@@ -18,7 +18,6 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
-use blobstore_stats::OperationType;
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use blobstore_sync_queue::BlobstoreSyncQueueEntry;
 use blobstore_sync_queue::OperationKey;
@@ -42,7 +41,6 @@ const SOME_FAILED_OTHERS_NONE: &str = "some_failed_others_none";
 /// Number of entries we've fetched from the queue trying to resolve
 /// SOME_FAILED_OTHERS_NONE case.
 const QUEUE_ENTRIES: &str = "queue_entries_count";
-const SYNC_QUEUE: &str = "mysql_sync_queue";
 
 #[derive(Clone)]
 pub struct MultiplexedBlobstore {
@@ -133,19 +131,14 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
             .timed()
             .await;
 
-        let mut ctx = ctx.clone();
-        let pc = ctx.fork_perf_counters();
         scuba::record_queue_stats(
+            ctx,
             &mut scuba,
-            &pc,
-            stats,
-            result.as_ref(),
             key,
-            ctx.metadata().session_id().as_str(),
-            OperationType::Put,
+            stats,
             Some(blobstore_id),
             blobstore_type,
-            SYNC_QUEUE,
+            &result,
         );
         result
     }

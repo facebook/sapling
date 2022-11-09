@@ -13,7 +13,6 @@ use anyhow::Result;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore_stats::add_completion_time;
-pub use blobstore_stats::record_queue_stats;
 use blobstore_stats::OperationType;
 use blobstore_stats::BLOB_PRESENT;
 use blobstore_stats::ERROR;
@@ -21,12 +20,14 @@ use blobstore_stats::KEY;
 use blobstore_stats::OPERATION;
 use context::CoreContext;
 use futures_stats::FutureStats;
+use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 const MULTIPLEX_ID: &str = "multiplex_id";
 const BLOB_SIZE: &str = "blob_size";
 const SUCCESS: &str = "success";
+const SYNC_QUEUE: &str = "mysql_sync_queue";
 
 fn record_scuba_common(
     mut ctx: CoreContext,
@@ -46,14 +47,14 @@ fn record_scuba_common(
     scuba.add(MULTIPLEX_ID, multiplex_id.clone());
 }
 
-pub fn record_put(
+pub fn record_put<T>(
     ctx: &CoreContext,
     scuba: &mut MononokeScubaSampleBuilder,
     multiplex_id: &MultiplexId,
     key: &str,
     blob_size: usize,
     stats: FutureStats,
-    result: &Result<()>,
+    result: &Result<T>,
 ) {
     let op = OperationType::Put;
     record_scuba_common(ctx.clone(), scuba, multiplex_id, key, stats, op);
@@ -90,8 +91,7 @@ pub fn record_get(
             scuba.add(BLOB_PRESENT, blob_present).add(SUCCESS, true);
 
             if let Some(blob) = mb_blob.as_ref() {
-                let size = blob.as_bytes().len();
-                scuba.add(BLOB_SIZE, size);
+                scuba.add(BLOB_SIZE, blob.len());
             }
         }
     }
@@ -127,4 +127,28 @@ pub fn record_is_present(
         }
     }
     scuba.log();
+}
+
+pub fn record_queue_stats(
+    ctx: &CoreContext,
+    scuba: &mut MononokeScubaSampleBuilder,
+    key: &str,
+    stats: FutureStats,
+    blobstore_id: Option<BlobstoreId>,
+    blobstore_type: String,
+    result: &Result<()>,
+) {
+    let pc = ctx.clone().fork_perf_counters();
+    blobstore_stats::record_queue_stats(
+        scuba,
+        &pc,
+        stats,
+        result.as_ref(),
+        key,
+        ctx.metadata().session_id().as_str(),
+        OperationType::Put,
+        blobstore_id,
+        blobstore_type,
+        SYNC_QUEUE,
+    );
 }
