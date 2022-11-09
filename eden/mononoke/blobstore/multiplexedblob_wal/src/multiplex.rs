@@ -240,8 +240,8 @@ impl WalMultiplexedBlobstore {
         let mut put_futs = inner_multi_put(
             ctx,
             self.blobstores.clone(),
-            key.clone(),
-            value.clone(),
+            &key,
+            &value,
             put_behaviour,
             scuba,
         );
@@ -264,8 +264,8 @@ impl WalMultiplexedBlobstore {
                             let write_mostly_puts = inner_multi_put(
                                 ctx,
                                 self.write_mostly_blobstores.clone(),
-                                key,
-                                value,
+                                &key,
+                                &value,
                                 put_behaviour,
                                 scuba,
                             );
@@ -578,11 +578,11 @@ fn spawn_stream_completion<T>(
     tokio::spawn(s.try_for_each(|_| future::ok(())))
 }
 
-pub(crate) fn inner_multi_put(
+fn inner_multi_put(
     ctx: &CoreContext,
     blobstores: Arc<[TimedStore]>,
-    key: String,
-    value: BlobstoreBytes,
+    key: &String,
+    value: &BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,
     scuba: &Scuba,
 ) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>>> {
