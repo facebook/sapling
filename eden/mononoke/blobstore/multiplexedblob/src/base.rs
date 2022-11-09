@@ -6,7 +6,6 @@
  */
 
 use std::borrow::Borrow;
-use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -42,14 +41,12 @@ use futures::future;
 use futures::future::join_all;
 use futures::future::select;
 use futures::future::Either as FutureEither;
-use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_stats::TimedFutureExt;
 use itertools::Either;
-use itertools::Itertools;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
@@ -159,17 +156,130 @@ impl std::fmt::Display for MultiplexedBlobstoreBase {
 }
 
 fn write_mostly_error(
-    blobstores: &[(BlobstoreId, Arc<dyn BlobstorePutOps>)],
+    mut main_blobstore_ids: impl Iterator<Item = BlobstoreId>,
     errors: HashMap<BlobstoreId, Error>,
 ) -> ErrorKind {
-    let main_blobstore_ids: HashSet<BlobstoreId, RandomState> =
-        HashSet::from_iter(blobstores.iter().map(|(id, _)| *id));
-    let errored_blobstore_ids = HashSet::from_iter(errors.keys().cloned());
-    if errored_blobstore_ids == main_blobstore_ids {
-        // The write mostly store that returned None might not have been fully populated
+    let errored_blobstore_ids: HashSet<BlobstoreId> = errors.keys().copied().collect();
+    if main_blobstore_ids.all(|id| errored_blobstore_ids.contains(&id)) {
+        // The write mostly stores that returned None might not have been fully populated
         ErrorKind::AllFailed(Arc::new(errors))
     } else {
         ErrorKind::SomeFailedOthersNone(Arc::new(errors))
+    }
+}
+
+type GetResult = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>);
+
+/// Get normal and write mostly results based on ScrubWriteMostly
+/// mode of getting results, which might optimise for less access
+/// to main blobstores or less access to write mostly blobstores
+pub async fn scrub_get_results<MF, WF>(
+    get_main_results: impl FnOnce() -> MF,
+    mut get_write_mostly_results: impl FnMut() -> WF,
+    write_mostly_blobstores: impl Iterator<Item = BlobstoreId>,
+    write_mostly: ScrubWriteMostly,
+) -> impl Iterator<Item = (bool, GetResult)>
+where
+    MF: Future<Output = Vec<GetResult>>,
+    WF: Future<Output = Vec<GetResult>>,
+{
+    // Exit early if all mostly-write are ok, and don't check main blobstores
+    if write_mostly == ScrubWriteMostly::ScrubIfAbsent {
+        let mut results = get_write_mostly_results().await.into_iter();
+        if let Some((bs_id, Ok(Some(data)))) = results.next() {
+            if results.all(|(_, r)| match r {
+                Ok(Some(other_data)) => other_data == data,
+                _ => false,
+            }) {
+                return Either::Left(std::iter::once((true, (bs_id, Ok(Some(data))))));
+            }
+        }
+    }
+
+    let write_mostly_results = async {
+        match write_mostly {
+            ScrubWriteMostly::Scrub | ScrubWriteMostly::SkipMissing => {
+                get_write_mostly_results().await
+            }
+            ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
+                write_mostly_blobstores.map(|id| (id, Ok(None))).collect()
+            }
+        }
+    };
+    let (normal_results, write_mostly_results) =
+        future::join(get_main_results(), write_mostly_results).await;
+
+    Either::Right(
+        normal_results
+            .into_iter()
+            .map(|r| (false, r))
+            .chain(write_mostly_results.into_iter().map(|r| (true, r))),
+    )
+}
+
+pub fn scrub_parse_results(
+    results: impl Iterator<Item = (bool, GetResult)>,
+    all_main: impl Iterator<Item = BlobstoreId>,
+) -> Result<Option<BlobstoreGetData>, ErrorKind> {
+    let mut all_values = HashMap::new();
+    let mut missing_main = HashSet::new();
+    let mut missing_write_mostly = HashSet::new();
+    let mut last_get_data = None;
+    let mut errors = HashMap::new();
+
+    for (is_write_mostly, (blobstore_id, result)) in results {
+        match result {
+            Ok(None) => {
+                if is_write_mostly {
+                    missing_write_mostly.insert(blobstore_id);
+                } else {
+                    missing_main.insert(blobstore_id);
+                }
+            }
+            Ok(Some(value)) => {
+                let mut content_hash = XxHash::with_seed(0);
+                content_hash.write(value.as_raw_bytes());
+                let content_hash = content_hash.finish();
+                all_values
+                    .entry(content_hash)
+                    .or_insert_with(HashSet::new)
+                    .insert(blobstore_id);
+                last_get_data = Some(value);
+            }
+            Err(err) => {
+                errors.insert(blobstore_id, err);
+            }
+        }
+    }
+    match all_values.len() {
+        0 => {
+            if errors.is_empty() {
+                Ok(None)
+            } else {
+                Err(write_mostly_error(all_main, errors))
+            }
+        }
+        1 => {
+            if missing_main.is_empty() && missing_write_mostly.is_empty() {
+                Ok(last_get_data)
+            } else {
+                Err(ErrorKind::SomeMissingItem {
+                    missing_main: Arc::new(missing_main),
+                    missing_write_mostly: Arc::new(missing_write_mostly),
+                    value: last_get_data,
+                })
+            }
+        }
+        _ => {
+            let answered = all_values.into_iter().map(|(_, stores)| stores).collect();
+            let mut all_missing = HashSet::new();
+            all_missing.extend(missing_main.into_iter());
+            all_missing.extend(missing_write_mostly.into_iter());
+            Err(ErrorKind::ValueMismatch(
+                Arc::new(answered),
+                Arc::new(all_missing),
+            ))
+        }
     }
 }
 
@@ -211,131 +321,31 @@ impl MultiplexedBlobstoreBase {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
-        if write_mostly == ScrubWriteMostly::ScrubIfAbsent {
-            let mut results = join_all(multiplexed_get(
-                ctx,
-                self.write_mostly_blobstores.as_ref(),
-                key,
-                OperationType::ScrubGet,
-                scuba.clone(),
-            ))
-            .await;
-            if let Some((_, Ok(success_return @ Some(_)))) = results.pop() {
-                if results.iter().all(|r| match &r.1 {
-                    Ok(ret @ Some(_)) => ret == &success_return,
-                    _ => false,
-                }) {
-                    return Ok(success_return);
-                }
-            }
-        }
-
-        let results = join_all(
-            multiplexed_get(
-                ctx,
-                self.blobstores.as_ref(),
-                key,
-                OperationType::ScrubGet,
-                scuba.clone(),
-            )
-            .map(|f| f.map(|v| (false, v)).left_future())
-            .chain(
-                match write_mostly {
-                    ScrubWriteMostly::Scrub | ScrubWriteMostly::SkipMissing => {
-                        Either::Left(
-                            // Generate queries
-                            multiplexed_get(
-                                ctx,
-                                self.write_mostly_blobstores.as_ref(),
-                                key,
-                                OperationType::ScrubGet,
-                                scuba,
-                            )
-                            .map(|f| f.map(|v| (true, v)).left_future()),
-                        )
-                    }
-                    ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
-                        Either::Right(
-                            // No need to query, give None for each store
-                            self.write_mostly_blobstores.iter().map(|(id, _store)| {
-                                future::ready((true, (*id, Ok(None)))).right_future()
-                            }),
-                        )
-                    }
-                }
-                .map(|f| f.right_future()),
-            ),
+        let results = scrub_get_results(
+            || {
+                join_all(multiplexed_get(
+                    ctx,
+                    self.blobstores.as_ref(),
+                    key,
+                    OperationType::ScrubGet,
+                    scuba.clone(),
+                ))
+            },
+            || {
+                join_all(multiplexed_get(
+                    ctx,
+                    self.write_mostly_blobstores.as_ref(),
+                    key,
+                    OperationType::ScrubGet,
+                    scuba.clone(),
+                ))
+            },
+            self.write_mostly_blobstores.iter().map(|(id, _)| *id),
+            write_mostly,
         )
         .await;
 
-        let (successes, errors): (HashMap<_, _>, HashMap<_, _>) = results
-            .into_iter()
-            .partition_map(|(write_mostly_flag, (id, r))| match r {
-                Ok(v) => Either::Left((id, (write_mostly_flag, v))),
-                Err(v) => Either::Right((id, v)),
-            });
-
-        if successes.is_empty() {
-            return Err(ErrorKind::AllFailed(errors.into()));
-        }
-
-        let mut all_values = HashMap::new();
-        let mut missing_main = HashSet::new();
-        let mut missing_write_mostly = HashSet::new();
-        let mut last_get_data = None;
-
-        for (blobstore_id, (write_mostly_flag, value)) in successes.into_iter() {
-            match value {
-                None => {
-                    if write_mostly_flag {
-                        missing_write_mostly.insert(blobstore_id);
-                    } else {
-                        missing_main.insert(blobstore_id);
-                    }
-                }
-                Some(value) => {
-                    let mut content_hash = XxHash::with_seed(0);
-                    content_hash.write(value.as_raw_bytes());
-                    let content_hash = content_hash.finish();
-                    all_values
-                        .entry(content_hash)
-                        .or_insert_with(HashSet::new)
-                        .insert(blobstore_id);
-                    last_get_data = Some(value);
-                }
-            }
-        }
-
-        match all_values.len() {
-            0 => {
-                if errors.is_empty() {
-                    Ok(None)
-                } else {
-                    Err(write_mostly_error(&self.blobstores, errors))
-                }
-            }
-            1 => {
-                if missing_main.is_empty() && missing_write_mostly.is_empty() {
-                    Ok(last_get_data)
-                } else {
-                    Err(ErrorKind::SomeMissingItem {
-                        missing_main: Arc::new(missing_main),
-                        missing_write_mostly: Arc::new(missing_write_mostly),
-                        value: last_get_data,
-                    })
-                }
-            }
-            _ => {
-                let answered = all_values.into_iter().map(|(_, stores)| stores).collect();
-                let mut all_missing = HashSet::new();
-                all_missing.extend(missing_main.into_iter());
-                all_missing.extend(missing_write_mostly.into_iter());
-                Err(ErrorKind::ValueMismatch(
-                    Arc::new(answered),
-                    Arc::new(all_missing),
-                ))
-            }
-        }
+        scrub_parse_results(results, self.blobstores.iter().map(|(id, _)| *id))
     }
 }
 
@@ -467,7 +477,10 @@ async fn blobstore_get<'a>(
             } else if errors.len() == blobstores_count {
                 Err(ErrorKind::AllFailed(Arc::new(errors)))
             } else {
-                Err(write_mostly_error(&blobstores, errors))
+                Err(write_mostly_error(
+                    blobstores.iter().map(|(id, _)| *id),
+                    errors,
+                ))
             }
         }
         .timed()
@@ -694,7 +707,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                     // some blobstores reported the blob is missing, others failed
                     else {
-                        let write_mostly_err = write_mostly_error(blobstores, errors);
+                        let write_mostly_err =
+                            write_mostly_error(blobstores.iter().map(|(id, _)| *id), errors);
                         if let ErrorKind::SomeFailedOthersNone(errors) = write_mostly_err {
                             let err = Error::from(ErrorKind::SomeFailedOthersNone(errors));
                             Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
