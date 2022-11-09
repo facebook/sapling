@@ -6,7 +6,7 @@
  */
 
 pub(crate) mod multiplex;
-mod scrub;
+pub mod scrub;
 #[cfg(test)]
 mod test;
 mod timed;

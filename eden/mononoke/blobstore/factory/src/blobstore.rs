@@ -50,6 +50,7 @@ use multiplexedblob::ScrubBlobstore;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
 use multiplexedblob::ScrubWriteMostly;
+use multiplexedblob_wal::scrub::WalScrubBlobstore;
 use multiplexedblob_wal::Scuba as WalScuba;
 use multiplexedblob_wal::WalMultiplexedBlobstore;
 use packblob::PackBlob;
@@ -825,9 +826,18 @@ async fn make_multiplexed_wal<'a>(
     )?;
 
     let blobstore = match &blobstore_options.scrub_options {
-        Some(_scrub_options) => {
-            // TODO(aida): Support Scrubbing multiplex
-            bail!("Scrub blobstore is not supported for the WAl multiplexed storage");
+        Some(scrub_options) => {
+            Arc::new(WalScrubBlobstore::new(
+                multiplex_id,
+                wal_queue,
+                normal_components,
+                write_mostly_components,
+                write_quorum,
+                None, // use default timeouts
+                scuba,
+                scrub_options.clone(),
+                scrub_handler.clone(),
+            )?) as Arc<dyn BlobstorePutOps>
         }
         None => Arc::new(WalMultiplexedBlobstore::new(
             multiplex_id,
@@ -835,7 +845,7 @@ async fn make_multiplexed_wal<'a>(
             normal_components,
             write_mostly_components,
             write_quorum,
-            None, /* use default timeouts */
+            None, // use default timeouts
             scuba,
         )?) as Arc<dyn BlobstorePutOps>,
     };
