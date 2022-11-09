@@ -94,7 +94,9 @@ def zip_sapling(project_root: Path, build_dir: Path):
                     source_file = os.path.join(root, f)
                     z.write(
                         source_file,
-                        os.path.join("sl", os.path.relpath(source_file, embedded_dir)),
+                        os.path.join(
+                            "Sapling", os.path.relpath(source_file, embedded_dir)
+                        ),
                     )
 
 
