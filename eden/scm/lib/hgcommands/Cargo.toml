@@ -37,7 +37,6 @@ hostname = "0.3"
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
 libc = "0.2.137"
-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metrics-render = { version = "0.1.0", path = "../metrics/render" }
 migration = { version = "0.1.0", path = "../migration" }
 mincode = { version = "0.1.0", path = "../mincode" }
@@ -59,7 +58,6 @@ revsets = { version = "0.1.0", path = "../revsets" }
 runlog = { version = "0.1.0", path = "../runlog" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
-sparse = { version = "0.1.0", path = "../sparse" }
 status = { version = "0.1.0", path = "../status" }
 termstyle = { version = "0.1.0", path = "../io/term/style" }
 tracing = "0.1.35"
@@ -72,7 +70,6 @@ types = { version = "0.1.0", path = "../types" }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }
 version = { version = "0.1.0", path = "../version" }
-vfs = { version = "0.1.0", path = "../vfs" }
 workingcopy = { version = "0.1.0", path = "../workingcopy" }
 zstd = "0.11.1+zstd.1.5.2"
 
