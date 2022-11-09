@@ -102,8 +102,6 @@ def _cleanuplanded(repo, dryrun=False):
     checklocalversions = ui.configbool("pullcreatemarkers", "check-local-versions")
     for diffid, draftnodes in sorted(difftodraft.items()):
         publicnode = difftopublic.get(diffid)
-        if checklocalversions:
-            draftnodes = draftnodes & difftolocal.get(diffid, set())
         if publicnode is None or publicnode not in unfi:
             continue
         # skip it if the local repo does not think it's a public commit.
@@ -112,6 +110,9 @@ def _cleanuplanded(repo, dryrun=False):
         # sanity check - the public commit should have a sane commit message.
         if diffprops.parserevfromcommitmsg(unfi[publicnode].description()) != diffid:
             continue
+
+        if checklocalversions:
+            draftnodes = draftnodes & difftolocal.get(diffid, set())
         draftnodestr = ", ".join(
             short(d) for d in sorted(draftnodes)
         )  # making output deterministic
