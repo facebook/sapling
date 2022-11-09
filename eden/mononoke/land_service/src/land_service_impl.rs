@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -16,10 +17,12 @@ use land_service_if::server::LandService;
 use land_service_if::services::land_service::LandChangesetsExn;
 use land_service_if::types::*;
 use mononoke_api::CoreContext;
+use parking_lot::Mutex;
 use srserver::RequestContext;
 use tunables::tunables;
 
 use crate::errors;
+use crate::errors::LandChangesetsError;
 use crate::factory::Factory;
 use crate::land_changeset_object::LandChangesetObject;
 use crate::worker;
@@ -29,26 +32,30 @@ use crate::worker::EnqueueSender;
 pub(crate) struct LandServiceImpl {
     factory: Factory,
     #[allow(dead_code)]
-    enqueue_entry_sender: Arc<EnqueueSender>,
-    #[allow(dead_code)]
-    ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
+    repo_bookmark_map:
+        Arc<Mutex<HashMap<RepoBookmarkKey, (EnqueueSender, Shared<BoxFuture<'static, ()>>)>>>,
 }
 
 pub(crate) struct LandServiceThriftImpl(LandServiceImpl);
 
 impl LandServiceImpl {
     pub fn new(factory: Factory) -> Self {
-        let (sender, ensure_worker_scheduled) = worker::setup_worker();
+        let repo_bookmark_map = Arc::new(Mutex::new(HashMap::new()));
         Self {
             factory,
-            enqueue_entry_sender: Arc::new(sender),
-            ensure_worker_scheduled,
+            repo_bookmark_map,
         }
     }
 
     pub(crate) fn thrift_server(&self) -> LandServiceThriftImpl {
         LandServiceThriftImpl(self.clone())
     }
+}
+
+#[derive(Hash, PartialEq, Eq)]
+struct RepoBookmarkKey {
+    repo_name: String,
+    bookmark: String,
 }
 
 #[async_trait]
@@ -75,15 +82,28 @@ impl LandService for LandServiceThriftImpl {
         );
 
         if tunables().get_batching_to_land_service() {
-            self.0.ensure_worker_scheduled.clone().await;
+            let (sender, receiver) =
+                oneshot::channel::<Result<LandChangesetsResponse, LandChangesetsError>>();
 
-            let (sender, receiver) = oneshot::channel();
+            let serialized_key = RepoBookmarkKey {
+                repo_name: land_changeset_object.request.repo_name.clone(),
+                bookmark: land_changeset_object.request.bookmark.clone(),
+            };
 
-            // Enqueue new entry
-            self.0
-                .enqueue_entry_sender
-                .unbounded_send((sender, land_changeset_object))
+            let (worker_sender, worker_process_future) = {
+                let mut repo_bookmark_map = self.0.repo_bookmark_map.lock();
+
+                repo_bookmark_map
+                    .entry(serialized_key)
+                    .or_insert_with(worker::setup_worker)
+                    .clone()
+            };
+
+            worker_sender
+                .unbounded_send((sender, land_changeset_object.clone()))
                 .map_err(|e| errors::internal_error(&e))?;
+
+            worker_process_future.await;
 
             return Ok(receiver.await.map_err(|e| errors::internal_error(&e))??);
         }
