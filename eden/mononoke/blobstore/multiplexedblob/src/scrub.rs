@@ -7,6 +7,7 @@
 
 use std::cmp::max;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
@@ -29,6 +30,7 @@ use clap::ArgEnum;
 use context::CoreContext;
 use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
+use futures::Future;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
@@ -260,6 +262,103 @@ async fn put_and_mark_repaired(
     res.map(|_status| ())
 }
 
+pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
+    ctx: &CoreContext,
+    key: &str,
+    value: BlobstoreGetData,
+    missing_main: Arc<HashSet<BlobstoreId>>,
+    missing_write_mostly: Arc<HashSet<BlobstoreId>>,
+    scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
+    scrub_handler: &dyn ScrubHandler,
+    scrub_options: &ScrubOptions,
+    scuba: &MononokeScubaSampleBuilder,
+    already_healed: impl FnOnce() -> F,
+) -> Result<Option<BlobstoreGetData>> {
+    let ctime_age = value.as_meta().ctime().map(|ctime| {
+        let age_secs = max(0, Timestamp::from_timestamp_secs(ctime).since_seconds());
+        Duration::from_secs(age_secs as u64)
+    });
+
+    match (ctime_age, scrub_options.scrub_grace) {
+        // value written recently, within the grace period, so don't attempt repair
+        (Some(ctime_age), Some(scrub_grace)) if ctime_age < scrub_grace => {
+            return Ok(Some(value));
+        }
+        _ => {}
+    }
+
+    let mut needs_repair: HashMap<BlobstoreId, (PutBehaviour, &dyn BlobstorePutOps)> =
+        HashMap::new();
+
+    // For write mostly stores we can chose not to do the scrub action
+    // e.g. if store is still being populated, a checking scrub wouldn't want to raise alarm on the store
+    if scrub_options.scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing
+        || !missing_main.is_empty()
+    {
+        // Only peek the queue if needed
+        let already_healed = match ctime_age.as_ref() {
+            // Avoid false alarms for recently written items still on the healer queue
+            Some(ctime_age) if ctime_age < &scrub_options.queue_peek_bound => {
+                already_healed().await?
+            }
+            _ => true,
+        };
+
+        // Only attempt the action if we don't know of pending writes from the queue
+        if already_healed {
+            for k in missing_main.iter() {
+                if let Some(s) = scrub_stores.get(k) {
+                    // We are repairing, overwrite is right thing to do as
+                    // bad keys may be is_present, but not retrievable.
+                    needs_repair.insert(*k, (PutBehaviour::Overwrite, s.as_ref()));
+                }
+            }
+            for k in missing_write_mostly.iter() {
+                if let Some(s) = scrub_stores.get(k) {
+                    let put_behaviour = match scrub_options.scrub_action_on_missing_write_mostly {
+                        ScrubWriteMostly::SkipMissing => None,
+                        ScrubWriteMostly::Scrub => Some(PutBehaviour::Overwrite),
+                        ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
+                            Some(PutBehaviour::IfAbsent)
+                        }
+                    };
+                    if let Some(put_behaviour) = put_behaviour {
+                        needs_repair.insert(*k, (put_behaviour, s.as_ref()));
+                    }
+                }
+            }
+        }
+    }
+
+    if scrub_options.scrub_action == ScrubAction::ReportOnly {
+        for id in needs_repair.keys() {
+            scrub_handler.on_repair(ctx, *id, key, false, value.as_meta());
+        }
+    } else {
+        // inner_put to the stores that need it.
+        let order = AtomicUsize::new(0);
+        let repair_puts: FuturesUnordered<_> = needs_repair
+            .into_iter()
+            .map(|(id, (put_behaviour, store))| {
+                put_and_mark_repaired(
+                    ctx,
+                    scuba,
+                    &order,
+                    id,
+                    store,
+                    key,
+                    &value,
+                    scrub_handler,
+                    put_behaviour,
+                )
+            })
+            .collect();
+
+        repair_puts.try_for_each(|_| async { Ok(()) }).await?;
+    }
+    Ok(Some(value))
+}
+
 // Workaround for Blobstore returning a static lifetime future
 async fn blobstore_get(
     inner_blobstore: &MultiplexedBlobstoreBase,
@@ -294,92 +393,19 @@ async fn blobstore_get(
                 missing_write_mostly,
                 value: Some(value),
             } => {
-                let ctime_age = value.as_meta().ctime().map(|ctime| {
-                    let age_secs = max(0, Timestamp::from_timestamp_secs(ctime).since_seconds());
-                    Duration::from_secs(age_secs as u64)
-                });
-
-                match (ctime_age, scrub_options.scrub_grace) {
-                    // value written recently, within the grace period, so don't attempt repair
-                    (Some(ctime_age), Some(scrub_grace)) if ctime_age < scrub_grace => {
-                        return Ok(Some(value));
-                    }
-                    _ => {}
-                }
-
-                let mut needs_repair: HashMap<BlobstoreId, (PutBehaviour, &dyn BlobstorePutOps)> =
-                    HashMap::new();
-
-                // For write mostly stores we can chose not to do the scrub action
-                // e.g. if store is still being populated, a checking scrub wouldn't want to raise alarm on the store
-                if scrub_options.scrub_action_on_missing_write_mostly
-                    != ScrubWriteMostly::SkipMissing
-                    || !missing_main.is_empty()
-                {
-                    // Only peek the queue if needed
-                    let entries = match ctime_age.as_ref() {
-                        // Avoid false alarms for recently written items still on the healer queue
-                        Some(ctime_age) if ctime_age < &scrub_options.queue_peek_bound => {
-                            queue.get(ctx, key).await?
-                        }
-                        _ => vec![],
-                    };
-
-                    // Only attempt the action if we don't know of pending writes from the queue
-                    if entries.is_empty() {
-                        for k in missing_main.iter() {
-                            if let Some(s) = scrub_stores.get(k) {
-                                // We are repairing, overwrite is right thing to do as
-                                // bad keys may be is_present, but not retrievable.
-                                needs_repair.insert(*k, (PutBehaviour::Overwrite, s.as_ref()));
-                            }
-                        }
-                        for k in missing_write_mostly.iter() {
-                            if let Some(s) = scrub_stores.get(k) {
-                                let put_behaviour =
-                                    match scrub_options.scrub_action_on_missing_write_mostly {
-                                        ScrubWriteMostly::SkipMissing => None,
-                                        ScrubWriteMostly::Scrub => Some(PutBehaviour::Overwrite),
-                                        ScrubWriteMostly::PopulateIfAbsent
-                                        | ScrubWriteMostly::ScrubIfAbsent => {
-                                            Some(PutBehaviour::IfAbsent)
-                                        }
-                                    };
-                                if let Some(put_behaviour) = put_behaviour {
-                                    needs_repair.insert(*k, (put_behaviour, s.as_ref()));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if scrub_options.scrub_action == ScrubAction::ReportOnly {
-                    for id in needs_repair.keys() {
-                        scrub_handler.on_repair(ctx, *id, key, false, value.as_meta());
-                    }
-                } else {
-                    // inner_put to the stores that need it.
-                    let order = AtomicUsize::new(0);
-                    let repair_puts: FuturesUnordered<_> = needs_repair
-                        .into_iter()
-                        .map(|(id, (put_behaviour, store))| {
-                            put_and_mark_repaired(
-                                ctx,
-                                scuba,
-                                &order,
-                                id,
-                                store,
-                                key,
-                                &value,
-                                scrub_handler,
-                                put_behaviour,
-                            )
-                        })
-                        .collect();
-
-                    repair_puts.try_for_each(|_| async { Ok(()) }).await?;
-                }
-                Ok(Some(value))
+                maybe_repair(
+                    ctx,
+                    key,
+                    value,
+                    missing_main,
+                    missing_write_mostly,
+                    scrub_stores,
+                    scrub_handler,
+                    scrub_options,
+                    scuba,
+                    || async { Ok(queue.get(ctx, key).await?.is_empty()) },
+                )
+                .await
             }
             _ => Err(error.into()),
         },
