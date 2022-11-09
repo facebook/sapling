@@ -85,31 +85,47 @@ impl MultiplexQuorum {
 
 #[derive(Clone)]
 pub struct Scuba {
-    scuba: MononokeScubaSampleBuilder,
+    inner_blobstores_scuba: MononokeScubaSampleBuilder,
+    multiplex_scuba: MononokeScubaSampleBuilder,
     sample_rate: NonZeroU64,
 }
 
 impl Scuba {
     pub fn new_from_raw(
         fb: FacebookInit,
-        scuba_table: Option<String>,
+        inner_blobstores_scuba_table: Option<String>,
+        multiplex_scuba_table: Option<String>,
         sample_rate: NonZeroU64,
     ) -> Result<Self> {
-        let scuba = scuba_table
-            .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
-                MononokeScubaSampleBuilder::new(fb, &table)
-            })?;
+        let inner = inner_blobstores_scuba_table.map_or_else(
+            || Ok(MononokeScubaSampleBuilder::with_discard()),
+            |table| MononokeScubaSampleBuilder::new(fb, &table),
+        )?;
+        let multiplex = multiplex_scuba_table.map_or_else(
+            || Ok(MononokeScubaSampleBuilder::with_discard()),
+            |table| MononokeScubaSampleBuilder::new(fb, &table),
+        )?;
 
-        Self::new(scuba, sample_rate)
+        Self::new(inner, multiplex, sample_rate)
     }
 
-    pub fn new(mut scuba: MononokeScubaSampleBuilder, sample_rate: NonZeroU64) -> Result<Self> {
-        scuba.add_common_server_data();
-        Ok(Self { scuba, sample_rate })
+    pub fn new(
+        mut inner_blobstores_scuba: MononokeScubaSampleBuilder,
+        mut multiplex_scuba: MononokeScubaSampleBuilder,
+        sample_rate: NonZeroU64,
+    ) -> Result<Self> {
+        inner_blobstores_scuba.add_common_server_data();
+        multiplex_scuba.add_common_server_data();
+        Ok(Self {
+            inner_blobstores_scuba,
+            multiplex_scuba,
+            sample_rate,
+        })
     }
 
     pub fn sampled(&mut self) {
-        self.scuba.sampled(self.sample_rate);
+        self.inner_blobstores_scuba.sampled(self.sample_rate);
+        self.multiplex_scuba.sampled(self.sample_rate);
     }
 }
 
@@ -493,8 +509,18 @@ fn inner_multi_put(
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs, ctx, key, value, put_behaviour, scuba.scuba);
-            async move { bs.put(&ctx, key, value, put_behaviour, scuba).await }
+            cloned!(
+                bs,
+                ctx,
+                key,
+                value,
+                put_behaviour,
+                scuba.inner_blobstores_scuba
+            );
+            async move {
+                bs.put(&ctx, key, value, put_behaviour, inner_blobstores_scuba)
+                    .await
+            }
         })
         .collect();
     put_futs
@@ -512,8 +538,8 @@ fn inner_multi_get<'a>(
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs, scuba.scuba);
-            async move { bs.get(ctx, key, operation, scuba).await }
+            cloned!(bs, scuba.inner_blobstores_scuba);
+            async move { bs.get(ctx, key, operation, inner_blobstores_scuba).await }
         })
         .collect();
     get_futs
@@ -528,8 +554,8 @@ fn inner_multi_is_present<'a>(
     let futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs, scuba.scuba);
-            async move { bs.is_present(ctx, key, scuba).await }
+            cloned!(bs, scuba.inner_blobstores_scuba);
+            async move { bs.is_present(ctx, key, inner_blobstores_scuba).await }
         })
         .collect();
     futs

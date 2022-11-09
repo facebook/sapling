@@ -34,6 +34,7 @@ use metaconfig_types::ShardedRemoteDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use nonzero_ext::nonzero;
 use repos::RawBlobstoreConfig;
+use repos::RawBlobstoreMultiplexedWal;
 use repos::RawBlobstorePackConfig;
 use repos::RawBlobstorePackFormat;
 use repos::RawBubbleDeletionMode;
@@ -175,20 +176,27 @@ impl Convert for RawBlobstoreConfig {
                         .convert()?,
                 }
             }
-            RawBlobstoreConfig::multiplexed_wal(raw) => {
-                let write_quorum: usize = raw.write_quorum.try_into()?;
-                if write_quorum > raw.components.len() {
+            RawBlobstoreConfig::multiplexed_wal(RawBlobstoreMultiplexedWal {
+                write_quorum,
+                components,
+                multiplex_id,
+                queue_db,
+                inner_blobstores_scuba_table,
+                multiplex_scuba_table,
+                scuba_sample_rate,
+            }) => {
+                let write_quorum: usize = write_quorum.try_into()?;
+                if write_quorum > components.len() {
                     return Err(anyhow!(
                         "Not enough blobstores for {} write quorum (have {})",
                         write_quorum,
-                        raw.components.len()
+                        components.len()
                     ));
                 }
 
                 BlobConfig::MultiplexedWal {
-                    multiplex_id: MultiplexId::new(raw.multiplex_id),
-                    blobstores: raw
-                        .components
+                    multiplex_id: MultiplexId::new(multiplex_id),
+                    blobstores: components
                         .into_iter()
                         .map(|comp| {
                             Ok((
@@ -201,9 +209,10 @@ impl Convert for RawBlobstoreConfig {
                         })
                         .collect::<Result<Vec<_>>>()?,
                     write_quorum,
-                    queue_db: raw.queue_db.convert()?,
-                    scuba_table: raw.scuba_table,
-                    scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
+                    queue_db: queue_db.convert()?,
+                    inner_blobstores_scuba_table,
+                    multiplex_scuba_table,
+                    scuba_sample_rate: parse_scuba_sample_rate(scuba_sample_rate)?,
                 }
             }
 

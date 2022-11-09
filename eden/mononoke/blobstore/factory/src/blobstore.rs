@@ -581,7 +581,8 @@ fn make_blobstore_put_ops<'a>(
                 blobstores,
                 write_quorum,
                 queue_db,
-                scuba_table,
+                inner_blobstores_scuba_table,
+                multiplex_scuba_table,
                 scuba_sample_rate,
             } => {
                 needs_wrappers = false;
@@ -589,7 +590,8 @@ fn make_blobstore_put_ops<'a>(
                     fb,
                     multiplex_id,
                     queue_db,
-                    scuba_table,
+                    inner_blobstores_scuba_table,
+                    multiplex_scuba_table,
                     scuba_sample_rate,
                     blobstores,
                     write_quorum,
@@ -784,7 +786,8 @@ async fn make_multiplexed_wal<'a>(
     fb: FacebookInit,
     multiplex_id: MultiplexId,
     queue_db: ShardedDatabaseConfig,
-    scuba_table: Option<String>,
+    inner_blobstores_scuba_table: Option<String>,
+    multiplex_scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     write_quorum: usize,
@@ -814,7 +817,12 @@ async fn make_multiplexed_wal<'a>(
         mysql_options,
         readonly_storage.0,
     )?);
-    let scuba = WalScuba::new_from_raw(fb, scuba_table, scuba_sample_rate)?;
+    let scuba = WalScuba::new_from_raw(
+        fb,
+        inner_blobstores_scuba_table,
+        multiplex_scuba_table,
+        scuba_sample_rate,
+    )?;
 
     let blobstore = match &blobstore_options.scrub_options {
         Some(_scrub_options) => {

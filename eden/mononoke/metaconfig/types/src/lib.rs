@@ -871,9 +871,10 @@ pub enum BlobConfig {
         /// DB config to use for the WAL
         queue_db: ShardedDatabaseConfig,
         /// A scuba table to log stats per inner blobstore
-        scuba_table: Option<String>,
-        /// 1 in scuba_sample_rate samples will be logged for both
-        /// multiplex and per blobstore scuba tables
+        inner_blobstores_scuba_table: Option<String>,
+        /// A scuba table to log status for the multiplexed blobstore
+        multiplex_scuba_table: Option<String>,
+        /// Used for both scuba tables. Write queries and read failures are not sampled.
         scuba_sample_rate: NonZeroU64,
     },
     /// Store in a manifold bucket, but every object will have an expiration

@@ -202,7 +202,7 @@ async fn maybe_schedule_healer_for_storage(
             blobstores,
             multiplex_id,
             queue_db,
-            scuba_table,
+            inner_blobstores_scuba_table,
             scuba_sample_rate,
             ..
         } => {
@@ -221,7 +221,7 @@ async fn maybe_schedule_healer_for_storage(
                 mysql_options,
                 blobstore_options,
                 readonly_storage,
-                scuba_table,
+                inner_blobstores_scuba_table,
                 scuba_sample_rate,
                 config_store,
                 dry_run,
