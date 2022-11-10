@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import os
+
 from bindings import cliparser
 from edenscm import (
     cmdutil,
@@ -182,7 +184,11 @@ def safelog(repo, command):
                 repo.ui.debug("can't make undolog folder in .hg\n")
                 return changes
             with lockmod.lock(
-                repo.localvfs, "undolog/lock", desc="undolog", timeout=2, ui=repo.ui
+                repo.localvfs,
+                os.path.join("undolog", "lock"),
+                desc="undolog",
+                timeout=2,
+                ui=repo.ui,
             ):
                 repo.ui.log("undologlock", "lock acquired\n")
                 tr = lighttransaction(repo)
@@ -212,7 +218,11 @@ def lighttransaction(repo):
     # do any tag handling
     vfsmap = {"shared": repo.sharedvfs, "local": repo.localvfs}
     tr = transaction.transaction(
-        repo.ui.warn, repo.localvfs, vfsmap, "undolog/tr.journal", "undolog/tr.undo"
+        repo.ui.warn,
+        repo.localvfs,
+        vfsmap,
+        os.path.join("undolog", "tr.journal"),
+        os.path.join("undolog", "tr.undo"),
     )
     return tr
 
@@ -346,16 +356,16 @@ def _logundoredoindex(repo, reverseindex, branch=""):
     rlog = _getrevlog(repo, "index.i")
     hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
     body = str(hexnode) + "\0" + branch
-    return repo.localvfs.writeutf8("undolog/redonode", body)
+    return repo.localvfs.writeutf8(os.path.join("undolog", "redonode"), body)
 
 
 def _delundoredo(repo):
-    path = "undolog" + "/" + "redonode"
+    path = os.path.join("undolog", "redonode")
     repo.localvfs.tryunlink(path)
 
 
 def _recordnewgap(repo, absoluteindex=None):
-    path = "undolog" + "/" + "gap"
+    path = os.path.join("undolog", "gap")
     if absoluteindex is None:
         rlog = _getrevlog(repo, "index.i")
         repo.localvfs.writeutf8(path, str(len(rlog) - 1))
@@ -395,7 +405,7 @@ def _logtoscuba(ui, message):
 def _gapcheck(ui, repo, reverseindex):
     rlog = _getrevlog(repo, "index.i")
     absoluteindex = _invertindex(rlog, reverseindex)
-    path = "undolog" + "/" + "gap"
+    path = os.path.join("undolog", "gap")
     result = False
     try:
         result = absoluteindex >= int(repo.localvfs.read(path))
@@ -1141,7 +1151,9 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
         sign = None
     if not absolute:
         try:  # attempt to get relative shift
-            nodebranch = repo.localvfs.read("undolog/redonode").split(b"\0")
+            nodebranch = repo.localvfs.read(os.path.join("undolog", "redonode")).split(
+                b"\0"
+            )
             hexnode = pycompat.decodeutf8(nodebranch[0])
             try:
                 oldbranch = pycompat.decodeutf8(nodebranch[1])
@@ -1411,7 +1423,7 @@ def _invertindex(rlog, indexorreverseindex):
 
 
 def _getrevlog(repo, filename):
-    path = "undolog/" + filename
+    path = os.path.join("undolog", filename)
     try:
         return revlog.revlog(repo.localvfs, path)
     except error.RevlogError:

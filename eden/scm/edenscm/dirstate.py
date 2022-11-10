@@ -288,6 +288,10 @@ class dirstate(object):
         return not util.fscasesensitive(self._repo.path)
 
     def _join(self, f: str) -> str:
+        # This is important on Windows if self._rootdir is a UNC path.
+        # We must convert "/" to local "\" in path before joining.
+        f = util.localpath(f)
+
         # much faster than os.path.join()
         # it's safe because f is always a relative path
         return self._rootdir + f

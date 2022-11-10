@@ -696,9 +696,9 @@ class fncachestore(basicstore):
         else:
             encode = _plainhybridencode
         self.encode = encode
-        vfs = vfstype(path + "/store")
+        vfs = vfstype(os.path.join(path, "store"))
         self.path = vfs.base
-        self.pathsep = self.path + "/"
+        self.pathsep = self.path + os.sep
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         self.rawvfs = vfs
