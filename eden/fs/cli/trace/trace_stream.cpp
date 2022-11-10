@@ -769,7 +769,7 @@ AbsolutePath getSocketPath(AbsolutePathPiece mountRoot) {
     auto configPath = mountRoot + ".eden"_pc + "config"_pc;
     auto config = cpptoml::parse_file(configPath.stringPiece().toString());
     auto socketPath = *config->get_qualified_as<std::string>("Config.socket");
-    return AbsolutePath{socketPath};
+    return canonicalPath(socketPath);
   } else {
     return mountRoot + ".eden"_pc + "socket"_pc;
   }
@@ -784,7 +784,7 @@ int main(int argc, char** argv) {
 
   folly::ScopedEventBaseThread evbThread;
 
-  AbsolutePath mountRoot{FLAGS_mountRoot};
+  AbsolutePath mountRoot = canonicalPath(FLAGS_mountRoot);
   AbsolutePath socketPath = getSocketPath(mountRoot);
 
   if (FLAGS_retroactive && FLAGS_trace == "fs") {
