@@ -75,14 +75,12 @@ def main(pull_request: str,
         rebase_base = default_branch_oid
         for s in stack:
             stdout = sh.run_sapling_command("rebase", "--keep", "-s", s.oid, "-d", rebase_base, "-q", "-T", "{nodechanges|json}")
-            # If there is no output, it appears that '""' is returned as opposed
-            # to '{}', which is a little weird...
-            if not stdout or stdout == '""':
+            mappings = json.loads(stdout) if stdout else None
+            if not mappings:
                 # If there was no stdout, then s.oid was not rebased because
                 # its parent is already the existing `rebase_base`.
                 rebase_base = s.oid
             else:
-                mappings = json.loads(stdout)
                 rebase_base = mappings[s.oid][0]
 
         # Advance base to head to "close" the PR for all PRs.
