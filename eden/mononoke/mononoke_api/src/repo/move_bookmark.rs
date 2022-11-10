@@ -13,9 +13,12 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
+use bookmarks_movement::UpdateBookmarkOp;
 use bytes::Bytes;
+use hooks::HookManagerRef;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
+use skiplist::SkiplistIndexArc;
 use tunables::tunables;
 
 use crate::errors::MononokeError;
@@ -51,36 +54,79 @@ impl RepoContext {
                 })?,
         };
 
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index_arc();
-
-        // Move the bookmark.
-        let mut op = bookmarks_movement::UpdateBookmarkOp::new(
-            &bookmark,
-            BookmarkUpdateTargets {
-                old: old_target,
-                new: target,
-            },
-            if allow_non_fast_forward {
-                BookmarkUpdatePolicy::AnyPermittedByConfig
-            } else {
-                BookmarkUpdatePolicy::FastForwardOnly
-            },
-            BookmarkUpdateReason::ApiRequest,
-        )
-        .with_pushvars(pushvars);
-
-        if !tunables().get_disable_commit_scribe_logging_scs() {
-            op = op.log_new_public_commits_to_scribe();
+        fn make_move_op<'a>(
+            bookmark: &'a BookmarkName,
+            target: ChangesetId,
+            old_target: ChangesetId,
+            allow_non_fast_forward: bool,
+            pushvars: Option<&'a HashMap<String, Bytes>>,
+        ) -> UpdateBookmarkOp<'a> {
+            let mut op = UpdateBookmarkOp::new(
+                bookmark,
+                BookmarkUpdateTargets {
+                    old: old_target,
+                    new: target,
+                },
+                if allow_non_fast_forward {
+                    BookmarkUpdatePolicy::AnyPermittedByConfig
+                } else {
+                    BookmarkUpdatePolicy::FastForwardOnly
+                },
+                BookmarkUpdateReason::ApiRequest,
+            )
+            .with_pushvars(pushvars);
+            if !tunables().get_disable_commit_scribe_logging_scs() {
+                op = op.log_new_public_commits_to_scribe();
+            }
+            op
         }
-
-        op.run(
-            self.ctx(),
-            self.authorization_context(),
-            self.inner_repo(),
-            &lca_hint,
-            self.hook_manager().as_ref(),
-        )
-        .await?;
+        if let Some(redirector) = self.push_redirector.as_ref() {
+            let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
+            if large_bookmark == bookmark {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "Cannot move shared bookmark '{}' from small repo",
+                    bookmark
+                )));
+            }
+            let ctx = self.ctx();
+            let (target, old_target) = futures::try_join!(
+                redirector.get_small_to_large_commit_equivalent(ctx, target),
+                redirector.get_small_to_large_commit_equivalent(ctx, old_target),
+            )?;
+            make_move_op(
+                &large_bookmark,
+                target,
+                old_target,
+                allow_non_fast_forward,
+                pushvars,
+            )
+            .run(
+                self.ctx(),
+                self.authorization_context(),
+                redirector.repo.inner_repo(),
+                &(redirector.repo.skiplist_index_arc() as Arc<dyn LeastCommonAncestorsHint>),
+                redirector.repo.hook_manager(),
+            )
+            .await?;
+            // Wait for bookmark to catch up on small repo
+            redirector.backsync_latest(ctx).await?;
+        } else {
+            make_move_op(
+                &bookmark,
+                target,
+                old_target,
+                allow_non_fast_forward,
+                pushvars,
+            )
+            .run(
+                self.ctx(),
+                self.authorization_context(),
+                self.inner_repo(),
+                &(self.skiplist_index_arc() as Arc<dyn LeastCommonAncestorsHint>),
+                self.hook_manager().as_ref(),
+            )
+            .await?;
+        }
 
         Ok(())
     }
