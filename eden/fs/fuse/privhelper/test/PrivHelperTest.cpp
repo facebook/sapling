@@ -250,7 +250,11 @@ TEST_F(PrivHelperTest, fuseMountPermissions) {
         client_->fuseMount(path, false).get(),
         std::exception,
         folly::to<std::string>(
-            "User doesn't have access to ", path, ": Permission denied"));
+            "User:",
+            getuid(),
+            " doesn't have write access to ",
+            path,
+            ": Permission denied"));
   }
 }
 

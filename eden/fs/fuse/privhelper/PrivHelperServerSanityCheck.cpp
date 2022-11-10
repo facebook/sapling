@@ -106,14 +106,24 @@ void PrivHelperServer::sanityCheckMountPoint(const std::string& mountPoint) {
   if (access(mountPoint.c_str(), W_OK) < 0) {
     auto err = errno;
     throw_<std::domain_error>(
-        "User doesn't have access to ", mountPoint, ": ", folly::errnoStr(err));
+        "User:",
+        getuid(),
+        " doesn't have write access to ",
+        mountPoint,
+        ": ",
+        folly::errnoStr(err));
   }
 
   struct stat st;
   if (stat(mountPoint.c_str(), &st) < 0) {
     auto err = errno;
     throw_<std::domain_error>(
-        "User doesn't have access to ", mountPoint, ": ", folly::errnoStr(err));
+        "User:",
+        getuid(),
+        " cannot stat ",
+        mountPoint,
+        ": ",
+        folly::errnoStr(err));
   }
 
   if (!S_ISDIR(st.st_mode)) {
@@ -121,7 +131,8 @@ void PrivHelperServer::sanityCheckMountPoint(const std::string& mountPoint) {
   }
 
   if (st.st_uid != uid_) {
-    throw_<std::domain_error>("User isn't the owner of: ", mountPoint);
+    throw_<std::domain_error>(
+        "User:", uid_, " isn't the owner of: ", mountPoint);
   }
 
   sanityCheckFs(mountPoint);
