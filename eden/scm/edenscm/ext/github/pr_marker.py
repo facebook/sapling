@@ -13,7 +13,7 @@ from edenscm import mutation, visibility
 from edenscm.ext.github.github_repo_util import get_pull_request_for_node
 from edenscm.ext.github.pullrequest import get_pr_state, PullRequestId
 from edenscm.ext.github.pullrequeststore import PullRequestStore
-from edenscm.i18n import _n
+from edenscm.i18n import _, _n
 from edenscm.node import bin
 from ghstack.github_cli_endpoint import GitHubCLIEndpoint
 
@@ -23,11 +23,27 @@ Node = bytes
 
 def cleanup_landed_pr(repo, dry_run=False):
     """cleanup landed GitHub PRs"""
+    ui = repo.ui
     pr_to_draft = _get_draft_commits(repo)
-    # TODO: add exception handling for getmergedcommits, since it queries GitHub for PR state
-    to_hide, mutation_entries = _get_landed_commits(repo, pr_to_draft)
+
+    try:
+        to_hide, mutation_entries = _get_landed_commits(repo, pr_to_draft)
+    except KeyboardInterrupt:
+        ui.warn(
+            _("reading from GitHub was interrupted, not marking commits as landed\n")
+        )
+        return
+    except Exception as e:
+        ui.warn(
+            _(
+                "warning: failed to read from Github for landed commits (%r), not marking commits as landed\n"
+            )
+            % e
+        )
+        return
+
     _hide_commits(repo, to_hide, mutation_entries, dry_run)
-    repo.ui.status(
+    ui.status(
         _n(
             "marked %d commit as landed\n",
             "marked %d commits as landed\n",
