@@ -102,6 +102,7 @@ with hgdemandimport.deactivated():
 release = lockmod.release
 table = cmdtable.table
 command = cmdtable.command
+command_name = cmdtable.command_name
 
 
 readonly = registrar.command.readonly
@@ -1172,7 +1173,11 @@ the sparse profile from the known %s changeset %s\n"
 
 
 @command(
-    "bookmark|bookmarks|bo|boo|book|bookm|bookma|bookmar",
+    command_name(
+        "bookmark",
+        alias=["bo", "book"],
+        legacy_alias=["bookmarks", "boo", "bookm", "bookma", "bookmar"],
+    ),
     [
         ("f", "force", False, _("force")),
         ("r", "rev", "", _("revision for bookmark action"), _("REV")),
