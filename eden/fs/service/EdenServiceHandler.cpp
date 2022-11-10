@@ -75,6 +75,7 @@
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/SourceLocation.h"
 #include "eden/fs/utils/StatTimes.h"
+#include "eden/fs/utils/String.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
@@ -2398,12 +2399,6 @@ ImmediateFuture<folly::Unit> detachIfBackgrounded(
   }
 }
 
-// string_view::starts_with() is not available until C++20
-// As a workaround, we provide our own implementation of starts_with().
-bool string_view_starts_with(std::string_view str, std::string_view prefix) {
-  return prefix == str.substr(0, prefix.size());
-}
-
 void maybeLogExpensiveGlob(
     const std::vector<std::string>& globs,
     const folly::StringPiece searchRoot,
@@ -2414,7 +2409,7 @@ void maybeLogExpensiveGlob(
 
   if (searchRoot.empty()) {
     for (const auto& glob : globs) {
-      if (string_view_starts_with(glob, "**")) {
+      if (string_view{glob}.starts_with("**")) {
         shouldLogExpensiveGlob = true;
       }
     }
