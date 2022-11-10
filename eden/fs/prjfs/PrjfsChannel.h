@@ -33,6 +33,10 @@ class ReloadableConfig;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
 
+namespace detail {
+struct PrjfsLiveRequest;
+}
+
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
 struct PrjfsTraceEvent : TraceEventBase {
@@ -122,50 +126,6 @@ struct PrjfsTraceEvent : TraceEventBase {
   Details details_;
 };
 
-namespace {
-struct PrjfsLiveRequest {
-  PrjfsLiveRequest(
-      std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus,
-      const std::atomic<size_t>& traceDetailedArguments,
-      PrjfsTraceCallType callType,
-      const PRJ_CALLBACK_DATA& data)
-      : traceBus_{std::move(traceBus)}, type_{callType}, data_{data} {
-    if (traceDetailedArguments.load(std::memory_order_acquire)) {
-      traceBus_->publish(PrjfsTraceEvent::start(
-          callType, data_, formatTraceEventString(data)));
-    } else {
-      traceBus_->publish(PrjfsTraceEvent::start(callType, data_));
-    }
-  }
-
-  PrjfsLiveRequest(PrjfsLiveRequest&& that) noexcept = default;
-  PrjfsLiveRequest& operator=(PrjfsLiveRequest&&) = delete;
-
-  ~PrjfsLiveRequest() {
-    if (traceBus_) {
-      traceBus_->publish(PrjfsTraceEvent::finish(type_, data_));
-    }
-  }
-
-  std::string formatTraceEventString(const PRJ_CALLBACK_DATA& data) {
-    return fmt::format(
-        "{} from {}({}): {}({})",
-        data_.commandId,
-        data.TriggeringProcessImageFileName == nullptr
-            ? PathComponentPiece{"None"}
-            : AbsolutePath(data.TriggeringProcessImageFileName).basename(),
-        data_.pid,
-        apache::thrift::util::enumName(type_, "(unknown)"),
-        data.FilePathName == nullptr ? RelativePath{}
-                                     : RelativePath(data.FilePathName));
-  }
-
-  std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
-  PrjfsTraceCallType type_;
-  PrjfsTraceEvent::PrjfsOperationData data_;
-};
-} // namespace
-
 class PrjfsChannelInner {
  public:
   PrjfsChannelInner(
@@ -191,7 +151,7 @@ class PrjfsChannelInner {
   HRESULT startEnumeration(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<PrjfsLiveRequest> liveRequest,
+      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId);
 
   /**
@@ -202,7 +162,7 @@ class PrjfsChannelInner {
   HRESULT endEnumeration(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<PrjfsLiveRequest> liveRequest,
+      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId);
 
   /**
@@ -213,7 +173,7 @@ class PrjfsChannelInner {
   HRESULT getEnumerationData(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<PrjfsLiveRequest> liveRequest,
+      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId,
       PCWSTR searchExpression,
       PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle);
@@ -226,7 +186,7 @@ class PrjfsChannelInner {
   HRESULT getPlaceholderInfo(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<PrjfsLiveRequest> liveRequest);
+      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest);
 
   /**
    * Test whether a given file exist in the repository.
@@ -236,7 +196,7 @@ class PrjfsChannelInner {
   HRESULT queryFileName(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<PrjfsLiveRequest> liveRequest);
+      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest);
 
   /**
    * Read the content of the given file.
@@ -246,7 +206,7 @@ class PrjfsChannelInner {
   HRESULT getFileData(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<PrjfsLiveRequest> liveRequest,
+      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       UINT64 byteOffset,
       UINT32 length);
 

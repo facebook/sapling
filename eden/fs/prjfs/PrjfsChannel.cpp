@@ -45,6 +45,19 @@ folly::ReadMostlySharedPtr<PrjfsChannelInner> getChannel(
 }
 
 /**
+ * ProjectedFS gives us a full device path for the application that triggered
+ * the IO, this trims it an returns a view onto the last component.
+ *
+ * The lifetime of the returned view is the same as the lifetime of the
+ * argument.
+ */
+std::wstring_view basenameFromAppName(PCWSTR fullAppName) noexcept {
+  auto fullAppNameView = std::wstring_view{fullAppName};
+  auto lastSlash = fullAppNameView.find_last_of(L'\\');
+  return fullAppNameView.substr(lastSlash + 1);
+}
+
+/**
  * Disallow some know applications that force EdenFS to overfetch files.
  *
  * Some backup applications or indexing are ignoring the
@@ -63,10 +76,7 @@ bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
       L"windirstat.exe",
   };
 
-  auto fullAppNameView = std::wstring_view{fullAppName};
-  auto lastSlash = fullAppNameView.find_last_of(L'\\');
-  auto appName = fullAppNameView.substr(lastSlash + 1);
-
+  auto appName = basenameFromAppName(fullAppName);
   for (auto misbehavingApp : misbehavingApps) {
     if (appName == misbehavingApp) {
       XLOG(DBG6) << "Stopping \"" << wideToMultibyteString<std::string>(appName)
@@ -77,6 +87,61 @@ bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
 
   return false;
 }
+} // namespace
+
+namespace detail {
+struct PrjfsLiveRequest {
+  PrjfsLiveRequest(
+      std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus,
+      const std::atomic<size_t>& traceDetailedArguments,
+      PrjfsTraceCallType callType,
+      const PRJ_CALLBACK_DATA& data)
+      : traceBus_{std::move(traceBus)}, type_{callType}, data_{data} {
+    if (traceDetailedArguments.load(std::memory_order_acquire)) {
+      traceBus_->publish(PrjfsTraceEvent::start(
+          callType, data_, formatTraceEventString(data)));
+    } else {
+      traceBus_->publish(PrjfsTraceEvent::start(callType, data_));
+    }
+  }
+
+  PrjfsLiveRequest(PrjfsLiveRequest&& that) noexcept = default;
+  PrjfsLiveRequest& operator=(PrjfsLiveRequest&&) = delete;
+
+  ~PrjfsLiveRequest() {
+    if (traceBus_) {
+      traceBus_->publish(PrjfsTraceEvent::finish(type_, data_));
+    }
+  }
+
+  std::string formatTraceEventString(const PRJ_CALLBACK_DATA& data) {
+    return fmt::format(
+        "{} from {}({}): {}({})",
+        data_.commandId,
+        processPathToName(data.TriggeringProcessImageFileName),
+        data_.pid,
+        apache::thrift::util::enumName(type_, "(unknown)"),
+        data.FilePathName == nullptr ? RelativePath{}
+                                     : RelativePath(data.FilePathName));
+  }
+
+ private:
+  std::string processPathToName(PCWSTR fullAppName) {
+    if (fullAppName == nullptr) {
+      return "None";
+    } else {
+      auto appName = basenameFromAppName(fullAppName);
+      return wideToMultibyteString<std::string>(appName);
+    }
+  }
+
+  std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
+  PrjfsTraceCallType type_;
+  PrjfsTraceEvent::PrjfsOperationData data_;
+};
+} // namespace detail
+
+namespace {
 
 template <class Method, class... Args>
 HRESULT runCallback(
@@ -98,11 +163,11 @@ HRESULT runCallback(
     auto channelPtr = channel.get();
     auto context = std::make_shared<PrjfsRequestContext>(
         std::move(channel), *callbackData);
-    auto liveRequest = std::make_unique<PrjfsLiveRequest>(PrjfsLiveRequest{
+    auto liveRequest = std::make_unique<detail::PrjfsLiveRequest>(
         channelPtr->getTraceBusPtr(),
         channelPtr->getTraceDetailedArguments(),
         callType,
-        *callbackData});
+        *callbackData);
     return (channelPtr->*method)(
         std::move(context),
         callbackData,
@@ -249,7 +314,7 @@ HRESULT notification(
     if (typeIt != notificationTypeMap.end()) {
       nType = typeIt->second;
     }
-    auto liveRequest = PrjfsLiveRequest{
+    auto liveRequest = detail::PrjfsLiveRequest{
         channelPtr->getTraceBusPtr(),
         channelPtr->getTraceDetailedArguments(),
         nType,
@@ -272,7 +337,7 @@ HRESULT notification(
 void detachAndCompleteCallback(
     ImmediateFuture<folly::Unit> future,
     std::shared_ptr<PrjfsRequestContext> context,
-    std::unique_ptr<PrjfsLiveRequest> liveRequest) {
+    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest) {
   auto completionFuture =
       context->catchErrors(std::move(future))
           .ensure([context = std::move(context),
@@ -330,7 +395,7 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
 HRESULT PrjfsChannelInner::startEnumeration(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<PrjfsLiveRequest> liveRequest,
+    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   auto path = RelativePath(callbackData->FilePathName);
@@ -362,7 +427,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
 HRESULT PrjfsChannelInner::endEnumeration(
     std::shared_ptr<PrjfsRequestContext> /* context */,
     const PRJ_CALLBACK_DATA* /* callbackData */,
-    std::unique_ptr<PrjfsLiveRequest> /* liveRequest */,
+    std::unique_ptr<detail::PrjfsLiveRequest> /* liveRequest */,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   FB_LOGF(getStraceLogger(), DBG7, "closedir({})", guid.toString());
@@ -375,7 +440,7 @@ HRESULT PrjfsChannelInner::endEnumeration(
 HRESULT PrjfsChannelInner::getEnumerationData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<PrjfsLiveRequest> liveRequest,
+    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     const GUID* enumerationId,
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) {
@@ -483,7 +548,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
 HRESULT PrjfsChannelInner::getPlaceholderInfo(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<PrjfsLiveRequest> liveRequest) {
+    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest) {
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
@@ -544,7 +609,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
 HRESULT PrjfsChannelInner::queryFileName(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<PrjfsLiveRequest> liveRequest) {
+    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest) {
   auto path = RelativePath(callbackData->FilePathName);
 
   auto fut = makeImmediateFutureWith([this,
@@ -655,7 +720,7 @@ constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 HRESULT PrjfsChannelInner::getFileData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<PrjfsLiveRequest> liveRequest,
+    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     UINT64 byteOffset,
     UINT32 length) {
   auto fut = makeImmediateFutureWith(
