@@ -84,6 +84,7 @@ use metaconfig_types::LfsParams;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -137,10 +138,14 @@ use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use test_repo_factory::TestRepoFactory;
+use tunables::tunables;
+use unbundle::PushRedirector;
+use unbundle::PushRedirectorArgs;
 use warm_bookmarks_cache::BookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 use wireproto_handler::PushRedirectorBase;
 use wireproto_handler::RepoHandlerBase;
+use wireproto_handler::RepoHandlerBaseRef;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -234,6 +239,7 @@ pub struct RepoContext {
     ctx: CoreContext,
     authz: Arc<AuthorizationContext>,
     repo: Arc<Repo>,
+    push_redirector: Option<Arc<PushRedirector<Repo>>>,
 }
 
 impl fmt::Debug for RepoContext {
@@ -246,17 +252,64 @@ pub struct RepoContextBuilder {
     ctx: CoreContext,
     authz: Option<AuthorizationContext>,
     repo: Arc<Repo>,
+    push_redirector: Option<Arc<PushRedirector<Repo>>>,
     bubble_id: Option<BubbleId>,
 }
 
+async fn maybe_push_redirector(
+    ctx: &CoreContext,
+    repo: &Arc<Repo>,
+    repos: &MononokeRepos<Repo>,
+) -> Result<Option<PushRedirector<Repo>>, MononokeError> {
+    if tunables().get_disable_scs_pushredirect() {
+        return Ok(None);
+    }
+    let base = match repo.repo_handler_base().maybe_push_redirector_base.as_ref() {
+        None => return Ok(None),
+        Some(base) => base,
+    };
+    let live_commit_sync_config = repo.live_commit_sync_config();
+    let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo.repoid());
+    if enabled {
+        let large_repo_id = base.common_commit_sync_config.large_repo_id;
+        let large_repo = repos.get_by_id(large_repo_id.id()).ok_or_else(|| {
+            MononokeError::InvalidRequest(format!("Large repo '{}' not found", large_repo_id))
+        })?;
+        Ok(Some(
+            PushRedirectorArgs::new(
+                large_repo,
+                repo.clone(),
+                base.synced_commit_mapping.clone(),
+                base.target_repo_dbs.clone(),
+            )
+            .into_push_redirector(
+                ctx,
+                live_commit_sync_config,
+                repo.inner_repo().repo_cross_repo.sync_lease().clone(),
+            )
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
+        ))
+    } else {
+        Ok(None)
+    }
+}
+
 impl RepoContextBuilder {
-    pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Self {
-        RepoContextBuilder {
+    pub(crate) async fn new(
+        ctx: CoreContext,
+        repo: Arc<Repo>,
+        repos: &MononokeRepos<Repo>,
+    ) -> Result<Self, MononokeError> {
+        let push_redirector = maybe_push_redirector(&ctx, &repo, repos)
+            .await?
+            .map(Arc::new);
+        Ok(RepoContextBuilder {
             ctx,
             authz: None,
             repo,
+            push_redirector,
             bubble_id: None,
-        }
+        })
     }
 
     pub async fn with_bubble<F, R>(mut self, bubble_fetcher: F) -> Result<Self, MononokeError>
@@ -278,7 +331,14 @@ impl RepoContextBuilder {
             self.authz
                 .unwrap_or_else(|| AuthorizationContext::new(&self.ctx)),
         );
-        RepoContext::new(self.ctx, authz, self.repo, self.bubble_id).await
+        RepoContext::new(
+            self.ctx,
+            authz,
+            self.repo,
+            self.bubble_id,
+            self.push_redirector,
+        )
+        .await
     }
 }
 
@@ -726,6 +786,7 @@ impl RepoContext {
         authz: Arc<AuthorizationContext>,
         repo: Arc<Repo>,
         bubble_id: Option<BubbleId>,
+        push_redirector: Option<Arc<PushRedirector<Repo>>>,
     ) -> Result<Self, MononokeError> {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("permissions_model", format!("{:?}", authz));
@@ -743,12 +804,17 @@ impl RepoContext {
             repo
         };
 
-        Ok(Self { ctx, authz, repo })
+        Ok(Self {
+            ctx,
+            authz,
+            repo,
+            push_redirector,
+        })
     }
 
     pub async fn new_test(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
         let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
-        RepoContext::new(ctx, authz, repo, None).await
+        RepoContext::new(ctx, authz, repo, None, None).await
     }
 
     /// The context for this query.

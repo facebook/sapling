@@ -22,12 +22,14 @@ use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use hooks::CrossRepoPushSource;
+use hooks::HookManagerRef;
 use hooks::PushAuthoredBy;
 use mononoke_types::ChangesetId;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
+use skiplist::SkiplistIndexArc;
 use unbundle::PushRedirector;
 
 use crate::errors::MononokeError;
@@ -37,7 +39,7 @@ use crate::Repo;
 impl RepoContext {
     async fn convert_outcome(
         &self,
-        redirector: PushRedirector<Repo>,
+        redirector: &PushRedirector<Repo>,
         outcome: Large<PushrebaseOutcome>,
     ) -> Result<Small<PushrebaseOutcome>, MononokeError> {
         let ctx = self.ctx();
@@ -79,7 +81,6 @@ impl RepoContext {
         // TODO: Remove
         push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
-        maybe_pushredirector: Option<(PushRedirector<Repo>, Large<RepoContext>)>,
         push_authored_by: PushAuthoredBy,
     ) -> Result<PushrebaseOutcome, MononokeError> {
         self.start_write()?;
@@ -136,7 +137,7 @@ impl RepoContext {
         // We CANNOT do remote pushrebase here otherwise it would result in an infinite
         // loop, as this code is used for remote pushrebase. Let's use local pushrebase.
 
-        let outcome = if let Some((redirector, Large(large_repo))) = maybe_pushredirector {
+        let outcome = if let Some(redirector) = self.push_redirector.as_ref() {
             // run hooks on small repo
             bookmarks_movement::run_hooks(
                 ctx,
@@ -155,11 +156,12 @@ impl RepoContext {
                 .await?;
             // Land the mapped changesets on the large repo
             let outcome = LocalPushrebaseClient {
-                ctx: large_repo.ctx(),
-                authz: large_repo.authorization_context(),
-                repo: large_repo.inner_repo(),
-                lca_hint: &(large_repo.skiplist_index_arc() as Arc<dyn LeastCommonAncestorsHint>),
-                hook_manager: large_repo.hook_manager().as_ref(),
+                ctx: self.ctx(),
+                authz: self.authorization_context(),
+                repo: &redirector.repo.inner,
+                lca_hint: &(redirector.repo.skiplist_index_arc()
+                    as Arc<dyn LeastCommonAncestorsHint>),
+                hook_manager: redirector.repo.hook_manager(),
             }
             .pushrebase(
                 &large_bookmark,

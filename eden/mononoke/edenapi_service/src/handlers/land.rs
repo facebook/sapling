@@ -98,7 +98,6 @@ async fn land_stack(
             },
             CrossRepoPushSource::NativeToThisRepo,
             BookmarkKindRestrictions::AnyKind,
-            None, // TODO: Implement push redirection?
             PushAuthoredBy::User,
         )
         .await?;

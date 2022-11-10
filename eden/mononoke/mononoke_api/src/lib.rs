@@ -148,7 +148,9 @@ impl Mononoke {
     ) -> Result<Option<RepoContextBuilder>, MononokeError> {
         match self.repos.get_by_name(name.as_ref()) {
             None => Ok(None),
-            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, Arc::clone(&repo)))),
+            Some(repo) => Ok(Some(
+                RepoContextBuilder::new(ctx, repo, self.repos.as_ref()).await?,
+            )),
         }
     }
 
@@ -162,7 +164,9 @@ impl Mononoke {
     ) -> Result<Option<RepoContextBuilder>, MononokeError> {
         match self.repos.get_by_id(repo_id.id()) {
             None => Ok(None),
-            Some(repo) => Ok(Some(RepoContextBuilder::new(ctx, Arc::clone(&repo)))),
+            Some(repo) => Ok(Some(
+                RepoContextBuilder::new(ctx, repo, self.repos.as_ref()).await?,
+            )),
         }
     }
 

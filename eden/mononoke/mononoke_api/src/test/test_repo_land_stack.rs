@@ -69,7 +69,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             NativeToThisRepo,
             AnyKind,
-            None,
             User,
         )
         .await?;
@@ -91,7 +90,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             NativeToThisRepo,
             AnyKind,
-            None,
             User,
         )
         .await?;
@@ -120,7 +118,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             NativeToThisRepo,
             AnyKind,
-            None,
             User,
         )
         .await?;
