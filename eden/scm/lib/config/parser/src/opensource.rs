@@ -611,4 +611,7 @@ pager=internal:streampager
 
 [config]
 use-rust=true
+
+[hooks]
+post-pull.prmarker=sl debugprmarker
 "###;
