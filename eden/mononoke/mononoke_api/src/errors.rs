@@ -6,7 +6,6 @@
  */
 
 use std::any::Demand;
-use std::any::Provider;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -88,23 +87,6 @@ pub enum MononokeError {
     AuthorizationError(String),
     #[error("internal error: {0}")]
     InternalError(#[source] InternalError),
-}
-
-impl Provider for MononokeError {
-    fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
-        match self {
-            Self::InvalidRequest(..)
-            | Self::MergeConflicts { .. }
-            | Self::PushrebaseConflicts(..)
-            | Self::ServicePermissionDenied { .. }
-            | Self::HookFailure(..)
-            | Self::NotAvailable(..)
-            | Self::AuthorizationError(..) => {}
-            Self::InternalError(error) => {
-                demand.provide_ref::<Backtrace>(error.backtrace());
-            }
-        }
-    }
 }
 
 impl From<Error> for MononokeError {

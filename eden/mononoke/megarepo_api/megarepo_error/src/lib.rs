@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(backtrace)]
 #![feature(error_generic_member_access)]
 #![feature(provide_any)]
 

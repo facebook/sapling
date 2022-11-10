@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(backtrace)]
-
 use std::fs::File;
 use std::io::Write;
 use std::sync::atomic::AtomicBool;

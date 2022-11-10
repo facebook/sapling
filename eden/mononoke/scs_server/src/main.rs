@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(backtrace)]
 #![type_length_limit = "2097152"]
 
 use std::fs::File;
