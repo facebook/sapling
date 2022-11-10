@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::Context;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_movement::DeleteBookmarkOp;
 use bytes::Bytes;
 use mononoke_types::ChangesetId;
 
@@ -44,16 +45,40 @@ impl RepoContext {
                 })?,
         };
 
-        // Delete the bookmark.
-        let op = bookmarks_movement::DeleteBookmarkOp::new(
-            &bookmark,
-            old_target,
-            BookmarkUpdateReason::ApiRequest,
-        )
-        .with_pushvars(pushvars);
-
-        op.run(self.ctx(), self.authorization_context(), self.inner_repo())
-            .await?;
+        fn make_delete_op<'a>(
+            bookmark: &'a BookmarkName,
+            old_target: ChangesetId,
+            pushvars: Option<&'a HashMap<String, Bytes>>,
+        ) -> DeleteBookmarkOp<'a> {
+            DeleteBookmarkOp::new(bookmark, old_target, BookmarkUpdateReason::ApiRequest)
+                .with_pushvars(pushvars)
+        }
+        if let Some(redirector) = self.push_redirector.as_ref() {
+            let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
+            if large_bookmark == bookmark {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "Cannot delete shared bookmark '{}' from small repo",
+                    bookmark
+                )));
+            }
+            let ctx = self.ctx();
+            let old_target = redirector
+                .get_small_to_large_commit_equivalent(ctx, old_target)
+                .await?;
+            make_delete_op(&large_bookmark, old_target, pushvars)
+                .run(
+                    self.ctx(),
+                    self.authorization_context(),
+                    redirector.repo.inner_repo(),
+                )
+                .await?;
+            // Wait for bookmark to catch up on small repo
+            redirector.backsync_latest(ctx).await?;
+        } else {
+            make_delete_op(&bookmark, old_target, pushvars)
+                .run(self.ctx(), self.authorization_context(), self.inner_repo())
+                .await?;
+        }
 
         Ok(())
     }
