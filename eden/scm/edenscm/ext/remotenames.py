@@ -543,7 +543,7 @@ def extsetup(ui):
 
     extensions.afterloaded("journal", hasjournal)
 
-    bookcmd = extensions.wrapcommand(commands.table, "bookmarks", exbookmarks)
+    bookcmd = extensions.wrapcommand(commands.table, "bookmark", exbookmarks)
     pushcmd = extensions.wrapcommand(commands.table, "push", expushcmd)
 
     localrepo.localrepository._wlockfreeprefix.add("selectivepullenabled")

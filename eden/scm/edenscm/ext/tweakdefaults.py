@@ -7,7 +7,7 @@
 
 This extension changes defaults to be more user friendly.
 
-  @prog@ bookmarks  always use unfiltered repo (--hidden)
+  @prog@ bookmark   always use unfiltered repo (--hidden)
   @prog@ log        always follows history (-f)
   @prog@ rebase     aborts without arguments
   @prog@ update     aborts without arguments
@@ -220,8 +220,8 @@ def extsetup(ui) -> None:
             wrapfunction(remotenames, "exbookmarks", unfilteredcmd)
             wrapfunction(remotenames, "expullcmd", pullrebaseffwd)
         else:
-            # otherwise wrap the bookmarks command
-            wrapcommand(commands.table, "bookmarks", unfilteredcmd)
+            # otherwise wrap the bookmark command
+            wrapcommand(commands.table, "bookmark", unfilteredcmd)
 
     extensions.afterloaded("remotenames", afterloaded)
 

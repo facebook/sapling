@@ -379,8 +379,8 @@ def _makerage(ui, repo, **opts) -> str:
             ),
         ),
         (
-            "hg bookmarks --list-subscriptions",
-            lambda: hgcmd("bookmarks", list_subscriptions=True),
+            "hg bookmark --list-subscriptions",
+            lambda: hgcmd("bookmark", list_subscriptions=True),
         ),
         ("sigtrace", lambda: readsigtraces(repo)),
         (

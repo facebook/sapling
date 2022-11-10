@@ -64,7 +64,7 @@ def extsetup(ui) -> None:
         ("", "bundle-store", None, _("force push to go to bundle store (EXPERIMENTAL)"))
     )
 
-    bookcmd = extensions.wrapcommand(commands.table, "bookmarks", _bookmarks)
+    bookcmd = extensions.wrapcommand(commands.table, "bookmark", _bookmarks)
     bookcmd[1].append(
         (
             "",

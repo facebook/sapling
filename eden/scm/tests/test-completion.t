@@ -12,7 +12,7 @@ Show all commands except debug commands
   backout
   bisect
   blackbox
-  bookmarks
+  bookmark
   branch
   bundle
   cat
@@ -326,7 +326,7 @@ Show aliases with -v
   backout
   bisect
   blackbox
-  bookmarks
+  bookmark bookmarks
   branch
   bundle
   cat
@@ -404,7 +404,7 @@ Show all commands + options
   backout: merge, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip
   blackbox: start, end, pattern, timestamp, sid
-  bookmarks: force, rev, delete, strip, rename, inactive, template
+  bookmark: force, rev, delete, strip, rename, inactive, template
   branch: force, clean, new
   bundle: force, rev, base, all, type
   cat: output, rev, decode, include, exclude, template

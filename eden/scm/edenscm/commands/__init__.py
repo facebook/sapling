@@ -1172,7 +1172,7 @@ the sparse profile from the known %s changeset %s\n"
 
 
 @command(
-    "bookmarks|bookmark|bo|boo|book|bookm|bookma|bookmar",
+    "bookmark|bookmarks|bo|boo|book|bookm|bookma|bookmar",
     [
         ("f", "force", False, _("force")),
         ("r", "rev", "", _("revision for bookmark action"), _("REV")),
@@ -1182,7 +1182,7 @@ the sparse profile from the known %s changeset %s\n"
         ("i", "inactive", False, _("mark a bookmark inactive")),
     ]
     + formatteropts,
-    _("@prog@ bookmarks [OPTIONS]... [NAME]..."),
+    _("[OPTIONS]... [NAME]..."),
 )
 def bookmark(ui, repo, *names, **opts):
     """create a new bookmark or list existing bookmarks
