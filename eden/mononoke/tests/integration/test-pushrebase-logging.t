@@ -34,8 +34,5 @@ Push the commits
 Check the logs, ensure that each commit (based on its generation number) has the right changed files count
 and size.
   $ jq < $TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY -c '[.generation, .changed_files_count, .changed_files_size]' | sort
-  [4,1,2] (?)
-  [4,2,4] (?)
-  [5,1,2] (?)
-  [5,2,4] (?)
-BUG! This is non-deterministic, and can return the wrong values ([4,2,4] and [5,1,2])
+  [4,1,2]
+  [5,2,4]

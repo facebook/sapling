@@ -41,7 +41,7 @@ pub struct CommitInfo<'a> {
     changed_files_info: ChangedFilesInfo,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Copy, Serialize)]
 pub struct ChangedFilesInfo {
     changed_files_count: u64,
     changed_files_size: u64,

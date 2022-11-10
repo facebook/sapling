@@ -316,7 +316,10 @@ async fn run_pushrebase(
         uploaded_bonsais,
         hook_rejection_remapper,
     } = action;
-    let changed_files_info: Vec<_> = uploaded_bonsais.iter().map(ChangedFilesInfo::new).collect();
+    let changed_files_info: HashMap<_, _> = uploaded_bonsais
+        .iter()
+        .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(bcs)))
+        .collect();
 
     // FIXME: stop cloning when this fn is async
     let bookmark = bookmark_spec.get_bookmark_name().clone();
@@ -340,21 +343,22 @@ async fn run_pushrebase(
                 cross_repo_push_source,
             )
             .await?;
-            let new_commits: Vec<ChangesetId> =
-                pushrebased_changesets.iter().map(|p| p.id_new).collect();
             log_commits_to_scribe_raw(
                 ctx,
                 repo,
                 Some(&bookmark),
-                new_commits
-                    .into_iter()
-                    .zip(changed_files_info.into_iter())
-                    .map(|(changeset_id, changed_files)| ScribeCommitInfo {
-                        changeset_id,
-                        bubble_id: None,
-                        changed_files,
+                pushrebased_changesets
+                    .iter()
+                    .map(|p| {
+                        Ok(ScribeCommitInfo {
+                            changeset_id: p.id_new,
+                            bubble_id: None,
+                            changed_files: changed_files_info.get(&p.id_old).copied().ok_or_else(
+                                || anyhow!("Missing changed files info for {}", p.id_old),
+                            )?,
+                        })
                     })
-                    .collect(),
+                    .collect::<Result<Vec<_>>>()?,
                 repo.repo_config()
                     .pushrebase
                     .commit_scribe_category
