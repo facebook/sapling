@@ -1422,7 +1422,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
           return makeFuture<CheckoutResult>(newEdenError(
               EdenErrorType::CHECKOUT_IN_PROGRESS,
               fmt::format(
-                  "a previous checkout was interrupted - please 'hg checkout {}' again first",
+                  "a previous checkout was interrupted - please run 'hg update --clean {}' first",
                   dest.value())));
         } else {
           oldParent = src;
@@ -1768,9 +1768,23 @@ ImmediateFuture<Unit> EdenMount::diff(
     auto parentInfo = parentState_.rlock();
 
     if (parentInfo->checkoutInProgress) {
-      return makeImmediateFuture<Unit>(newEdenError(
-          EdenErrorType::CHECKOUT_IN_PROGRESS,
-          "cannot compute status while a checkout is currently in progress"));
+      if (parentInfo->checkoutPid == folly::get_cached_pid() ||
+          !parentInfo->checkoutOriginalTrees) {
+        return makeImmediateFuture<Unit>(newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            "cannot compute status while a checkout is currently in progress"));
+      } else if (getEdenConfig()->allowResumeCheckout.getValue()) {
+        auto [fromCommit, toCommit] = *parentInfo->checkoutOriginalTrees;
+        return makeImmediateFuture<Unit>(newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            fmt::format(
+                "cannot compute status while a checkout is in progress - please run 'hg update --clean {}' to resume it",
+                toCommit)));
+      } else {
+        return makeImmediateFuture<Unit>(newEdenError(
+            EdenErrorType::CHECKOUT_IN_PROGRESS,
+            "cannot compute status for an interrupted checkout operation"));
+      }
     }
 
     if (parentInfo->workingCopyParentRootId != commitHash) {

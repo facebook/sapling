@@ -756,16 +756,15 @@ class UpdateTest(EdenHgTestCase):
         self.eden = self.init_eden_client()
         self.eden.start()
 
-        try:
+        with self.assertRaisesRegex(
+            hgrepo.HgError, f"checkout is in progress.*{bottom}"
+        ):
+            self.assert_status_empty()
+
+        with self.assertRaisesRegex(
+            hgrepo.HgError, f"a previous checkout was interrupted.*{bottom}"
+        ):
             self.repo.update(middle)
-        except hgrepo.HgError as ex:
-            self.assertIn(
-                "a previous checkout was interrupted - please 'hg checkout", str(ex)
-            )
-        else:
-            self.fail(
-                "'hg update' should've failed if eden previously crashed during checkout"
-            )
 
         output = self.repo.update(bottom, clean=True)
         self.assertEqual("update complete\n", output)
