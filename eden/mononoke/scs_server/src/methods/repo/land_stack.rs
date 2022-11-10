@@ -138,10 +138,13 @@ impl LoggableError for LandStackError {
 }
 
 impl SourceControlServiceImpl {
-    async fn maybe_push_redirector(
+    pub(crate) async fn maybe_push_redirector(
         &self,
         repo: &RepoContext,
-    ) -> Result<Option<(PushRedirector<Repo>, Large<RepoContext>)>, LandStackError> {
+    ) -> Result<Option<(PushRedirector<Repo>, Large<RepoContext>)>, errors::ServiceError> {
+        if tunables().get_disable_scs_pushredirect() {
+            return Ok(None);
+        }
         let base = match repo.maybe_push_redirector_base() {
             None => return Ok(None),
             Some(base) => base,
@@ -175,7 +178,8 @@ impl SourceControlServiceImpl {
                     repo.ctx(),
                     live_commit_sync_config,
                     repo.inner_repo().repo_cross_repo.sync_lease().clone(),
-                )?,
+                )
+                .map_err(errors::internal_error)?,
                 Large(large_repo_ctx),
             )))
         } else {
@@ -227,11 +231,7 @@ impl SourceControlServiceImpl {
         let bookmark_restrictions =
             BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;
 
-        let maybe_pushredirector = if tunables().get_disable_scs_pushredirect() {
-            None
-        } else {
-            self.maybe_push_redirector(&repo).await?
-        };
+        let maybe_pushredirector = self.maybe_push_redirector(&repo).await?;
 
         let pushrebase_outcome = repo
             .land_stack(
