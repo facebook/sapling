@@ -1,0 +1,80 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+"""
+mark commits as "Landed" on pull
+"""
+import typing as t
+from collections import defaultdict
+
+from edenscm import mutation, visibility
+from edenscm.ext.github.github_repo_util import get_pull_request_for_node
+from edenscm.ext.github.pullrequest import get_pr_state, PullRequestId
+from edenscm.ext.github.pullrequeststore import PullRequestStore
+from edenscm.i18n import _n
+from edenscm.node import bin
+from ghstack.github_cli_endpoint import GitHubCLIEndpoint
+
+
+Node = bytes
+
+
+def cleanup_landed_pr(repo, dry_run=False):
+    """cleanup landed GitHub PRs"""
+    pr_to_draft = _get_draft_commits(repo)
+    # TODO: add exception handling for getmergedcommits, since it queries GitHub for PR state
+    to_hide, mutation_entries = _get_landed_commits(repo, pr_to_draft)
+    _hide_commits(repo, to_hide, mutation_entries, dry_run)
+    repo.ui.status(
+        _n(
+            "marked %d commit as landed\n",
+            "marked %d commits as landed\n",
+            len(to_hide),
+        )
+        % len(to_hide)
+    )
+
+
+def _get_draft_commits(repo) -> t.Dict[PullRequestId, t.Set[Node]]:
+    pr_to_draft = defaultdict(set)
+    for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
+        node = ctx.node()
+        pr = _get_pr_for_node(repo, ctx, node)
+        if pr:
+            pr_to_draft[pr].add(node)
+    return pr_to_draft
+
+
+def _get_pr_for_node(repo, ctx, node) -> t.Optional[PullRequestId]:
+    store = PullRequestStore(repo)
+    return get_pull_request_for_node(node, store, ctx)
+
+
+def _get_landed_commits(repo, pr_to_draft) -> t.Tuple[t.Set[Node], t.List]:
+    github = GitHubCLIEndpoint()
+    to_hide = set()
+    mutation_entries = []
+    for pr, draft_nodes in pr_to_draft.items():
+        pr_state = get_pr_state(github, pr)
+        if pr_state["merged"]:
+            public_node = bin(pr_state["merge_commit"])
+            for draft_node in draft_nodes:
+                to_hide.add(draft_node)
+                mutation_entries.append(
+                    mutation.createsyntheticentry(
+                        repo, [draft_node], public_node, "land"
+                    )
+                )
+    return to_hide, mutation_entries
+
+
+def _hide_commits(repo, to_hide, mutation_entries, dry_run):
+    if dry_run or not to_hide:
+        return
+    with repo.lock(), repo.transaction("pr_marker"):
+        if mutation.enabled(repo):
+            mutation.recordentries(repo, mutation_entries, skipexisting=False)
+        if visibility.tracking(repo):
+            visibility.remove(repo, to_hide)

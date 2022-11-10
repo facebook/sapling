@@ -15,7 +15,7 @@ class PullRequestIdDict(TypedDict):
     number: int
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class PullRequestId:
     """A structured representation of the fields used to identify a pull
     request: owner, name, number.

@@ -8,10 +8,10 @@
 
 from typing import Optional
 
-from edenscm import registrar
+from edenscm import commands, registrar
 from edenscm.i18n import _
 
-from . import follow, github_repo_util, link, submit, templates
+from . import follow, github_repo_util, link, pr_marker, submit, templates
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -104,6 +104,14 @@ def follow_cmd(ui, repo, *revs, **opts):
     """
     revs = list(revs) + opts.pop("rev", [])
     return follow.follow(ui, repo, *revs)
+
+
+@command("debugprmarker", commands.dryrunopts)
+def debug_pr_marker(ui, repo, **opts):
+    dry_run = opts.get("dry_run")
+    pr_marker.cleanup_landed_pr(repo, dry_run=dry_run)
+    if dry_run:
+        ui.status(_("(this is a dry-run, nothing was actually done)\n"))
 
 
 @templatekeyword("github_repo")
