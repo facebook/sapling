@@ -212,6 +212,12 @@ async def create_pull_requests(
     Each CommitData in `commits` will be updated such that its `.pr` field is
     set appropriately.
     """
+    # Note that `commits` is ordered from the top of the stack to the bottom,
+    # but we want to create PRs from the bottom to the top so the PR numbers are
+    # created in ascending order. We shadow the original `commmits` argument
+    # with a reversed copy to operate bottom-to-top within this function.
+    commits = list(reversed(commits))
+
     head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
     owner, name = repository.get_upstream_owner_and_name()
     # Because these will be "overlapping" pull requests, all share the same
