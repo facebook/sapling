@@ -46,6 +46,7 @@ pub struct TreeState {
     store: FileStore,
     tree: Tree<FileStateV2>,
     root: TreeStateRoot,
+    original_root_id: BlockId,
     // eden_dirstate_path is only used in the case the case that the treestate is
     // wrapping a legacy eden dirstate which is necessary for EdenFS compatility.
     // TODO: Remove once EdenFS has migrated to treestate.
@@ -72,6 +73,7 @@ impl TreeState {
             store,
             tree,
             root,
+            original_root_id: root_id,
             eden_dirstate_path: None,
             case_sensitive,
         })
@@ -88,6 +90,7 @@ impl TreeState {
             store,
             tree,
             root,
+            original_root_id: BlockId(0),
             eden_dirstate_path: None,
             case_sensitive,
         };
@@ -119,6 +122,7 @@ impl TreeState {
             store,
             tree,
             root,
+            original_root_id: BlockId(0),
             eden_dirstate_path: Some(path),
             case_sensitive,
         };
@@ -142,6 +146,11 @@ impl TreeState {
             .ok_or_else(|| anyhow!("missing file name for TreeState"))?
             .to_string_lossy()
             .to_string())
+    }
+
+    /// The root_id from when the treestate was loaded or last saved. Gets updated upon flush.
+    pub fn original_root_id(&self) -> BlockId {
+        self.original_root_id
     }
 
     pub fn dirty(&self) -> bool {
@@ -183,6 +192,7 @@ impl TreeState {
             write_eden_dirstate(&eden_dirstate_path, metadata, entries)?;
         }
 
+        self.original_root_id = result;
         Ok(result)
     }
 

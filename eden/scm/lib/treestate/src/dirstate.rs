@@ -19,6 +19,7 @@ use types::HgId;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
 use crate::treestate::TreeState;
+use crate::ErrorKind;
 
 /// A dirstate object. This maintains .hg/dirstate file
 #[derive(Debug, PartialEq)]
@@ -49,6 +50,23 @@ pub fn flush(config: &dyn Config, root: &Path, treestate: &mut TreeState) -> Res
         let dirstate_input = util::file::read(&dirstate_path)?;
         let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
 
+        // If the dirstate has changed since we last loaded it, don't flush since we might
+        // overwrite data. For instance, if we start running 'hg status', it loads the dirstate and
+        // treestate and starts updating the treestate.  Before status gets to this flush, if
+        // another process, like 'hg checkout' writes to the dirstate/treestate, then if we let
+        // this 'hg status' flush it's old data, we'd result in a dirty working copy where the
+        // clean checkout data was thought to be dirty because we had old treestate data.
+        //
+        // In that situation, just return an error and the client can decide if that's ok or not.
+
+        if let Some(dirstate_fields) = &dirstate.tree_state {
+            if treestate.file_name()? != dirstate_fields.tree_filename
+                || treestate.original_root_id() != dirstate_fields.tree_root_id
+            {
+                return Err(ErrorKind::TreestateOutOfDate.into());
+            }
+        }
+
         dirstate.p1 = treestate
             .get_metadata_by_key("p1")?
             .map_or(Ok(NULL_ID), |p| HgId::from_hex(p.as_bytes()))?;
@@ -62,6 +80,7 @@ pub fn flush(config: &dyn Config, root: &Path, treestate: &mut TreeState) -> Res
         })?;
 
         let root_id = treestate.flush()?;
+        treestate_fields.tree_filename = treestate.file_name()?;
         treestate_fields.tree_root_id = root_id;
 
         let mut dirstate_output: Vec<u8> = Vec::new();

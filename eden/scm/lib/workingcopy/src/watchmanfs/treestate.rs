@@ -18,6 +18,7 @@ use treestate::filestate::StateFlags;
 use treestate::metadata::Metadata;
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
+use treestate::ErrorKind;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
@@ -115,7 +116,15 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
     }
 
     fn flush(self, config: &dyn Config) -> Result<()> {
-        dirstate::flush(config, &self.root, &mut self.treestate.lock())
+        match dirstate::flush(config, &self.root, &mut self.treestate.lock()) {
+            Ok(()) => Ok(()),
+            // If the dirstate was changed before we flushed, that's ok. Let the other write win
+            // since writes during status are just optimizations.
+            Err(e) => match e.downcast_ref::<ErrorKind>() {
+                Some(e) if *e == ErrorKind::TreestateOutOfDate => Ok(()),
+                _ => Err(e),
+            },
+        }
     }
 }
 

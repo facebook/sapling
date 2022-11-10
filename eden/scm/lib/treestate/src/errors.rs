@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ErrorKind {
     #[error("the provided store file is not a valid store file: {0}")]
     NotAStoreFile(PathBuf),
@@ -27,4 +27,6 @@ pub enum ErrorKind {
     CorruptTree,
     #[error("callback error: {0}")]
     CallbackError(String),
+    #[error("dirstate/treestate was out of date and therefore did not flush")]
+    TreestateOutOfDate,
 }
