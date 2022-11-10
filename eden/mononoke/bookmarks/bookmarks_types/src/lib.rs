@@ -213,6 +213,13 @@ impl BookmarkKind {
         BookmarkKind::Publishing,
         BookmarkKind::PullDefaultPublishing,
     ];
+
+    pub fn is_public(&self) -> bool {
+        match self {
+            BookmarkKind::Scratch => false,
+            BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => true,
+        }
+    }
 }
 
 impl std::fmt::Display for BookmarkKind {

@@ -9,7 +9,10 @@
 //! external telemetry.
 
 mod bookmark_logger;
+mod commit_logger;
 
-pub use bookmark_logger::log_bookmark_operation;
-pub use bookmark_logger::BookmarkInfo;
-pub use bookmark_logger::BookmarkOperation;
+pub use crate::bookmark_logger::log_bookmark_operation;
+pub use crate::bookmark_logger::BookmarkInfo;
+pub use crate::bookmark_logger::BookmarkOperation;
+pub use crate::commit_logger::log_new_commits;
+pub use crate::commit_logger::CommitInfo;
