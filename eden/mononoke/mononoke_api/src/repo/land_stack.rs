@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::Context;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -150,16 +149,7 @@ impl RepoContext {
             )
             .await?;
             // Convert changesets to large repo
-            let large_bookmark = redirector
-                .small_to_large_commit_syncer
-                .rename_bookmark(&bookmark)
-                .await?
-                .with_context(|| {
-                    format!(
-                        "Bookmark {} unexpectedly dropped in {:?}",
-                        bookmark, redirector.small_to_large_commit_syncer
-                    )
-                })?;
+            let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
             let small_to_large = redirector
                 .sync_uploaded_changesets(ctx, changesets, Some(&large_bookmark))
                 .await?;

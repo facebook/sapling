@@ -495,6 +495,21 @@ impl<R: Repo> PushRedirector<R> {
         Ok(())
     }
 
+    pub async fn small_to_large_bookmark(
+        &self,
+        bookmark: &BookmarkName,
+    ) -> Result<BookmarkName, Error> {
+        self.small_to_large_commit_syncer
+            .rename_bookmark(bookmark)
+            .await?
+            .with_context(|| {
+                format!(
+                    "Bookmark {} unexpectedly dropped in {:?}",
+                    bookmark, self.small_to_large_commit_syncer
+                )
+            })
+    }
+
     /// Convert `UnbundlePushRebaseResponse` struct in a large-to-small
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_pushrebase_response(
@@ -616,7 +631,7 @@ impl<R: Repo> PushRedirector<R> {
     /// Given, the `source_cs_id` in the small repo, get it's equivalent
     /// in a large repo. See `remap_changeset_expect_rewritten_or_preserved`
     /// for details
-    async fn get_small_to_large_commit_equivalent(
+    pub async fn get_small_to_large_commit_equivalent(
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
@@ -753,17 +768,7 @@ impl<R: Repo> PushRedirector<R> {
             },
         )?;
 
-        let name = self
-            .small_to_large_commit_syncer
-            .rename_bookmark(&name)
-            .await?
-            .ok_or_else(|| {
-                format_err!(
-                    "Bookmark {} unexpectedly dropped in {:?}",
-                    name,
-                    self.small_to_large_commit_syncer
-                )
-            })?;
+        let name = self.small_to_large_bookmark(&name).await?;
 
         Ok(PlainBookmarkPush {
             part_id,
@@ -781,17 +786,7 @@ impl<R: Repo> PushRedirector<R> {
     ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
         match pushrebase_bookmark_spec {
             PushrebaseBookmarkSpec::NormalPushrebase(bookmark) => {
-                let bookmark = self
-                    .small_to_large_commit_syncer
-                    .rename_bookmark(&bookmark)
-                    .await?
-                    .ok_or_else(|| {
-                        format_err!(
-                            "Bookmark {} unexpectedly dropped in {:?}",
-                            bookmark,
-                            self.small_to_large_commit_syncer
-                        )
-                    })?;
+                let bookmark = self.small_to_large_bookmark(&bookmark).await?;
 
                 Ok(PushrebaseBookmarkSpec::NormalPushrebase(bookmark))
             }
