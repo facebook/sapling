@@ -24,7 +24,7 @@ folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
         fmt::format(FMT_STRING("couldn't read {}"), path))};
   }
 
-  return folly::Try{ret};
+  return folly::Try{std::move(ret)};
 }
 
 folly::Try<void> writeFile(AbsolutePathPiece path, folly::ByteRange data) {
@@ -66,7 +66,7 @@ folly::Try<std::vector<PathComponent>> getAllDirectoryEntryNames(
   for (const auto& entry : iter) {
     direntNames.emplace_back(entry.path().filename().c_str());
   }
-  return folly::Try{direntNames};
+  return folly::Try{std::move(direntNames)};
 }
 
 #else
@@ -178,7 +178,7 @@ folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
         GetLastError(), fmt::format(FMT_STRING("couldn't read {}"), path))};
   }
 
-  return folly::Try{ret};
+  return folly::Try{std::move(ret)};
 }
 
 folly::Try<void> writeFile(AbsolutePathPiece path, folly::ByteRange data) {
