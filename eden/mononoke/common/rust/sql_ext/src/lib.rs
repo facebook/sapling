@@ -35,6 +35,8 @@ pub mod _macro_internal {
     pub use sql::Connection;
     pub use sql::WriteResult;
     pub use sql_query_config::SqlQueryConfig;
+    pub use twox_hash::xxh3::Hash128;
+    pub use twox_hash::xxh3::HasherExt;
 
     pub use crate::mononoke_queries::query_with_retry;
     pub use crate::mononoke_queries::query_with_retry_no_cache;

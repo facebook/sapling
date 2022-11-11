@@ -150,15 +150,18 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
-                    let mut hasher = DefaultHasher::new();
-                    stringify!($name).hash(&mut hasher);
+                    let mut hasher = Hash128::with_seed(0);
+
                     $(
                         $pname.hash(&mut hasher);
                     )*
                     $(
                         $lname.hash(&mut hasher);
                     )*
-                    let key = hasher.finish();
+                    stringify!($name).hash(&mut hasher);
+                    stringify!($mysql_q).hash(&mut hasher);
+                    stringify!($sqlite_q).hash(&mut hasher);
+                    let key = hasher.finish_ext();
                     let data = CacheData {key, config: config.caching.as_ref()};
 
 
@@ -332,13 +335,15 @@ fn single_element<T>(it: impl IntoIterator<Item = T>) -> Result<T> {
     )
 }
 
+type Key = u128;
+
 pub struct CacheData<'a> {
-    pub key: u64,
+    pub key: Key,
     pub config: Option<&'a CachingConfig>,
 }
 
 struct QueryCacheStore<'a, F, T> {
-    key: u64,
+    key: Key,
     cache_config: &'a CachingConfig,
     cachelib: CachelibHandler<T>,
     fetcher: F,
@@ -365,19 +370,19 @@ impl<F, V> EntityStore<V> for QueryCacheStore<'_, F, V> {
 }
 
 #[async_trait]
-impl<V, F, Fut> KeyedEntityStore<u64, V> for QueryCacheStore<'_, F, V>
+impl<V, F, Fut> KeyedEntityStore<Key, V> for QueryCacheStore<'_, F, V>
 where
     V: Send + 'static,
     F: Fn() -> Fut + Send + Sync,
     Fut: Future<Output = Result<V>> + Send,
 {
-    fn get_cache_key(&self, key: &u64) -> String {
+    fn get_cache_key(&self, key: &Key) -> String {
         // We just need a unique representation of the key as a String.
         // Let's use base64 as it's smaller than just .to_string()
         base64::encode(&key.to_ne_bytes())
     }
 
-    async fn get_from_db(&self, keys: HashSet<u64>) -> Result<HashMap<u64, V>> {
+    async fn get_from_db(&self, keys: HashSet<Key>) -> Result<HashMap<Key, V>> {
         let key = single_element(keys)?;
         anyhow::ensure!(key == self.key, "Fetched invalid key {}", key);
         let val = (self.fetcher)().await?;
