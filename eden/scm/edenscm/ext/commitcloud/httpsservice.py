@@ -539,6 +539,18 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         response = self._timedsend(path, data)
         return response["sharing_data"]
 
+    @perftrace.tracefunc("Rollback Workspace")
+    def rollbackworkspace(self, reponame, workspace, version):
+        """Rollback the given workspace to a specific version"""
+        self.ui.debug("sending 'rollback_workspace' request\n", component="commitcloud")
+        path = "/commit_cloud/rollback_workspace"
+        data = {
+            "repo_name": reponame,
+            "workspace": workspace,
+            "version": version,
+        }
+        self._timedsend(path, data)
+
 
 # Make sure that the HttpsCommitCloudService is a singleton
 HttpsCommitCloudService = baseservice.SingletonDecorator(_HttpsCommitCloudService)

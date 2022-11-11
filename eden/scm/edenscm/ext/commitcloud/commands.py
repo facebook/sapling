@@ -801,6 +801,51 @@ def checkauthenticated(ui, repo):
 
 
 @subcmd(
+    "rollback",
+    [
+        ("", "to-version", "", _("version to rollback to")),
+    ]
+    + workspace.workspaceopts,
+)
+def cloudrollback(ui, repo, *revs, **opts):
+    """rollback your commit cloud workspace to a specific version that you can get browsing `hg cloud sl --history`"""
+    repo.ignoreautobackup = True
+
+    workspacename = workspace.parseworkspace(ui, opts)
+    if workspacename is None:
+        workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        raise error.Abort(_("the repo is not connected to any workspace"))
+
+    version = opts.get("to_version")
+    if not version:
+        raise error.Abort(_("workspace version must be specified"))
+
+    version = int(version)
+    serv = service.get(ui)
+    reponame = ccutil.getreponame(repo)
+
+    ui.status(
+        _("rollback workspace '%s' for the '%s' repo to match version %d\n")
+        % (workspacename, reponame, version),
+        component="commitcloud",
+    )
+
+    # cloud sync before and after rollback for the current workspace
+    if workspacename == workspace.currentworkspace(repo):
+        cloudsync(ui, repo, **opts)
+        serv.rollbackworkspace(reponame, workspacename, version)
+        cloudsync(ui, repo, **opts)
+    else:
+        serv.rollbackworkspace(reponame, workspacename, version)
+
+    ui.status(
+        _("rollback completed\n"),
+        component="commitcloud",
+    )
+
+
+@subcmd(
     "backup",
     [
         ("r", "rev", [], _("revisions to back up")),

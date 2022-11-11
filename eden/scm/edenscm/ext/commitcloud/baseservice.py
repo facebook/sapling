@@ -263,6 +263,10 @@ class BaseService(pycompat.ABC):
     def shareworkspace(self, reponame, workspace):
         """Enable sharing for the given workspace"""
 
+    @abstractmethod
+    def rollbackworkspace(self, reponame, workspace, version):
+        """Rollback the given workspace to a specific version"""
+
     @staticmethod
     def _makesmartloginfo(data):
         """Returns a SmartlogInfo that supports DAG operations like heads, parents,

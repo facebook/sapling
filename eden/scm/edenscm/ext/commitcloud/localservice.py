@@ -334,6 +334,10 @@ class _LocalService(baseservice.BaseService):
         """Enable sharing for the given workspace"""
         raise NotImplementedError  # Since auth is disabled in tests
 
+    def rollbackworkspace(self, reponame, workspace, version):
+        """Rollback the given workspace to a specific version"""
+        raise NotImplementedError  # Since commit cloud history is not supported in the tests yet
+
 
 # Make sure that the LocalService is a singleton
 LocalService = baseservice.SingletonDecorator(_LocalService)
