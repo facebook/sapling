@@ -11,6 +11,7 @@ use std::fmt;
 use std::fs::File;
 use std::fs::Permissions;
 use std::io::Write;
+use std::num::NonZeroU64;
 use std::ops::Add;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -40,8 +41,8 @@ pub struct RepoLocker {
 struct RepoLockerInner {
     config: LockConfigs,
     store_path: PathBuf,
-    store_lock: Option<LockHandle>,
-    wc_locks: HashMap<PathBuf, LockHandle>,
+    store_lock: Option<(LockHandle, NonZeroU64)>,
+    wc_locks: HashMap<PathBuf, (LockHandle, NonZeroU64)>,
 }
 
 pub struct RepoLockHandle {
@@ -142,13 +143,17 @@ impl RepoLocker {
 
 impl RepoLockerInner {
     pub fn lock_store(&mut self) -> anyhow::Result<(), LockError> {
-        let handle = lock(
-            &self.config,
-            &self.store_path,
-            STORE_NAME,
-            lock_contents()?.as_bytes(),
-        )?;
-        self.store_lock = Some(handle);
+        if let Some(store_lock) = &mut self.store_lock {
+            store_lock.1 = store_lock.1.checked_add(1).unwrap();
+        } else {
+            let handle = lock(
+                &self.config,
+                &self.store_path,
+                STORE_NAME,
+                lock_contents()?.as_bytes(),
+            )?;
+            self.store_lock = Some((handle, NonZeroU64::new(1).unwrap()));
+        }
         Ok(())
     }
 
@@ -158,14 +163,19 @@ impl RepoLockerInner {
                 "must not take store lock before wlock".to_string(),
             ));
         }
-        // TODO: Should we check that this working copy is actually related to this store?
-        let handle = lock(
-            &self.config,
-            &wc_dot_hg,
-            WORKING_COPY_NAME,
-            lock_contents()?.as_bytes(),
-        )?;
-        self.wc_locks.insert(wc_dot_hg, handle);
+        if let Some(wc_lock) = self.wc_locks.get_mut(&wc_dot_hg) {
+            wc_lock.1 = wc_lock.1.checked_add(1).unwrap();
+        } else {
+            // TODO: Should we check that this working copy is actually related to this store?
+            let handle = lock(
+                &self.config,
+                &wc_dot_hg,
+                WORKING_COPY_NAME,
+                lock_contents()?.as_bytes(),
+            )?;
+            self.wc_locks
+                .insert(wc_dot_hg, (handle, NonZeroU64::new(1).unwrap()));
+        }
         Ok(())
     }
 }
@@ -213,13 +223,25 @@ impl Drop for RepoLockHandle {
     fn drop(&mut self) {
         let mut locker = self.locker.lock();
         if self.store {
-            assert!(locker.store_lock.take().is_some());
+            let store_lock = locker.store_lock.as_mut().unwrap();
+            let lock_count = store_lock.1.get();
+            if lock_count > 1 {
+                store_lock.1 = NonZeroU64::new(lock_count - 1).unwrap();
+            } else {
+                let _ = locker.store_lock.take();
+            }
         }
         if let Some(wc_path) = &self.wc_path {
             if locker.store_lock.is_some() {
                 panic!("attempted to release wlock before lock");
             }
-            assert!(locker.wc_locks.remove(wc_path).is_some());
+            let wc_lock = locker.wc_locks.get_mut(wc_path.as_path()).unwrap();
+            let lock_count = wc_lock.1.get();
+            if lock_count > 1 {
+                wc_lock.1 = NonZeroU64::new(lock_count - 1).unwrap();
+            } else {
+                locker.wc_locks.remove(wc_path.as_path());
+            }
         }
     }
 }
@@ -628,6 +650,54 @@ mod tests {
         locker.ensure_store_locked().unwrap();
 
         Ok(())
+    }
+
+    #[test]
+    fn test_taking_lock_twice() -> Result<()> {
+        let store_tmp = tempfile::tempdir()?;
+        let wc_tmp = tempfile::tempdir()?;
+
+        let cfg = BTreeMap::<&str, &str>::new();
+        let locker = RepoLocker::new(&cfg, store_tmp.path().to_path_buf())?;
+
+        let _wclock1 = locker.lock_working_copy(wc_tmp.path().to_path_buf())?;
+        let _wclock2 = locker.lock_working_copy(wc_tmp.path().to_path_buf())?;
+
+        let _lock1 = locker.lock_store()?;
+        let _lock2 = locker.lock_store()?;
+
+        drop(_lock1);
+        assert!(locker.ensure_store_locked().is_ok());
+        drop(_lock2);
+        assert!(locker.ensure_store_locked().is_err());
+        drop(_wclock1);
+        assert!(locker.ensure_working_copy_locked(wc_tmp.path()).is_ok());
+        drop(_wclock2);
+        assert!(locker.ensure_working_copy_locked(wc_tmp.path()).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_bad_lock_release_order() {
+        let store_tmp = tempfile::tempdir().unwrap();
+        let wc_tmp = tempfile::tempdir().unwrap();
+
+        let cfg = BTreeMap::<&str, &str>::new();
+        let locker = RepoLocker::new(&cfg, store_tmp.path().to_path_buf()).unwrap();
+
+        let _wclock1 = locker
+            .lock_working_copy(wc_tmp.path().to_path_buf())
+            .unwrap();
+        let _wclock2 = locker
+            .lock_working_copy(wc_tmp.path().to_path_buf())
+            .unwrap();
+
+        let _lock1 = locker.lock_store().unwrap();
+        let _lock2 = locker.lock_store().unwrap();
+
+        drop(_wclock1);
     }
 
     #[test]
