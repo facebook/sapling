@@ -30,6 +30,7 @@ pub mod _macro_internal {
     pub use sql::queries;
     pub use sql::Connection;
     pub use sql::WriteResult;
+    pub use sql_query_config::SqlQueryConfig;
 
     pub use crate::mononoke_queries::query_with_retry;
 }

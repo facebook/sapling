@@ -37,8 +37,24 @@ macro_rules! mononoke_queries {
             $( $rest )*
         }
     };
+    // Read query with a single expression and cache. Redirect to read query with same expression for mysql and sqlite.
+    (
+        $vi:vis cacheable read $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            $( >list $lname:ident: $ltype:ty )*
+        ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
+        $( $rest:tt )*
+    ) => {
+        $crate::mononoke_queries! {
+            $vi cacheable read $name (
+                $( $pname: $ptype, )*
+                $( >list $lname: $ltype )*
+            ) -> ($( $rtype ),*) { mysql($q) sqlite($q) }
+            $( $rest )*
+        }
+    };
 
-    // Full read query. Call `sql::queries!` and re-export stuff, wrapped in retries, on a new module.
+    // Full read query without cache. Call `sql::queries!` and re-export stuff, wrapped in retries, on a new module.
     (
         $vi:vis read $name:ident (
             $( $pname:ident: $ptype:ty ),* $(,)*
@@ -59,6 +75,7 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use super::*;
 
+                #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
                 // Not possible to retry query with transaction
@@ -67,6 +84,51 @@ macro_rules! mononoke_queries {
 
                 #[allow(dead_code)]
                 pub async fn query(
+                    connection: &Connection,
+                    $( $pname: & $ptype, )*
+                    $( $lname: & [ $ltype ], )*
+                ) -> Result<Vec<($( $rtype, )*)>> {
+                    query_with_retry(
+                        || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
+                    ).await
+                }
+            }
+
+            $crate::mononoke_queries! { $( $rest )* }
+        }
+    };
+
+    // Full read query. Call `sql::queries!` and re-export stuff, wrapped in retries, on a new module.
+    (
+        $vi:vis cacheable read $name:ident (
+            $( $pname:ident: $ptype:ty ),* $(,)*
+            $( >list $lname:ident: $ltype:ty )*
+        ) -> ($( $rtype:ty ),* $(,)*) { mysql($mysql_q:expr) sqlite($sqlite_q:expr) }
+        $( $rest:tt )*
+    ) => {
+        $crate::_macro_internal::paste::item! {
+            $crate::_macro_internal::queries! {
+                pub read [<$name Impl>] (
+                    $( $pname: $ptype, )*
+                    $( >list $lname: $ltype )*
+                ) -> ($( $rtype ),*) { mysql($mysql_q) sqlite($sqlite_q) }
+            }
+
+            #[allow(non_snake_case)]
+            $vi mod $name {
+                #[allow(unused_imports)]
+                use super::*;
+
+                #[allow(unused_imports)]
+                use $crate::_macro_internal::*;
+
+                // Not possible to retry query with transaction
+                #[allow(unused_imports)]
+                pub use [<$name Impl>]::query_with_transaction;
+
+                #[allow(dead_code)]
+                pub async fn query(
+                    _config: &SqlQueryConfig,
                     connection: &Connection,
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
@@ -119,6 +181,7 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use super::*;
 
+                #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
                 // Not possible to retry query with transaction
@@ -179,6 +242,7 @@ macro_rules! mononoke_queries {
                 #[allow(unused_imports)]
                 use super::*;
 
+                #[allow(unused_imports)]
                 use $crate::_macro_internal::*;
 
                 // Not possible to retry query with transaction
@@ -256,13 +320,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     mononoke_queries! {
         read TestQuery(param_str: String, param_uint: u64) -> (u64, Option<i32>, String, i64) {
             "SELECT 44, NULL, {param_str}, {param_uint}"
         }
-        pub(crate) read TestQuery2() -> (u64, Option<String>) {
+        pub(crate) cacheable read TestQuery2() -> (u64, Option<String>) {
             "SELECT 44, NULL"
         }
         pub(super) write TestQuery3(values: (
@@ -278,15 +340,19 @@ mod tests {
         }
     }
 
-    #[allow(dead_code, unreachable_code)]
-    async fn should_compile() -> Result<()> {
-        TestQuery::query(todo!(), todo!(), todo!()).await?;
+    #[allow(dead_code, unreachable_code, unused_variables)]
+    async fn should_compile() -> anyhow::Result<()> {
+        use sql_query_config::SqlQueryConfig;
+
+        let config: &SqlQueryConfig = todo!();
+        let connection: &sql::Connection = todo!();
+        TestQuery::query(connection, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
-        TestQuery2::query(todo!()).await?;
+        TestQuery2::query(config, connection).await?;
         TestQuery2::query_with_transaction(todo!()).await?;
-        TestQuery3::query(todo!(), &[(&12,)]).await?;
+        TestQuery3::query(connection, &[(&12,)]).await?;
         TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
-        TestQuery4::query(todo!(), &"hello").await?;
+        TestQuery4::query(connection, &"hello").await?;
         Ok(())
     }
 }
