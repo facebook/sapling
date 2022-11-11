@@ -8,4 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

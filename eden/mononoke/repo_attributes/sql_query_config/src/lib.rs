@@ -9,6 +9,14 @@
 //!
 //! Retries and caching option for generic SQL queries.
 
+use cachelib::VolatileLruCachePool;
+use caching_ext::MemcacheHandler;
+use memcache::KeyGen;
+
 /// SQL query config.
 #[facet::facet]
-pub struct SqlQueryConfig {}
+pub struct SqlQueryConfig {
+    pub keygen: KeyGen,
+    pub memcache: MemcacheHandler,
+    pub cache_pool: VolatileLruCachePool,
+}

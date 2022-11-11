@@ -5,18 +5,35 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::future::Future;
 use std::time::Duration;
 
+use abomonation::Abomonation;
+use abomonation_derive::Abomonation;
+use anyhow::anyhow;
 use anyhow::Result;
+use async_trait::async_trait;
+use bytes::Bytes;
+use caching_ext::*;
+use maplit::hashmap;
+use maplit::hashset;
+use memcache::KeyGen;
 use retry::retry;
 use retry::RetryLogic;
+use sql_query_config::SqlQueryConfig;
 use tunables::tunables;
 
 const RETRY_ATTEMPTS: usize = 2;
 
 // This wraps around rust/shed/sql::queries, check that macro: https://fburl.com/code/semq9xm3
 /// Define SQL queries that automatically retry on certain errors.
+///
+/// Caching can be enabled on a read query by:
+/// - Adding "cacheable" keyword to your query.
+/// - Make sure all parameters (input) to the query implement the Hash trait.
+/// - Making sure the return values (output) implement Serialize, Deserialize, and Abomonation.
 #[macro_export]
 macro_rules! mononoke_queries {
     () => {};
@@ -88,7 +105,7 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
-                    query_with_retry(
+                    query_with_retry_no_cache(
                         || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
                     ).await
                 }
@@ -128,14 +145,27 @@ macro_rules! mononoke_queries {
 
                 #[allow(dead_code)]
                 pub async fn query(
-                    _config: &SqlQueryConfig,
+                    config: &SqlQueryConfig,
                     connection: &Connection,
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
-                    query_with_retry(
-                        || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
-                    ).await
+                    let mut hasher = DefaultHasher::new();
+                    stringify!($name).hash(&mut hasher);
+                    $(
+                        $pname.hash(&mut hasher);
+                    )*
+                    $(
+                        $lname.hash(&mut hasher);
+                    )*
+                    let key = hasher.finish();
+                    let data = CacheData {key, config};
+
+
+                    Ok(query_with_retry(
+                        data,
+                        || async move { Ok(MemcacheWrapper([<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*).await?)) },
+                    ).await?.0)
                 }
             }
 
@@ -194,7 +224,7 @@ macro_rules! mononoke_queries {
                     values: &[($( & $vtype, )*)],
                     $( $pname: & $ptype ),*
                 ) -> Result<WriteResult> {
-                    query_with_retry(
+                    query_with_retry_no_cache(
                         || [<$name Impl>]::query(connection, values $( , $pname )* ),
                     ).await
                 }
@@ -255,7 +285,7 @@ macro_rules! mononoke_queries {
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<WriteResult> {
-                    query_with_retry(
+                    query_with_retry_no_cache(
                         || [<$name Impl>]::query(connection, $( $pname, )* $( $lname, )*),
                     ).await
                 }
@@ -294,7 +324,90 @@ fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
     false
 }
 
-pub async fn query_with_retry<T, Fut>(mut do_query: impl FnMut() -> Fut + Send) -> Result<T>
+fn single_element<T>(it: impl IntoIterator<Item = T>) -> Result<T> {
+    iterhelpers::get_only_item(
+        it,
+        || anyhow!("No keys"),
+        |_, _| anyhow!("More than one key"),
+    )
+}
+
+pub struct CacheData<'a> {
+    key: u64,
+    config: &'a SqlQueryConfig,
+}
+
+struct QueryCacheStore<'a, F, T> {
+    data: CacheData<'a>,
+    cachelib: CachelibHandler<T>,
+    fetcher: F,
+}
+
+impl<F, V> EntityStore<V> for QueryCacheStore<'_, F, V> {
+    fn cachelib(&self) -> &CachelibHandler<V> {
+        &self.cachelib
+    }
+
+    fn keygen(&self) -> &KeyGen {
+        &self.data.config.keygen
+    }
+
+    fn memcache(&self) -> &MemcacheHandler {
+        &self.data.config.memcache
+    }
+
+    fn cache_determinator(&self, _v: &V) -> CacheDisposition {
+        CacheDisposition::Cache(CacheTtl::NoTtl)
+    }
+
+    caching_ext::impl_singleton_stats!("sql");
+}
+
+#[async_trait]
+impl<V, F, Fut> KeyedEntityStore<u64, V> for QueryCacheStore<'_, F, V>
+where
+    V: Send + 'static,
+    F: Fn() -> Fut + Send + Sync,
+    Fut: Future<Output = Result<V>> + Send,
+{
+    fn get_cache_key(&self, key: &u64) -> String {
+        // We just need a unique representation of the key as a String.
+        // Let's use base64 as it's smaller than just .to_string()
+        base64::encode(&key.to_ne_bytes())
+    }
+
+    async fn get_from_db(&self, keys: HashSet<u64>) -> Result<HashMap<u64, V>> {
+        let key = single_element(keys)?;
+        anyhow::ensure!(key == self.data.key, "Fetched invalid key {}", key);
+        let val = (self.fetcher)().await?;
+        Ok(hashmap! { key => val })
+    }
+}
+
+#[derive(Abomonation, Clone)]
+pub struct MemcacheWrapper<T>(pub T);
+
+impl<T> MemcacheEntity for MemcacheWrapper<T>
+where
+    T: serde::Serialize + for<'a> serde::Deserialize<'a>,
+{
+    fn serialize(&self) -> Bytes {
+        serde_cbor::to_vec(&self.0)
+            .expect("Should serialize cleanly")
+            .into()
+    }
+
+    fn deserialize(bytes: Bytes) -> McResult<Self> {
+        match serde_cbor::from_slice(bytes.as_ref()) {
+            Ok(ok) => Ok(Self(ok)),
+            Err(_) => Err(McErrorKind::Deserialization),
+        }
+    }
+}
+
+pub async fn query_with_retry_no_cache<T, Fut>(
+    do_query: impl Fn() -> Fut + Send + Sync,
+) -> Result<T>
 where
     T: Send + 'static,
     Fut: Future<Output = Result<T>>,
@@ -316,6 +429,24 @@ where
     )
     .await?
     .0)
+}
+
+pub async fn query_with_retry<T, Fut>(
+    cache_data: CacheData<'_>,
+    do_query: impl Fn() -> Fut + Send + Sync,
+) -> Result<T>
+where
+    T: Send + Abomonation + MemcacheEntity + Clone + 'static,
+    Fut: Future<Output = Result<T>> + Send,
+{
+    let fetch = || query_with_retry_no_cache(&do_query);
+    let key = cache_data.key;
+    let store = QueryCacheStore {
+        cachelib: cache_data.config.cache_pool.clone().into(),
+        data: cache_data,
+        fetcher: fetch,
+    };
+    Ok(single_element(get_or_fill(store, hashset! {key}).await?)?.1)
 }
 
 #[cfg(test)]
@@ -342,7 +473,7 @@ mod tests {
 
     #[allow(dead_code, unreachable_code, unused_variables)]
     async fn should_compile() -> anyhow::Result<()> {
-        use sql_query_config::SqlQueryConfig;
+        use super::*;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();
