@@ -20,6 +20,7 @@ use futures::future::join_all;
 use futures::stream;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::args::RepoArg;
+use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -62,11 +63,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_app_extension(Fb303AppExtension {})
         .build::<SegmentedChangelogTailerArgs>()?;
 
-    app.run_with_fb303_monitoring(
-        async_main,
-        "segmented_changelog_tailer",
-        cmdlib::monitoring::AliveService,
-    )
+    app.run_with_fb303_monitoring(async_main, "segmented_changelog_tailer", AliveService)
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {

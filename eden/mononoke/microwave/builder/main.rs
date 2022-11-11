@@ -38,6 +38,7 @@ use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;
 use mononoke_api_types::InnerRepo;
+use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -211,5 +212,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .build::<MononokeMicrowaveArgs>()?;
 
-    app.run_with_fb303_monitoring(async_main, "microwave", cmdlib::monitoring::AliveService)
+    app.run_with_fb303_monitoring(async_main, "microwave", AliveService)
 }

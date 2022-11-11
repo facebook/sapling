@@ -63,6 +63,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -1497,7 +1498,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ),
     };
 
-    app.run_with_fb303_monitoring(async_main, "repo_import", cmdlib::monitoring::AliveService)
+    app.run_with_fb303_monitoring(async_main, "repo_import", AliveService)
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {

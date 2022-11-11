@@ -32,6 +32,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mercurial_types::FileBytes;
 use mononoke_app::args::RepoArgs;
+use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
@@ -323,5 +324,5 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_app_extension(Fb303AppExtension {})
         .build::<AliasVerifyArgs>()?;
 
-    app.run_with_fb303_monitoring(async_main, "aliasverify", cmdlib::monitoring::AliveService)
+    app.run_with_fb303_monitoring(async_main, "aliasverify", AliveService)
 }
