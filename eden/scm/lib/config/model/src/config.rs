@@ -18,7 +18,7 @@ use crate::convert::FromConfigValue;
 use crate::Result;
 
 /// Readable config. This can be used as a trait object.
-#[auto_impl::auto_impl(&, Arc)]
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait Config {
     /// Get config names in the given section. Sorted by insertion order.
     fn keys(&self, section: &str) -> Vec<Text>;

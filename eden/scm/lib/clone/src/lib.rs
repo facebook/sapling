@@ -135,6 +135,7 @@ pub fn init_working_copy(
         file_store.clone(),
         &mut ts,
         target,
+        repo.locker(),
     ) {
         Ok(stats) => {
             logger.info(format!("{}", stats));

@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::Config;
 use parking_lot::Mutex;
+use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
@@ -29,7 +29,7 @@ pub trait WatchmanTreeStateWrite {
 
     fn set_clock(&mut self, clock: Clock) -> Result<()>;
 
-    fn flush(self, config: &dyn Config) -> Result<()>;
+    fn flush(self, locker: &RepoLocker) -> Result<()>;
 }
 
 pub trait WatchmanTreeStateRead {
@@ -115,8 +115,8 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
         Ok(())
     }
 
-    fn flush(self, config: &dyn Config) -> Result<()> {
-        match dirstate::flush(config, &self.root, &mut self.treestate.lock()) {
+    fn flush(self, locker: &RepoLocker) -> Result<()> {
+        match dirstate::flush(&self.root, &mut self.treestate.lock(), locker) {
             Ok(()) => Ok(()),
             // If the dirstate was changed before we flushed, that's ok. Let the other write win
             // since writes during status are just optimizations.

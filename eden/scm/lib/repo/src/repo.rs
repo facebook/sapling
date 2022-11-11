@@ -23,6 +23,7 @@ use hgcommits::DagCommits;
 use metalog::MetaLog;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use repolock::RepoLocker;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::trait_impls::ArcFileStore;
@@ -67,6 +68,7 @@ pub struct Repo {
     dag_commits: Option<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>>,
     file_store: Option<Arc<dyn RefreshableReadFileContents<Error = anyhow::Error> + Send + Sync>>,
     tree_store: Option<Arc<dyn RefreshableTreeStore + Send + Sync>>,
+    locker: Arc<RepoLocker>,
 }
 
 impl Repo {
@@ -157,6 +159,8 @@ impl Repo {
         let requirements = Requirements::open(&dot_hg_path.join("requires"))?;
         let store_requirements = Requirements::open(&store_path.join("requires"))?;
 
+        let locker = Arc::new(RepoLocker::new(&config, store_path.clone())?);
+
         Ok(Repo {
             path,
             ident,
@@ -174,6 +178,7 @@ impl Repo {
             dag_commits: None,
             file_store: None,
             tree_store: None,
+            locker,
         })
     }
 
@@ -215,6 +220,10 @@ impl Repo {
 
     pub fn config_mut(&mut self) -> &mut ConfigSet {
         &mut self.config
+    }
+
+    pub fn locker(&self) -> &Arc<RepoLocker> {
+        &self.locker
     }
 
     pub fn repo_name(&self) -> Option<&str> {
@@ -485,6 +494,7 @@ impl Repo {
             tree_resolver,
             file_store,
             &self.config,
+            self.locker.clone(),
         )?)
     }
 

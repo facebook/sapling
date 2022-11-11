@@ -25,6 +25,7 @@ use pathmatcher::GitignoreMatcher;
 use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
+use repolock::RepoLocker;
 use status::Status;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
@@ -66,6 +67,7 @@ pub struct WorkingCopy {
     tree_resolver: ArcReadTreeManifest,
     filesystem: Mutex<FileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
+    locker: Arc<RepoLocker>,
 }
 
 impl WorkingCopy {
@@ -77,6 +79,7 @@ impl WorkingCopy {
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcReadFileContents,
         config: &ConfigSet,
+        locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
 
@@ -95,6 +98,7 @@ impl WorkingCopy {
             treestate.clone(),
             tree_resolver.clone(),
             filestore,
+            locker.clone(),
         )?);
 
         Ok(WorkingCopy {
@@ -103,6 +107,7 @@ impl WorkingCopy {
             tree_resolver,
             filesystem,
             ignore_matcher,
+            locker,
         })
     }
 
@@ -158,6 +163,7 @@ impl WorkingCopy {
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
+        locker: Arc<RepoLocker>,
     ) -> Result<FileSystem> {
         let inner: Box<dyn PendingChanges + Send> = match file_system_type {
             FileSystemType::Normal => Box::new(PhysicalFileSystem::new(
@@ -173,6 +179,7 @@ impl WorkingCopy {
                 treestate.clone(),
                 tree_resolver,
                 store.clone(),
+                locker,
             )?),
             FileSystemType::Eden => {
                 #[cfg(not(feature = "eden"))]

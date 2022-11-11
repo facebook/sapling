@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-use configmodel::Config;
+use repolock::RepoLocker;
 use serde::Deserialize;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
@@ -139,8 +139,8 @@ impl WatchmanPendingChanges {
     pub fn persist(
         &mut self,
         mut treestate: impl WatchmanTreeStateWrite,
-        config: &dyn Config,
         should_update_clock: bool,
+        locker: &RepoLocker,
     ) -> Result<()> {
         let mut wrote = false;
         for path in self.needs_clear.iter() {
@@ -166,7 +166,7 @@ impl WatchmanPendingChanges {
             treestate.set_clock(self.clock.clone())?;
         }
 
-        treestate.flush(config)
+        treestate.flush(locker)
     }
 }
 
@@ -184,7 +184,7 @@ mod tests {
     use std::collections::HashSet;
 
     use anyhow::Result;
-    use configmodel::Config;
+    use repolock::RepoLocker;
     use types::RepoPath;
     use types::RepoPathBuf;
     use watchman_client::prelude::*;
@@ -246,7 +246,7 @@ mod tests {
             Ok(())
         }
 
-        fn flush(self, _config: &dyn Config) -> Result<()> {
+        fn flush(self, _locker: &RepoLocker) -> Result<()> {
             Ok(())
         }
     }

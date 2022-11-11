@@ -1163,7 +1163,7 @@ pub fn checkout(
     // 4. Update the treestate parents, dirstate
     wc.set_parents(&mut [target_commit].iter())?;
     record_updates(&plan, &wc.vfs(), &mut wc.treestate().lock())?;
-    dirstate::flush(&repo.config(), wc.vfs().root(), &mut wc.treestate().lock())?;
+    dirstate::flush(wc.vfs().root(), &mut wc.treestate().lock(), repo.locker())?;
 
     Ok(plan.stats())
 }

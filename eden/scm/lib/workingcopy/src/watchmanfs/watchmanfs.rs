@@ -17,6 +17,7 @@ use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::Matcher;
+use repolock::RepoLocker;
 use treestate::treestate::TreeState;
 use vfs::VFS;
 use watchman_client::prelude::*;
@@ -37,6 +38,7 @@ pub struct WatchmanFileSystem {
     treestate: Arc<Mutex<TreeState>>,
     tree_resolver: ArcReadTreeManifest,
     store: ArcReadFileContents,
+    locker: Arc<RepoLocker>,
 }
 
 impl WatchmanFileSystem {
@@ -45,12 +47,14 @@ impl WatchmanFileSystem {
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         store: ArcReadFileContents,
+        locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         Ok(WatchmanFileSystem {
             vfs,
             treestate,
             tree_resolver,
             store,
+            locker,
         })
     }
 
@@ -150,8 +154,8 @@ impl PendingChanges for WatchmanFileSystem {
                 treestate: self.treestate.clone(),
                 root: self.vfs.root(),
             },
-            config,
             should_update_clock,
+            &self.locker,
         )?;
 
         Ok(Box::new(pending_changes.into_iter()))

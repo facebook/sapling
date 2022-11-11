@@ -21,6 +21,7 @@ use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
+use repolock::RepoLocker;
 use storemodel::ReadFileContents;
 use tracing::instrument;
 use treestate::dirstate::Dirstate;
@@ -90,11 +91,12 @@ pub fn checkout(
     file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
     ts: &mut TreeState,
     target: HgId,
+    locker: &RepoLocker,
 ) -> anyhow::Result<CheckoutStats, CheckoutError> {
     let mut state = CheckoutState::default();
     state
         .checkout(
-            config, dot_path, source_mf, target_mf, file_store, ts, target,
+            config, dot_path, source_mf, target_mf, file_store, ts, target, locker,
         )
         .map_err(|err| CheckoutError {
             resumable: state.resumable,
@@ -117,13 +119,14 @@ impl CheckoutState {
         file_store: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
         ts: &mut TreeState,
         target: HgId,
+        locker: &RepoLocker,
     ) -> anyhow::Result<CheckoutStats> {
         let wc_path = match dot_path.parent() {
             Some(p) => p,
             None => bail!("invalid dot path {}", dot_path.display()),
         };
 
-        let _wlock = repolock::lock_working_copy(config, dot_path)?;
+        let _wlock = locker.lock_working_copy(dot_path.to_owned())?;
 
         let mut sparse_overrides = None;
 

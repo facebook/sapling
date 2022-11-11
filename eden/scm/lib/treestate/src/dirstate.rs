@@ -12,7 +12,7 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::Config;
+use repolock::RepoLocker;
 use types::hgid::NULL_ID;
 use types::HgId;
 
@@ -38,14 +38,14 @@ pub struct TreeStateFields {
     pub repack_threshold: Option<u64>,
 }
 
-pub fn flush(config: &dyn Config, root: &Path, treestate: &mut TreeState) -> Result<()> {
+pub fn flush(root: &Path, treestate: &mut TreeState, locker: &RepoLocker) -> Result<()> {
     if treestate.dirty() {
         tracing::debug!("flushing dirty treestate");
         let id = identity::must_sniff_dir(root)?;
         let dot_dir = root.join(id.dot_dir());
         let dirstate_path = dot_dir.join("dirstate");
 
-        let _locked = repolock::lock_working_copy(&config, &dot_dir)?;
+        let _locked = locker.lock_working_copy(dot_dir.clone())?;
 
         let dirstate_input = util::file::read(&dirstate_path)?;
         let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
