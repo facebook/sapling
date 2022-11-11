@@ -8,6 +8,8 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
+abomonation = "0.7"
+abomonation_derive = "0.5"
 anyhow = "1.0.65"
 async-stream = "0.3"
 async-trait = "0.1.58"
@@ -25,10 +27,12 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+serde = { version = "1.0.136", features = ["derive", "rc"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 thiserror = "1.0.36"
 
 [dev-dependencies]

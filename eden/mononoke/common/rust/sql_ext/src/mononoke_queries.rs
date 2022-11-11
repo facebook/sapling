@@ -22,7 +22,7 @@ use maplit::hashset;
 use memcache::KeyGen;
 use retry::retry;
 use retry::RetryLogic;
-use sql_query_config::SqlQueryConfig;
+use sql_query_config::CachingConfig;
 use tunables::tunables;
 
 const RETRY_ATTEMPTS: usize = 2;
@@ -159,7 +159,7 @@ macro_rules! mononoke_queries {
                         $lname.hash(&mut hasher);
                     )*
                     let key = hasher.finish();
-                    let data = CacheData {key, config};
+                    let data = CacheData {key, config: config.caching.as_ref()};
 
 
                     Ok(query_with_retry(
@@ -333,12 +333,13 @@ fn single_element<T>(it: impl IntoIterator<Item = T>) -> Result<T> {
 }
 
 pub struct CacheData<'a> {
-    key: u64,
-    config: &'a SqlQueryConfig,
+    pub key: u64,
+    pub config: Option<&'a CachingConfig>,
 }
 
 struct QueryCacheStore<'a, F, T> {
-    data: CacheData<'a>,
+    key: u64,
+    cache_config: &'a CachingConfig,
     cachelib: CachelibHandler<T>,
     fetcher: F,
 }
@@ -349,11 +350,11 @@ impl<F, V> EntityStore<V> for QueryCacheStore<'_, F, V> {
     }
 
     fn keygen(&self) -> &KeyGen {
-        &self.data.config.keygen
+        &self.cache_config.keygen
     }
 
     fn memcache(&self) -> &MemcacheHandler {
-        &self.data.config.memcache
+        &self.cache_config.memcache
     }
 
     fn cache_determinator(&self, _v: &V) -> CacheDisposition {
@@ -378,7 +379,7 @@ where
 
     async fn get_from_db(&self, keys: HashSet<u64>) -> Result<HashMap<u64, V>> {
         let key = single_element(keys)?;
-        anyhow::ensure!(key == self.data.key, "Fetched invalid key {}", key);
+        anyhow::ensure!(key == self.key, "Fetched invalid key {}", key);
         let val = (self.fetcher)().await?;
         Ok(hashmap! { key => val })
     }
@@ -439,14 +440,22 @@ where
     T: Send + Abomonation + MemcacheEntity + Clone + 'static,
     Fut: Future<Output = Result<T>> + Send,
 {
+    if tunables().get_disable_sql_auto_cache() {
+        return query_with_retry_no_cache(&do_query).await;
+    }
     let fetch = || query_with_retry_no_cache(&do_query);
     let key = cache_data.key;
-    let store = QueryCacheStore {
-        cachelib: cache_data.config.cache_pool.clone().into(),
-        data: cache_data,
-        fetcher: fetch,
-    };
-    Ok(single_element(get_or_fill(store, hashset! {key}).await?)?.1)
+    if let Some(config) = cache_data.config.as_ref() {
+        let store = QueryCacheStore {
+            key: cache_data.key,
+            cachelib: config.cache_pool.clone().into(),
+            cache_config: config,
+            fetcher: fetch,
+        };
+        Ok(single_element(get_or_fill(store, hashset! {key}).await?)?.1)
+    } else {
+        fetch().await
+    }
 }
 
 #[cfg(test)]
@@ -473,7 +482,7 @@ mod tests {
 
     #[allow(dead_code, unreachable_code, unused_variables)]
     async fn should_compile() -> anyhow::Result<()> {
-        use super::*;
+        use sql_query_config::SqlQueryConfig;
 
         let config: &SqlQueryConfig = todo!();
         let connection: &sql::Connection = todo!();

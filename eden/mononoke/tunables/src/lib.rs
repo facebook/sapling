@@ -255,6 +255,9 @@ pub struct MononokeTunables {
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate the cache
     blobstore_memcache_sitever: AtomicI64,
+    // Setting this tunable to a new non-zero value and restarting
+    // mononoke hosts will invalidate the cache
+    sql_memcache_sitever: AtomicI64,
 
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate bonsai_hg_mapping cache
@@ -336,6 +339,8 @@ pub struct MononokeTunables {
 
     // Disable SQL queries being retried after admission control errors
     disable_sql_auto_retries: AtomicBool,
+    // Disable SQL queries being cached using `cacheable` keyword
+    disable_sql_auto_cache: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

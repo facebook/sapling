@@ -30,6 +30,7 @@ pub struct CachelibSettings {
     pub phases_cache_size: Option<usize>,
     pub segmented_changelog_cache_size: Option<usize>,
     pub mutable_renames_cache_size: Option<usize>,
+    pub sql_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
     pub blobstore_cachelib_only: bool,
     pub rebalancing_use_lru: bool,
@@ -119,6 +120,7 @@ impl CachelibSettings {
             "mutable-renames-cache-size",
             &self.mutable_renames_cache_size,
         );
+        set_default(&mut defaults, "sql-cache-size", &self.sql_cache_size);
 
         defaults
     }
@@ -162,6 +164,7 @@ impl CachelibSettings {
             &mut self.mutable_renames_cache_size,
             &args.mutable_renames_cache_size,
         );
+        replace(&mut self.sql_cache_size, &args.sql_cache_size);
     }
 }
 
@@ -185,6 +188,7 @@ impl Default for CachelibSettings {
             phases_cache_size: None,
             segmented_changelog_cache_size: None,
             mutable_renames_cache_size: None,
+            sql_cache_size: None,
             expected_item_size_bytes: None,
             blobstore_cachelib_only: false,
             rebalancing_use_lru: false,

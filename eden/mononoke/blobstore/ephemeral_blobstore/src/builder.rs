@@ -15,6 +15,7 @@ use metaconfig_types::BubbleDeletionMode;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
+use sql_query_config::SqlQueryConfig;
 
 use crate::store::RepoEphemeralStore;
 
@@ -39,6 +40,7 @@ impl RepoEphemeralStoreBuilder {
         self,
         repo_id: RepositoryId,
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
+        sql_query_config: Arc<SqlQueryConfig>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
         bubble_deletion_mode: BubbleDeletionMode,
@@ -47,6 +49,7 @@ impl RepoEphemeralStoreBuilder {
             repo_id,
             self.connections,
             blobstore,
+            sql_query_config,
             initial_bubble_lifespan,
             bubble_expiration_grace,
             bubble_deletion_mode,

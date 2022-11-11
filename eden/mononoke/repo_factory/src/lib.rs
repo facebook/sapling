@@ -83,6 +83,8 @@ use hooks::HookManager;
 use hooks_content_stores::RepoFileContentManager;
 use hooks_content_stores::TextOnlyFileContentManager;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use memcache::KeyGen;
+use memcache::MemcacheClient;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::CachedHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
@@ -147,6 +149,8 @@ use sql::SqlConnectionsWithSchema;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_query_config::ArcSqlQueryConfig;
+use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
@@ -1079,6 +1083,7 @@ impl RepoFactory {
 
     pub async fn repo_ephemeral_store(
         &self,
+        sql_query_config: &ArcSqlQueryConfig,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcRepoEphemeralStore> {
@@ -1095,6 +1100,7 @@ impl RepoFactory {
             .build(
                 repo_identity.id(),
                 blobstore,
+                sql_query_config.clone(),
                 ephemeral_config.initial_bubble_lifespan,
                 ephemeral_config.bubble_expiration_grace,
                 ephemeral_config.bubble_deletion_mode,
@@ -1453,6 +1459,25 @@ impl RepoFactory {
             repo_client_knobs,
             backup_repo_config,
         }))
+    }
+
+    pub async fn sql_query_config(&self) -> Result<ArcSqlQueryConfig> {
+        let caching = if matches!(self.env.caching, Caching::Enabled(_)) {
+            const KEY_PREFIX: &str = "scm.mononoke.sql";
+            const MC_CODEVER: u32 = 0;
+            let sitever: u32 = tunables()
+                .get_sql_memcache_sitever()
+                .try_into()
+                .unwrap_or(0);
+            Some(sql_query_config::CachingConfig {
+                keygen: KeyGen::new(KEY_PREFIX, MC_CODEVER, sitever),
+                memcache: MemcacheClient::new(self.env.fb)?.into(),
+                cache_pool: volatile_pool("sql")?,
+            })
+        } else {
+            None
+        };
+        Ok(Arc::new(SqlQueryConfig { caching }))
     }
 }
 

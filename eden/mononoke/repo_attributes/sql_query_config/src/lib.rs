@@ -13,10 +13,14 @@ use cachelib::VolatileLruCachePool;
 use caching_ext::MemcacheHandler;
 use memcache::KeyGen;
 
-/// SQL query config.
-#[facet::facet]
-pub struct SqlQueryConfig {
+pub struct CachingConfig {
     pub keygen: KeyGen,
     pub memcache: MemcacheHandler,
     pub cache_pool: VolatileLruCachePool,
+}
+
+/// SQL query config.
+#[facet::facet]
+pub struct SqlQueryConfig {
+    pub caching: Option<CachingConfig>,
 }

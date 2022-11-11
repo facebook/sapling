@@ -9,6 +9,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::str::FromStr;
 
+use abomonation_derive::Abomonation;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -181,7 +182,7 @@ const SEC_IN_NS: i64 = 1_000_000_000;
 
 /// Number of non-leap-nanoseconds since January 1, 1970 UTC
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-#[derive(Deserialize, Serialize, mysql::OptTryFromRowField)]
+#[derive(Deserialize, Serialize, mysql::OptTryFromRowField, Abomonation)]
 pub struct Timestamp(i64);
 
 impl Timestamp {

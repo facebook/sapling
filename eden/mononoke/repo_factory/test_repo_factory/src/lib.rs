@@ -112,6 +112,8 @@ use sql::Connection;
 use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::SqlConstruct;
+use sql_query_config::ArcSqlQueryConfig;
+use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
@@ -695,5 +697,10 @@ impl TestRepoFactory {
             StreamingCloneBuilder::from_sql_connections(self.metadata_db.clone().into())
                 .build(repo_identity.id(), repo_blobstore.clone()),
         )
+    }
+
+    /// Sql query config
+    pub fn sql_query_config(&self) -> ArcSqlQueryConfig {
+        Arc::new(SqlQueryConfig { caching: None })
     }
 }

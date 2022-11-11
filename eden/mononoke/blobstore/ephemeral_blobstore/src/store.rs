@@ -22,6 +22,7 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use sql_query_config::SqlQueryConfig;
 
 use crate::bubble::Bubble;
 use crate::bubble::BubbleId;
@@ -35,6 +36,10 @@ struct RepoEphemeralStoreInner {
     /// The backing blobstore where blobs are stored, without any redaction
     /// or repo prefix wrappers.
     pub(crate) blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
+
+    #[derivative(Debug = "ignore")]
+    /// Config used to do SQL queries to underlying DB
+    pub(crate) sql_config: Arc<SqlQueryConfig>,
 
     #[derivative(Debug = "ignore")]
     /// Database used to manage the ephemeral store.
@@ -76,7 +81,7 @@ mononoke_queries! {
          VALUES ({created_at}, {expires_at}, {owner_identity})"
     }
 
-    read SelectBubbleById(
+    cacheable read SelectBubbleById(
         id: BubbleId,
     ) -> (Timestamp, ExpiryStatus, Option<String>) {
         "SELECT expires_at, expired, owner_identity FROM ephemeral_bubbles
@@ -297,14 +302,22 @@ impl RepoEphemeralStoreInner {
     }
 
     async fn open_bubble_raw(&self, bubble_id: BubbleId, fail_on_expired: bool) -> Result<Bubble> {
-        let mut rows =
-            SelectBubbleById::query(&self.connections.read_connection, &bubble_id).await?;
+        let mut rows = SelectBubbleById::query(
+            self.sql_config.as_ref(),
+            &self.connections.read_connection,
+            &bubble_id,
+        )
+        .await?;
 
         if rows.is_empty() {
             // Perhaps the bubble hasn't showed up yet due to replication lag.
             // Let's retry on master just in case.
-            rows = SelectBubbleById::query(&self.connections.read_master_connection, &bubble_id)
-                .await?;
+            rows = SelectBubbleById::query(
+                self.sql_config.as_ref(),
+                &self.connections.read_master_connection,
+                &bubble_id,
+            )
+            .await?;
             if rows.is_empty() {
                 return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
             }
@@ -338,6 +351,7 @@ impl RepoEphemeralStore {
         repo_id: RepositoryId,
         connections: SqlConnections,
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
+        sql_config: Arc<SqlQueryConfig>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
         bubble_deletion_mode: BubbleDeletionMode,
@@ -346,6 +360,7 @@ impl RepoEphemeralStore {
             repo_id,
             inner: Some(Arc::new(RepoEphemeralStoreInner {
                 blobstore,
+                sql_config,
                 connections,
                 initial_bubble_lifespan: to_chrono(initial_bubble_lifespan),
                 bubble_expiration_grace: to_chrono(bubble_expiration_grace),
@@ -479,9 +494,11 @@ mod test {
             REPO_ZERO,
             MononokeScubaSampleBuilder::with_discard(),
         );
+        let sql_config = Arc::new(SqlQueryConfig { caching: None });
         let eph = RepoEphemeralStoreBuilder::with_sqlite_in_memory()?.build(
             REPO_ZERO,
             blobstore.clone(),
+            sql_config,
             initial_lifespan,
             grace_period,
             deletion_mode,
