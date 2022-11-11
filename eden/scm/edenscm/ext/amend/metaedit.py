@@ -115,7 +115,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
 
     There is also automation-friendly JSON input mode which allows the caller
     to provide the mapping between commit and new message and username in the
-    following format:
+    following format::
 
         {
             "<commit_hash>": {
