@@ -36,7 +36,7 @@ use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 use thiserror::Error;
@@ -83,7 +83,7 @@ pub struct SqlChangesets {
     read_master_connection: RendezVousConnection,
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write InsertChangeset(values: (repo_id: RepositoryId, cs_id: ChangesetId, gen: u64)) {
         insert_or_ignore,
         "{insert_or_ignore} INTO changesets (repo_id, cs_id, gen) VALUES {values}"

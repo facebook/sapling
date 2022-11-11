@@ -14,7 +14,7 @@ use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
 const DEFAULT_DB_MSG: &str = "Repo is locked in DB";
@@ -35,7 +35,7 @@ pub trait RepoLock: Send + Sync {
     async fn set_repo_lock(&self, lock_state: RepoLockState) -> Result<bool, Error>;
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write SetRepoLockStatus(repo_id: RepositoryId, state: u8, reason: Option<&str>) {
         none,
         mysql("INSERT INTO repo_lock (repo_id, state, reason)
@@ -192,7 +192,7 @@ impl RepoLock for AlwaysUnlockedRepoLock {
 mod test {
     use super::*;
 
-    queries_with_retry! {
+    mononoke_queries! {
         write InsertState(repo_id: RepositoryId, state: u8, reason: Option<&str>) {
             none,
             "INSERT OR REPLACE INTO repo_lock (repo_id, state, reason)

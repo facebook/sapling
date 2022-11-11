@@ -8,7 +8,7 @@
 use std::collections::HashSet;
 
 use ::sql::Connection;
-use ::sql_ext::queries_with_retry;
+use ::sql_ext::mononoke_queries;
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -27,7 +27,7 @@ use super::BonsaiSvnrevMapping;
 use super::BonsaiSvnrevMappingEntry;
 use super::BonsaisOrSvnrevs;
 
-queries_with_retry! {
+mononoke_queries! {
     write DangerouslyAddSvnrevs(values: (
         repo_id: RepositoryId,
         bcs_id: ChangesetId,

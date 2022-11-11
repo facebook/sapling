@@ -11,7 +11,7 @@ use anyhow::Result;
 use context::CoreContext;
 use context::PerfCounterType;
 use mononoke_types::RepositoryId;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -99,7 +99,7 @@ impl SegmentedChangelogVersionStore {
     }
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write SetVersion(
         repo_id: RepositoryId,
         iddag_version: IdDagVersion,

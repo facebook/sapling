@@ -26,7 +26,7 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
 use slog::debug;
 use sql::Connection;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
 use crate::entry::HgMutationEntry;
@@ -599,7 +599,7 @@ impl HgMutationStore for SqlHgMutationStore {
     }
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write AddChangesets(
         values: (
             repo_id: RepositoryId,

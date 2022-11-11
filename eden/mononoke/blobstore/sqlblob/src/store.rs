@@ -19,7 +19,7 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::Stream;
 use sql::Connection;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use twox_hash::XxHash32;
 use vec1::Vec1;
 use xdb_gc_structs::XdbGc;
@@ -93,7 +93,7 @@ mod types {
 
 pub use self::types::ChunkingMethod;
 
-queries_with_retry! {
+mononoke_queries! {
     write InsertData(values: (id: &str, ctime: i64, chunk_id: &str, chunk_count: u32, chunking_method: ChunkingMethod)) {
         insert_or_ignore,
         "{insert_or_ignore} INTO data (

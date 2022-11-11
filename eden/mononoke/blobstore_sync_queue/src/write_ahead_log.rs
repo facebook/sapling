@@ -32,10 +32,10 @@ use mononoke_types::Timestamp;
 use rand::Rng;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
-use sql::queries;
 use sql::Connection;
 use sql::WriteResult;
 use sql_construct::SqlShardedConstruct;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
 use vec1::Vec1;
 
@@ -429,7 +429,7 @@ async fn insert_entries(
     WalInsertEntry::query(write_connection, &entries_ref).await
 }
 
-queries! {
+mononoke_queries! {
     write WalDeleteEntries(>list ids: u64) {
         none,
         "DELETE FROM blobstore_write_ahead_log WHERE id in {ids}"

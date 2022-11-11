@@ -23,7 +23,7 @@ use sql::Connection;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 use thiserror::Error;
@@ -248,7 +248,7 @@ pub struct SqlSyncedCommitMapping {
     read_master_connection: Connection,
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write InsertMapping(values: (
         large_repo_id: RepositoryId,
         large_bcs_id: ChangesetId,

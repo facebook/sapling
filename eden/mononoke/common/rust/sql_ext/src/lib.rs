@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+mod mononoke_queries;
 #[cfg(not(fbcode_build))]
 mod oss;
 pub mod replication;
-mod retryable_queries;
 mod sqlite;
 
 pub use sql::SqlConnections;
@@ -31,7 +31,7 @@ pub mod _macro_internal {
     pub use sql::Connection;
     pub use sql::WriteResult;
 
-    pub use crate::retryable_queries::query_with_retry;
+    pub use crate::mononoke_queries::query_with_retry;
 }
 
 pub mod facebook {

@@ -30,7 +30,7 @@ use reloader::Reloader;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
 use crate::RedactionConfigBlobstore;
@@ -41,7 +41,7 @@ pub struct SqlRedactedContentStore {
     write_connection: Connection,
 }
 
-queries_with_retry! {
+mononoke_queries! {
 
     write InsertRedactedBlobs(
         values: (content_key: String, task: String, add_timestamp: Timestamp, log_only: bool)

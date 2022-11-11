@@ -16,7 +16,7 @@ use mononoke_types::RepositoryId;
 use repo_blobstore::ArcRepoBlobstore;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use thiserror::Error;
 
@@ -57,7 +57,7 @@ impl RevlogStreamingChunks {
     }
 }
 
-queries_with_retry! {
+mononoke_queries! {
     read CountChunks(repo_id: RepositoryId, tag: &str) -> (u64) {
         "SELECT count(*)
          FROM streaming_changelog_chunks

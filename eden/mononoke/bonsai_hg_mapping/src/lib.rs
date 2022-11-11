@@ -27,7 +27,7 @@ use rendezvous::TunablesRendezVousController;
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -195,7 +195,7 @@ pub struct SqlBonsaiHgMapping {
     overwrite: bool,
 }
 
-queries_with_retry! {
+mononoke_queries! {
     // Sett almost identical ReplaceMapping below
     write InsertMapping(values: (
         repo_id: RepositoryId,

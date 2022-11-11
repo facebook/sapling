@@ -18,7 +18,7 @@ const RETRY_ATTEMPTS: usize = 2;
 // This wraps around rust/shed/sql::queries, check that macro: https://fburl.com/code/semq9xm3
 /// Define SQL queries that automatically retry on certain errors.
 #[macro_export]
-macro_rules! queries_with_retry {
+macro_rules! mononoke_queries {
     () => {};
 
     // Read query with a single expression. Redirect to read query with same expression for mysql and sqlite.
@@ -29,7 +29,7 @@ macro_rules! queries_with_retry {
         ) -> ($( $rtype:ty ),* $(,)*) { $q:expr }
         $( $rest:tt )*
     ) => {
-        $crate::queries_with_retry! {
+        $crate::mononoke_queries! {
             $vi read $name (
                 $( $pname: $ptype, )*
                 $( >list $lname: $ltype )*
@@ -77,7 +77,7 @@ macro_rules! queries_with_retry {
                 }
             }
 
-            $crate::queries_with_retry! { $( $rest )* }
+            $crate::mononoke_queries! { $( $rest )* }
         }
     };
 
@@ -89,7 +89,7 @@ macro_rules! queries_with_retry {
         ) { $qtype:ident, $q:expr }
         $( $rest:tt )*
     ) => {
-        $crate::queries_with_retry! {
+        $crate::mononoke_queries! {
             $vi write $name (
                 values: ( $( $vname: $vtype ),* )
                 $( , $pname: $ptype )*
@@ -137,7 +137,7 @@ macro_rules! queries_with_retry {
                 }
             }
 
-            $crate::queries_with_retry! { $( $rest )* }
+            $crate::mononoke_queries! { $( $rest )* }
         }
     };
 
@@ -149,7 +149,7 @@ macro_rules! queries_with_retry {
         ) { $qtype:ident, $q:expr }
         $( $rest:tt )*
     ) => {
-        $crate::queries_with_retry! {
+        $crate::mononoke_queries! {
             $vi write $name (
                 $( $pname: $ptype, )*
                 $( >list $lname: $ltype )*
@@ -197,7 +197,7 @@ macro_rules! queries_with_retry {
                 }
             }
 
-            $crate::queries_with_retry! { $( $rest )* }
+            $crate::mononoke_queries! { $( $rest )* }
         }
     };
 
@@ -258,7 +258,7 @@ where
 mod tests {
     use super::*;
 
-    queries_with_retry! {
+    mononoke_queries! {
         read TestQuery(param_str: String, param_uint: u64) -> (u64, Option<i32>, String, i64) {
             "SELECT 44, NULL, {param_str}, {param_uint}"
         }

@@ -26,7 +26,7 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql::Connection;
 use sql::Transaction as SqlTransaction;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use stats::prelude::*;
 
 use crate::store::SelectBookmark;
@@ -46,7 +46,7 @@ define_stats! {
     bookmarks_insert_other_error_attempt_count: timeseries(Rate, Average, Sum),
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write ReplaceBookmarks(
         values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, changeset_id: ChangesetId)
     ) {

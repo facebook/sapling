@@ -32,7 +32,7 @@ use path_hash::PathWithHash;
 use rand::thread_rng;
 use rand::Rng;
 use sql::Connection;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use thiserror::Error as DeriveError;
 use tokio::time::timeout;
@@ -715,7 +715,7 @@ where
     }
 }
 
-queries_with_retry! {
+mononoke_queries! {
     read SelectFilenode(
         repo_id: RepositoryId,
         path_hash: PathHashBytes,

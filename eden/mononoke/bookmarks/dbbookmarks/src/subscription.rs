@@ -22,7 +22,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use rand::Rng;
 use slog::warn;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use stats::prelude::*;
 use tunables::tunables;
 
@@ -199,7 +199,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
     }
 }
 
-queries_with_retry! {
+mononoke_queries! {
     read SelectUpdatedBookmarks(
         repo_id: RepositoryId,
         log_id: u64

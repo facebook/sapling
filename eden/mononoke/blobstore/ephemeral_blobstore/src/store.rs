@@ -20,7 +20,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
 use crate::bubble::Bubble;
@@ -65,7 +65,7 @@ pub struct RepoEphemeralStore {
     inner: Option<Arc<RepoEphemeralStoreInner>>,
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write CreateBubble(
         created_at: Timestamp,
         expires_at: Timestamp,

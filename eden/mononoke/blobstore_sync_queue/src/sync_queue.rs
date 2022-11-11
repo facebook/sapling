@@ -31,7 +31,7 @@ use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use sql::Connection;
 pub use sql_construct::SqlConstruct;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 pub use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -138,7 +138,7 @@ pub struct SqlBlobstoreSyncQueue {
     ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
 }
 
-queries_with_retry! {
+mononoke_queries! {
     write InsertEntry(values: (
         blobstore_key: String,
         blobstore_id: BlobstoreId,

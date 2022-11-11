@@ -9,7 +9,7 @@ use std::collections::HashSet;
 
 use ::sql::Connection;
 use ::sql::Transaction;
-use ::sql_ext::queries_with_retry;
+use ::sql_ext::mononoke_queries;
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -28,7 +28,7 @@ use super::BonsaiGlobalrevMapping;
 use super::BonsaiGlobalrevMappingEntry;
 use super::BonsaisOrGlobalrevs;
 
-queries_with_retry! {
+mononoke_queries! {
     write DangerouslyAddGlobalrevs(values: (
         repo_id: RepositoryId,
         bcs_id: ChangesetId,

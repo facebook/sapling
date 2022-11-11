@@ -39,7 +39,7 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use rand::Rng;
 use sql::Connection;
-use sql_ext::queries_with_retry;
+use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -55,7 +55,7 @@ define_stats! {
     get_bookmark: timeseries(Rate, Sum),
 }
 
-queries_with_retry! {
+mononoke_queries! {
     pub(crate) read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId, Option<u64>) {
         "SELECT changeset_id, log_id
          FROM bookmarks
