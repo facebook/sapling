@@ -2362,8 +2362,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
                                 folly::Unit) {
                    return edenMount->getInodeSlow(relativePath, fetchContext);
                  })
-                 .thenValue([relativePath = std::move(relativePath),
-                             &fetchContext](InodePtr inode) {
+                 .thenValue([relativePath, &fetchContext](InodePtr inode) {
                    return inode->getParentRacy()->removeRecursively(
                        relativePath.basename(),
                        InvalidationRequired::Yes,
