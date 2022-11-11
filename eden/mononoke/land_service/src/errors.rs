@@ -18,7 +18,7 @@ use pushrebase::PushrebaseConflict;
 use pushrebase::PushrebaseError;
 use thiserror::Error as ThisError;
 
-#[derive(ThisError, Debug)]
+#[derive(ThisError, Debug, Clone)]
 pub enum LandChangesetsError {
     #[error("Internal error: {0}")]
     InternalError(land_service_if::InternalError),

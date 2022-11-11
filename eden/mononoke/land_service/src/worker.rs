@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -49,7 +50,10 @@ define_stats! {
     total_request_internal_failure: timeseries(Rate, Sum),
     total_request_canceled: timeseries(Rate, Sum),
 
-    // Duration per changesets landed
+    total_batch_success: timeseries(Rate, Sum),
+    total_batch_failures: timeseries(Rate, Sum),
+
+    // Duration per changesets landed with and without batches
     method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
 }
 
@@ -83,19 +87,48 @@ pub fn setup_worker() -> (EnqueueSender, Shared<BoxFuture<'static, ()>>) {
     .shared();
     (queue_sender, worker)
 }
+
 async fn process_requests(
     requests: Vec<(
         oneshot::Sender<Result<LandChangesetsResponse, LandChangesetsError>>,
         LandChangesetObject,
     )>,
 ) {
-    // TODO: Right now we are processing each request for the batch.
-    // Next, we will process batches of the ones that fit together
+    let mut changesets_batch: BTreeSet<Vec<u8>> = BTreeSet::new();
+    let mut first_land_changeset_object_batched: Option<LandChangesetObject> = None;
+    let mut backup_batch = Vec::new();
+
     for (sender, land_changeset_object) in requests.into_iter() {
-        match sender.send(impl_land_changesets(land_changeset_object).await) {
-            Ok(_) => (),
-            Err(_) => (),
+        // If there is NO pushvars for a request, we batch it
+        if land_changeset_object.request.pushvars.is_none() {
+            if changesets_batch.is_empty() {
+                first_land_changeset_object_batched = Some(land_changeset_object.clone());
+            }
+            changesets_batch.extend(land_changeset_object.request.changesets.clone());
+            backup_batch.push((sender, land_changeset_object));
+        //Otherwise, we just process it individually
+        } else if let Err(err) =
+            sender.send(impl_land_changesets(land_changeset_object.clone()).await)
+        {
+            let mut scuba = land_changeset_object.ctx.scuba().clone();
+            scuba.log_with_msg(
+                        "Failed to send individual response back without batching (i.e., request with pushvars)",
+                        Some(format!("{:?}", err)),
+                    );
         };
+    }
+
+    if let Some(mut land_changeset_object) = first_land_changeset_object_batched {
+        land_changeset_object.request.changesets = changesets_batch;
+
+        let (stats, result) = impl_land_changesets(land_changeset_object.clone())
+            .timed()
+            .await;
+        log_batch_result(land_changeset_object.ctx, &stats, result, backup_batch).await;
+        STATS::method_completion_time_ms.add_value(
+            stats.completion_time.as_millis_unchecked() as i64,
+            ("impl_land_changesets_with_batch".to_string(),),
+        );
     }
 }
 
@@ -224,6 +257,59 @@ async fn process_land_changesets_request(
                 .map(conversion_helpers::convert_changeset_id_to_vec_binary),
         },
     })
+}
+
+async fn log_batch_result(
+    ctx: CoreContext,
+    stats: &FutureStats,
+    result: Result<LandChangesetsResponse, LandChangesetsError>,
+    backup_batch: Vec<(
+        oneshot::Sender<Result<LandChangesetsResponse, LandChangesetsError>>,
+        LandChangesetObject,
+    )>,
+) {
+    let mut scuba = ctx.scuba().clone();
+    let batch_size = backup_batch.len();
+
+    match result {
+        Ok(ref response) => {
+            // if batched request worked, send response back for each request
+            for (sender, _) in backup_batch.into_iter() {
+                if let Err(err) = sender.send(result.clone()) {
+                    scuba.log_with_msg(
+                        "Failed sending individual response back after batching completed",
+                        Some(format!("{:?}", err)),
+                    );
+                };
+            }
+            response.add_scuba_response(&mut scuba);
+            STATS::total_batch_success.add_value(1);
+            scuba.log_with_msg(
+                format!("Batching {} requests completed successfully", batch_size).as_str(),
+                None,
+            );
+        }
+        Err(err) => {
+            STATS::total_batch_failures.add_value(1);
+            scuba.log_with_msg(
+                format!("Batching {} requests failed", batch_size).as_str(),
+                None,
+            );
+            scuba.add("error batching", err.to_string());
+            // if found error, process requests individually
+            for (sender, land_changeset_object) in backup_batch.into_iter() {
+                if let Err(err) = sender.send(impl_land_changesets(land_changeset_object).await) {
+                    scuba.log_with_msg(
+                        "Failed sending individual response back after batching failed",
+                        Some(format!("{:?}", err)),
+                    );
+                };
+            }
+        }
+    };
+
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+    scuba.add_future_stats(stats);
 }
 
 fn log_result<T: AddScubaResponse>(
