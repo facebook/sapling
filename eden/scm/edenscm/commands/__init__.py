@@ -3803,7 +3803,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 @command(
     "init|ini",
     [
-        ("", "git", False, _("use git as backend (EXPERIMENTAL)")),
+        ("", "git", None, _("use git as backend (EXPERIMENTAL)")),
     ],
     _("[-e CMD] [--remotecmd CMD] [DEST]"),
     norepo=True,
@@ -3822,8 +3822,14 @@ def init(ui, dest=".", **opts):
     Returns 0 on success.
     """
     destpath = ui.expandpath(dest)
-    if opts.get("git"):
+    usegit = opts.get("git")
+    if usegit:
         git.clone(ui, "", destpath)
+    elif usegit is None and ui.configbool("init", "prefer-git"):
+        # In the OSS build, non-git mode doesn't give you a usable repo.
+        raise error.Abort(
+            _("please use '@prog@ init --git %s' for a better experience") % dest
+        )
     elif ui.configbool("format", "use-eager-repo"):
         bindings.eagerepo.EagerRepo.open(destpath)
     else:

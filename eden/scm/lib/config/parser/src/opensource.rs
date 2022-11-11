@@ -614,4 +614,7 @@ use-rust=true
 
 [hooks]
 post-pull.prmarker=sl debugprmarker
+
+[init]
+prefer-git=True
 "###;
