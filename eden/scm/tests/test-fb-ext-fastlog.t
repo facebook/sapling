@@ -1,10 +1,5 @@
 #chg-compatible
-  $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig workingcopy.ruststatus=False
-  $ setconfig experimental.allowfilepeer=True
-
-  $ disable treemanifest
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
+  $ configure modernclient
 
   $ . "$TESTDIR/library.sh"
 
@@ -26,22 +21,15 @@
 
 # Test fastlog
 
-  $ hginit master
-  $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > server=True
-  > serverexpiration=-1
-  > EOF
+  $ newclientrepo master
   $ echo x > x
   $ hg commit -qAm x
   $ echo x >> x
   $ hg commit -Aqm xx
+  $ hg push -q --to master --create
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master shallow -q
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ cd shallow
+  $ newclientrepo shallow test:master_server
   $ echo x >> x
   $ hg commit -Aqm xx2
   $ cd ../master
@@ -51,9 +39,10 @@
   $ hg commit -Aqm xx2-fake-rebased
   $ echo y >> y
   $ hg commit -Aqm yy3
+  $ hg push -q --to master
   $ cd ../shallow
   $ hg pull -q
-  $ hg update tip -q
+  $ hg update master -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ echo x > x
   $ hg commit -qAm xx3
@@ -81,10 +70,9 @@ Case 1: fastlog service calls fails or times out
   > EOF
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
-  32e6611f6149 xx2-fake-rebased draft x
-  0632994590a8 xx draft x
-  b292c1e3311f x draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
 
 Case 2: fastlog returns empty results
 
@@ -96,9 +84,9 @@ Case 2: fastlog returns empty results
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased draft x
-  0632994590a8 xx draft x
-  b292c1e3311f x draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
 
 Case 3: fastlog returns a bad hash
 
@@ -106,9 +94,9 @@ Case 3: fastlog returns a bad hash
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/123456
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased draft x
-  0632994590a8 xx draft x
-  b292c1e3311f x draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
 
 Fastlog succeeds and returns the correct results
 
@@ -116,9 +104,9 @@ Fastlog succeeds and returns the correct results
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/32e6611f6149e85f58def77ee0c22549bb6953a2
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased draft x
-  0632994590a8 xx draft x
-  b292c1e3311f x draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
 
 Fastlog should never get called on draft commits
 

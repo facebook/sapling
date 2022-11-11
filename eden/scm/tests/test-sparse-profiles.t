@@ -3,9 +3,9 @@
 test sparse
 
   $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
   $ enable sparse rebase
-  $ hg init myrepo
-  $ cd myrepo
+  $ newclientrepo myrepo
 
   $ echo a > index.html
   $ echo x > data.py

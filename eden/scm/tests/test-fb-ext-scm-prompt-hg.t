@@ -4,7 +4,7 @@
 To run this test against other shells, use the shell argument, eg:
 run-tests.py --shell=zsh test-scm-prompt*
 
-  $ setconfig workingcopy.ruststatus=False
+  $ configure modernclient
   $ configure mutation-norecord
 
 Initialize scm prompt
@@ -27,9 +27,7 @@ Outside of a repo, should have no output
   $ _scm_prompt
 
 Test basic repo behaviors
-  $ hg init repo
-  $ cmd cd repo
-  (empty)
+  $ newclientrepo repo
   $ echo a > a
   $ cmd hg add a
   (000000000)
@@ -162,34 +160,6 @@ Test remotenames
   $ echo 4b6cc7d5194bd5dbf63970015ec75f8fd1de6dba bookmarks remote/@ > .hg/store/remotenames
   $ cmd
   (4b6cc7d51|remote/@)
-
-Test shared bookmarks
-  $ cmd cd ..
-  $ cmd hg share -B repo share --config "extensions.share="
-  updating working directory
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cmd cd share
-  (42eaf5ca8)
-  $ echo rebase > .hg/bookmarks.current
-  $ cmd
-  (rebase|UPDATE_NEEDED)
-  $ cd ../repo
-
-Test unshared bookmarks
-  $ cmd cd ..
-  $ cmd hg share repo share2 --config "extensions.share="
-  updating working directory
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cmd cd share2
-  (42eaf5ca8)
-  $ cmd hg book unshared
-  (unshared)
-  $ cmd hg up -q ".^"
-  (4b6cc7d51|remote/@)
-  $ echo unshared > .hg/bookmarks.current
-  $ cmd
-  (unshared|remote/@|UPDATE_NEEDED)
-  $ cd ../repo
 
 Test with symlinks to inside of subdir of repo
   $ mkdir subdir

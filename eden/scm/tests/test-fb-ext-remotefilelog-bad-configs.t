@@ -1,28 +1,17 @@
 #chg-compatible
-  $ setconfig workingcopy.ruststatus=False
-  $ setconfig experimental.allowfilepeer=True
-
-  $ disable treemanifest
+  $ configure modernclient
 
 no-check-code
   $ . "$TESTDIR/library.sh"
 
-  $ hginit master
-  $ cd master
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > server=True
-  > EOF
+  $ newclientrepo master
   $ echo x > x
   $ echo y > y
   $ echo z > z
   $ hg commit -qAm xy
+  $ hg push --to master --create -q
 
-  $ cd ..
-
-  $ hgcloneshallow ssh://user@dummy/master shallow -q
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
-  $ cd shallow
+  $ newclientrepo shallow test:master_server
 
 Verify error message when no cachepath specified
   $ hg up -q null
@@ -39,6 +28,5 @@ Verify error message when no fallback specified
   $ rm .hg/hgrc
   $ clearcache
   $ hg up tip
-  abort: no remotefilelog server configured - is your .hg/hgrc trusted?
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
+  abort: working copy is missing information or corrupt: Missing required config item: edenapi.url
   [255]
