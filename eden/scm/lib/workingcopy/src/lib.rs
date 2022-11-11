@@ -8,6 +8,7 @@
 #[cfg(feature = "eden")]
 pub mod edenfs;
 
+mod errors;
 mod filechangedetector;
 pub mod filesystem;
 pub mod physicalfs;

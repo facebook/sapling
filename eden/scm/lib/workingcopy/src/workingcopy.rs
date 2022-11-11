@@ -32,11 +32,13 @@ use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::HgId;
+use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::VFS;
 
 #[cfg(feature = "eden")]
 use crate::edenfs::EdenFileSystem;
+use crate::errors;
 use crate::filesystem::ChangeType;
 use crate::filesystem::FileSystemType;
 use crate::filesystem::PendingChangeResult;
@@ -68,6 +70,7 @@ pub struct WorkingCopy {
     filesystem: Mutex<FileSystem>,
     ignore_matcher: Arc<GitignoreMatcher>,
     locker: Arc<RepoLocker>,
+    dot_hg_path: PathBuf,
 }
 
 impl WorkingCopy {
@@ -101,6 +104,15 @@ impl WorkingCopy {
             locker.clone(),
         )?);
 
+        let root = vfs.root();
+        let ident = match identity::sniff_dir(&root)? {
+            Some(ident) => ident,
+            None => {
+                return Err(errors::RepoNotFound(root.to_string_lossy().to_string()).into());
+            }
+        };
+        let dot_hg_path = vfs.join(RepoPath::from_str(ident.dot_dir())?);
+
         Ok(WorkingCopy {
             vfs,
             treestate,
@@ -108,7 +120,21 @@ impl WorkingCopy {
             filesystem,
             ignore_matcher,
             locker,
+            dot_hg_path,
         })
+    }
+
+    /// Working copy root path, with `.hg`.
+    pub fn dot_hg_path(&self) -> &Path {
+        &self.dot_hg_path
+    }
+
+    pub fn lock(&self) -> Result<repolock::RepoLockHandle, repolock::LockError> {
+        self.locker.lock_working_copy(self.dot_hg_path.clone())
+    }
+
+    pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
+        self.locker.ensure_working_copy_locked(&self.dot_hg_path)
     }
 
     pub fn treestate(&self) -> Arc<Mutex<TreeState>> {

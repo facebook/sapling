@@ -98,6 +98,21 @@ impl RepoLocker {
         Ok(RepoLockHandle::new_store_lock(self.inner.clone()))
     }
 
+    pub fn ensure_store_locked(&self) -> anyhow::Result<(), LockError> {
+        let inner = self.inner.lock();
+        if inner.store_lock.is_some() {
+            Ok(())
+        } else {
+            Err(LockError::NotHeld(
+                inner
+                    .store_path
+                    .join(STORE_NAME)
+                    .to_string_lossy()
+                    .to_string(),
+            ))
+        }
+    }
+
     pub fn lock_working_copy(
         &self,
         wc_dot_hg: PathBuf,
@@ -108,6 +123,20 @@ impl RepoLocker {
             self.inner.clone(),
             wc_dot_hg,
         ))
+    }
+
+    pub fn ensure_working_copy_locked(&self, wc_path: &Path) -> anyhow::Result<(), LockError> {
+        let inner = self.inner.lock();
+        if inner.wc_locks.contains_key(wc_path) {
+            Ok(())
+        } else {
+            Err(LockError::NotHeld(
+                wc_path
+                    .join(WORKING_COPY_NAME)
+                    .to_string_lossy()
+                    .to_string(),
+            ))
+        }
     }
 }
 
@@ -382,6 +411,8 @@ pub enum LockError {
     Io(#[from] IOError),
     #[error("{0}")]
     OutOfOrder(String),
+    #[error("lock is not held: {0}")]
+    NotHeld(String),
 }
 
 #[derive(Debug)]
@@ -571,6 +602,30 @@ mod tests {
                 result => panic!("wlock should be required before lock: {:?}", result),
             };
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_lock() -> Result<()> {
+        let store_tmp = tempfile::tempdir()?;
+        let wc_tmp = tempfile::tempdir()?;
+
+        let cfg = BTreeMap::<&str, &str>::new();
+        let locker = RepoLocker::new(&cfg, store_tmp.path().to_path_buf())?;
+
+        locker
+            .ensure_working_copy_locked(wc_tmp.path())
+            .unwrap_err();
+        locker.ensure_store_locked().unwrap_err();
+
+        let _wlock = locker.lock_working_copy(wc_tmp.path().to_path_buf())?;
+        locker.ensure_working_copy_locked(wc_tmp.path()).unwrap();
+        locker.ensure_store_locked().unwrap_err();
+
+        let _lock = locker.lock_store()?;
+        locker.ensure_working_copy_locked(wc_tmp.path()).unwrap();
+        locker.ensure_store_locked().unwrap();
 
         Ok(())
     }

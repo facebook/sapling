@@ -182,6 +182,14 @@ impl Repo {
         })
     }
 
+    pub fn lock(&self) -> Result<repolock::RepoLockHandle, repolock::LockError> {
+        self.locker.lock_store()
+    }
+
+    pub fn ensure_locked(&self) -> Result<(), repolock::LockError> {
+        self.locker.ensure_store_locked()
+    }
+
     pub fn reload_requires(&mut self) -> Result<()> {
         self.requirements = Requirements::open(&self.dot_hg_path.join("requires"))?;
         self.store_requirements = Requirements::open(&self.store_path.join("requires"))?;
