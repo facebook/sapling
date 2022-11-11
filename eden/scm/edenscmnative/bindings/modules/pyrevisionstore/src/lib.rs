@@ -1238,8 +1238,10 @@ fn make_filescmstore<'a>(
         builder = builder.shared_indexedlog_local(indexedlog_local);
     }
 
-    filestore_builder = filestore_builder.indexedlog_cache(indexedlog_cache.clone());
-    builder = builder.shared_indexedlog_shared(indexedlog_cache.clone());
+    if let Some(ref cache) = indexedlog_cache {
+        filestore_builder = filestore_builder.indexedlog_cache(cache.clone());
+        builder = builder.shared_indexedlog_shared(cache.clone());
+    }
 
     if let Some(lfs_local) = lfs_local {
         filestore_builder = filestore_builder.lfs_local(lfs_local.clone());
@@ -1488,8 +1490,10 @@ fn make_treescmstore<'a>(
         builder = builder.shared_indexedlog_local(indexedlog_local);
     }
 
-    treestore_builder = treestore_builder.indexedlog_cache(indexedlog_cache.clone());
-    builder = builder.shared_indexedlog_shared(indexedlog_cache.clone());
+    if let Some(ref cache) = indexedlog_cache {
+        treestore_builder = treestore_builder.indexedlog_cache(cache.clone());
+        builder = builder.shared_indexedlog_shared(cache.clone());
+    }
 
     let contentstore = Arc::new(builder.build()?);
 

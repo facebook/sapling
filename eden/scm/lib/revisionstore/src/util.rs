@@ -12,47 +12,53 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::Result;
 use configmodel::Config;
-use configmodel::ConfigExt;
 use edenapi::Stats;
 use hgtime::HgTime;
 use thiserror::Error;
 use tracing::Span;
 use util::path::create_dir;
 use util::path::create_shared_dir;
+use util::path::expand_path;
 
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("could not find config option {0}")]
     ConfigNotSet(String),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
-pub fn get_str_config(config: &dyn Config, section: &str, name: &str) -> Result<String> {
+pub fn get_str_config(config: &dyn Config, section: &str, name: &str) -> Result<String, Error> {
     let name = config
         .get(section, name)
         .ok_or_else(|| Error::ConfigNotSet(format!("{}.{}", section, name)))?;
     Ok(name.to_string())
 }
 
-pub fn get_repo_name(config: &dyn Config) -> Result<String> {
+pub fn get_repo_name(config: &dyn Config) -> Result<String, Error> {
     get_str_config(config, "remotefilelog", "reponame")
 }
 
-fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf> {
+fn get_config_cache_path(config: &dyn Config) -> Result<PathBuf, Error> {
     let reponame = get_repo_name(config)?;
-    let config_path: PathBuf = config
-        .get_or_default::<Option<_>>("remotefilelog", "cachepath")?
-        .ok_or_else(|| Error::ConfigNotSet("remotefilelog.cachepath".into()))?;
+    let config_path = match config.get_nonempty("remotefilelog", "cachepath") {
+        Some(path) => expand_path(path),
+        None => return Err(Error::ConfigNotSet("remotefilelog.cachepath".into())),
+    };
     let mut path = PathBuf::new();
-    path.push(config_path);
+    path.push(&config_path);
     create_shared_dir(&path)?;
     path.push(reponame);
     create_shared_dir(&path)?;
     Ok(path)
 }
 
-pub fn get_cache_path(config: &dyn Config, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
+pub fn get_cache_path(
+    config: &dyn Config,
+    suffix: &Option<impl AsRef<Path>>,
+) -> Result<PathBuf, Error> {
     let mut path = get_config_cache_path(config)?;
 
     if let Some(ref suffix) = suffix {
@@ -63,7 +69,10 @@ pub fn get_cache_path(config: &dyn Config, suffix: &Option<impl AsRef<Path>>) ->
     Ok(path)
 }
 
-pub fn get_local_path(local_path: PathBuf, suffix: &Option<impl AsRef<Path>>) -> Result<PathBuf> {
+pub fn get_local_path(
+    local_path: PathBuf,
+    suffix: &Option<impl AsRef<Path>>,
+) -> Result<PathBuf, Error> {
     let mut path = local_path;
     create_dir(&path)?;
 
@@ -75,28 +84,28 @@ pub fn get_local_path(local_path: PathBuf, suffix: &Option<impl AsRef<Path>>) ->
     Ok(path)
 }
 
-pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore");
     create_shared_dir(&path)?;
     Ok(path)
 }
 
-pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_indexedlogdatastore_aux_path(path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore_aux");
     create_shared_dir(&path)?;
     Ok(path)
 }
 
-pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = path.as_ref().to_owned();
     path.push("indexedloghistorystore");
     create_shared_dir(&path)?;
     Ok(path)
 }
 
-pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Result<PathBuf> {
+pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Result<PathBuf, Error> {
     let mut path = path.as_ref().to_owned();
     path.push("packs");
     create_shared_dir(&path)?;
@@ -109,11 +118,14 @@ pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Resul
     Ok(path)
 }
 
-pub fn get_cache_packs_path(config: &dyn Config, suffix: &Option<PathBuf>) -> Result<PathBuf> {
+pub fn get_cache_packs_path(
+    config: &dyn Config,
+    suffix: &Option<PathBuf>,
+) -> Result<PathBuf, Error> {
     get_packs_path(get_config_cache_path(config)?, suffix)
 }
 
-fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = store_path.as_ref().to_owned();
     path.push("lfs");
     create_shared_dir(&path)?;
@@ -121,7 +133,7 @@ fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = get_lfs_path(store_path)?;
     path.push("pointers");
     create_shared_dir(&path)?;
@@ -129,7 +141,7 @@ pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_lfs_objects_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_lfs_objects_path(store_path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = get_lfs_path(store_path)?;
     path.push("objects");
     create_shared_dir(&path)?;
@@ -137,7 +149,7 @@ pub fn get_lfs_objects_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf, Error> {
     let mut path = get_lfs_path(store_path)?;
     path.push("blobs");
     create_shared_dir(&path)?;

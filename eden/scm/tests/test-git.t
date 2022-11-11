@@ -518,3 +518,9 @@ Test amend:
   @@ -1,1 +1,1 @@
   -1
   +3
+
+Init with --git works without a reponame:
+
+  $ cd
+  $ grep -v reponame $HGRCPATH > $TESTTMP/hgrc-no-reponame
+  $ HGRCPATH=$TESTTMP/hgrc-no-reponame hg init --git init-git-no-reponame

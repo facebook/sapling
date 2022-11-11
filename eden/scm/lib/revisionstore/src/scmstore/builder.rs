@@ -31,7 +31,6 @@ use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::file::FileStoreMetrics;
 use crate::scmstore::FileStore;
 use crate::scmstore::TreeStore;
-use crate::util::get_cache_path;
 use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_local_path;
@@ -210,8 +209,12 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
-    pub fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
-        let cache_path = get_cache_path(self.config, &self.suffix)?;
+    pub fn build_indexedlog_cache(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
+        let cache_path = match cache_path(self.config, &self.suffix)? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
         let max_log_count = self
             .config
             .get_opt::<u8>("indexedlog", "data.max-log-count")?;
@@ -226,12 +229,12 @@ impl<'a> FileStoreBuilder<'a> {
             max_bytes_per_log,
             max_bytes,
         };
-        Ok(Arc::new(IndexedLogHgIdDataStore::new(
+        Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
             self.get_extstored_policy()?,
             &config,
             StoreType::Shared,
-        )?))
+        )?)))
     }
 
     pub fn build_aux_local(&self) -> Result<Option<Arc<AuxStore>>> {
@@ -248,14 +251,18 @@ impl<'a> FileStoreBuilder<'a> {
         })
     }
 
-    pub fn build_aux_cache(&self) -> Result<Arc<AuxStore>> {
-        let cache_path = get_cache_path(self.config, &self.suffix)?;
+    pub fn build_aux_cache(&self) -> Result<Option<Arc<AuxStore>>> {
+        let cache_path = match cache_path(self.config, &self.suffix)? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
         let cache_path = get_indexedlogdatastore_aux_path(&cache_path)?;
-        Ok(Arc::new(AuxStore::new(
+        Ok(Some(Arc::new(AuxStore::new(
             cache_path,
             self.config,
             StoreType::Shared,
-        )?))
+        )?)))
     }
 
     pub fn build_lfs_local(&self) -> Result<Option<Arc<LfsStore>>> {
@@ -276,14 +283,19 @@ impl<'a> FileStoreBuilder<'a> {
             return Ok(None);
         }
 
-        let cache_path = get_cache_path(self.config, &self.suffix)?;
+        let cache_path = match cache_path(self.config, &self.suffix)? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
         Ok(Some(Arc::new(LfsStore::shared(&cache_path, self.config)?)))
     }
 
     pub fn build(mut self) -> Result<FileStore> {
         if self.contentstore.is_none() {
-            let cache_path = get_cache_path(self.config, &self.suffix)?;
-            check_cache_buster(&self.config, &cache_path);
+            if let Some(cache_path) = cache_path(self.config, &self.suffix)? {
+                check_cache_buster(&self.config, &cache_path);
+            }
         }
 
         let extstored_policy = self.get_extstored_policy()?;
@@ -300,7 +312,7 @@ impl<'a> FileStoreBuilder<'a> {
         let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {
             Some(indexedlog_cache)
         } else {
-            Some(self.build_indexedlog_cache()?)
+            self.build_indexedlog_cache()?
         };
 
         let lfs_local = if let Some(lfs_local) = self.lfs_local.take() {
@@ -317,7 +329,7 @@ impl<'a> FileStoreBuilder<'a> {
 
         let (aux_local, aux_cache) = if self.store_aux_data {
             let aux_local = self.build_aux_local()?;
-            let aux_cache = Some(self.build_aux_cache()?);
+            let aux_cache = self.build_aux_cache()?;
             (aux_local, aux_cache)
         } else {
             (None, None)
@@ -419,6 +431,19 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         })
+    }
+}
+
+// Return remotefilelog cache path, or None if there is no cache path
+// (e.g. because we have no repo name).
+fn cache_path(
+    config: &dyn Config,
+    suffix: &Option<PathBuf>,
+) -> Result<Option<PathBuf>, crate::Error> {
+    match crate::util::get_cache_path(config, suffix) {
+        Ok(p) => Ok(Some(p)),
+        Err(crate::Error::ConfigNotSet(_)) => Ok(None),
+        Err(err) => Err(err),
     }
 }
 
@@ -535,8 +560,12 @@ impl<'a> TreeStoreBuilder<'a> {
         })
     }
 
-    pub fn build_indexedlog_cache(&self) -> Result<Arc<IndexedLogHgIdDataStore>> {
-        let cache_path = get_cache_path(self.config, &self.suffix)?;
+    pub fn build_indexedlog_cache(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
+        let cache_path = match cache_path(self.config, &self.suffix)? {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
         let max_log_count = self
             .config
             .get_opt::<u8>("indexedlog", "manifest.max-log-count")?;
@@ -552,20 +581,21 @@ impl<'a> TreeStoreBuilder<'a> {
             max_bytes,
         };
 
-        Ok(Arc::new(IndexedLogHgIdDataStore::new(
+        Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
             ExtStoredPolicy::Use,
             &config,
             StoreType::Shared,
-        )?))
+        )?)))
     }
 
     pub fn build(mut self) -> Result<TreeStore> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
         // (the EdenApiAdapter stuff needs to be fixed in particular)
         if self.contentstore.is_none() {
-            let cache_path = get_cache_path(self.config, &self.suffix)?;
-            check_cache_buster(&self.config, &cache_path);
+            if let Some(cache_path) = cache_path(self.config, &self.suffix)? {
+                check_cache_buster(&self.config, &cache_path);
+            }
         }
 
         let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
@@ -577,7 +607,7 @@ impl<'a> TreeStoreBuilder<'a> {
         let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {
             Some(indexedlog_cache)
         } else {
-            Some(self.build_indexedlog_cache()?)
+            self.build_indexedlog_cache()?
         };
 
         let memcache = self.memcache.take();
