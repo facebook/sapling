@@ -113,6 +113,8 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
         }
     };
 
+    let _wlock = wc.lock();
+    let _lock = repo.lock();
     let (updated, removed) = checkout::checkout(ctx.io(), repo, wc, target)?;
 
     if !ctx.global_opts().quiet {

@@ -1116,6 +1116,8 @@ pub fn checkout(
     wc: &mut WorkingCopy,
     target_commit: HgId,
 ) -> Result<(usize, usize)> {
+    wc.ensure_locked()?;
+
     let current_commit = wc.parents()?.into_iter().next().unwrap_or(NULL_ID);
 
     let tree_resolver = repo.tree_resolver()?;

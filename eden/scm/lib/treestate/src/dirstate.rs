@@ -45,7 +45,7 @@ pub fn flush(root: &Path, treestate: &mut TreeState, locker: &RepoLocker) -> Res
         let dot_dir = root.join(id.dot_dir());
         let dirstate_path = dot_dir.join("dirstate");
 
-        let _locked = locker.lock_working_copy(dot_dir.clone())?;
+        let _lock = locker.lock_working_copy(dot_dir.clone())?;
 
         let dirstate_input = util::file::read(&dirstate_path)?;
         let mut dirstate = Dirstate::deserialize(&mut dirstate_input.as_slice())?;
