@@ -19,7 +19,7 @@ namespace facebook::eden {
 folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
   std::string ret;
 
-  if (!folly::readFile(path.stringPiece().data(), ret, num_bytes)) {
+  if (!folly::readFile(path.asString().c_str(), ret, num_bytes)) {
     return folly::Try<std::string>{folly::makeSystemError(
         fmt::format(FMT_STRING("couldn't read {}"), path))};
   }
@@ -28,7 +28,7 @@ folly::Try<std::string> readFile(AbsolutePathPiece path, size_t num_bytes) {
 }
 
 folly::Try<void> writeFile(AbsolutePathPiece path, folly::ByteRange data) {
-  if (!folly::writeFile(data, path.stringPiece().data())) {
+  if (!folly::writeFile(data, path.asString().c_str())) {
     return folly::Try<void>{folly::makeSystemError(
         fmt::format(FMT_STRING("couldn't write {}"), path))};
   }
