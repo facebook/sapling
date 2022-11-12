@@ -219,3 +219,10 @@ TEST(Hash20, getHashCode) {
   // using 64 bits of data to contribute to the hash code.
   EXPECT_EQ(folly::Endian::big(0xfaceb00cdeadbeef), testHash.getHashCode());
 }
+
+TEST(Hash20, formatting) {
+  Hash20 h("0123456789abcdeffedcba987654321076543210");
+  EXPECT_EQ(
+      "0123456789abcdeffedcba987654321076543210", folly::to<std::string>(h));
+  EXPECT_EQ("0123456789abcdeffedcba987654321076543210", fmt::to_string(h));
+}

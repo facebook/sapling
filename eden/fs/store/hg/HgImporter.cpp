@@ -22,9 +22,7 @@
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
-#ifndef _WIN32
 #include <folly/portability/Unistd.h>
-#endif
 
 #include <mutex>
 

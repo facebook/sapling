@@ -156,5 +156,13 @@ struct hash<facebook::eden::Hash20> {
     return hash.getHashCode();
   }
 };
-
 } // namespace std
+
+template <>
+struct fmt::formatter<facebook::eden::Hash20> : formatter<string_view> {
+  template <typename Context>
+  auto format(const facebook::eden::Hash20& h, Context& ctx) const {
+    // TODO: Avoid allocation here.
+    return formatter<string_view>::format(h.toString(), ctx);
+  }
+};
