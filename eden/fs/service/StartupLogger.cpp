@@ -84,14 +84,11 @@ StartupLogger::~StartupLogger() = default;
 void StartupLogger::success(uint64_t startTimeInSeconds) {
   writeMessage(
       folly::LogLevel::INFO,
-      folly::to<string>(
-          "Started EdenFS (pid ",
+      fmt::format(
+          "Started EdenFS (pid {}, session_id {}) in {}s",
           getpid(),
-          ", session_id ",
           getSessionId(),
-          ") in ",
-          startTimeInSeconds,
-          "s"));
+          startTimeInSeconds));
 
   successImpl();
 }
@@ -105,8 +102,7 @@ void StartupLogger::writeMessage(folly::LogLevel level, StringPiece message) {
 void DaemonStartupLogger::successImpl() {
   if (!logPath_.empty()) {
     writeMessage(
-        folly::LogLevel::INFO,
-        folly::to<string>("Logs available at ", logPath_));
+        folly::LogLevel::INFO, fmt::format("Logs available at {}", logPath_));
   }
   sendResult(0);
 }
@@ -197,13 +193,13 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   auto exePath = executablePath();
   auto canonPath = realpath(exePath.c_str());
   if (exePath != canonPath) {
-    throw std::runtime_error(folly::to<std::string>(
-        "Refusing to start because my exePath ",
+    throw std::runtime_error(fmt::format(
+        "Refusing to start because my exePath {} "
+        "is not the realpath to myself (which is {}). "
+        "This is an unsafe installation and may be an indication of a "
+        "symlink attack or similar attempt to escalate privileges",
         exePath,
-        " is not the realpath to myself (which is ",
-        canonPath,
-        "). This is an unsafe installation and may be an indication of a "
-        "symlink attack or similar attempt to escalate privileges"));
+        canonPath));
   }
 
   SpawnedProcess::Options opts;
@@ -250,15 +246,15 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
     // It requires that the flag and the value be in separate
     // array entries.
     args.push_back("--privhelper_fd");
-    args.push_back(folly::to<std::string>(fd));
+    args.push_back(fmt::to_string(fd));
   }
 #endif
 
   // Set up a pipe for the child to pass back startup status
   Pipe exitStatusPipe;
   args.push_back("--startupLoggerFd");
-  args.push_back(folly::to<std::string>(
-      opts.inheritDescriptor(std::move(exitStatusPipe.write))));
+  args.push_back(
+      fmt::to_string(opts.inheritDescriptor(std::move(exitStatusPipe.write))));
 
   args.insert(args.end(), extraArgs.begin(), extraArgs.end());
   SpawnedProcess proc(args, std::move(opts));
@@ -348,8 +344,8 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
     // This should only happen if edenfs crashed before writing its status.
     // Check to see if the child process has died.
     auto result = handleChildCrash(proc);
-    result.errorMessage += folly::to<string>(
-        "\nCheck the EdenFS log file at ", logPath, " for more details");
+    result.errorMessage += fmt::format(
+        "\nCheck the EdenFS log file at {} for more details", logPath);
     return result;
   }
 

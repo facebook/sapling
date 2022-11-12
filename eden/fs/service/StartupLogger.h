@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <folly/Conv.h>
+#include <fmt/ranges.h>
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/lang/Assume.h>
@@ -77,30 +77,33 @@ class StartupLogger {
    * without waiting for all mount points to be remounted.
    */
   template <typename... Args>
-  void log(Args&&... args) {
+  void log(const Args&... args) {
     writeMessage(
         folly::LogLevel::DBG2,
-        folly::to<std::string>(std::forward<Args>(args)...));
+        fmt::to_string(
+            fmt::join(std::make_tuple<const Args&...>(args...), "")));
   }
 
   /**
    * Log a verbose message
    */
   template <typename... Args>
-  void logVerbose(Args&&... args) {
+  void logVerbose(const Args&... args) {
     writeMessage(
         folly::LogLevel::DBG7,
-        folly::to<std::string>(std::forward<Args>(args)...));
+        fmt::to_string(
+            fmt::join(std::make_tuple<const Args&...>(args...), "")));
   }
 
   /**
    * Log a warning message.
    */
   template <typename... Args>
-  void warn(Args&&... args) {
+  void warn(const Args&... args) {
     writeMessage(
         folly::LogLevel::WARN,
-        folly::to<std::string>(std::forward<Args>(args)...));
+        fmt::to_string(
+            fmt::join(std::make_tuple<const Args&...>(args...), "")));
   }
 
   /**
