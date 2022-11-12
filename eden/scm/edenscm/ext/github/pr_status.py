@@ -31,19 +31,21 @@ def get_pull_request_data(repo, pr: PullRequestId) -> Optional[GraphQLPullReques
 
 
 def _prefetch(repo, ctx_iter):
-    peek_ahead = repo.ui.configint("githubprstatus", "peekahead", _PR_STATUS_PEEK_AHEAD)
+    ui = repo.ui
+    peek_ahead = ui.configint("githubprstatus", "peekahead", _PR_STATUS_PEEK_AHEAD)
+    pr_store = PullRequestStore(repo)
     for batch in util.eachslice(ctx_iter, peek_ahead):
         cached = getattr(repo, _PR_STATUS_CACHE, {})
-        pr_store = PullRequestStore(repo)
-        pr_list = [
+        pr_list = {
             get_pull_request_for_node(ctx.node(), pr_store, ctx) for ctx in batch
-        ]
-        pr_list = {pr for pr in pr_list if pr and pr not in cached}
+        }
+        pr_list = [pr for pr in pr_list if pr and pr not in cached]
         if pr_list:
-            repo.ui.debug(
-                "prefetch GitHub PR status for %r\n"
-                % sorted([pr.number for pr in pr_list])
-            )
+            if ui.debugflag:
+                ui.debug(
+                    "prefetch GitHub PR status for %r\n"
+                    % sorted([pr.number for pr in pr_list])
+                )
             _get_pull_request_data_list(repo, *pr_list)
 
         # this is needed by smartset's iterctx method
@@ -65,7 +67,7 @@ def _memoize(f):
             pr_status_cache[key] = val_list
             for pr, val in zip(pr_list, val_list):
                 pr_status_cache[(repo, pr)] = [val]
-        return pr_status_cache[key]
+        return val_list
 
     return helper
 
