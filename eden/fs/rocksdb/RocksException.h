@@ -7,7 +7,8 @@
 
 #pragma once
 
-#include <folly/String.h>
+#include <fmt/ranges.h>
+#include <folly/Likely.h>
 #include <rocksdb/db.h>
 
 namespace facebook::eden {
@@ -17,13 +18,17 @@ class RocksException : public std::exception {
   RocksException(const rocksdb::Status& status, const std::string& msg);
 
   template <typename... Args>
-  static RocksException build(const rocksdb::Status& status, Args&&... args) {
+  static RocksException build(
+      const rocksdb::Status& status,
+      const Args&... args) {
     return RocksException(
-        status, folly::to<std::string>(std::forward<Args>(args)...));
+        status,
+        fmt::to_string(
+            fmt::join(std::make_tuple<const Args&...>(args...), "")));
   }
 
   template <typename... Args>
-  static void check(const rocksdb::Status& status, Args&&... args) {
+  static void check(const rocksdb::Status& status, const Args&... args) {
     if (UNLIKELY(!status.ok())) {
       throw build(status, std::forward<Args>(args)...);
     }

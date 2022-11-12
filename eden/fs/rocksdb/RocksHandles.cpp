@@ -11,7 +11,6 @@
 
 #include "eden/fs/rocksdb/RocksException.h"
 
-using folly::StringPiece;
 using rocksdb::ColumnFamilyDescriptor;
 using rocksdb::ColumnFamilyHandle;
 using rocksdb::DB;
@@ -31,11 +30,11 @@ void RocksHandles::close() {
 }
 
 RocksHandles::RocksHandles(
-    StringPiece dbPath,
+    std::string_view dbPath,
     RocksDBOpenMode mode,
     const Options& options,
     const std::vector<ColumnFamilyDescriptor>& columnDescriptors) {
-  auto dbPathStr = dbPath.str();
+  auto dbPathStr = std::string{dbPath};
   DB* dbRaw;
   std::vector<ColumnFamilyHandle*> columnHandles;
 

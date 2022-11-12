@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <folly/String.h>
 #include <rocksdb/db.h>
 #include <memory>
-#include <string>
+#include <string_view>
+#include <vector>
 
 namespace facebook::eden {
 
@@ -49,7 +49,7 @@ struct RocksHandles {
    * exception.
    */
   RocksHandles(
-      folly::StringPiece dbPath,
+      std::string_view dbPath,
       RocksDBOpenMode mode,
       const rocksdb::Options& options,
       const std::vector<rocksdb::ColumnFamilyDescriptor>& columnDescriptors);

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "RocksException.h"
+#include "eden/fs/rocksdb/RocksException.h"
 
 namespace facebook::eden {
 
@@ -13,7 +13,7 @@ RocksException::RocksException(
     const rocksdb::Status& status,
     const std::string& msg)
     : status_(status), msg_(msg) {
-  fullMsg_ = folly::to<std::string>(msg, "(Status: ", status_.ToString(), ")");
+  fullMsg_ = fmt::format("{} (Status: {})", msg, status_.ToString());
 }
 
 const char* RocksException::what() const noexcept {
