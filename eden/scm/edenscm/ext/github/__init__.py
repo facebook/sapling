@@ -11,11 +11,15 @@ from typing import Optional
 from edenscm import commands, registrar
 from edenscm.i18n import _
 
-from . import follow, github_repo_util, link, pr_marker, submit, templates
+from . import follow, github_repo_util, link, pr_marker, pr_status, submit, templates
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 templatekeyword = registrar.templatekeyword()
+
+
+def extsetup(ui):
+    pr_status.setup_smartset_prefetch()
 
 
 @command(

@@ -8,7 +8,8 @@
 
 from typing import Optional
 
-from . import github_repo_util, graphql
+from . import github_repo_util
+from .pr_status import get_pr_data
 from .pullrequest import GraphQLPullRequest, PullRequestId
 from .pullrequeststore import PullRequestStore
 
@@ -87,7 +88,7 @@ def get_pull_request_data_for_rev(repo, ctx, **args) -> GraphQLPullRequest:
     if pull_request_data is _NO_ENTRY:
         pull_request = get_pull_request_url_for_rev(repo, ctx, **args)
         if pull_request:
-            pull_request_data = graphql.get_pull_request_data(pull_request)
+            pull_request_data = get_pr_data(repo, pull_request)
     return pull_request_data
 
 
