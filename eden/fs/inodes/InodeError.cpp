@@ -31,7 +31,7 @@ std::string InodeError::computePath() const noexcept {
   if (inode_) {
     if (child_.has_value()) {
       if (inode_->getNodeId() == kRootNodeId) {
-        path = child_.value().stringPiece().str();
+        path = child_.value().asString();
       } else {
         path = inode_->getLogPath() + "/";
         auto childName = child_.value().stringPiece();

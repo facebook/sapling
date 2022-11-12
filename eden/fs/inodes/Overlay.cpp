@@ -409,8 +409,8 @@ overlay::OverlayDir Overlay::serializeOverlayDir(
     XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
         << "serializeOverlayDir called with entry using unallocated inode number";
 
-    odir.entries_ref()->emplace(std::make_pair(
-        entName.stringPiece().str(), serializeOverlayEntry(ent)));
+    odir.entries_ref()->emplace(
+        std::make_pair(entName.asString(), serializeOverlayEntry(ent)));
   }
 
   return odir;

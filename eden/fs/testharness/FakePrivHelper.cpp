@@ -73,8 +73,8 @@ void FakePrivHelper::registerMount(
 void FakePrivHelper::registerMountDelegate(
     AbsolutePathPiece mountPath,
     std::shared_ptr<MountDelegate> mountDelegate) {
-  auto ret = mountDelegates_.emplace(
-      mountPath.stringPiece().str(), std::move(mountDelegate));
+  auto ret =
+      mountDelegates_.emplace(mountPath.asString(), std::move(mountDelegate));
   if (!ret.second) {
     throw std::range_error(
         folly::to<string>("mount ", mountPath, " already defined"));

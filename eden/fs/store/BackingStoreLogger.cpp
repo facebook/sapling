@@ -33,7 +33,7 @@ void BackingStoreLogger::logImport(
   }
   auto pid = context.getClientPid();
   auto cause = context.getCause();
-  auto importPathString = importPath.stringPiece().str();
+  auto importPathString = importPath.asString();
 
   std::optional<std::string> cmdline;
   if (pid) {

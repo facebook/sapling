@@ -919,7 +919,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(
 
       serializedEntry.inodeNumber_ref() = inodeNumber.get();
       serializedEntry.parentInode_ref() = entry.parent.get();
-      serializedEntry.name_ref() = entry.name.stringPiece().str();
+      serializedEntry.name() = entry.name.asString();
       serializedEntry.isUnlinked_ref() = entry.isUnlinked;
       serializedEntry.numFsReferences_ref() = entry.numFsReferences;
       if (entry.hash.has_value()) {

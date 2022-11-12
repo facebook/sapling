@@ -260,7 +260,7 @@ int trace_hg(
   apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
 
   apache::thrift::ClientBufferedStream<HgEvent> traceHgStream =
-      client.semifuture_traceHgEvents(mountRoot.stringPiece().str())
+      client.semifuture_traceHgEvents(mountRoot.asString())
           .via(evbThread.getEventBase())
           .get();
 
@@ -340,7 +340,7 @@ int trace_fs(
 
   apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
   apache::thrift::ClientBufferedStream<FsEvent> traceFsStream =
-      client.semifuture_traceFsEvents(mountRoot.stringPiece().str(), mask)
+      client.semifuture_traceFsEvents(mountRoot.asString(), mask)
           .via(evbThread.getEventBase())
           .get();
 
@@ -351,7 +351,7 @@ int trace_fs(
   std::vector<folly::SemiFuture<folly::Unit>> outstandingCallFutures;
 #ifndef _WIN32
   outstandingCallFutures.emplace_back(
-      client.semifuture_debugOutstandingFuseCalls(mountRoot.stringPiece().str())
+      client.semifuture_debugOutstandingFuseCalls(mountRoot.asString())
           .via(evbThread.getEventBase())
           .thenValue([](std::vector<FuseCall> outstandingCalls) {
             if (outstandingCalls.empty()) {
@@ -366,7 +366,7 @@ int trace_fs(
           }));
 
   outstandingCallFutures.emplace_back(
-      client.semifuture_debugOutstandingNfsCalls(mountRoot.stringPiece().str())
+      client.semifuture_debugOutstandingNfsCalls(mountRoot.asString())
           .via(evbThread.getEventBase())
           .thenValue([](std::vector<NfsCall> outstandingCalls) {
             if (outstandingCalls.empty()) {
@@ -381,8 +381,7 @@ int trace_fs(
           }));
 #else
   outstandingCallFutures.emplace_back(
-      client
-          .semifuture_debugOutstandingPrjfsCalls(mountRoot.stringPiece().str())
+      client.semifuture_debugOutstandingPrjfsCalls(mountRoot.asString())
           .via(evbThread.getEventBase())
           .thenValue([](std::vector<PrjfsCall> outstandingCalls) {
             if (outstandingCalls.empty()) {
@@ -689,7 +688,7 @@ int trace_inode(
   apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
 
   apache::thrift::ClientBufferedStream<InodeEvent> traceInodeStream =
-      client.semifuture_traceInodeEvents(mountRoot.stringPiece().str())
+      client.semifuture_traceInodeEvents(mountRoot.asString())
           .via(evbThread.getEventBase())
           .get();
 
@@ -767,7 +766,7 @@ int trace_inode_retroactive(
 AbsolutePath getSocketPath(AbsolutePathPiece mountRoot) {
   if constexpr (folly::kIsWindows) {
     auto configPath = mountRoot + ".eden"_pc + "config"_pc;
-    auto config = cpptoml::parse_file(configPath.stringPiece().toString());
+    auto config = cpptoml::parse_file(configPath.asString());
     auto socketPath = *config->get_qualified_as<std::string>("Config.socket");
     return canonicalPath(socketPath);
   } else {

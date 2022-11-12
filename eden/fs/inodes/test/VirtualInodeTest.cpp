@@ -111,7 +111,7 @@ struct TestFileInfo {
   }
 
   std::string pathStr() const {
-    return path.stringPiece().str();
+    return path.asString();
   }
 
   folly::StringPiece getContents() const {
@@ -429,8 +429,7 @@ void verifyTreeState(
     const char* type = files.isModified(expected) ? "MOD" : "ORIG";
 
     std::string dbgMsg = std::string(" for file at \"") +
-        expected.path.stringPiece().str() + "\" with " + type +
-        " record and flags (";
+        expected.path.asString() + "\" with " + type + " record and flags (";
     {
       std::string flags;
       if (expected.flags & FLAG_L) {

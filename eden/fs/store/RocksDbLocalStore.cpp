@@ -251,11 +251,11 @@ rocksdb::Options getRocksdbOptions() {
 
 RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
   auto options = getRocksdbOptions();
-  const auto columnDescriptors = columnFamilies(
-      rocksdb::DBOptions{options}, path.stringPieceWithoutUNC().str());
+  const auto columnDescriptors =
+      columnFamilies(rocksdb::DBOptions{options}, path.stringWithoutUNC());
   try {
     return RocksHandles(
-        path.stringPieceWithoutUNC(), mode, options, columnDescriptors);
+        path.viewWithoutUNC(), mode, options, columnDescriptors);
   } catch (const RocksException& ex) {
     XLOG(ERR) << "Error opening RocksDB storage at " << path << ": "
               << ex.what();
@@ -269,8 +269,7 @@ RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
   RocksDbLocalStore::repairDB(path);
 
   // Now try opening the DB again.
-  return RocksHandles(
-      path.stringPieceWithoutUNC(), mode, options, columnDescriptors);
+  return RocksHandles(path.viewWithoutUNC(), mode, options, columnDescriptors);
 }
 
 } // namespace
@@ -368,11 +367,11 @@ void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
   unknownColumFamilyOptions.OptimizeForPointLookup(8);
   unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
 
-  auto dbPathStr = path.stringPieceWithoutUNC().str();
+  auto dbPathStr = path.stringWithoutUNC();
   rocksdb::DBOptions dbOptions(getRocksdbOptions());
 
   const auto columnDescriptors =
-      columnFamilies(dbOptions, path.stringPieceWithoutUNC().str());
+      columnFamilies(dbOptions, path.stringWithoutUNC());
 
   auto status = RepairDB(
       dbPathStr, dbOptions, columnDescriptors, unknownColumFamilyOptions);

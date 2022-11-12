@@ -613,6 +613,24 @@ class PathBase :
   PathBase& operator=(const PathBase&) = default;
   PathBase(const PathBase&) = default;
 
+  /**
+   * Returns the path as a std::string. Returns a copy if the stored type is not
+   * a std::string, and a const reference if it is.
+   *
+   * Primarily used to ensure null termination or convert to API boundaries like
+   * Thrift.
+   */
+  auto asString() const -> std::conditional_t<
+      std::is_same_v<Storage, std::string>,
+      const std::string&,
+      std::string> {
+    if constexpr (std::is_same_v<Storage, std::string>) {
+      return path_;
+    } else {
+      return std::string{view()};
+    }
+  }
+
   /// Return the path as a StringPiece
   folly::StringPiece stringPiece() const {
     return folly::StringPiece{path_};
@@ -1623,12 +1641,16 @@ class AbsolutePathBase : public ComposedPathBase<
    *
    * This does nothing more than what stringPiece does on non-Windows.
    */
-  folly::StringPiece stringPieceWithoutUNC() const {
+  std::string_view viewWithoutUNC() const {
     if (folly::kIsWindows) {
-      return this->stringPiece().subpiece(detail::kUNCPrefix.size());
+      return this->view().substr(detail::kUNCPrefix.size());
     } else {
-      return this->stringPiece();
+      return this->view();
     }
+  }
+
+  std::string stringWithoutUNC() const {
+    return std::string{viewWithoutUNC()};
   }
 
   /** Compose an AbsolutePath with a RelativePath */

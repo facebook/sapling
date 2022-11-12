@@ -348,7 +348,7 @@ AbsolutePath absolutePathFromThrift(StringPiece path) {
  * prefix is stripped when sending the path to Thrift.
  */
 std::string absolutePathToThrift(AbsolutePathPiece path) {
-  return path.stringPieceWithoutUNC().str();
+  return path.stringWithoutUNC();
 }
 
 } // namespace
@@ -1462,8 +1462,8 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
         ConvertInodeTraceEventToThriftInodeEvent(event, thriftEvent);
         try {
           auto relativePath = inodeMap->getPathForInode(event.ino);
-          thriftEvent.path() = relativePath ? relativePath->stringPiece().str()
-                                            : event.getPath();
+          thriftEvent.path() =
+              relativePath ? relativePath->asString() : event.getPath();
         } catch (const std::system_error& /* e */) {
           thriftEvent.path() = event.getPath();
         }
@@ -1615,16 +1615,13 @@ EdenServiceHandler::streamChangesSince(
     }
 
     publishFile(
-        *sharedPublisher,
-        entry.first.stringPiece().str(),
-        status,
-        dtype_t::Unknown);
+        *sharedPublisher, entry.first.asString(), status, dtype_t::Unknown);
   }
 
   for (const auto& name : summed->uncleanPaths) {
     publishFile(
         *sharedPublisher,
-        name.stringPiece().str(),
+        name.asString(),
         ScmFileStatus::MODIFIED,
         dtype_t::Unknown);
   }
@@ -1727,14 +1724,14 @@ void EdenServiceHandler::getFilesChangedSince(
       auto& path = entry.first;
       auto& changeInfo = entry.second;
       if (changeInfo.isNew()) {
-        out.createdPaths_ref()->emplace_back(path.stringPiece().str());
+        out.createdPaths_ref()->emplace_back(path.asString());
       } else {
-        out.changedPaths_ref()->emplace_back(path.stringPiece().str());
+        out.changedPaths_ref()->emplace_back(path.asString());
       }
     }
 
     for (auto& path : summed->uncleanPaths) {
-      out.uncleanPaths_ref()->emplace_back(path.stringPiece().str());
+      out.uncleanPaths_ref()->emplace_back(path.asString());
     }
 
     out.snapshotTransitions_ref()->reserve(summed->snapshotTransitions.size());
@@ -2039,7 +2036,7 @@ DirListAttributeDataOrError serializeEntryAttributes(
   std::map<std::string, FileAttributeDataOrErrorV2> thriftEntryResult;
   for (auto& entry : entries.value()) {
     thriftEntryResult.emplace(
-        entry.first.stringPiece().str(),
+        entry.first.asString(),
         serializeEntryAttributes(
             entry.first.piece().stringPiece(),
             entry.second,
@@ -2829,7 +2826,7 @@ void EdenServiceHandler::debugGetScmTree(
     const auto& [name, treeEntry] = entry;
     entries.emplace_back();
     auto& out = entries.back();
-    out.name_ref() = name.stringPiece().str();
+    out.name_ref() = name.asString();
     out.mode_ref() = modeFromTreeEntryType(treeEntry.getType());
     out.id_ref() =
         edenMount->getObjectStore()->renderObjectId(treeEntry.getHash());
@@ -2920,7 +2917,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
 
     TreeInodeDebugInfo info;
     info.inodeNumber_ref() = ino.get();
-    info.path_ref() = path.stringPiece().str();
+    info.path_ref() = path.asString();
     info.materialized_ref() = !hash.has_value();
     if (hash.has_value()) {
       info.treeHash_ref() =
@@ -2932,7 +2929,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
 
     for (auto& entry : entries) {
       TreeInodeEntryDebugInfo entryInfo;
-      entryInfo.name_ref() = entry.name.stringPiece().str();
+      entryInfo.name_ref() = entry.name.asString();
       entryInfo.inodeNumber_ref() = entry.ino.get();
 
       // This could be enabled on Windows if InodeMetadataTable was removed.
@@ -3227,7 +3224,7 @@ void EdenServiceHandler::debugGetInodePath(
   info.loaded_ref() = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
   // If getPathForInode returned none then the inode is unlinked
   info.linked_ref() = relativePath != std::nullopt;
-  info.path_ref() = relativePath ? relativePath->stringPiece().str() : "";
+  info.path_ref() = relativePath ? relativePath->asString() : "";
 }
 
 void EdenServiceHandler::clearFetchCounts() {
@@ -3530,7 +3527,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                              auto childPath = RelativePath{*path} + entry.first;
                              auto childInode = inodeFromUserPath(
                                  *edenMount,
-                                 childPath.stringPiece().str(),
+                                 childPath.asString(),
                                  fetchContext);
                              childInode->forceMetadataUpdate();
                              childInvalidations.push_back(

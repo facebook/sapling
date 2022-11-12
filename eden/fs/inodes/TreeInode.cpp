@@ -701,12 +701,12 @@ static std::vector<std::string> computeEntryDifferences(
   for (const auto& entry : dir) {
     auto it = tree.find(entry.first);
     if (it == tree.cend()) {
-      differences.insert("- " + entry.first.stringPiece().str());
+      differences.insert(fmt::format("- {}", entry.first));
     }
   }
   for (const auto& entry : tree) {
     if (!dir.count(entry.first)) {
-      differences.insert("+ " + entry.first.stringPiece().str());
+      differences.insert(fmt::format("+ {}", entry.first));
     }
   }
   return std::vector<std::string>{differences.begin(), differences.end()};

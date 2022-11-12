@@ -408,8 +408,7 @@ folly::File mountMacFuse(
   opts.environment().set("_FUSE_COMMVERS", "2");
   // It is unclear what purpose passing the daemon path serves, but
   // libfuse does this, and thus we do also.
-  opts.environment().set(
-      "_FUSE_DAEMON_PATH", executablePath().stringPiece().toString());
+  opts.environment().set("_FUSE_DAEMON_PATH", executablePath().asString());
 
   AbsolutePath canonicalPath = realpath(mountPath);
 
@@ -428,7 +427,7 @@ folly::File mountMacFuse(
       folly::to<std::string>("-oiosize=", 1024 * 1024),
       "-oallow_other",
       "-odefault_permissions",
-      canonicalPath.stringPiece().toString(),
+      canonicalPath.asString(),
   };
 
   // Start the helper...

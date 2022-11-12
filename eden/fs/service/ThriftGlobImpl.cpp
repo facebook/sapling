@@ -196,7 +196,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                   for (auto& entry : results) {
                     if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
                       out->matchingFiles_ref()->emplace_back(
-                          entry.name.stringPiece().toString());
+                          entry.name.asString());
 
                       if (wantDtype) {
                         out->dtypes_ref()->emplace_back(

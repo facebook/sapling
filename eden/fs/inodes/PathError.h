@@ -73,7 +73,7 @@ class PathError : public PathErrorBase {
 
  protected:
   std::string computePath() const noexcept override {
-    return path_.stringPiece().str();
+    return path_.asString();
   }
 
  private:

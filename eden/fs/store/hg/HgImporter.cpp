@@ -84,7 +84,7 @@ HgImporter::HgImporter(
   // primarily in our integration tests.
   if (importHelperScript.has_value()) {
     cmd.push_back(importHelperScript.value().value());
-    cmd.push_back(repoPath.stringPieceWithoutUNC().str());
+    cmd.push_back(repoPath.stringWithoutUNC());
   } else {
     cmd.push_back(FLAGS_hgPath);
     cmd.push_back("debugedenimporthelper");

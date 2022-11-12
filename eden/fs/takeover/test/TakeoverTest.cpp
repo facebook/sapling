@@ -166,7 +166,7 @@ void checkExpectedFile(int fd, AbsolutePathPiece path) {
   struct stat pathStat;
   auto rc = fstat(fd, &fdStat);
   folly::checkUnixError(rc, "fstat failed");
-  rc = stat(path.stringPiece().str().c_str(), &pathStat);
+  rc = stat(path.asString().c_str(), &pathStat);
   folly::checkUnixError(rc, "stat failed");
 
   EXPECT_EQ(fdStat.st_dev, pathStat.st_dev);

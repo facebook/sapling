@@ -275,7 +275,7 @@ void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
 const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   // return the first cert path that exists
   for (auto& cert : clientCertificateLocations.getValue()) {
-    if (boost::filesystem::exists(cert.stringPiece().str())) {
+    if (boost::filesystem::exists(cert.asString())) {
       return cert;
     }
   }

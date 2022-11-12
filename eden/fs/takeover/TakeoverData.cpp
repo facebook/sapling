@@ -524,13 +524,11 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
 
     SerializedMountInfo serializedMount;
 
-    *serializedMount.mountPath_ref() = mount.mountPath.stringPiece().str();
-    *serializedMount.stateDirectory_ref() =
-        mount.stateDirectory.stringPiece().str();
+    *serializedMount.mountPath_ref() = mount.mountPath.asString();
+    *serializedMount.stateDirectory_ref() = mount.stateDirectory.asString();
 
     for (const auto& bindMount : mount.bindMounts) {
-      serializedMount.bindMountPaths_ref()->push_back(
-          bindMount.stringPiece().str());
+      serializedMount.bindMountPaths_ref()->push_back(bindMount.asString());
     }
 
     if (auto fuseChannelInfo =

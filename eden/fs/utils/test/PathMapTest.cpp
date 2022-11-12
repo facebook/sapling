@@ -99,8 +99,7 @@ TEST(PathMap, caseInSensitiveOrdering) {
   for (auto it1 = map1.cbegin(), it2 = map2.cbegin(); it1 != map1.cend();
        ++it1, ++it2) {
     EXPECT_STRCASEEQ(
-        it1->first.stringPiece().str().c_str(),
-        it2->first.stringPiece().str().c_str());
+        it1->first.asString().c_str(), it2->first.asString().c_str());
   }
 }
 

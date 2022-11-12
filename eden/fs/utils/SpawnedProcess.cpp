@@ -638,7 +638,7 @@ SpawnedProcess::SpawnedProcess(
     execPath = multibyteToWideString(options.execPath_->stringPiece());
   }
   if (options.cwd_) {
-    cwd = multibyteToWideString(options.cwd_->stringPieceWithoutUNC());
+    cwd = multibyteToWideString(options.cwd_->viewWithoutUNC());
   }
   PROCESS_INFORMATION procInfo{};
   auto status = CreateProcessW(

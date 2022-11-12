@@ -326,7 +326,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                      logger_->logEvent(EdenApiMiss{
                          repoName_,
                          EdenApiMiss::Tree,
-                         path.stringPiece().toString(),
+                         path.asString(),
                          manifestNode.toString(),
                      });
                    }
@@ -566,7 +566,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
           logger_->logEvent(EdenApiMiss{
               repoName_,
               EdenApiMiss::Blob,
-              hgInfo.path().stringPiece().toString(),
+              hgInfo.path().asString(),
               hgInfo.revHash().toString(),
           });
         }

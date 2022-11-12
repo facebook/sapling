@@ -609,7 +609,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
       context.getCause() != ObjectFetchContext::Cause::Prefetch) {
     auto guard = fetchedFilePaths_.wlock();
     for (const auto& hash : hashes) {
-      guard->emplace(hash.path().stringPiece().str());
+      guard->emplace(hash.path().view());
     }
   }
 }

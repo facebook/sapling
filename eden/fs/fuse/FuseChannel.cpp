@@ -811,7 +811,7 @@ FuseChannel::FuseChannel(
       processAccessLog_(std::move(processNameCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(TraceBus<FuseTraceEvent>::create(
-          "FuseTrace" + mountPath.stringPiece().str(),
+          "FuseTrace" + mountPath.asString(),
           kTraceBusCapacity)) {
   XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();

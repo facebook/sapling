@@ -120,7 +120,7 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
     DaemonStartupLogger logger{};
     auto args = originalCommandLine;
     args.push_back(name.str());
-    args.push_back(logPath().stringPiece().str());
+    args.push_back(logPath().asString());
     auto child = logger.spawnImpl(logPath().stringPiece(), nullptr, args);
     auto result = logger.waitForChildStatus(
         child.exitStatusPipe, child.process, logPath().stringPiece());
@@ -329,7 +329,7 @@ TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
   opts.pipeStderr();
   auto process = SpawnedProcess{
       {{
-          executablePath().stringPiece().str(),
+          executablePath().asString(),
           "daemonClosesStandardFileDescriptorsChild",
       }},
       std::move(opts)};
@@ -489,7 +489,7 @@ FunctionResult runFunctionInSeparateProcess(
     std::vector<std::string> arguments) {
   auto execPath = executablePath();
   auto command = std::vector<std::string>{
-      execPath.stringPiece().str(),
+      execPath.asString(),
       functionName.str(),
   };
   command.insert(command.end(), arguments.begin(), arguments.end());

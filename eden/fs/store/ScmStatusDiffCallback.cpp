@@ -19,28 +19,28 @@ namespace facebook::eden {
 void ScmStatusDiffCallback::ignoredPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
     data_.wlock()->entries_ref()->emplace(
-        path.stringPiece().str(), ScmFileStatus::IGNORED);
+        path.asString(), ScmFileStatus::IGNORED);
   }
 }
 
 void ScmStatusDiffCallback::addedPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
     data_.wlock()->entries_ref()->emplace(
-        path.stringPiece().str(), ScmFileStatus::ADDED);
+        path.asString(), ScmFileStatus::ADDED);
   }
 }
 
 void ScmStatusDiffCallback::removedPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
     data_.wlock()->entries_ref()->emplace(
-        path.stringPiece().str(), ScmFileStatus::REMOVED);
+        path.asString(), ScmFileStatus::REMOVED);
   }
 }
 
 void ScmStatusDiffCallback::modifiedPath(RelativePathPiece path, dtype_t type) {
   if (type != dtype_t::Dir) {
     data_.wlock()->entries_ref()->emplace(
-        path.stringPiece().str(), ScmFileStatus::MODIFIED);
+        path.asString(), ScmFileStatus::MODIFIED);
   }
 }
 
@@ -50,7 +50,7 @@ void ScmStatusDiffCallback::diffError(
   XLOG(WARNING) << "error computing status data for " << path << ": "
                 << folly::exceptionStr(ew);
   data_.wlock()->errors_ref()->emplace(
-      path.stringPiece().str(), folly::exceptionStr(ew).toStdString());
+      path.asString(), folly::exceptionStr(ew).toStdString());
 }
 
 /**
