@@ -85,20 +85,22 @@ class OverlayChecker::RepairState {
             O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC,
             0600) {}
 
-  void log(StringPiece msg) {
-    logLine(msg);
-  }
-  template <typename Arg1, typename... Args>
-  void log(Arg1&& arg1, Args&&... args) {
-    auto msg = folly::to<string>(
-        std::forward<Arg1>(arg1), std::forward<Args>(args)...);
+  void log(std::string_view msg) {
     logLine(msg);
   }
 
+  template <typename Arg1, typename Arg2, typename... Args>
+  void log(const Arg1& arg1, const Arg2& arg2, const Args&... args) {
+    logLine(fmt::to_string(fmt::join(
+        std::make_tuple<const Arg1&, const Arg2&, const Args&...>(
+            arg1, arg2, args...),
+        "")));
+  }
+
   template <typename Arg1, typename... Args>
-  void warn(Arg1&& arg1, Args&&... args) {
-    auto msg = folly::to<string>(
-        std::forward<Arg1>(arg1), std::forward<Args>(args)...);
+  void warn(const Arg1& arg1, const Args&... args) {
+    auto msg = fmt::to_string(
+        fmt::join(std::make_tuple<const Arg1&, const Args&...>(arg1, args...)));
     XLOG(WARN) << "fsck:" << checker_->impl_->fcs->getLocalDir() << ":" << msg;
     logLine(msg);
   }
@@ -265,7 +267,7 @@ class OverlayChecker::RepairState {
         "failed to create an fsck repair directory: retry limit exceeded");
   }
 
-  void logLine(StringPiece msg) {
+  void logLine(std::string_view msg) {
     auto now = std::chrono::system_clock::now().time_since_epoch();
     auto nowSec = std::chrono::duration_cast<seconds>(now);
     auto us = std::chrono::duration_cast<microseconds>(now - nowSec);
