@@ -7,15 +7,14 @@
 """
 
 import asyncio
-from typing import Dict, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 from ghstack.github_gh_cli import make_request
 
 from .pullrequest import GraphQLPullRequest, PullRequestId
 
 
-def get_pull_request_data(pr: PullRequestId) -> Optional[GraphQLPullRequest]:
-    query = """
+PULL_REQUEST_QUERY = """
 query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
   repository(name: $name, owner: $owner) {
     pullRequest(number: $number) {
@@ -45,12 +44,10 @@ query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
   }
 }
 """
-    params: Dict[str, Union[str, int, bool]] = {
-        "query": query,
-        "owner": pr.owner,
-        "name": pr.name,
-        "number": pr.number,
-    }
+
+
+def get_pull_request_data(pr: PullRequestId) -> Optional[GraphQLPullRequest]:
+    params = _generate_params(pr)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(make_request(params))
     if result.is_error():
@@ -59,3 +56,28 @@ query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
 
     pr = result.ok["data"]["repository"]["pullRequest"]
     return GraphQLPullRequest(pr)
+
+
+def get_pull_request_data_list(
+    pr_list: Iterable[PullRequestId],
+) -> List[Optional[GraphQLPullRequest]]:
+    requests = [make_request(_generate_params(pr)) for pr in pr_list]
+    loop = asyncio.get_event_loop()
+    responses = loop.run_until_complete(asyncio.gather(*requests))
+    result = []
+    for resp in responses:
+        if resp.is_error():
+            result.append(None)
+        else:
+            pr_data = resp.ok["data"]["repository"]["pullRequest"]
+            result.append(GraphQLPullRequest(pr_data))
+    return result
+
+
+def _generate_params(pr: PullRequestId) -> Dict[str, Union[str, int, bool]]:
+    return {
+        "query": PULL_REQUEST_QUERY,
+        "owner": pr.owner,
+        "name": pr.name,
+        "number": pr.number,
+    }
