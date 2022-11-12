@@ -998,6 +998,8 @@ TEST(VirtualInodeTest, materializationPropagation) {
 }
 
 TEST(VirtualInodeTest, loadPropagation) {
+  const size_t M = 10;
+
   // One by one, start with something fresh, load the one, and check the state
   TestFileDatabase files;
   auto builder = MakeTestTreeBuilder(files);
@@ -1019,7 +1021,7 @@ TEST(VirtualInodeTest, loadPropagation) {
   }
 
   // Now do a set of random sets
-  for (size_t iteration = 0; iteration < 1000; ++iteration) {
+  for (size_t iteration = 0; iteration < M; ++iteration) {
     // TestFileDatabase files;
     VERIFY_TREE(VERIFY_INITIAL);
     // Load a random set of files
