@@ -76,8 +76,4 @@ std::ostream& operator<<(std::ostream& os, const Hash20& hash) {
   return os;
 }
 
-void toAppend(const Hash20& hash, std::string* result) {
-  folly::toAppend(hash.toString(), result);
-}
-
 } // namespace facebook::eden

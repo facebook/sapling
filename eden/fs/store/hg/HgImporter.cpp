@@ -269,15 +269,13 @@ unique_ptr<Blob> HgImporter::importFileContents(
   // the body data in fixed-size chunks, particularly for very large files.
   auto header = readChunkHeader(requestID, "CMD_CAT_FILE");
   if (header.dataLength < sizeof(uint64_t)) {
-    auto msg = folly::to<string>(
-        "CMD_CAT_FILE response for blob ",
+    auto msg = fmt::format(
+        "CMD_CAT_FILE response for blob {} ({}, {}) "
+        "from debugedenimporthelper is too "
+        "short for body length field: length = {}",
         blobHash,
-        " (",
         path,
-        ", ",
         blobHash,
-        ") from debugedenimporthelper is too "
-        "short for body length field: length = ",
         header.dataLength);
     XLOG(ERR) << msg;
     throw std::runtime_error(std::move(msg));
@@ -299,16 +297,13 @@ unique_ptr<Blob> HgImporter::importFileContents(
   memcpy(&bodyLength, buf.tail(), sizeof(uint64_t));
   bodyLength = Endian::big(bodyLength);
   if (bodyLength != header.dataLength - sizeof(uint64_t)) {
-    auto msg = folly::to<string>(
-        "inconsistent body length received when importing blob ",
+    auto msg = fmt::format(
+        "inconsistent body length received when importing blob {} ({}, {}): "
+        "bodyLength={} responseLength={}",
         blobHash,
-        " (",
         path,
-        ", ",
         blobHash,
-        "): bodyLength=",
         bodyLength,
-        " responseLength=",
         header.dataLength);
     XLOG(ERR) << msg;
     throw std::runtime_error(std::move(msg));
@@ -362,16 +357,13 @@ std::unique_ptr<IOBuf> HgImporter::fetchTree(
   memcpy(&bodyLength, buf->tail(), sizeof(uint64_t));
   bodyLength = Endian::big(bodyLength);
   if (bodyLength != header.dataLength - sizeof(uint64_t)) {
-    auto msg = folly::to<string>(
-        "inconsistent body length received when importing tree ",
+    auto msg = fmt::format(
+        "inconsistent body length received when importing tree {} ({}, {}): "
+        "bodyLength={} responseLength={}",
         pathManifestNode,
-        " (",
         path,
-        ", ",
         pathManifestNode,
-        "): bodyLength=",
         bodyLength,
-        " responseLength=",
         header.dataLength);
     XLOG(ERR) << msg;
     throw std::runtime_error(std::move(msg));

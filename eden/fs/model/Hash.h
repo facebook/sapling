@@ -144,9 +144,6 @@ extern const Hash20 kEmptySha1;
  */
 std::ostream& operator<<(std::ostream& os, const Hash20& hash);
 
-/* Define toAppend() so folly::to<string>(Hash) will work */
-void toAppend(const Hash20& hash, std::string* result);
-
 } // namespace facebook::eden
 
 namespace std {
