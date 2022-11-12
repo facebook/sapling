@@ -3,10 +3,18 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from typing import List, Optional
+
 from edenscm import smartset, util
-from edenscm.ext.github import graphql
-from edenscm.ext.github.github_repo_util import get_pull_request_for_node
-from edenscm.ext.github.pullrequeststore import PullRequestStore
+
+from . import graphql
+from .github_repo_util import get_pull_request_for_node
+from .pullrequest import GraphQLPullRequest, PullRequestId
+from .pullrequeststore import PullRequestStore
+
+
+_PR_STATUS_PEEK_AHEAD = 30
+_PR_STATUS_CACHE = "_pr_status_cache"
 
 
 def setup_smartset_prefetch():
@@ -18,29 +26,52 @@ def setup_smartset_prefetch():
     smartset.prefetchtable["pr_status"] = _prefetch
 
 
+def get_pull_request_data(repo, pr: PullRequestId) -> Optional[GraphQLPullRequest]:
+    return _get_pull_request_data_list(repo, pr)[0]
+
+
 def _prefetch(repo, ctx_iter):
-    for ctx in ctx_iter:
-        store = PullRequestStore(repo)
-        pr = get_pull_request_for_node(ctx.node(), store, ctx)
-        if pr:
-            repo.ui.debug("prefetch GitHub for pr%r\n" % pr.number)
-            get_pr_data(repo, pr)
-        yield ctx
+    peek_ahead = repo.ui.configint("githubprstatus", "peekahead", _PR_STATUS_PEEK_AHEAD)
+    for batch in util.eachslice(ctx_iter, peek_ahead):
+        cached = getattr(repo, _PR_STATUS_CACHE, {})
+        pr_store = PullRequestStore(repo)
+        pr_list = [
+            get_pull_request_for_node(ctx.node(), pr_store, ctx) for ctx in batch
+        ]
+        pr_list = {pr for pr in pr_list if pr and pr not in cached}
+        if pr_list:
+            repo.ui.debug(
+                "prefetch GitHub PR status for %r\n"
+                % sorted([pr.number for pr in pr_list])
+            )
+            _get_pull_request_data_list(repo, *pr_list)
+
+        # this is needed by smartset's iterctx method
+        for ctx in batch:
+            yield ctx
 
 
 def _memoize(f):
-    def helper(repo, pr):
-        if not util.safehasattr(repo, "_pr_status"):
-            repo._pr_status = {}
-        key = (repo, pr)
-        if key not in repo._pr_status:
-            val = f(repo, pr)
-            repo._pr_status[key] = val
-        return repo._pr_status[key]
+    """Cache the result of the PR list and the result of each PR."""
+
+    def helper(repo, *pr_list: PullRequestId) -> List[Optional[GraphQLPullRequest]]:
+        pr_status_cache = getattr(repo, _PR_STATUS_CACHE, None)
+        if pr_status_cache is None:
+            repo._pr_status_cache = pr_status_cache = {}
+        key = (repo, *pr_list)
+        val_list = pr_status_cache.get(key)
+        if val_list is None:
+            val_list = f(repo, *pr_list)
+            pr_status_cache[key] = val_list
+            for pr, val in zip(pr_list, val_list):
+                pr_status_cache[(repo, pr)] = [val]
+        return pr_status_cache[key]
 
     return helper
 
 
 @_memoize
-def get_pr_data(_repo, pr):
-    return graphql.get_pull_request_data(pr)
+def _get_pull_request_data_list(
+    _repo, *pr_list: PullRequestId
+) -> List[Optional[GraphQLPullRequest]]:
+    return graphql.get_pull_request_data_list(pr_list)
