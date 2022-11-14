@@ -7,8 +7,8 @@
 # actual URL, with an actual sha256, license, and tests.
 class Sapling < Formula
   desc "The Sapling source control client"
-  homepage ""
-  license ""
+  homepage "https://sapling-scm.com"
+  license "GPL-2.0-or-later"
   # These fields are intended to be populated by a Github action
   url "%URL%"
   version "%VERSION%"
@@ -16,25 +16,33 @@ class Sapling < Formula
 
   depends_on "python@3.8"
   depends_on "node"
+  depends_on "openssl@1.1"
   depends_on "cmake" => :build
-  depends_on "openssl@1.1" => :build
-  depends_on "rust" => :build
+  depends_on "rustup-init" => :build
   depends_on "yarn" => :build
 
   def install
-    ENV["OPENSSL_DIR"] = Formula["openssl@1.1"].opt_prefix
+    # We use the openssl rust crate, which has its own mechanism for figuring
+    # out where the OpenSSL installation is.
+    # According to  https://docs.rs/openssl/latest/openssl/#manual , we can
+    # force some specific location by setting the OPENSSL_DIR environment
+    # variable. This is necessary since the installed OpenSSL library
+    # might not match the architecture of the destination one.
+    ENV["OPENSSL_DIR"] = "%TMPDIR%/openssl@1.1/1.1.1s"
     ENV["PYTHON_SYS_EXECUTABLE"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
     ENV["PYTHON"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
     ENV["PYTHON3"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
+    ENV["SAPLING_VERSION"] = "%VERSION%"
+    ENV["CFLAGS"] = "--target=%TARGET%"
+    ENV["RUST_TARGET"] = "%TARGET%"
+    # The line below is necessary, since otherwise homebrew somehow injects
+    # -march=... into clang
+    ENV["HOMEBREW_OPTFLAGS"] = ""
 
     cd "eden/scm" do
-      # Since above we make openssl a build-time dependency, we need to
-      # statically link the OpenSSL library. In the openssl Rust crate, which
-      # we use, this is done via setting the OPENSSL_STATIC environment variable
-      #
-      # The VERSION environment variable sets the version, and this is expected
-      # to be filled by a Github action
-      system "OPENSSL_STATIC=1 SAPLING_VERSION=%VERSION% " \
+      system "rustup-init -y"
+      system "source %CACHEDIR%/cargo_cache/env && rustup target add %TARGET%"
+      system "source %CACHEDIR%/cargo_cache/env && "\
              "make PREFIX=#{prefix} install-oss"
     end
   end
