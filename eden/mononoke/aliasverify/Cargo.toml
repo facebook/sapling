@@ -18,7 +18,6 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }

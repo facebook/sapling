@@ -22,7 +22,6 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }

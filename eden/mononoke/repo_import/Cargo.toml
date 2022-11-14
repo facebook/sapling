@@ -21,7 +21,6 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
