@@ -22,7 +22,7 @@ define_flags! {
         #[short('C')]
         clean: bool,
 
-        /// require clean working directory
+        /// require clean working copy
         #[short('c')]
         check: bool,
 
@@ -128,40 +128,41 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 }
 
 pub fn aliases() -> &'static str {
-    "update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou|goto|go"
+    // NB: This must be the combination of Python aliases and legacy
+    // aliases, in the right order.
+    "update|up|checkout|co|goto|go|upd|upda|updat|che|chec|check|checko|checkou"
 }
 
 pub fn doc() -> &'static str {
-    r#"check out a specific commit
+    r#"update working copy to a given commit
 
-Update your checkout to the given destination commit. More precisely, make
-the destination commit the current commit and update the contents of all
-files in your checkout to match their state in the destination commit.
+Update your working copy to the given destination commit. More
+precisely, make the destination commit the current commit and update the
+contents of all files in your working copy to match their state in the
+destination commit.
 
-By default, if you attempt to check out a commit while you have pending
+By default, if you attempt to go to a commit while you have pending
 changes, and the destination commit is not an ancestor or descendant of
 the current commit, the checkout will abort. However, if the destination
 commit is an ancestor or descendant of the current commit, the pending
-changes will be merged into the new checkout.
+changes will be merged with the destination.
 
-Use one of the following flags to modify this behavior:
+Use one of the following flags to modify this behavior::
 
---check: abort if there are pending changes
+    --check: abort if there are pending changes
 
---clean: permanently discard any pending changes (use with caution)
+    --clean: permanently discard any pending changes (use with caution)
 
---merge: attempt to merge the pending changes into the new checkout, even
-if the destination commit is not an ancestor or descendant of the current
-commit
+    --merge: always attempt to merge the pending changes into the destination
 
-If merge conflicts occur during checkout, @Product@ enters an unfinished
+If merge conflicts occur during update, @Product@ enters an unfinished
 merge state. If this happens, fix the conflicts manually and then run
-@prog@ commit to exit the unfinished merge state and save your changes in a
-new commit. Alternatively, run @prog@ checkout --clean to discard your pending
-changes.
+:prog:`commit` to exit the unfinished merge state and save your changes
+in a new commit. Alternatively, run :prog:`goto --clean` to discard your
+pending changes.
 
-Specify null as the destination commit to get an empty checkout (sometimes
-known as a bare repository).
+Specify null as the destination commit to get an empty working copy
+(sometimes known as a bare repository).
 
 Returns 0 on success, 1 if there are unresolved files."#
 }

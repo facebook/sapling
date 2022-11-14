@@ -22,7 +22,7 @@ Short help:
   
   Check out a commit:
   
-   checkout      check out a specific commit
+   checkout      update working copy to a given commit
   
   Work with your checkout:
   
@@ -79,7 +79,7 @@ Short help:
   
   Check out a commit:
   
-   checkout      check out a specific commit
+   checkout      update working copy to a given commit
   
   Work with your checkout:
   
@@ -136,7 +136,7 @@ Short help:
   
   Check out a commit:
   
-   checkout      check out a specific commit
+   checkout      update working copy to a given commit
   
   Work with your checkout:
   
@@ -193,7 +193,7 @@ Short help:
   
   Check out a commit:
   
-   checkout      check out a specific commit
+   checkout      update working copy to a given commit
   
   Work with your checkout:
   
@@ -859,7 +859,7 @@ Test that default list of commands omits extension commands
   
   Check out a commit:
   
-   checkout      check out a specific commit
+   checkout      update working copy to a given commit
   
   Work with your checkout:
   

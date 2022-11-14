@@ -6197,10 +6197,10 @@ def _ensurebaserev(ui, repo, fname):
 
 
 @command(
-    "update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou|goto|go",
+    "update|up|checkout|co|goto|go",
     [
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
-        ("c", "check", None, _("require clean working directory")),
+        ("c", "check", None, _("require clean working copy")),
         ("m", "merge", None, _("merge uncommitted changes")),
         ("d", "date", "", _("tipmost revision matching date (ADVANCED)"), _("DATE")),
         ("r", "rev", "", _("revision"), _("REV")),
@@ -6208,6 +6208,7 @@ def _ensurebaserev(ui, repo, fname):
         ("", "continue", None, _("resume interrupted update --merge (ADVANCED)")),
     ]
     + mergetoolopts,
+    legacyaliases=["upd", "upda", "updat", "che", "chec", "check", "checko", "checkou"],
 )
 def update(
     ui,

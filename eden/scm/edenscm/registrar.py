@@ -212,8 +212,18 @@ class command(_funcregistrarbase):
                 "unknown cmdtype value '%s' for " "'%s' command" % (cmdtype, name)
             )
 
-        if self.showlegacyaliases and legacyaliases:
-            name = "|".join((name, "|".join(legacyaliases)))
+        if legacyaliases:
+            legacyname = "|".join((name, "|".join(legacyaliases)))
+            if self.showlegacyaliases:
+                name = legacyname
+            elif legacyname in self._table:
+                # This is for compat w/ Rust so Rust doesn't have to
+                # duplicate the legacy alias concept for now. Rust is
+                # expected to include the legacy aliases in its alias
+                # list, and we swap the table entries here (because we
+                # aren't using the legacy aliases, so the "name" is
+                # different between Python and Rust).
+                self._table[name] = self._table.pop(legacyname)
 
         func.norepo = norepo
         func.optionalrepo = optionalrepo
