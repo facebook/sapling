@@ -5033,7 +5033,7 @@ def recover(ui, repo):
 
 
 @command(
-    "remove|rm|rem|remo|remov",
+    "remove|rm",
     [
         ("A", "after", None, _("record delete for missing files")),
         ("f", "force", None, _("forget added files, delete modified files")),
@@ -5041,6 +5041,7 @@ def recover(ui, repo):
     + walkopts,
     _("[OPTION]... FILE..."),
     inferrepo=True,
+    legacyaliases=["rem", "remo", "remove"],
 )
 def remove(ui, repo, *pats, **opts):
     """delete the specified tracked files
@@ -5054,29 +5055,30 @@ def remove(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
-      -A/--after can be used to remove only files that have already
-      been deleted, -f/--force can be used to force deletion, and -Af
+      ``-A/--after`` can be used to remove only files that have already
+      been deleted, ``-f/--force`` can be used to force deletion, and ``-Af``
       can be used to remove files from the next revision without
       deleting them from the working directory.
 
       The following table details the behavior of remove for different
       file states (columns) and option combinations (rows). The file
-      states are Added [A], Clean [C], Modified [M] and Missing [!]
-      (as reported by :prog:`status`). The actions are Warn, Remove
-      (from branch) and Delete (from disk):
+      states are Added (**A**), Clean (**C**), Modified (**M**) and
+      Missing (**!**) (as reported by :prog:`status`). The actions are
+      Warn (**W**), Remove (**R**) (from branch) and Delete (**D**)
+      (from disk):
 
-      ========= == == == ==
-      opt/state A  C  M  !
-      ========= == == == ==
-      none      W  RD W  R
-      -f        R  RD RD R
-      -A        W  W  W  R
-      -Af       R  R  R  R
-      ========= == == == ==
+      =========    =====  ====== ====== =====
+      opt/state    **A**  **C**  **M**  **!**
+      =========    =====  ====== ====== =====
+      none         **W**  **RD** **W**  **R**
+      ``-f``       **R**  **RD** **RD** **R**
+      ``-A``       **W**  **W**  **W**  **R**
+      ``-Af``      **R**  **R**  **R**  **R**
+      =========    =====  ====== ====== =====
 
       .. note::
 
-         :prog:`remove` never deletes files in Added [A] state from the
+         :prog:`remove` never deletes files in **Added** state from the
          working directory, not even if ``--force`` is specified.
 
     Returns 0 on success, 1 if any warnings encountered.
@@ -5491,7 +5493,7 @@ def rollback(ui, repo, **opts):
     the working directory.
 
     Transactions are used to encapsulate the effects of all commands
-    that create new changesets or propagate existing changesets into a
+    that create new commits or propagate existing commits into a
     repository.
 
     .. container:: verbose
