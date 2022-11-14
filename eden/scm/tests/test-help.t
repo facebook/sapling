@@ -391,7 +391,7 @@ Normal help for add
       an add after files have been committed, use 'hg rm'.
   
       If no names are given, add all files to the repository (except files
-      matching ".hgignore").
+      matching ".gitignore").
   
       Returns 0 if all files are successfully added.
   
@@ -417,7 +417,7 @@ Verbose help for add
       an add after files have been committed, use 'hg rm'.
   
       If no names are given, add all files to the repository (except files
-      matching ".hgignore").
+      matching ".gitignore").
   
       Examples:
   
@@ -432,7 +432,7 @@ Verbose help for add
             $ hg status
             A foo.c
   
-        - Specific files to be added can be specified:
+        - Add specific files:
   
             $ ls
             bar.c  foo.c

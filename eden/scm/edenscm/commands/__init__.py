@@ -206,7 +206,7 @@ def add(ui, repo, *pats, **opts):
     To undo an add after files have been committed, use :hg:`rm`.
 
     If no names are given, add all files to the repository (except
-    files matching ``.hgignore``).
+    files matching ``.gitignore``).
 
     .. container:: verbose
 
@@ -224,7 +224,7 @@ def add(ui, repo, *pats, **opts):
              $ @prog@ status
              A foo.c
 
-         - Specific files to be added can be specified::
+         - Add specific files::
 
              $ ls
              bar.c  foo.c
