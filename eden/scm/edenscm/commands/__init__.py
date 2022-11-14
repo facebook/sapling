@@ -5647,9 +5647,9 @@ def show(ui, repo, *args, **opts):
     Show the commit message and contents for the specified commit. If no commit
     is specified, shows the current commit.
 
-    This behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or
-    if called without a REV, :prog:`log -vp -r . [OPTION]...` Use
-    :prog:`log` for more powerful operations than supported by @prog@ show.
+    :prog:`show` behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or
+    if called without a ``REV``, :prog:`log -vp -r . [OPTION]...` Use
+    :prog:`log` for more powerful operations than supported by :prog:`show`.
 
     """
     ui.pager("show")
