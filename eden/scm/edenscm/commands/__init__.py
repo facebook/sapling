@@ -611,7 +611,7 @@ def archive(ui, repo, dest, **opts):
 
 
 @command(
-    "backout|backo|backou",
+    "backout",
     [
         ("", "merge", None, _("combine existing pending changes with backout changes")),
         ("", "no-commit", False, _("do not commit")),
@@ -630,55 +630,51 @@ def archive(ui, repo, dest, **opts):
     + commitopts
     + commitopts2,
     _("[OPTION]... [-r] REV"),
+    legacyaliases=["backo", "backou"],
 )
 def backout(ui, repo, node=None, rev=None, **opts):
     """reverse the effects of an earlier commit
 
-    Create an inverse commit for the specified commit. This command is commonly
+    Create an inverse commit of the specified commit. Backout is commonly
     used to undo the effects of a public commit.
 
-    By default, :prog:`backout` creates a new commit on top of the current commit.
-    Specify --no-commit to only change the working copy rather than
-    automatically creating a new commit.
+    By default, :prog:`backout` creates a new commit on top of the
+    current commit. Specify ``--no-commit`` to skip making a new
+    commit, leaving the changes outstanding in your working copy.
 
     If merge conflicts are encountered during the backout, changes will be
     left in the working copy with conflict markers inserted. When this occurs,
     resolve the conflicts and then run :prog:`commit`.
 
     By default, :prog:`backout` will abort if pending changes are present in the
-    working copy. Specify --merge to combine changes from the backout with
+    working copy. Specify ``--merge`` to combine changes from the backout with
     your pending changes.
 
     .. container:: verbose
 
       Examples:
 
-      - Reverse the effect of the parent of the working directory.
+      - Reverse the effect of the parent of the working copy.
         This backout will be committed immediately::
 
           @prog@ backout -r .
 
-      - Reverse the effect of previous bad revision 23::
+      - Reverse the effect of previous bad commit 42e8ddebe::
 
-          @prog@ backout -r 23
+          @prog@ backout -r 42e8ddebe
 
-      - Reverse the effect of previous bad revision 23 and
+      - Reverse the effect of previous bad revision 42e8ddebe and
         leave changes uncommitted::
 
-          @prog@ backout -r 23 --no-commit
-          @prog@ commit -m "Backout revision 23"
+          @prog@ backout -r 42e8ddebe --no-commit
+          @prog@ commit -m "Backout 42e8ddebe"
 
-      By default, the pending changeset will have one parent,
-      maintaining a linear history. With --merge, the pending
-      changeset will instead have two parents: the old parent of the
-      working directory and a new child of REV that simply undoes REV.
+      By default, the new commit will have one parent,
+      maintaining a linear history. With ``--merge``, the commit
+      will instead have two parents: the old parent of the
+      working copy and a new child of REV that simply undoes REV.
 
-      Before version 1.7, the behavior without --merge was equivalent
-      to specifying --merge followed by :prog:`update --clean .` to
-      cancel the merge and leave the child of REV as a head to be
-      merged separately.
-
-    See :prog:`help dates` for a list of formats valid for -d/--date.
+    See :prog:`help dates` for a list of formats valid for ``-d/--date``.
 
     See :prog:`help revert` for a way to restore files to the state
     of another revision.
