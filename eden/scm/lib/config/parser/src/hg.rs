@@ -440,7 +440,10 @@ impl ConfigSetHgExt for ConfigSet {
                 if mtime_age > generation_time {
                     let config_regen_command: Vec<String> =
                         self.get_or("configs", "regen-command", || {
-                            vec!["hg".to_string(), "debugdynamicconfig".to_string()]
+                            vec![
+                                identity::cli_name().to_string(),
+                                "debugdynamicconfig".to_string(),
+                            ]
                         })?;
                     tracing::debug!(
                         "spawn {:?} because mtime({}) {:?} > generation_time {:?}",
@@ -574,10 +577,10 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
             match read_repo_name_from_disk(repo_path) {
                 Ok(s) => {
                     name = s;
-                    source = ".hg/reponame";
+                    source = "reponame file";
                 }
                 Err(e) => {
-                    tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
+                    tracing::warn!("repo name: no reponame file: {:?}", &e);
                 }
             };
         }
@@ -586,7 +589,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
 
     if !repo_name.is_empty() {
         tracing::debug!("repo name: {:?} (from {})", &repo_name, source);
-        if source != ".hg/reponame" {
+        if source != "reponame file" {
             let need_rewrite = match read_repo_name_from_disk(repo_path) {
                 Ok(s) => s != repo_name,
                 Err(_) => true,
@@ -594,8 +597,8 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
             if need_rewrite {
                 let path = get_repo_name_path(repo_path);
                 match fs::write(&path, &repo_name) {
-                    Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
-                    Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
+                    Ok(_) => tracing::debug!("repo name: written to reponame file"),
+                    Err(e) => tracing::warn!("repo name: cannot write to reponame file: {:?}", e),
                 }
             }
         }

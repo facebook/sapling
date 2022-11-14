@@ -399,7 +399,7 @@ pub fn revlog_clone(
     root: &Path,
 ) -> Result<()> {
     let mut args = vec![
-        "hg".to_string(),
+        identity::cli_name().to_string(),
         "debugrevlogclone".to_string(),
         ctx.opts.source.to_string(),
         "-R".to_string(),

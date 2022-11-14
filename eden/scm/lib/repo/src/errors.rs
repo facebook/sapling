@@ -14,7 +14,7 @@ use thiserror::Error;
 pub struct RepoNotFound(pub String);
 
 #[derive(Debug, Error)]
-#[error(".hg/sharedpath points to nonexistent directory {0}!")]
+#[error("sharedpath points to nonexistent directory {0}!")]
 pub struct InvalidSharedPath(pub String);
 
 #[derive(Debug, Error)]

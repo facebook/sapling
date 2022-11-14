@@ -120,7 +120,7 @@ pub fn init_working_copy(
         let path = RepoPath::from_str(profile).map_err(|e| anyhow!(e))?;
         if matches!(target_mf.get(path)?, None) {
             logger.warn(format!(
-                "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with 'hg sparse disableprofile'."
+                "The profile '{profile}' does not exist. Check out a commit where it exists, or remove it with '@prog@ sparse disableprofile'."
             ));
         }
     }

@@ -37,7 +37,7 @@ struct UserIdentity {
     /// Full name of the product
     long_product_name: &'static str,
 
-    /// Prefix of environment variables related to current repo. To be used in the future.
+    /// Prefix of environment variables related to current repo.
     env_prefix: &'static str,
 
     /// Subdirectory below user's config directory. The user's config directory depends on platform:
@@ -171,6 +171,11 @@ impl Identity {
         } else {
             Some(self.user.config_system_path.into())
         }
+    }
+
+    pub fn punch(&self, tmpl: &str) -> String {
+        tmpl.replace("@prog@", self.cli_name())
+            .replace("@Product@", self.product_name())
     }
 }
 

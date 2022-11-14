@@ -12,6 +12,6 @@ Make sure we do not rewrite by default:
 Rewrite on wrong reponame:
   $ echo foobar > .hg/reponame
   $ LOG=configparser::hg=debug hg log  2>&1 | grep written
-  DEBUG configparser::hg: repo name: written to .hg/reponame
+  DEBUG configparser::hg: repo name: written to reponame file
   $ cat .hg/reponame
   reponame-default (no-eol)

@@ -119,7 +119,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
           store\n\
           treestate\n",
     )
-    .context("error writing to hg requires")?;
+    .context("error writing to requires")?;
 
     let mut store_requires_path = dot_path.clone();
     store_requires_path.push("store");
@@ -131,7 +131,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
           narrowheads\n\
           visibleheads\n",
     )
-    .context("error writing to hg store requires")?;
+    .context("error writing to store requires")?;
 
     fs::write(
         dot_path.join(ident.config_repo_file()),
@@ -143,7 +143,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
         )
         .as_bytes(),
     )
-    .context("error writing to hg store requires")?;
+    .context("error writing to store requires")?;
 
     Ok(0)
 }

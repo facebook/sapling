@@ -20,7 +20,8 @@ pub struct NonUTF8Arguments;
 pub use cliparser::errors::InvalidArguments;
 
 #[derive(Debug, Error)]
-#[error("unknown command '{0}'\n(use 'hg help' to get help)")]
+// This error message isn't user facing yet, so let's just say "sl".
+#[error("unknown command '{0}'\n(use 'sl help' to get help)")]
 pub struct UnknownCommand(pub String);
 
 /// Explicitly fallback to Python code path.
@@ -53,16 +54,17 @@ pub struct Abort(pub Cow<'static, str>);
 /// This function adds `hg:` or `abort:` to error messages.
 pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
     use cliparser::parser::ParseError;
+    let cli_name = identity::cli_name();
     if err.downcast_ref::<configparser::Error>().is_some() {
-        let _ = io.write_err(format!("hg: parse error: {}\n", err));
+        let _ = io.write_err(format!("{cli_name}: parse error: {err}\n"));
     } else if err.downcast_ref::<configparser::Errors>().is_some() {
-        let _ = io.write_err(format!("hg: parse errors: {}\n", err));
+        let _ = io.write_err(format!("{cli_name}: parse errors: {err}\n"));
     } else if let Some(ParseError::AmbiguousCommand {
         command_name: _,
         possibilities,
     }) = err.downcast_ref::<ParseError>()
     {
-        let _ = io.write_err(format!("hg: {}:\n", err));
+        let _ = io.write_err(format!("{cli_name}: {err}:\n"));
         for possibility in possibilities {
             // UX: Colorize the output once `io` can output colors.
             let _ = io.write_err(format!("     {}\n", possibility));

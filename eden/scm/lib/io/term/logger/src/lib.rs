@@ -68,7 +68,7 @@ impl TermLogger {
     }
 
     fn write(mut w: impl Write, msg: impl AsRef<str>) {
-        let msg = msg.as_ref();
+        let msg = identity::default().punch(msg.as_ref());
 
         if let Err(err) = || -> std::io::Result<()> {
             w.write_all(msg.as_bytes())?;

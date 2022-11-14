@@ -33,11 +33,15 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo) -> Result<u8> {
-    let repopath = repo.path();
     let config = repo.config();
 
     let edenapi_client = edenapi::Builder::from_config(config)?.build()?;
-    let namedag_path = IndexedLogNameDagPath(repopath.join(".hg/store/segments/v1"));
+
+    let mut segments_path = repo.dot_hg_path().to_path_buf();
+    segments_path.push("store");
+    segments_path.push("segments");
+    segments_path.push("v1");
+    let namedag_path = IndexedLogNameDagPath(segments_path);
     let mut namedag = namedag_path
         .open()
         .context("error opening segmented changelog")?;

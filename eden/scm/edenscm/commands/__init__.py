@@ -1392,7 +1392,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     # Packed bundles are a pseudo bundle format for now.
     if cgversion == "s1":
         raise error.Abort(
-            _('packed bundles cannot be produced by "hg bundle"'),
+            _('packed bundles cannot be produced by "@prog@ bundle"'),
             hint=_("use '@prog@ debugcreatestreamclonebundle'"),
         )
 
@@ -6114,7 +6114,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 if isinstance(gen, streamclone.streamcloneapplier):
                     raise error.Abort(
                         _("packed bundles cannot be applied with " '"@prog@ unbundle"'),
-                        hint=_('use "hg debugapplystreamclonebundle"'),
+                        hint=_('use "@prog@ debugapplystreamclonebundle"'),
                     )
                 url = "bundle:" + fname
                 txnname = "unbundle"
@@ -6254,10 +6254,14 @@ def update(
     if ui.configbool("ui", "disallowemptyupdate"):
         if node is None and rev is None and not date:
             raise error.Abort(
-                "You must specify a destination to update to,"
-                + ' for example "hg checkout master".',
-                hint="If you're trying to move a bookmark forward, try "
-                + '"hg rebase -d <destination>".',
+                _(
+                    "You must specify a destination to update to,"
+                    + ' for example "@prog@ checkout master".'
+                ),
+                hint=_(
+                    "If you're trying to move a bookmark forward, try "
+                    + '"@prog@ rebase -d <destination>".'
+                ),
             )
 
     # Suggest `hg prev` as an alternative to 'hg update .^'.
