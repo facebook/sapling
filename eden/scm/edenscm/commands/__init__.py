@@ -79,6 +79,7 @@ with hgdemandimport.deactivated():
     # Importing these modules have side effect on the command table.
     from . import (  # noqa: F401
         blackbox,
+        clean as cleancmd,
         debug,
         debugbenchmark,
         debugcheckoutidentifier,
@@ -95,7 +96,6 @@ with hgdemandimport.deactivated():
         eden,
         fs,
         isl,
-        purge,
         uncommit,
     )
 
