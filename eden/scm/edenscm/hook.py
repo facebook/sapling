@@ -184,12 +184,12 @@ def _hookitems(ui):
 _redirect = False
 
 
-def redirect(state):
+def redirect(state: bool) -> None:
     global _redirect
     _redirect = state
 
 
-def hashook(ui, htype):
+def hashook(ui, htype) -> bool:
     """return True if a hook is configured for 'htype'"""
     if not ui.callhooks:
         return False
@@ -199,7 +199,7 @@ def hashook(ui, htype):
     return False
 
 
-def hook(ui, repo, htype, throw=False, **args):
+def hook(ui, repo, htype, throw: bool = False, **args) -> bool:
     if not ui.callhooks:
         return False
 
@@ -215,7 +215,7 @@ def hook(ui, repo, htype, throw=False, **args):
     return r
 
 
-def runhooks(ui, repo, htype, hooks, throw=False, **args):
+def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
     args = args
     res = {}
     oldstdout = -1
@@ -278,6 +278,7 @@ def runhooks(ui, repo, htype, hooks, throw=False, **args):
     finally:
         if _redirect and oldstdout >= 0:
             util.stdout.flush()  # write hook output to stderr fd
+            # pyre-fixme[61]: `stdoutno` is undefined, or not always defined.
             os.dup2(oldstdout, stdoutno)
             os.close(oldstdout)
 
