@@ -37,7 +37,7 @@ hex = node.hex
             None,
             _("fold linearly from current revision to specified revision"),
         ),
-        ("", "no-rebase", False, _("don't rebase descendants after split")),
+        ("", "no-rebase", False, _("don't rebase descendants after fold")),
         ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
     ]
     + (commands.commitopts + commands.commitopts2 + commands.formatteropts),
@@ -46,39 +46,39 @@ hex = node.hex
 def fold(ui, repo, *revs, **opts):
     """combine multiple commits into a single commit
 
-    With --from, folds all the revisions linearly between the current revision
-    and the specified revision.
+    With ``--from``, fold all of the commit linearly between the current
+    commit and the specified commit.
 
-    With --exact, folds only the specified revisions while ignoring the revision
-    currently checked out. The given revisions must form a linear unbroken
+    With ``--exact``, fold only the specified commits while ignoring the
+    current commit. The given commits must form a linear, continuous
     chain.
 
     .. container:: verbose
 
      Some examples:
 
-     - Fold from the current revision to its parent::
+     - Fold from the current commit to its parent::
 
          @prog@ fold --from .^
 
-     - Fold all draft revisions into the current revision::
+     - Fold all draft commits into the current commit::
 
          @prog@ fold --from 'draft()'
 
-       See :prog:`help phases` for more about draft revisions and
-       :prog:`help revsets` for more about the `draft()` keyword
+       See :prog:`help phases` for more about draft commits and
+       :prog:`help revsets` for more about the `draft()` keyword.
 
-     - Fold revisions between 3 and 6 into the current revision::
+     - Fold commits between e254371c1 and be57079e4 into the current commit::
 
-         @prog@ fold --from 3::6
+         @prog@ fold --from e254371c1::be57079e4
 
-     - Fold revisions 3 and 4:
+     - Fold commits e254371c1 and be57079e4:
 
-        @prog@ fold "3 + 4" --exact
+        @prog@ fold "e254371c1 + be57079e4" --exact
 
-     - Only fold revisions linearly between foo and @::
+     - Only fold commits linearly between foo and .::
 
-         @prog@ fold foo::@ --exact
+         @prog@ fold foo::. --exact
     """
     revs = list(revs)
     revs.extend(opts["rev"])
