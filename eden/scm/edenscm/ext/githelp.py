@@ -3,26 +3,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""try mapping git commands to Mercurial commands
+"""try mapping git commands to @Product@ commands
 
-Tries to map a given git command to a Mercurial command:
+Tries to map a given git command to a @Product@ command:
 
   $ @prog@ githelp -- git checkout master
-  @prog@ update master
+  @prog@ goto master
 
-If an unknown command or parameter combination is detected, an error is
-produced, followed by a footer with instructions on how to contact the
-maintainers if the command is legitimate. To customize this footer, set:
-
-  [githelp]
-  unknown.footer = My footer message
-
-(newlines are possible in hgrc by indenting the lines after the first)
+The translation is best effort, and if an unknown command or parameter
+combination is detected, it simply returns an error.
 
 """
 import re
 
-from bindings import cliparser
+from bindings import cliparser, identity
 from edenscm import error, extensions, pycompat, registrar, util
 from edenscm.i18n import _
 
@@ -51,16 +45,22 @@ def convert(s: str) -> str:
         return s[7:]
     if "HEAD" in s:
         s = s.replace("HEAD", ".")
-    # HEAD~ in git is .~1 in mercurial
+    # HEAD~ in git is .~1
     s = re.sub("~$", "~1", s)
     return s
 
 
 @command("githelp|git", [], _("-- GIT COMMAND"))
 def githelp(ui, repo, *args, **kwargs):
-    """suggests the Mercurial equivalent of the given git command
+    """suggests the @Product@ equivalent of the given git command
 
     Usage: @prog@ githelp -- <git command>
+
+    Example:
+
+      $ @prog@ git -- checkout my_file.txt baef1046b
+
+      @prog@ revert -r my_file.txt baef1046b
     """
 
     if len(args) == 0 or (len(args) == 1 and args[0] == "git"):
@@ -122,7 +122,8 @@ class Command(object):
         self.opts = {}
 
     def __str__(self):
-        cmd = "hg " + self.name
+        prog = identity.default().cliname()
+        cmd = prog + " " + self.name
         if self.opts:
             for k, values in sorted(pycompat.iteritems(self.opts)):
                 for v in values:
@@ -170,7 +171,7 @@ def add(ui, repo, *args, **kwargs) -> None:
         ui.status(
             _(
                 "note: record and crecord will commit when complete, "
-                "as there is no staging area in mercurial\n\n"
+                "as there is no staging area in @Product@\n\n"
             )
         )
         cmd = Command("record")
@@ -265,9 +266,10 @@ def branch(ui, repo, *args, **kwargs) -> None:
             if len(args) > 1:
                 old = args.pop(0)
             else:
+                prog = identity.default().cliname()
                 # shell command to output the active bookmark for the active
                 # revision
-                old = '`hg log -T"{activebookmark}" -r .`'
+                old = '`%s log -T"{activebookmark}" -r .`' % prog
         new = args[0]
         # pyre-fixme[61]: `old` is undefined, or not always defined.
         cmd["-m"] = old
@@ -428,7 +430,7 @@ def clone(ui, repo, *args, **kwargs) -> None:
         cmd["-U"] = None
         ui.status(
             _(
-                "note: Mercurial does not have bare clones. "
+                "note: @Product@ does not have bare clones. "
                 + "-U will clone the repo without checking out a commit\n\n"
             )
         )
@@ -476,7 +478,7 @@ def commit(ui, repo, *args, **kwargs) -> None:
     if opts.get("all"):
         ui.status(
             _(
-                "note: Mercurial doesn't have a staging area, "
+                "note: @Product@ doesn't have a staging area, "
                 + "so there is no --all. -A will add and remove files "
                 + "for you though.\n\n"
             )
@@ -518,7 +520,7 @@ def diff(ui, repo, *args, **kwargs) -> None:
     if opts.get("cached"):
         ui.status(
             _(
-                "note: Mercurial has no concept of a staging area, "
+                "note: @Product@ has no concept of a staging area, "
                 + "so --cached does nothing.\n\n"
             )
         )
@@ -540,11 +542,11 @@ def diff(ui, repo, *args, **kwargs) -> None:
 def difftool(ui, repo, *args, **kwargs) -> None:
     ui.status(
         _(
-            "Mercurial does not enable external difftool by default. You "
-            "need to enable the extdiff extension in your .hgrc file by adding\n"
+            "@Product@ does not enable external difftool by default. You "
+            "need to enable the extdiff extension in your config file by adding\n"
             "extdiff =\n"
             "to the [extensions] section and then running\n\n"
-            "hg extdiff -p <program>\n\n"
+            "@prog@ extdiff -p <program>\n\n"
             "See '@prog@ help extdiff' and '@prog@ help -e extdiff' for more "
             "information.\n"
         )
@@ -562,7 +564,7 @@ def fetch(ui, repo, *args, **kwargs) -> None:
         if len(args) > 1:
             ui.status(
                 _(
-                    "note: Mercurial doesn't have refspecs. "
+                    "note: @Product@ doesn't have refspecs. "
                     + "-r can be used to specify which commits you want to pull. "
                     + "-B can be used to specify which bookmark you want to pull."
                     + "\n\n"
@@ -583,7 +585,7 @@ def grep(ui, repo, *args, **kwargs) -> None:
 
     cmd = Command("grep")
 
-    # For basic usage, git grep and hg grep are the same. They both have the
+    # For basic usage, git grep and sl grep are the same. They both have the
     # pattern first, followed by paths.
     cmd.extend(args)
 
@@ -648,7 +650,7 @@ def log(ui, repo, *args, **kwargs) -> None:
         if "format:" in format:
             ui.status(
                 _(
-                    "note: --format format:??? equates to Mercurial's "
+                    "note: --format format:??? equates to @Product@'s "
                     + "--template. See @prog@ help templates for more info.\n\n"
                 )
             )
@@ -656,7 +658,7 @@ def log(ui, repo, *args, **kwargs) -> None:
         else:
             ui.status(
                 _(
-                    "note: --pretty/format/oneline equate to Mercurial's "
+                    "note: --pretty/format/oneline equate to @Product@'s "
                     + "--style or --template. See @prog@ help templates for more info."
                     + "\n\n"
                 )
@@ -784,7 +786,7 @@ def pull(ui, repo, *args, **kwargs) -> None:
         if len(args) > 1:
             ui.status(
                 _(
-                    "note: Mercurial doesn't have refspecs. "
+                    "note: @Product@ doesn't have refspecs. "
                     + "-r can be used to specify which commits you want to pull. "
                     + "-B can be used to specify which bookmark you want to pull."
                     + "\n\n"
@@ -810,7 +812,7 @@ def push(ui, repo, *args, **kwargs) -> None:
         if len(args) > 1:
             ui.status(
                 _(
-                    "note: Mercurial doesn't have refspecs. "
+                    "note: @Product@ doesn't have refspecs. "
                     + "-r can be used to specify which commits you want to push. "
                     + "-B can be used to specify which bookmark you want to push."
                     + "\n\n"
@@ -911,10 +913,9 @@ def reflog(ui, repo, *args, **kwargs) -> None:
     ui.status(str(cmd), "\n\n")
     ui.status(
         _(
-            "note: in @prog@ commits can be deleted from repo but we always"
-            " have backups.\n"
-            "Please use '@prog@ backups --restore' or 'hg reset'"
-            + " to restore from backups.\n"
+            "note: in @prog@ commits can be hidden from repo but the "
+            " commits can be unhidden if needed.\n"
+            "Please use '@prog@ unhide --rev HASH' to restore a commit.\n"
         )
     )
 
@@ -933,7 +934,7 @@ def reset(ui, repo, *args, **kwargs) -> None:
     if opts.get("mixed"):
         ui.status(
             _(
-                "NOTE: --mixed has no meaning since mercurial has no "
+                "NOTE: --mixed has no meaning since @Product@ has no "
                 + "staging area\n\n"
             )
         )
@@ -1045,7 +1046,7 @@ def stash(ui, repo, *args, **kwargs) -> None:
     elif action == "branch" or action == "show" or action == "create":
         ui.status(
             _(
-                "note: Mercurial doesn't have equivalents to the "
+                "note: @Product@ doesn't have equivalents to the "
                 + "git stash branch, show, or create actions.\n\n"
             )
         )
