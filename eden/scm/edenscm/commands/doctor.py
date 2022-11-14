@@ -485,8 +485,8 @@ def checknoisybranches(repo):
     - Most (> 50%) changes are not authored by the current user.
     """
     ui = repo.ui
-    commitcloudmod = extensions.find("commitcloud")
-    if commitcloudmod:
+    if extensions.isloaded("commitcloud"):
+        commitcloudmod = extensions.find("commitcloud")
         (
             current_workspace,
             locally_owned,
