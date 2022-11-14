@@ -3031,7 +3031,7 @@ def heads(ui, repo, *branchrevs, **opts):
 
 
 @command(
-    "help|hel",
+    "help",
     [
         ("e", "extension", None, _("show help for extensions")),
         ("c", "command", None, _("show help for commands")),
@@ -3041,6 +3041,7 @@ def heads(ui, repo, *branchrevs, **opts):
     _("[-ecks] [TOPIC]"),
     norepo=True,
     cmdtype=readonly,
+    legacyaliases=["hel"],
 )
 def help_(ui, *names, **opts):
     """show help for a given topic or a help overview
