@@ -11,8 +11,8 @@
 # This program was inspired by the "cvspurge" script contained in CVS
 # utilities (http://www.red-bean.com/cvsutils/).
 #
-# For help on the usage of "hg purge" use:
-#  hg help purge
+# For help on the usage of "hg clean" use:
+#  hg help clean
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,12 +36,13 @@ from .cmdtable import command
 
 
 @command(
-    "purge|clean",
+    "clean|purge",
     [
         ("a", "abort-on-err", None, _("abort if an error occurs")),
-        ("", "all", None, _("purge ignored files too")),
-        ("", "dirs", None, _("purge empty directories")),
-        ("", "files", None, _("purge files")),
+        ("", "all", None, _("delete ignored files too (DEPRECATED)")),
+        ("", "ignored", None, _("delete ignored files too")),
+        ("", "dirs", None, _("delete empty directories")),
+        ("", "files", None, _("delete files")),
         ("p", "print", None, _("print filenames instead of deleting them")),
         (
             "0",
@@ -53,28 +54,23 @@ from .cmdtable import command
     + cmdutil.walkopts,
     _("[OPTION]... [DIR]..."),
 )
-def purge(ui, repo, *dirs, **opts):
+def clean(ui, repo, *dirs, **opts):
     """delete untracked files
 
-    Delete all untracked files in your checkout. Untracked files are files
+    Delete all untracked files in your working copy. Untracked files are files
     that are unknown to @Product@. They are marked with "?" when you run
     :prog:`status`.
 
-    By default, :prog:`purge` does not affect::
-
-    - Modified and unmodified tracked files
-    - Ignored files (unless --all is specified)
-    - New files added to the repository with :prog:`add`, but not yet committed
-    - Empty directories that contain no files (unless --dirs is specified)
+    By default, :prog:`clean` implies ``--files``, so only untracked
+    files are deleted. If you add ``--ignored``, ignored files are also
+    deleted. If you add ``--dirs``, empty directories are deleted and
+    ``--files`` is no longer implied.
 
     If directories are given on the command line, only files in these
     directories are considered.
 
-    Caution: Be careful with purge, as you might irreversibly delete some files
-    you forgot to add to the repository. There is no way to undo an
-    :prog:`purge` operation. Run :prog:`status` first to verify the list of
-    files that will be deleted, or use the --print option with :prog:`purge`
-    to preview the results.
+    Caution: :prog:`clean` is irreversible. To avoid accidents, first
+    perform a dry run with :prog:`clean --print`.
     """
     act = not opts.get("print")
     eol = "\n"
@@ -83,10 +79,14 @@ def purge(ui, repo, *dirs, **opts):
         act = False  # --print0 implies --print
     removefiles = opts.get("files")
     removedirs = opts.get("dirs")
-    removeignored = opts.get("all")
+    removeignored = opts.get("ignored")
+    if removeignored is None:
+        removeignored = opts.get("all")
     if not removefiles and not removedirs:
         removefiles = True
-        removedirs = ui.configbool("purge", "dirs-by-default")
+        removedirs = ui.configbool("clean", "dirs-by-default", default=None)
+        if removedirs is None:
+            removedirs = ui.configbool("purge", "dirs-by-default")
 
     match = scmutil.match(repo[None], dirs, opts)
 

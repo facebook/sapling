@@ -16,6 +16,7 @@ Show all commands except debug commands
   branch
   bundle
   cat
+  clean
   clone
   commit
   configfile
@@ -47,7 +48,6 @@ Show all commands except debug commands
   phase
   prefetch
   pull
-  purge
   push
   record
   recover
@@ -330,6 +330,7 @@ Show aliases with -v
   branch
   bundle
   cat
+  clean purge
   clone
   commit ci
   configfile
@@ -361,7 +362,6 @@ Show aliases with -v
   phase
   prefetch
   pull
-  purge clean
   push
   record
   recover
@@ -408,6 +408,7 @@ Show all commands + options
   branch: force, clean, new
   bundle: force, rev, base, all, type
   cat: output, rev, decode, include, exclude, template
+  clean: abort-on-err, all, ignored, dirs, files, print, print0, include, exclude
   clone: noupdate, updaterev, rev, pull, stream, shallow, git
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   configfile: user, local, system
@@ -562,7 +563,6 @@ Show all commands + options
   phase: public, draft, secret, force, rev
   prefetch: rev, repack, base, include, exclude
   pull: update, force, rev, bookmark
-  purge: abort-on-err, all, dirs, files, print, print0, include, exclude
   push: force, rev, bookmark, new-branch, pushvars
   record: addremove, amend, secret, edit, message, logfile, date, user, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude
   recover: 
