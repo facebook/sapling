@@ -968,7 +968,7 @@ def _hidenodes(repo, nodes) -> None:
 
 
 @command(
-    "unshelve|unshe|unshel|unshelv",
+    "unshelve",
     [
         ("a", "abort", None, _("abort an incomplete unshelve operation")),
         ("c", "continue", None, _("continue an incomplete unshelve operation")),
@@ -978,31 +978,26 @@ def _hidenodes(repo, nodes) -> None:
         ("", "date", "", _("set date for temporary commits (DEPRECATED)"), _("DATE")),
     ],
     _("@prog@ unshelve [[-n] SHELVED]"),
+    legacyaliases=["unshe", "unshel", "unshelv"],
 )
 def unshelve(ui, repo, *shelved, **opts):
-    """restore a shelved change to the working directory
+    """restore a shelved change to the working copy
 
     This command accepts an optional name of a shelved change to
     restore. If none is given, the most recent shelved change is used.
 
     If a shelved change is applied successfully, the bundle that
     contains the shelved changes is moved to a backup location
-    (.hg/shelve-backup).
+    (.@prog@/shelve-backup).
 
     Since you can restore a shelved change on top of an arbitrary
-    commit, it is possible that unshelving will result in a conflict
-    between your changes and the commits you are unshelving onto. If
-    this occurs, you must resolve the conflict, then use
-    ``--continue`` to complete the unshelve operation. (The bundle
-    will not be moved until you successfully complete the unshelve.)
+    commit, it is possible that unshelving will result in a conflict. If
+    this occurs, you must resolve the conflict, then use ``--continue``
+    to complete the unshelve operation. The bundle will not be moved
+    until you successfully complete the unshelve.
 
-    (Alternatively, you can use ``--abort`` to abandon an unshelve
-    that causes a conflict. This reverts the unshelved changes, and
-    leaves the bundle in place.)
-
-    If bare shelved change(when no files are specified, without interactive,
-    include and exclude option) was done on newly created branch it would
-    restore branch information to the working directory.
+    Alternatively, you can use ``--abort`` to cancel the conflict
+    resolution and undo the unshelve, leaving the shelve bundle intact.
 
     After a successful unshelve, the shelved changes are stored in a
     backup directory. Only the N most recent backups are kept. N
@@ -1011,9 +1006,11 @@ def unshelve(ui, repo, *shelved, **opts):
 
     .. container:: verbose
 
-       Timestamp in seconds is used to decide order of backups. More
-       than ``maxbackups`` backups are kept, if same timestamp
-       prevents from deciding exact order of them, for safety.
+       Timestamp in seconds is used to decide the order of backups. More
+       than ``maxbackups`` backups are kept if same timestamp prevents
+       from deciding exact order of them, for safety.
+
+    Returns 0 on success.
     """
     with repo.wlock():
         return _dounshelve(ui, repo, *shelved, **opts)
@@ -1139,7 +1136,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
 
 @command(
-    "shelve|she|shel|shelv",
+    "shelve",
     [
         (
             "A",
@@ -1160,45 +1157,40 @@ def _dounshelve(ui, repo, *shelved, **opts):
             "i",
             "interactive",
             None,
-            _("interactive mode, only works while creating a shelve"),
+            _("interactive mode - only works while creating a shelve"),
         ),
         ("", "stat", None, _("output diffstat-style summary of changes")),
     ]
     + cmdutil.walkopts,
     _("@prog@ shelve [OPTION]... [FILE]..."),
+    legacyaliases=["she", "shel", "shelv"],
 )
 def shelvecmd(ui, repo, *pats, **opts):
-    """save pending changes and revert checkout to a clean state
+    """save pending changes and revert working copy to a clean state
 
-    Shelving takes files that "hg status" reports as not clean, saves
+    Shelving takes files that :prog:`status` reports as not clean, saves
     the modifications to a bundle (a shelved change), and reverts the
-    files so that their state in the working directory becomes clean.
+    files to a clean state in the working copy.
 
-    To restore these changes to the working directory, using "hg
-    unshelve"; this will work even if you switch to a different
-    commit.
+    To restore the changes to the working copy, using :prog:`unshelve`,
+    regardless of your current commit.
 
-    When no files are specified, "hg shelve" saves all not-clean
+    When no files are specified, :prog:`shelve` saves all not-clean
     files. If specific files or directories are named, only changes to
     those files are shelved.
 
-    In bare shelve (when no files are specified, without interactive,
-    include and exclude option), shelving remembers information if the
-    working directory was on newly created branch, in other words working
-    directory was on different branch than its first parent. In this
-    situation unshelving restores branch information to the working directory.
-
     Each shelved change has a name that makes it easier to find later.
-    The name of a shelved change defaults to being based on the active
-    bookmark, or if there is no active bookmark, the current named
-    branch.  To specify a different name, use ``--name``.
+    The name of a shelved change by default is based on the active
+    bookmark. To specify a different name, use ``--name``.
 
     To see a list of existing shelved changes, use the ``--list``
     option. For each shelved change, this will print its name, age,
-    and description; use ``--patch`` or ``--stat`` for more details.
+    and description. Use ``--patch`` or ``--stat`` for more details.
 
     To delete specific shelved changes, use ``--delete``. To delete
     all shelved changes, use ``--cleanup``.
+
+    Returns 0 on success.
     """
     allowables = [
         ("addremove", {"create"}),  # 'create' is pseudo action
@@ -1251,7 +1243,7 @@ def extsetup(ui) -> None:
         ]
     )
     cmdutil.afterresolvedstates.append(
-        (shelvedstate._filename, "hg unshelve --continue")
+        (shelvedstate._filename, _("@prog@ unshelve --continue"))
     )
 
 
