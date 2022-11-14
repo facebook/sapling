@@ -5654,7 +5654,7 @@ def show(ui, repo, *args, **opts):
 
 
 @command(
-    "status|st|sta|stat|statu",
+    "status|st",
     [
         ("A", "all", None, _("show status of all files")),
         ("m", "modified", None, _("show only modified files")),
@@ -5675,6 +5675,7 @@ def show(ui, repo, *args, **opts):
     + formatteropts,
     inferrepo=True,
     cmdtype=readonly,
+    legacyaliases=["sta", "stat", "statu"],
 )
 def status(ui, repo, *pats, **opts):
     revs = opts.get("rev")

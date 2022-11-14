@@ -164,7 +164,7 @@ invalid options
   
   list files with pending changes
   
-      Show status of files in the repository using the following status
+      Show status of files in the working copy using the following status
       indicators:
   
         M = modified
@@ -177,22 +177,21 @@ invalid options
           = origin of the previous file (with --copies)
   
       By default, shows files that have been modified, added, removed, deleted,
-      or that are unknown (corresponding to the options -mardu). Files that are
-      unmodified, ignored, or the source of a copy/move operation are not
-      listed.
+      or that are unknown (corresponding to the options "-mardu", respectively).
+      Files that are unmodified, ignored, or the source of a copy/move operation
+      are not listed.
   
       To control the exact statuses that are shown, specify the relevant flags
-      (like -rd to show only files that are removed or deleted). Additionally,
-      specify -q/--quiet to hide both unknown and ignored files.
+      (like "-rd" to show only files that are removed or deleted). Additionally,
+      specify "-q/--quiet" to hide both unknown and ignored files.
   
-      To show the status of specific files, provide an explicit list of files to
-      match. To include or exclude files using regular expressions, use -I or
-      -X.
+      To show the status of specific files, provide a list of files to match. To
+      include or exclude files using patterns or filesets, use "-I" or "-X".
   
-      If --rev is specified, and only one revision is given, it is used as the
+      If "--rev" is specified and only one revision is given, it is used as the
       base revision. If two revisions are given, the differences between them
-      are shown. The --change option can also be used as a shortcut to list the
-      changed files of a revision from its first parent.
+      are shown. The "--change" option can also be used as a shortcut to list
+      the changed files of a revision from its first parent.
   
       Note:
          'hg status' might appear to disagree with 'hg diff' if permissions have
@@ -234,7 +233,7 @@ invalid options
   
   list files with pending changes
   
-      Show status of files in the repository using the following status
+      Show status of files in the working copy using the following status
       indicators:
   
         M = modified
@@ -247,22 +246,21 @@ invalid options
           = origin of the previous file (with --copies)
   
       By default, shows files that have been modified, added, removed, deleted,
-      or that are unknown (corresponding to the options -mardu). Files that are
-      unmodified, ignored, or the source of a copy/move operation are not
-      listed.
+      or that are unknown (corresponding to the options "-mardu", respectively).
+      Files that are unmodified, ignored, or the source of a copy/move operation
+      are not listed.
   
       To control the exact statuses that are shown, specify the relevant flags
-      (like -rd to show only files that are removed or deleted). Additionally,
-      specify -q/--quiet to hide both unknown and ignored files.
+      (like "-rd" to show only files that are removed or deleted). Additionally,
+      specify "-q/--quiet" to hide both unknown and ignored files.
   
-      To show the status of specific files, provide an explicit list of files to
-      match. To include or exclude files using regular expressions, use -I or
-      -X.
+      To show the status of specific files, provide a list of files to match. To
+      include or exclude files using patterns or filesets, use "-I" or "-X".
   
-      If --rev is specified, and only one revision is given, it is used as the
+      If "--rev" is specified and only one revision is given, it is used as the
       base revision. If two revisions are given, the differences between them
-      are shown. The --change option can also be used as a shortcut to list the
-      changed files of a revision from its first parent.
+      are shown. The "--change" option can also be used as a shortcut to list
+      the changed files of a revision from its first parent.
   
       Note:
          'hg status' might appear to disagree with 'hg diff' if permissions have
@@ -304,7 +302,7 @@ invalid options
   
   list files with pending changes
   
-      Show status of files in the repository using the following status
+      Show status of files in the working copy using the following status
       indicators:
   
         M = modified
@@ -317,22 +315,21 @@ invalid options
           = origin of the previous file (with --copies)
   
       By default, shows files that have been modified, added, removed, deleted,
-      or that are unknown (corresponding to the options -mardu). Files that are
-      unmodified, ignored, or the source of a copy/move operation are not
-      listed.
+      or that are unknown (corresponding to the options "-mardu", respectively).
+      Files that are unmodified, ignored, or the source of a copy/move operation
+      are not listed.
   
       To control the exact statuses that are shown, specify the relevant flags
-      (like -rd to show only files that are removed or deleted). Additionally,
-      specify -q/--quiet to hide both unknown and ignored files.
+      (like "-rd" to show only files that are removed or deleted). Additionally,
+      specify "-q/--quiet" to hide both unknown and ignored files.
   
-      To show the status of specific files, provide an explicit list of files to
-      match. To include or exclude files using regular expressions, use -I or
-      -X.
+      To show the status of specific files, provide a list of files to match. To
+      include or exclude files using patterns or filesets, use "-I" or "-X".
   
-      If --rev is specified, and only one revision is given, it is used as the
+      If "--rev" is specified and only one revision is given, it is used as the
       base revision. If two revisions are given, the differences between them
-      are shown. The --change option can also be used as a shortcut to list the
-      changed files of a revision from its first parent.
+      are shown. The "--change" option can also be used as a shortcut to list
+      the changed files of a revision from its first parent.
   
       Note:
          'hg status' might appear to disagree with 'hg diff' if permissions have
@@ -374,7 +371,7 @@ invalid options
   
   list files with pending changes
   
-      Show status of files in the repository using the following status
+      Show status of files in the working copy using the following status
       indicators:
   
         M = modified
@@ -387,22 +384,21 @@ invalid options
           = origin of the previous file (with --copies)
   
       By default, shows files that have been modified, added, removed, deleted,
-      or that are unknown (corresponding to the options -mardu). Files that are
-      unmodified, ignored, or the source of a copy/move operation are not
-      listed.
+      or that are unknown (corresponding to the options "-mardu", respectively).
+      Files that are unmodified, ignored, or the source of a copy/move operation
+      are not listed.
   
       To control the exact statuses that are shown, specify the relevant flags
-      (like -rd to show only files that are removed or deleted). Additionally,
-      specify -q/--quiet to hide both unknown and ignored files.
+      (like "-rd" to show only files that are removed or deleted). Additionally,
+      specify "-q/--quiet" to hide both unknown and ignored files.
   
-      To show the status of specific files, provide an explicit list of files to
-      match. To include or exclude files using regular expressions, use -I or
-      -X.
+      To show the status of specific files, provide a list of files to match. To
+      include or exclude files using patterns or filesets, use "-I" or "-X".
   
-      If --rev is specified, and only one revision is given, it is used as the
+      If "--rev" is specified and only one revision is given, it is used as the
       base revision. If two revisions are given, the differences between them
-      are shown. The --change option can also be used as a shortcut to list the
-      changed files of a revision from its first parent.
+      are shown. The "--change" option can also be used as a shortcut to list
+      the changed files of a revision from its first parent.
   
       Note:
          'hg status' might appear to disagree with 'hg diff' if permissions have
