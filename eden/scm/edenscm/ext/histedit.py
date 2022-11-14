@@ -985,7 +985,7 @@ class message(histeditaction):
 
 
 @command(
-    "histedit|histe|histed|histedi",
+    "histedit",
     [
         (
             "",
@@ -1002,35 +1002,36 @@ class message(histeditaction):
     ]
     + cmdutil.formatteropts,
     _("[OPTION]... [ANCESTOR]"),
+    legacyaliases=["histe", "histed", "histedi"],
 )
 def histedit(ui, repo, *freeargs, **opts):
     """interactively reorder, combine, or delete commits
 
-    This command lets you edit a linear series of changesets (up to
-    and including the working directory, which should be clean).
+    This command lets you edit a linear series of commits up to
+    and including the working copy, which should be clean.
     You can:
 
-    - `pick` to [re]order a changeset
+    - `pick` to (re)order a commit
 
-    - `drop` to omit changeset
+    - `drop` to omit a commit
 
-    - `mess` to reword the changeset commit message
+    - `mess` to reword a commit message
 
-    - `fold` to combine it with the preceding changeset (using the later date)
+    - `fold` to combine a commit with the preceding commit, using the later date
 
     - `roll` like fold, but discarding this commit's description and date
 
-    - `edit` to edit this changeset (preserving date)
+    - `edit` to edit a commit, preserving date
 
-    - `base` to checkout changeset and apply further changesets from there
+    - `base` to checkout a commit and continue applying subsequent commits
 
-    There are a number of ways to select the root changeset:
+    There are multiple ways to select the root changeset:
 
     - Specify ANCESTOR directly
 
-    - Otherwise, the value from the "histedit.defaultrev" config option
-      is used as a revset to select the base revision when ANCESTOR is not
-      specified. The first revision returned by the revset is used. By
+    - Otherwise, the value from the ``histedit.defaultrev`` config option
+      is used as a revset to select the base commit when ANCESTOR is not
+      specified. The first commit returned by the revset is used. By
       default, this selects the editable history that is unique to the
       ancestry of the working directory.
 
@@ -1039,54 +1040,52 @@ def histedit(ui, repo, *freeargs, **opts):
        Examples:
 
          - A number of changes have been made.
-           Revision 3 is no longer needed.
+           Commit `a113a4006` is no longer needed.
 
-           Start history editing from revision 3::
+           Start history editing from commit a::
 
-             @prog@ histedit -r 3
+             @prog@ histedit -r a113a4006
 
-           An editor opens, containing the list of revisions,
+           An editor opens, containing the list of commits,
            with specific actions specified::
 
-             pick 5339bf82f0ca 3 Zworgle the foobar
-             pick 8ef592ce7cc4 4 Bedazzle the zerlog
-             pick 0a9639fcda9d 5 Morgify the cromulancy
+             pick a113a4006 Zworgle the foobar
+             pick 822478b68 Bedazzle the zerlog
+             pick d275e7ed9 5 Morgify the cromulancy
 
            Additional information about the possible actions
-           to take appears below the list of revisions.
+           to take appears below the list of commits.
 
-           To remove revision 3 from the history,
+           To remove commit a113a4006 from the history,
            its action (at the beginning of the relevant line)
-           is changed to 'drop'::
+           is changed to ``drop``::
 
-             drop 5339bf82f0ca 3 Zworgle the foobar
-             pick 8ef592ce7cc4 4 Bedazzle the zerlog
-             pick 0a9639fcda9d 5 Morgify the cromulancy
+             drop a113a4006 Zworgle the foobar
+             pick 822478b68 Bedazzle the zerlog
+             pick d275e7ed9 Morgify the cromulancy
 
          - A number of changes have been made.
-           Revision 2 and 4 need to be swapped.
+           Commit fe2bff2ce and c9116c09e need to be swapped.
 
-           Start history editing from revision 2::
+           Start history editing from commit fe2bff2ce::
 
-             @prog@ histedit -r 2
+             @prog@ histedit -r fe2bff2ce
 
-           An editor opens, containing the list of revisions,
+           An editor opens, containing the list of commits,
            with specific actions specified::
 
-             pick 252a1af424ad 2 Blorb a morgwazzle
-             pick 5339bf82f0ca 3 Zworgle the foobar
+             pick fe2bff2ce Blorb a morgwazzle
+             pick 99a93da65 Zworgle the foobar
+             pick c9116c09e Bedazzle the zerlog
+
+           To swap commits fe2bff2ce and c9116c09e, simply swap their lines::
+
              pick 8ef592ce7cc4 4 Bedazzle the zerlog
-
-           To swap revision 2 and 4, its lines are swapped
-           in the editor::
-
-             pick 8ef592ce7cc4 4 Bedazzle the zerlog
              pick 5339bf82f0ca 3 Zworgle the foobar
              pick 252a1af424ad 2 Blorb a morgwazzle
 
-    Returns 0 on success, 1 if user intervention is required (not only
-    for intentional "edit" command, but also for resolving unexpected
-    conflicts).
+    Returns 0 on success, 1 if user intervention is required for
+    ``edit`` command or to resolve merge conflicts.
     """
     state = histeditstate(repo)
     try:
