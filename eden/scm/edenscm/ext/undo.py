@@ -808,21 +808,23 @@ def undo(ui, repo, *args, **opts):
 
     You can run :prog:`undo` multiple times to undo a series of local commands.
     Alternatively, you can explicitly specify the number of local commands to
-    undo using --step. This number can also be specified as a positional
+    undo using ``--step``. This number can also be specified as a positional
     argument.
 
-    To undo the effects of :prog:`undo`, run :prog:`redo`. Run :prog:`help redo` for
-    more information.
+    To undo the effects of :prog:`undo`, run :prog:`redo`. Run
+    :prog:`help redo` for more information.
 
-    Include --keep to preserve the state of the working copy. For example,
-    specify --keep when running :prog:`undo` to reverse the effects of an
+
+    Include ``--keep`` to preserve the state of the working copy. For example,
+    specify ``--keep`` when running :prog:`undo` to reverse the effects of an
     :prog:`commit` or :prog:`amend` operation while still preserving changes
     in the working copy. These changes will appear as pending changes.
 
-    Specify --preview to see a graphical display that shows what your smartlog
-    will look like after you run the command. Specify --interactive for an
-    interactive version of this preview in which you can step backwards and
-    forwards in the undo history.
+    Specify ``--preview`` to see a graphical display that shows what
+    your smartlog will look like after you run the command. Specify
+    ``--interactive`` for an interactive version of this preview in which
+    you can step backwards and forwards in the undo history.
+
 
     .. note::
 
@@ -942,8 +944,8 @@ def redo(ui, repo, *args, **opts):
     commands. Alternatively, you can explicitly specify the number of
     :prog:`undo` commands to undo by providing a number as a positional argument.
 
-    Specify ``--preview`` to see a graphical display that shows what your smartlog
-    will look like after you run the command.
+    Specify ``--preview`` to see a graphical display that shows what
+    your smartlog will look like after you run the command.
 
     For an interactive interface, run :prog:`undo --interactive`. This command
     enables you to visually step backwards and forwards in the undo history.
