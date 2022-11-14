@@ -23,7 +23,12 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-@command("unamend|una|unam|uname|unamen", [])
+@command(
+    "unamend|una",
+    [],
+    _("@prog@ unamend"),
+    legacyaliases=["unam", "uname", "unamen"],
+    )
 def unamend(ui, repo, **opts):
     """undo the last amend operation on the current commit
 
