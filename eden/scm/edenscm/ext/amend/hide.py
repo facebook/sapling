@@ -34,7 +34,7 @@ command = registrar.command(cmdtable)
 
 
 @command(
-    "hide|strip|prune|hid|str|stri",
+    "hide",
     [
         ("r", "rev", [], _("revisions to hide")),
         (
@@ -48,6 +48,7 @@ command = registrar.command(cmdtable)
         ("B", "bookmark", [], _("hide commits only reachable from a bookmark")),
     ],
     _("[OPTION]... [-r] REV..."),
+    legacyaliases=["strip", "prune", "hid", "str", "stri"],
 )
 def hide(ui, repo, *revs, **opts):
     """hide commits and their descendants
