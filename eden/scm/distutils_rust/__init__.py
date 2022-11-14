@@ -159,6 +159,7 @@ class BuildRustExt(distutils.core.Command):
         self.build_lib = None
         self.build_exe = None
         self.build_temp = None
+        self.target = os.environ.get("RUST_TARGET")
         self.debug = None
         self.inplace = None
         self.long_paths_support = False
@@ -193,7 +194,9 @@ class BuildRustExt(distutils.core.Command):
 
     def get_temp_output(self, target):
         """Returns the location in the temp directory of the output file."""
-        return os.path.join("debug" if self.debug else "release", target.dstnametmp)
+        temp_output = [self.target] if self.target else []
+        temp_output += ["debug" if self.debug else "release", target.dstnametmp]
+        return os.path.join(*temp_output)
 
     def get_output_filename(self, target):
         """Returns the filename of the build output."""
@@ -252,6 +255,8 @@ rustflags = ["-C", "link-args=-fuse-ld=gold"]
 
 [build]
 """
+        if self.target:
+            config += f'target = "{self.target}"\n'
         config += 'target-dir = "{}"\n'.format(self.get_cargo_target())
         paths = self.rust_binary_paths()
         for key in ["rustc", "rustdoc"]:
@@ -289,6 +294,8 @@ replace-with = "vendored-sources"
 
         paths = self.rust_binary_paths()
         cmd = [paths.get("cargo", "cargo"), "build", "--manifest-path", target.manifest]
+        if self.target:
+            cmd.append(f"--target={self.target}")
         if not self.debug:
             cmd.append("--release")
 

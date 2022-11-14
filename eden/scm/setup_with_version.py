@@ -55,6 +55,10 @@ versionhash = str(struct.unpack(">Q", hashlib.sha1(versionb).digest()[:8])[0])
 env = os.environ.copy()
 env["SAPLING_VERSION"] = version
 env["SAPLING_VERSION_HASH"] = versionhash
+# Somehow `HOMEBREW_CCCFG` gets set every time setup.py runs when running on
+# Homebrew. This affects certain Rust targets, somehow, making them produce
+# a target of the wrong arch (e.g. cross compiling to arm64 from x86)
+env.pop("HOMEBREW_CCCFG", None)
 
 python = env.get("PYTHON_SYS_EXECUTABLE", sys.executable)
 p = subprocess.run([python, "setup.py"] + sys.argv[1:], env=env)
