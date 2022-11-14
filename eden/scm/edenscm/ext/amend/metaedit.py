@@ -80,7 +80,7 @@ def editmessages(repo, revs):
 
 
 @command(
-    "metaedit|met|meta|metae|metaed|metaedi",
+    "metaedit|meta|me",
     [
         ("r", "rev", [], _("revision to edit")),
         ("", "fold", False, _("fold specified revisions into one")),
@@ -98,24 +98,29 @@ def editmessages(repo, revs):
     + cmdutil.formatteropts,
     _("[OPTION]... [-r] [REV]"),
     cmdtemplate=True,
+    legacyaliases=["met", "meta", "metaed", "metaedi"],
 )
 def metaedit(ui, repo, templ, *revs, **opts):
     """edit commit message and other metadata
 
-    Edit commit message for the current commit. By default, opens your default
-    editor so that you can edit the commit message interactively. Specify -m
-    to specify the commit message on the command line.
+    :prog:`metaedit` lets you edit commit messages. With no
+    arguments, the current commit message is modified. To edit
+    the commit message for a different commit, specify ``-r
+    REV``. To edit the commit messages for multiple commits,
+    specify ``--batch``.
 
-    To edit the message for a different commit, specify -r. To edit the
-    messages of multiple commits, specify --batch.
+    By default, :prog:`metaedit` launches your default editor so that
+    you can interactively edit the commit message. Specify ``-m`` to
+    specify the commit message on the command line.
 
-    You can edit other pieces of commit metadata, namely the user or date,
-    by specifying -u or -d, respectively. The expected format for user is
-    'Full Name <user@example.com>'.
+    You can edit other pieces of commit metadata such as the user or
+    date, by specifying ``-u`` or ``-d``, respectively. The expected
+    format for the user is 'Full Name <user@example.com>'.
 
-    There is also automation-friendly JSON input mode which allows the caller
-    to provide the mapping between commit and new message and username in the
-    following format::
+
+    There is also an automation-friendly JSON input mode which allows
+    the caller to provide the mapping between commit and new message
+    and username in the following format::
 
         {
             "<commit_hash>": {
@@ -126,7 +131,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
 
     .. note::
 
-        You can specify --fold to fold multiple revisions into one when the
+        You can specify ``--fold`` to fold multiple revisions into one when the
         given revisions form a linear unbroken chain. However, :prog:`fold` is
         the preferred command for this purpose. See :prog:`help fold` for more
         information.
