@@ -722,7 +722,7 @@ def _setupdirstate(ui) -> None:
 
 
 def _setupdiff(ui) -> None:
-    entry = commands.table["diff|d|di|dif"]
+    entry = cmdutil.findcmd("diff", commands.table)[1]
     entry[1].append(
         ("s", "sparse", None, "only show changes in files in the sparse config")
     )

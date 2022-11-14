@@ -2026,7 +2026,7 @@ def debugcomplete(ui, cmd="", **opts):
 
 
 @command(
-    "diff|d|di|dif",
+    "diff|d",
     [
         ("r", "rev", [], _("revision"), _("REV")),
         ("c", "change", "", _("change made by revision"), _("REV")),
@@ -2037,29 +2037,29 @@ def debugcomplete(ui, cmd="", **opts):
     _("[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."),
     inferrepo=True,
     cmdtype=readonly,
+    legacyaliases=["di", "dif"],
 )
 def diff(ui, repo, *pats, **opts):
     """show differences between commits
 
     Show the differences between two commits. If only one commit is specified,
-    shows the differences between the specified commit and your pending
-    changes. If no commits are specified, shows your pending changes.
+    show the differences between the specified commit and your working copy.
+    If no commits are specified, show your pending changes.
 
-    Specify -c to see the changes in the specified commit relative to its
+    Specify ``-c`` to see the changes in the specified commit relative to its
     parent.
 
     By default, this command skips binary files. To override this behavior,
-    specify -a to include binary files in the diff, probably with undesirable
-    results.
+    specify ``-a`` to include binary files in the diff.
 
-    By default, diffs are shown using the unified diff format. Specify -g
+    By default, diffs are shown using the unified diff format. Specify ``-g``
     to generate diffs in the git extended diff format. For more information,
-    read :prog:`help diffs`.
+    see :prog:`help diffs`.
 
     .. note::
 
        :prog:`diff` might generate unexpected results during merges because it
-       defaults to comparing against your checkout's first parent commit
+       defaults to comparing against your working copy's first parent commit
        if no commits are specified.
 
     .. container:: verbose
@@ -2072,7 +2072,7 @@ def diff(ui, repo, *pats, **opts):
 
       - compare two historical versions of a directory, with rename info::
 
-          @prog@ diff --git -r 1.0:1.2 lib/
+          @prog@ diff --git -r 5be761874:431ec8e07 lib/
 
       - get change stats relative to the last change on some date::
 
@@ -2084,9 +2084,9 @@ def diff(ui, repo, *pats, **opts):
 
       - compare a revision and its parents::
 
-          @prog@ diff -c 9353         # compare against first parent
-          @prog@ diff -r 9353^:9353   # same using revset syntax
-          @prog@ diff -r 9353^2:9353  # compare against the second parent
+          @prog@ diff -c 340f3fef5              # compare against first parent
+          @prog@ diff -r 340f3fef5^:340f3fef5   # same using revset syntax
+          @prog@ diff -r 340f3fef5^2:340f3fef5  # compare against the second parent
 
     Returns 0 on success.
     """

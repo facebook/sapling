@@ -576,24 +576,23 @@ Test command without options
   show differences between commits
   
       Show the differences between two commits. If only one commit is specified,
-      shows the differences between the specified commit and your pending
-      changes. If no commits are specified, shows your pending changes.
+      show the differences between the specified commit and your working copy.
+      If no commits are specified, show your pending changes.
   
-      Specify -c to see the changes in the specified commit relative to its
+      Specify "-c" to see the changes in the specified commit relative to its
       parent.
   
       By default, this command skips binary files. To override this behavior,
-      specify -a to include binary files in the diff, probably with undesirable
-      results.
+      specify "-a" to include binary files in the diff.
   
-      By default, diffs are shown using the unified diff format. Specify -g to
-      generate diffs in the git extended diff format. For more information, read
+      By default, diffs are shown using the unified diff format. Specify "-g" to
+      generate diffs in the git extended diff format. For more information, see
       'hg help diffs'.
   
       Note:
          'hg diff' might generate unexpected results during merges because it
-         defaults to comparing against your checkout's first parent commit if no
-         commits are specified.
+         defaults to comparing against your working copy's first parent commit
+         if no commits are specified.
   
       Returns 0 on success.
   
