@@ -451,9 +451,8 @@ mergemarkers=detailed
 origbackuppath=.sl/origbackups
 rollback=False
 suggesthgprev=True
-allowmerge=False
+allowmerge=True
 disallowedbrancheshint=use bookmarks instead
-hgrcmanagedby=cpe_mercurial
 threaded=False
 merge=internal:merge
 
