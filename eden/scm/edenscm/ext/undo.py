@@ -931,7 +931,7 @@ def undo(ui, repo, *args, **opts):
 
 @command(
     "redo",
-    [("p", "preview", False, _("see smartlog-like preview of future redo " "state"))],
+    [("p", "preview", False, _("see smartlog-like preview of future redo state"))],
 )
 def redo(ui, repo, *args, **opts):
     """undo the last undo
@@ -942,13 +942,14 @@ def redo(ui, repo, *args, **opts):
     commands. Alternatively, you can explicitly specify the number of
     :prog:`undo` commands to undo by providing a number as a positional argument.
 
-    Specify --preview to see a graphical display that shows what your smartlog
+    Specify ``--preview`` to see a graphical display that shows what your smartlog
     will look like after you run the command.
 
     For an interactive interface, run :prog:`undo --interactive`. This command
     enables you to visually step backwards and forwards in the undo history.
     Run :prog:`help undo` for more information.
 
+    Returns 0 on success.
     """
     shiftedindex = _computerelative(repo, 0)
     preview = opts.get("preview")
