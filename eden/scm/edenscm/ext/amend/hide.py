@@ -75,7 +75,7 @@ def hide(ui, repo, *revs, **opts):
 
     :prog:`hide 'obsolete() - ancestors(draft() & not obsolete())'`
 
-    --cleanup skips obsolete commits with non-obsolete descendants.
+    ``--cleanup`` skips obsolete commits with non-obsolete descendants.
     """
     removednames = []
     if opts.get("cleanup") and len(opts.get("rev") + list(revs)) != 0:
@@ -213,9 +213,10 @@ def hide(ui, repo, *revs, **opts):
 
 
 @command(
-    "unhide|unh|unhi|unhid",
+    "unhide",
     [("r", "rev", [], _("revisions to unhide"))],
     _("[OPTION]... [-r] REV..."),
+    legacyaliases=["unh", "unhi", "unhid"],
 )
 def unhide(ui, repo, *revs, **opts):
     """unhide commits and their ancestors
