@@ -8,7 +8,7 @@
 #pragma once
 
 #include <boost/regex.hpp>
-#include <folly/String.h>
+#include <fmt/ranges.h>
 #include <folly/Synchronized.h>
 #include <folly/container/F14Map.h>
 #include <folly/futures/Future.h>
@@ -104,9 +104,8 @@ class FaultInjector {
    *
    * This helper method checks for a fault using multiple arguments to construct
    * the key value.  The value arguments are converted to strings using
-   * folly::to<std::string>(), then joined together with ", " between each
-   * argument.  e.g., calling check("myFault", "foo", "bar") will use "foo, bar"
-   * as the key.
+   * fmt and joined with ", " as the delimiter.  e.g., calling check("myFault",
+   * "foo", "bar") will use "foo, bar" as the key.
    *
    * This string construction is only done if fault injection is enabled,
    * and so has no extra overhead if fault injection is disabled.
@@ -269,8 +268,9 @@ class FaultInjector {
   };
 
   template <typename... Args>
-  std::string constructKey(Args&&... args) {
-    return folly::join(", ", {folly::to<std::string>(args)...});
+  std::string constructKey(const Args&... args) {
+    return fmt::to_string(
+        fmt::join(std::make_tuple<const Args&...>(args...), ", "));
   }
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsyncImpl(

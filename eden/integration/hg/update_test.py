@@ -738,7 +738,7 @@ class UpdateTest(EdenHgTestCase):
             client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::checkout",
-                    keyValueRegex="dir2, 0",
+                    keyValueRegex="dir2, false",
                     kill=True,
                 )
             )
