@@ -28,7 +28,7 @@ Help for uncommit
   
       'hg uncommit' cannot be run on commits that have children. In other words,
       you cannot uncommit a commit in the middle of a stack. Similarly, by
-      default you cannot run 'hg uncommit' if there are pending changes in the
+      default, you cannot run 'hg uncommit' if there are pending changes in the
       working copy.
   
       You can selectively uncommit files from the current commit by optionally

@@ -40,10 +40,12 @@ from .cmdtable import command
 
 
 @command(
-    "uncommit|unc|unco|uncom|uncomm|uncommi",
+    "uncommit|unc",
     [("", "keep", False, _("allow an empty commit after uncommiting"))]
     + cmdutil.walkopts,
     _("[OPTION]... [FILE]..."),
+    legacyaliases=["unco", "uncom", "uncomm", "uncommi"],
+
 )
 def uncommit(ui, repo, *pats, **opts):
     """uncommit part or all of the current commit
@@ -54,10 +56,10 @@ def uncommit(ui, repo, *pats, **opts):
     contained in the uncommitted commit become pending changes in the
     working copy.
 
-    :prog:`uncommit` cannot be run on commits that have children. In other words,
-    you cannot uncommit a commit in the middle of a stack. Similarly, by
-    default you cannot run :prog:`uncommit` if there are pending changes in the
-    working copy.
+    :prog:`uncommit` cannot be run on commits that have children. In
+    other words, you cannot uncommit a commit in the middle of a
+    stack. Similarly, by default, you cannot run :prog:`uncommit` if
+    there are pending changes in the working copy.
 
     You can selectively uncommit files from the current commit by optionally
     specifying a list of files to remove. The specified files are removed from
