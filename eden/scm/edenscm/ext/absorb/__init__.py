@@ -960,7 +960,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
 
 
 @command(
-    "absorb|ab|abs|abso|absor|sf",
+    "absorb|ab",
     [
         (
             "a",
@@ -972,7 +972,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
             "p",
             "print-changes",
             None,
-            _("print which changesets are modified by which changes (DEPRECATED)"),
+            _("print which commits are modified by which changes (DEPRECATED)"),
         ),
         (
             "i",
@@ -985,7 +985,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
             "edit-lines",
             None,
             _(
-                "edit what lines belong to which changesets before commit "
+                "edit what lines belong to which commits before commit "
                 "(EXPERIMENTAL)"
             ),
         ),
@@ -995,30 +995,29 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     + commands.templateopts
     + commands.walkopts,
     _("@prog@ absorb [OPTION] [FILE]..."),
+    legacyaliases=["abs", "abso", "absor", "sf"],
 )
 def absorbcmd(ui, repo, *pats, **opts):
-    """apply pending corrections into a stack of commits
+    """intelligently integrate pending changes into current stack
 
-    absorb analyzes each change in your working directory and attempts to
-    amend the changed lines into the changesets in your stack that first
-    introduced those lines.
+    Attempt to amend each pending change to the proper commit in your
+    stack. Absorb does not write to the working copy.
 
-    If absorb cannot find an unambiguous changeset to amend for a change,
-    that change will be left in the working directory, untouched. They can be
-    observed by :hg:`status` or :hg:`diff` afterwards. In other words,
-    absorb does not write to the working directory.
+    If absorb cannot find an unambiguous commit to amend for a change, that
+    change will be left in the working copy, untouched. The unabsorbed
+    changes can be observed by :hg:`status` or :hg:`diff` afterwards.
 
-    Changesets outside the revset `::. and not public() and not merge()` will
+    Commits outside the revset `::. and not public() and not merge()` will
     not be changed.
 
-    Changesets that become empty after applying the changes will be deleted.
+    Commits that become empty after applying the changes will be deleted.
 
     By default, absorb will show what it plans to do and prompt for
     confirmation.  If you are confident that the changes will be absorbed
     to the correct place, run :hg:`absorb -a` to apply the changes
     immediately.
 
-    Returns 0 on success, 1 if all chunks were ignored and nothing absorbed.
+    Returns 0 if anything was absorbed, 1 if nothing was absorbed.
     """
     state = absorb(ui, repo, pats=pats, opts=opts)
     if sum(s[0] for s in state.chunkstats.values()) == 0:
@@ -1090,7 +1089,7 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
                 reason = _("%s files were ignored") % word
             messages.append((symbol, word, path, reason))
     if messages:
-        ui.write(_("\n# changes not applied and left in " "working directory:\n"))
+        ui.write(_("\n# changes not applied and left in " "working copy:\n"))
         for symbol, word, path, reason in messages:
             ui.write(
                 _("# %s %s : %s\n")

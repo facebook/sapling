@@ -465,7 +465,7 @@
   apply changes (yn)?  y
   1 of 2 chunks applied
   
-  # changes not applied and left in working directory:
+  # changes not applied and left in working copy:
   # M b : 1 modified chunks were ignored
   # M c : unsupported file type (ex. binary or link)
   # R a : removed files were ignored
