@@ -499,16 +499,17 @@ _ignoreopts = ("no-merges", "graph")
 
 
 @command(
-    "journal|j|jo|jou|jour|journ|journa",
+    "journal|jo",
     [
         ("", "all", None, "show history for all names"),
         ("c", "commits", None, "show commit metadata"),
     ]
     + [opt for opt in cmdutil.logopts if opt[1] not in _ignoreopts],
     "[OPTION]... [BOOKMARKNAME]",
+    legacyaliases=["j", "jou", "jour", "journ", "journa"],
 )
 def journal(ui, repo, *args, **opts) -> None:
-    """show history of the checked out commit or a bookmark
+    """show the history of the checked out commit or a bookmark
 
     Show the history of all the commits that were once the current commit. In
     other words, shows a list of your previously checked out commits.
@@ -520,25 +521,25 @@ def journal(ui, repo, *args, **opts) -> None:
     display a list of commits pointed to by a bookmark, specify a bookmark
     name.
 
-    Specify --all to show the history of both the current commit and all
-    bookmarks. In the output for --all, bookmarks are listed by name, and '.'
-    indicates the current commit.
+    Specify ``--all`` to show the history of both the current commit and all
+    bookmarks. In the output for ``--all``, bookmarks are listed by name, and
+    ``.`` indicates the current commit.
 
-    Specify -Tjson to produce machine-readable output.
+    Specify ``-Tjson`` to produce machine-readable output.
 
     .. container:: verbose
 
-       By default, :prog:`journal` only shows the commit hash and the
-       corresponding command. Specify --verbose to also include the previous
-       commit hash, user, and timestamp.
+      By default, :prog:`journal` only shows the commit hash and the
+      corresponding command. Specify ``--verbose`` to also include the
+      previous commit hash, user, and timestamp.
 
-       Use -c/--commits to output log information about each commit hash. To
-       customize the log output, you can also specify switches like '--patch',
-       '--git', '--stat', and '--template'.
+      Use ``-c/--commits`` to output log information about each commit
+      hash. To customize the log output, you can also specify switches
+      like ``--patch``, ``git``, ``--stat``, and ``--template``.
 
-       If a bookmark name starts with 're:', the remainder of the name is
-       treated as a regular expression. To match a name that actually starts
-       with 're:', use the prefix 'literal:'.
+      If a bookmark name starts with ``re:``, the remainder of the name
+      is treated as a regular expression. To match a name that actually
+      starts with ``re:``, use the prefix ``literal:``.
 
     """
     name = "."
