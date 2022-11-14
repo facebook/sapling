@@ -3785,23 +3785,20 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
 
 @command(
-    "init|ini",
+    "init",
     [
-        ("", "git", None, _("use git as backend (EXPERIMENTAL)")),
+        ("", "git", None, _("use git as the backend (EXPERIMENTAL)")),
     ],
-    _("[-e CMD] [--remotecmd CMD] [DEST]"),
+    _("[DEST]"),
     norepo=True,
+    legacyaliases=["ini"],
 )
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
 
     Initialize a new repository in the given directory. If the given
-    directory does not exist, it will be created.
-
-    If no directory is given, the current directory is used.
-
-    It is possible to specify an ``ssh://`` URL as the destination.
-    See :prog:`help urls` for more information.
+    directory does not exist, it will be created. If no directory is
+    given, the current directory is used.
 
     Returns 0 on success.
     """
