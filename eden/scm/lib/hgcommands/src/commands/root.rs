@@ -41,9 +41,13 @@ pub fn aliases() -> &'static str {
 }
 
 pub fn doc() -> &'static str {
-    r#"print the root (top) of the current working directory
+    r#"print the repository's root (top) of the current working directory
 
     Print the root directory of the current repository.
+
+    Frequently useful in shells scripts and automation to run commands like::
+
+       $  ./$(sl root)/bin/script.py
 
     Returns 0 on success."#
 }
