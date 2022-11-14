@@ -5380,7 +5380,7 @@ def resolve(ui, repo, *pats, **opts):
 
 
 @command(
-    "revert|rev|reve|rever",
+    "revert",
     [
         ("a", "all", None, _("revert all changes when no arguments given")),
         ("d", "date", "", _("tipmost revision matching date"), _("DATE")),
@@ -5391,6 +5391,7 @@ def resolve(ui, repo, *pats, **opts):
     + walkopts
     + dryrunopts,
     _("[OPTION]... [-r REV] [NAME]..."),
+    legacyaliases=["reve", "rever", "rev"],
 )
 def revert(ui, repo, *pats, **opts):
     """change the specified files to match a commit
@@ -5401,17 +5402,17 @@ def revert(ui, repo, *pats, **opts):
     contents they had in the current commit. If you are in the middle of
     an unfinished merge state, you must explicitly specify a revision.
 
-    Use the -r/--rev option to revert the given files or directories to
+    Use the ``-r/--rev`` option to revert the given files or directories to
     their states as of a specific commit. Because revert does not actually
     check out the specified commit, the files appear as modified and show
     up as pending changes in :prog:`status`.
 
     Revert causes files to match their contents in another commit. If
     instead you want to undo a specific landed commit, use :prog:`backout`
-    instead. Run `@prog help backout` for more information.
+    instead. Run :prog:`help backout` for more information.
 
     Modified files are saved with an .orig suffix before reverting.
-    To disable these backups, use --no-backup. You can configure @Product@
+    To disable these backups, use ``--no-backup``. You can configure @Product@
     to store these backup files in a custom directory relative to the root
     of the repository by setting the ``ui.origbackuppath`` configuration
     option.
