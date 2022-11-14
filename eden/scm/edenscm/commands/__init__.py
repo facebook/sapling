@@ -2334,7 +2334,7 @@ def forget(ui, repo, *pats, **opts):
 
 
 @command(
-    "graft|gra|graf",
+    "graft",
     [
         ("r", "rev", [], _("revisions to graft"), _("REV")),
         ("c", "continue", False, _("resume interrupted graft")),
@@ -2348,44 +2348,43 @@ def forget(ui, repo, *pats, **opts):
             "currentuser",
             False,
             _("record the current user as committer"),
-            _("DATE"),
         ),
     ]
     + commitopts2
     + mergetoolopts
     + dryrunopts,
     _("[OPTION]... [-r REV]... REV..."),
+    legacyaliases=["gra", "graf"],
 )
 def graft(ui, repo, *revs, **opts):
     """copy commits from a different location
 
-    This command uses @Product@'s merge logic to copy individual
-    changes from other branches without merging branches in the
-    history graph. This is sometimes known as 'backporting' or
-    'cherry-picking'. By default, graft will copy user, date, and
-    description from the source changesets.
+    Use @Product@'s merge logic to copy individual commits from other
+    locations without making merge commits. This is sometimes known as
+    'backporting' or 'cherry-picking'. By default, graft will also
+    copy user, date, and description from the source commits.
 
-    Changesets that are ancestors of the current revision, that have
-    already been grafted, or that are merges will be skipped.
+    Source commits will be skipped if they are ancestors of the
+    current commit, have already been grafted, or are merges.
 
-    If --log is specified, log messages will have a comment appended
+    If ``--log`` is specified, commit messages will have a comment appended
     of the form::
 
-      (grafted from CHANGESETHASH)
+      (grafted from COMMITHASH)
 
-    If --force is specified, revisions will be grafted even if they
+    If ``--force`` is specified, commits will be grafted even if they
     are already ancestors of, or have been grafted to, the destination.
-    This is useful when the revisions have since been backed out.
+    This is useful when the commits have since been backed out.
 
-    If a graft merge results in conflicts, the graft process is
-    interrupted so that the current merge can be manually resolved.
-    Once all conflicts are addressed, the graft process can be
-    continued with the -c/--continue option.
+    If a graft results in conflicts, the graft process is interrupted
+    so that the current merge can be manually resolved. Once all
+    conflicts are resolved, the graft process can be continued with
+    the ``-c/--continue`` option.
 
     .. note::
 
-       The -c/--continue option does not reapply earlier options, except
-       for --force.
+       The ``-c/--continue`` operation does not remember options from
+       the original invocation, except for ``--force``.
 
     .. container:: verbose
 
@@ -2394,11 +2393,11 @@ def graft(ui, repo, *revs, **opts):
       - copy a single change to the stable branch and edit its description::
 
           @prog@ update stable
-          @prog@ graft --edit 9393
+          @prog@ graft --edit ba7e89595
 
       - graft a range of changesets with one exception, updating dates::
 
-          @prog@ graft -D "2085::2093 and not 2091"
+          @prog@ graft -D "0e13e529c::224010e02 and not 85c0535a4"
 
       - continue a graft after resolving conflicts::
 
@@ -2412,13 +2411,9 @@ def graft(ui, repo, *revs, **opts):
 
           @prog@ log --debug -r .
 
-      - show revisions sorted by date::
-
-          @prog@ log -r "sort(all(), date)"
-
     See :prog:`help revisions` for more about specifying revisions.
 
-    Returns 0 on successful completion.
+    Returns 0 on success.
     """
     with repo.wlock():
         return _dograft(ui, repo, *revs, **opts)
