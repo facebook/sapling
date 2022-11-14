@@ -1574,7 +1574,7 @@ def clone(ui, source, dest=None, **opts):
 
 
 @command(
-    "commit|ci|com|comm|commi",
+    "commit|ci",
     [
         (
             "A",
@@ -1582,7 +1582,7 @@ def clone(ui, source, dest=None, **opts):
             None,
             _("mark new/missing files as added/removed before committing"),
         ),
-        ("", "amend", None, _("amend the parent of the working directory")),
+        ("", "amend", None, _("amend the parent of the working copy (DEPRECATED)")),
         ("e", "edit", None, _("invoke editor on commit messages")),
         ("i", "interactive", None, _("use interactive mode")),
         ("M", "reuse-message", "", _("reuse commit message from REV"), _("REV")),
@@ -1592,6 +1592,7 @@ def clone(ui, source, dest=None, **opts):
     + commitopts2,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
+    legacyaliases=["com", "comm", "commi"],
 )
 def commit(ui, repo, *pats, **opts):
     """save all pending changes or specified files in a new commit
@@ -1599,24 +1600,27 @@ def commit(ui, repo, *pats, **opts):
     Commit changes to the given files to your local repository.
 
     By default, all pending changes (in other words, those reported by
-    '@prog@ status') are committed. If you want to commit only some of your
+    :prog:`status`) are committed. If you want to commit only some of your
     changes, choose one of the following options:
 
     - Specify an exact list of files for which you want changes committed.
 
-    - Use the -I or -X flags to pattern match file names to exclude or
-      include by using a fileset. See '@prog@ help filesets' for more
-      information.
+    - Use the ``-I`` or ``-X`` flags to match or exclude file names
+      using a pattern or fileset. See :prog:`help patterns` and
+      :prog:`help filesets` fot details.
 
-    - Specify the --interactive flag to open a UI that will enable you
-      to select individual insertions or deletions.
+    - Specify the ``--interactive`` flag to open a UI to select
+      individual files, hunks, or lines.
+
+    To meld pending changes into the current commit instead of creating
+    a new commit, see :prog:`amend`.
 
     If you are committing the result of a merge, such as when merge
-    conflicts occur during '@prog@ checkout', commit all pending changes.
-    Do not specify files or use -I, -X, or -i.
+    conflicts occur during :prog:`checkout`, commit all pending changes.
+    Do not specify files or use ``-I``, ``-X``, or ``-i``.
 
-    Specify the -m flag to include a free-form commit message. If you do
-    not specify -m, @Product@ opens your configured editor where you can
+    Specify the ``-m`` flag to include a free-form commit message. If you do
+    not specify ``-m``, @Product@ opens your configured editor where you can
     enter a message based on a pre-loaded commit template.
 
     Returns 0 on success, 1 if nothing changed.
@@ -1624,32 +1628,17 @@ def commit(ui, repo, *pats, **opts):
     .. container:: verbose
 
       If your commit fails, you can find a backup of your commit message in
-      ``.hg/last-message.txt``.
-
-      You can use --amend to replace your current commit with a new commit
-      that contains the contents of the original commit, plus any pending
-      changes. Specify -m to provide a new commit message. If you do not
-      specify -m, @Product@ opens your configured editor where you can
-      enter a message based on a pre-loaded commit template.
-
-      .. note::
-
-         '@prog@ commit --amend' is not recommended. Use '@prog@ amend' instead.
-         See '@prog@ help amend' for more information.
+      ``.@prog@/last-message.txt``.
 
       Examples:
 
       - commit all files ending in .py::
 
-          @prog@ commit --include "set:**.py"
+          @prog@ commit --include "glob:**.py"
 
       - commit all non-binary files::
 
           @prog@ commit --exclude "set:binary()"
-
-      - amend the current commit and set the date to now::
-
-          @prog@ commit --amend --date now
     """
     wlock = lock = None
     try:

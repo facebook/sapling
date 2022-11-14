@@ -41,7 +41,9 @@ configitem("automv", "similarity", default=95)
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, "commit", mvcheck)
-    entry[1].append(("", "no-automv", None, _("disable automatic file move detection")))
+    entry[1].append(
+        ("", "no-automv", None, _("disable automatic file move detection (DEPRECATED)"))
+    )
     entry[1].append(
         ("", "no-move-detection", None, _("disable automatic file move detection"))
     )
