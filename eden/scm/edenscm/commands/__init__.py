@@ -2289,18 +2289,24 @@ def files(ui, repo, *pats, **opts):
         return cmdutil.files(ui, ctx, m, fm, fmt)
 
 
-@command("forget|for|forg|forge", walkopts, _("[OPTION]... FILE..."), inferrepo=True)
+@command(
+    "forget",
+    walkopts,
+    _("[OPTION]... FILE..."),
+    inferrepo=True,
+    legacyaliases=["for", "forg", "forge"],
+)
 def forget(ui, repo, *pats, **opts):
     """stop tracking the specified files
 
     Mark the specified files so they will no longer be tracked
     after the next commit.
 
-    This only removes files from the current branch, not from the
-    entire project history, and it does not delete them from the
-    working directory.
+    Forget does not delete the files from the working copy. To delete
+    the file from the working copy, see :prog:`remove`.
 
-    To delete the file from the working directory, see :prog:`remove`.
+    Forget does not remove files from the repository history. The files
+    will only be removed in the next commit and its descendants.
 
     To undo a forget before the next commit, see :prog:`add`.
 
