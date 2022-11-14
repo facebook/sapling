@@ -1060,29 +1060,29 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
 
 
 @command(
-    "rebase|reb|reba|rebas",
+    "rebase",
     [
         (
             "s",
             "source",
             "",
-            _("rebase the specified changeset and descendants"),
+            _("rebase the specified commit and descendants"),
             _("REV"),
         ),
         (
             "b",
             "base",
             "",
-            _("rebase everything from branching point of specified changeset"),
+            _("rebase everything from branching point of specified commit"),
             _("REV"),
         ),
         ("r", "rev", [], _("rebase these revisions"), _("REV")),
-        ("d", "dest", "", _("rebase onto the specified changeset"), _("REV")),
-        ("", "collapse", False, _("collapse the rebased changesets")),
+        ("d", "dest", "", _("rebase onto the specified revision"), _("REV")),
+        ("", "collapse", False, _("collapse the rebased commits")),
         ("m", "message", "", _("use text as collapse commit message"), _("TEXT")),
         ("e", "edit", False, _("invoke editor on commit messages")),
         ("l", "logfile", "", _("read collapse commit message from file"), _("FILE")),
-        ("k", "keep", False, _("keep original changesets")),
+        ("k", "keep", False, _("keep original commits")),
         ("D", "detach", False, _("(DEPRECATED)")),
         ("i", "interactive", False, _("(DEPRECATED)")),
         ("t", "tool", "", _("specify merge tool")),
@@ -1098,32 +1098,32 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
     + cmdutil.formatteropts,
     _("[-s REV | -b REV] [-d REV] [OPTION]"),
     cmdtemplate=True,
+    legacyaliases=["reb", "reba", "rebas"],
 )
 def rebase(ui, repo, templ=None, **opts):
     """move commits from one location to another
 
-    Rebase moves commits from one part of the commit graph to another. It
-    does this by creating a copy of the commit at the destination and hiding
-    the original commit.
+    Move commits from one part of the commit graph to another. This
+    behavior is achieved by creating a copy of the commit at the
+    destination and hiding the original commit.
 
-    To create copies of your commits instead of moving them, use ``--keep``
-    (``-k``) to keep the original commits rather than hiding them.
+    Use ``-k/--keep`` to skip the hiding and keep the original commits visible.
 
     If the commits being rebased have bookmarks, rebase moves the bookmarks
     onto the new versions of the commits. Bookmarks are moved even if ``--keep``
     is specified.
 
-    Public commits cannot be rebased unless you use the ``-k`` option to copy
-    them.
+    Public commits cannot be rebased unless you use the ``--keep`` option
+    to copy them.
 
     Use the following options to select the commits you want to rebase:
 
-      1. ``--rev`` to explicitly select commits
+      1. ``-r/--rev`` to explicitly select commits
 
-      2. ``--source`` to select a root commit and include all of its
+      2. ``-s/--source`` to select a root commit and include all of its
          descendants
 
-      3. ``--base`` to select a commit and its ancestors and descendants
+      3. ``-b/--base`` to select a commit and its ancestors and descendants
 
     If no option is specified to select commits, ``-b .`` is used by default.
 
@@ -1156,9 +1156,9 @@ def rebase(ui, repo, templ=None, **opts):
     can resolve conflicts in manual resolution mode. See :prog:`help resolve` for
     details.
 
-    After manually resolving conflicts, resume the rebase with ``@prog@ rebase
-    --continue`` (``-c``). If you are not able to successfully resolve all
-    conflicts, run ``@prog@ rebase --abort`` (``-a``) to abort the
+    After manually resolving conflicts, resume the rebase with
+    :prog:`rebase --continue`. If you are not able to successfully
+    resolve all conflicts, run :prog:`rebase --abort` to abort the
     rebase.
 
     Alternatively, you can use a custom merge tool to automate conflict
@@ -1203,7 +1203,7 @@ def rebase(ui, repo, templ=None, **opts):
         [rebase]
         singletransaction = True
 
-      By default, rebase writes to the current checkout, but you can configure it
+      By default, rebase writes to the working copy, but you can configure it
       to run in-memory for for better performance, and to allow it to run if the
       current checkout is dirty::
 
@@ -1214,8 +1214,6 @@ def rebase(ui, repo, templ=None, **opts):
 
         [rebase]
         experimental.inmemorywarning = Using experimental in-memory rebase
-
-    Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or if there are
     unresolved conflicts.
