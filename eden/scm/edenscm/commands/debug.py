@@ -2597,7 +2597,7 @@ def debugpathcomplete(ui, repo, *specs, **opts) -> None:
 def debugpickmergetool(ui, repo, *pats, **opts) -> None:
     """examine which merge tool is chosen for specified file
 
-    As described in :hg:`help merge-tools`, Mercurial examines
+    As described in :prog:`help merge-tools`, Mercurial examines
     configurations below in this order to decide which merge tool is
     chosen for specified file.
 
@@ -2855,7 +2855,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts) -> None:
     manifest but are not in the dirstate. It will not change adds, removes, or
     modified files that are in the working copy parent.
 
-    One use of this command is to make the next :hg:`status` invocation
+    One use of this command is to make the next :prog:`status` invocation
     check the actual file content.
     """
     if not rev:
@@ -3411,7 +3411,7 @@ def debugssl(ui, repo, source=None, **opts) -> None:
     does nothing on other platforms.
 
     If SOURCE is omitted, the 'default' path will be used.  If a URL is given,
-    that server is used. See :hg:`help urls` for more information.
+    that server is used. See :prog:`help urls` for more information.
 
     If the update succeeds, retry the original operation.  Otherwise, the cause
     of the SSL error is likely another issue.
@@ -3665,14 +3665,14 @@ def debugwireargs(ui, repopath, *vals, **opts) -> None:
 def debugdrawdag(ui, repo, **opts) -> None:
     r"""read an ASCII graph from stdin and create changesets
 
-    The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
+    The ASCII graph is like what :prog:`log -G` outputs, with each `o` replaced
     to the name of the node. The command will create dummy changesets and local
     tags with those names to make the dummy changesets easier to be referred
     to.
 
     If the name of a node is a single character 'o', It will be replaced by the
     word to the right. This makes it easier to reuse
-    :hg:`log -G -T '{desc}'` outputs.
+    :prog:`log -G -T '{desc}'` outputs.
 
     For root (no parents) nodes, revset can be used to query existing repo.
     Note that the revset cannot have confusing characters which can be seen as

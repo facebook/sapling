@@ -548,7 +548,7 @@ pub fn doc() -> &'static str {
       once for the bundle fetched from the URL and another for any additional
       data not fetched from this URL. In addition, if an error occurs, the
       repository may be rolled back to a partial clone. This behavior may
-      change in future releases. See :hg:`help -e clonebundles` for more.
+      change in future releases. See :prog:`help -e clonebundles` for more.
 
       Examples:
 
@@ -576,7 +576,7 @@ pub fn doc() -> &'static str {
 
           @prog@ clone https://www.mercurial-scm.org/repo/hg/#stable
 
-    See :hg:`help urls` for details on specifying URLs.
+    See :prog:`help urls` for details on specifying URLs.
 
     Returns 0 on success."#
 }

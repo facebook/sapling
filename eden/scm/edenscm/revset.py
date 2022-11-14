@@ -733,7 +733,7 @@ def bisected(repo, subset, x):
 def bookmark(repo, subset, x):
     """The named bookmark or all bookmarks.
 
-    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
+    Pattern matching is supported for `name`. See :prog:`help revisions.patterns`.
     """
     # i18n: "bookmark" is a keyword
     args = getargs(x, 0, 1, _("bookmark takes one or no arguments"))
@@ -774,7 +774,7 @@ def branch(repo, subset, x):
     changesets.
 
     Pattern matching is supported for `string`. See
-    :hg:`help revisions.patterns`.
+    :prog:`help revisions.patterns`.
     """
     # There is only the "default" branch. Every commit belongs to it.
     # So just return directly.
@@ -916,7 +916,7 @@ def closed(repo, subset, x):
 @predicate("contains(pattern)", weight=100)
 def contains(repo, subset, x):
     """The revision's manifest contains a file matching pattern (but might not
-    modify it). See :hg:`help patterns` for information about file patterns.
+    modify it). See :prog:`help patterns` for information about file patterns.
 
     The pattern without explicit kind like ``glob:`` is expected to be
     relative to the current directory and match against a file exactly
@@ -968,7 +968,7 @@ def converted(repo, subset, x):
 
 @predicate("date(interval)", safe=True, weight=10)
 def date(repo, subset, x):
-    """Changesets within the interval, see :hg:`help dates`."""
+    """Changesets within the interval, see :prog:`help dates`."""
     # i18n: "date" is a keyword
     ds = getstring(x, _("date requires a string"))
     dm = util.matchdate(ds)
@@ -986,7 +986,7 @@ def desc(repo, subset, x):
     """Search commit message for string. The match is case-insensitive.
 
     Pattern matching is supported for `string`. See
-    :hg:`help revisions.patterns`.
+    :prog:`help revisions.patterns`.
     """
     # i18n: "desc" is a keyword
     ds = getstring(x, _("desc requires a string"))
@@ -1122,7 +1122,7 @@ def extra(repo, subset, x):
     optional value.
 
     Pattern matching is supported for `value`. See
-    :hg:`help revisions.patterns`.
+    :prog:`help revisions.patterns`.
     """
     args = getargsdict(x, "extra", "label value")
     if "label" not in args:
@@ -1646,7 +1646,7 @@ def named(repo, subset, x):
     """The changesets in a given namespace.
 
     Pattern matching is supported for `namespace`. See
-    :hg:`help revisions.patterns`.
+    :prog:`help revisions.patterns`.
     """
     # i18n: "named" is a keyword
     args = getargs(x, 1, 1, _("named requires a namespace argument"))
@@ -2497,7 +2497,7 @@ def user(repo, subset, x):
     """User name contains string. The match is case-insensitive.
 
     Pattern matching is supported for `string`. See
-    :hg:`help revisions.patterns`.
+    :prog:`help revisions.patterns`.
     """
     return author(repo, subset, x)
 
@@ -2526,7 +2526,7 @@ def remotenamesrevset(repo, subset, x):
 def remotebookmarkrevset(repo, subset, x):
     """The named remote bookmark, or all remote bookmarks.
 
-    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
+    Pattern matching is supported for `name`. See :prog:`help revisions.patterns`.
     """
     args = getargs(x, 0, 1, _("remotebookmark takes one or no arguments"))
     if args:

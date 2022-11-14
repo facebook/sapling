@@ -1005,7 +1005,7 @@ def absorbcmd(ui, repo, *pats, **opts):
 
     If absorb cannot find an unambiguous commit to amend for a change, that
     change will be left in the working copy, untouched. The unabsorbed
-    changes can be observed by :hg:`status` or :hg:`diff` afterwards.
+    changes can be observed by :prog:`status` or :prog:`diff` afterwards.
 
     Commits outside the revset `::. and not public() and not merge()` will
     not be changed.
@@ -1014,7 +1014,7 @@ def absorbcmd(ui, repo, *pats, **opts):
 
     By default, absorb will show what it plans to do and prompt for
     confirmation.  If you are confident that the changes will be absorbed
-    to the correct place, run :hg:`absorb -a` to apply the changes
+    to the correct place, run :prog:`absorb -a` to apply the changes
     immediately.
 
     Returns 0 if anything was absorbed, 1 if nothing was absorbed.

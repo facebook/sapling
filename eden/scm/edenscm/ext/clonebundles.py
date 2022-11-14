@@ -38,7 +38,7 @@ expensive clone load to an external service. Here's how it works.
 6. The client downloads and applies an available bundle from the
    server-specified URL.
 7. The client reconnects to the original server and performs the equivalent
-   of :hg:`pull` to retrieve all repository data not in the bundle. (The
+   of :prog:`pull` to retrieve all repository data not in the bundle. (The
    repository could have been updated between when the bundle was created
    and when the client started the clone.)
 
@@ -64,10 +64,10 @@ operator could use a dynamic service for retrieving bundle data. However,
 static file hosting services are simple and scalable and should be sufficient
 for most needs.
 
-Bundle files can be generated with the :hg:`bundle` command. Typically
-:hg:`bundle --all` is used to produce a bundle of the entire repository.
+Bundle files can be generated with the :prog:`bundle` command. Typically
+:prog:`bundle --all` is used to produce a bundle of the entire repository.
 
-:hg:`debugcreatestreamclonebundle` can be used to produce a special
+:prog:`debugcreatestreamclonebundle` can be used to produce a special
 *streaming clone bundle*. These are bundle files that are extremely efficient
 to produce and consume (read: fast). However, they are larger than
 traditional bundle formats and require that clients support the exact set
@@ -104,13 +104,13 @@ BUNDLESPEC
    A "bundle specification" string that describes the type of the bundle.
 
    These are string values that are accepted by the "--type" argument of
-   :hg:`bundle`.
+   :prog:`bundle`.
 
    The values are parsed in strict mode, which means they must be of the
    "<compression>-<type>" form. See
    exchange.parsebundlespec() for more details.
 
-   :hg:`debugbundle --spec` can be used to print the bundle specification
+   :prog:`debugbundle --spec` can be used to print the bundle specification
    string for a bundle file. The output of this command can be used verbatim
    for the value of ``BUNDLESPEC`` (it is already escaped).
 

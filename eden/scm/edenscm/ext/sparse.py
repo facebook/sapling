@@ -45,7 +45,7 @@ Include and exclude rules
 .........................
 
 Each line in the `[include]` and `[exclude]` sections is treated as a
-standard pattern, see :hg:`help patterns`. Exclude rules override include
+standard pattern, see :prog:`help patterns`. Exclude rules override include
 rules.
 
 Example
@@ -1887,7 +1887,7 @@ def sparse(ui, repo, *pats, **opts) -> None:
     such profiles. Changes to shared profiles are not applied until they have
     been committed.
 
-    See :hg:`help -e sparse` and :hg:`help sparse [subcommand]` to get
+    See :prog:`help -e sparse` and :prog:`help sparse [subcommand]` to get
     additional information.
     """
     _checksparse(repo)

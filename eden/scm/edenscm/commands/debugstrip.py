@@ -103,8 +103,8 @@ def stripcmd(ui, repo, *revs, **opts):
     completes.
 
     Any stripped commits are stored in ``.hg/strip-backup`` as a
-    bundle (see :hg:`help bundle` and :hg:`help unbundle`). They can
-    be restored by running :hg:`unbundle .hg/strip-backup/BUNDLE`,
+    bundle (see :prog:`help bundle` and :prog:`help unbundle`). They can
+    be restored by running :prog:`unbundle .hg/strip-backup/BUNDLE`,
     where BUNDLE is the bundle file created by the strip. Note that
     the local revision numbers will in general be different after the
     restore.

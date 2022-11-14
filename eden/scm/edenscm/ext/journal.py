@@ -512,11 +512,11 @@ def journal(ui, repo, *args, **opts) -> None:
 
     Show the history of all the commits that were once the current commit. In
     other words, shows a list of your previously checked out commits.
-    :hg:`journal` can be used to find older versions of commits (for example,
+    :prog:`journal` can be used to find older versions of commits (for example,
     when you want to revert to a previous state). It can also be used to
     discover commits that were previously hidden.
 
-    By default, :hg:`journal` displays the history of the current commit. To
+    By default, :prog:`journal` displays the history of the current commit. To
     display a list of commits pointed to by a bookmark, specify a bookmark
     name.
 
@@ -528,7 +528,7 @@ def journal(ui, repo, *args, **opts) -> None:
 
     .. container:: verbose
 
-       By default, :hg:`journal` only shows the commit hash and the
+       By default, :prog:`journal` only shows the commit hash and the
        corresponding command. Specify --verbose to also include the previous
        commit hash, user, and timestamp.
 

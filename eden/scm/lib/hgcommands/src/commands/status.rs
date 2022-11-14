@@ -273,9 +273,9 @@ pub fn doc() -> &'static str {
 
     .. note::
 
-       :hg:`status` might appear to disagree with :hg:`diff` if permissions
+       :prog:`status` might appear to disagree with :prog:`diff` if permissions
        have changed or a merge has occurred, because the standard diff
-       format does not report permission changes and :hg:`diff` only
+       format does not report permission changes and :prog:`diff` only
        reports changes relative to one merge parent.
 
     .. container:: verbose
@@ -306,7 +306,7 @@ pub fn doc() -> &'static str {
           @prog@ status --rev 9353
 
       - show changes in the working directory relative to the
-        current directory (see :hg:`help patterns` for more information)::
+        current directory (see :prog:`help patterns` for more information)::
 
           @prog@ status re:
 

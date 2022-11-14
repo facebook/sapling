@@ -801,22 +801,22 @@ def undo(ui, repo, *args, **opts):
     Reverse the effects of the last local command. A local command is one that
     changed the currently checked out commit, that modified the contents of
     local commits, or that changed local bookmarks. Examples of local commands
-    include :hg:`checkout`, :hg:`commit`, :hg:`amend`, and :hg:`rebase`.
+    include :prog:`checkout`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.
 
-    You cannot use :hg:`undo` to undo uncommited changes in the working copy,
+    You cannot use :prog:`undo` to undo uncommited changes in the working copy,
     or changes to remote bookmarks.
 
-    You can run :hg:`undo` multiple times to undo a series of local commands.
+    You can run :prog:`undo` multiple times to undo a series of local commands.
     Alternatively, you can explicitly specify the number of local commands to
     undo using --step. This number can also be specified as a positional
     argument.
 
-    To undo the effects of :hg:`undo`, run :hg:`redo`. Run :hg:`help redo` for
+    To undo the effects of :prog:`undo`, run :prog:`redo`. Run :prog:`help redo` for
     more information.
 
     Include --keep to preserve the state of the working copy. For example,
-    specify --keep when running :hg:`undo` to reverse the effects of an
-    :hg:`commit` or :hg:`amend` operation while still preserving changes
+    specify --keep when running :prog:`undo` to reverse the effects of an
+    :prog:`commit` or :prog:`amend` operation while still preserving changes
     in the working copy. These changes will appear as pending changes.
 
     Specify --preview to see a graphical display that shows what your smartlog
@@ -826,14 +826,14 @@ def undo(ui, repo, *args, **opts):
 
     .. note::
 
-       :hg:`undo` cannot be used with non-local commands, or with commands
-       that are read-only. :hg:`undo` will skip over these commands in the
+       :prog:`undo` cannot be used with non-local commands, or with commands
+       that are read-only. :prog:`undo` will skip over these commands in the
        undo history.
 
        For hybrid commands that result in both local and remote changes,
-       :hg:`undo` will undo the local changes, but not the remote changes.
+       :prog:`undo` will undo the local changes, but not the remote changes.
        For example, `@prog pull --rebase` might move remote/master and also
-       rebase local commits. In this situation, :hg:`undo` will revert the
+       rebase local commits. In this situation, :prog:`undo` will revert the
        rebase, but not the change to remote/master.
 
     .. container:: verbose
@@ -936,18 +936,18 @@ def undo(ui, repo, *args, **opts):
 def redo(ui, repo, *args, **opts):
     """undo the last undo
 
-    Reverse the effects of an :hg:`undo` operation.
+    Reverse the effects of an :prog:`undo` operation.
 
-    You can run :hg:`redo` multiple times to undo a series of :hg:`undo`
+    You can run :prog:`redo` multiple times to undo a series of :prog:`undo`
     commands. Alternatively, you can explicitly specify the number of
-    :hg:`undo` commands to undo by providing a number as a positional argument.
+    :prog:`undo` commands to undo by providing a number as a positional argument.
 
     Specify --preview to see a graphical display that shows what your smartlog
     will look like after you run the command.
 
-    For an interactive interface, run :hg:`undo --interactive`. This command
+    For an interactive interface, run :prog:`undo --interactive`. This command
     enables you to visually step backwards and forwards in the undo history.
-    Run :hg:`help undo` for more information.
+    Run :prog:`help undo` for more information.
 
     """
     shiftedindex = _computerelative(repo, 0)

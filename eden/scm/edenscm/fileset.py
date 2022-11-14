@@ -166,7 +166,7 @@ predicate = registrar.filesetpredicate()
 
 @predicate("modified()", callstatus=True)
 def modified(mctx, x):
-    """File that is modified according to :hg:`status`."""
+    """File that is modified according to :prog:`status`."""
     # i18n: "modified" is a keyword
     getargs(x, 0, 0, _("modified takes no arguments"))
     s = set(mctx.status().modified)
@@ -175,7 +175,7 @@ def modified(mctx, x):
 
 @predicate("added()", callstatus=True)
 def added(mctx, x):
-    """File that is added according to :hg:`status`."""
+    """File that is added according to :prog:`status`."""
     # i18n: "added" is a keyword
     getargs(x, 0, 0, _("added takes no arguments"))
     s = set(mctx.status().added)
@@ -184,7 +184,7 @@ def added(mctx, x):
 
 @predicate("removed()", callstatus=True)
 def removed(mctx, x):
-    """File that is removed according to :hg:`status`."""
+    """File that is removed according to :prog:`status`."""
     # i18n: "removed" is a keyword
     getargs(x, 0, 0, _("removed takes no arguments"))
     s = set(mctx.status().removed)
@@ -202,7 +202,7 @@ def deleted(mctx, x):
 
 @predicate("missing()", callstatus=True)
 def missing(mctx, x):
-    """File that is missing according to :hg:`status`."""
+    """File that is missing according to :prog:`status`."""
     # i18n: "missing" is a keyword
     getargs(x, 0, 0, _("missing takes no arguments"))
     s = set(mctx.status().deleted)
@@ -211,7 +211,7 @@ def missing(mctx, x):
 
 @predicate("unknown()", callstatus=True)
 def unknown(mctx, x):
-    """File that is unknown according to :hg:`status`. These files will only be
+    """File that is unknown according to :prog:`status`. These files will only be
     considered if this predicate is used.
     """
     # i18n: "unknown" is a keyword
@@ -222,7 +222,7 @@ def unknown(mctx, x):
 
 @predicate("ignored()", callstatus=True)
 def ignored(mctx, x):
-    """File that is ignored according to :hg:`status`. These files will only be
+    """File that is ignored according to :prog:`status`. These files will only be
     considered if this predicate is used.
     """
     # i18n: "ignored" is a keyword
@@ -233,7 +233,7 @@ def ignored(mctx, x):
 
 @predicate("clean()", callstatus=True)
 def clean(mctx, x):
-    """File that is clean according to :hg:`status`."""
+    """File that is clean according to :prog:`status`."""
     # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
     s = mctx.status().clean
@@ -297,7 +297,7 @@ def symlink(mctx, x):
 
 @predicate("resolved()")
 def resolved(mctx, x):
-    """File that is marked resolved according to :hg:`resolve -l`."""
+    """File that is marked resolved according to :prog:`resolve -l`."""
     # i18n: "resolved" is a keyword
     getargs(x, 0, 0, _("resolved takes no arguments"))
     if mctx.ctx.rev() is not None:
@@ -308,7 +308,7 @@ def resolved(mctx, x):
 
 @predicate("unresolved()")
 def unresolved(mctx, x):
-    """File that is marked unresolved according to :hg:`resolve -l`."""
+    """File that is marked unresolved according to :prog:`resolve -l`."""
     # i18n: "unresolved" is a keyword
     getargs(x, 0, 0, _("unresolved takes no arguments"))
     if mctx.ctx.rev() is not None:

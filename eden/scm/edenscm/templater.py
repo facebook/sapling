@@ -664,7 +664,7 @@ templatefunc = registrar.templatefunc(funcs)
 
 @templatefunc("date(date[, fmt])")
 def date(context, mapping, args):
-    """Format a date. See :hg:`help dates` for formatting
+    """Format a date. See :prog:`help dates` for formatting
     strings. The default is a Unix date format, including the timezone:
     "Mon Sep 04 15:13:13 2006 0700"."""
     if not (1 <= len(args) <= 2):
@@ -757,7 +757,7 @@ def extdata(context, mapping, args):
 @templatefunc("files(pattern)")
 def files(context, mapping, args):
     """All files of the current changeset matching the pattern. See
-    :hg:`help patterns`."""
+    :prog:`help patterns`."""
     if not len(args) == 1:
         # i18n: "files" is a keyword
         raise error.ParseError(_("files expects one argument"))
@@ -1159,7 +1159,7 @@ def relpath(context, mapping, args):
 @templatefunc("revset(query[, formatargs...])")
 def revset(context, mapping, args):
     """Execute a revision set query. See
-    :hg:`help revset`."""
+    :prog:`help revset`."""
     if not len(args) > 0:
         # i18n: "revset" is a keyword
         raise error.ParseError(_("revset expects one or more arguments"))

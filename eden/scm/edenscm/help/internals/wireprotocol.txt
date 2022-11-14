@@ -896,7 +896,7 @@ to detect race conditions and abort push operations before a server performs
 too much work or a client transfers too much data.
 
 The request payload consists of a bundle to be applied to the repository,
-similarly to as if :hg:`unbundle` were called.
+similarly to as if :prog:`unbundle` were called.
 
 In most scenarios, a special ``push response`` type is returned. This type
 contains an integer describing the change in heads as a result of the

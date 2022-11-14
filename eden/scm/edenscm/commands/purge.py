@@ -58,13 +58,13 @@ def purge(ui, repo, *dirs, **opts):
 
     Delete all untracked files in your checkout. Untracked files are files
     that are unknown to @Product@. They are marked with "?" when you run
-    :hg:`status`.
+    :prog:`status`.
 
-    By default, :hg:`purge` does not affect::
+    By default, :prog:`purge` does not affect::
 
     - Modified and unmodified tracked files
     - Ignored files (unless --all is specified)
-    - New files added to the repository with :hg:`add`, but not yet committed
+    - New files added to the repository with :prog:`add`, but not yet committed
     - Empty directories that contain no files (unless --dirs is specified)
 
     If directories are given on the command line, only files in these
@@ -72,8 +72,8 @@ def purge(ui, repo, *dirs, **opts):
 
     Caution: Be careful with purge, as you might irreversibly delete some files
     you forgot to add to the repository. There is no way to undo an
-    :hg:`purge` operation. Run :hg:`status` first to verify the list of
-    files that will be deleted, or use the --print option with :hg:`purge`
+    :prog:`purge` operation. Run :prog:`status` first to verify the list of
+    files that will be deleted, or use the --print option with :prog:`purge`
     to preview the results.
     """
     act = not opts.get("print")

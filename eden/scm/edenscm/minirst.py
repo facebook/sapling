@@ -443,7 +443,7 @@ def hgrole(blocks, style="plain"):
             continue
 
         stype = substs if apply_all_substitutions else unisubst
-        # Turn :hg:`command` into "hg command". This also works
+        # Turn :prog:`command` into "hg command". This also works
         # when there is a line break in the command and relies on
         # the fact that we have no stray back-quotes in the input
         # (run the blocks through inlineliterals first).

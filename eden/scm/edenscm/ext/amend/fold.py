@@ -65,8 +65,8 @@ def fold(ui, repo, *revs, **opts):
 
          @prog@ fold --from 'draft()'
 
-       See :hg:`help phases` for more about draft revisions and
-       :hg:`help revsets` for more about the `draft()` keyword
+       See :prog:`help phases` for more about draft revisions and
+       :prog:`help revsets` for more about the `draft()` keyword
 
      - Fold revisions between 3 and 6 into the current revision::
 

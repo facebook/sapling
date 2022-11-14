@@ -787,7 +787,7 @@ def filelogrevset(orig, repo, subset, x):
     Changesets connected to the specified filelog.
 
     For performance reasons, ``filelog()`` does not show every changeset
-    that affects the requested file(s). See :hg:`help log` for details. For
+    that affects the requested file(s). See :prog:`help log` for details. For
     a slower, more accurate result, use ``file()``.
     """
 

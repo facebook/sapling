@@ -53,26 +53,26 @@ def hide(ui, repo, *revs, **opts):
     """hide commits and their descendants
 
     Mark the specified commits as hidden. Hidden commits are not included in
-    the output of most @Product@ commands, including :hg:`log` and
-    :hg:`smartlog.` Any descendants of the specified commits will also be
+    the output of most @Product@ commands, including :prog:`log` and
+    :prog:`smartlog.` Any descendants of the specified commits will also be
     hidden.
 
     Hidden commits are not deleted. They will remain in the repo indefinitely
-    and are still accessible by their hashes. However, :hg:`hide` will delete
+    and are still accessible by their hashes. However, :prog:`hide` will delete
     any bookmarks pointing to hidden commits.
 
-    Use the :hg:`unhide` command to make hidden commits visible again. See
-    :hg:`help unhide` for more information.
+    Use the :prog:`unhide` command to make hidden commits visible again. See
+    :prog:`help unhide` for more information.
 
-    To view hidden commits, run :hg:`journal`.
+    To view hidden commits, run :prog:`journal`.
 
     When you hide the current commit, the most recent visible ancestor is
     checked out.
 
     To hide obsolete stacks (stacks that have a newer version), run
-    :hg:`hide --cleanup`. This command is equivalent to:
+    :prog:`hide --cleanup`. This command is equivalent to:
 
-    :hg:`hide 'obsolete() - ancestors(draft() & not obsolete())'`
+    :prog:`hide 'obsolete() - ancestors(draft() & not obsolete())'`
 
     --cleanup skips obsolete commits with non-obsolete descendants.
     """

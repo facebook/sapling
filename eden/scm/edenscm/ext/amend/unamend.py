@@ -27,30 +27,30 @@ command = registrar.command(cmdtable)
 def unamend(ui, repo, **opts):
     """undo the last amend operation on the current commit
 
-    Reverse the effects of an :hg:`amend` operation. Hides the current commit
-    and checks out the previous version of the commit. :hg:`unamend` does not
+    Reverse the effects of an :prog:`amend` operation. Hides the current commit
+    and checks out the previous version of the commit. :prog:`unamend` does not
     revert the state of the working copy, so changes that were added to the
     commit in the last amend operation become pending changes in the working
     copy.
 
-    :hg:`unamend` cannot be run on amended commits that have children. In
+    :prog:`unamend` cannot be run on amended commits that have children. In
     other words, you cannot unamend an amended commit in the middle of a
     stack.
 
     .. note::
 
-        Running :hg:`unamend` is similar to running :hg:`undo --keep`
-        immediately after :hg:`amend`. However, unlike :hg:`undo`, which can
+        Running :prog:`unamend` is similar to running :prog:`undo --keep`
+        immediately after :prog:`amend`. However, unlike :prog:`undo`, which can
         only undo an amend if it was the last operation you performed,
-        :hg:`unamend` can unamend any draft amended commit in the graph that
+        :prog:`unamend` can unamend any draft amended commit in the graph that
         does not have children.
 
     .. container:: verbose
 
-      Although :hg:`unamend` is typically used to reverse the effects of
-      :hg:`amend`, it actually rolls back the current commit to its previous
-      version, regardless of whether the changes resulted from an :hg:`amend`
-      operation or from another operation, such as :hg:`rebase`.
+      Although :prog:`unamend` is typically used to reverse the effects of
+      :prog:`amend`, it actually rolls back the current commit to its previous
+      version, regardless of whether the changes resulted from an :prog:`amend`
+      operation or from another operation, such as :prog:`rebase`.
     """
     unfi = repo
 

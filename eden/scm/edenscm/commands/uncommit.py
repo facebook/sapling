@@ -48,15 +48,15 @@ from .cmdtable import command
 def uncommit(ui, repo, *pats, **opts):
     """uncommit part or all of the current commit
 
-    Reverse the effects of an :hg:`commit` operation. When run with no
+    Reverse the effects of an :prog:`commit` operation. When run with no
     arguments, hides the current commit and checks out the parent commit,
     but does not revert the state of the working copy. Changes that were
     contained in the uncommitted commit become pending changes in the
     working copy.
 
-    :hg:`uncommit` cannot be run on commits that have children. In other words,
+    :prog:`uncommit` cannot be run on commits that have children. In other words,
     you cannot uncommit a commit in the middle of a stack. Similarly, by
-    default you cannot run :hg:`uncommit` if there are pending changes in the
+    default you cannot run :prog:`uncommit` if there are pending changes in the
     working copy.
 
     You can selectively uncommit files from the current commit by optionally
@@ -66,10 +66,10 @@ def uncommit(ui, repo, *pats, **opts):
 
     .. note::
 
-       Running :hg:`uncommit` is similar to running :hg:`undo --keep`
-       immediately after :hg:`commit`. However, unlike :hg:`undo`, which can
+       Running :prog:`uncommit` is similar to running :prog:`undo --keep`
+       immediately after :prog:`commit`. However, unlike :prog:`undo`, which can
        only undo a commit if it was the last operation you performed,
-       :hg:`uncommit` can uncommit any draft commit in the graph that does
+       :prog:`uncommit` can uncommit any draft commit in the graph that does
        not have children.
     """
 

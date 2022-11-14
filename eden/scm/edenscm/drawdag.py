@@ -269,14 +269,14 @@ def _getcomments(text):
 def drawdag(repo, text: str, **opts) -> None:
     r"""given an ASCII graph as text, create changesets in repo.
 
-    The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
+    The ASCII graph is like what :prog:`log -G` outputs, with each `o` replaced
     to the name of the node. The command will create dummy changesets and local
     tags with those names to make the dummy changesets easier to be referred
     to.
 
     If the name of a node is a single character 'o', It will be replaced by the
     word to the right. This makes it easier to reuse
-    :hg:`log -G -T '{desc}'` outputs.
+    :prog:`log -G -T '{desc}'` outputs.
 
     For root (no parents) nodes, revset can be used to query existing repo.
     Note that the revset cannot have confusing characters which can be seen as

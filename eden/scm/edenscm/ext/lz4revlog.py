@@ -14,14 +14,14 @@ space.  The improvement in decompression speed leads to speedups in
 many common operations, such as update and history traversal.
 
 To use lz4 compression, a repository can be created from scratch or
-converted from an existing repository, for example using :hg:`clone
+converted from an existing repository, for example using :prog:`clone
 --pull`.
 
 The behaviour of Mercurial in an existing zlib-compressed repository
 will not be affected by this extension.
 
 To avoid use of lz4 when cloning or creating a new repository, use
-:hg:`--config format.uselz4=no`.
+:prog:`--config format.uselz4=no`.
 
 Interop with other Mercurial repositories is generally not affected by
 this extension.

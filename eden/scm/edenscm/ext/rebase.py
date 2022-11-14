@@ -1153,7 +1153,7 @@ def rebase(ui, repo, templ=None, **opts):
 
     If you close the editor without resolving the conflict, the rebase is
     interrupted and you are returned to the command line. At this point, you
-    can resolve conflicts in manual resolution mode. See :hg:`help resolve` for
+    can resolve conflicts in manual resolution mode. See :prog:`help resolve` for
     details.
 
     After manually resolving conflicts, resume the rebase with ``@prog@ rebase
@@ -1163,7 +1163,7 @@ def rebase(ui, repo, templ=None, **opts):
 
     Alternatively, you can use a custom merge tool to automate conflict
     resolution. To specify a custom merge tool, use the ``--tool`` flag. See
-    :hg:`help merge-tools` for a list of available tools and for information
+    :prog:`help merge-tools` for a list of available tools and for information
     about configuring the default merge behavior.
 
     .. container:: verbose

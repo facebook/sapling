@@ -14,7 +14,7 @@
 bundlespec = r"""@Product@ supports generating standalone "bundle" files that hold repository
 data. These "bundles" are typically saved locally and used later or exchanged
 between different repositories, possibly on different machines. Example
-commands using bundles are :hg:`bundle` and :hg:`unbundle`.
+commands using bundles are :prog:`bundle` and :prog:`unbundle`.
 
 Generation of bundle files is controlled by a "bundle specification"
 ("bundlespec") string. This string tells the bundle generation process how
@@ -115,13 +115,13 @@ To disable color use::
   [ui]
   color = no
 
-See :hg:`help config.ui.color` for details.
+See :prog:`help config.ui.color` for details.
 
 Mode
 ====
 
 @Product@ can use various systems to display color. The supported modes are
-``ansi``, ``win32``, and ``terminfo``.  See :hg:`help config.color` for details
+``ansi``, ``win32``, and ``terminfo``.  See :prog:`help config.color` for details
 about how to control the mode.
 
 Effects
@@ -154,7 +154,7 @@ Labels
 
 Text receives color effects depending on the labels that it has. Many
 default @Product@ commands emit labelled text. You can also define
-your own labels in templates using the label function, see :hg:`help
+your own labels in templates using the label function, see :prog:`help
 templates`. A single portion of text may have more than one label. In
 that case, effects given to the last label will override any other
 effects. This includes the special "none" effect, which nullifies
@@ -258,10 +258,10 @@ Troubleshooting
 ===============
 
 If you're having problems with your configuration,
-:hg:`config --debug` can help you understand what is introducing
+:prog:`config --debug` can help you understand what is introducing
 a setting into your environment.
 
-See :hg:`help config.syntax` and :hg:`help config.files`
+See :prog:`help config.syntax` and :prog:`help config.files`
 for information about how and where to override things.
 
 Structure
@@ -276,7 +276,7 @@ by ``name = value`` entries::
   verbose = True
 
 The above entries will be referred to as ``ui.username`` and
-``ui.verbose``, respectively. See :hg:`help config.syntax`.
+``ui.verbose``, respectively. See :prog:`help config.syntax`.
 
 Files
 =====
@@ -531,7 +531,7 @@ echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 ------------
 
 Settings used when displaying file annotations. All values are
-Booleans and default to False. See :hg:`help config.diff` for
+Booleans and default to False. See :prog:`help config.diff` for
 related options for the diff command.
 
 ``ignorews``
@@ -635,7 +635,7 @@ for credentials as usual if required by the remote.
 ---------
 
 Configure the @Product@ color mode. For details about how to define your custom
-effect and style see :hg:`help color`.
+effect and style see :prog:`help color`.
 
 ``mode``
     String: control the method used to output color. One of ``auto``, ``ansi``,
@@ -647,11 +647,11 @@ effect and style see :hg:`help color`.
 ------------
 
 ``status.relative``
-    Make paths in :hg:`status` output relative to the current directory.
+    Make paths in :prog:`status` output relative to the current directory.
     (default: False)
 
 ``update.check``
-    Determines what level of checking :hg:`update` will perform before moving
+    Determines what level of checking :prog:`update` will perform before moving
     to a destination revision. Valid values are ``abort``, ``none``,
     ``linear``, and ``noconflict``. ``abort`` always fails if the working
     directory has uncommitted changes. ``none`` performs no checking, and may
@@ -663,8 +663,8 @@ effect and style see :hg:`help color`.
     (default: ``linear``)
 
 ``update.requiredest``
-    Require that the user pass a destination when running :hg:`update`.
-    For example, :hg:`update .::` will be allowed, but a plain :hg:`update`
+    Require that the user pass a destination when running :prog:`update`.
+    For example, :prog:`update .::` will be allowed, but a plain :prog:`update`
     will be disallowed.
     (default: False)
 
@@ -713,7 +713,7 @@ one shown by default::
        "HG: no files changed\n")}
 
 ``diff()``
-    String: show the diff (see :hg:`help templates` for detail)
+    String: show the diff (see :prog:`help templates` for detail)
 
 Sometimes it is helpful to show the diff of the changeset in the editor without
 having to prefix 'HG: ' to each line so that highlighting works correctly. For
@@ -736,7 +736,7 @@ extra message::
 
 .. note::
 
-   For some problematic encodings (see :hg:`help win32mbcs` for
+   For some problematic encodings (see :prog:`help win32mbcs` for
    detail), this customization should be configured carefully, to
    avoid showing broken characters.
 
@@ -748,51 +748,51 @@ extra message::
 Customized template is used for commands below (``--edit`` may be
 required):
 
-- :hg:`backout`
-- :hg:`commit`
-- :hg:`fetch` (for merge commit only)
-- :hg:`graft`
-- :hg:`histedit`
-- :hg:`import`
-- :hg:`qfold`, :hg:`qnew` and :hg:`qrefresh`
-- :hg:`rebase`
-- :hg:`shelve`
-- :hg:`sign`
-- :hg:`tag`
-- :hg:`transplant`
+- :prog:`backout`
+- :prog:`commit`
+- :prog:`fetch` (for merge commit only)
+- :prog:`graft`
+- :prog:`histedit`
+- :prog:`import`
+- :prog:`qfold`, :prog:`qnew` and :prog:`qrefresh`
+- :prog:`rebase`
+- :prog:`shelve`
+- :prog:`sign`
+- :prog:`tag`
+- :prog:`transplant`
 
 Configuring items below instead of ``changeset`` allows showing
 customized message only for specific actions, or showing different
 messages for each action.
 
-- ``changeset.backout`` for :hg:`backout`
-- ``changeset.commit.amend.merge`` for :hg:`commit --amend` on merges
-- ``changeset.commit.amend.normal`` for :hg:`commit --amend` on other
-- ``changeset.commit.normal.merge`` for :hg:`commit` on merges
-- ``changeset.commit.normal.normal`` for :hg:`commit` on other
-- ``changeset.fetch`` for :hg:`fetch` (impling merge commit)
-- ``changeset.gpg.sign`` for :hg:`sign`
-- ``changeset.graft`` for :hg:`graft`
-- ``changeset.histedit.edit`` for ``edit`` of :hg:`histedit`
-- ``changeset.histedit.fold`` for ``fold`` of :hg:`histedit`
-- ``changeset.histedit.mess`` for ``mess`` of :hg:`histedit`
-- ``changeset.histedit.pick`` for ``pick`` of :hg:`histedit`
-- ``changeset.import.bypass`` for :hg:`import --bypass`
-- ``changeset.import.normal.merge`` for :hg:`import` on merges
-- ``changeset.import.normal.normal`` for :hg:`import` on other
-- ``changeset.rebase.collapse`` for :hg:`rebase --collapse`
-- ``changeset.rebase.merge`` for :hg:`rebase` on merges
-- ``changeset.rebase.normal`` for :hg:`rebase` on other
-- ``changeset.shelve.shelve`` for :hg:`shelve`
-- ``changeset.tag.add`` for :hg:`tag` without ``--remove``
-- ``changeset.tag.remove`` for :hg:`tag --remove`
-- ``changeset.transplant.merge`` for :hg:`transplant` on merges
-- ``changeset.transplant.normal`` for :hg:`transplant` on other
+- ``changeset.backout`` for :prog:`backout`
+- ``changeset.commit.amend.merge`` for :prog:`commit --amend` on merges
+- ``changeset.commit.amend.normal`` for :prog:`commit --amend` on other
+- ``changeset.commit.normal.merge`` for :prog:`commit` on merges
+- ``changeset.commit.normal.normal`` for :prog:`commit` on other
+- ``changeset.fetch`` for :prog:`fetch` (impling merge commit)
+- ``changeset.gpg.sign`` for :prog:`sign`
+- ``changeset.graft`` for :prog:`graft`
+- ``changeset.histedit.edit`` for ``edit`` of :prog:`histedit`
+- ``changeset.histedit.fold`` for ``fold`` of :prog:`histedit`
+- ``changeset.histedit.mess`` for ``mess`` of :prog:`histedit`
+- ``changeset.histedit.pick`` for ``pick`` of :prog:`histedit`
+- ``changeset.import.bypass`` for :prog:`import --bypass`
+- ``changeset.import.normal.merge`` for :prog:`import` on merges
+- ``changeset.import.normal.normal`` for :prog:`import` on other
+- ``changeset.rebase.collapse`` for :prog:`rebase --collapse`
+- ``changeset.rebase.merge`` for :prog:`rebase` on merges
+- ``changeset.rebase.normal`` for :prog:`rebase` on other
+- ``changeset.shelve.shelve`` for :prog:`shelve`
+- ``changeset.tag.add`` for :prog:`tag` without ``--remove``
+- ``changeset.tag.remove`` for :prog:`tag --remove`
+- ``changeset.transplant.merge`` for :prog:`transplant` on merges
+- ``changeset.transplant.normal`` for :prog:`transplant` on other
 
 These dot-separated lists of names are treated as hierarchical ones.
 For example, ``changeset.tag.remove`` customizes the commit message
-only for :hg:`tag --remove`, but ``changeset.tag`` customizes the
-commit message for :hg:`tag` regardless of ``--remove`` option.
+only for :prog:`tag --remove`, but ``changeset.tag`` customizes the
+commit message for :prog:`tag` regardless of ``--remove`` option.
 
 When the external editor is invoked for a commit, the corresponding
 dot-separated list of names without the ``changeset.`` prefix
@@ -883,8 +883,8 @@ format. We suggest you use the ``eol`` extension for convenience.
 Use the ``[defaults]`` section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
 
-The following example makes :hg:`log` run in verbose mode, and
-:hg:`status` show only the modified files, by default::
+The following example makes :prog:`log` run in verbose mode, and
+:prog:`status` show only the modified files, by default::
 
   [defaults]
   log = -v
@@ -899,7 +899,7 @@ to the aliases of the commands defined.
 --------
 
 Settings used when displaying diffs. Everything except for ``unified``
-is a Boolean and defaults to False. See :hg:`help config.annotate`
+is a Boolean and defaults to False. See :prog:`help config.annotate`
 for related options for the annotate command.
 
 ``git``
@@ -1156,7 +1156,7 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 ``outgoing``
   Run after sending changes from the local repository to another. The ID of
   first changeset sent is in ``$HG_NODE``. The source of operation is in
-  ``$HG_SOURCE``. Also see :hg:`help config.hooks.preoutgoing`.
+  ``$HG_SOURCE``. Also see :prog:`help config.hooks.preoutgoing`.
 
 ``post-<command>``
   Run after successful invocations of the associated command. The
@@ -1274,23 +1274,23 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
-  after the lock is released. See :hg:`help config.hooks.pretxnclose` for
+  after the lock is released. See :prog:`help config.hooks.pretxnclose` for
   details about available variables.
 
 ``txnclose-bookmark``
   Run after any bookmark change has been committed. At this point, the
   transaction can no longer be rolled back. The hook will run after the lock
-  is released. See :hg:`help config.hooks.pretxnclose-bookmark` for details
+  is released. See :prog:`help config.hooks.pretxnclose-bookmark` for details
   about available variables.
 
 ``txnclose-phase``
   Run after any phase change has been committed. At this point, the
   transaction can no longer be rolled back. The hook will run after the lock
-  is released. See :hg:`help config.hooks.pretxnclose-phase` for details about
+  is released. See :prog:`help config.hooks.pretxnclose-phase` for details about
   available variables.
 
 ``txnabort``
-  Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`
+  Run when a transaction is aborted. See :prog:`help config.hooks.pretxnclose`
   for details about available variables.
 
 ``pretxnchangegroup``
@@ -1625,8 +1625,8 @@ Example::
 
 This section configures external merge tools to use for file-level
 merges. This section has likely been preconfigured at install time.
-Use :hg:`config merge-tools` to check the existing configuration.
-Also see :hg:`help merge-tools` for more details.
+Use :prog:`config merge-tools` to check the existing configuration.
+Also see :prog:`help merge-tools` for more details.
 
 Example ``~/.hgrc``::
 
@@ -1683,7 +1683,7 @@ Supported arguments:
   ``keep-merge3``. The ``keep`` option will leave markers in the file if the
   premerge fails. The ``keep-merge3`` will do the same but include information
   about the base of the merge in the marker (see internal :merge3 in
-  :hg:`help merge-tools`).
+  :prog:`help merge-tools`).
   (default: True)
 
 ``binary``
@@ -1764,7 +1764,7 @@ Controls recording of commit mutation metadata.
 ---------
 
 Setting used to control when to paginate and with what external tool. See
-:hg:`help pager` for details.
+:prog:`help pager` for details.
 
 ``pager``
     If specified as ``internal:streampager`` (the default), the builtin
@@ -1870,8 +1870,8 @@ location of the repository. Example::
     local_path = /home/me/repo
 
 These symbolic names can be used from the command line. To pull
-from ``my_server``: :hg:`pull my_server`. To push to ``local_path``:
-:hg:`push local_path`.
+from ``my_server``: :prog:`pull my_server`. To push to ``local_path``:
+:prog:`push local_path`.
 
 Options containing colons (``:``) denote sub-options that can influence
 behavior for that specific path. Example::
@@ -1889,7 +1889,7 @@ The following sub-options can be defined:
 ``pushrev``
    A revset defining which revisions to push by default.
 
-   When :hg:`push` is executed without a ``-r`` argument, the revset
+   When :prog:`push` is executed without a ``-r`` argument, the revset
    defined by this sub-option is evaluated to determine what to push.
 
    For example, a value of ``.`` will push the working directory's
@@ -1903,17 +1903,17 @@ The following special named paths exist:
 ``default``
    The URL or directory to use when no source or remote is specified.
 
-   :hg:`clone` will automatically define this path to the location the
+   :prog:`clone` will automatically define this path to the location the
    repository was cloned from.
 
 ``default-push``
-   (deprecated) The URL or directory for the default :hg:`push` location.
+   (deprecated) The URL or directory for the default :prog:`push` location.
    ``default:pushurl`` should be used instead.
 
 ``phases``
 ----------
 
-Specifies default handling of phases. See :hg:`help phases` for more
+Specifies default handling of phases. See :prog:`help phases` for more
 information about working with phases.
 
 ``publish``
@@ -2110,7 +2110,7 @@ have a definite end point.
 ``revsetalias``
 ---------------
 
-Alias definitions for revsets. See :hg:`help revsets` for details.
+Alias definitions for revsets. See :prog:`help revsets` for details.
 
 ``server``
 ----------
@@ -2134,7 +2134,7 @@ Controls generic server settings.
     here, it won't be advertised to clients.
 
     If not set (the default), built-in defaults are used. Run
-    :hg:`debuginstall` to list available compression engines and their
+    :prog:`debuginstall` to list available compression engines and their
     default wire protocol priority.
 
     Older @Product@ clients only support zlib compression and this setting
@@ -2265,13 +2265,13 @@ Configuration for extensions that need to send email messages.
 ``templatealias``
 -----------------
 
-Alias definitions for templates. See :hg:`help templates` for details.
+Alias definitions for templates. See :prog:`help templates` for details.
 
 ``templates``
 -------------
 
 Use the ``[templates]`` section to define template strings.
-See :hg:`help templates` for details.
+See :prog:`help templates` for details.
 
 ``tracing``
 -------------
@@ -2311,7 +2311,7 @@ User interface controls.
 ``archivemeta``
     Whether to include the .hg_archival.txt file containing meta data
     (hashes for the repository base and for tip) in archives created
-    by the :hg:`archive` command.
+    by the :prog:`archive` command.
     (default: True)
 
 ``askusername``
@@ -2324,7 +2324,7 @@ User interface controls.
 ``clonebundles``
     Whether the "clone bundles" feature is enabled.
 
-    When enabled, :hg:`clone` may download and apply a server-advertised
+    When enabled, :prog:`clone` may download and apply a server-advertised
     bundle file from a URL instead of using the normal exchange mechanism.
 
     This can likely result in faster and more reliable clones.
@@ -2357,7 +2357,7 @@ User interface controls.
     The following keys are defined by @Product@:
 
     BUNDLESPEC
-       A bundle type specifier. These are strings passed to :hg:`bundle -t`.
+       A bundle type specifier. These are strings passed to :prog:`bundle -t`.
        e.g. ``gzip-v2`` or ``bzip2-v1``.
 
     COMPRESSION
@@ -2373,7 +2373,7 @@ User interface controls.
 ``color``
     When to colorize output. Possible value are Boolean ("yes" or "no"), or
     "debug", or "always". (default: "yes"). "yes" will use color whenever it
-    seems possible. See :hg:`help color` for details.
+    seems possible. See :prog:`help color` for details.
 
 ``debug``
     Print debugging information. (default: False)
@@ -2429,7 +2429,7 @@ User interface controls.
     Possible values are 'text' and 'curses'.
 
 ``interface.chunkselector``
-    Select the interface for change recording (e.g. :hg:`commit -i`).
+    Select the interface for change recording (e.g. :prog:`commit -i`).
     Possible values are 'text' and 'curses'.
     This config overrides the interface specified by ui.interface.
 
@@ -2438,7 +2438,7 @@ User interface controls.
 
 ``merge``
     The conflict resolution program to use during a manual merge.
-    For more information on merge tools see :hg:`help merge-tools`.
+    For more information on merge tools see :prog:`help merge-tools`.
     For configuring merge tools see the ``[merge-tools]`` section.
 
 ``merge:interactive``
@@ -2454,7 +2454,7 @@ User interface controls.
 
 ``mergemarkertemplate``
     The template used to print the commit description next to each conflict
-    marker during merge conflicts. See :hg:`help templates` for the template
+    marker during merge conflicts. See :prog:`help templates` for the template
     format.
 
     Defaults to showing the hash, tags, branches, bookmarks, author, and
@@ -2475,7 +2475,7 @@ User interface controls.
     suffix.
 
 ``paginate``
-  Control the pagination of command output (default: True). See :hg:`help pager`
+  Control the pagination of command output (default: True). See :prog:`help pager`
   for details.
 
 ``patch``
@@ -2746,7 +2746,7 @@ by default because a few widespread tools still do not understand this
 format.
 
 This means that when generating diffs from a @Product@ repository
-(e.g. with :hg:`export`), you should be careful about things like file
+(e.g. with :prog:`export`), you should be careful about things like file
 copies and renames or other things mentioned above, because when
 applying a standard diff to a different repository, this extra
 information is lost. @Product@'s internal operations (like push and
@@ -2769,7 +2769,7 @@ environment = r"""HG
 HGEDITOR
     This is the name of the editor to run when committing. See EDITOR.
 
-    (deprecated, see :hg:`help config.ui.editor`)
+    (deprecated, see :prog:`help config.ui.editor`)
 
 HGENCODING
     This overrides the default locale setting detected by @Product@.
@@ -2797,7 +2797,7 @@ HGMERGE
     will be executed with three arguments: local file, remote file,
     ancestor file.
 
-    (deprecated, see :hg:`help config.ui.merge`)
+    (deprecated, see :prog:`help config.ui.merge`)
 
 HGRCPATH
     A list of files or directories to search for configuration
@@ -2826,7 +2826,7 @@ HGPLAIN
     Equivalent options set via command line flags or environment
     variables are not overridden.
 
-    See :hg:`help scripting` for details.
+    See :prog:`help scripting` for details.
 
 HGPLAINEXCEPT
     This is a comma-separated list of features to preserve when
@@ -2858,7 +2858,7 @@ HGUSER
     - interactive prompt
     - LOGNAME (with ``@hostname`` appended)
 
-    (deprecated, see :hg:`help config.ui.username`)
+    (deprecated, see :prog:`help config.ui.username`)
 
 EMAIL
     May be used as the author of a commit; see HGUSER.
@@ -2900,7 +2900,7 @@ You may also specify the full path to an extension::
   [extensions]
   myfeature = ~/.ext/myfeature.py
 
-See :hg:`help config` for more information on configuration files.
+See :prog:`help config` for more information on configuration files.
 
 Extensions are not loaded by default for a variety of reasons:
 they can increase startup overhead; they may be meant for advanced
@@ -2938,7 +2938,7 @@ Special characters can be used in quoted identifiers by escaping them,
 e.g., ``\n`` is interpreted as a newline. To prevent them from being
 interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``.
 
-See also :hg:`help patterns`.
+See also :prog:`help patterns`.
 
 Operators
 =========
@@ -3007,9 +3007,9 @@ flags = r"""Most @Product@ commands accept various flags.
 Flag names
 ==========
 
-Flags for each command are listed in :hg:`help` for that command.
+Flags for each command are listed in :prog:`help` for that command.
 Additionally, some flags, such as --repository, are global and can be used with
-any command - those are seen in :hg:`help -v`, and can be specified before or
+any command - those are seen in :prog:`help -v`, and can be specified before or
 after the command.
 
 Every flag has at least a long name, such as --repository. Some flags may also
@@ -3071,7 +3071,7 @@ use aliases::
     [alias]
     commit = commit --interactive
 
-For more information on hgrc files, see :hg:`help config`.
+For more information on hgrc files, see :prog:`help config`.
 
 Overriding flags on the command line
 ====================================
@@ -3120,7 +3120,7 @@ Bookmark
     Bookmarks are pointers to certain commits that move when
     committing. They are similar to tags in that it is possible to use
     bookmark names in all places where @Product@ expects a changeset
-    ID, e.g., with :hg:`update`. Unlike tags, bookmarks move along
+    ID, e.g., with :prog:`update`. Unlike tags, bookmarks move along
     when you make a commit.
 
     Bookmarks can be renamed, copied and deleted. Bookmarks are local,
@@ -3168,12 +3168,12 @@ Branch head
 Branch, inactive
     If a named branch has no topological heads, it is considered to be
     inactive. As an example, a feature branch becomes inactive when it
-    is merged into the default branch. The :hg:`branches` command
+    is merged into the default branch. The :prog:`branches` command
     shows inactive branches by default, though they can be hidden with
-    :hg:`branches --active`.
+    :prog:`branches --active`.
 
     NOTE: this concept is deprecated because it is too implicit.
-    Branches should now be explicitly closed using :hg:`commit
+    Branches should now be explicitly closed using :prog:`commit
     --close-branch` when they are no longer needed.
 
 Branch tip
@@ -3220,7 +3220,7 @@ Checkout
     Example: "I'm using checkout X."
 
     (Verb) Updating the working directory to a specific changeset. See
-    :hg:`help update`.
+    :prog:`help update`.
 
     Example: "I'm going to check out changeset X."
 
@@ -3239,7 +3239,7 @@ Clone
 
     Example: "Is your clone up to date?"
 
-    (Verb) The process of creating a clone, using :hg:`clone`.
+    (Verb) The process of creating a clone, using :prog:`clone`.
 
     Example: "I'm going to clone the repository."
 
@@ -3271,7 +3271,7 @@ DAG
     system (DVCS) can be described as a directed acyclic graph (DAG),
     consisting of nodes and edges, where nodes correspond to
     changesets and edges imply a parent -> child relation. This graph
-    can be visualized by graphical tools such as :hg:`log --graph`. In
+    can be visualized by graphical tools such as :prog:`log --graph`. In
     @Product@, the DAG is limited by the requirement for children to
     have at most two parents.
 
@@ -3316,13 +3316,13 @@ Directory, working
 Draft
     Changesets in the draft phase have not been shared with publishing
     repositories and may thus be safely changed by history-modifying
-    extensions. See :hg:`help phases`.
+    extensions. See :prog:`help phases`.
 
 Experimental
     Feature that may change or be removed at a later date.
 
 Graph
-    See DAG and :hg:`log --graph`.
+    See DAG and :prog:`log --graph`.
 
 Head
     The term 'head' may be used to refer to both a branch head or a
@@ -3337,9 +3337,9 @@ Head, branch
 
 Head, closed branch
     A changeset that marks a head as no longer interesting. The closed
-    head is no longer listed by :hg:`heads`. A branch is considered
+    head is no longer listed by :prog:`heads`. A branch is considered
     closed when all its heads are closed and consequently is not
-    listed by :hg:`branches`.
+    listed by :prog:`branches`.
 
     Closed heads can be re-opened by committing new changeset as the
     child of the changeset that marks a head as closed.
@@ -3398,9 +3398,9 @@ Parent changeset
 Parent, working directory
     The working directory parent reflects a virtual revision which is
     the child of the changeset (or two changesets with an uncommitted
-    merge) shown by :hg:`parents`. This is changed with
-    :hg:`update`. Other commands to see the working directory parent
-    are :hg:`summary` and :hg:`id`. Can be specified by the alias ".".
+    merge) shown by :prog:`parents`. This is changed with
+    :prog:`update`. Other commands to see the working directory parent
+    are :prog:`summary` and :prog:`id`. Can be specified by the alias ".".
 
 Patch
     (Noun) The product of a diff operation.
@@ -3414,11 +3414,11 @@ Patch
 
 Phase
     A per-changeset state tracking how the changeset has been or
-    should be shared. See :hg:`help phases`.
+    should be shared. See :prog:`help phases`.
 
 Public
     Changesets in the public phase have been shared with publishing
-    repositories and are therefore considered immutable. See :hg:`help
+    repositories and are therefore considered immutable. See :prog:`help
     phases`.
 
 Pull
@@ -3426,14 +3426,14 @@ Pull
     not in the local repository are brought into the local
     repository. Note that this operation without special arguments
     only updates the repository, it does not update the files in the
-    working directory. See :hg:`help pull`.
+    working directory. See :prog:`help pull`.
 
 Push
     An operation in which changesets in a local repository which are
     not in a remote repository are sent to the remote repository. Note
     that this operation only adds changesets which have been committed
     locally to the remote repository. Uncommitted changes are not
-    sent. See :hg:`help push`.
+    sent. See :prog:`help push`.
 
 Repository
     The metadata describing all recorded states of a collection of
@@ -3448,7 +3448,7 @@ Repository head
 
 Revision
     A state of the repository at some point in time. Earlier revisions
-    can be updated to by using :hg:`update`.  See also 'Revision
+    can be updated to by using :prog:`update`.  See also 'Revision
     number'; See also 'Changeset'.
 
 Revision number
@@ -3476,12 +3476,12 @@ Root
 
 Secret
     Changesets in the secret phase may not be shared via push, pull,
-    or clone. See :hg:`help phases`.
+    or clone. See :prog:`help phases`.
 
 Tag
     An alternative name given to a changeset. Tags can be used in all
     places where @Product@ expects a changeset ID, e.g., with
-    :hg:`update`. The creation of a tag is stored in the history and
+    :prog:`update`. The creation of a tag is stored in the history and
     will thus automatically be shared with other using push and pull.
 
 Tip
@@ -3502,7 +3502,7 @@ Update
 
     (Verb) This term is usually used to describe updating the state of
     the working directory to that of a specific changeset. See
-    :hg:`help update`.
+    :prog:`help update`.
 
     Example: "You should update."
 
@@ -3523,8 +3523,8 @@ file. Merge tools are given the two files and the greatest common
 ancestor of the two file versions, so they can determine the changes
 made on both branches.
 
-Merge tools are used both for :hg:`resolve`, :hg:`merge`, :hg:`update`,
-:hg:`backout` and in several extensions.
+Merge tools are used both for :prog:`resolve`, :prog:`merge`, :prog:`update`,
+:prog:`backout` and in several extensions.
 
 Usually, the merge tool tries to automatically reconcile the files by
 combining all non-overlapping changes that occurred separately in
@@ -3621,7 +3621,7 @@ pager.ignore list::
   [pager]
   ignore = version, help, update
 
-To ignore global commands like :hg:`version` or :hg:`help`, you have
+To ignore global commands like :prog:`version` or :prog:`help`, you have
 to specify them in your user configuration file.
 
 To control whether the pager is used at all for an individual command,
@@ -3639,7 +3639,7 @@ To globally turn off all attempts to use a pager, set::
 
 which will prevent the pager from running.
 
-For more config options, check :hg:`help config.pager`.
+For more config options, check :prog:`help config.pager`.
 """
 
 
@@ -3719,7 +3719,7 @@ File examples::
   listfile:list.txt  read list from list.txt with one file pattern per line
   listfile0:list.txt read list from list.txt with null byte delimiters
 
-See also :hg:`help filesets`.
+See also :prog:`help filesets`.
 
 Include examples::
 
@@ -3755,8 +3755,8 @@ phase when it is pushed to another repository.
 
 Once changesets become public, commands like amend and rebase will
 refuse to operate on them to prevent creating duplicate changesets.
-Phases can also be manually manipulated with the :hg:`phase` command
-if needed. See :hg:`help -v phase` for examples.
+Phases can also be manually manipulated with the :prog:`phase` command
+if needed. See :prog:`help -v phase` for examples.
 
 To make your commits secret by default, put this in your
 configuration file::
@@ -3789,7 +3789,7 @@ repository to disable publishing in its configuration file::
   [phases]
   publish = False
 
-See :hg:`help config` for more information on configuration files.
+See :prog:`help config` for more information on configuration files.
 
 .. note::
 
@@ -3827,7 +3827,7 @@ Examples
 
      @prog@ phase -fd "outgoing(URL)"
 
-See :hg:`help phase` for more information on manually manipulating phases.
+See :prog:`help phase` for more information on manually manipulating phases.
 """
 
 
@@ -3999,7 +3999,7 @@ exactly equivalent to ``reverse(sort(0:tip, author))``.
 Equivalents
 ===========
 
-Command line equivalents for :hg:`log`::
+Command line equivalents for :prog:`log`::
 
   -f    ->  ::.
   -d x  ->  date(x)
@@ -4070,12 +4070,12 @@ These include:
 Executing ``hg`` processes is very similar to how humans interact with
 @Product@ in the shell. It should already be familiar to you.
 
-:hg:`serve` can be used to start a "command server." Clients can connect
+:prog:`serve` can be used to start a "command server." Clients can connect
 to this server and issue @Product@ commands over a special protocol.
 For more details on the command server, including links to client
 libraries, see https://www.mercurial-scm.org/wiki/CommandServer.
 
-:hg:`serve` based interfaces (the command servers) have the
+:prog:`serve` based interfaces (the command servers) have the
 advantage over simple ``hg`` process invocations in that they are
 likely more efficient. This is because there is significant overhead
 to spawn new Python processes.
@@ -4089,7 +4089,7 @@ to spawn new Python processes.
 Environment Variables
 =====================
 
-As documented in :hg:`help environment`, various environment variables
+As documented in :prog:`help environment`, various environment variables
 influence the operation of @Product@. The following are particularly
 relevant for machines consuming @Product@:
 
@@ -4113,7 +4113,7 @@ HGENCODING
 
 HGRCPATH
     If not set, @Product@ will inherit config options from config files
-    using the process described in :hg:`help config`. This includes
+    using the process described in :prog:`help config`. This includes
     inheriting user or system-wide config files.
 
     When utmost control over the @Product@ configuration is desired, the
@@ -4179,7 +4179,7 @@ Using Templates to Control Output
 ---------------------------------
 
 Many ``hg`` commands support templatized output via the
-``-T/--template`` argument. For more, see :hg:`help templates`.
+``-T/--template`` argument. For more, see :prog:`help templates`.
 
 Templates are useful for explicitly controlling output so that
 you get exactly the data you want formatted how you want it. For
@@ -4235,7 +4235,7 @@ revsets
    of revisions. Think of it as SQL for @Product@ repositories. Revsets
    are useful for querying repositories for specific data.
 
-   See :hg:`help revsets` for more.
+   See :prog:`help revsets` for more.
 
 share extension
    The ``share`` extension provides functionality for sharing
@@ -4248,7 +4248,7 @@ share extension
    network. This is especially true for continuous integration (CI)
    environments.
 
-   See :hg:`help -e share` for more.
+   See :prog:`help -e share` for more.
 """
 
 
@@ -4260,7 +4260,7 @@ You can customize output for any "log-like" command: log,
 outgoing, incoming, tip, parents, and heads.
 
 Some built-in styles are packaged with @Product@. These can be listed
-with :hg:`log --template list`. Example usage::
+with :prog:`log --template list`. Example usage::
 
     $ @prog@ log -r1.0::1.1 --template changelog
 
@@ -4479,11 +4479,11 @@ urls = r"""Valid URLs are of the form::
   ssh://[user@]host[:port]/[path][#revision]
 
 Paths in the local filesystem can either point to @Product@
-repositories or to bundle files (as created by :hg:`bundle` or
-:hg:`incoming --bundle`). See also :hg:`help paths`.
+repositories or to bundle files (as created by :prog:`bundle` or
+:prog:`incoming --bundle`). See also :prog:`help paths`.
 
 An optional identifier after # indicates a particular branch, tag, or
-changeset to use from the remote repository. See also :hg:`help
+changeset to use from the remote repository. See also :prog:`help
 revisions`.
 
 Some features, such as pushing to http:// and https:// URLs are only
@@ -4522,7 +4522,7 @@ aliases under the [paths] section like so::
   ...
 
 You can then use the alias for any command that uses a URL (for
-example :hg:`pull alias1` will be treated as :hg:`pull URL1`).
+example :prog:`pull alias1` will be treated as :prog:`pull URL1`).
 
 Two path aliases are special because they are used as defaults when
 you do not provide the URL to a command:

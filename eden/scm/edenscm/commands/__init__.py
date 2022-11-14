@@ -202,8 +202,8 @@ def add(ui, repo, *pats, **opts):
     Specify files to be tracked by @Product@. The files will be added to
     the repository at the next commit.
 
-    To undo an add before files have been committed, use :hg:`forget`.
-    To undo an add after files have been committed, use :hg:`rm`.
+    To undo an add before files have been committed, use :prog:`forget`.
+    To undo an add after files have been committed, use :prog:`rm`.
 
     If no names are given, add all files to the repository (except
     files matching ``.gitignore``).
@@ -213,7 +213,7 @@ def add(ui, repo, *pats, **opts):
        Examples:
 
          - New (unknown) files are added
-           automatically by :hg:`add`::
+           automatically by :prog:`add`::
 
              $ ls
              foo.c
@@ -265,7 +265,7 @@ def addremove(ui, repo, *pats, **opts):
     be identical) as its parameter. With a parameter greater than 0,
     this compares every removed file with every added file and records
     those similar enough as renames. Detecting renamed files this way
-    can be expensive. After using this option, :hg:`status -C` can be
+    can be expensive. After using this option, :prog:`status -C` can be
     used to check which files were identified as moved or renamed. If
     not specified, -s/--similarity defaults to 100 and only renames of
     identical files are detected.
@@ -275,7 +275,7 @@ def addremove(ui, repo, *pats, **opts):
        Examples:
 
          - A number of files (bar.c and foo.c) are new,
-           while foobar.c has been removed (without using :hg:`remove`)
+           while foobar.c has been removed (without using :prog:`remove`)
            from the repository::
 
              $ ls
@@ -293,7 +293,7 @@ def addremove(ui, repo, *pats, **opts):
              A foo.c
              R foobar.c
 
-         - A file foobar.c was moved to foo.c without using :hg:`rename`.
+         - A file foobar.c was moved to foo.c without using :prog:`rename`.
            Afterwards, it was edited slightly::
 
              $ ls
@@ -569,7 +569,7 @@ def archive(ui, repo, dest, **opts):
     :``zip``:   zip archive, compressed using deflate
 
     The exact name of the destination archive or directory is given
-    using a format string; see :hg:`help export` for details.
+    using a format string; see :prog:`help export` for details.
 
     Each member added to an archive file has a directory prefix
     prepended. Use -p/--prefix to specify a format string for the
@@ -636,15 +636,15 @@ def backout(ui, repo, node=None, rev=None, **opts):
     Create an inverse commit for the specified commit. This command is commonly
     used to undo the effects of a public commit.
 
-    By default, :hg:`backout` creates a new commit on top of the current commit.
+    By default, :prog:`backout` creates a new commit on top of the current commit.
     Specify --no-commit to only change the working copy rather than
     automatically creating a new commit.
 
     If merge conflicts are encountered during the backout, changes will be
     left in the working copy with conflict markers inserted. When this occurs,
-    resolve the conflicts and then run :hg:`commit`.
+    resolve the conflicts and then run :prog:`commit`.
 
-    By default, :hg:`backout` will abort if pending changes are present in the
+    By default, :prog:`backout` will abort if pending changes are present in the
     working copy. Specify --merge to combine changes from the backout with
     your pending changes.
 
@@ -673,13 +673,13 @@ def backout(ui, repo, node=None, rev=None, **opts):
       working directory and a new child of REV that simply undoes REV.
 
       Before version 1.7, the behavior without --merge was equivalent
-      to specifying --merge followed by :hg:`update --clean .` to
+      to specifying --merge followed by :prog:`update --clean .` to
       cancel the merge and leave the child of REV as a head to be
       merged separately.
 
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    See :prog:`help dates` for a list of formats valid for -d/--date.
 
-    See :hg:`help revert` for a way to restore files to the state
+    See :prog:`help revert` for a way to restore files to the state
     of another revision.
 
     Returns 0 on success, 1 if nothing to backout or there are unresolved
@@ -954,7 +954,7 @@ def bisect(
 
           @prog@ log --graph -r "bisect(range)"
 
-      See :hg:`help revisions.bisect` for more about the `bisect()` predicate.
+      See :prog:`help revisions.bisect` for more about the `bisect()` predicate.
 
     Returns 0 on success.
     """
@@ -1195,18 +1195,18 @@ def bookmark(ui, repo, *names, **opts):
     Creating or updating to a bookmark causes it to be marked as 'active'.
     The active bookmark is indicated with a '*'.
     When a commit is made, the active bookmark will advance to the new commit.
-    A plain :hg:`update` will also advance an active bookmark, if possible.
+    A plain :prog:`update` will also advance an active bookmark, if possible.
     Updating away from a bookmark will cause it to be deactivated.
 
     Bookmarks can be pushed and pulled between repositories (see
-    :hg:`help push` and :hg:`help pull`). If a shared bookmark has
+    :prog:`help push` and :prog:`help pull`). If a shared bookmark has
     diverged, a new 'divergent bookmark' of the form 'name@path' will
-    be created. Using :hg:`merge` will resolve the divergence.
+    be created. Using :prog:`merge` will resolve the divergence.
 
     Specifying bookmark as '.' to -m or -d options is equivalent to specifying
     the active bookmark's name.
 
-    A bookmark named '@' has the special property that :hg:`clone` will
+    A bookmark named '@' has the special property that :prog:`clone` will
     check it out by default if it exists.
 
     .. container:: verbose
@@ -1360,7 +1360,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     default-push/default if no destination is specified.
 
     You can change bundle format with the -t/--type option. See
-    :hg:`help bundlespec` for documentation on this format. By default,
+    :prog:`help bundlespec` for documentation on this format. By default,
     the most appropriate format is used and compression defaults to
     bzip2.
 
@@ -1948,7 +1948,7 @@ def copy(ui, repo, *pats, **opts):
     operation is recorded, but no copying is performed.
 
     This command takes effect with the next commit. To undo a copy
-    before that, see :hg:`revert`.
+    before that, see :prog:`revert`.
 
     Returns 0 on success, 1 if errors are encountered.
     """
@@ -1964,9 +1964,9 @@ def copy(ui, repo, *pats, **opts):
 def uncopy(ui, repo, *pats, **opts):
     """mark files as not copied for the next commit
 
-    Unmark sources previously marked by :hg:`copy` so they are no longer copies.
+    Unmark sources previously marked by :prog:`copy` so they are no longer copies.
 
-    See :hg:`help patterns` and :hg:`help filesets` for more information
+    See :prog:`help patterns` and :prog:`help filesets` for more information
     on specifying file patterns.
 
     This command takes effect with the next commit.
@@ -2068,11 +2068,11 @@ def diff(ui, repo, *pats, **opts):
 
     By default, diffs are shown using the unified diff format. Specify -g
     to generate diffs in the git extended diff format. For more information,
-    read :hg:`help diffs`.
+    read :prog:`help diffs`.
 
     .. note::
 
-       :hg:`diff` might generate unexpected results during merges because it
+       :prog:`diff` might generate unexpected results during merges because it
        defaults to comparing against your checkout's first parent commit
        if no commits are specified.
 
@@ -2161,7 +2161,7 @@ def export(ui, repo, *changesets, **opts):
 
     .. note::
 
-       :hg:`export` may generate unexpected diff output for merge
+       :prog:`export` may generate unexpected diff output for merge
        changesets, as it will compare the merge changeset against its
        first parent only.
 
@@ -2183,7 +2183,7 @@ def export(ui, repo, *changesets, **opts):
     diff anyway, probably with undesirable results.
 
     Use the -g/--git option to generate diffs in the git extended diff
-    format. See :hg:`help diffs` for more information.
+    format. See :prog:`help diffs` for more information.
 
     With the --switch-parent option, the diff will be against the
     second parent. It can be useful to review a merge.
@@ -2280,7 +2280,7 @@ def files(ui, repo, *pats, **opts):
 
           @prog@ files -0 | xargs -0 grep foo
 
-    See :hg:`help patterns` and :hg:`help filesets` for more information
+    See :prog:`help patterns` and :prog:`help filesets` for more information
     on specifying file patterns.
 
     Returns 0 if a match is found, 1 otherwise.
@@ -2314,9 +2314,9 @@ def forget(ui, repo, *pats, **opts):
     entire project history, and it does not delete them from the
     working directory.
 
-    To delete the file from the working directory, see :hg:`remove`.
+    To delete the file from the working directory, see :prog:`remove`.
 
-    To undo a forget before the next commit, see :hg:`add`.
+    To undo a forget before the next commit, see :prog:`add`.
 
     .. container:: verbose
 
@@ -2424,7 +2424,7 @@ def graft(ui, repo, *revs, **opts):
 
           @prog@ log -r "sort(all(), date)"
 
-    See :hg:`help revisions` for more about specifying revisions.
+    See :prog:`help revisions` for more about specifying revisions.
 
     Returns 0 on successful completion.
     """
@@ -2984,11 +2984,11 @@ def heads(ui, repo, *branchrevs, **opts):
 
     If one or more REVs are given, only open branch heads on the
     branches associated with the specified changesets are shown. This
-    means that you can use :hg:`heads .` to see the heads on the
+    means that you can use :prog:`heads .` to see the heads on the
     currently checked-out branch.
 
     If -c/--closed is specified, also show branch heads marked closed
-    (see :hg:`commit --close-branch`).
+    (see :prog:`commit --close-branch`).
 
     If STARTREV is specified, only those heads that are descendants of
     STARTREV will be displayed.
@@ -3449,7 +3449,7 @@ def identify(
 
           @prog@ id -r tip https://www.mercurial-scm.org/repo/hg/
 
-    See :hg:`log` for generating more information about specific revisions,
+    See :prog:`log` for generating more information about specific revisions,
     including full hash identifiers.
 
     Returns 0 if successful.
@@ -3631,7 +3631,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     text/plain body parts before first diff are added to the commit
     message.
 
-    If the imported patch was generated by :hg:`export`, user and
+    If the imported patch was generated by :prog:`export`, user and
     description from patch override values from message headers and
     body. Values given on command line with -m/--message and -u/--user
     override these.
@@ -3641,31 +3641,31 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     resulting changeset has a different ID than the one recorded in
     the patch. This will guard against various ways that portable
     patch formats and mail systems might fail to transfer @Product@
-    data or metadata. See :hg:`bundle` for lossless transmission.
+    data or metadata. See :prog:`bundle` for lossless transmission.
 
     Use --partial to ensure a changeset will be created from the patch
     even if some hunks fail to apply. Hunks that fail to apply will be
     written to a <target-file>.rej file. Conflicts can then be resolved
-    by hand before :hg:`commit --amend` is run to update the created
+    by hand before :prog:`commit --amend` is run to update the created
     changeset. This flag exists to let people import patches that
     partially apply without losing the associated metadata (author,
     date, description, ...).
 
     .. note::
 
-       When no hunks apply cleanly, :hg:`import --partial` will create
+       When no hunks apply cleanly, :prog:`import --partial` will create
        an empty changeset, importing only the patch metadata.
 
     With -s/--similarity, @prog@ will attempt to discover renames and
-    copies in the patch in the same way as :hg:`addremove`.
+    copies in the patch in the same way as :prog:`addremove`.
 
     It is possible to use external patch programs to perform the patch
     by setting the ``ui.patch`` configuration option. For the default
     internal tool, the fuzz can also be configured via ``patch.fuzz``.
-    See :hg:`help config` for more information about configuration
+    See :prog:`help config` for more information about configuration
     files and how to use these options.
 
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    See :prog:`help dates` for a list of formats valid for -d/--date.
 
     .. container:: verbose
 
@@ -3813,7 +3813,7 @@ def init(ui, dest=".", **opts):
     If no directory is given, the current directory is used.
 
     It is possible to specify an ``ssh://`` URL as the destination.
-    See :hg:`help urls` for more information.
+    See :prog:`help urls` for more information.
 
     Returns 0 on success.
     """
@@ -3864,7 +3864,7 @@ def locate(ui, repo, *pats, **opts):
     will avoid the problem of "xargs" treating single filenames that
     contain whitespace as multiple filenames.
 
-    See :hg:`help files` for a more versatile command.
+    See :prog:`help files` for a more versatile command.
 
     Returns 0 if a match is found, 1 otherwise.
     """
@@ -3981,14 +3981,14 @@ def log(ui, repo, *pats, **opts):
 
     .. note::
 
-       :hg:`log --patch` may generate unexpected diff output for merge
+       :prog:`log --patch` may generate unexpected diff output for merge
        changesets, as it will only compare the merge changeset against
        its first parent. Also, only files different from BOTH parents
        will appear in files:.
 
     .. note::
 
-       For performance reasons, :hg:`log FILE` may omit duplicate changes
+       For performance reasons, :prog:`log FILE` may omit duplicate changes
        made on branches and will not show removals or mode changes. To
        see all such changes, use the --removed switch.
 
@@ -4053,12 +4053,12 @@ def log(ui, repo, *pats, **opts):
 
           @prog@ log -L file.c,13:23 -L main.c,2:6 -p
 
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    See :prog:`help dates` for a list of formats valid for -d/--date.
 
-    See :hg:`help revisions` for more about specifying and ordering
+    See :prog:`help revisions` for more about specifying and ordering
     revisions.
 
-    See :hg:`help templates` for more about pre-packaged styles and
+    See :prog:`help templates` for more about pre-packaged styles and
     specifying custom templates. The default template used by the log
     command can be customized via the ``ui.logtemplate`` configuration
     setting.
@@ -4239,16 +4239,16 @@ def merge(ui, repo, node=None, **opts):
 
     ``--tool`` can be used to specify the merge tool used for file
     merges. It overrides the HGMERGE environment variable and your
-    configuration files. See :hg:`help merge-tools` for options.
+    configuration files. See :prog:`help merge-tools` for options.
 
     If no revision is specified, the working directory's parent is a
     head revision, and the current branch contains exactly one other
     head, the other head is merged with by default. Otherwise, an
     explicit revision with which to merge with must be provided.
 
-    See :hg:`help resolve` for information on handling file conflicts.
+    See :prog:`help resolve` for information on handling file conflicts.
 
-    To undo an uncommitted merge, use :hg:`update --clean .` which
+    To undo an uncommitted merge, use :prog:`update --clean .` which
     will check out a clean copy of the original merge parent, losing
     all changes.
 
@@ -4320,7 +4320,7 @@ def parents(ui, repo, file_=None, **opts):
         @prog@ log -r "max(::p1() and file(FILE))+max(::p2() and file(FILE))" or
         @prog@ log -r "max(::p1(REV) and file(FILE))+max(::p2(REV) and file(FILE))"
 
-    See :hg:`summary` and :hg:`help revsets` for related information.
+    See :prog:`summary` and :prog:`help revsets` for related information.
 
     Returns 0 on success.
     """
@@ -4386,10 +4386,10 @@ def paths(ui, repo, search=None, **opts):
     .. note::
 
        ``default`` and ``default-push`` apply to all inbound (e.g.
-       :hg:`incoming`) and outbound (e.g. :hg:`outgoing`, :hg:`email`
-       and :hg:`bundle`) operations.
+       :prog:`incoming`) and outbound (e.g. :prog:`outgoing`, :prog:`email`
+       and :prog:`bundle`) operations.
 
-    See :hg:`help urls` for more information.
+    See :prog:`help urls` for more information.
 
     Returns 0 on success.
     """
@@ -4454,14 +4454,14 @@ def phase(ui, repo, *revs, **opts):
     With one of -p/--public, -d/--draft or -s/--secret, change the
     phase value of the specified revisions.
 
-    Unless -f/--force is specified, :hg:`phase` won't move changesets from a
+    Unless -f/--force is specified, :prog:`phase` won't move changesets from a
     lower phase to a higher phase. Phases are ordered as follows::
 
         public < draft < secret
 
     Returns 0 on success, 1 if some phases could not be changed.
 
-    (For more information about the phases concept, see :hg:`help phases`.)
+    (For more information about the phases concept, see :prog:`help phases`.)
     """
     # search for a unique phase argument
     targetphase = None
@@ -4570,7 +4570,7 @@ def pull(ui, repo, source="default", **opts):
     the commit graph, but doesn't affect local commits or files on disk.
 
     If SOURCE is omitted, the default path is used.
-    See :hg:`help urls` for more information.
+    See :prog:`help urls` for more information.
 
     .. container:: verbose
 
@@ -4848,7 +4848,7 @@ def push(ui, repo, dest=None, **opts):
     repository. Specifying ``.`` is equivalent to specifying the active
     bookmark's name.
 
-    Please see :hg:`help urls` for important details about ``ssh://``
+    Please see :prog:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
 
     .. container:: verbose
@@ -4986,12 +4986,12 @@ def push(ui, repo, dest=None, **opts):
 def record(ui, repo, *pats, **opts):
     """interactively select changes to commit
 
-    If a list of files is omitted, all changes reported by :hg:`status`
+    If a list of files is omitted, all changes reported by :prog:`status`
     will be candidates for recording.
 
-    See :hg:`help dates` for a list of formats valid for -d/--date.
+    See :prog:`help dates` for a list of formats valid for -d/--date.
 
-    If using the text interface (see :hg:`help config`),
+    If using the text interface (see :prog:`help config`),
     you will be prompted for whether to record changes to each
     modified file, and for files with multiple changes, for each
     change to use. For each query, the following responses are
@@ -5059,8 +5059,8 @@ def remove(ui, repo, *pats, **opts):
     them. The files will be deleted from the repository at the next
     commit.
 
-    To undo a remove before files have been committed, use :hg:`revert`.
-    To stop tracking files without deleting them, use :hg:`forget`.
+    To undo a remove before files have been committed, use :prog:`revert`.
+    To stop tracking files without deleting them, use :prog:`forget`.
 
     .. container:: verbose
 
@@ -5072,7 +5072,7 @@ def remove(ui, repo, *pats, **opts):
       The following table details the behavior of remove for different
       file states (columns) and option combinations (rows). The file
       states are Added [A], Clean [C], Modified [M] and Missing [!]
-      (as reported by :hg:`status`). The actions are Warn, Remove
+      (as reported by :prog:`status`). The actions are Warn, Remove
       (from branch) and Delete (from disk):
 
       ========= == == == ==
@@ -5086,7 +5086,7 @@ def remove(ui, repo, *pats, **opts):
 
       .. note::
 
-         :hg:`remove` never deletes files in Added [A] state from the
+         :prog:`remove` never deletes files in Added [A] state from the
          working directory, not even if ``--force`` is specified.
 
     Returns 0 on success, 1 if any warnings encountered.
@@ -5122,7 +5122,7 @@ def rename(ui, repo, *pats, **opts):
     operation is recorded, but no copying is performed.
 
     This command takes effect at the next commit. To undo a rename
-    before that, see :hg:`revert`.
+    before that, see :prog:`revert`.
 
     Returns 0 on success, 1 if errors are encountered.
     """
@@ -5153,13 +5153,13 @@ def resolve(ui, repo, *pats, **opts):
     non-interactive merging using the ``internal:merge`` configuration
     setting, or a command-line merge tool like ``diff3``. The resolve
     command is used to manage the files involved in a merge, after
-    :hg:`merge` has been run, and before :hg:`commit` is run (i.e. the
-    working directory must have two parents). See :hg:`help
+    :prog:`merge` has been run, and before :prog:`commit` is run (i.e. the
+    working directory must have two parents). See :prog:`help
     merge-tools` for information on configuring merge tools.
 
     The resolve command can be used in the following ways:
 
-    - :hg:`resolve [--tool TOOL] FILE...`: attempt to re-merge the specified
+    - :prog:`resolve [--tool TOOL] FILE...`: attempt to re-merge the specified
       files, discarding any previous merge attempts. Re-merging is not
       performed for files already marked as resolved. Use ``--all/-a``
       to select all unresolved files. ``--tool`` can be used to specify
@@ -5167,22 +5167,22 @@ def resolve(ui, repo, *pats, **opts):
       environment variable and your configuration files.  Previous file
       contents are saved with a ``.orig`` suffix.
 
-    - :hg:`resolve -m [FILE]`: mark a file as having been resolved
+    - :prog:`resolve -m [FILE]`: mark a file as having been resolved
       (e.g. after having manually fixed-up the files). The default is
       to mark all unresolved files.
 
-    - :hg:`resolve -u [FILE]...`: mark a file as unresolved. The
+    - :prog:`resolve -u [FILE]...`: mark a file as unresolved. The
       default is to mark all resolved files.
 
-    - :hg:`resolve -l`: list files which had or still have conflicts.
+    - :prog:`resolve -l`: list files which had or still have conflicts.
       In the printed list, ``U`` = unresolved and ``R`` = resolved.
       You can use ``set:unresolved()`` or ``set:resolved()`` to filter
-      the list. See :hg:`help filesets` for details.
+      the list. See :prog:`help filesets` for details.
 
     .. note::
 
        @Product@ will not let you commit files with unresolved merge
-       conflicts. You must use :hg:`resolve -m ...` before you can
+       conflicts. You must use :prog:`resolve -m ...` before you can
        commit after a conflicting merge.
 
     Returns 0 on success, 1 if any files fail a resolve attempt.
@@ -5414,10 +5414,10 @@ def revert(ui, repo, *pats, **opts):
     Use the -r/--rev option to revert the given files or directories to
     their states as of a specific commit. Because revert does not actually
     check out the specified commit, the files appear as modified and show
-    up as pending changes in :hg:`status`.
+    up as pending changes in :prog:`status`.
 
     Revert causes files to match their contents in another commit. If
-    instead you want to undo a specific landed commit, use :hg:`backout`
+    instead you want to undo a specific landed commit, use :prog:`backout`
     instead. Run `@prog help backout` for more information.
 
     Modified files are saved with an .orig suffix before reverting.
@@ -5490,7 +5490,7 @@ def revert(ui, repo, *pats, **opts):
 def rollback(ui, repo, **opts):
     """roll back the last transaction (DANGEROUS) (DEPRECATED)
 
-    Please use :hg:`commit --amend` instead of rollback to correct
+    Please use :prog:`commit --amend` instead of rollback to correct
     mistakes in the last commit.
 
     This command should be used with care. There is only one level of
@@ -5656,9 +5656,9 @@ def show(ui, repo, *args, **opts):
     Show the commit message and contents for the specified commit. If no commit
     is specified, shows the current commit.
 
-    This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
-    if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
-    :hg:`log` for more powerful operations than supported by @prog@ show.
+    This behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or
+    if called without a REV, :prog:`log -vp -r . [OPTION]...` Use
+    :prog:`log` for more powerful operations than supported by @prog@ show.
 
     """
     ui.pager("show")
@@ -6095,7 +6095,7 @@ def tip(ui, repo, **opts):
     that repository becomes the current tip. The "tip" tag is special
     and cannot be renamed or assigned to a different changeset.
 
-    This command is deprecated, please use :hg:`heads` instead.
+    This command is deprecated, please use :prog:`heads` instead.
 
     Returns 0 on success.
     """
@@ -6121,7 +6121,7 @@ def tip(ui, repo, **opts):
 def unbundle(ui, repo, fname1, *fnames, **opts):
     """apply one or more bundle files
 
-    Apply one or more bundle files generated by :hg:`bundle`.
+    Apply one or more bundle files generated by :prog:`bundle`.
 
     Returns 0 on success, 1 if an update has unresolved files.
     """

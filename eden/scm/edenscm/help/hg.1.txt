@@ -68,7 +68,7 @@ Files
     the repository contents. The file content is encoded using UTF-8.
 
 ``.hg/last-message.txt``
-    This file is used by :hg:`commit` to store a backup of the commit message
+    This file is used by :prog:`commit` to store a backup of the commit message
     in case the commit fails.
 
 ``.hg/localtags``

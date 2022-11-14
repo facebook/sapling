@@ -127,8 +127,8 @@ def metaedit(ui, repo, templ, *revs, **opts):
     .. note::
 
         You can specify --fold to fold multiple revisions into one when the
-        given revisions form a linear unbroken chain. However, :hg:`fold` is
-        the preferred command for this purpose. See :hg:`help fold` for more
+        given revisions form a linear unbroken chain. However, :prog:`fold` is
+        the preferred command for this purpose. See :prog:`help fold` for more
         information.
 
     .. container:: verbose

@@ -294,7 +294,7 @@ pub fn doc() -> &'static str {
     With ``--debug``, the source (filename and line number) is printed
     for each config item.
 
-    See :hg:`help config` for more information about config files.
+    See :prog:`help config` for more information about config files.
 
     Returns 0 on success, 1 if NAME does not exist.
 

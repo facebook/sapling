@@ -20,7 +20,7 @@ Examples::
   [blackbox]
   track = *
   # dirty is *EXPENSIVE* (slow);
-  # each log entry indicates `+` if the repository is dirty, like :hg:`id`.
+  # each log entry indicates `+` if the repository is dirty, like :prog:`id`.
   dirty = True
   # record the source of log messages
   logsource = True
