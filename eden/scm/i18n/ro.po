@@ -6473,10 +6473,10 @@ msgstr ""
 msgid "PATTERN"
 msgstr "TIPAR"
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "include numele care se potrivesc cu tiparele specificate"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "exclude numele care se potrivesc cu tiparele specificate"
 
 msgid "use text as commit message"

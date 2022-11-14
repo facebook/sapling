@@ -10619,10 +10619,10 @@ msgstr "не проверять сертификат сервера (игнор�
 msgid "PATTERN"
 msgstr "ШАБЛОН"
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "добавить файлы, имена которых соответствуют данным шаблонам"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "не добавлять файлы, имена которых соответствуют данным шаблонам"
 
 msgid "read commit message from file"

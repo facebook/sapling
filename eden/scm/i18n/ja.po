@@ -11765,10 +11765,10 @@ msgstr "接続先証明書の検証省略(web.cacerts 設定の無視)"
 msgid "PATTERN"
 msgstr "パターン"
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "パターンに合致したファイルを処理対象に追加"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "パターンに合致したファイルを処理対象から除外"
 
 msgid "read commit message from file"

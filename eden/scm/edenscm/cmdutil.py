@@ -79,14 +79,14 @@ walkopts = _typedflags(
             "I",
             "include",
             [],
-            _("include names matching the given patterns"),
+            _("include files matching the given patterns"),
             _("PATTERN"),
         ),
         (
             "X",
             "exclude",
             [],
-            _("exclude names matching the given patterns"),
+            _("exclude files matching the given patterns"),
             _("PATTERN"),
         ),
     ]

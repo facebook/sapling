@@ -7919,10 +7919,10 @@ msgstr ""
 msgid "PATTERN"
 msgstr "MÖNSTER"
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "inkludera namn som matchar de givna mönstren"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "exkludera namn som matchar de givna mönstren"
 
 msgid "use text as commit message"

@@ -8265,10 +8265,10 @@ msgstr ""
 msgid "PATTERN"
 msgstr ""
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "含括符合檔案表示式的檔案"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "排除符合檔案表示式的檔案"
 
 msgid "use text as commit message"

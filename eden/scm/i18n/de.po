@@ -9966,10 +9966,10 @@ msgstr ""
 msgid "PATTERN"
 msgstr ""
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "Namen hinzufügen, die auf das angegebene Muster passen"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "Namen ausschließen, die auf das angegebene Muster passen"
 
 msgid "use text as commit message"

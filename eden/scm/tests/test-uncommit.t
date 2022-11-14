@@ -46,8 +46,8 @@ Help for uncommit
   Options ([+] can be repeated):
   
       --keep                allow an empty commit after uncommiting
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
 

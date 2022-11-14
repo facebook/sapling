@@ -55,8 +55,8 @@ Record help
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
    -Z --ignore-space-at-eol ignore changes in whitespace at EOL
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
 

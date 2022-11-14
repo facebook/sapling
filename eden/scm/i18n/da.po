@@ -7339,10 +7339,10 @@ msgstr ""
 msgid "PATTERN"
 msgstr ""
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "inkluder navne som matcher det givne mønster"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "ekskluder navne som matcher det givne mønster"
 
 msgid "use text as commit message"

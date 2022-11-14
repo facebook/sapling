@@ -218,8 +218,8 @@ invalid options
       --rev REV [+]         show difference from revision
       --change REV          list the changed files of a revision
       --root-relative       show status relative to root
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no-R
@@ -288,8 +288,8 @@ invalid options
       --rev REV [+]         show difference from revision
       --change REV          list the changed files of a revision
       --root-relative       show status relative to root
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--repo
@@ -358,8 +358,8 @@ invalid options
       --rev REV [+]         show difference from revision
       --change REV          list the changed files of a revision
       --root-relative       show status relative to root
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--repository
@@ -428,8 +428,8 @@ invalid options
       --rev REV [+]         show difference from revision
       --change REV          list the changed files of a revision
       --root-relative       show status relative to root
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg no--config

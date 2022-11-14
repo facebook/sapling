@@ -444,8 +444,8 @@ Confirm that --help works (it didn't when we used an alias)
    -B --ignore-blank-lines  ignore changes whose lines are all blank
    -Z --ignore-space-at-eol ignore changes in whitespace at EOL
    -T --template TEMPLATE   display with template
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
   $ hg show --help --verbose
@@ -474,8 +474,8 @@ Confirm that --help works (it didn't when we used an alias)
    -Z --ignore-space-at-eol ignore changes in whitespace at EOL
       --style STYLE         display using template map file (DEPRECATED)
    -T --template TEMPLATE   display with template
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   Global options ([+] can be repeated):
   

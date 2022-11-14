@@ -12299,10 +12299,10 @@ msgstr ""
 msgid "PATTERN"
 msgstr "PADRÃO"
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr "inclui nomes que casem com os padrões fornecidos"
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr "exclui nomes que casem com os padrões fornecidos"
 
 msgid "read commit message from file"

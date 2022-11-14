@@ -9471,10 +9471,10 @@ msgstr ""
 msgid "specify hg command to run on the remote side"
 msgstr ""
 
-msgid "include names matching the given patterns"
+msgid "include files matching the given patterns"
 msgstr ""
 
-msgid "exclude names matching the given patterns"
+msgid "exclude files matching the given patterns"
 msgstr ""
 
 msgid "use <text> as commit message"

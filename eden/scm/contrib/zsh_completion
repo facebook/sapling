@@ -390,8 +390,8 @@ _hg_global_opts=(
 )
 
 _hg_pat_opts=(
-  '*'{-I+,--include=}'[include names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/'
-  '*'{-X+,--exclude=}'[exclude names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/')
+  '*'{-I+,--include=}'[include files matching the given patterns]:dir:_files -W $(_hg_cmd root) -/'
+  '*'{-X+,--exclude=}'[exclude files matching the given patterns]:dir:_files -W $(_hg_cmd root) -/')
 
 _hg_clone_opts=(
   $_hg_remote_opts

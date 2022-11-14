@@ -397,8 +397,8 @@ Normal help for add
   
   Options ([+] can be repeated):
   
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
    -n --dry-run             do not perform actions, just print output
   
   (some details hidden, use --verbose to show complete help)
@@ -448,8 +448,8 @@ Verbose help for add
   
   Options ([+] can be repeated):
   
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
    -n --dry-run             do not perform actions, just print output
   
   Global options ([+] can be repeated):
@@ -617,8 +617,8 @@ Test command without options
       --root DIR            produce diffs relative to subdirectory
       --only-files-in-revs  only show changes for files modified in the
                             requested revisions
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
 
@@ -683,8 +683,8 @@ Test command without options
       --rev REV [+]         show difference from revision
       --change REV          list the changed files of a revision
       --root-relative       show status relative to root
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
+   -I --include PATTERN [+] include files matching the given patterns
+   -X --exclude PATTERN [+] exclude files matching the given patterns
   
   (some details hidden, use --verbose to show complete help)
 

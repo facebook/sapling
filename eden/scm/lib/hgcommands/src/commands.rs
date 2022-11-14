@@ -84,12 +84,12 @@ pub fn table() -> CommandTable {
 
 define_flags! {
     pub struct WalkOpts {
-        /// include names matching the given patterns
+        /// include files matching the given patterns
         #[short('I')]
         #[argtype("PATTERN")]
         include: Vec<String>,
 
-        /// exclude names matching the given patterns
+        /// exclude files matching the given patterns
         #[short('X')]
         #[argtype("PATTERN")]
         exclude: Vec<String>,
