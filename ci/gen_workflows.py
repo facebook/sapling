@@ -39,6 +39,19 @@ UBUNTU_DEPS = [
     "dpkg-dev",
 ]
 
+MACOS_RELEASES = {
+    "x86": {
+        "target": "x86_64-apple-darwin",
+        "python_bottle_hash": "c247a261048c510b963705acfbea23b09cc193b5d4256a5d10b42d199a8f8869",
+        "openssl_bottle_hash": "d915175bedb146e38d7a2c95e86888a60a5058a5cd21f835813d43d1372a29d9",
+    },
+    "arm64": {
+        "target": "aarch64-apple-darwin",
+        "python_bottle_hash": "3e95fbf0f18b59af7aeaa957be4499a9c521ec199f2ec2a419b8a7b9ac627a3a",
+        "openssl_bottle_hash": "c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6",
+    },
+}
+
 SAPLING_VERSION = "SAPLING_VERSION"
 
 
@@ -58,7 +71,9 @@ def main() -> int:
         workflows.gen_ubuntu_release(ubuntu_version=ubuntu_version)
 
     workflows.gen_windows_release()
-    workflows.gen_homebrew_macos_release()
+
+    for arch, opts in MACOS_RELEASES.items():
+        workflows.gen_homebrew_macos_release(arch, **opts)
 
     return 0
 
@@ -327,50 +342,43 @@ RUN rm -rf /tmp/repo
         }
         self._write_file("sapling-cli-windows-amd64-release.yml", gh_action)
 
-    def gen_homebrew_macos_release(self) -> str:
+    def gen_homebrew_macos_release(
+        self, arch, target, python_bottle_hash, openssl_bottle_hash
+    ) -> str:
         BUILD = "build"
-        artifact_key = "macos-homebrew-bottle"
-        artifact_glob = "sapling-*.bottle.tar.gz"
+        artifact_key = f"macos-homebrew-{arch}-bottle"
+        mac_release = "monterey"
+        extension = f"{mac_release}.bottle.tar.gz"
+        final_ext = f"{'' if arch == 'x86' else 'arm64_'}{extension}"
+        artifact_glob = "sapling*" + extension
 
         build_job = {
             "runs-on": "macos-12",
             "steps": [
                 {"name": "Checkout Code", "uses": "actions/checkout@v3"},
                 grant_repo_access(),
-                {
-                    "name": "Create tarball of directory",
-                    "run": "tar --exclude '.git/**' --exclude 'sapling.tar.gz' -czf ./sapling.tar.gz .",
-                },
                 create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh | tr \\- .)"),
                 {
-                    "name": "Set SHA256 of tarball",
-                    "id": "sha256sum",
-                    "run": "echo ::set-output name=sha::\"$(shasum -a 256 ./sapling.tar.gz | awk '{printf $1}')\"",
+                    "name": "Prepare build environment",
+                    "run": "eden/scm/packaging/mac/prepare_environment.py \\\n"
+                    + f"-s {openssl_bottle_hash} -f openssl@1.1 \\\n"
+                    + f"-s {python_bottle_hash} -f python@3.8 \\\n"
+                    + f"-t {target} \\\n"
+                    + "-r ${{ env.SAPLING_VERSION }} \\\n"
+                    + "-o $(brew tap-info homebrew/core | sed -n '2p' | awk '{printf $1}')/Formula/sapling.rb",
                 },
                 {
-                    "name": "Fill in version in the Formula template",
-                    "run": "sed -i '' -e \"s/%VERSION%/${{ env.SAPLING_VERSION }}/g\" ./eden/scm/packaging/mac/brew_formula.rb",
-                },
-                {
-                    "name": "Fill in url in the Formula template",
-                    "run": "sed -i '' -e \"%s\" ./eden/scm/packaging/mac/brew_formula.rb"
-                    % r"s#%URL%#file://$(echo $PWD | sed 's#/#\\/#g')\/sapling.tar.gz#g",
-                },
-                {
-                    "name": "Fill in SHA256 in the Formula template",
-                    "run": "sed -i '' -e \"s/%SHA256%/${{ steps.sha256sum.outputs.sha }}/g\" ./eden/scm/packaging/mac/brew_formula.rb",
-                },
-                {
-                    "name": "Get brew_formula.rb into local homebrew tap",
-                    "run": "cp ./eden/scm/packaging/mac/brew_formula.rb $(brew tap-info homebrew/core | sed -n '2p' | awk '{printf $1}')/Formula/sapling.rb",
-                },
-                {
-                    "name": "Install and build bottle",
+                    "name": "Install and build Sapling bottle",
                     "run": "brew install --build-bottle sapling",
                 },
                 {
-                    "name": "Create bottle",
+                    "name": "Create Sapling bottle",
                     "run": "brew bottle sapling",
+                },
+                {
+                    "name": "Rename bottle to some platform specific name",
+                    "run": "mv %s sapling_0.0-${{ env.SAPLING_VERSION }}.%s"
+                    % (artifact_glob, final_ext),
                 },
                 upload_artifact(artifact_key, artifact_glob),
             ],
@@ -383,14 +391,14 @@ RUN rm -rf /tmp/repo
         }
 
         gh_action = {
-            "name": "Release - Homebrew macOS",
+            "name": f"Release - Homebrew macOS-{arch}",
             "on": release_trigger_on(),
             "jobs": {
                 BUILD: build_job,
                 "publish": publish_job,
             },
         }
-        self._write_file("sapling-cli-homebrew-macos-release.yml", gh_action)
+        self._write_file(f"sapling-cli-homebrew-macos-{arch}-release.yml", gh_action)
 
     def _get_ubuntu_container_name(self, version: str) -> str:
         """Name of container to use when doing builds on Ubuntu: will be built
