@@ -4537,7 +4537,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
 
 
 @command(
-    "pull|pul",
+    "pull",
     [
         (
             "u",
@@ -4550,12 +4550,13 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
         ("B", "bookmark", [], _("a bookmark to pull"), _("BOOKMARK")),
     ],
     _("[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"),
+    legacyaliases=["pul"],
 )
 def pull(ui, repo, source="default", **opts):
     """pull changes from the specified source
 
     Pull changes from a remote repository to a local one. This command modifies
-    the commit graph, but doesn't affect local commits or files on disk.
+    the commit graph, but doesn't affect local commits or the working copy.
 
     If SOURCE is omitted, the default path is used.
     See :prog:`help urls` for more information.
@@ -4564,7 +4565,8 @@ def pull(ui, repo, source="default", **opts):
 
         You can use ``.`` for BOOKMARK to specify the active bookmark.
 
-    Returns 0 on success, 1 if ``--update`` was specified but the update had unresolved conflicts.
+    Returns 0 on success, 1 on failure, including if ``--update`` was
+    specified but the update had unresolved conflicts.
     """
     if ui.configbool("pull", "automigrate"):
         repo.automigratestart()
