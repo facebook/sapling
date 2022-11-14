@@ -3939,64 +3939,71 @@ def log(ui, repo, *pats, **opts):
     Print the revision history of the specified files or the entire
     project.
 
-    If no revision range is specified, the default is ``::.``.
+    If no revision range is specified, the default is the current commit
+    and all of its ancestors (``::.``).
 
-    File history is shown without following rename or copy history of
-    files. Use -f/--follow with a filename to follow history across
-    renames and copies. --follow without a filename will only show
-    ancestors or descendants of the starting revision.
+    File history is shown without following the rename or copy
+    history of files. To follow file history across renames and
+    copies, use the ``-f/-- follow`` option. If the ``--follow``
+    option is used without a filename, only the ancestors or
+    descendants of the starting revision are shown.
 
-    By default this command prints revision number and changeset id,
-    non-trivial parents, user, date and time, and a summary for
-    each commit. When the -v/--verbose switch is used, the list of
-    changed files and full commit message are shown.
+    By default, :prog:`log` prints the commit's hash, non-trivial
+    parents, user, date, time, and the single-line summary. When the
+    ``-v/--verbose`` option is used, the list of changed files and
+    full commit message are shown.
 
-    With --graph the revisions are shown as an ASCII art DAG with the most
-    recent changeset at the top.
-    'o' is a changeset, '@' is a working directory parent, 'x' is obsolete,
-    and '+' represents a fork where the changeset from the lines below is a
-    parent of the 'o' merge on the same line.
-    Paths in the DAG are represented with '|', '/' and so forth. ':' in place
-    of a '|' indicates one or more revisions in a path are omitted.
+    With the ``--graph`` option, revisions are shown as an ASCII art
+    graph with the most recent commit at the top. The graph nodes
+    are depicted as follows: **o** is a commit, **@** is a working
+    directory parent, **x** is obsolete, and **+** represents a fork
+    where the commit from the lines below is a parent of the **o**
+    merge on the same line. Paths in the graph are represented with
+    **|**, **/** and so forth. **:** in place of a **|** indicates
+    one or more revisions in a path are omitted.
+
 
     .. container:: verbose
 
-       Use -L/--line-range FILE,M:N options to follow the history of lines
-       from M to N in FILE. With -p/--patch only diff hunks affecting
-       specified line range will be shown. This option requires --follow;
-       it can be specified multiple times. Currently, this option is not
-       compatible with --graph. This option is experimental.
+      Use the ``-L/--line-range FILE,M:N`` option to follow the
+      history of lines from **M** to **N** in FILE. With the ``-p/--
+      patch`` option, only diff hunks affecting specified line range
+      will be shown. The ``-L`` option can be specified multiple
+      times and requires the ``--follow`` option. Currently, the line
+      range option is not compatible with ``--graph`` and is an
+      experimental feature.
 
     .. note::
 
-       :prog:`log --patch` may generate unexpected diff output for merge
-       changesets, as it will only compare the merge changeset against
-       its first parent. Also, only files different from BOTH parents
-       will appear in files:.
+      :prog:`log --patch` may generate unexpected diff output for merge
+      commits, as it will only compare the merge commit against
+      its first parent. Also, only files different from BOTH parents
+      will appear in the **files:** section.
 
     .. note::
 
-       For performance reasons, :prog:`log FILE` may omit duplicate changes
-       made on branches and will not show removals or mode changes. To
-       see all such changes, use the --removed switch.
+      For performance reasons, :prog:`log FILE` may omit duplicate changes
+      made on branches and will not show removals or mode changes. To
+      see all such changes, use the ``--removed`` switch.
 
     .. container:: verbose
 
        .. note::
 
-          The history resulting from -L/--line-range options depends on diff
-          options; for instance if white-spaces are ignored, respective changes
-          with only white-spaces in specified line range will not be listed.
+          The history resulting from ``-L/--line-range`` options depends on
+          diff options: for instance, if white-spaces are ignored,
+          respective changes with only white-spaces in specified line range
+          will not be listed.
 
     .. container:: verbose
 
       Some examples:
 
-      - changesets with full descriptions and file lists::
+      - commits with full descriptions and file lists::
 
           @prog@ log -v
 
-      - changesets ancestral to the working directory::
+      - commits ancestral to the working directory::
 
           @prog@ log -f
 
@@ -4004,11 +4011,11 @@ def log(ui, repo, *pats, **opts):
 
           @prog@ log -l 10 -b .
 
-      - changesets showing all modifications of a file, including removals::
+      - commits showing all modifications of a file, including removals::
 
           @prog@ log --removed file.c
 
-      - all changesets that touch a directory, with diffs, excluding merges::
+      - all commits that touch a directory, with diffs, excluding merges::
 
           @prog@ log -Mp lib/
 
@@ -4024,24 +4031,24 @@ def log(ui, repo, *pats, **opts):
 
           @prog@ log -T list
 
-      - check if a given changeset is included in a bookmarked release::
+      - check if a given commit is included in a bookmarked release::
 
           @prog@ log -r "a21ccf and ancestor(release_1.9)"
 
-      - find all changesets by some user in a date range::
+      - find all commits by some user in a date range::
 
           @prog@ log -k alice -d "may 2008 to jul 2008"
 
-      - changesets touching lines 13 to 23 for file.c::
+      - commits touching lines 13 to 23 for file.c::
 
           @prog@ log -L file.c,13:23
 
-      - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of
+      - commits touching lines 13 to 23 for file.c and lines 2 to 6 of
         main.c with patch::
 
           @prog@ log -L file.c,13:23 -L main.c,2:6 -p
 
-    See :prog:`help dates` for a list of formats valid for -d/--date.
+    See :prog:`help dates` for a list of formats valid for ``-d/--date``.
 
     See :prog:`help revisions` for more about specifying and ordering
     revisions.
