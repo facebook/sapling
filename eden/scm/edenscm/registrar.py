@@ -12,7 +12,9 @@
 
 from __future__ import absolute_import
 
-from . import configitems, error, pycompat, util
+from typing import List
+
+from . import configitems, error, identity, pycompat, util
 
 
 # unlike the other registered items, config options are neither functions or
@@ -161,6 +163,9 @@ class command(_funcregistrarbase):
     then there will be an error produced (and help text shown) if the user calls
     the command without a subcommand.
 
+    The `legacyaliases` argument defines legacy aliases for historical Mercurial
+    users. They will not be available when run as Sapling.
+
     The signature of the decorated function looks like this:
         def cmd(ui[, repo] [, <args>] [, <options>])
 
@@ -180,6 +185,8 @@ class command(_funcregistrarbase):
 
     possiblecmdtypes = {unrecoverablewrite, recoverablewrite, readonly}
 
+    showlegacyaliases = "hg" in identity.default().cliname()
+
     def _doregister(
         self,
         func,
@@ -192,6 +199,7 @@ class command(_funcregistrarbase):
         cmdtemplate=False,
         cmdtype=unrecoverablewrite,
         subonly=False,
+        legacyaliases=[],
     ):
         def subcommand(table=None, categories=None):
             c = command(table)
@@ -203,6 +211,10 @@ class command(_funcregistrarbase):
             raise error.ProgrammingError(
                 "unknown cmdtype value '%s' for " "'%s' command" % (cmdtype, name)
             )
+
+        if self.showlegacyaliases and legacyaliases:
+            name = "|".join((name, "|".join(legacyaliases)))
+
         func.norepo = norepo
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
