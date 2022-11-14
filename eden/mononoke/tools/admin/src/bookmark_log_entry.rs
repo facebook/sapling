@@ -22,11 +22,9 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
-use trait_alias::trait_alias;
 
 use crate::commit_id::IdentityScheme;
 
-#[trait_alias]
 pub trait Repo =
     BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -63,7 +65,6 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use topo_sort::sort_topological;
-use trait_alias::trait_alias;
 use unodes::RootUnodeManifestId;
 
 pub mod warmup;
@@ -123,7 +124,6 @@ lazy_static! {
     };
 }
 
-#[trait_alias]
 pub trait Repo = RepoDerivedDataArc
     + RepoIdentityRef
     + ChangesetsArc

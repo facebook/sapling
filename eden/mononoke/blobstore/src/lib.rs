@@ -37,7 +37,7 @@ use strum_macros::EnumIter;
 use strum_macros::EnumString;
 use strum_macros::IntoStaticStr;
 use thiserror::Error;
-use trait_alias::trait_alias;
+use trait_set::trait_set;
 
 pub use crate::counted_blobstore::CountedBlobstore;
 pub use crate::disabled::DisabledBlob;
@@ -503,11 +503,12 @@ pub trait BlobstoreKeySource: Blobstore {
     ) -> Result<BlobstoreEnumerationData>;
 }
 
-/// Creating a trait alias that represents blobstores
-/// that can be enumerated, updated and have its keys unlinked.
-#[trait_alias]
-#[auto_impl(Arc, Box)]
-pub trait BlobstoreEnumerableWithUnlink = BlobstoreKeySource + BlobstoreUnlinkOps;
+trait_set! {
+    /// A trait alias that represents blobstores that can be enumerated,
+    /// updated and have their keys unlinked.
+    #[auto_impl(Arc, Box)]
+    pub trait BlobstoreEnumerableWithUnlink = BlobstoreKeySource + BlobstoreUnlinkOps;
+}
 
 /// Range of keys.  The range is inclusive (both start and end key are
 /// included in the range), which matches Manifold behaviour.  If the key is

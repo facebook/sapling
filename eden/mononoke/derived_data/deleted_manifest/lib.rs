@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 mod derive;
 mod derive_batch;
 mod mapping;

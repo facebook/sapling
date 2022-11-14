@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use anyhow::Result;
 use clap::Parser;
 use cmdlib_scrubbing::ScrubAppExtension;

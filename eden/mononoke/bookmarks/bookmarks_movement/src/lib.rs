@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use ::repo_lock::RepoLockRef;
 use blobrepo::AsBlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingArc;
@@ -29,7 +31,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use thiserror::Error;
-use trait_alias::trait_alias;
 
 mod affected_changesets;
 mod create;
@@ -61,7 +62,6 @@ pub use crate::update::UpdateBookmarkOp;
 ///
 /// These are the repo attributes that are necessary to call most functions in
 /// bookmarks movement.
-#[trait_alias]
 pub trait Repo = AsBlobRepo
     + BonsaiHgMappingRef
     + BonsaiGitMappingArc

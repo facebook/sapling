@@ -47,6 +47,8 @@
 //! sideload database updates in the transaction that moves forward the bookmark. See hooks.rs for
 //! more information on those;
 
+#![feature(trait_alias)]
+
 use std::cmp::max;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -106,7 +108,6 @@ use revset::RangeNodeStream;
 use slog::info;
 use stats::prelude::*;
 use thiserror::Error;
-use trait_alias::trait_alias;
 use tunables::tunables;
 
 define_stats! {
@@ -236,7 +237,6 @@ pub struct PushrebaseOutcome {
     pub pushrebase_distance: PushrebaseDistance,
 }
 
-#[trait_alias]
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
     + ChangesetsRef

@@ -35,7 +35,6 @@ use mononoke_types::MPath;
 use mononoke_types::ManifestUnodeId;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
-use trait_alias::trait_alias;
 use unodes::RootUnodeManifestId;
 
 //use time_ext::DurationExt;
@@ -50,7 +49,6 @@ pub enum PathState {
     Exists(UnodeEntry),
 }
 
-#[trait_alias]
 pub trait Repo =
     RepoDerivedDataRef + RepoBlobstoreArc + ChangesetFetcherRef + Clone + Copy + Send + Sync;
 

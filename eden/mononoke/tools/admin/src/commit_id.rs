@@ -21,9 +21,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::Svnrev;
 use strum_macros::ToString;
-use trait_alias::trait_alias;
 
-#[trait_alias]
 pub trait Repo =
     BonsaiHgMappingRef + BonsaiGitMappingRef + BonsaiGlobalrevMappingRef + BonsaiSvnrevMappingRef;
 

@@ -42,7 +42,6 @@ use skiplist::SkiplistIndexArc;
 use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
-use trait_alias::trait_alias;
 use wireproto_handler::TargetRepoDbs;
 
 use crate::hook_running::HookRejectionRemapper;
@@ -64,7 +63,6 @@ use crate::UnbundlePushResponse;
 use crate::UnbundleResponse;
 use crate::UploadedBonsais;
 
-#[trait_alias]
 pub trait Repo = crate::processing::Repo + SkiplistIndexArc + HookManagerRef;
 
 /// An auxillary struct, which contains nearly

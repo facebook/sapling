@@ -12,6 +12,8 @@
 //!
 //! This crate procides all the primitives useful for serving log and blame data (mutable and immutable).
 
+#![feature(trait_alias)]
+
 mod blame;
 mod common;
 mod log;
@@ -34,7 +36,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use skiplist::SkiplistIndexRef;
-use trait_alias::trait_alias;
 
 pub use crate::blame::blame;
 pub use crate::blame::blame_with_content;
@@ -43,7 +44,6 @@ pub use crate::blame::blame_with_content;
 ///
 /// These are the repo attributes that are necessary to do most of the (mutable)
 /// history traversal operations.
-#[trait_alias]
 pub trait Repo = AsBlobRepo
     + ChangesetFetcherArc
     + ChangesetFetcherRef

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -50,11 +52,9 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
-use trait_alias::trait_alias;
 
 pub mod drawdag;
 
-#[trait_alias]
 pub trait Repo = BonsaiHgMappingRef
     + BookmarksRef
     + ChangesetsRef

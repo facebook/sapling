@@ -43,7 +43,6 @@ use scribe_commit_queue::ChangedFilesInfo;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use stats::prelude::*;
-use trait_alias::trait_alias;
 use tunables::tunables;
 
 use crate::hook_running::map_hook_rejections;
@@ -75,7 +74,6 @@ define_stats! {
     infinitepush: dynamic_timeseries("{}.infinitepush", (reponame: String); Rate, Sum),
 }
 
-#[trait_alias]
 pub trait Repo = bookmarks_movement::Repo + HgMutationStoreRef;
 
 pub async fn run_post_resolve_action(

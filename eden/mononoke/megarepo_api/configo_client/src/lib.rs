@@ -6,7 +6,6 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
-#![feature(trait_alias)]
 
 #[cfg(fbcode_build)]
 mod facebook;
