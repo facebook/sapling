@@ -895,8 +895,6 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     if similarity is None:
         similarity = float(opts.get("similarity") or 0)
 
-    ret = 0
-
     rejected = []
 
     def badfn(f, msg):
@@ -926,7 +924,7 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     for f in rejected:
         if f in m.files():
             return 1
-    return ret
+    return 0
 
 
 def marktouched(repo, files, similarity=0.0):

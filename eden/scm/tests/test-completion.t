@@ -320,7 +320,7 @@ Show aliases with -v
 
   $ hg debugcomplete -v
   add
-  addremove
+  addremove addrm
   annotate blame
   archive
   backout

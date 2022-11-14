@@ -245,36 +245,37 @@ def add(ui, repo, *pats, **opts):
 
 
 @command(
-    "addremove|addr|addre|addrem|addremo|addremov",
+    "addremove|addrm",
     similarityopts + walkopts + dryrunopts,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
+    legacyaliases=["addr", "addre", "addrem", "addremo", "addremov"],
 )
 def addremove(ui, repo, *pats, **opts):
     """add all new files, delete all missing files
 
-    Add all new files and remove all missing files from the
-    repository.
-
-    Unless names are given, new files are ignored if they match any of
-    the patterns in ``.gitignore``. As with add, these changes take
+    Start tracking all new files and stop tracking all missing files
+    in the working copy. As with :prog:`add`, these changes take
     effect at the next commit.
 
-    Use the -s/--similarity option to detect renamed files. This
+    Unless file names are given, new files are ignored if they match any of
+    the patterns in ``.gitignore``.
+
+    Use the ``-s/--similarity`` option to detect renamed files. This
     option takes a percentage between 0 (disabled) and 100 (files must
     be identical) as its parameter. With a parameter greater than 0,
     this compares every removed file with every added file and records
     those similar enough as renames. Detecting renamed files this way
     can be expensive. After using this option, :prog:`status -C` can be
     used to check which files were identified as moved or renamed. If
-    not specified, -s/--similarity defaults to 100 and only renames of
+    not specified, ``-s/--similarity`` defaults to 100 and only renames of
     identical files are detected.
 
     .. container:: verbose
 
        Examples:
 
-         - A number of files (bar.c and foo.c) are new,
+         - Files bar.c and foo.c are new,
            while foobar.c has been removed (without using :prog:`remove`)
            from the repository::
 
@@ -310,7 +311,7 @@ def addremove(ui, repo, *pats, **opts):
                foobar.c
              R foobar.c
 
-    Returns 0 if all files are successfully added.
+    Returns 0 if all files are successfully added/removed.
     """
     try:
         sim = float(opts.get("similarity") or 100)
