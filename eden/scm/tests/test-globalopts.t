@@ -293,7 +293,7 @@ Testing -h/--help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
-   amend         save pending changes to the current commit
+   amend         meld pending changes into the current commit
    metaedit      edit commit message and other metadata
   
   Rearrange commits:
@@ -364,7 +364,7 @@ Testing -h/--help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
-   amend         save pending changes to the current commit
+   amend         meld pending changes into the current commit
    metaedit      edit commit message and other metadata
   
   Rearrange commits:

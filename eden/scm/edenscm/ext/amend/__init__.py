@@ -180,7 +180,7 @@ def uisetup(ui):
 
     # manual call of the decorator
     command(
-        "amend|am|ame|amen|ramen",
+        "amend|am",
         [
             (
                 "A",
@@ -196,6 +196,7 @@ def uisetup(ui):
         + commands.commitopts
         + commands.commitopts2,
         _("@prog@ amend [OPTION]... [FILE]..."),
+        legacyaliases=["ame", "amen", "ramen"],
     )(amend)
 
     def has_automv(loaded):
@@ -269,50 +270,49 @@ def commit(orig, ui, repo, *pats, **opts):
 
 
 def amend(ui, repo, *pats, **opts):
-    """save pending changes to the current commit
+    """meld pending changes into the current commit
 
-    Replaces your current commit with a new commit that contains the contents
+    Replace your current commit with a new commit that contains the contents
     of the original commit, plus any pending changes.
 
-    By default, all pending changes (in other words, those reported by '@prog@
-    status') are committed. To commit only some of your changes,
-    you can:
+    By default, all pending changes (in other words, those reported by
+    :prog:`status`) are committed. To commit only some of your
+    changes, you can:
 
     - Specify an exact list of files for which you want changes committed.
 
-    - Use the -I or -X flags to pattern match file names to exclude or
-      include by using a fileset. See '@prog@ help filesets' for more
-      information.
+    - Use the ``-I`` or ``-X`` flags to match file names to exclude or
+      include using patterns or filesets. See :prog:`help patterns` and :prog:`help filesets`.
 
-    - Specify the --interactive flag to open a UI that will enable you
-      to select individual insertions or deletions.
+    - Specify the ``--interactive`` flag to open a UI where you can
+      select individual hunks for inclusion.
 
-    By default, @prog@ amend reuses your existing commit message and does not
+    By default, :prog:`amend` reuses your existing commit message and does not
     prompt you for changes. To change your commit message, you can:
 
-    - Specify --edit / -e to open your configured editor to update the
+    - Specify ``--edit/-e`` to open your configured editor to update the
       existing commit message.
 
-    - Specify --message / -m to replace the entire commit message, including
+    - Specify ``--message/-m`` to replace the entire commit message, including
       any commit template fields, with a string that you specify.
 
     .. note::
 
-       Specifying -m overwrites all information in the commit message,
+       Specifying ``-m`` overwrites all information in the commit message,
        including information specified as part of a pre-loaded commit
        template. For example, any information associating this commit with
        a code review system will be lost and might result in breakages.
 
     When you amend a commit that has descendants, those descendants are
     rebased on top of the amended version of the commit, unless doing so
-    would result in merge conflicts. If this happens, run '@prog@ restack'
+    would result in merge conflicts. If this happens, run :prog:`restack`
     to manually trigger the rebase so that you can go through the merge
-    conflict resolution process.  You can also:
+    conflict resolution process. Alternatively:
 
-    - Specify --rebase to always trigger the rebase and resolve merge
+    - Specify ``--rebase`` to always trigger the rebase and resolve merge
       conflicts.
 
-    - Specify --no-rebase to prevent the automatic rebasing of descendants.
+    - Specify ``--no-rebase`` to prevent the automatic rebasing of descendants.
     """
     # 'rebase' is a tristate option: None=auto, True=force, False=disable
     rebase = opts.get("rebase")
