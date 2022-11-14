@@ -47,10 +47,10 @@ define_flags! {
         #[argtype("REV")]
         rev: String,
 
-        /// use pull protocol to copy metadata
+        /// use pull protocol to copy metadata (DEPRECATED)
         pull: bool,
 
-        /// clone with minimal data processing
+        /// clone with minimal data processing (DEPRECATED)
         stream: bool,
 
         /// "use remotefilelog (only turn it off in legacy tests) (ADVANCED)"
@@ -488,95 +488,33 @@ pub fn doc() -> &'static str {
     basename of the source.
 
     The location of the source is added to the new repository's
-    ``.hg/hgrc`` file, as the default to be used for future pulls.
+    config file as the default to be used for future pulls.
 
-    Only local paths and ``ssh://`` URLs are supported as
-    destinations. For ``ssh://`` destinations, no working directory or
-    ``.hg/hgrc`` will be created on the remote side.
+    Sources are typically URLs. The following URL schemes are assumed
+    to be a Git repo: ``git``, ``git+file``, ``git+ftp``, ``git+ftps``,
+    ``git+http``, ``git+https``, ``git+ssh``, ``ssh`` and ``https``.
 
-    If the source repository has a bookmark called '@' set, that
-    revision will be checked out in the new repository by default.
+    Scp-like URLs of the form ``user@host:path`` are converted to
+    ``ssh://user@host/path``.
 
-    To check out a particular version, use -u/--update, or
-    -U/--noupdate to create a clone with no working directory.
+    Other URL schemes are assumed to point to an EdenAPI capable repo.
 
-    To pull only a subset of changesets, specify one or more revisions
-    identifiers with -r/--rev. The resulting clone will contain only the
-    specified changesets and their ancestors. These options (or 'clone src#rev
-    dest') imply --pull, even for local source repositories.
+    The ``--git`` option forces the source to be interpreted as a Git repo.
 
-    In normal clone mode, the remote normalizes repository data into a common
-    exchange format and the receiving end translates this data into its local
-    storage format. --stream activates a different clone mode that essentially
-    copies repository files from the remote with minimal data processing. This
-    significantly reduces the CPU cost of a clone both remotely and locally.
-    However, it often increases the transferred data size by 30-40%. This can
-    result in substantially faster clones where I/O throughput is plentiful,
-    especially for larger repositories. A side-effect of --stream clones is
-    that storage settings and requirements on the remote are applied locally:
-    a modern client may inherit legacy or inefficient storage used by the
-    remote or a legacy @Product@ client may not be able to clone from a
-    modern @Product@ remote.
+    To check out a particular version, use ``-u/--update``, or
+    ``-U/--noupdate`` to create a clone with no working copy.
+
+    If specified, the ``--enable-profile`` option should refer to a
+    sparse profile within the source repo to filter the contents of
+    the new working copy. See :prog:`help -e sparse` for details.
 
     .. container:: verbose
 
-      For efficiency, hardlinks are used for cloning whenever the
-      source and destination are on the same filesystem (note this
-      applies only to the repository data, not to the working
-      directory). Some filesystems, such as AFS, implement hardlinking
-      incorrectly, but do not report errors. In these cases, use the
-      --pull option to avoid hardlinking.
-
-      @Product@ will update the working directory to the first applicable
-      revision from this list:
-
-      a) null if -U or the source repository has no changesets
-      b) if -u . and the source repository is local, the first parent of
-         the source repository's working directory
-      c) the changeset specified with -u (if a branch name, this means the
-         latest head of that branch)
-      d) the changeset specified with -r
-      e) the tipmost head specified with -b
-      f) the tipmost head specified with the url#branch source syntax
-      g) the revision marked with the '@' bookmark, if present
-      h) the tipmost head of the default branch
-      i) tip
-
-      When cloning from servers that support it, @Product@ may fetch
-      pre-generated data from a server-advertised URL. When this is done,
-      hooks operating on incoming changesets and changegroups may fire twice,
-      once for the bundle fetched from the URL and another for any additional
-      data not fetched from this URL. In addition, if an error occurs, the
-      repository may be rolled back to a partial clone. This behavior may
-      change in future releases. See :prog:`help -e clonebundles` for more.
-
       Examples:
 
-      - clone a remote repository to a new directory named hg/::
+      - clone a remote repository to a new directory named some_repo::
 
-          @prog@ clone https://www.mercurial-scm.org/repo/hg/
-
-      - create a lightweight local clone::
-
-          @prog@ clone project/ project-feature/
-
-      - clone from an absolute path on an ssh server (note double-slash)::
-
-          @prog@ clone ssh://user@server//home/projects/alpha/
-
-      - do a streaming clone while checking out a specified version::
-
-          @prog@ clone --stream http://server/repo -u 1.5
-
-      - create a repository without changesets after a particular revision::
-
-          @prog@ clone -r 04e544 experimental/ good/
-
-      - clone (and track) a particular named branch::
-
-          @prog@ clone https://www.mercurial-scm.org/repo/hg/#stable
-
-    See :prog:`help urls` for details on specifying URLs.
+          @prog@ clone https://example.com/some_repo
 
     Returns 0 on success."#
 }
