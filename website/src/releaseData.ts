@@ -9,11 +9,7 @@
 
 import {latestReleaseAssets} from './rawReleaseData';
 
-// TODO: Add better utility functions here.
-
-export function findAssetWithFilenameSubstr(
-  searchString: string,
-) {
+function findAssetWithFilenameSubstr(searchString: string) {
   for (const asset of latestReleaseAssets.assets) {
     if (asset.name.includes(searchString)) {
       return asset;
@@ -21,3 +17,13 @@ export function findAssetWithFilenameSubstr(
   }
   return null;
 }
+
+export const macArmAsset = findAssetWithFilenameSubstr(
+  'arm64_monterey.bottle.tar.gz',
+);
+
+export const macIntelAsset = findAssetWithFilenameSubstr(
+  '.monterey.bottle.tar.gz',
+);
+
+export const windowsAsset = findAssetWithFilenameSubstr('sapling_windows');
