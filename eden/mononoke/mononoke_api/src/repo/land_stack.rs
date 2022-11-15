@@ -17,6 +17,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use cross_repo_sync::types::Large;
 use cross_repo_sync::types::Small;
+use cross_repo_sync::CommitSyncOutcome;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::future::TryFutureExt;
@@ -37,29 +38,59 @@ use crate::repo::RepoContext;
 use crate::Repo;
 
 impl RepoContext {
+    async fn convert_old_bookmark_value(
+        &self,
+        redirector: &PushRedirector<Repo>,
+        bookmark_value: Large<Option<ChangesetId>>,
+    ) -> anyhow::Result<Small<Option<ChangesetId>>> {
+        let large_cs_id = match bookmark_value {
+            Large(Some(cs_id)) => cs_id,
+            Large(None) => return Ok(Small(None)),
+        };
+        let syncer = &redirector.large_to_small_commit_syncer;
+        match syncer
+            .get_commit_sync_outcome(self.ctx(), large_cs_id)
+            .await?
+        {
+            None => anyhow::bail!(
+                "Unexpected absence of CommitSyncOutcome for {} in {:?}",
+                large_cs_id,
+                syncer
+            ),
+            // EquivalentWorkingCopyAncestor is fine because the bookmark commit in the
+            // large repo might not have come from the small repo
+            Some(CommitSyncOutcome::RewrittenAs(small_cs_id, _))
+            | Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(small_cs_id, _)) => {
+                Ok(Small(Some(small_cs_id)))
+            }
+            Some(outcome) => anyhow::bail!(
+                "Unexpected CommitSyncOutcome for {} in {:?}: {:?}",
+                large_cs_id,
+                syncer,
+                outcome
+            ),
+        }
+    }
     async fn convert_outcome(
         &self,
         redirector: &PushRedirector<Repo>,
         outcome: Large<PushrebaseOutcome>,
     ) -> Result<Small<PushrebaseOutcome>, MononokeError> {
         let ctx = self.ctx();
-        let PushrebaseOutcome {
+        let Large(PushrebaseOutcome {
             old_bookmark_value,
             head,
             retry_num,
             rebased_changesets,
             pushrebase_distance,
-        } = outcome.0;
+        }) = outcome;
         redirector.backsync_latest(ctx).await?;
+
         Ok(Small(PushrebaseOutcome {
-            old_bookmark_value: match old_bookmark_value {
-                Some(val) => Some(
-                    redirector
-                        .get_large_to_small_commit_equivalent(ctx, val)
-                        .await?,
-                ),
-                None => None,
-            },
+            old_bookmark_value: self
+                .convert_old_bookmark_value(redirector, Large(old_bookmark_value))
+                .await?
+                .0,
             head: redirector
                 .get_large_to_small_commit_equivalent(ctx, head)
                 .await?,
