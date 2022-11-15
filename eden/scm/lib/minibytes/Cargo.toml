@@ -8,12 +8,13 @@ license = "MIT"
 
 [dependencies]
 bytes = { version = "1.1", features = ["serde"], optional = true }
-memmap = "0.7"
+memmap = { version = "0.7", optional = true }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 
 [dev-dependencies]
 quickcheck = "1.0"
 
 [features]
-default = ["frombytes"]
+default = ["frombytes", "frommmap"]
 frombytes = ["bytes"]
+frommmap = ["memmap"]
