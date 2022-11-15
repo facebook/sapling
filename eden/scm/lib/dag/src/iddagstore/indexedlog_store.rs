@@ -16,6 +16,7 @@ use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
+use std::sync::Mutex;
 
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
@@ -24,7 +25,6 @@ use fs2::FileExt;
 use indexedlog::log;
 use indexedlog::log::Fold;
 use minibytes::Bytes;
-use parking_lot::Mutex;
 
 use super::IdDagStore;
 use crate::errors::bug;
@@ -74,14 +74,14 @@ impl Fold for CoveredIdSetFold {
     fn load(&mut self, bytes: &[u8]) -> io::Result<()> {
         let id_sets = mincode::deserialize(bytes)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        let mut locked = self.inner.lock();
+        let mut locked = self.inner.lock().unwrap();
         locked.id_set_by_group = id_sets;
         locked.id_set_pending_remove_by_group = Default::default();
         Ok(())
     }
 
     fn dump(&self) -> io::Result<Vec<u8>> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().unwrap();
         inner.apply_removals();
         mincode::serialize(&inner.id_set_by_group)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
@@ -89,7 +89,7 @@ impl Fold for CoveredIdSetFold {
 
     #[allow(clippy::for_loops_over_fallibles)]
     fn accumulate(&mut self, data: &[u8]) -> indexedlog::Result<()> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().unwrap();
         if data.starts_with(IndexedLogStore::MAGIC_REMOVE_SEGMENT) {
             let data_start = IndexedLogStore::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES;
             for seg_data in data.get(data_start..) {
@@ -145,7 +145,7 @@ impl Fold for CoveredIdSetFold {
     }
 
     fn clone_boxed(&self) -> Box<dyn Fold> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().unwrap();
         inner.apply_removals();
         let cloned_inner = inner.clone();
         let cloned = CoveredIdSetFold {
@@ -267,7 +267,7 @@ impl IdDagStore for IndexedLogStore {
             .downcast_ref::<CoveredIdSetFold>()
             .expect("should downcast to CoveredIdSetFold defined by OpenOptions");
         let mut result = IdSet::empty();
-        let mut inner = fold.inner.lock();
+        let mut inner = fold.inner.lock().unwrap();
         inner.apply_removals();
         let id_sets = &inner.id_set_by_group;
         for group in groups {

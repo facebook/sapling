@@ -16,6 +16,8 @@ use std::fmt;
 use std::io;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::RwLock;
 
 use dag_types::FlatSegment;
 use futures::future::BoxFuture;
@@ -23,8 +25,6 @@ use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use nonblocking::non_blocking_result;
-use parking_lot::Mutex;
-use parking_lot::RwLock;
 
 use crate::clone::CloneData;
 use crate::errors::bug;
@@ -279,7 +279,7 @@ where
 
         // Prepare data to insert. Do not hold Mutex across async yield points.
         let mut to_insert: Vec<(AncestorPath, Vec<VertexName>)> = Vec::new();
-        std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock());
+        std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock().unwrap());
         if to_insert.is_empty() {
             return Ok(());
         }
@@ -294,7 +294,7 @@ where
         new.map.reload(&map_lock)?;
         new.dag.reload(&dag_lock)?;
         new.maybe_reuse_caches_from(self);
-        std::mem::swap(&mut to_insert, &mut *new.overlay_map_paths.lock());
+        std::mem::swap(&mut to_insert, &mut *new.overlay_map_paths.lock().unwrap());
         new.flush_cached_idmap_with_lock(&map_lock).await?;
 
         new.state.persist(&lock)?;
@@ -314,7 +314,7 @@ where
     /// Implementation detail. Must be protected by a lock.
     async fn flush_cached_idmap_with_lock(&mut self, map_lock: &M::Lock) -> Result<()> {
         let mut to_insert: Vec<(AncestorPath, Vec<VertexName>)> = Vec::new();
-        std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock());
+        std::mem::swap(&mut to_insert, &mut *self.overlay_map_paths.lock().unwrap());
         if to_insert.is_empty() {
             return Ok(());
         }
@@ -378,7 +378,7 @@ where
         }
         tracing::debug!(
             target: "dag::cache", "reusing cache ({} missing)",
-            other.missing_vertexes_confirmed_by_remote.read().len(),
+            other.missing_vertexes_confirmed_by_remote.read().unwrap().len(),
         );
         self.missing_vertexes_confirmed_by_remote =
             other.missing_vertexes_confirmed_by_remote.clone();
@@ -574,6 +574,7 @@ where
         // Add removed names to missing cache.
         self.missing_vertexes_confirmed_by_remote
             .write()
+            .unwrap()
             .extend(removed_vertexes);
 
         // Snapshot cannot be reused.
@@ -1081,12 +1082,12 @@ where
     /// Forgetting to call this function might hurt performance a bit, but does
     /// not affect correctness.
     fn invalidate_snapshot(&mut self) {
-        *self.snapshot.write() = None;
+        *self.snapshot.write().unwrap() = None;
     }
 
     fn invalidate_missing_vertex_cache(&mut self) {
         tracing::debug!(target: "dag::cache", "cleared missing cache");
-        *self.missing_vertexes_confirmed_by_remote.write() = Default::default();
+        *self.missing_vertexes_confirmed_by_remote.write().unwrap() = Default::default();
     }
 
     fn invalidate_overlay_map(&mut self) -> Result<()> {
@@ -1103,13 +1104,13 @@ where
 
     /// Attempt to get a snapshot of this graph.
     pub(crate) fn try_snapshot(&self) -> Result<Arc<Self>> {
-        if let Some(s) = self.snapshot.read().deref() {
+        if let Some(s) = self.snapshot.read().unwrap().deref() {
             if s.dag.version() == self.dag.version() {
                 return Ok(Arc::clone(s));
             }
         }
 
-        let mut snapshot = self.snapshot.write();
+        let mut snapshot = self.snapshot.write().unwrap();
         match snapshot.deref() {
             Some(s) if s.dag.version() == self.dag.version() => Ok(s.clone()),
             _ => {
@@ -1175,7 +1176,7 @@ where
     ) -> Result<()> {
         if self.is_vertex_lazy() {
             let unassigned = calculate_definitely_unassigned_vertexes(self, parents, heads).await?;
-            let mut missing = self.missing_vertexes_confirmed_by_remote.write();
+            let mut missing = self.missing_vertexes_confirmed_by_remote.write().unwrap();
             for v in unassigned {
                 if missing.insert(v.clone()) {
                     tracing::trace!(target: "dag::cache", "cached missing {:?} (definitely missing)", &v);
@@ -1384,9 +1385,9 @@ where
             .resolve_names_to_relative_paths(request.heads, request.names)
             .await?;
         self.insert_relative_paths(path_names).await?;
-        let overlay = self.overlay_map.read();
+        let overlay = self.overlay_map.read().unwrap();
         let mut ids = Vec::with_capacity(names.len());
-        let mut missing = self.missing_vertexes_confirmed_by_remote.write();
+        let mut missing = self.missing_vertexes_confirmed_by_remote.write().unwrap();
         for name in names {
             if let Some(id) = overlay.lookup_vertex_id(name) {
                 ids.push(Some(id));
@@ -1426,7 +1427,7 @@ where
             .resolve_relative_paths_to_names(request.paths)
             .await?;
         self.insert_relative_paths(path_names).await?;
-        let overlay = self.overlay_map.read();
+        let overlay = self.overlay_map.read().unwrap();
         let mut names = Vec::with_capacity(ids.len());
         for &id in ids {
             if let Some(name) = overlay.lookup_vertex_name(id) {
@@ -1454,11 +1455,11 @@ where
         )
         .await?;
 
-        let mut paths = self.overlay_map_paths.lock();
+        let mut paths = self.overlay_map_paths.lock().unwrap();
         paths.extend(path_names);
         drop(paths);
 
-        let mut overlay = self.overlay_map.write();
+        let mut overlay = self.overlay_map.write().unwrap();
         for (id, name) in to_insert {
             tracing::trace!(target: "dag::cache", "cached mapping {:?} <=> {:?}", id, &name);
             overlay.insert_vertex_id_name(id, name);
@@ -1960,6 +1961,7 @@ where
         let overlay_list = self
             .overlay_map
             .read()
+            .unwrap()
             .lookup_vertexes_by_hex_prefix(hex_prefix, limit)?;
         list.extend(overlay_list);
         list.sort_unstable();
@@ -1982,12 +1984,13 @@ where
         match self.map.vertex_id(name.clone()).await {
             Ok(id) => Ok(id),
             Err(crate::Error::VertexNotFound(_)) if self.is_vertex_lazy() => {
-                if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
+                if let Some(id) = self.overlay_map.read().unwrap().lookup_vertex_id(&name) {
                     return Ok(id);
                 }
                 if self
                     .missing_vertexes_confirmed_by_remote
                     .read()
+                    .unwrap()
                     .contains(&name)
                 {
                     return name.not_found();
@@ -2013,12 +2016,13 @@ where
             Ok(Some(id)) => Ok(Some(id)),
             Err(err) => Err(err),
             Ok(None) if self.is_vertex_lazy() => {
-                if let Some(id) = self.overlay_map.read().lookup_vertex_id(&name) {
+                if let Some(id) = self.overlay_map.read().unwrap().lookup_vertex_id(&name) {
                     return Ok(Some(id));
                 }
                 if self
                     .missing_vertexes_confirmed_by_remote
                     .read()
+                    .unwrap()
                     .contains(&name)
                 {
                     return Ok(None);
@@ -2050,7 +2054,7 @@ where
         match self.map.vertex_name(id).await {
             Ok(name) => Ok(name),
             Err(crate::Error::IdNotFound(_)) if self.is_vertex_lazy() => {
-                if let Some(name) = self.overlay_map.read().lookup_vertex_name(id) {
+                if let Some(name) = self.overlay_map.read().unwrap().lookup_vertex_name(id) {
                     return Ok(name);
                 }
                 // Only ids <= max(MASTER group) can be lazy.
@@ -2073,12 +2077,19 @@ where
         match self.map.contains_vertex_name(name).await {
             Ok(true) => Ok(true),
             Ok(false) if self.is_vertex_lazy() => {
-                if self.overlay_map.read().lookup_vertex_id(name).is_some() {
+                if self
+                    .overlay_map
+                    .read()
+                    .unwrap()
+                    .lookup_vertex_id(name)
+                    .is_some()
+                {
                     return Ok(true);
                 }
                 if self
                     .missing_vertexes_confirmed_by_remote
                     .read()
+                    .unwrap()
                     .contains(&name)
                 {
                     return Ok(false);
@@ -2098,7 +2109,7 @@ where
 
     async fn contains_vertex_id_locally(&self, ids: &[Id]) -> Result<Vec<bool>> {
         let mut list = self.map.contains_vertex_id_locally(ids).await?;
-        let map = self.overlay_map.read();
+        let map = self.overlay_map.read().unwrap();
         for (b, id) in list.iter_mut().zip(ids.iter().copied()) {
             if !*b {
                 *b = *b || map.has_vertex_id(id);
@@ -2112,7 +2123,7 @@ where
         let mut list = self.map.contains_vertex_name_locally(names).await?;
         tracing::trace!("contains_vertex_name_locally list (local): {:?}", &list);
         assert_eq!(list.len(), names.len());
-        let map = self.overlay_map.read();
+        let map = self.overlay_map.read().unwrap();
         for (b, name) in list.iter_mut().zip(names.iter()) {
             if !*b && map.has_vertex_name(name) {
                 tracing::trace!("contains_vertex_name_locally overlay has {:?}", &name);
@@ -2127,7 +2138,7 @@ where
         if self.is_vertex_lazy() {
             // Read from overlay map cache.
             {
-                let map = self.overlay_map.read();
+                let map = self.overlay_map.read().unwrap();
                 for (r, id) in list.iter_mut().zip(ids) {
                     if let Some(name) = map.lookup_vertex_name(*id) {
                         *r = Ok(name);
@@ -2160,7 +2171,7 @@ where
         if self.is_vertex_lazy() {
             // Read from overlay map cache.
             {
-                let map = self.overlay_map.read();
+                let map = self.overlay_map.read().unwrap();
                 for (r, name) in list.iter_mut().zip(names) {
                     if let Some(id) = map.lookup_vertex_id(name) {
                         *r = Ok(id);
@@ -2169,7 +2180,7 @@ where
             }
             // Read from missing_vertexes_confirmed_by_remote cache.
             let missing_indexes: Vec<usize> = {
-                let known_missing = self.missing_vertexes_confirmed_by_remote.read();
+                let known_missing = self.missing_vertexes_confirmed_by_remote.read().unwrap();
                 list.iter()
                     .enumerate()
                     .filter_map(|(i, r)| {

@@ -6,12 +6,12 @@
  */
 
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use futures::StreamExt;
 use futures::TryStreamExt;
 use nonblocking::non_blocking;
 use nonblocking::non_blocking_result;
-use parking_lot::Mutex;
 use tracing::debug;
 
 use crate::ops::CheckIntegrity;
@@ -305,7 +305,7 @@ impl TestDag {
     /// Output of remote protocols since the last call.
     pub fn output(&self) -> Vec<String> {
         let mut result = Vec::new();
-        let mut output = self.output.lock();
+        let mut output = self.output.lock().unwrap();
         std::mem::swap(&mut result, &mut *output);
         result
     }
@@ -425,7 +425,7 @@ impl RemoteIdConvertProtocol for ProtocolMonitor {
         names: Vec<Vertex>,
     ) -> Result<Vec<(protocol::AncestorPath, Vec<Vertex>)>> {
         let msg = format!("resolve names: {:?}, heads: {:?}", &names, &heads);
-        self.output.lock().push(msg);
+        self.output.lock().unwrap().push(msg);
         self.inner
             .resolve_names_to_relative_paths(heads, names)
             .await
@@ -436,7 +436,7 @@ impl RemoteIdConvertProtocol for ProtocolMonitor {
         paths: Vec<protocol::AncestorPath>,
     ) -> Result<Vec<(protocol::AncestorPath, Vec<Vertex>)>> {
         let msg = format!("resolve paths: {:?}", &paths);
-        self.output.lock().push(msg);
+        self.output.lock().unwrap().push(msg);
         self.inner.resolve_relative_paths_to_names(paths).await
     }
 }

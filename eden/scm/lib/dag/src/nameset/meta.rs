@@ -7,9 +7,9 @@
 
 use std::any::Any;
 use std::fmt;
+use std::sync::RwLock;
 
 use futures::future::BoxFuture;
-use parking_lot::RwLock;
 
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
@@ -94,18 +94,18 @@ impl MetaSet {
 
     /// Evaluate the set. Returns a new set.
     pub async fn evaluate(&self) -> Result<NameSet> {
-        if let Some(s) = &*self.evaluated.read() {
+        if let Some(s) = &*self.evaluated.read().unwrap() {
             return Ok(s.clone());
         }
         let s = (self.evaluate)().await?;
-        *self.evaluated.write() = Some(s.clone());
+        *self.evaluated.write().unwrap() = Some(s.clone());
         Ok(s)
     }
 
     /// Returns the evaluated set if it was evaluated.
     /// Returns None if the set was not evaluated.
     pub fn evaluated(&self) -> Option<NameSet> {
-        self.evaluated.read().clone()
+        self.evaluated.read().unwrap().clone()
     }
 }
 
