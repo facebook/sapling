@@ -66,6 +66,7 @@ def parse_owner_and_name_from_github_url(url: str) -> Optional[Tuple[str, str]]:
     https://github.com/bolinfest/escoria-demo-game
     https://github.com/bolinfest/escoria-demo-game.git
     git@github.com:bolinfest/escoria-demo-game.git
+    ssh://git@github.com/bolinfest/escoria-demo-game.git
 
     and returns:
 
@@ -79,13 +80,15 @@ def parse_owner_and_name_from_github_url(url: str) -> Optional[Tuple[str, str]]:
     ('bolinfest', 'escoria-demo-game')
     >>> parse_owner_and_name_from_github_url("git@github.com:bolinfest/escoria-demo-game.git")
     ('bolinfest', 'escoria-demo-game')
+    >>> parse_owner_and_name_from_github_url("ssh://git@github.com/bolinfest/escoria-demo-game.git")
+    ('bolinfest', 'escoria-demo-game')
     """
     https_pattern = r"^https://github.com/([^/]+)/([^/]+?)(?:\.git)?$"
     https_match = re.match(https_pattern, url)
     if https_match:
         return (https_match[1], https_match[2])
 
-    ssh_pattern = r"^git@github.com:([^/]+)/([^/]+?)(?:\.git)?$"
+    ssh_pattern = r"^(?:ssh://)?git@github.com[:/]([^/]+)/([^/]+?)(?:\.git)?$"
     ssh_match = re.match(ssh_pattern, url)
     if ssh_match:
         return (ssh_match[1], ssh_match[2])
