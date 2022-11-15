@@ -1,0 +1,55 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.error-notice {
+  --errpadding: 20px;
+  margin: var(--errpadding);
+  padding: var(--errpadding);
+  border: 2px solid var(--scm-removed-foreground);
+  color: var(--scm-removed-foreground);
+  border-radius: 1px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.error-notice-arrow {
+  margin-top: calc(var(--errpadding) / 2);
+}
+
+.error-notice-row {
+  display: flex;
+  flex-direction: row;
+}
+.error-notice-content {
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100% - var(--errpadding));
+}
+
+.error-notice-title {
+  font-weight: bold;
+}
+.error-notice-stack-trace {
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+.error-notice-byline {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.error-notice-left {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  overflow: hidden;
+  gap: 10px;
+}

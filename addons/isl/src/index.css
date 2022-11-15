@@ -1,0 +1,60 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/*
+  * We don't assume we're rendered directly into <body>,
+  * so we don't put any styles on <body> itself.
+  */
+.isl-root {
+  /**
+   * These CSS variables come from the VS Code webview UI toolkit:
+   * https://github.com/microsoft/vscode-webview-ui-toolkit/blob/main/src/design-tokens.ts
+   */
+  background-color: var(--background);
+  color: var(--foreground);
+
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+    'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --highlight-foreground: var(--dropdown-foreground);
+  --pad: 10px;
+  --halfpad: 5px;
+
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content-area {
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.center-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-app-state {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}

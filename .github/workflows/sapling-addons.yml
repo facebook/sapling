@@ -1,0 +1,26 @@
+name: Verify addons/ folder
+on:
+  # Run on any branch to support ghstack's synthetic base/head branches.
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify-addons:
+    runs-on: ubuntu-latest
+    # Our build container already has Node, Yarn, and Python installed.
+    container:
+      image: ${{ format('ghcr.io/{0}/build_ubuntu_20_04:latest', github.repository) }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Grant Access
+        run: git config --global --add safe.directory "$PWD"
+      - name: yarn install
+        working-directory: ./addons
+        run: yarn install --prefer-offline
+      - name: Run addons/verify-addons-folder.py
+        working-directory: ./addons
+        run: ./verify-addons-folder.py

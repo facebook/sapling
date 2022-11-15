@@ -1,0 +1,31 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/** Used to mute the area behind the dialog. */
+.LoginDialog-overlay {
+  background-color: var(--login-overlay-bg-color);
+  position: absolute;
+  height: 100vh;
+  opacity: 0.5;
+  left: 0;
+  top: 0;
+  width: 100%;
+}
+
+.LoginDialog-container {
+  display: flex;
+  justify-content: center;
+}
+
+.LoginDialog {
+  border-width: 1px;
+  border-style: solid;
+  padding: 8px;
+  position: absolute;
+  top: 10px;
+  width: 600px;
+}

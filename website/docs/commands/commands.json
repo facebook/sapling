@@ -1,0 +1,2781 @@
+{
+  "absorb": {
+    "name": "absorb",
+    "aliases": [
+      "absorb",
+      "ab"
+    ],
+    "doc": "intelligently integrate pending changes into current stack\n\n    Attempt to amend each pending change to the proper commit in your\n    stack. Absorb does not write to the working copy.\n\n    If absorb cannot find an unambiguous commit to amend for a change, that\n    change will be left in the working copy, untouched. The unabsorbed\n    changes can be observed by :prog:`status` or :prog:`diff` afterwards.\n\n    Commits outside the revset `::. and not public() and not merge()` will\n    not be changed.\n\n    Commits that become empty after applying the changes will be deleted.\n\n    By default, absorb will show what it plans to do and prompt for\n    confirmation.  If you are confident that the changes will be absorbed\n    to the correct place, run :prog:`absorb -a` to apply the changes\n    immediately.\n\n    Returns 0 if anything was absorbed, 1 if nothing was absorbed.\n    ",
+    "args": [
+      {
+        "shortname": "a",
+        "fullname": "apply-changes",
+        "default": null,
+        "description": "apply changes without prompting for confirmation"
+      },
+      {
+        "shortname": "p",
+        "fullname": "print-changes",
+        "default": null,
+        "description": "print which commits are modified by which changes (DEPRECATED)"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": null,
+        "description": "interactively select which chunks to apply (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit-lines",
+        "default": null,
+        "description": "edit what lines belong to which commits before commit (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "n",
+        "fullname": "dry-run",
+        "default": null,
+        "description": "do not perform actions, just print output"
+      },
+      {
+        "shortname": "",
+        "fullname": "style",
+        "default": "",
+        "description": "display using template map file (DEPRECATED)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "add": {
+    "name": "add",
+    "aliases": [
+      "add"
+    ],
+    "doc": "start tracking the specified files\n\n    Specify files to be tracked by @Product@. The files will be added to\n    the repository at the next commit.\n\n    To undo an add before files have been committed, use :prog:`forget`.\n    To undo an add after files have been committed, use :prog:`rm`.\n\n    If no names are given, add all files to the repository (except\n    files matching ``.gitignore``).\n\n    .. container:: verbose\n\n       Examples:\n\n         - New (unknown) files are added\n           automatically by :prog:`add`::\n\n             $ ls\n             foo.c\n             $ @prog@ status\n             ? foo.c\n             $ @prog@ add\n             adding foo.c\n             $ @prog@ status\n             A foo.c\n\n         - Add specific files::\n\n             $ ls\n             bar.c  foo.c\n             $ @prog@ status\n             ? bar.c\n             ? foo.c\n             $ @prog@ add bar.c\n             $ @prog@ status\n             A bar.c\n             ? foo.c\n\n    Returns 0 if all files are successfully added.\n    ",
+    "args": [
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "n",
+        "fullname": "dry-run",
+        "default": null,
+        "description": "do not perform actions, just print output"
+      },
+      {
+        "shortname": "s",
+        "fullname": "sparse",
+        "default": null,
+        "description": "also include directories of added files in sparse config"
+      }
+    ],
+    "subcommands": null
+  },
+  "addremove": {
+    "name": "addremove",
+    "aliases": [
+      "addremove",
+      "addrm"
+    ],
+    "doc": "add all new files, delete all missing files\n\n    Start tracking all new files and stop tracking all missing files\n    in the working copy. As with :prog:`add`, these changes take\n    effect at the next commit.\n\n    Unless file names are given, new files are ignored if they match any of\n    the patterns in ``.gitignore``.\n\n    Use the ``-s/--similarity`` option to detect renamed files. This\n    option takes a percentage between 0 (disabled) and 100 (files must\n    be identical) as its parameter. With a parameter greater than 0,\n    this compares every removed file with every added file and records\n    those similar enough as renames. Detecting renamed files this way\n    can be expensive. After using this option, :prog:`status -C` can be\n    used to check which files were identified as moved or renamed. If\n    not specified, ``-s/--similarity`` defaults to 100 and only renames of\n    identical files are detected.\n\n    .. container:: verbose\n\n       Examples:\n\n         - Files bar.c and foo.c are new,\n           while foobar.c has been removed (without using :prog:`remove`)\n           from the repository::\n\n             $ ls\n             bar.c foo.c\n             $ @prog@ status\n             ! foobar.c\n             ? bar.c\n             ? foo.c\n             $ @prog@ addremove\n             adding bar.c\n             adding foo.c\n             removing foobar.c\n             $ @prog@ status\n             A bar.c\n             A foo.c\n             R foobar.c\n\n         - A file foobar.c was moved to foo.c without using :prog:`rename`.\n           Afterwards, it was edited slightly::\n\n             $ ls\n             foo.c\n             $ @prog@ status\n             ! foobar.c\n             ? foo.c\n             $ @prog@ addremove --similarity 90\n             removing foobar.c\n             adding foo.c\n             recording removal of foobar.c as rename to foo.c (94% similar)\n             $ @prog@ status -C\n             A foo.c\n               foobar.c\n             R foobar.c\n\n    Returns 0 if all files are successfully added/removed.\n    ",
+    "args": [
+      {
+        "shortname": "s",
+        "fullname": "similarity",
+        "default": "",
+        "description": "guess renamed files by similarity (0<=s<=100)"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "n",
+        "fullname": "dry-run",
+        "default": null,
+        "description": "do not perform actions, just print output"
+      }
+    ],
+    "subcommands": null
+  },
+  "amend": {
+    "name": "amend",
+    "aliases": [
+      "amend",
+      "am"
+    ],
+    "doc": "meld pending changes into the current commit\n\n    Replace your current commit with a new commit that contains the contents\n    of the original commit, plus any pending changes.\n\n    By default, all pending changes (in other words, those reported by\n    :prog:`status`) are committed. To commit only some of your\n    changes, you can:\n\n    - Specify an exact list of files for which you want changes committed.\n\n    - Use the ``-I`` or ``-X`` flags to match file names to exclude or\n      include using patterns or filesets. See :prog:`help patterns` and :prog:`help filesets`.\n\n    - Specify the ``--interactive`` flag to open a UI where you can\n      select individual hunks for inclusion.\n\n    By default, :prog:`amend` reuses your existing commit message and does not\n    prompt you for changes. To change your commit message, you can:\n\n    - Specify ``--edit/-e`` to open your configured editor to update the\n      existing commit message.\n\n    - Specify ``--message/-m`` to replace the entire commit message, including\n      any commit template fields, with a string that you specify.\n\n    .. note::\n\n       Specifying ``-m`` overwrites all information in the commit message,\n       including information specified as part of a pre-loaded commit\n       template. For example, any information associating this commit with\n       a code review system will be lost and might result in breakages.\n\n    When you amend a commit that has descendants, those descendants are\n    rebased on top of the amended version of the commit, unless doing so\n    would result in merge conflicts. If this happens, run :prog:`restack`\n    to manually trigger the rebase so that you can go through the merge\n    conflict resolution process. Alternatively:\n\n    - Specify ``--rebase`` to always trigger the rebase and resolve merge\n      conflicts.\n\n    - Specify ``--no-rebase`` to prevent the automatic rebasing of descendants.\n    ",
+    "args": [
+      {
+        "shortname": "A",
+        "fullname": "addremove",
+        "default": null,
+        "description": "mark new/missing files as added/removed before committing"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": null,
+        "description": "prompt to edit the commit message"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": null,
+        "description": "use interactive mode"
+      },
+      {
+        "shortname": "",
+        "fullname": "rebase",
+        "default": null,
+        "description": "rebases children after the amend"
+      },
+      {
+        "shortname": "",
+        "fullname": "fixup",
+        "default": null,
+        "description": "rebase children from a previous amend (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "to",
+        "default": "",
+        "description": "amend to a specific commit in the current stack (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "style",
+        "default": "",
+        "description": "display using template map file (DEPRECATED)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-move-detection",
+        "default": null,
+        "description": "disable automatic file move detection"
+      },
+      {
+        "shortname": "",
+        "fullname": "stack",
+        "default": null,
+        "description": "incorporate corrections into stack. see 'sl help absorb' for details"
+      }
+    ],
+    "subcommands": null
+  },
+  "backout": {
+    "name": "backout",
+    "aliases": [
+      "backout"
+    ],
+    "doc": "reverse the effects of an earlier commit\n\n    Create an inverse commit of the specified commit. Backout is commonly\n    used to undo the effects of a public commit.\n\n    By default, :prog:`backout` creates a new commit on top of the\n    current commit. Specify ``--no-commit`` to skip making a new\n    commit, leaving the changes outstanding in your working copy.\n\n    If merge conflicts are encountered during the backout, changes will be\n    left in the working copy with conflict markers inserted. When this occurs,\n    resolve the conflicts and then run :prog:`commit`.\n\n    By default, :prog:`backout` will abort if pending changes are present in the\n    working copy. Specify ``--merge`` to combine changes from the backout with\n    your pending changes.\n\n    .. container:: verbose\n\n      Examples:\n\n      - Reverse the effect of the parent of the working copy.\n        This backout will be committed immediately::\n\n          @prog@ backout -r .\n\n      - Reverse the effect of previous bad commit 42e8ddebe::\n\n          @prog@ backout -r 42e8ddebe\n\n      - Reverse the effect of previous bad revision 42e8ddebe and\n        leave changes uncommitted::\n\n          @prog@ backout -r 42e8ddebe --no-commit\n          @prog@ commit -m \"Backout 42e8ddebe\"\n\n      By default, the new commit will have one parent,\n      maintaining a linear history. With ``--merge``, the commit\n      will instead have two parents: the old parent of the\n      working copy and a new child of REV that simply undoes REV.\n\n    See :prog:`help dates` for a list of formats valid for ``-d/--date``.\n\n    See :prog:`help revert` for a way to restore files to the state\n    of another revision.\n\n    Returns 0 on success, 1 if nothing to backout or there are unresolved\n    files.\n    ",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "merge",
+        "default": null,
+        "description": "combine existing pending changes with backout changes"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-commit",
+        "default": false,
+        "description": "do not commit"
+      },
+      {
+        "shortname": "",
+        "fullname": "parent",
+        "default": "",
+        "description": "parent to choose when backing out merge (DEPRECATED)"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "revision to back out"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": false,
+        "description": "open editor to specify custom commit message"
+      },
+      {
+        "shortname": "t",
+        "fullname": "tool",
+        "default": "",
+        "description": "specify merge tool"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      }
+    ],
+    "subcommands": null
+  },
+  "bookmark": {
+    "name": "bookmark",
+    "aliases": [
+      "bookmark",
+      "bo",
+      "book"
+    ],
+    "doc": "create a new bookmark or list existing bookmarks\n\n    Bookmarks are labels on changesets to help track lines of development.\n    Bookmarks are unversioned and can be moved, renamed and deleted.\n    Deleting or moving a bookmark has no effect on the associated changesets.\n\n    Creating or updating to a bookmark causes it to be marked as 'active'.\n    The active bookmark is indicated with a '*'.\n    When a commit is made, the active bookmark will advance to the new commit.\n    A plain :prog:`update` will also advance an active bookmark, if possible.\n    Updating away from a bookmark will cause it to be deactivated.\n\n    Bookmarks can be pushed and pulled between repositories (see\n    :prog:`help push` and :prog:`help pull`). If a shared bookmark has\n    diverged, a new 'divergent bookmark' of the form 'name@path' will\n    be created. Using :prog:`merge` will resolve the divergence.\n\n    Specifying bookmark as '.' to -m or -d options is equivalent to specifying\n    the active bookmark's name.\n\n    A bookmark named '@' has the special property that :prog:`clone` will\n    check it out by default if it exists.\n\n    .. container:: verbose\n\n      Examples:\n\n      - create an active bookmark for a new line of development::\n\n          @prog@ book new-feature\n\n      - create an inactive bookmark as a place marker::\n\n          @prog@ book -i reviewed\n\n      - create an inactive bookmark on another changeset::\n\n          @prog@ book -r .^ tested\n\n      - rename bookmark turkey to dinner::\n\n          @prog@ book -m turkey dinner\n\n      - move the '@' bookmark from another branch::\n\n          @prog@ book -f @\n    ",
+    "args": [
+      {
+        "shortname": "f",
+        "fullname": "force",
+        "default": false,
+        "description": "force"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "revision for bookmark action"
+      },
+      {
+        "shortname": "d",
+        "fullname": "delete",
+        "default": false,
+        "description": "delete a given bookmark"
+      },
+      {
+        "shortname": "D",
+        "fullname": "strip",
+        "default": null,
+        "description": "like --delete, but also strip changesets"
+      },
+      {
+        "shortname": "m",
+        "fullname": "rename",
+        "default": "",
+        "description": "rename a given bookmark"
+      },
+      {
+        "shortname": "i",
+        "fullname": "inactive",
+        "default": false,
+        "description": "mark a bookmark inactive"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "t",
+        "fullname": "track",
+        "default": "",
+        "description": "track this bookmark or remote name"
+      },
+      {
+        "shortname": "u",
+        "fullname": "untrack",
+        "default": null,
+        "description": "remove tracking for this bookmark"
+      },
+      {
+        "shortname": "a",
+        "fullname": "all",
+        "default": null,
+        "description": "show both remote and local bookmarks"
+      },
+      {
+        "shortname": "",
+        "fullname": "remote",
+        "default": null,
+        "description": "show only remote bookmarks (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "list-subscriptions",
+        "default": null,
+        "description": "show only remote bookmarks that are available locally"
+      }
+    ],
+    "subcommands": null
+  },
+  "clean": {
+    "name": "clean",
+    "aliases": [
+      "clean",
+      "purge"
+    ],
+    "doc": "delete untracked files\n\n    Delete all untracked files in your working copy. Untracked files are files\n    that are unknown to @Product@. They are marked with \"?\" when you run\n    :prog:`status`.\n\n    By default, :prog:`clean` implies ``--files``, so only untracked\n    files are deleted. If you add ``--ignored``, ignored files are also\n    deleted. If you add ``--dirs``, empty directories are deleted and\n    ``--files`` is no longer implied.\n\n    If directories are given on the command line, only files in these\n    directories are considered.\n\n    Caution: :prog:`clean` is irreversible. To avoid accidents, first\n    perform a dry run with :prog:`clean --print`.\n    ",
+    "args": [
+      {
+        "shortname": "a",
+        "fullname": "abort-on-err",
+        "default": null,
+        "description": "abort if an error occurs"
+      },
+      {
+        "shortname": "",
+        "fullname": "all",
+        "default": null,
+        "description": "delete ignored files too (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "ignored",
+        "default": null,
+        "description": "delete ignored files too"
+      },
+      {
+        "shortname": "",
+        "fullname": "dirs",
+        "default": null,
+        "description": "delete empty directories"
+      },
+      {
+        "shortname": "",
+        "fullname": "files",
+        "default": null,
+        "description": "delete files"
+      },
+      {
+        "shortname": "p",
+        "fullname": "print",
+        "default": null,
+        "description": "print filenames instead of deleting them"
+      },
+      {
+        "shortname": "0",
+        "fullname": "print0",
+        "default": null,
+        "description": "end filenames with NUL, for use with xargs (implies -p/--print)"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "clone": {
+    "name": "clone",
+    "aliases": [
+      "clone"
+    ],
+    "doc": "make a copy of an existing repository\n\n    Create a copy of an existing repository in a new directory.\n\n    If no destination directory name is specified, it defaults to the\n    basename of the source.\n\n    The location of the source is added to the new repository's\n    config file as the default to be used for future pulls.\n\n    Sources are typically URLs. The following URL schemes are assumed\n    to be a Git repo: ``git``, ``git+file``, ``git+ftp``, ``git+ftps``,\n    ``git+http``, ``git+https``, ``git+ssh``, ``ssh`` and ``https``.\n\n    Scp-like URLs of the form ``user@host:path`` are converted to\n    ``ssh://user@host/path``.\n\n    Other URL schemes are assumed to point to an EdenAPI capable repo.\n\n    The ``--git`` option forces the source to be interpreted as a Git repo.\n\n    To check out a particular version, use ``-u/--update``, or\n    ``-U/--noupdate`` to create a clone with no working copy.\n\n    If specified, the ``--enable-profile`` option should refer to a\n    sparse profile within the source repo to filter the contents of\n    the new working copy. See :prog:`help -e sparse` for details.\n\n    .. container:: verbose\n\n      Examples:\n\n      - clone a remote repository to a new directory named some_repo::\n\n          @prog@ clone https://example.com/some_repo\n\n    Returns 0 on success.",
+    "args": [
+      {
+        "shortname": "U",
+        "fullname": "noupdate",
+        "default": false,
+        "description": "clone an empty working directory"
+      },
+      {
+        "shortname": "u",
+        "fullname": "updaterev",
+        "default": "",
+        "description": "revision or branch to check out"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "include the specified changeset (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "pull",
+        "default": false,
+        "description": "use pull protocol to copy metadata (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "stream",
+        "default": false,
+        "description": "clone with minimal data processing (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "shallow",
+        "default": true,
+        "description": "\"use remotefilelog (only turn it off in legacy tests) (ADVANCED)\""
+      },
+      {
+        "shortname": "",
+        "fullname": "git",
+        "default": false,
+        "description": "\"use git protocol (EXPERIMENTAL)\""
+      },
+      {
+        "shortname": "",
+        "fullname": "enable-profile",
+        "default": [],
+        "description": "enable a sparse profile"
+      },
+      {
+        "shortname": "",
+        "fullname": "include",
+        "default": "",
+        "description": "files to include in a sparse profile (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "exclude",
+        "default": "",
+        "description": "files to exclude in a sparse profile (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "eden",
+        "default": false,
+        "description": "use EdenFs (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "eden-backing-repo",
+        "default": "",
+        "description": "location of the backing repo to be used or created (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "commit": {
+    "name": "commit",
+    "aliases": [
+      "commit",
+      "ci"
+    ],
+    "doc": "save all pending changes or specified files in a new commit\n\n    Commit changes to the given files to your local repository.\n\n    By default, all pending changes (in other words, those reported by\n    :prog:`status`) are committed. If you want to commit only some of your\n    changes, choose one of the following options:\n\n    - Specify an exact list of files for which you want changes committed.\n\n    - Use the ``-I`` or ``-X`` flags to match or exclude file names\n      using a pattern or fileset. See :prog:`help patterns` and\n      :prog:`help filesets` fot details.\n\n    - Specify the ``--interactive`` flag to open a UI to select\n      individual files, hunks, or lines.\n\n    To meld pending changes into the current commit instead of creating\n    a new commit, see :prog:`amend`.\n\n    If you are committing the result of a merge, such as when merge\n    conflicts occur during :prog:`checkout`, commit all pending changes.\n    Do not specify files or use ``-I``, ``-X``, or ``-i``.\n\n    Specify the ``-m`` flag to include a free-form commit message. If you do\n    not specify ``-m``, @Product@ opens your configured editor where you can\n    enter a message based on a pre-loaded commit template.\n\n    Returns 0 on success, 1 if nothing changed.\n\n    .. container:: verbose\n\n      If your commit fails, you can find a backup of your commit message in\n      ``.@prog@/last-message.txt``.\n\n      Examples:\n\n      - commit all files ending in .py::\n\n          @prog@ commit --include \"glob:**.py\"\n\n      - commit all non-binary files::\n\n          @prog@ commit --exclude \"set:binary()\"\n    ",
+    "args": [
+      {
+        "shortname": "A",
+        "fullname": "addremove",
+        "default": null,
+        "description": "mark new/missing files as added/removed before committing"
+      },
+      {
+        "shortname": "",
+        "fullname": "amend",
+        "default": null,
+        "description": "amend the parent of the working copy (DEPRECATED)"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": null,
+        "description": "invoke editor on commit messages"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": null,
+        "description": "use interactive mode"
+      },
+      {
+        "shortname": "M",
+        "fullname": "reuse-message",
+        "default": "",
+        "description": "reuse commit message from REV"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "",
+        "fullname": "rebase",
+        "default": null,
+        "description": "(with --amend) rebases children after the amend (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "fixup",
+        "default": null,
+        "description": "(with --amend) rebase children from a previous amend (DEPRECATED) (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "to",
+        "default": "",
+        "description": "(with --amend) amend to a specific commit in the current stack (ADVANCED) (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "style",
+        "default": "",
+        "description": "(with --amend) display using template map file (DEPRECATED) (DEPRECATED)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "(with --amend) display with template (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-automv",
+        "default": null,
+        "description": "disable automatic file move detection (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-move-detection",
+        "default": null,
+        "description": "disable automatic file move detection"
+      }
+    ],
+    "subcommands": null
+  },
+  "config": {
+    "name": "config",
+    "aliases": [
+      "config",
+      "showconfig",
+      "debugconfig",
+      "conf",
+      "confi"
+    ],
+    "doc": "show config settings\n\n    With no arguments, print names and values of all config items.\n\n    With one argument of the form ``section.name``, print just the value\n    of that config item.\n\n    With multiple arguments, print names and values of all config\n    items with matching section names.\n\n    With ``--user``, edit the user-level config file. With ``--system``,\n    edit the system-wide config file. With ``--local``, edit the\n    repository-level config file. If there are no arguments, spawn\n    an editor to edit the config file. If there are arguments in\n    ``section.name=value`` or ``section.name value`` format, the appropriate\n    config file will be updated directly without spawning an editor.\n\n    With ``--debug``, the source (filename and line number) is printed\n    for each config item.\n\n    See :prog:`help config` for more information about config files.\n\n    Returns 0 on success, 1 if NAME does not exist.\n\n    ",
+    "args": [
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": false,
+        "description": "edit config, implying --user if no other flags set (DEPRECATED)"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": false,
+        "description": "edit user config, opening in editor if no args given"
+      },
+      {
+        "shortname": "l",
+        "fullname": "local",
+        "default": false,
+        "description": "edit repository config, opening in editor if no args given"
+      },
+      {
+        "shortname": "g",
+        "fullname": "global",
+        "default": false,
+        "description": "edit system config, opening in editor if no args given (DEPRECATED)"
+      },
+      {
+        "shortname": "s",
+        "fullname": "system",
+        "default": false,
+        "description": "edit system config, opening in editor if no args given"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "diff": {
+    "name": "diff",
+    "aliases": [
+      "diff",
+      "d"
+    ],
+    "doc": "show differences between commits\n\n    Show the differences between two commits. If only one commit is specified,\n    show the differences between the specified commit and your working copy.\n    If no commits are specified, show your pending changes.\n\n    Specify ``-c`` to see the changes in the specified commit relative to its\n    parent.\n\n    By default, this command skips binary files. To override this behavior,\n    specify ``-a`` to include binary files in the diff.\n\n    By default, diffs are shown using the unified diff format. Specify ``-g``\n    to generate diffs in the git extended diff format. For more information,\n    see :prog:`help diffs`.\n\n    .. note::\n\n       :prog:`diff` might generate unexpected results during merges because it\n       defaults to comparing against your working copy's first parent commit\n       if no commits are specified.\n\n    .. container:: verbose\n\n      Examples:\n\n      - compare a file in the current working directory to its parent::\n\n          @prog@ diff foo.c\n\n      - compare two historical versions of a directory, with rename info::\n\n          @prog@ diff --git -r 5be761874:431ec8e07 lib/\n\n      - get change stats relative to the last change on some date::\n\n          @prog@ diff --stat -r \"date('may 2')\"\n\n      - diff all newly-added files that contain a keyword::\n\n          @prog@ diff \"set:added() and grep(GNU)\"\n\n      - compare a revision and its parents::\n\n          @prog@ diff -c 340f3fef5              # compare against first parent\n          @prog@ diff -r 340f3fef5^:340f3fef5   # same using revset syntax\n          @prog@ diff -r 340f3fef5^2:340f3fef5  # compare against the second parent\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revision"
+      },
+      {
+        "shortname": "c",
+        "fullname": "change",
+        "default": "",
+        "description": "change made by revision"
+      },
+      {
+        "shortname": "a",
+        "fullname": "text",
+        "default": null,
+        "description": "treat all files as text"
+      },
+      {
+        "shortname": "g",
+        "fullname": "git",
+        "default": null,
+        "description": "use git extended diff format"
+      },
+      {
+        "shortname": "",
+        "fullname": "binary",
+        "default": null,
+        "description": "generate binary diffs in git mode (default)"
+      },
+      {
+        "shortname": "",
+        "fullname": "nodates",
+        "default": null,
+        "description": "omit dates from diff headers"
+      },
+      {
+        "shortname": "",
+        "fullname": "noprefix",
+        "default": null,
+        "description": "omit a/ and b/ prefixes from filenames"
+      },
+      {
+        "shortname": "p",
+        "fullname": "show-function",
+        "default": null,
+        "description": "show which function each change is in"
+      },
+      {
+        "shortname": "",
+        "fullname": "reverse",
+        "default": null,
+        "description": "produce a diff that undoes the changes"
+      },
+      {
+        "shortname": "w",
+        "fullname": "ignore-all-space",
+        "default": null,
+        "description": "ignore white space when comparing lines"
+      },
+      {
+        "shortname": "b",
+        "fullname": "ignore-space-change",
+        "default": null,
+        "description": "ignore changes in the amount of white space"
+      },
+      {
+        "shortname": "B",
+        "fullname": "ignore-blank-lines",
+        "default": null,
+        "description": "ignore changes whose lines are all blank"
+      },
+      {
+        "shortname": "Z",
+        "fullname": "ignore-space-at-eol",
+        "default": null,
+        "description": "ignore changes in whitespace at EOL"
+      },
+      {
+        "shortname": "U",
+        "fullname": "unified",
+        "default": "",
+        "description": "number of lines of context to show"
+      },
+      {
+        "shortname": "",
+        "fullname": "stat",
+        "default": null,
+        "description": "output diffstat-style summary of changes"
+      },
+      {
+        "shortname": "",
+        "fullname": "root",
+        "default": "",
+        "description": "produce diffs relative to subdirectory"
+      },
+      {
+        "shortname": "",
+        "fullname": "only-files-in-revs",
+        "default": null,
+        "description": "only show changes for files modified in the requested revisions"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "",
+        "fullname": "per-file-stat-json",
+        "default": null,
+        "description": "show diff stat per file in json (ADVANCED)"
+      },
+      {
+        "shortname": "s",
+        "fullname": "sparse",
+        "default": null,
+        "description": "only show changes in files in the sparse config"
+      }
+    ],
+    "subcommands": null
+  },
+  "fold": {
+    "name": "fold",
+    "aliases": [
+      "fold",
+      "squash"
+    ],
+    "doc": "combine multiple commits into a single commit\n\n    With ``--from``, fold all of the commit linearly between the current\n    commit and the specified commit.\n\n    With ``--exact``, fold only the specified commits while ignoring the\n    current commit. The given commits must form a linear, continuous\n    chain.\n\n    .. container:: verbose\n\n     Some examples:\n\n     - Fold from the current commit to its parent::\n\n         @prog@ fold --from .^\n\n     - Fold all draft commits into the current commit::\n\n         @prog@ fold --from 'draft()'\n\n       See :prog:`help phases` for more about draft commits and\n       :prog:`help revsets` for more about the `draft()` keyword.\n\n     - Fold commits between e254371c1 and be57079e4 into the current commit::\n\n         @prog@ fold --from e254371c1::be57079e4\n\n     - Fold commits e254371c1 and be57079e4:\n\n        @prog@ fold \"e254371c1 + be57079e4\" --exact\n\n     - Only fold commits linearly between foo and .::\n\n         @prog@ fold foo::. --exact\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revision to fold"
+      },
+      {
+        "shortname": "",
+        "fullname": "exact",
+        "default": null,
+        "description": "only fold specified revisions"
+      },
+      {
+        "shortname": "",
+        "fullname": "from",
+        "default": null,
+        "description": "fold linearly from current revision to specified revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-rebase",
+        "default": false,
+        "description": "don't rebase descendants after fold"
+      },
+      {
+        "shortname": "M",
+        "fullname": "reuse-message",
+        "default": "",
+        "description": "reuse commit message from REV"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "forget": {
+    "name": "forget",
+    "aliases": [
+      "forget"
+    ],
+    "doc": "stop tracking the specified files\n\n    Mark the specified files so they will no longer be tracked\n    after the next commit.\n\n    Forget does not delete the files from the working copy. To delete\n    the file from the working copy, see :prog:`remove`.\n\n    Forget does not remove files from the repository history. The files\n    will only be removed in the next commit and its descendants.\n\n    To undo a forget before the next commit, see :prog:`add`.\n\n    .. container:: verbose\n\n      Examples:\n\n      - forget newly-added binary files::\n\n          @prog@ forget \"set:added() and binary()\"\n\n      - forget files that would be excluded by .gitignore::\n\n          @prog@ forget \"set:gitignore()\"\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "ghstack": {
+    "name": "ghstack",
+    "aliases": [
+      "ghstack"
+    ],
+    "doc": "submits a stack of commits to GitHub as individual pull requests using ghstack\n\n    Uses the scheme employed by ghstack (https://github.com/ezyang/ghstack) to\n    submit a stack of commits to GitHub as individual pull requests. Pull\n    requests managed by ghstack are never force-pushed.\n\n    Currently, you must configure ghstack by creating a ~/.ghstackrc file as\n    explained on https://github.com/ezyang/ghstack. Ultimately, we will likely\n    replace this use of the GitHub CLI to manage API requests to GitHub.\n\n    Note that you must have *write* access to the GitHub repository in order to\n    use ghstack. If you do not have write access, consider using the `pr`\n    subcommand instead.\n    ",
+    "args": [],
+    "subcommands": [
+      {
+        "name": "submit",
+        "aliases": [],
+        "doc": "submit stack of commits to GitHub",
+        "args": [
+          {
+            "shortname": "m",
+            "fullname": "message",
+            "default": "Update",
+            "description": "message describing changes to updated commits"
+          },
+          {
+            "shortname": "u",
+            "fullname": "update-fields",
+            "default": false,
+            "description": "update GitHub pull request summary from the local commit"
+          },
+          {
+            "shortname": "",
+            "fullname": "short",
+            "default": false,
+            "description": "print only the URL of the latest opened PR to stdout"
+          },
+          {
+            "shortname": "",
+            "fullname": "force",
+            "default": false,
+            "description": "force push the branch even if your local branch is stale"
+          },
+          {
+            "shortname": "",
+            "fullname": "skip",
+            "default": false,
+            "description": "never skip pushing commits, even if the contents didn't change (use this if you've only updated the commit message)."
+          },
+          {
+            "shortname": "",
+            "fullname": "draft",
+            "default": false,
+            "description": "create the pull request in draft mode (only if it has not already been created)"
+          }
+        ],
+        "subcommands": null
+      },
+      {
+        "name": "unlink",
+        "aliases": [],
+        "doc": "remove the association of a commit with a pull request",
+        "args": [],
+        "subcommands": null
+      },
+      {
+        "name": "land",
+        "aliases": [],
+        "doc": "lands the stack for the specified pull request URL",
+        "args": [],
+        "subcommands": null
+      },
+      {
+        "name": "checkout",
+        "aliases": [],
+        "doc": "goto the stack for the specified pull request URL",
+        "args": [],
+        "subcommands": null
+      },
+      {
+        "name": "action",
+        "aliases": [],
+        "doc": "goto the stack for the specified pull request URL",
+        "args": [
+          {
+            "shortname": "",
+            "fullname": "close",
+            "default": false,
+            "description": "close the specified pull request"
+          }
+        ],
+        "subcommands": null
+      }
+    ]
+  },
+  "goto": {
+    "name": "goto",
+    "aliases": [
+      "update",
+      "up",
+      "checkout",
+      "co",
+      "goto",
+      "go"
+    ],
+    "doc": "update working copy to a given commit\n\nUpdate your working copy to the given destination commit. More\nprecisely, make the destination commit the current commit and update the\ncontents of all files in your working copy to match their state in the\ndestination commit.\n\nBy default, if you attempt to go to a commit while you have pending\nchanges, and the destination commit is not an ancestor or descendant of\nthe current commit, the checkout will abort. However, if the destination\ncommit is an ancestor or descendant of the current commit, the pending\nchanges will be merged with the destination.\n\nUse one of the following flags to modify this behavior::\n\n    --check: abort if there are pending changes\n\n    --clean: permanently discard any pending changes (use with caution)\n\n    --merge: always attempt to merge the pending changes into the destination\n\nIf merge conflicts occur during update, @Product@ enters an unfinished\nmerge state. If this happens, fix the conflicts manually and then run\n:prog:`commit` to exit the unfinished merge state and save your changes\nin a new commit. Alternatively, run :prog:`goto --clean` to discard your\npending changes.\n\nSpecify null as the destination commit to get an empty working copy\n(sometimes known as a bare repository).\n\nReturns 0 on success, 1 if there are unresolved files.",
+    "args": [
+      {
+        "shortname": "C",
+        "fullname": "clean",
+        "default": false,
+        "description": "discard uncommitted changes (no backup)"
+      },
+      {
+        "shortname": "c",
+        "fullname": "check",
+        "default": false,
+        "description": "require clean working copy"
+      },
+      {
+        "shortname": "m",
+        "fullname": "merge",
+        "default": false,
+        "description": "merge uncommitted changes"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "tipmost revision matching date (ADVANCED)"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "inactive",
+        "default": false,
+        "description": "update without activating bookmarks"
+      },
+      {
+        "shortname": "",
+        "fullname": "continue",
+        "default": false,
+        "description": "resume interrupted update --merge (ADVANCED)"
+      },
+      {
+        "shortname": "B",
+        "fullname": "bookmark",
+        "default": "",
+        "description": "create new bookmark"
+      },
+      {
+        "shortname": "t",
+        "fullname": "tool",
+        "default": "",
+        "description": "specify merge tool"
+      }
+    ],
+    "subcommands": null
+  },
+  "graft": {
+    "name": "graft",
+    "aliases": [
+      "graft"
+    ],
+    "doc": "copy commits from a different location\n\n    Use @Product@'s merge logic to copy individual commits from other\n    locations without making merge commits. This is sometimes known as\n    'backporting' or 'cherry-picking'. By default, graft will also\n    copy user, date, and description from the source commits.\n\n    Source commits will be skipped if they are ancestors of the\n    current commit, have already been grafted, or are merges.\n\n    If ``--log`` is specified, commit messages will have a comment appended\n    of the form::\n\n      (grafted from COMMITHASH)\n\n    If ``--force`` is specified, commits will be grafted even if they\n    are already ancestors of, or have been grafted to, the destination.\n    This is useful when the commits have since been backed out.\n\n    If a graft results in conflicts, the graft process is interrupted\n    so that the current merge can be manually resolved. Once all\n    conflicts are resolved, the graft process can be continued with\n    the ``-c/--continue`` option.\n\n    .. note::\n\n       The ``-c/--continue`` operation does not remember options from\n       the original invocation, except for ``--force``.\n\n    .. container:: verbose\n\n      Examples:\n\n      - copy a single change to the stable branch and edit its description::\n\n          @prog@ update stable\n          @prog@ graft --edit ba7e89595\n\n      - graft a range of changesets with one exception, updating dates::\n\n          @prog@ graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n\n      - continue a graft after resolving conflicts::\n\n          @prog@ graft -c\n\n      - abort an interrupted graft::\n\n          @prog@ graft --abort\n\n      - show the source of a grafted changeset::\n\n          @prog@ log --debug -r .\n\n    See :prog:`help revisions` for more about specifying revisions.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revisions to graft"
+      },
+      {
+        "shortname": "c",
+        "fullname": "continue",
+        "default": false,
+        "description": "resume interrupted graft"
+      },
+      {
+        "shortname": "",
+        "fullname": "abort",
+        "default": false,
+        "description": "abort an interrupted graft"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": false,
+        "description": "invoke editor on commit messages"
+      },
+      {
+        "shortname": "",
+        "fullname": "log",
+        "default": null,
+        "description": "append graft info to log message"
+      },
+      {
+        "shortname": "f",
+        "fullname": "force",
+        "default": false,
+        "description": "force graft"
+      },
+      {
+        "shortname": "D",
+        "fullname": "currentdate",
+        "default": false,
+        "description": "record the current date as commit date"
+      },
+      {
+        "shortname": "U",
+        "fullname": "currentuser",
+        "default": false,
+        "description": "record the current user as committer"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "t",
+        "fullname": "tool",
+        "default": "",
+        "description": "specify merge tool"
+      },
+      {
+        "shortname": "n",
+        "fullname": "dry-run",
+        "default": null,
+        "description": "do not perform actions, just print output"
+      }
+    ],
+    "subcommands": null
+  },
+  "help": {
+    "name": "help",
+    "aliases": [
+      "help"
+    ],
+    "doc": "show help for a given topic or a help overview\n\n    With no arguments, print a list of commands with short help messages.\n\n    Given a topic, extension, or command name, print help for that\n    topic.\n\n    Returns 0 if successful.\n    ",
+    "args": [
+      {
+        "shortname": "e",
+        "fullname": "extension",
+        "default": null,
+        "description": "show help for extensions"
+      },
+      {
+        "shortname": "c",
+        "fullname": "command",
+        "default": null,
+        "description": "show help for commands"
+      },
+      {
+        "shortname": "k",
+        "fullname": "keyword",
+        "default": null,
+        "description": "show topics matching keyword"
+      },
+      {
+        "shortname": "s",
+        "fullname": "system",
+        "default": [],
+        "description": "show help for specific platform(s)"
+      }
+    ],
+    "subcommands": null
+  },
+  "hide": {
+    "name": "hide",
+    "aliases": [
+      "hide"
+    ],
+    "doc": "hide commits and their descendants\n\n    Mark the specified commits as hidden. Hidden commits are not included in\n    the output of most @Product@ commands, including :prog:`log` and\n    :prog:`smartlog.` Any descendants of the specified commits will also be\n    hidden.\n\n    Hidden commits are not deleted. They will remain in the repo indefinitely\n    and are still accessible by their hashes. However, :prog:`hide` will delete\n    any bookmarks pointing to hidden commits.\n\n    Use the :prog:`unhide` command to make hidden commits visible again. See\n    :prog:`help unhide` for more information.\n\n    To view hidden commits, run :prog:`journal`.\n\n    When you hide the current commit, the most recent visible ancestor is\n    checked out.\n\n    To hide obsolete stacks (stacks that have a newer version), run\n    :prog:`hide --cleanup`. This command is equivalent to:\n\n    :prog:`hide 'obsolete() - ancestors(draft() & not obsolete())'`\n\n    --cleanup skips obsolete commits with non-obsolete descendants.\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revisions to hide"
+      },
+      {
+        "shortname": "c",
+        "fullname": "cleanup",
+        "default": null,
+        "description": "clean up commits with newer versions, and non-essential remote bookmarks"
+      },
+      {
+        "shortname": "B",
+        "fullname": "bookmark",
+        "default": [],
+        "description": "hide commits only reachable from a bookmark"
+      }
+    ],
+    "subcommands": null
+  },
+  "histedit": {
+    "name": "histedit",
+    "aliases": [
+      "histedit"
+    ],
+    "doc": "interactively reorder, combine, or delete commits\n\n    This command lets you edit a linear series of commits up to\n    and including the working copy, which should be clean.\n    You can:\n\n    - `pick` to (re)order a commit\n\n    - `drop` to omit a commit\n\n    - `mess` to reword a commit message\n\n    - `fold` to combine a commit with the preceding commit, using the later date\n\n    - `roll` like fold, but discarding this commit's description and date\n\n    - `edit` to edit a commit, preserving date\n\n    - `base` to checkout a commit and continue applying subsequent commits\n\n    There are multiple ways to select the root changeset:\n\n    - Specify ANCESTOR directly\n\n    - Otherwise, the value from the ``histedit.defaultrev`` config option\n      is used as a revset to select the base commit when ANCESTOR is not\n      specified. The first commit returned by the revset is used. By\n      default, this selects the editable history that is unique to the\n      ancestry of the working directory.\n\n    .. container:: verbose\n\n       Examples:\n\n         - A number of changes have been made.\n           Commit `a113a4006` is no longer needed.\n\n           Start history editing from commit a::\n\n             @prog@ histedit -r a113a4006\n\n           An editor opens, containing the list of commits,\n           with specific actions specified::\n\n             pick a113a4006 Zworgle the foobar\n             pick 822478b68 Bedazzle the zerlog\n             pick d275e7ed9 5 Morgify the cromulancy\n\n           Additional information about the possible actions\n           to take appears below the list of commits.\n\n           To remove commit a113a4006 from the history,\n           its action (at the beginning of the relevant line)\n           is changed to ``drop``::\n\n             drop a113a4006 Zworgle the foobar\n             pick 822478b68 Bedazzle the zerlog\n             pick d275e7ed9 Morgify the cromulancy\n\n         - A number of changes have been made.\n           Commit fe2bff2ce and c9116c09e need to be swapped.\n\n           Start history editing from commit fe2bff2ce::\n\n             @prog@ histedit -r fe2bff2ce\n\n           An editor opens, containing the list of commits,\n           with specific actions specified::\n\n             pick fe2bff2ce Blorb a morgwazzle\n             pick 99a93da65 Zworgle the foobar\n             pick c9116c09e Bedazzle the zerlog\n\n           To swap commits fe2bff2ce and c9116c09e, simply swap their lines::\n\n             pick 8ef592ce7cc4 4 Bedazzle the zerlog\n             pick 5339bf82f0ca 3 Zworgle the foobar\n             pick 252a1af424ad 2 Blorb a morgwazzle\n\n    Returns 0 on success, 1 if user intervention is required for\n    ``edit`` command or to resolve merge conflicts.\n    ",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "commands",
+        "default": "",
+        "description": "read history edits from the specified file"
+      },
+      {
+        "shortname": "c",
+        "fullname": "continue",
+        "default": false,
+        "description": "continue an edit already in progress"
+      },
+      {
+        "shortname": "",
+        "fullname": "edit-plan",
+        "default": false,
+        "description": "edit remaining actions list"
+      },
+      {
+        "shortname": "k",
+        "fullname": "keep",
+        "default": false,
+        "description": "don't strip old nodes after edit is complete"
+      },
+      {
+        "shortname": "",
+        "fullname": "abort",
+        "default": false,
+        "description": "abort an edit in progress"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "first revision to be edited"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "x",
+        "fullname": "retry",
+        "default": false,
+        "description": "retry exec command that failed and try to continue"
+      },
+      {
+        "shortname": "",
+        "fullname": "show-plan",
+        "default": false,
+        "description": "show remaining actions list"
+      }
+    ],
+    "subcommands": null
+  },
+  "init": {
+    "name": "init",
+    "aliases": [
+      "init",
+      "ini"
+    ],
+    "doc": "create a new repository in the given directory\n\n    Initialize a new repository in the given directory. If the given\n    directory does not exist, it will be created.\n\n    If no directory is given, the current directory is used.\n\n    It is possible to specify an ``ssh://`` URL as the destination.\n    See :prog:`help urls` for more information.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "git",
+        "default": null,
+        "description": "use git as backend (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "journal": {
+    "name": "journal",
+    "aliases": [
+      "journal",
+      "j",
+      "jo",
+      "jou",
+      "jour",
+      "journ",
+      "journa"
+    ],
+    "doc": "show history of the checked out commit or a bookmark\n\n    Show the history of all the commits that were once the current commit. In\n    other words, shows a list of your previously checked out commits.\n    :prog:`journal` can be used to find older versions of commits (for example,\n    when you want to revert to a previous state). It can also be used to\n    discover commits that were previously hidden.\n\n    By default, :prog:`journal` displays the history of the current commit. To\n    display a list of commits pointed to by a bookmark, specify a bookmark\n    name.\n\n    Specify --all to show the history of both the current commit and all\n    bookmarks. In the output for --all, bookmarks are listed by name, and '.'\n    indicates the current commit.\n\n    Specify -Tjson to produce machine-readable output.\n\n    .. container:: verbose\n\n       By default, :prog:`journal` only shows the commit hash and the\n       corresponding command. Specify --verbose to also include the previous\n       commit hash, user, and timestamp.\n\n       Use -c/--commits to output log information about each commit hash. To\n       customize the log output, you can also specify switches like '--patch',\n       '--git', '--stat', and '--template'.\n\n       If a bookmark name starts with 're:', the remainder of the name is\n       treated as a regular expression. To match a name that actually starts\n       with 're:', use the prefix 'literal:'.\n\n    ",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "all",
+        "default": null,
+        "description": "show history for all names"
+      },
+      {
+        "shortname": "c",
+        "fullname": "commits",
+        "default": null,
+        "description": "show commit metadata"
+      },
+      {
+        "shortname": "p",
+        "fullname": "patch",
+        "default": null,
+        "description": "show patch"
+      },
+      {
+        "shortname": "g",
+        "fullname": "git",
+        "default": null,
+        "description": "use git extended diff format"
+      },
+      {
+        "shortname": "l",
+        "fullname": "limit",
+        "default": "",
+        "description": "limit number of changes displayed"
+      },
+      {
+        "shortname": "",
+        "fullname": "stat",
+        "default": null,
+        "description": "output diffstat-style summary of changes"
+      },
+      {
+        "shortname": "",
+        "fullname": "style",
+        "default": "",
+        "description": "display using template map file (DEPRECATED)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template"
+      }
+    ],
+    "subcommands": null
+  },
+  "log": {
+    "name": "log",
+    "aliases": [
+      "log",
+      "history"
+    ],
+    "doc": "show commit history\n\n    Print the revision history of the specified files or the entire\n    project.\n\n    If no revision range is specified, the default is ``::.``.\n\n    File history is shown without following rename or copy history of\n    files. Use -f/--follow with a filename to follow history across\n    renames and copies. --follow without a filename will only show\n    ancestors or descendants of the starting revision.\n\n    By default this command prints revision number and changeset id,\n    non-trivial parents, user, date and time, and a summary for\n    each commit. When the -v/--verbose switch is used, the list of\n    changed files and full commit message are shown.\n\n    With --graph the revisions are shown as an ASCII art DAG with the most\n    recent changeset at the top.\n    'o' is a changeset, '@' is a working directory parent, 'x' is obsolete,\n    and '+' represents a fork where the changeset from the lines below is a\n    parent of the 'o' merge on the same line.\n    Paths in the DAG are represented with '|', '/' and so forth. ':' in place\n    of a '|' indicates one or more revisions in a path are omitted.\n\n    .. container:: verbose\n\n       Use -L/--line-range FILE,M:N options to follow the history of lines\n       from M to N in FILE. With -p/--patch only diff hunks affecting\n       specified line range will be shown. This option requires --follow;\n       it can be specified multiple times. Currently, this option is not\n       compatible with --graph. This option is experimental.\n\n    .. note::\n\n       :prog:`log --patch` may generate unexpected diff output for merge\n       changesets, as it will only compare the merge changeset against\n       its first parent. Also, only files different from BOTH parents\n       will appear in files:.\n\n    .. note::\n\n       For performance reasons, :prog:`log FILE` may omit duplicate changes\n       made on branches and will not show removals or mode changes. To\n       see all such changes, use the --removed switch.\n\n    .. container:: verbose\n\n       .. note::\n\n          The history resulting from -L/--line-range options depends on diff\n          options; for instance if white-spaces are ignored, respective changes\n          with only white-spaces in specified line range will not be listed.\n\n    .. container:: verbose\n\n      Some examples:\n\n      - changesets with full descriptions and file lists::\n\n          @prog@ log -v\n\n      - changesets ancestral to the working directory::\n\n          @prog@ log -f\n\n      - last 10 commits on the current branch::\n\n          @prog@ log -l 10 -b .\n\n      - changesets showing all modifications of a file, including removals::\n\n          @prog@ log --removed file.c\n\n      - all changesets that touch a directory, with diffs, excluding merges::\n\n          @prog@ log -Mp lib/\n\n      - all revision numbers that match a keyword::\n\n          @prog@ log -k bug --template \"{rev}\\n\"\n\n      - the full hash identifier of the working directory parent::\n\n          @prog@ log -r . --template \"{node}\\n\"\n\n      - list available log templates::\n\n          @prog@ log -T list\n\n      - check if a given changeset is included in a bookmarked release::\n\n          @prog@ log -r \"a21ccf and ancestor(release_1.9)\"\n\n      - find all changesets by some user in a date range::\n\n          @prog@ log -k alice -d \"may 2008 to jul 2008\"\n\n      - changesets touching lines 13 to 23 for file.c::\n\n          @prog@ log -L file.c,13:23\n\n      - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of\n        main.c with patch::\n\n          @prog@ log -L file.c,13:23 -L main.c,2:6 -p\n\n    See :prog:`help dates` for a list of formats valid for -d/--date.\n\n    See :prog:`help revisions` for more about specifying and ordering\n    revisions.\n\n    See :prog:`help templates` for more about pre-packaged styles and\n    specifying custom templates. The default template used by the log\n    command can be customized via the ``ui.logtemplate`` configuration\n    setting.\n\n    Returns 0 on success.\n\n    ",
+    "args": [
+      {
+        "shortname": "f",
+        "fullname": "follow",
+        "default": null,
+        "description": "follow changeset history, or file history across copies and renames"
+      },
+      {
+        "shortname": "",
+        "fullname": "follow-first",
+        "default": null,
+        "description": "only follow the first parent of merge changesets (DEPRECATED)"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "show revisions matching date spec"
+      },
+      {
+        "shortname": "C",
+        "fullname": "copies",
+        "default": null,
+        "description": "show copied files"
+      },
+      {
+        "shortname": "k",
+        "fullname": "keyword",
+        "default": [],
+        "description": "do case-insensitive search for a given text"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "show the specified revision or revset"
+      },
+      {
+        "shortname": "L",
+        "fullname": "line-range",
+        "default": [],
+        "description": "follow line range of specified file (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "removed",
+        "default": null,
+        "description": "include revisions where files were removed"
+      },
+      {
+        "shortname": "m",
+        "fullname": "only-merges",
+        "default": null,
+        "description": "show only merges (DEPRECATED)"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": [],
+        "description": "revisions committed by user"
+      },
+      {
+        "shortname": "b",
+        "fullname": "branch",
+        "default": [],
+        "description": "show changesets within the given named branch"
+      },
+      {
+        "shortname": "P",
+        "fullname": "prune",
+        "default": [],
+        "description": "do not display revision or any of its ancestors"
+      },
+      {
+        "shortname": "p",
+        "fullname": "patch",
+        "default": null,
+        "description": "show patch"
+      },
+      {
+        "shortname": "g",
+        "fullname": "git",
+        "default": null,
+        "description": "use git extended diff format"
+      },
+      {
+        "shortname": "l",
+        "fullname": "limit",
+        "default": "",
+        "description": "limit number of changes displayed"
+      },
+      {
+        "shortname": "M",
+        "fullname": "no-merges",
+        "default": null,
+        "description": "do not show merges"
+      },
+      {
+        "shortname": "",
+        "fullname": "stat",
+        "default": null,
+        "description": "output diffstat-style summary of changes"
+      },
+      {
+        "shortname": "G",
+        "fullname": "graph",
+        "default": null,
+        "description": "show the revision DAG"
+      },
+      {
+        "shortname": "",
+        "fullname": "style",
+        "default": "",
+        "description": "display using template map file (DEPRECATED)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "",
+        "fullname": "all",
+        "default": null,
+        "description": "shows all changesets in the repo"
+      },
+      {
+        "shortname": "",
+        "fullname": "sparse",
+        "default": null,
+        "description": "limit to changesets affecting the sparse checkout"
+      },
+      {
+        "shortname": "",
+        "fullname": "remote",
+        "default": null,
+        "description": "show remote names even if hidden"
+      }
+    ],
+    "subcommands": null
+  },
+  "metaedit": {
+    "name": "metaedit",
+    "aliases": [
+      "metaedit",
+      "met",
+      "meta",
+      "metae",
+      "metaed",
+      "metaedi"
+    ],
+    "doc": "edit commit message and other metadata\n\n    Edit commit message for the current commit. By default, opens your default\n    editor so that you can edit the commit message interactively. Specify -m\n    to specify the commit message on the command line.\n\n    To edit the message for a different commit, specify -r. To edit the\n    messages of multiple commits, specify --batch.\n\n    You can edit other pieces of commit metadata, namely the user or date,\n    by specifying -u or -d, respectively. The expected format for user is\n    'Full Name <user@example.com>'.\n\n    There is also automation-friendly JSON input mode which allows the caller\n    to provide the mapping between commit and new message and username in the\n    following format::\n\n        {\n            \"<commit_hash>\": {\n                \"message\": \"<message>\",\n                \"user\": \"<user>\" // optional\n            }\n        }\n\n    .. note::\n\n        You can specify --fold to fold multiple revisions into one when the\n        given revisions form a linear unbroken chain. However, :prog:`fold` is\n        the preferred command for this purpose. See :prog:`help fold` for more\n        information.\n\n    .. container:: verbose\n\n     Some examples:\n\n     - Edit the commit message for the current commit::\n\n         @prog@ metaedit\n\n     - Change the username for the current commit::\n\n         @prog@ metaedit --user 'New User <new-email@example.com>'\n\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revision to edit"
+      },
+      {
+        "shortname": "",
+        "fullname": "fold",
+        "default": false,
+        "description": "fold specified revisions into one"
+      },
+      {
+        "shortname": "",
+        "fullname": "batch",
+        "default": false,
+        "description": "edit messages of multiple commits in one editor invocation"
+      },
+      {
+        "shortname": "",
+        "fullname": "json-input-file",
+        "default": "",
+        "description": "read commit messages and users from JSON file"
+      },
+      {
+        "shortname": "M",
+        "fullname": "reuse-message",
+        "default": "",
+        "description": "reuse commit message from another commit"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "next": {
+    "name": "next",
+    "aliases": [
+      "next",
+      "n",
+      "ne",
+      "nex"
+    ],
+    "doc": "check out a child commit",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "newest",
+        "default": false,
+        "description": "always pick the newest child when a changeset has multiple children"
+      },
+      {
+        "shortname": "",
+        "fullname": "rebase",
+        "default": false,
+        "description": "rebase each changeset if necessary"
+      },
+      {
+        "shortname": "",
+        "fullname": "top",
+        "default": false,
+        "description": "update to the head of the current stack"
+      },
+      {
+        "shortname": "",
+        "fullname": "bookmark",
+        "default": false,
+        "description": "update to the first changeset with a bookmark"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-activate-bookmark",
+        "default": false,
+        "description": "do not activate the bookmark on the destination changeset"
+      },
+      {
+        "shortname": "",
+        "fullname": "towards",
+        "default": "",
+        "description": "move linearly towards the specified head"
+      },
+      {
+        "shortname": "C",
+        "fullname": "clean",
+        "default": false,
+        "description": "discard uncommitted changes (no backup)"
+      },
+      {
+        "shortname": "B",
+        "fullname": "move-bookmark",
+        "default": false,
+        "description": "move active bookmark"
+      },
+      {
+        "shortname": "m",
+        "fullname": "merge",
+        "default": false,
+        "description": "merge uncommitted changes"
+      },
+      {
+        "shortname": "c",
+        "fullname": "check",
+        "default": false,
+        "description": "require clean working directory"
+      }
+    ],
+    "subcommands": null
+  },
+  "pr": {
+    "name": "pr",
+    "aliases": [
+      "pr"
+    ],
+    "doc": "exchange local commit data with GitHub pull requests",
+    "args": [],
+    "subcommands": [
+      {
+        "name": "submit",
+        "aliases": [],
+        "doc": "create or update GitHub pull requests from local commits",
+        "args": [
+          {
+            "shortname": "s",
+            "fullname": "stack",
+            "default": false,
+            "description": "also include draft ancestors"
+          },
+          {
+            "shortname": "m",
+            "fullname": "message",
+            "default": null,
+            "description": "message describing changes to updated commits"
+          }
+        ],
+        "subcommands": null
+      },
+      {
+        "name": "link",
+        "aliases": [],
+        "doc": "indentify a commit as the head of a GitHub pull request\n\n    A PULL_REQUEST can be specified in a number of formats:\n\n    - GitHub URL to the PR: https://github.com/facebook/react/pull/42\n\n    - Integer: Number for the PR. Uses 'paths.upstream' as the target repo,\n        if specified; otherwise, falls back to 'paths.default'.\n    ",
+        "args": [
+          {
+            "shortname": "r",
+            "fullname": "rev",
+            "default": "",
+            "description": "revision to link"
+          }
+        ],
+        "subcommands": null
+      },
+      {
+        "name": "unlink",
+        "aliases": [],
+        "doc": "remove a commit's association with a GitHub pull request",
+        "args": [
+          {
+            "shortname": "r",
+            "fullname": "rev",
+            "default": [],
+            "description": "revisions to unlink"
+          }
+        ],
+        "subcommands": null
+      },
+      {
+        "name": "follow",
+        "aliases": [],
+        "doc": "join the nearest desecendant's pull request\n\n    Marks commits to become part of their nearest desecendant's pull request\n    instead of starting as the head of a new pull request.\n\n    Use `pr unlink` to undo.\n    ",
+        "args": [
+          {
+            "shortname": "r",
+            "fullname": "rev",
+            "default": [],
+            "description": "revisions to follow the next pull request"
+          }
+        ],
+        "subcommands": null
+      }
+    ]
+  },
+  "prev": {
+    "name": "prev",
+    "aliases": [
+      "previous",
+      "prev",
+      "previ",
+      "previo",
+      "previou"
+    ],
+    "doc": "check out the parent commit",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "newest",
+        "default": false,
+        "description": "always pick the newest parent when a changeset has multiple parents"
+      },
+      {
+        "shortname": "",
+        "fullname": "bottom",
+        "default": false,
+        "description": "update to the lowest non-public ancestor of the current changeset"
+      },
+      {
+        "shortname": "",
+        "fullname": "bookmark",
+        "default": false,
+        "description": "update to the first ancestor with a bookmark"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-activate-bookmark",
+        "default": false,
+        "description": "do not activate the bookmark on the destination changeset"
+      },
+      {
+        "shortname": "C",
+        "fullname": "clean",
+        "default": false,
+        "description": "discard uncommitted changes (no backup)"
+      },
+      {
+        "shortname": "B",
+        "fullname": "move-bookmark",
+        "default": false,
+        "description": "move active bookmark"
+      },
+      {
+        "shortname": "m",
+        "fullname": "merge",
+        "default": false,
+        "description": "merge uncommitted changes"
+      },
+      {
+        "shortname": "c",
+        "fullname": "check",
+        "default": false,
+        "description": "require clean working directory"
+      }
+    ],
+    "subcommands": null
+  },
+  "pull": {
+    "name": "pull",
+    "aliases": [
+      "pull"
+    ],
+    "doc": "pull changes from the specified source\n\n    Pull changes from a remote repository to a local one. This command modifies\n    the commit graph, but doesn't affect local commits or the working copy.\n\n    If SOURCE is omitted, the default path is used.\n    See :prog:`help urls` for more information.\n\n    .. container:: verbose\n\n        You can use ``.`` for BOOKMARK to specify the active bookmark.\n\n    Returns 0 on success, 1 on failure, including if ``--update`` was\n    specified but the update had unresolved conflicts.\n    ",
+    "args": [
+      {
+        "shortname": "u",
+        "fullname": "update",
+        "default": null,
+        "description": "update to new branch head if new descendants were pulled"
+      },
+      {
+        "shortname": "f",
+        "fullname": "force",
+        "default": null,
+        "description": "run even when remote repository is unrelated"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "a remote commit to pull"
+      },
+      {
+        "shortname": "B",
+        "fullname": "bookmark",
+        "default": [],
+        "description": "a bookmark to pull"
+      },
+      {
+        "shortname": "",
+        "fullname": "rebase",
+        "default": null,
+        "description": "rebase current commit or current stack onto master"
+      },
+      {
+        "shortname": "t",
+        "fullname": "tool",
+        "default": "",
+        "description": "specify merge tool for rebase"
+      },
+      {
+        "shortname": "d",
+        "fullname": "dest",
+        "default": "",
+        "description": "destination for rebase or update"
+      }
+    ],
+    "subcommands": null
+  },
+  "push": {
+    "name": "push",
+    "aliases": [
+      "push"
+    ],
+    "doc": "push changes to the specified destination\n\n    Push changesets from the local repository to the specified\n    destination.\n\n    This operation is symmetrical to pull: it is identical to a pull\n    in the destination repository from the current one.\n\n    By default, push will not allow creation of new heads at the\n    destination, since multiple heads would make it unclear which head\n    to use. In this situation, it is recommended to pull and merge\n    before pushing.\n\n    .. note::\n\n       Extra care should be taken with the -f/--force option,\n       which will push all new heads on all branches, an action which will\n       almost always cause confusion for collaborators.\n\n    If -r/--rev is used, the specified revision and all its ancestors\n    will be pushed to the remote repository.\n\n    If -B/--bookmark is used, the specified bookmarked revision, its\n    ancestors, and the bookmark will be pushed to the remote\n    repository. Specifying ``.`` is equivalent to specifying the active\n    bookmark's name.\n\n    Please see :prog:`help urls` for important details about ``ssh://``\n    URLs. If DESTINATION is omitted, a default path will be used.\n\n    .. container:: verbose\n\n        The --pushvars option sends strings to the server that become\n        environment variables prepended with ``HG_USERVAR_``. For example,\n        ``--pushvars ENABLE_FEATURE=true``, provides the server side hooks with\n        ``HG_USERVAR_ENABLE_FEATURE=true`` as part of their environment.\n\n        pushvars can provide for user-overridable hooks as well as set debug\n        levels. One example is having a hook that blocks commits containing\n        conflict markers, but enables the user to override the hook if the file\n        is using conflict markers for testing purposes or the file format has\n        strings that look like conflict markers.\n\n        By default, servers will ignore `--pushvars`. To enable it add the\n        following to your configuration file::\n\n            [push]\n            pushvars.server = true\n\n        If ``push.requirereason`` is set to true, users will need to pass\n        ``--pushvars PUSH_REASON=\"...\"`` in order to push, and their reason will\n        be logged via ``ui.log(...)``.\n\n        ``push.requirereasonmsg`` can be used to set the message shown to users\n        when they don't provide a reason.\n\n    Returns 0 if push was successful, 1 if nothing to push.\n    ",
+    "args": [
+      {
+        "shortname": "f",
+        "fullname": "force",
+        "default": null,
+        "description": "force push"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "a changeset intended to be included in the destination"
+      },
+      {
+        "shortname": "B",
+        "fullname": "bookmark",
+        "default": [],
+        "description": "bookmark to push"
+      },
+      {
+        "shortname": "",
+        "fullname": "new-branch",
+        "default": false,
+        "description": "allow pushing a new branch (DEPRECATED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "pushvars",
+        "default": [],
+        "description": "variables that can be sent to server (ADVANCED)"
+      },
+      {
+        "shortname": "t",
+        "fullname": "to",
+        "default": "",
+        "description": "push revs to this bookmark"
+      },
+      {
+        "shortname": "d",
+        "fullname": "delete",
+        "default": "",
+        "description": "delete remote bookmark"
+      },
+      {
+        "shortname": "",
+        "fullname": "create",
+        "default": null,
+        "description": "create a new remote bookmark"
+      },
+      {
+        "shortname": "",
+        "fullname": "allow-anon",
+        "default": null,
+        "description": "allow a new unbookmarked head"
+      },
+      {
+        "shortname": "",
+        "fullname": "non-forward-move",
+        "default": null,
+        "description": "allows moving a remote bookmark to an arbitrary place"
+      }
+    ],
+    "subcommands": null
+  },
+  "rebase": {
+    "name": "rebase",
+    "aliases": [
+      "rebase"
+    ],
+    "doc": "move commits from one location to another\n\n    Move commits from one part of the commit graph to another. This\n    behavior is achieved by creating a copy of the commit at the\n    destination and hiding the original commit.\n\n    Use ``-k/--keep`` to skip the hiding and keep the original commits visible.\n\n    If the commits being rebased have bookmarks, rebase moves the bookmarks\n    onto the new versions of the commits. Bookmarks are moved even if ``--keep``\n    is specified.\n\n    Public commits cannot be rebased unless you use the ``--keep`` option\n    to copy them.\n\n    Use the following options to select the commits you want to rebase:\n\n      1. ``-r/--rev`` to explicitly select commits\n\n      2. ``-s/--source`` to select a root commit and include all of its\n         descendants\n\n      3. ``-b/--base`` to select a commit and its ancestors and descendants\n\n    If no option is specified to select commits, ``-b .`` is used by default.\n\n      .. container:: verbose\n\n        If ``--source`` or ``--rev`` is used, special names ``SRC`` and ``ALLSRC``\n        can be used in ``--dest``. Destination would be calculated per source\n        revision with ``SRC`` substituted by that single source revision and\n        ``ALLSRC`` substituted by all source revisions.\n\n    If commits that you are rebasing consist entirely of changes that are\n    already present in the destination, those commits are not moved (in\n    other words, they are rebased out).\n\n    Sometimes conflicts can occur when you rebase. When this happens, by\n    default, @Product@ launches an editor for every conflict. Conflict markers\n    are inserted into affected files, like::\n\n        <<<<\n        dest\n        ====\n        source\n        >>>>\n\n    To fix the conflicts, for each file, remove the markers and replace the\n    whole block of code with the correctly merged code.\n\n    If you close the editor without resolving the conflict, the rebase is\n    interrupted and you are returned to the command line. At this point, you\n    can resolve conflicts in manual resolution mode. See :prog:`help resolve` for\n    details.\n\n    After manually resolving conflicts, resume the rebase with\n    :prog:`rebase --continue`. If you are not able to successfully\n    resolve all conflicts, run :prog:`rebase --abort` to abort the\n    rebase.\n\n    Alternatively, you can use a custom merge tool to automate conflict\n    resolution. To specify a custom merge tool, use the ``--tool`` flag. See\n    :prog:`help merge-tools` for a list of available tools and for information\n    about configuring the default merge behavior.\n\n    .. container:: verbose\n\n      Examples:\n\n      - Move a single commit to master::\n\n          @prog@ rebase -r 5f493448 -d master\n\n      - Move a commit and all its descendants to another part of the commit graph::\n\n          @prog@ rebase --source c0c3 --dest 4cf9\n\n      - Rebase everything on a local branch marked by a bookmark to master::\n\n          @prog@ rebase --base myfeature --dest master\n\n      - Rebase orphaned commits onto the latest version of their parents::\n\n          @prog@ rebase --restack\n\n      Configuration Options:\n\n      You can make rebase require a destination if you set the following config\n      option::\n\n        [commands]\n        rebase.requiredest = True\n\n      By default, rebase will close the transaction after each commit. For\n      performance purposes, you can configure rebase to use a single transaction\n      across the entire rebase. WARNING: This setting introduces a significant\n      risk of losing the work you've done in a rebase if the rebase aborts\n      unexpectedly::\n\n        [rebase]\n        singletransaction = True\n\n      By default, rebase writes to the working copy, but you can configure it\n      to run in-memory for for better performance, and to allow it to run if the\n      current checkout is dirty::\n\n        [rebase]\n        experimental.inmemory = True\n\n      It will also print a configurable warning::\n\n        [rebase]\n        experimental.inmemorywarning = Using experimental in-memory rebase\n\n    Returns 0 on success, 1 if nothing to rebase or if there are\n    unresolved conflicts.\n\n    ",
+    "args": [
+      {
+        "shortname": "s",
+        "fullname": "source",
+        "default": "",
+        "description": "rebase the specified commit and descendants"
+      },
+      {
+        "shortname": "b",
+        "fullname": "base",
+        "default": "",
+        "description": "rebase everything from branching point of specified commit"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "rebase these revisions"
+      },
+      {
+        "shortname": "d",
+        "fullname": "dest",
+        "default": "",
+        "description": "rebase onto the specified revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "collapse",
+        "default": false,
+        "description": "collapse the rebased commits"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as collapse commit message"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": false,
+        "description": "invoke editor on commit messages"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read collapse commit message from file"
+      },
+      {
+        "shortname": "k",
+        "fullname": "keep",
+        "default": false,
+        "description": "keep original commits"
+      },
+      {
+        "shortname": "D",
+        "fullname": "detach",
+        "default": false,
+        "description": "(DEPRECATED)"
+      },
+      {
+        "shortname": "t",
+        "fullname": "tool",
+        "default": "",
+        "description": "specify merge tool"
+      },
+      {
+        "shortname": "c",
+        "fullname": "continue",
+        "default": false,
+        "description": "continue an interrupted rebase"
+      },
+      {
+        "shortname": "a",
+        "fullname": "abort",
+        "default": false,
+        "description": "abort an interrupted rebase"
+      },
+      {
+        "shortname": "",
+        "fullname": "noconflict",
+        "default": false,
+        "description": "cancel the rebase if there are conflicts (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "restack",
+        "default": false,
+        "description": "rebase all changesets in the current stack onto the latest version of their respective parents"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": false,
+        "description": "interactive rebase"
+      }
+    ],
+    "subcommands": null
+  },
+  "redo": {
+    "name": "redo",
+    "aliases": [
+      "redo"
+    ],
+    "doc": "undo the last undo\n\n    Reverse the effects of an :prog:`undo` operation.\n\n    You can run :prog:`redo` multiple times to undo a series of :prog:`undo`\n    commands. Alternatively, you can explicitly specify the number of\n    :prog:`undo` commands to undo by providing a number as a positional argument.\n\n    Specify ``--preview`` to see a graphical display that shows what your smartlog\n    will look like after you run the command.\n\n    For an interactive interface, run :prog:`undo --interactive`. This command\n    enables you to visually step backwards and forwards in the undo history.\n    Run :prog:`help undo` for more information.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "p",
+        "fullname": "preview",
+        "default": false,
+        "description": "see smartlog-like preview of future redo state"
+      }
+    ],
+    "subcommands": null
+  },
+  "remove": {
+    "name": "remove",
+    "aliases": [
+      "remove",
+      "rm",
+      "rem",
+      "remo",
+      "remov"
+    ],
+    "doc": "delete the specified tracked files\n\n    Remove the specified tracked files from the repository and delete\n    them. The files will be deleted from the repository at the next\n    commit.\n\n    To undo a remove before files have been committed, use :prog:`revert`.\n    To stop tracking files without deleting them, use :prog:`forget`.\n\n    .. container:: verbose\n\n      -A/--after can be used to remove only files that have already\n      been deleted, -f/--force can be used to force deletion, and -Af\n      can be used to remove files from the next revision without\n      deleting them from the working directory.\n\n      The following table details the behavior of remove for different\n      file states (columns) and option combinations (rows). The file\n      states are Added [A], Clean [C], Modified [M] and Missing [!]\n      (as reported by :prog:`status`). The actions are Warn, Remove\n      (from branch) and Delete (from disk):\n\n      ========= == == == ==\n      opt/state A  C  M  !\n      ========= == == == ==\n      none      W  RD W  R\n      -f        R  RD RD R\n      -A        W  W  W  R\n      -Af       R  R  R  R\n      ========= == == == ==\n\n      .. note::\n\n         :prog:`remove` never deletes files in Added [A] state from the\n         working directory, not even if ``--force`` is specified.\n\n    Returns 0 on success, 1 if any warnings encountered.\n    ",
+    "args": [
+      {
+        "shortname": "A",
+        "fullname": "after",
+        "default": null,
+        "description": "record delete for missing files"
+      },
+      {
+        "shortname": "f",
+        "fullname": "force",
+        "default": null,
+        "description": "forget added files, delete modified files"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "revert": {
+    "name": "revert",
+    "aliases": [
+      "revert",
+      "rev",
+      "reve",
+      "rever"
+    ],
+    "doc": "change the specified files to match a commit\n\n    With no revision specified, restore the contents of files to an\n    unmodified state and unschedule adds, removes, copies, and renames.\n    In other words, revert the specified files or directories to the\n    contents they had in the current commit. If you are in the middle of\n    an unfinished merge state, you must explicitly specify a revision.\n\n    Use the -r/--rev option to revert the given files or directories to\n    their states as of a specific commit. Because revert does not actually\n    check out the specified commit, the files appear as modified and show\n    up as pending changes in :prog:`status`.\n\n    Revert causes files to match their contents in another commit. If\n    instead you want to undo a specific landed commit, use :prog:`backout`\n    instead. Run `@prog help backout` for more information.\n\n    Modified files are saved with an .orig suffix before reverting.\n    To disable these backups, use --no-backup. You can configure @Product@\n    to store these backup files in a custom directory relative to the root\n    of the repository by setting the ``ui.origbackuppath`` configuration\n    option.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "a",
+        "fullname": "all",
+        "default": null,
+        "description": "revert all changes when no arguments given"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "tipmost revision matching date"
+      },
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "revert to the specified revision"
+      },
+      {
+        "shortname": "C",
+        "fullname": "no-backup",
+        "default": null,
+        "description": "do not save backup copies of files"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": null,
+        "description": "interactively select the changes"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "n",
+        "fullname": "dry-run",
+        "default": null,
+        "description": "do not perform actions, just print output"
+      }
+    ],
+    "subcommands": null
+  },
+  "root": {
+    "name": "root",
+    "aliases": [
+      "root"
+    ],
+    "doc": "print the root (top) of the current working directory\n\n    Print the root directory of the current repository.\n\n    Returns 0 on success.",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "shared",
+        "default": false,
+        "description": "show root of the shared repo"
+      },
+      {
+        "shortname": "",
+        "fullname": "dotdir",
+        "default": false,
+        "description": "join root with the repo dot dir (e.g. \".sl\") (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "shelve": {
+    "name": "shelve",
+    "aliases": [
+      "shelve"
+    ],
+    "doc": "save pending changes and revert working copy to a clean state\n\n    Shelving takes files that :prog:`status` reports as not clean, saves\n    the modifications to a bundle (a shelved change), and reverts the\n    files to a clean state in the working copy.\n\n    To restore the changes to the working copy, using :prog:`unshelve`,\n    regardless of your current commit.\n\n    When no files are specified, :prog:`shelve` saves all not-clean\n    files. If specific files or directories are named, only changes to\n    those files are shelved.\n\n    Each shelved change has a name that makes it easier to find later.\n    The name of a shelved change by default is based on the active\n    bookmark. To specify a different name, use ``--name``.\n\n    To see a list of existing shelved changes, use the ``--list``\n    option. For each shelved change, this will print its name, age,\n    and description. Use ``--patch`` or ``--stat`` for more details.\n\n    To delete specific shelved changes, use ``--delete``. To delete\n    all shelved changes, use ``--cleanup``.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "A",
+        "fullname": "addremove",
+        "default": null,
+        "description": "mark new/missing files as added/removed before shelving"
+      },
+      {
+        "shortname": "u",
+        "fullname": "unknown",
+        "default": null,
+        "description": "store unknown files in the shelve"
+      },
+      {
+        "shortname": "",
+        "fullname": "cleanup",
+        "default": null,
+        "description": "delete all shelved changes"
+      },
+      {
+        "shortname": "",
+        "fullname": "date",
+        "default": "",
+        "description": "shelve with the specified commit date"
+      },
+      {
+        "shortname": "d",
+        "fullname": "delete",
+        "default": null,
+        "description": "delete the named shelved change(s)"
+      },
+      {
+        "shortname": "e",
+        "fullname": "edit",
+        "default": false,
+        "description": "invoke editor on commit messages"
+      },
+      {
+        "shortname": "l",
+        "fullname": "list",
+        "default": null,
+        "description": "list current shelves"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as shelve message"
+      },
+      {
+        "shortname": "n",
+        "fullname": "name",
+        "default": "",
+        "description": "use the given name for the shelved commit"
+      },
+      {
+        "shortname": "p",
+        "fullname": "patch",
+        "default": null,
+        "description": "show patch"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": null,
+        "description": "interactive mode - only works while creating a shelve"
+      },
+      {
+        "shortname": "",
+        "fullname": "stat",
+        "default": null,
+        "description": "output diffstat-style summary of changes"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "show": {
+    "name": "show",
+    "aliases": [
+      "show"
+    ],
+    "doc": "show commit in detail\n\n    Show the commit message and contents for the specified commit. If no commit\n    is specified, shows the current commit.\n\n    This behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or\n    if called without a REV, :prog:`log -vp -r . [OPTION]...` Use\n    :prog:`log` for more powerful operations than supported by @prog@ show.\n\n    ",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "nodates",
+        "default": null,
+        "description": "omit dates from diff headers (but keeps it in commit header)"
+      },
+      {
+        "shortname": "",
+        "fullname": "noprefix",
+        "default": null,
+        "description": "omit a/ and b/ prefixes from filenames"
+      },
+      {
+        "shortname": "",
+        "fullname": "stat",
+        "default": null,
+        "description": "output diffstat-style summary of changes"
+      },
+      {
+        "shortname": "g",
+        "fullname": "git",
+        "default": null,
+        "description": "use git extended diff format"
+      },
+      {
+        "shortname": "U",
+        "fullname": "unified",
+        "default": 3,
+        "description": "number of lines of diff context to show"
+      },
+      {
+        "shortname": "w",
+        "fullname": "ignore-all-space",
+        "default": null,
+        "description": "ignore white space when comparing lines"
+      },
+      {
+        "shortname": "b",
+        "fullname": "ignore-space-change",
+        "default": null,
+        "description": "ignore changes in the amount of white space"
+      },
+      {
+        "shortname": "B",
+        "fullname": "ignore-blank-lines",
+        "default": null,
+        "description": "ignore changes whose lines are all blank"
+      },
+      {
+        "shortname": "Z",
+        "fullname": "ignore-space-at-eol",
+        "default": null,
+        "description": "ignore changes in whitespace at EOL"
+      },
+      {
+        "shortname": "",
+        "fullname": "style",
+        "default": "",
+        "description": "display using template map file (DEPRECATED)"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "split": {
+    "name": "split",
+    "aliases": [
+      "split",
+      "spl",
+      "spli"
+    ],
+    "doc": "split a changeset into smaller changesets\n\n    Prompt for hunks to be selected until exhausted. Each selection of hunks\n    will form a separate changeset, in order from parent to child: the first\n    selection will form the first changeset, the second selection will form\n    the second changeset, and so on.\n\n    Operates on the current revision by default. Use --rev to split a given\n    changeset instead.\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revision to split"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-rebase",
+        "default": false,
+        "description": "don't rebase descendants after split"
+      },
+      {
+        "shortname": "m",
+        "fullname": "message",
+        "default": "",
+        "description": "use text as commit message"
+      },
+      {
+        "shortname": "l",
+        "fullname": "logfile",
+        "default": "",
+        "description": "read commit message from file"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": "",
+        "description": "record the specified date as commit date"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": "",
+        "description": "record the specified user as committer"
+      }
+    ],
+    "subcommands": null
+  },
+  "status": {
+    "name": "status",
+    "aliases": [
+      "status",
+      "st"
+    ],
+    "doc": "list files with pending changes\n\n    Show status of files in the working copy using the following status\n    indicators::\n\n      M = modified\n      A = added\n      R = removed\n      C = clean\n      ! = missing (deleted by a non-@prog@ command, but still tracked)\n      ? = not tracked\n      I = ignored\n        = origin of the previous file (with --copies)\n\n    By default, shows files that have been modified, added, removed,\n    deleted, or that are unknown (corresponding to the options ``-mardu``,\n    respectively). Files that are unmodified, ignored, or the source of\n    a copy/move operation are not listed.\n\n    To control the exact statuses that are shown, specify the relevant\n    flags (like ``-rd`` to show only files that are removed or deleted).\n    Additionally, specify ``-q/--quiet`` to hide both unknown and ignored\n    files.\n\n    To show the status of specific files, provide a list of files to\n    match. To include or exclude files using patterns or filesets, use\n    ``-I`` or ``-X``.\n\n    If ``--rev`` is specified and only one revision is given, it is used as\n    the base revision. If two revisions are given, the differences between\n    them are shown. The ``--change`` option can also be used as a shortcut\n    to list the changed files of a revision from its first parent.\n\n    .. note::\n\n       :prog:`status` might appear to disagree with :prog:`diff` if permissions\n       have changed or a merge has occurred, because the standard diff\n       format does not report permission changes and :prog:`diff` only\n       reports changes relative to one merge parent.\n\n    .. container:: verbose\n\n      The ``-t/--terse`` option abbreviates the output by showing only the directory\n      name if all the files in it share the same status. The option takes an\n      argument indicating the statuses to abbreviate: 'm' for 'modified', 'a'\n      for 'added', 'r' for 'removed', 'd' for 'deleted', 'u' for 'unknown', 'i'\n      for 'ignored' and 'c' for clean.\n\n      It abbreviates only those statuses which are passed. Note that clean and\n      ignored files are not displayed with ``--terse ic`` unless the ``-c/--clean``\n      and ``-i/--ignored`` options are also used.\n\n      The ``-v/--verbose`` option shows information when the repository is in an\n      unfinished merge, shelve, rebase state, etc. You can have this behavior\n      turned on by default by enabling the ``commands.status.verbose`` config option.\n\n      You can skip displaying some of these states by setting\n      ``commands.status.skipstates`` to one or more of: 'bisect', 'graft',\n      'histedit', 'merge', 'rebase', or 'unshelve'.\n\n      Examples:\n\n      - show changes in the working directory relative to a\n        commit::\n\n          @prog@ status --rev 88a692db8\n\n      - show changes in the working copy relative to the\n        current directory (see :prog:`help patterns` for more information)::\n\n          @prog@ status re:\n\n      - show all changes including copies in a commit::\n\n          @prog@ status --copies --change 88a692db8\n\n      - get a NUL separated list of added files, suitable for xargs::\n\n          @prog@ status -an0\n\n      - show more information about the repository status, abbreviating\n        added, removed, modified, deleted, and untracked paths::\n\n          @prog@ status -v -t mardu\n\n    Returns 0 on success.",
+    "args": [
+      {
+        "shortname": "A",
+        "fullname": "all",
+        "default": false,
+        "description": "show status of all files"
+      },
+      {
+        "shortname": "m",
+        "fullname": "modified",
+        "default": false,
+        "description": "show only modified files"
+      },
+      {
+        "shortname": "a",
+        "fullname": "added",
+        "default": false,
+        "description": "show only added files"
+      },
+      {
+        "shortname": "r",
+        "fullname": "removed",
+        "default": false,
+        "description": "show only removed files"
+      },
+      {
+        "shortname": "d",
+        "fullname": "deleted",
+        "default": false,
+        "description": "show only deleted (but tracked) files"
+      },
+      {
+        "shortname": "c",
+        "fullname": "clean",
+        "default": false,
+        "description": "show only files without changes"
+      },
+      {
+        "shortname": "u",
+        "fullname": "unknown",
+        "default": false,
+        "description": "show only unknown (not tracked) files"
+      },
+      {
+        "shortname": "i",
+        "fullname": "ignored",
+        "default": false,
+        "description": "show only ignored files"
+      },
+      {
+        "shortname": "n",
+        "fullname": "no-status",
+        "default": false,
+        "description": "hide status prefix"
+      },
+      {
+        "shortname": "t",
+        "fullname": "terse",
+        "default": "",
+        "description": "show the terse output (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "C",
+        "fullname": "copies",
+        "default": false,
+        "description": "show source of copied files"
+      },
+      {
+        "shortname": "0",
+        "fullname": "print0",
+        "default": false,
+        "description": "end filenames with NUL, for use with xargs"
+      },
+      {
+        "shortname": "",
+        "fullname": "rev",
+        "default": [],
+        "description": "show difference from revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "change",
+        "default": "",
+        "description": "list the changed files of a revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "root-relative",
+        "default": false,
+        "description": "show status relative to root"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      }
+    ],
+    "subcommands": null
+  },
+  "unamend": {
+    "name": "unamend",
+    "aliases": [
+      "unamend",
+      "una",
+      "unam",
+      "uname",
+      "unamen"
+    ],
+    "doc": "undo the last amend operation on the current commit\n\n    Reverse the effects of an :prog:`amend` operation. Hides the current commit\n    and checks out the previous version of the commit. :prog:`unamend` does not\n    revert the state of the working copy, so changes that were added to the\n    commit in the last amend operation become pending changes in the working\n    copy.\n\n    :prog:`unamend` cannot be run on amended commits that have children. In\n    other words, you cannot unamend an amended commit in the middle of a\n    stack.\n\n    .. note::\n\n        Running :prog:`unamend` is similar to running :prog:`undo --keep`\n        immediately after :prog:`amend`. However, unlike :prog:`undo`, which can\n        only undo an amend if it was the last operation you performed,\n        :prog:`unamend` can unamend any draft amended commit in the graph that\n        does not have children.\n\n    .. container:: verbose\n\n      Although :prog:`unamend` is typically used to reverse the effects of\n      :prog:`amend`, it actually rolls back the current commit to its previous\n      version, regardless of whether the changes resulted from an :prog:`amend`\n      operation or from another operation, such as :prog:`rebase`.\n    ",
+    "args": [],
+    "subcommands": null
+  },
+  "uncommit": {
+    "name": "uncommit",
+    "aliases": [
+      "uncommit",
+      "unc",
+      "unco",
+      "uncom",
+      "uncomm",
+      "uncommi"
+    ],
+    "doc": "uncommit part or all of the current commit\n\n    Reverse the effects of an :prog:`commit` operation. When run with no\n    arguments, hides the current commit and checks out the parent commit,\n    but does not revert the state of the working copy. Changes that were\n    contained in the uncommitted commit become pending changes in the\n    working copy.\n\n    :prog:`uncommit` cannot be run on commits that have children. In other words,\n    you cannot uncommit a commit in the middle of a stack. Similarly, by\n    default you cannot run :prog:`uncommit` if there are pending changes in the\n    working copy.\n\n    You can selectively uncommit files from the current commit by optionally\n    specifying a list of files to remove. The specified files are removed from\n    the list of changed files in the current commit, but are not modified on\n    disk, so they appear as pending changes in the working copy.\n\n    .. note::\n\n       Running :prog:`uncommit` is similar to running :prog:`undo --keep`\n       immediately after :prog:`commit`. However, unlike :prog:`undo`, which can\n       only undo a commit if it was the last operation you performed,\n       :prog:`uncommit` can uncommit any draft commit in the graph that does\n       not have children.\n    ",
+    "args": [
+      {
+        "shortname": "",
+        "fullname": "keep",
+        "default": false,
+        "description": "allow an empty commit after uncommiting"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      }
+    ],
+    "subcommands": null
+  },
+  "undo": {
+    "name": "undo",
+    "aliases": [
+      "undo"
+    ],
+    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`checkout`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommited changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using --step. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run :prog:`help redo` for\n    more information.\n\n    Include --keep to preserve the state of the working copy. For example,\n    specify --keep when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify --preview to see a graphical display that shows what your smartlog\n    will look like after you run the command. Specify --interactive for an\n    interactive version of this preview in which you can step backwards and\n    forwards in the undo history.\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
+    "args": [
+      {
+        "shortname": "a",
+        "fullname": "absolute",
+        "default": false,
+        "description": "absolute based on command index instead of relative undo"
+      },
+      {
+        "shortname": "b",
+        "fullname": "branch",
+        "default": "",
+        "description": "local branch undo, accepts commit hash (ADVANCED)"
+      },
+      {
+        "shortname": "f",
+        "fullname": "force",
+        "default": false,
+        "description": "undo across missing undo history (ADVANCED)"
+      },
+      {
+        "shortname": "i",
+        "fullname": "interactive",
+        "default": false,
+        "description": "use interactive ui for undo"
+      },
+      {
+        "shortname": "k",
+        "fullname": "keep",
+        "default": false,
+        "description": "keep working copy changes"
+      },
+      {
+        "shortname": "n",
+        "fullname": "step",
+        "default": 1,
+        "description": "how many steps to undo back"
+      },
+      {
+        "shortname": "p",
+        "fullname": "preview",
+        "default": false,
+        "description": "see smartlog-like preview of future undo state"
+      }
+    ],
+    "subcommands": null
+  },
+  "unhide": {
+    "name": "unhide",
+    "aliases": [
+      "unhide",
+      "unh",
+      "unhi",
+      "unhid"
+    ],
+    "doc": "unhide commits and their ancestors\n\n    Mark the specified commits as visible. Any ancestors of the specified\n    commits will also become visible.\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": [],
+        "description": "revisions to unhide"
+      }
+    ],
+    "subcommands": null
+  },
+  "unshelve": {
+    "name": "unshelve",
+    "aliases": [
+      "unshelve"
+    ],
+    "doc": "restore a shelved change to the working copy\n\n    This command accepts an optional name of a shelved change to\n    restore. If none is given, the most recent shelved change is used.\n\n    If a shelved change is applied successfully, the bundle that\n    contains the shelved changes is moved to a backup location\n    (.@prog@/shelve-backup).\n\n    Since you can restore a shelved change on top of an arbitrary\n    commit, it is possible that unshelving will result in a conflict. If\n    this occurs, you must resolve the conflict, then use ``--continue``\n    to complete the unshelve operation. The bundle will not be moved\n    until you successfully complete the unshelve.\n\n    Alternatively, you can use ``--abort`` to cancel the conflict\n    resolution and undo the unshelve, leaving the shelve bundle intact.\n\n    After a successful unshelve, the shelved changes are stored in a\n    backup directory. Only the N most recent backups are kept. N\n    defaults to 10 but can be overridden using the ``shelve.maxbackups``\n    configuration option.\n\n    .. container:: verbose\n\n       Timestamp in seconds is used to decide the order of backups. More\n       than ``maxbackups`` backups are kept if same timestamp prevents\n       from deciding exact order of them, for safety.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "a",
+        "fullname": "abort",
+        "default": null,
+        "description": "abort an incomplete unshelve operation"
+      },
+      {
+        "shortname": "c",
+        "fullname": "continue",
+        "default": null,
+        "description": "continue an incomplete unshelve operation"
+      },
+      {
+        "shortname": "k",
+        "fullname": "keep",
+        "default": null,
+        "description": "keep shelve after unshelving"
+      },
+      {
+        "shortname": "n",
+        "fullname": "name",
+        "default": "",
+        "description": "restore shelved change with given name"
+      },
+      {
+        "shortname": "t",
+        "fullname": "tool",
+        "default": "",
+        "description": "specify merge tool"
+      },
+      {
+        "shortname": "",
+        "fullname": "date",
+        "default": "",
+        "description": "set date for temporary commits (DEPRECATED)"
+      }
+    ],
+    "subcommands": null
+  },
+  "web": {
+    "name": "web",
+    "aliases": [
+      "web",
+      "isl"
+    ],
+    "doc": "launch Sapling Web GUI on localhost\n\n    Sapling Web is a collection of web-based tools including Interactive Smartlog,\n    which is a GUI that facilitates source control operations such as creating,\n    reordering, or rebasing commits.\n    Running this command launches a web server that makes Sapling Web and\n    Interactive Smartlog available in a local web browser.\n\n    Examples:\n\n    Launch Sapling Web locally on port 8081::\n\n        $ @prog@ web --port 8081\n        Listening on http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\n        Server logs will be written to /dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\n\n    Using the ``--json`` option to get the current status of Sapling Web::\n\n        $ @prog@ web --port 8081 --json | jq\n        {\n            \"url\": \"http://localhost:8081/?token=bbe168b7b4af1614dd5b9ddc48e7d30e&cwd=%2Fhome%2Falice%2Fsapling\",\n            \"port\": 8081,\n            \"token\": \"bbe168b7b4af1614dd5b9ddc48e7d30e\",\n            \"pid\": 1521158,\n            \"wasServerReused\": true,\n            \"logFileLocation\": \"/dev/shm/tmp/isl-server-logrkrmxp/isl-server.log\",\n            \"cwd\": \"/home/alice/sapling\"\n        }\n\n    Using the ``--kill`` option to shut down the server::\n\n        $ @prog@ web --port 8081 --kill\n        killed ISL server process 1521158\n    ",
+    "args": [
+      {
+        "shortname": "p",
+        "fullname": "port",
+        "default": 3011,
+        "description": "port for Sapling Web"
+      },
+      {
+        "shortname": "",
+        "fullname": "json",
+        "default": false,
+        "description": "output machine-readable JSON"
+      },
+      {
+        "shortname": "",
+        "fullname": "open",
+        "default": true,
+        "description": "open Sapling Web in a local browser"
+      },
+      {
+        "shortname": "f",
+        "fullname": "foreground",
+        "default": false,
+        "description": "keep the server process in the foreground"
+      },
+      {
+        "shortname": "",
+        "fullname": "kill",
+        "default": false,
+        "description": "kill any running server process, but do not start a new server"
+      },
+      {
+        "shortname": "",
+        "fullname": "force",
+        "default": false,
+        "description": "kill any running server process, then start a new server"
+      }
+    ],
+    "subcommands": null
+  }
+}

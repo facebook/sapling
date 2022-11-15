@@ -1,0 +1,54 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.diff-badge {
+  color: white;
+  cursor: pointer;
+  text-decoration: none;
+}
+.diff-badge:hover {
+  text-decoration: underline;
+}
+.diff-badge:hover .codicon {
+  text-decoration: none;
+}
+
+.diff-badge,
+.diff-info,
+.diff-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.diff-number {
+  opacity: 0.9;
+  font-size: 90%;
+  padding: 0 var(--halfpad);
+}
+.diff-number:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.diff-comments-count {
+  font-size: 90%;
+  align-items: center;
+  display: flex;
+  gap: 2px;
+}
+
+.diff-signal-summary {
+  display: flex;
+  align-items: center;
+}
+.diff-signal-pass {
+  color: var(--scm-added-foreground);
+}
+.diff-signal-fail {
+  color: var(--scm-removed-foreground);
+}

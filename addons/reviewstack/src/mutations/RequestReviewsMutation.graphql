@@ -1,0 +1,9 @@
+mutation RequestReviewsMutation($input: RequestReviewsInput!) {
+  requestReviews(input: $input) {
+    requestedReviewersEdge {
+      node {
+        id
+      }
+    }
+  }
+}

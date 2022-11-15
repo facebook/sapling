@@ -1,0 +1,24 @@
+{
+  "name": "shared",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "@types/jest": "27.5.2",
+    "jest": "27.5.1",
+    "ts-jest": "27"
+  },
+  "dependencies": {
+    "@types/diff": "^5.0.2",
+    "diff": "^5.0.0",
+    "@primer/react": "35.7.0",
+    "react": "^18.1.0",
+    "recoil": "^0.7.5",
+    "styled-components": "^5.3.5",
+    "vscode-oniguruma": "^1.6.1",
+    "vscode-textmate": "^6.0.0"
+  },
+  "scripts": {
+    "eslint": "eslint . github --ext .ts --ext .tsx",
+    "test": "jest"
+  }
+}

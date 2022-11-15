@@ -1,0 +1,42 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.options-modal-header {
+  justify-content: flex-end;
+  width: 100%;
+  flex-direction: row;
+  display: flex;
+}
+
+.options-modal-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  justify-content: flex-end;
+  margin: var(--pad) calc(2 * var(--pad));
+}
+
+.options-modal-buttons vscode-button {
+  min-width: 5em;
+}
+
+.options-modal {
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  justify-content: space-between;
+}
+
+#options-modal-title {
+  font-weight: bold;
+}
+
+#options-modal-title,
+#options-modal-message {
+  padding: 0 var(--pad);
+}

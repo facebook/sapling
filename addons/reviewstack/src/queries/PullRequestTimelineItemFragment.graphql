@@ -1,0 +1,83 @@
+fragment PullRequestTimelineItemFragment on PullRequestTimelineItems {
+  ... on PullRequestCommit {
+    commit {
+      ...CommitFragment
+    }
+  }
+  ... on PullRequestReview {
+    id
+    author {
+      ...ActorFragment
+    }
+    state
+    bodyHTML
+    comments(first: $numComments) {
+      nodes {
+        ...PullRequestReviewCommentFragment
+      }
+    }
+  }
+  ... on HeadRefForcePushedEvent {
+    actor {
+      ...ActorFragment
+    }
+    createdAt
+    beforeCommit {
+      ...CommitFragment
+    }
+    afterCommit {
+      ...CommitFragment
+    }
+  }
+  ... on ReviewRequestedEvent {
+    actor {
+      ...ActorFragment
+    }
+    createdAt
+    requestedReviewer {
+      ...RequestedReviewerFragment
+    }
+  }
+  ... on ReviewRequestRemovedEvent {
+    actor {
+      ...ActorFragment
+    }
+    requestedReviewer {
+      ...RequestedReviewerFragment
+    }
+  }
+  ... on IssueComment {
+    author {
+      ...ActorFragment
+    }
+    bodyHTML
+  }
+  ... on RenamedTitleEvent {
+    actor {
+      ...ActorFragment
+    }
+    previousTitle
+    currentTitle
+  }
+  ... on MergedEvent {
+    actor {
+      ...ActorFragment
+    }
+    mergedCommit: commit {
+      ...CommitFragment
+    }
+    mergeRefName
+  }
+  ... on ClosedEvent {
+    actor {
+      ...ActorFragment
+    }
+    closable {
+      __typename
+      ... on PullRequest {
+        merged
+      }
+    }
+  }
+  __typename
+}

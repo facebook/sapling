@@ -1,0 +1,13 @@
+# Note that if this fragment changes, CachingGitHubClient must be updated
+# to ensure the new fields are serialized/deserialized correctly.
+fragment StackPullRequestFragment on PullRequest {
+  number
+  title
+  updatedAt
+  state
+  reviewDecision
+  headRefOid
+  comments {
+    totalCount
+  }
+}

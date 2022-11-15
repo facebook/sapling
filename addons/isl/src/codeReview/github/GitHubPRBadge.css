@@ -1,0 +1,39 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.github-diff-status-OPEN {
+  background-color: var(--github-open-bg);
+}
+.github-diff-status-MERGED {
+  background-color: var(--github-merged-bg);
+}
+.github-diff-status-CLOSED {
+  background-color: var(--github-closed-bg);
+}
+.github-diff-status-none {
+  background-color: var(--github-neutral-bg);
+}
+.github-diff-status-ERROR {
+  background-color: var(--github-closed-bg);
+}
+
+.github-diff-status {
+  font-weight: bold;
+  border-radius: 10px;
+  padding: 3px 8px;
+  font-size: 70%;
+}
+.github-diff-badge .codicon {
+  font-size: 90%;
+  margin-right: 5px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.github-diff-status .tooltip-creator {
+  align-items: center;
+}

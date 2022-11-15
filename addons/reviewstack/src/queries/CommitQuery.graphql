@@ -1,0 +1,29 @@
+query CommitQuery($org: String!, $repo: String!, $oid: GitObjectID!, $numParents: Int!) {
+  repositoryOwner(login: $org) {
+    repository(name: $repo) {
+      object(oid: $oid) {
+        ... on Commit {
+          __typename
+          id
+          oid
+          committedDate
+          url
+          message
+          messageBody
+          messageBodyHTML
+          messageHeadline
+          messageHeadlineHTML
+          tree {
+            ...TreeFragment
+          }
+          parents(first: $numParents) {
+            nodes {
+              oid
+            }
+            totalCount
+          }
+        }
+      }
+    }
+  }
+}

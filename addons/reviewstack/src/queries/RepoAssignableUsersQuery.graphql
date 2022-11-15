@@ -1,0 +1,9 @@
+query RepoAssignableUsersQuery($name: String!, $owner: String!, $query: String) {
+  repository(name: $name, owner: $owner) {
+    assignableUsers(first: 20, query: $query) {
+      nodes {
+        ...UserFragment
+      }
+    }
+  }
+}

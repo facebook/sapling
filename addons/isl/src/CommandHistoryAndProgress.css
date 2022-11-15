@@ -1,0 +1,93 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.progress-container {
+  bottom: 0;
+  background: var(--background);
+  padding: calc(2 * var(--pad));
+  z-index: 100;
+  border-top: 1px solid var(--panel-view-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  position: relative;
+}
+
+.progress-container .tooltip-creator {
+  width: fit-content;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--pad);
+}
+
+.progress-container-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pad);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.progress-container-row .codicon-error {
+  color: var(--scm-removed-foreground);
+}
+.progress-container-row .codicon-pass {
+  color: var(--scm-added-foreground);
+}
+
+.queued-operations-container {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0px;
+  background-color: var(--background);
+  padding: 10px;
+  border-radius: 4px 0 0 0;
+  border: 1px solid var(--dropdown-border);
+  max-width: 90%;
+  border-right-width: 0;
+}
+
+.queued-operation {
+  background-color: var(--badge-background);
+  color: var(--badge-foreground);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-left: 10px;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.progress-container-command {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.progress-container-row .tooltip-creator {
+  width: 100%;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.progress-command-tooltip {
+  max-width: min(700px, 50vw);
+}
+
+.progress-command-tooltip pre {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}

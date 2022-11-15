@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="referrer" content="no-referrer" />
+    <!--
+      The production bundle is designed such that React and Recoil dependencies
+      should be injectable so it is easier to embed in larger React applications.
+
+      Note that "development" is used instead of "production" in the React URLs
+      below to catch issues like:
+      "Each child in a list should have a unique "key" prop."
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.min.js"></script>
+    <!--
+      Note that recoil.js appears to report errors (like when
+      `dangerouslyAllowMutability` is needed for a Recoil value) that
+      recoil.min.js does not, so recoil.js appears to be the "development"
+      version while recoil.min.js is the "production" version.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/recoil@0.7.5/umd/index.js"></script>
+
+    <!--
+      We use react-router for demo purposes, but this is not required to render the UI.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/history@5.3.0/umd/history.production.min.js"></script>
+    <!--
+      Note that updating these URLs to react-router@6.4 does not "just work," so
+      take care when changing these dependencies. Incidentally, the release
+      notes suggest 6.4 is a substantial update, so be mindful of a potential
+      affect on download size: https://remix.run/blog/react-router-v6.4.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/react-router@6.2.2/umd/react-router.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-router-dom@6.2.2/umd/react-router-dom.development.min.js"></script>
+
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/Sapling_favicon-light-green-transparent-big.svg" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Review GitHub Pull Requests" />
+    <title>Review GitHub Pull Requests</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script>
+      window.addEventListener('load', () => {
+        const {useNavigate, useParams, Link} = ReactRouterDOM;
+        function CustomLink({href, style, children}) {
+          const childArray = Array.isArray(children) ? children : [children];
+          return React.createElement(Link, {to: href, style}, ...childArray);
+        }
+
+        const {
+          App,
+          ThemeProvider,
+          configureLoginDialog,
+          getColorModeFromLocalStorage,
+          setCustomLinkElement,
+          setCustomNavigateHook,
+        } = ReviewStack;
+        setCustomLinkElement(CustomLink);
+        setCustomNavigateHook(useNavigate);
+        configureLoginDialog();
+
+        function ProjectPageEntrypoint() {
+          const {org, repo} = useParams();
+          return React.createElement(App, {
+            page: {
+              type: 'project',
+              org,
+              repo,
+            },
+          });
+        }
+
+        function PullsEntrypoint() {
+          const {org, repo} = useParams();
+
+          return React.createElement(App, {
+            page: {
+              type: 'pulls',
+              org,
+              repo,
+            },
+          });
+        }
+
+        function PullRequestEntrypoint() {
+          const {org, repo, pr} = useParams();
+          const prNum = parseInt(pr, 10);
+          if (isNaN(prNum)) {
+            return null;
+          }
+
+          return React.createElement(App, {
+            page: {
+              type: 'pr',
+              org,
+              repo,
+              number: prNum,
+            },
+          });
+        }
+
+        function CommitEntrypoint() {
+          const {org, repo, oid} = useParams();
+          return React.createElement(App, {
+            page: {
+              type: 'commit',
+              org,
+              repo,
+              oid,
+            },
+          });
+        }
+
+        function LandingPage() {
+          return React.createElement(App, {
+            page: {
+              type: 'home',
+            },
+          });
+        }
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(
+          React.createElement(
+            React.StrictMode,
+            null,
+            React.createElement(
+              Recoil.RecoilRoot,
+              null,
+              React.createElement(
+                ThemeProvider,
+                {
+                  colorMode: getColorModeFromLocalStorage(),
+                },
+                React.createElement(
+                  ReactRouterDOM.BrowserRouter,
+                  null,
+                  React.createElement(
+                    ReactRouterDOM.Routes,
+                    null,
+                    React.createElement(ReactRouterDOM.Route, {
+                      path: '/',
+                      element: React.createElement(LandingPage),
+                    }),
+                    React.createElement(ReactRouterDOM.Route, {
+                      path: '/:org/:repo',
+                      element: React.createElement(ProjectPageEntrypoint),
+                    }),
+                    React.createElement(ReactRouterDOM.Route, {
+                      path: '/:org/:repo/pulls',
+                      element: React.createElement(PullsEntrypoint),
+                    }),
+                    React.createElement(ReactRouterDOM.Route, {
+                      path: '/:org/:repo/pull/:pr',
+                      element: React.createElement(PullRequestEntrypoint),
+                    }),
+                    React.createElement(ReactRouterDOM.Route, {
+                      path: '/:org/:repo/commit/:oid',
+                      element: React.createElement(CommitEntrypoint),
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      });
+    </script>
+  </body>
+</html>

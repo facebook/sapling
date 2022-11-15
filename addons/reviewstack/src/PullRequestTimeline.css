@@ -1,0 +1,35 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.PRT-review-comment {
+  margin-left: 4px;
+}
+
+.PRT-review-comment-path-link {
+  cursor: pointer;
+  display: inline-block;
+  font-size: 12px;
+  line-height: 16px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.PRT-old-title {
+  text-decoration: line-through;
+}
+
+.PRT-old-title,
+.PRT-new-title {
+  font-weight: bold;
+}
+
+.PRT-actor-basic {
+  font-weight: bold;
+}

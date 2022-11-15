@@ -1,0 +1,15 @@
+fragment RequestedReviewerFragment on RequestedReviewer {
+  ... on User {
+    login
+  }
+  ... on Mannequin {
+    login
+  }
+  # Apparently reading values off of Team requires the PAT to have one of the
+  # following scopes: ['read:org', 'read:discussion']
+  #
+  # ... on Team {
+  #   name
+  # }
+  __typename
+}

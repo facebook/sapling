@@ -1,0 +1,35 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.settings-dropdown {
+  min-width: 300px;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}
+
+.settings-dropdown .setting-title,
+.settings-dropdown .setting-description {
+  margin-bottom: var(--halfpad);
+}
+.settings-dropdown .setting-title {
+  font-weight: bold;
+}
+
+.settings-dropdown .settings-header {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.settings-dropdown .settings-heading {
+  font-size: 1em;
+  font-weight: bold;
+  margin: 0;
+}

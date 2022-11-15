@@ -1,0 +1,10 @@
+{
+  "sapling.command-category": "Sapling SCM",
+  "sapling.open-isl-command": "Open Interactive Smartlog",
+  "sapling.open-diff-uncommitted-command": "Open Diff View For Current File (Uncommitted Changes)",
+  "sapling.open-diff-head-command": "Open Diff View For Current File (Head Changes)",
+  "sapling.open-diff-stack-command": "Open Diff View For Current File (Stack Changes)",
+  "isl.confirmModalOK": "OK",
+  "isl.title": "Interactive Smartlog",
+  "isl.loading-text": "Loading..."
+}

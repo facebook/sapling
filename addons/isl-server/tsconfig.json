@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "lib": ["dom", "dom.iterable"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "importsNotUsedAsValues": "error",
+    "noFallthroughCasesInSwitch": true,
+    "sourceMap": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  // As explained on:
+  // https://webpack.js.org/configuration/configuration-languages/
+  // We need `"module": "commonjs"` so that webpack.config.ts can be read
+  // correctly, but we need `"module": "esnext",` for the rest of our code so
+  // that code-splitting works correctly, as explained here:
+  // https://davidea.st/articles/webpack-typescript-code-split-wont-work/
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  },
+  "include": ["src", "webpack.config.ts", "jest.config.js", "proxy"]
+}

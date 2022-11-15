@@ -1,0 +1,145 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.drawers {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+
+  --drag-handle-size: 7px;
+  --drawer-label-size: calc(2 * var(--halfpad) + 1ch);
+  --min-pane-width: 50px;
+}
+.drawers-horizontal {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+/* actual content takes all the size minus label and resize handle  */
+.drawer-left > div:nth-child(3),
+.drawer-right > div:nth-child(3) {
+  width: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad));
+}
+.drawer-top > div:nth-child(3),
+.drawer-bottom > div:nth-child(3) {
+  height: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad));
+}
+
+.drawer-main-content {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  width: 100%;
+}
+
+.drawer {
+  display: flex;
+  flex: none;
+  overflow-y: auto;
+}
+
+.drawer.drawer-top {
+  flex-direction: column-reverse;
+}
+.drawer.drawer-left {
+  flex-direction: row-reverse;
+}
+.drawer.drawer-bottom {
+  flex-direction: column;
+}
+.drawer.drawer-right {
+  flex-direction: row;
+}
+.drawer-expanded.drawer-top,
+.drawer-expanded.drawer-bottom {
+  min-height: calc(var(--pad) + var(--drag-handle-size) + var(--drawer-label-size));
+}
+
+.drawer-expanded.drawer-right,
+.drawer-expanded.drawer-left {
+  min-width: calc(var(--pad) + var(--drag-handle-size) + var(--drawer-label-size));
+}
+
+.drawer.drawer-expanded.drawer-left {
+  min-width: var(--min-pane-width);
+  max-width: calc(100vw - var(--min-pane-width));
+}
+.drawer.drawer-expanded.drawer-top {
+  min-height: var(--min-pane-width);
+  max-height: calc(100vw - var(--min-pane-width));
+}
+
+.drawer .resizable-drag-handle {
+  border: 1px solid var(--panel-view-border);
+  user-select: none;
+}
+
+.drawer-top .resizable-drag-handle,
+.drawer-bottom .resizable-drag-handle {
+  min-height: calc(var(--drag-handle-size) - (2 * 1px)); /* 2px for border */
+  width: 100%;
+  border-left-width: 0;
+  border-right-width: 0;
+  cursor: ns-resize;
+}
+
+.drawer-left .resizable-drag-handle,
+.drawer-right .resizable-drag-handle {
+  min-width: calc(var(--drag-handle-size) - (2 * 1px)); /* 2px for border */
+  height: 100%;
+  border-top-width: 0;
+  border-bottom-width: 0;
+  cursor: ew-resize;
+}
+
+.drawer-label {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0px solid var(--panel-view-border);
+  cursor: pointer;
+  padding: var(--halfpad);
+  gap: var(--halfpad);
+}
+.drawer-label:hover {
+  background-color: var(--list-hover-background);
+}
+
+.drawer-left .drawer-label {
+  border-left-width: 1px;
+}
+.drawer-right .drawer-label {
+  border-right-width: 1px;
+}
+.drawer-top .drawer-label {
+  border-bottom-width: 1px;
+}
+.drawer-bottom .drawer-label {
+  border-top-width: 1px;
+}
+
+.drawer-left .drawer-label,
+.drawer-right .drawer-label {
+  width: var(--drawer-label-size);
+}
+.drawer-top .drawer-label,
+.drawer-bottom .drawer-label {
+  height: var(--drawer-label-size);
+}
+
+.drawer-left .drawer-label,
+.drawer-right .drawer-label {
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+}

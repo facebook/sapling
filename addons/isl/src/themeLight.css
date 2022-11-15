@@ -1,0 +1,64 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.light-theme,
+.vscode-light {
+  /* custom values **/
+  --scm-modified-foreground: #895503;
+  --scm-added-foreground: #007100;
+  --scm-removed-foreground: #ad0707;
+  --selected-commit-background: rgba(0, 0, 0, 0.1);
+  --tooltip-background: var(--vscode-editorWidget-background, #f3f3f3);
+  --tooltip-border: var(--vscode-editorWidget-border, #c8c8c8);
+
+  /* github PR colors */
+  --github-badge-fg: white;
+  --github-open-bg: #2da44e;
+  --github-closed-bg: #cf222e;
+  --github-merged-bg: #8250df;
+  --github-neutral-bg: #6e7781;
+
+  /* VS Code Webview UI Toolkit theme colors */
+  /* TODO: we shouldn't bother bundling any of this in the vscode extension, since
+     theme variables are defined for us */
+  --background: #ffffff;
+  --focus-border: #0090f1;
+  --foreground: #616161;
+  --scrollbar-slider-background: rgba(100, 100, 100, 0.4);
+  --scrollbar-slider-hover-background: rgba(100, 100, 100, 0.7);
+  --scrollbar-slider-active-background: rgba(0, 0, 0, 0.6);
+  --badge-background: #c4c4c4;
+  --badge-foreground: #333333;
+  --button-border: transparent;
+  --button-primary-background: #007acc;
+  --button-primary-foreground: #ffffff;
+  --button-primary-hover-background: #0062a3;
+  --button-secondary-background: #5f6a79;
+  --button-secondary-foreground: #ffffff;
+  --button-secondary-hover-background: #4c5561;
+  --checkbox-background: #ffffff;
+  --checkbox-border: #cecece;
+  --checkbox-foreground: var(--foreground);
+  --list-active-selection-background: #0060c0;
+  --list-active-selection-foreground: #ffffff;
+  --list-hover-background: #e8e8e8;
+  --divider-background: #c8c8c8;
+  --dropdown-background: #ffffff;
+  --dropdown-border: #cecece;
+  --dropdown-foreground: var(--foreground);
+  --input-background: #ffffff;
+  --input-foreground: #616161;
+  --input-placeholder-foreground: #767676;
+  --link-active-foreground: #006ab1;
+  --link-foreground: #006ab1;
+  --progress-background: #0e70c0;
+  --panel-tab-active-border: #424242;
+  --panel-tab-active-foreground: #424242;
+  --panel-tab-foreground: rgba(66, 66, 66, 0.75);
+  --panel-view-background: #ffffff;
+  --panel-view-border: rgba(128, 128, 128, 0.35);
+}

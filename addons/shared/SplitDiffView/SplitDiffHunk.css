@@ -1,0 +1,37 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.SplitDiffView-hunk-table {
+  border-spacing: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.SplitDiffView-hunk-table tbody {
+  vertical-align: top;
+}
+
+.SplitDiffView-hunk-table td {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px 0 2px 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.SplitDiffView-hunk-table td.lineNumber {
+  padding-left: 10px;
+  padding-right: 10px;
+  text-align: right;
+}
+
+.SplitDiffView-hunk-table td.separator {
+  line-height: 20px;
+  padding-top: 0;
+  padding-bottom: 0;
+  text-align: center;
+}

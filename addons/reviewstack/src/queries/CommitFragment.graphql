@@ -1,0 +1,13 @@
+fragment CommitFragment on Commit {
+  oid
+  committedDate
+  tree {
+    oid
+  }
+  parents(first: 10) {
+    nodes {
+      oid
+    }
+    totalCount
+  }
+}

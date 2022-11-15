@@ -1,0 +1,19 @@
+mutation AddCommentMutation($id: ID!, $body: String!) {
+  addComment(input: {subjectId: $id, body: $body}) {
+    subject {
+      id
+    }
+    commentEdge {
+      cursor
+      node {
+        id
+      }
+    }
+    timelineEdge {
+      cursor
+      node {
+        __typename
+      }
+    }
+  }
+}

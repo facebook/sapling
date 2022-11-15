@@ -1,0 +1,51 @@
+{
+  "name": "reviewstack.dev",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "netlify-auth-providers": "1.0.0-alpha5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.0",
+    "recoil": "^0.7.5",
+    "reviewstack": "0.1.0",
+    "rewire": "^6.0.0",
+    "shared": "0.1.0"
+  },
+  "scripts": {
+    "start": "node ./start.js",
+    "build": "node ./build.js",
+    "release": "node ./release.js",
+    "eslint": "eslint src --ext .ts --ext .tsx"
+  },
+  "browserslist": {
+    "production": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/netlify-auth-providers": "1.0.0",
+    "@types/node": "^16.11.25",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@graphql-codegen/cli": "^2.6.2",
+    "@graphql-codegen/typescript": "^2.4.8",
+    "@graphql-codegen/typescript-document-nodes": "^2.2.8",
+    "@graphql-codegen/typescript-operations": "^2.3.5",
+    "graphql": "^16.3.0",
+    "history": "^5.3.0",
+    "react-router": "6.2.*",
+    "react-router-dom": "6.2.*",
+    "styled-components": "^5.3.5"
+  },
+  "resolutions": {
+    "@types/eslint": "8.4.1"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "confirmDiscardChanges_one": "Are you sure you want to discard your 1 selected change? Discarded changes cannot be recovered.",
+  "confirmDiscardChanges_other": "Are you sure you want to discard your {count} selected changes? Discarded changes cannot be recovered.",
+  "discardTooltip_one": "Discard the selected uncommitted changed file, even if untracked.\n\nNote: Changes to this file will be irreversably lost.",
+  "discardTooltip_other": "Discard {count} selected uncommitted changes, including untracked files.\n\nNote: Changes will be irreversably lost."
+}

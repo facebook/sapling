@@ -1,0 +1,160 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.branch-indicator {
+  stroke: var(--foreground);
+  position: absolute;
+  bottom: -20px;
+  left: -30px;
+  margin-bottom: -5px;
+  z-index: 2;
+}
+.commit-group {
+  margin-bottom: 30px;
+  margin-left: 20px;
+  margin-top: 10px;
+  position: relative;
+}
+.commit-tree-root {
+  margin-left: calc(3.5 * var(--pad));
+}
+.commit-group:before {
+  /* branch vertical line */
+  content: ' ';
+  border-left: 2px solid var(--foreground);
+  position: absolute;
+  bottom: 5px;
+  top: 20px;
+  left: -10px;
+  z-index: 1;
+}
+.commit {
+  position: relative;
+}
+.commit-ellipsis {
+  height: 20px;
+  margin-left: -10px;
+  border-left: 2px dashed;
+}
+
+.commit-avatar {
+  position: absolute;
+  border: 2px solid var(--foreground);
+  margin-bottom: 0px;
+  z-index: 3;
+  background-color: var(--foreground, hsla(0, 0%, 0%, 0.1));
+  display: inline-block;
+  vertical-align: top;
+  overflow: hidden;
+  left: -21px;
+  top: 9px;
+  border-radius: 50%;
+  height: 14px;
+  width: 14px;
+  box-sizing: border-box;
+}
+
+.head-commit .commit-avatar {
+  border-color: var(--button-primary-hover-background);
+}
+
+.commit.obsolete .commit-title {
+  opacity: 0.5;
+}
+
+.commit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+
+  padding: var(--halfpad);
+  padding-left: 0;
+  margin-left: var(--halfpad);
+  position: relative;
+}
+
+.commit-details {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad) var(--pad);
+  position: relative;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.commit-second-row {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.commit-rows > *:not(.selected-commit-background) {
+  /*
+   * We need the commit selection background behind all other commit info.
+   * Giving the selection a negative index won't work here since then it moves behind its ancestors,
+   * so we instead increment the non-selection elements.
+   */
+  z-index: 1;
+}
+
+.commit-date {
+  font-size: 90%;
+  opacity: 0.8;
+  margin: 0 2px;
+  margin-left: var(--pad);
+}
+.commit .unsaved-message-indicator {
+  color: var(--button-primary-background);
+  display: flex;
+}
+
+.commit vscode-tag::part(control) {
+  text-transform: unset;
+}
+
+.commit-preview-rebase-root,
+.commit-preview-rebase-descendant {
+  color: var(--scm-added-foreground);
+}
+.commit-preview-rebase-old {
+  opacity: 0.5;
+}
+
+.commit-inline-operation-progress {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-size: 90%;
+  gap: 10px;
+  opacity: 0.9;
+}
+
+.goto-button {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.goto-button .codicon {
+  margin-left: var(--halfpad);
+}
+
+.commit:hover .goto-button {
+  opacity: 1;
+}
+.goto-button:focus-within {
+  opacity: 1;
+}
+
+.selected-commit-background {
+  background-color: var(--selected-commit-background);
+  width: calc(100% + 3.5 * var(--pad));
+  position: absolute;
+  height: 100%;
+  left: calc(-3.5 * var(--pad));
+  pointer-events: none;
+}
