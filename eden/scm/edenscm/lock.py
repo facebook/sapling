@@ -146,7 +146,7 @@ class lockinfo(object):
 
 def trylock(
     ui, vfs, lockname, timeout, warntimeout: Optional[int] = None, *args, **kwargs
-):
+) -> "pythonlock":
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
