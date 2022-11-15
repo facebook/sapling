@@ -7,7 +7,7 @@
 
 import type {Repository} from '../Repository';
 import type {Logger} from '../logger';
-import type {RepoInfo} from 'isl/src/types';
+import type {RepoInfo, RepositoryError} from 'isl/src/types';
 
 import {__TEST__} from '../RepositoryCache';
 import {mockLogger} from 'shared/testUtils';
@@ -17,18 +17,22 @@ const {RepositoryCache} = __TEST__;
 
 class SimpleMockRepositoryImpl {
   static getRepoInfo(command: string, _logger: Logger, cwd: string): Promise<RepoInfo> {
-    const data = cwd.includes('/path/to/repo')
-      ? {
-          repoRoot: '/path/to/repo',
-          dotdir: '/path/to/repo/.sl',
-        }
-      : cwd.includes('/path/to/anotherrepo')
-      ? {
-          repoRoot: '/path/to/anotherrepo',
-          dotdir: '/path/to/anotherrepo/.sl',
-        }
-      : {repoRoot: undefined, dotdir: undefined};
+    let data;
+    if (cwd.includes('/path/to/repo')) {
+      data = {
+        repoRoot: '/path/to/repo',
+        dotdir: '/path/to/repo/.sl',
+      };
+    } else if (cwd.includes('/path/to/anotherrepo')) {
+      data = {
+        repoRoot: '/path/to/anotherrepo',
+        dotdir: '/path/to/anotherrepo/.sl',
+      };
+    } else {
+      return Promise.resolve({type: 'cwdNotARepository', cwd} as RepositoryError);
+    }
     return Promise.resolve({
+      type: 'success',
       command,
       pullRequestDomain: undefined,
       preferredSubmitCommand: 'pr',
@@ -60,12 +64,12 @@ describe('RepositoryCache', () => {
     ref.unref();
   });
 
-  it('Gives null for paths without repos', async () => {
+  it('Gives error for paths without repos', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
     const ref = cache.getOrCreate('sl', mockLogger, '/some/invalid/repo');
 
     const repo = await ref.promise;
-    expect(repo).toEqual(undefined);
+    expect(repo).toEqual({type: 'cwdNotARepository', cwd: '/some/invalid/repo'});
 
     ref.unref();
   });
@@ -75,7 +79,7 @@ describe('RepositoryCache', () => {
     const ref = cache.getOrCreate('sl', mockLogger, '/path/to/repo/cwd');
 
     const repo = await ref.promise;
-    const disposeFunc = repo?.dispose;
+    const disposeFunc = (repo as Repository).dispose;
 
     ref.unref();
     expect(disposeFunc).toHaveBeenCalledTimes(1);
@@ -90,7 +94,7 @@ describe('RepositoryCache', () => {
     const repo = await ref.promise;
     // even though this would be a valid repo, by disposing the ref before it is created,
     // we prevent creating a repo.
-    expect(repo).toEqual(undefined);
+    expect(repo).toEqual({type: 'unknownError', error: expect.anything()});
   });
 
   it('shares repositories under the same cwd', async () => {
@@ -143,7 +147,7 @@ describe('RepositoryCache', () => {
     const repo = await ref1.promise;
     await ref2.promise;
 
-    const disposeFunc = repo?.dispose;
+    const disposeFunc = (repo as Repository).dispose;
 
     ref1.unref();
     expect(disposeFunc).not.toHaveBeenCalled();
@@ -162,8 +166,8 @@ describe('RepositoryCache', () => {
     const repo2 = await ref2.promise;
 
     expect(repo1).not.toBe(repo2);
-    expect(repo1?.dispose).toHaveBeenCalledTimes(1);
-    expect(repo2?.dispose).not.toHaveBeenCalled();
+    expect((repo1 as Repository).dispose).toHaveBeenCalledTimes(1);
+    expect((repo2 as Repository).dispose).not.toHaveBeenCalled();
 
     ref2.unref();
   });
@@ -184,6 +188,7 @@ describe('RepositoryCache', () => {
 
   it('only creates one Repository even when racing lookups', async () => {
     const repoInfo = {
+      type: 'success',
       command: 'sl',
       pullRequestDomain: undefined,
       codeReviewSystem: {type: 'unknown'},

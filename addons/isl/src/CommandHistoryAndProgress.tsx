@@ -6,7 +6,7 @@
  */
 
 import type {Operation} from './operations/Operation';
-import type {RepoInfo} from './types';
+import type {ValidatedRepoInfo} from './types';
 
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
@@ -18,11 +18,12 @@ import {useRecoilValue} from 'recoil';
 
 import './CommandHistoryAndProgress.css';
 
-function displayOperationArgs(info: RepoInfo | null, operation: Operation) {
+function displayOperationArgs(info: ValidatedRepoInfo, operation: Operation) {
   const commandName =
     operation.runner === CommandRunner.Sapling
-      ? /[^\\/]+$/.exec(info?.command ?? 'sl')?.[0] ?? 'sl'
-      : ''; // TODO: we currently don't know the command name when it's not sapling
+      ? /[^\\/]+$/.exec(info.command)?.[0] ?? 'sl'
+      : // TODO: we currently don't know the command name when it's not sapling
+        '';
   return (
     commandName +
     ' ' +
@@ -48,6 +49,9 @@ export function CommandHistoryAndProgress() {
   const queued = useRecoilValue(queuedOperations);
 
   const info = useRecoilValue(repositoryInfo);
+  if (info?.type !== 'success') {
+    return null;
+  }
 
   const progress = list.currentOperation;
   if (progress == null) {

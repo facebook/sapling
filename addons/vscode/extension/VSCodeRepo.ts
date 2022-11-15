@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryReference} from 'isl-server/src/RepositoryCache';
 import type {Logger} from 'isl-server/src/logger';
 import type {ChangedFile} from 'isl/src/types';
@@ -14,6 +13,7 @@ import type {Writable} from 'shared/typeUtils';
 
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
+import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
@@ -43,7 +43,7 @@ export function watchAndCreateRepositoriesForWorkspaceFolders(logger: Logger): v
       const repoReference = repositoryCache.getOrCreate(SL_COMMAND, logger, path);
       knownRepos.set(path, repoReference);
       repoReference.promise.then(repo => {
-        if (repo) {
+        if (repo instanceof Repository) {
           const root = repo?.info.repoRoot;
           const existing = vscodeRepos.get(root);
           if (existing) {

@@ -52,6 +52,7 @@ describe('Repository', () => {
     )) as ValidatedRepoInfo;
     const repo = new Repository(info, mockLogger);
     expect(repo.info).toEqual({
+      type: 'success',
       command: 'sl',
       repoRoot: '/path/to/myRepo',
       dotdir: '/path/to/myRepo/.sl',
@@ -85,6 +86,7 @@ describe('Repository', () => {
     )) as ValidatedRepoInfo;
     const repo = new Repository(info, mockLogger);
     expect(repo.info).toEqual({
+      type: 'success',
       command: 'sl',
       repoRoot: '/path/to/myRepo',
       dotdir: '/path/to/myRepo/.sl',
@@ -98,6 +100,7 @@ describe('Repository', () => {
 
   describe('merge conflicts', () => {
     const repoInfo: ValidatedRepoInfo = {
+      type: 'success',
       command: 'sl',
       dotdir: '/path/to/repo/.sl',
       repoRoot: '/path/to/repo',

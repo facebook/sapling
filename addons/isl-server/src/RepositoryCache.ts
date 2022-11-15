@@ -6,7 +6,7 @@
  */
 
 import type {Logger} from './logger';
-import type {AbsolutePath, ValidatedRepoInfo} from 'isl/src/types';
+import type {AbsolutePath, RepositoryError, ValidatedRepoInfo} from 'isl/src/types';
 
 import {Repository} from './Repository';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
@@ -17,7 +17,7 @@ import {ensureTrailingPathSep} from 'shared/pathUtils';
  * Be sure to `unref()` when no longer needed.
  */
 export interface RepositoryReference {
-  promise: Promise<Repository | undefined>;
+  promise: Promise<Repository | RepositoryError>;
   unref: () => unknown;
 }
 
@@ -27,7 +27,10 @@ export interface RepositoryReference {
  * which is why we can't return RefCounted<Repository> directly.
  */
 class RepositoryReferenceImpl implements RepositoryReference {
-  constructor(public promise: Promise<Repository | undefined>, private disposeFunc: () => void) {}
+  constructor(
+    public promise: Promise<Repository | RepositoryError>,
+    private disposeFunc: () => void,
+  ) {}
   public unref() {
     if (!this.disposed) {
       this.disposed = true;
@@ -106,7 +109,7 @@ class RepositoryCache {
 
     // eslint-disable-next-line prefer-const
     let ref: RepositoryReferenceImpl;
-    const lookupRepoInfoAndReuseIfPossible = async (): Promise<Repository | undefined> => {
+    const lookupRepoInfoAndReuseIfPossible = async (): Promise<Repository | RepositoryError> => {
       // TODO: we should rate limit how many getRepoInfos we run at a time, and make other callers just wait.
       // this would guard against querying lots of redundant paths within the same repo.
       // This is probably not necessary right now, but would be useful for a VS Code extension where we need to query
@@ -114,15 +117,15 @@ class RepositoryCache {
       const repoInfo = await this.RepositoryType.getRepoInfo(cmd, logger, cwd);
       // important: there should be no `await` points after here, to ensure there is no race when re-using Repositories.
 
-      if (repoInfo.repoRoot == null) {
-        // No repository found at this root
-        return undefined;
+      if (repoInfo.type !== 'success') {
+        // No repository found at this root, or some other error prevents the repo from being created
+        return repoInfo;
       }
 
       if (ref.disposed) {
         // If the reference is disposed, the caller gave up while waiting for the repo to be created.
         // make sure we don't create a dangling Repository.
-        return undefined;
+        return {type: 'unknownError', error: new Error('Repository already disposed')};
       }
 
       // Now that we've spent some async time to determine this repo's actual root,

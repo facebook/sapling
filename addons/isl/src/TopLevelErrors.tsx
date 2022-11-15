@@ -56,7 +56,7 @@ export function TopLevelErrors() {
       />
     );
   } else if (diffFetchError) {
-    if (repoInfo?.codeReviewSystem.type === 'github') {
+    if (repoInfo?.type === 'success' && repoInfo.codeReviewSystem.type === 'github') {
       const learnAboutGhButton = (
         <VSCodeButton
           appearance="secondary"

@@ -77,7 +77,9 @@ function SettingsDropdown() {
           <VSCodeOption value="en">en</VSCodeOption>
         </VSCodeDropdown>
       </Setting>
-      {repoInfo?.codeReviewSystem.type === 'github' ? (
+      {repoInfo?.type !== 'success' ? (
+        <Icon icon="loading" />
+      ) : repoInfo?.codeReviewSystem.type === 'github' ? (
         <Setting
           title={<T>Preferred Code Review Submit Command</T>}
           description={

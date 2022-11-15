@@ -5,22 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepoInfo} from './types';
+import type {RepositoryError} from './types';
 import type {AllDrawersState} from 'shared/Drawers';
 
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfo';
 import {CommitTreeList} from './CommitTreeList';
 import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
-import {ErrorBoundary} from './ErrorNotice';
+import {EmptyState} from './EmptyState';
+import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {Icon} from './Icon';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {repositoryInfo} from './codeReview/CodeReviewInfo';
-import {I18nSupport, T} from './i18n';
+import {I18nSupport, t, T} from './i18n';
 import {OptionsModal} from './optionsModal';
+import platform from './platform';
 import {ThemeRoot} from './theme';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
 import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
 import {Drawers} from 'shared/Drawers';
@@ -90,8 +93,8 @@ function MainContent() {
     <div className="main-content-area">
       <TopBar />
       <TopLevelErrors />
-      {repoInfo != null && repoInfo.repoRoot == null ? (
-        <EmptyState repoInfo={repoInfo} />
+      {repoInfo != null && repoInfo.type !== 'success' ? (
+        <ISLNullState repoError={repoInfo} />
       ) : (
         <CommitTreeList />
       )}
@@ -99,15 +102,46 @@ function MainContent() {
   );
 }
 
-function EmptyState({repoInfo}: {repoInfo: RepoInfo}) {
-  return (
-    <div className="empty-app-state">
-      <h1>
-        <T>No repository found</T>
-      </h1>
-      <p>
-        <T replace={{$root: <code>{repoInfo.repoRoot}</code>}}>$root is not a valid repository</T>
-      </p>
-    </div>
-  );
+function ISLNullState({repoError}: {repoError: RepositoryError}) {
+  let content;
+  if (repoError != null) {
+    if (repoError.type === 'cwdNotARepository') {
+      content = (
+        <EmptyState>
+          <div>
+            <T>Not a valid repository</T>
+          </div>
+          <p>
+            <T replace={{$cwd: <code>{repoError.cwd}</code>}}>
+              $cwd is not a valid Sapling repository. Clone or init a repository to use ISL.
+            </T>
+          </p>
+        </EmptyState>
+      );
+    } else if (repoError.type === 'invalidCommand') {
+      content = (
+        <ErrorNotice
+          title={<T>Invalid Sapling command. Is Sapling installed correctly?</T>}
+          error={
+            new Error(t('Command "$cmd" was not found.', {replace: {$cmd: repoError.command}}))
+          }
+          buttons={[
+            <VSCodeButton
+              appearance="secondary"
+              onClick={e => {
+                platform.openExternalLink('https://sapling-scm.com/docs/introduction/installation');
+                e.preventDefault();
+                e.stopPropagation();
+              }}>
+              <T>See installation docs</T>
+            </VSCodeButton>,
+          ]}
+        />
+      );
+    } else {
+      content = <ErrorNotice title={<T>Something went wrong</T>} error={repoError.error} />;
+    }
+  }
+
+  return <div className="empty-app-state">{content}</div>;
 }

@@ -51,8 +51,10 @@ describe('GitHubPRBadge', () => {
         simulateMessageFromServer({
           type: 'repoInfo',
           info: {
+            type: 'success',
             command: 'sl',
             repoRoot: '/path/to/testrepo',
+            dotdir: '/path/to/testrepo/.sl',
             codeReviewSystem: {
               type: 'github',
               repo: 'testrepo',
@@ -158,8 +160,10 @@ describe('GitHubPRBadge', () => {
             simulateMessageFromServer({
               type: 'repoInfo',
               info: {
+                type: 'success',
                 command: 'sl',
                 repoRoot: '/path/to/testrepo',
+                dotdir: '/path/to/testrepo/.sl',
                 codeReviewSystem: {
                   type: 'github',
                   repo: 'testrepo',
@@ -186,8 +190,10 @@ describe('GitHubPRBadge', () => {
             simulateMessageFromServer({
               type: 'repoInfo',
               info: {
+                type: 'success',
                 command: 'sl',
                 repoRoot: '/path/to/testrepo',
+                dotdir: '/path/to/testrepo/.sl',
                 codeReviewSystem: {
                   type: 'github',
                   repo: 'testrepo',

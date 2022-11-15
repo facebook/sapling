@@ -100,6 +100,9 @@ export class WatchForChanges {
   };
 
   private async setupWatchmanSubscriptions() {
+    if (this.repoInfo.type !== 'success') {
+      return;
+    }
     const {repoRoot, dotdir} = this.repoInfo;
 
     if (repoRoot == null || dotdir == null) {

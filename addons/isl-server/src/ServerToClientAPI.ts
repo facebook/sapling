@@ -109,7 +109,7 @@ export default class ServerToClientAPI {
 
     switch (data.type) {
       case 'requestRepoInfo': {
-        logger.log('refresh requested');
+        logger.log('repo info requested');
         this.postMessage({type: 'repoInfo', info: repo.info});
         break;
       }

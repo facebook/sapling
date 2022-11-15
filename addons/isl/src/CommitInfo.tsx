@@ -503,7 +503,8 @@ function ActionsBar({
             }
 
             if (
-              repoInfo?.codeReviewSystem.type === 'github' &&
+              repoInfo?.type === 'success' &&
+              repoInfo.codeReviewSystem.type === 'github' &&
               repoInfo.preferredSubmitCommand == null
             ) {
               const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;

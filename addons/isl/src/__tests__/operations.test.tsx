@@ -15,6 +15,7 @@ import {
   closeCommitInfoSidebar,
   simulateMessageFromServer,
   TEST_COMMIT_HISTORY,
+  simulateRepoConnected,
 } from '../testUtils';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
@@ -39,6 +40,7 @@ describe('operations', () => {
         type: 'subscribeSmartlogCommits',
         subscriptionID: expect.anything(),
       });
+      simulateRepoConnected();
       simulateCommits({
         value: TEST_COMMIT_HISTORY,
       });

@@ -13,6 +13,7 @@ import {
   COMMIT,
   simulateUncommittedChangedFiles,
   closeCommitInfoSidebar,
+  simulateRepoConnected,
 } from '../testUtils';
 import {render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
@@ -34,6 +35,7 @@ describe('CommitTreeList', () => {
     beforeEach(() => {
       render(<App />);
       act(() => {
+        simulateRepoConnected();
         closeCommitInfoSidebar();
         expectMessageSentToServer({
           type: 'subscribeSmartlogCommits',

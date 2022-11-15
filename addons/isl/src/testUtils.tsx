@@ -48,6 +48,20 @@ export function simulateUncommittedChangedFiles(files: Result<UncommittedChanges
     files,
   });
 }
+export function simulateRepoConnected() {
+  simulateMessageFromServer({
+    type: 'repoInfo',
+    info: {
+      type: 'success',
+      repoRoot: '/path/to/repo',
+      dotdir: '/path/to/repo/.sl',
+      command: 'sl',
+      pullRequestDomain: undefined,
+      codeReviewSystem: {type: 'github', owner: 'owner', repo: 'repo'},
+    },
+  });
+}
+
 export function resetTestMessages() {
   testMessageBus.resetTestMessages();
 }

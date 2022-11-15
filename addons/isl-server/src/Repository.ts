@@ -353,10 +353,15 @@ export class Repository {
     return this.mergeConflicts;
   }
 
+  /**
+   * Determine basic repo info including the root and important config values.
+   * Resulting RepoInfo may have null fields if cwd is not a valid repo root.
+   * Throws if `command` is not found.
+   */
   static async getRepoInfo(command: string, logger: Logger, cwd: string): Promise<RepoInfo> {
     const [repoRoot, dotdirFromRoot, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
       await Promise.all([
-        findRoot(command, logger, cwd),
+        findRoot(command, logger, cwd).catch((err: Error) => err),
         findDotDir(command, logger, cwd),
         getConfig(command, logger, cwd, 'paths.default').then(value => value ?? ''),
         getConfig(command, logger, cwd, 'github.pull_request_domain'),
@@ -364,6 +369,9 @@ export class Repository {
           value => value || undefined,
         ),
       ]);
+    if (repoRoot instanceof Error) {
+      return {type: 'invalidCommand', command};
+    }
     const isGitOnSl = !pathsDefault.startsWith('mononoke://');
     let codeReviewSystem: CodeReviewSystem;
     if (isGitOnSl) {
@@ -400,7 +408,12 @@ export class Repository {
         }
       }
     }
-    const result = {
+
+    if (repoRoot == null || dotdir == null) {
+      return {type: 'cwdNotARepository', cwd};
+    }
+    const result: RepoInfo = {
+      type: 'success',
       command,
       dotdir,
       repoRoot,
@@ -631,7 +644,9 @@ function runCommand(
   return execa(command, args, options);
 }
 
-/** root of the repository where the .sl folder lives */
+/**
+ * Root of the repository where the .sl folder lives.
+ * Throws only if `command` is invalid, so this check can double as validation of the `sl` command */
 async function findRoot(
   command: string,
   logger: Logger,
@@ -640,6 +655,10 @@ async function findRoot(
   try {
     return (await runCommand(command, ['root'], logger, cwd)).stdout;
   } catch (error) {
+    if ((error as {code?: string}).code === 'ENOENT') {
+      logger.error(`command ${command} not found`, error);
+      throw error;
+    }
     logger.error(`Failed to find repository in ${cwd}`, error);
     return undefined;
   }

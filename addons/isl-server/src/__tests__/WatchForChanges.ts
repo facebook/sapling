@@ -32,6 +32,7 @@ jest.mock('fb-watchman', () => {
 
 describe('WatchForChanges', () => {
   const mockInfo: RepoInfo = {
+    type: 'success',
     command: 'sl',
     repoRoot: '/testRepo',
     dotdir: '/testRepo/.sl',

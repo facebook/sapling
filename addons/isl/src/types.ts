@@ -68,24 +68,37 @@ export type DiffSignalSummary = 'running' | 'pass' | 'failed' | 'warning' | 'no-
  */
 // TODO: export type DiffDetails = {};
 
-export type RepoInfo = {
+/** An error causing the entire Repository to not be accessible */
+export type RepositoryError =
+  | {
+      type: 'invalidCommand';
+      command: string;
+    }
+  | {type: 'cwdNotARepository'; cwd: string}
+  | {
+      type: 'unknownError';
+      error: Error;
+    };
+
+export type RepoInfo = RepositoryError | ValidatedRepoInfo;
+
+/** Proven valid repositories with valid repoRoot / dotdir */
+export type ValidatedRepoInfo = {
+  type: 'success';
   /** Which cli command name this repository should use for sapling, e.g. `sl`  */
   command: string;
   /**
    * Repo root, which cwd may be a subset of. `undefined` if the cwd is not a valid repository.
    */
-  repoRoot?: AbsolutePath;
+  repoRoot: AbsolutePath;
   /**
    * Directory containing sl internal information for this repo, usually `${repoRoot}/.sl`.
    */
-  dotdir?: AbsolutePath;
+  dotdir: AbsolutePath;
   codeReviewSystem: CodeReviewSystem;
   pullRequestDomain: string | undefined;
   preferredSubmitCommand?: PreferredSubmitCommand;
 };
-type WithRequired<T, K extends keyof T> = T & {[P in K]-?: T[P]};
-/** Like {@link RepoInfo}, for proven valid repositories with valid repoRoot / dotdir */
-export type ValidatedRepoInfo = WithRequired<RepoInfo, 'repoRoot' | 'dotdir'>;
 
 export type CodeReviewSystem =
   | {
@@ -321,6 +334,7 @@ export type ServerToClientMessage =
   | BeganFetchingUncommittedChangesEvent
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'repoInfo'; info: RepoInfo}
+  | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Array<string>}

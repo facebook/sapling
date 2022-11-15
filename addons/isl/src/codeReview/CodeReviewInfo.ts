@@ -37,7 +37,7 @@ export const codeReviewProvider = selector<UICodeReviewProvider | null>({
   key: 'codeReviewProvider',
   get: ({get}) => {
     const repoInfo = get(repositoryInfo);
-    if (repoInfo == null) {
+    if (repoInfo?.type !== 'success') {
       return null;
     }
     if (repoInfo.codeReviewSystem.type === 'github') {

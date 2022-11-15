@@ -22,18 +22,19 @@ const mockLogger: Logger = {info: jest.fn(), warn: jest.fn(), log: jest.fn(), er
 jest.mock('isl-server/src/Repository', () => {
   class MockRepository implements Partial<Repository> {
     static getRepoInfo = jest.fn((_cmd, _logger, cwd: string): Promise<RepoInfo> => {
-      let root: string | undefined;
+      let root: string;
       // resolve cwd into shared mock locations
       if (cwd.includes('/path/to/repo1')) {
         root = '/path/to/repo1';
       } else if (cwd.includes('/path/to/repo2')) {
         root = '/path/to/repo2';
       } else {
-        throw new Error('invalid mock repo directory');
+        return Promise.resolve({type: 'cwdNotARepository', cwd});
       }
       return Promise.resolve({
+        type: 'success',
         repoRoot: root,
-        dotdir: root ? root + '/.sl' : undefined,
+        dotdir: root + '/.sl',
         command: 'sl',
         preferredSubmitCommand: 'pr',
         codeReviewSystem: {type: 'unknown', path: ''},

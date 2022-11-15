@@ -15,7 +15,7 @@ export const pullRequestDomain = selector<string | undefined>({
   key: 'pullRequestDomain',
   get: ({get}) => {
     const info = get(repositoryInfo);
-    return info?.pullRequestDomain;
+    return info?.type !== 'success' ? undefined : info.pullRequestDomain;
   },
 });
 
