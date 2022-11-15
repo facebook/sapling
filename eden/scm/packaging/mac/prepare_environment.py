@@ -157,6 +157,7 @@ def set_up_downloaded_crates(tmpdir):
             tmpdir,
         ]
     )
+    run_cmd(["brew", "install", "-f", os.path.join(tmpdir, "openssl@1.1.bottle.tar.gz")])
 
 
 def create_repo_tarball(dotdir):
