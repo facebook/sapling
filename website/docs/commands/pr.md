@@ -1,18 +1,17 @@
 ---
-sidebar_position: 24
+sidebar_position: 26
 ---
 
 ## pr
 <!--
-  @generated SignedSource<<a42a5691a893ccf985c5cef179e3409b>>
+  @generated SignedSource<<e941942593bb89b37ac08dbaca3933c7>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
 **exchange local commit data with GitHub pull requests**
 
-## arguments
-no arguments
+
 ## subcommands
 ### submit
 
@@ -21,8 +20,7 @@ create or update GitHub pull requests from local commits
 | shortname | fullname | default | description |
 | - | - | - | - |
 | `-s`| `--stack`| `false`| also include draft ancestors|
-| `-m`| `--message`| | message describing changes to updated commits|
-### link
+| `-m`| `--message`| | message describing changes to updated commits|### link
 
 indentify a commit as the head of a GitHub pull request
 
@@ -34,15 +32,13 @@ A PULL_REQUEST can be specified in a number of formats:
 
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-r`| `--rev`| | revision to link|
-### unlink
+| `-r`| `--rev`| | revision to link|### unlink
 
 remove a commit's association with a GitHub pull request
 
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-r`| `--rev`| | revisions to unlink|
-### follow
+| `-r`| `--rev`| | revisions to unlink|### follow
 
 join the nearest desecendant's pull request
 

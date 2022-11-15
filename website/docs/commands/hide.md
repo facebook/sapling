@@ -1,10 +1,10 @@
 ---
-sidebar_position: 17
+sidebar_position: 19
 ---
 
 ## hide
 <!--
-  @generated SignedSource<<07e4d57f5e3fb5f8d811a4c8e59711dc>>
+  @generated SignedSource<<69fac9195301773ee3329600102aa324>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -33,7 +33,7 @@ To hide obsolete stacks (stacks that have a newer version), run
 
 `sl hide 'obsolete() - ancestors(draft() & not obsolete())'`
 
---cleanup skips obsolete commits with non-obsolete descendants.
+`--cleanup` skips obsolete commits with non-obsolete descendants.
 
 ## arguments
 | shortname | fullname | default | description |

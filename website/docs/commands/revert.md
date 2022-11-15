@@ -1,10 +1,10 @@
 ---
-sidebar_position: 31
+sidebar_position: 33
 ---
 
-## revert | rev | reve | rever
+## revert
 <!--
-  @generated SignedSource<<ff84b2ee6d57dd29802439cfc5242d01>>
+  @generated SignedSource<<35b2522c0a4355e63f41e189fc0d96ca>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -17,17 +17,17 @@ In other words, revert the specified files or directories to the
 contents they had in the current commit. If you are in the middle of
 an unfinished merge state, you must explicitly specify a revision.
 
-Use the -r/--rev option to revert the given files or directories to
+Use the `-r/--rev` option to revert the given files or directories to
 their states as of a specific commit. Because revert does not actually
 check out the specified commit, the files appear as modified and show
 up as pending changes in `sl status`.
 
 Revert causes files to match their contents in another commit. If
 instead you want to undo a specific landed commit, use `sl backout`
-instead. Run `@prog help backout` for more information.
+instead. Run `sl help backout` for more information.
 
 Modified files are saved with an .orig suffix before reverting.
-To disable these backups, use --no-backup. You can configure Sapling
+To disable these backups, use `--no-backup`. You can configure Sapling
 to store these backup files in a custom directory relative to the root
 of the repository by setting the `ui.origbackuppath` configuration
 option.

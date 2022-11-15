@@ -1,10 +1,10 @@
 ---
-sidebar_position: 38
+sidebar_position: 41
 ---
 
-## uncommit | unc | unco | uncom | uncomm | uncommi
+## uncommit | unc
 <!--
-  @generated SignedSource<<b882a167c5ad734f2c1b7f9f091feed5>>
+  @generated SignedSource<<4215389d366e2c25c319a24cf77cd034>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -17,10 +17,10 @@ but does not revert the state of the working copy. Changes that were
 contained in the uncommitted commit become pending changes in the
 working copy.
 
-`sl uncommit` cannot be run on commits that have children. In other words,
-you cannot uncommit a commit in the middle of a stack. Similarly, by
-default you cannot run `sl uncommit` if there are pending changes in the
-working copy.
+`sl uncommit` cannot be run on commits that have children. In
+other words, you cannot uncommit a commit in the middle of a
+stack. Similarly, by default, you cannot run `sl uncommit` if
+there are pending changes in the working copy.
 
 You can selectively uncommit files from the current commit by optionally
 specifying a list of files to remove. The specified files are removed from

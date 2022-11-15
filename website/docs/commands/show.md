@@ -1,10 +1,10 @@
 ---
-sidebar_position: 34
+sidebar_position: 36
 ---
 
 ## show
 <!--
-  @generated SignedSource<<832c6328a285c2b8a1a24fcecf1cc8af>>
+  @generated SignedSource<<da4f2cd812e2b9229ac71773b9bafeb5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -14,9 +14,9 @@ sidebar_position: 34
 Show the commit message and contents for the specified commit. If no commit
 is specified, shows the current commit.
 
-This behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or
-if called without a REV, `sl log -vp -r . [OPTION]...` Use
-`sl log` for more powerful operations than supported by sl show.
+`sl show` behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or
+if called without a `REV`, `sl log -vp -r . [OPTION]...` Use
+`sl log` for more powerful operations than supported by `sl show`.
 
 ## arguments
 | shortname | fullname | default | description |

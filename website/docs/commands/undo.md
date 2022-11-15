@@ -1,10 +1,10 @@
 ---
-sidebar_position: 39
+sidebar_position: 42
 ---
 
 ## undo
 <!--
-  @generated SignedSource<<a96cb61b52b197399138a5e4b752b2ca>>
+  @generated SignedSource<<1880696c2c9758e6dbcaa603b6792f93>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -21,21 +21,21 @@ or changes to remote bookmarks.
 
 You can run `sl undo` multiple times to undo a series of local commands.
 Alternatively, you can explicitly specify the number of local commands to
-undo using --step. This number can also be specified as a positional
+undo using `--step`. This number can also be specified as a positional
 argument.
 
-To undo the effects of `sl undo`, run `sl redo`. Run `sl help redo` for
-more information.
+To undo the effects of `sl undo`, run `sl redo`. Run
+`sl help redo` for more information.
 
-Include --keep to preserve the state of the working copy. For example,
-specify --keep when running `sl undo` to reverse the effects of an
+Include `--keep` to preserve the state of the working copy. For example,
+specify `--keep` when running `sl undo` to reverse the effects of an
 `sl commit` or `sl amend` operation while still preserving changes
 in the working copy. These changes will appear as pending changes.
 
-Specify --preview to see a graphical display that shows what your smartlog
-will look like after you run the command. Specify --interactive for an
-interactive version of this preview in which you can step backwards and
-forwards in the undo history.
+Specify `--preview` to see a graphical display that shows what
+your smartlog will look like after you run the command. Specify
+`--interactive` for an interactive version of this preview in which
+you can step backwards and forwards in the undo history.
 
 `sl undo` cannot be used with non-local commands, or with commands
 that are read-only. `sl undo` will skip over these commands in the
