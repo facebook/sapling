@@ -27,7 +27,7 @@ scale with the number of files in use by a developer, and not with the size of
 the repository itself.  This enables fast, performant developer experiences even
 in massive repositories with millions of files and extremely long commit histories.
 
-# Sapling CLI
+### Sapling CLI
 
 The Sapling CLI, `sl`, was originally based on
 [Mercurial](https://www.mercurial-scm.org/), and shares various aspects of the UI
@@ -35,16 +35,19 @@ and features of Mercurial.
 
 The CLI code can be found in the `eden/scm` subdirectory.
 
-# Mononoke
+### Mononoke
 
 [Mononoke](eden/mononoke/README.md) is the server-side component of Sapling SCM.
 
 While it is used in production within Meta, it currently does not build in an
 open source context and is not yet supported for external usage.
 
-# EdenFS
+### EdenFS
 
 EdenFS is a virtual file system for managing Sapling checkouts.
+
+While it is used in production within Meta, it currently does not build in an
+open source context and is not yet supported for external usage.
 
 EdenFS speeds up operations in large repositories by only populating working
 directory files on demand, as they are accessed.  This makes operations like
