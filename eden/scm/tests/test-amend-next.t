@@ -15,17 +15,43 @@ Check help text for new options and removal of unsupported options.
   
   aliases: n
   
-  check out a child commit
+  check out a descendant commit
+  
+      Update to a descendant commit of the current commit. When working with a
+      stack of commits, you can use 'hg next' to move up your stack with ease.
+  
+      - Use the "--newest" flag to always pick the newest of multiple child
+        commits. You can set "amend.alwaysnewest" to true in your global
+        Mercurial config file to make this the default.
+      - Use the "--merge" flag to bring along uncommitted changes to the
+        destination commit.
+      - Use the "--bookmark" flag to move to the next commit with a bookmark.
+      - Use the "--rebase" flag to rebase any child commits that were left
+        behind after "amend", "split", "fold", or "histedit".
+  
+      Examples:
+  
+      - Move 1 level up the stack:
+  
+          hg next
+  
+      - Move 2 levels up the stack:
+  
+          hg next 2
+  
+      - Move to the top of the stack:
+  
+          hg next --top
   
   Options:
   
-      --newest               always pick the newest child when a changeset has
+      --newest               always pick the newest child when a commit has
                              multiple children
-      --rebase               rebase each changeset if necessary
+      --rebase               rebase each commit if necessary
       --top                  update to the head of the current stack
-      --bookmark             update to the first changeset with a bookmark
+      --bookmark             update to the first commit with a bookmark
       --no-activate-bookmark do not activate the bookmark on the destination
-                             changeset
+                             commit
       --towards VALUE        move linearly towards the specified head
    -C --clean                discard uncommitted changes (no backup)
    -B --move-bookmark        move active bookmark

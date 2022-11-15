@@ -305,7 +305,7 @@ Testing -h/--help:
   Work with stacks of commits:
   
    previous      check out the parent commit
-   next          check out a child commit
+   next          check out a descendant commit
    split         split a changeset into smaller changesets
    fold          combine multiple commits into a single commit
   
@@ -376,7 +376,7 @@ Testing -h/--help:
   Work with stacks of commits:
   
    previous      check out the parent commit
-   next          check out a child commit
+   next          check out a descendant commit
    split         split a changeset into smaller changesets
    fold          combine multiple commits into a single commit
   

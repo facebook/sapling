@@ -59,30 +59,61 @@ def previous(ui, repo, *args, **opts):
 
 
 @command(
-    "next|n|ne|nex",
+    "next",
     [
         (
             "",
             "newest",
             False,
-            _("always pick the newest child when a changeset has multiple children"),
+            _("always pick the newest child when a commit has multiple children"),
         ),
-        ("", "rebase", False, _("rebase each changeset if necessary")),
+        ("", "rebase", False, _("rebase each commit if necessary")),
         ("", "top", False, _("update to the head of the current stack")),
-        ("", "bookmark", False, _("update to the first changeset with a bookmark")),
+        ("", "bookmark", False, _("update to the first commit with a bookmark")),
         (
             "",
             "no-activate-bookmark",
             False,
-            _("do not activate the bookmark on the destination changeset"),
+            _("do not activate the bookmark on the destination commit"),
         ),
         ("", "towards", "", _("move linearly towards the specified head")),
     ]
     + moveopts,
     _("[OPTIONS]... [STEPS]"),
+    legacyaliases=["n", "ne", "nex"],
 )
 def next_(ui, repo, *args, **opts):
-    """check out a child commit"""
+    """check out a descendant commit
+
+    Update to a descendant commit of the current commit. When working with a stack
+    of commits, you can use :prog:`next` to move up your stack with ease.
+
+    - Use the ``--newest`` flag to always pick the newest of multiple child commits.
+      You can set ``amend.alwaysnewest`` to true in your global @Product@ config file
+      to make this the default.
+
+    - Use the ``--merge`` flag to bring along uncommitted changes to the destination
+      commit.
+
+    - Use the ``--bookmark`` flag to move to the next commit with a bookmark.
+
+    - Use the ``--rebase`` flag to rebase any child commits that were left behind
+      after ``amend``, ``split``, ``fold``, or ``histedit``.
+
+    Examples:
+
+    - Move 1 level up the stack::
+
+        @prog@ next
+
+    - Move 2 levels up the stack::
+
+        @prog@ next 2
+
+    - Move to the top of the stack::
+
+        @prog@ next --top
+    """
     _moverelative(ui, repo, args, opts, reverse=False)
 
 
