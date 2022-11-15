@@ -45,7 +45,6 @@ from .cmdtable import command
     + cmdutil.walkopts,
     _("[OPTION]... [FILE]..."),
     legacyaliases=["unco", "uncom", "uncomm", "uncommi"],
-
 )
 def uncommit(ui, repo, *pats, **opts):
     """uncommit part or all of the current commit
