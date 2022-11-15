@@ -15,33 +15,39 @@ $ sl git -- checkout 060f340a9 my_file.txt
 sl revert -r 060f340a9 my_file.txt
 ```
 
-### Cloning and pulling a repository
+### Cloning, pulling, and pushing
 
 | |Git |Sapling |
 |--- |--- |--- |
 |Clone  |git clone http://github.com/foo my_repo |sl clone http://github.com/foo my_repo |
 |Pull |git fetch |sl pull |
-|Pull a Branch |git fetch REFSPEC |sl pull -B my_branch |
-|Pull From |git fetch origin |sl pull remote |
-|Pull and Rebase |git pull |sl pull —rebase |
+|Pull a branch |git fetch origin REFSPEC |sl pull -B BRANCH |
+|Pull and rebase |git pull --rebase |sl pull --rebase |
+|Push to a branch |git push HEAD:BRANCH | sl push --to BRANCH |
+|Add a remote |git remote add REMOTE URL | sl path --add REMOTE URL |
+|Pull from a remote |git fetch REMOTE |sl pull REMOTE |
+
+Sapling
+[only](differences-git#sapling-may-not-download-all-the-repository-data-during-clonepull)
+clones and pulls a subset of remote branches.
 
 ### Understanding the repository
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Your Commits |N/A |sl |
-|Current History |git log |sl log |
-|Edited Files |git status |sl status |
-|Current Hash |git rev-parse HEAD |sl whereami |
-|Pending Changes |git diff |sl diff |
-|Current Commit |git show |sl show |
+|Your commits |N/A |sl |
+|Current history |git log |sl log |
+|Edited files |git status |sl status |
+|Current hash |git rev-parse HEAD |sl whereami |
+|Pending changes |git diff |sl diff |
+|Current commit |git show |sl show |
 
 ### Referring to commits
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Current Commit |HEAD |. |
-|Parent Commit |HEAD^ |.^ |
+|Current commit |HEAD |. |
+|Parent commit |HEAD^ |.^ |
 |All local commits |N/A |draft() |
 |Commits in branch X but not Y |Y..X |X % Y |
 
@@ -51,71 +57,71 @@ See `sl help revset` for more ways of referencing commits.
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Add New File |git add FILE |sl add FILE |
-|Un-add New File |git rm --cached FILE |sl forget FILE |
-|Remove File |git rm FILE |sl rm FILE |
-|Rename File |git mv OLD NEW |sl mv OLD NEW |
-|Copy File |cp OLD NEW |sl cp OLD NEW |
-|Add/Remove All Files |git add -A . |sl addremove |
-|Undo Changes |git checkout -- FILE |sl revert FILE |
-|Undo All Changes |git reset --hard |sl revert —all |
-|Delete Untracked Files |git clean -f |sl clean |
-|Output File Content |git cat-file -p COMMIT:FILE |sl cat -r COMMIT FILE |
-|Show Blame |git blame FILE |sl blame FILE |
+|Add new file |git add FILE |sl add FILE |
+|Un-add new File |git rm --cached FILE |sl forget FILE |
+|Remove file |git rm FILE |sl rm FILE |
+|Rename file |git mv OLD NEW |sl mv OLD NEW |
+|Copy file |cp OLD NEW |sl cp OLD NEW |
+|Add/remove all files |git add -A . |sl addremove |
+|Undo changes |git checkout -- FILE |sl revert FILE |
+|Undo all changes |git reset --hard |sl revert —all |
+|Delete untracked files |git clean -f |sl clean |
+|Output file content |git cat-file -p COMMIT:FILE |sl cat -r COMMIT FILE |
+|Show blame |git blame FILE |sl blame FILE |
 
 ### Working with commits
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Commit Changes |git commit -a |sl commit |
-|Modify Commit |git commit -a --amend |sl amend |
-|Move to Commit |git checkout COMMIT |sl goto COMMIT |
-|Remove a Commit |git reset -hard COMMIT |sl hide COMMIT |
-|Edit Message |git commit --amend |sl metaedit |
-|Rebase Commits |git rebase main |sl rebase -d main |
-|Complex Rebase |git rebase --onto DEST BOTTOM^ TOP |sl rebase -d DEST -r BOTTOM::TOP |
-|Rebase All |N/A |sl rebase -d main -r 'draft()' |
-|Interactive Rebase |git rebase -i |sl histedit |
-|Interactive Commit |git add -p |sl commit -i / sl amend -i  |
+|Commit changes |git commit -a |sl commit |
+|Modify commit |git commit -a --amend |sl amend |
+|Move to commit |git checkout COMMIT |sl goto COMMIT |
+|Remove a commit |git reset -hard COMMIT |sl hide COMMIT |
+|Edit message |git commit --amend |sl metaedit |
+|Rebase commits |git rebase main |sl rebase -d main |
+|Complex rebase |git rebase --onto DEST BOTTOM^ TOP |sl rebase -d DEST -r BOTTOM::TOP |
+|Rebase all |N/A |sl rebase -d main -r 'draft()' |
+|Interactive rebase |git rebase -i |sl histedit |
+|Interactive commit |git add -p |sl commit -i / sl amend -i  |
 |Cherry-pick |git cherry-pick COMMIT |sl graft COMMIT |
-|Stash Changes |git stash |sl shelve |
-|Unstach Changes |git stash pop |sl unshelve |
+|Stash changes |git stash |sl shelve |
+|Unstach changes |git stash pop |sl unshelve |
 
 ### Undo, redo, and reverting
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Undo Commit |git reset --soft HEAD^ |sl uncommit |
-|Undo Partial Commit |git reset --soft HEAD^ FILE |sl uncommit FILE |
-|Undo Amend |git reset HEAD@{1} |sl unamend |
-|Undo Rebase/Etc |git reset —hard HEAD@{1} |sl undo |
-|Revert Already Landed Commit |git revert COMMIT |sl backout COMMIT |
-|View Recent Commits |git reflog |sl journal |
-|Recover Commit |git reset COMMIT |sl unhide COMMIT |
+|Undo commit |git reset --soft HEAD^ |sl uncommit |
+|Undo partial commit |git reset --soft HEAD^ FILE |sl uncommit FILE |
+|Undo amend |git reset HEAD@{1} |sl unamend |
+|Undo rebase/etc |git reset —hard HEAD@{1} |sl undo |
+|Revert already landed commit |git revert COMMIT |sl backout COMMIT |
+|View recent commits |git reflog |sl journal |
+|Recover commit |git reset COMMIT |sl unhide COMMIT |
 
 ### Working with stacks
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Modify Middle Commit |git rebase -i |sl goto COMMIT && sl amend |
-|Move Up/Down the Stack |git rebase -i |sl prev / sl next |
-|Squash Last Two Commits |git reset --soft HEAD^ && git commit —amend |sl fold —from .^ |
-|Split a Commit into Two |N/A |sl split |
-|Reorder Commits |git rebase -i |sl histedit |
-|Amend Down into Stack |N/A |sl absorb |
+|Modify middle commit |git rebase -i |sl goto COMMIT && sl amend |
+|Move up/down the stack |git rebase -i |sl prev / sl next |
+|Squash last two commits |git reset --soft HEAD^ && git commit —amend |sl fold —from .^ |
+|Split a commit into two |N/A |sl split |
+|Reorder commits |git rebase -i |sl histedit |
+|Amend down into stack |N/A |sl absorb |
 
 ### Giving commits names
 
 | |Git |Sapling |
 |--- |--- |--- |
-|Listing Branches |git branch |sl bookmark |
-|Create Branch/Bookmark |git branch NAME |sl book NAME |
-|Switch to Branch |git checkout NAME |sl goto NAME |
-|Delete Branch |git branch -d NAME |sl book -d NAME (deletes just the bookmark name) / sl book -D NAME (deletes the bookmark name and hides the commits) |
+|Listing branches |git branch |sl bookmark |
+|Create branch/bookmark |git branch NAME |sl book NAME |
+|Switch to branch |git checkout NAME |sl goto NAME |
+|Delete a branch |git branch -d NAME |sl book -d NAME (deletes just the bookmark name) / sl book -D NAME (deletes the bookmark name and hides the commits) |
 
 ### Resolving conflicts
 
 | |Git |Sapling |
 |--- |--- |--- |
-|List Unresolved Conflicts |git diff —name-only —diff-filter=U |sl resolve —list |
-|Mark a File Resolved |git add FILE |sl resolve -m FILE |
+|List unresolved conflicts |git diff —name-only —diff-filter=U |sl resolve —list |
+|Mark a file resolved |git add FILE |sl resolve -m FILE |
