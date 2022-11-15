@@ -18,7 +18,7 @@ Make sure you have followed the instructions to [authenticate with GitHub using 
 
 :::caution
 
-`sl pr submit` creates _overlapping_ commits where each pull request contains the commit that is inteded to be reviewed as part of the pull request as well as all commits below it in the stack. This will not "look right" on GitHub, so collaborators who use this command are encouraged to use [ReviewStack](../addons/reviewstack.md) to review these pull requests, as ReviewStack will present only the commit that is intended to be reviewed for each pull request.
+`sl pr submit` creates _overlapping_ commits where each pull request contains the commit that is intended to be reviewed as part of the pull request as well as all commits below it in the stack. This will not "look right" on GitHub, so collaborators who use this command are encouraged to use [ReviewStack](../addons/reviewstack.md) to review these pull requests, as ReviewStack will present only the commit that is intended to be reviewed for each pull request.
 
 :::
 
