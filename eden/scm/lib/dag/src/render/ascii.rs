@@ -103,51 +103,48 @@ where
         // Render the link line
         if let Some(link_row) = line.link_line {
             let mut link_line = String::new();
-            for (prev, cur, next) in Some(LinkLine::empty())
+            let any_horizontal = link_row
                 .iter()
-                .chain(link_row.iter())
+                .any(|cur| cur.intersects(LinkLine::HORIZONTAL));
+            for (cur, next) in link_row
+                .iter()
                 .chain(Some(LinkLine::empty()).iter())
                 .tuple_windows()
             {
-                let adj = prev.clone() | next.clone();
-
                 // Draw the parent/ancestor line.
-                if cur.contains(LinkLine::HORIZONTAL) {
+                if cur.intersects(LinkLine::HORIZONTAL) {
                     if cur.intersects(LinkLine::CHILD | LinkLine::ANY_FORK_OR_MERGE) {
                         link_line.push_str("+");
                     } else {
                         link_line.push_str("-");
                     }
-                } else if cur.intersects(LinkLine::PARENT | LinkLine::ANCESTOR) {
-                    if cur.intersects(LinkLine::ANY_FORK_OR_MERGE)
-                        && adj.contains(LinkLine::HORIZONTAL)
-                    {
+                } else if cur.intersects(LinkLine::VERTICAL) {
+                    if cur.intersects(LinkLine::ANY_FORK_OR_MERGE) && any_horizontal {
                         link_line.push_str("+");
-                    } else if cur.contains(LinkLine::ANCESTOR) {
-                        link_line.push_str(".");
-                    } else {
+                    } else if cur.intersects(LinkLine::VERT_PARENT) {
                         link_line.push_str("|");
+                    } else {
+                        link_line.push_str(".");
                     }
-                } else if cur.intersects(LinkLine::ANY_MERGE) && adj.contains(LinkLine::HORIZONTAL)
-                {
+                } else if cur.intersects(LinkLine::ANY_MERGE) && any_horizontal {
                     link_line.push_str("'");
-                } else if cur.intersects(LinkLine::ANY_FORK) && adj.contains(LinkLine::HORIZONTAL) {
+                } else if cur.intersects(LinkLine::ANY_FORK) && any_horizontal {
                     link_line.push_str(".");
                 } else {
                     link_line.push_str(" ");
                 }
 
                 // Draw the connecting line.
-                if cur.contains(LinkLine::HORIZONTAL) {
+                if cur.intersects(LinkLine::HORIZONTAL) {
                     link_line.push_str("-");
-                } else if cur.contains(LinkLine::RIGHT_MERGE) {
-                    if next.contains(LinkLine::LEFT_FORK) && !next.contains(LinkLine::HORIZONTAL) {
+                } else if cur.intersects(LinkLine::RIGHT_MERGE) {
+                    if next.intersects(LinkLine::LEFT_FORK) && !any_horizontal {
                         link_line.push_str("\\");
                     } else {
                         link_line.push_str("-");
                     }
-                } else if cur.contains(LinkLine::RIGHT_FORK) {
-                    if next.contains(LinkLine::LEFT_MERGE) && !next.contains(LinkLine::HORIZONTAL) {
+                } else if cur.intersects(LinkLine::RIGHT_FORK) {
+                    if next.intersects(LinkLine::LEFT_MERGE) && !any_horizontal {
                         link_line.push_str("/");
                     } else {
                         link_line.push_str("-");

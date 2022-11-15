@@ -171,7 +171,7 @@ where
         if let Some(link_row) = line.link_line {
             let mut link_line = String::new();
             for cur in link_row.iter() {
-                if cur.contains(LinkLine::HORIZONTAL) {
+                if cur.intersects(LinkLine::HORIZONTAL) {
                     if cur.intersects(LinkLine::CHILD) {
                         link_line.push_str(glyphs[glyph::JOIN_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_FORK)
@@ -179,7 +179,7 @@ where
                     {
                         link_line.push_str(glyphs[glyph::JOIN_BOTH]);
                     } else if cur.intersects(LinkLine::ANY_FORK)
-                        && cur.intersects(LinkLine::PARENT)
+                        && cur.intersects(LinkLine::VERT_PARENT)
                         && !line.merge
                     {
                         link_line.push_str(glyphs[glyph::JOIN_BOTH]);
@@ -190,7 +190,7 @@ where
                     } else {
                         link_line.push_str(glyphs[glyph::HORIZONTAL]);
                     }
-                } else if cur.contains(LinkLine::PARENT) && !line.merge {
+                } else if cur.intersects(LinkLine::VERT_PARENT) && !line.merge {
                     let left = cur.intersects(LinkLine::LEFT_MERGE | LinkLine::LEFT_FORK);
                     let right = cur.intersects(LinkLine::RIGHT_MERGE | LinkLine::RIGHT_FORK);
                     match (left, right) {
@@ -199,42 +199,46 @@ where
                         (false, true) => link_line.push_str(glyphs[glyph::JOIN_RIGHT]),
                         (false, false) => link_line.push_str(glyphs[glyph::PARENT]),
                     }
-                } else if cur.intersects(LinkLine::PARENT | LinkLine::ANCESTOR)
+                } else if cur.intersects(LinkLine::VERT_PARENT | LinkLine::VERT_ANCESTOR)
                     && !cur.intersects(LinkLine::LEFT_FORK | LinkLine::RIGHT_FORK)
                 {
-                    let left = cur.contains(LinkLine::LEFT_MERGE);
-                    let right = cur.contains(LinkLine::RIGHT_MERGE);
+                    let left = cur.intersects(LinkLine::LEFT_MERGE);
+                    let right = cur.intersects(LinkLine::RIGHT_MERGE);
                     match (left, right) {
                         (true, true) => link_line.push_str(glyphs[glyph::JOIN_BOTH]),
                         (true, false) => link_line.push_str(glyphs[glyph::JOIN_LEFT]),
                         (false, true) => link_line.push_str(glyphs[glyph::JOIN_RIGHT]),
                         (false, false) => {
-                            if cur.contains(LinkLine::ANCESTOR) {
+                            if cur.intersects(LinkLine::VERT_ANCESTOR) {
                                 link_line.push_str(glyphs[glyph::ANCESTOR]);
                             } else {
                                 link_line.push_str(glyphs[glyph::PARENT]);
                             }
                         }
                     }
-                } else if cur.contains(LinkLine::LEFT_FORK)
+                } else if cur.intersects(LinkLine::LEFT_FORK)
                     && cur.intersects(LinkLine::LEFT_MERGE | LinkLine::CHILD)
                 {
                     link_line.push_str(glyphs[glyph::JOIN_LEFT]);
-                } else if cur.contains(LinkLine::RIGHT_FORK)
+                } else if cur.intersects(LinkLine::RIGHT_FORK)
                     && cur.intersects(LinkLine::RIGHT_MERGE | LinkLine::CHILD)
                 {
                     link_line.push_str(glyphs[glyph::JOIN_RIGHT]);
-                } else if cur.contains(LinkLine::ANY_MERGE) {
+                } else if cur.intersects(LinkLine::LEFT_MERGE)
+                    && cur.intersects(LinkLine::RIGHT_MERGE)
+                {
                     link_line.push_str(glyphs[glyph::MERGE_BOTH]);
-                } else if cur.contains(LinkLine::ANY_FORK) {
+                } else if cur.intersects(LinkLine::LEFT_FORK)
+                    && cur.intersects(LinkLine::RIGHT_FORK)
+                {
                     link_line.push_str(glyphs[glyph::FORK_BOTH]);
-                } else if cur.contains(LinkLine::LEFT_FORK) {
+                } else if cur.intersects(LinkLine::LEFT_FORK) {
                     link_line.push_str(glyphs[glyph::FORK_LEFT]);
-                } else if cur.contains(LinkLine::LEFT_MERGE) {
+                } else if cur.intersects(LinkLine::LEFT_MERGE) {
                     link_line.push_str(glyphs[glyph::MERGE_LEFT]);
-                } else if cur.contains(LinkLine::RIGHT_FORK) {
+                } else if cur.intersects(LinkLine::RIGHT_FORK) {
                     link_line.push_str(glyphs[glyph::FORK_RIGHT]);
-                } else if cur.contains(LinkLine::RIGHT_MERGE) {
+                } else if cur.intersects(LinkLine::RIGHT_MERGE) {
                     link_line.push_str(glyphs[glyph::MERGE_RIGHT]);
                 } else {
                     link_line.push_str(glyphs[glyph::SPACE]);

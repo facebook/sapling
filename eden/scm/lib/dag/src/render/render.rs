@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::cmp::max;
-use std::cmp::min;
 use std::collections::BTreeMap;
+use std::ops::Range;
 
 use bitflags::bitflags;
 
@@ -65,19 +64,87 @@ impl<N> Ancestor<N> {
         }
     }
 
-    fn to_link_line(&self) -> LinkLine {
-        match self {
-            Ancestor::Ancestor(_) => LinkLine::ANCESTOR,
-            Ancestor::Parent(_) => LinkLine::PARENT,
-            Ancestor::Anonymous => LinkLine::PARENT,
-        }
-    }
-
     fn id(&self) -> Option<&N> {
         match self {
             Ancestor::Ancestor(n) => Some(&n),
             Ancestor::Parent(n) => Some(&n),
             Ancestor::Anonymous => None,
+        }
+    }
+
+    fn is_direct(&self) -> bool {
+        match self {
+            Ancestor::Ancestor(_) => false,
+            Ancestor::Parent(_) => true,
+            Ancestor::Anonymous => true,
+        }
+    }
+
+    fn to_link_line(&self, direct: LinkLine, indirect: LinkLine) -> LinkLine {
+        if self.is_direct() { direct } else { indirect }
+    }
+}
+
+struct AncestorColumnBounds {
+    target: usize,
+    min_ancestor: usize,
+    min_parent: usize,
+    max_parent: usize,
+    max_ancestor: usize,
+}
+
+impl AncestorColumnBounds {
+    fn new<N>(columns: &BTreeMap<usize, &Ancestor<N>>, target: usize) -> Option<Self> {
+        if columns.is_empty() {
+            return None;
+        }
+        let min_ancestor = columns
+            .iter()
+            .next()
+            .map_or(target, |(index, _)| *index)
+            .min(target);
+        let max_ancestor = columns
+            .iter()
+            .next_back()
+            .map_or(target, |(index, _)| *index)
+            .max(target);
+        let min_parent = columns
+            .iter()
+            .find(|(_, ancestor)| ancestor.is_direct())
+            .map_or(target, |(index, _)| *index)
+            .min(target);
+        let max_parent = columns
+            .iter()
+            .rev()
+            .find(|(_, ancestor)| ancestor.is_direct())
+            .map_or(target, |(index, _)| *index)
+            .max(target);
+        Some(Self {
+            target,
+            min_ancestor,
+            min_parent,
+            max_parent,
+            max_ancestor,
+        })
+    }
+
+    fn range(&self) -> Range<usize> {
+        if self.min_ancestor < self.max_ancestor {
+            self.min_ancestor + 1..self.max_ancestor
+        } else {
+            Default::default()
+        }
+    }
+
+    fn horizontal_line(&self, index: usize) -> LinkLine {
+        if index == self.target {
+            LinkLine::empty()
+        } else if index > self.min_parent && index < self.max_parent {
+            LinkLine::HORIZ_PARENT
+        } else if index > self.min_ancestor && index < self.max_ancestor {
+            LinkLine::HORIZ_ANCESTOR
+        } else {
+            LinkLine::empty()
         }
     }
 }
@@ -93,8 +160,8 @@ impl<N> Column<N> {
 
     fn to_link_line(&self) -> LinkLine {
         match self {
-            Column::Ancestor(_) => LinkLine::ANCESTOR,
-            Column::Parent(_) => LinkLine::PARENT,
+            Column::Ancestor(_) => LinkLine::VERT_ANCESTOR,
+            Column::Parent(_) => LinkLine::VERT_PARENT,
             _ => LinkLine::empty(),
         }
     }
@@ -140,34 +207,58 @@ pub enum PadLine {
 bitflags! {
     /// A column in a linking row.
     #[derive(Default)]
-    pub struct LinkLine: u8 {
-        /// This cell contains a horizontal line.
-        const HORIZONTAL = 0b0000_0001;
+    pub struct LinkLine: u16 {
+        /// This cell contains a horizontal line that connects to a parent.
+        const HORIZ_PARENT = 0b0_0000_0000_0001;
 
-        /// The descendent of this cell is directly connect to the ancestor.
-        const PARENT = 0b0000_0010;
+        /// This cell contains a horizontal line that connects to an ancestor.
+        const HORIZ_ANCESTOR = 0b0_0000_0000_0010;
 
-        /// The descendent of this cell is indirectly connected to the ancestor.
-        const ANCESTOR = 0b0000_0100;
+        /// The descendent of this cell is connected to the parent.
+        const VERT_PARENT = 0b0_0000_0000_0100;
 
-        /// The ancestor of this cell is linked in this link row and is in the
-        /// same column at the child.
-        const CHILD = 0b0000_1000;
+        /// The descendent of this cell is connected to an ancestor.
+        const VERT_ANCESTOR = 0b0_0000_0000_1000;
+
+        /// The parent of this cell is linked in this link row and the child
+        /// is to the left.
+        const LEFT_FORK_PARENT = 0b0_0000_0001_0000;
 
         /// The ancestor of this cell is linked in this link row and the child
         /// is to the left.
-        const LEFT_FORK = 0b0001_0000;
+        const LEFT_FORK_ANCESTOR = 0b0_0000_0010_0000;
+
+        /// The parent of this cell is linked in this link row and the child
+        /// is to the right.
+        const RIGHT_FORK_PARENT = 0b0_0000_0100_0000;
 
         /// The ancestor of this cell is linked in this link row and the child
         /// is to the right.
-        const RIGHT_FORK = 0b0010_0000;
+        const RIGHT_FORK_ANCESTOR = 0b0_0000_1000_0000;
 
-        /// The child of this cell is linked to columns on the left.
-        const LEFT_MERGE = 0b0100_0000;
+        /// The child of this cell is linked to parents on the left.
+        const LEFT_MERGE_PARENT = 0b0_0001_0000_0000;
 
-        /// The child of this cell is linked to columns on the right.
-        const RIGHT_MERGE = 0b1000_0000;
+        /// The child of this cell is linked to ancestors on the left.
+        const LEFT_MERGE_ANCESTOR = 0b0_0010_0000_0000;
 
+        /// The child of this cell is linked to parents on the right.
+        const RIGHT_MERGE_PARENT = 0b0_0100_0000_0000;
+
+        /// The child of this cell is linked to ancestors on the right.
+        const RIGHT_MERGE_ANCESTOR = 0b0_1000_0000_0000;
+
+        /// The target node of this link line is the child of this column.
+        /// This disambiguates between the node that is connected in this link
+        /// line, and other nodes that are also connected vertically.
+        const CHILD = 0b1_0000_0000_0000;
+
+        const HORIZONTAL = Self::HORIZ_PARENT.bits | Self::HORIZ_ANCESTOR.bits;
+        const VERTICAL = Self::VERT_PARENT.bits | Self::VERT_ANCESTOR.bits;
+        const LEFT_FORK = Self::LEFT_FORK_PARENT.bits | Self::LEFT_FORK_ANCESTOR.bits;
+        const RIGHT_FORK = Self::RIGHT_FORK_PARENT.bits | Self::RIGHT_FORK_ANCESTOR.bits;
+        const LEFT_MERGE = Self::LEFT_MERGE_PARENT.bits | Self::LEFT_MERGE_ANCESTOR.bits;
+        const RIGHT_MERGE = Self::RIGHT_MERGE_PARENT.bits | Self::RIGHT_MERGE_ANCESTOR.bits;
         const ANY_MERGE = Self::LEFT_MERGE.bits | Self::RIGHT_MERGE.bits;
         const ANY_FORK = Self::LEFT_FORK.bits | Self::RIGHT_FORK.bits;
         const ANY_FORK_OR_MERGE = Self::ANY_MERGE.bits | Self::ANY_FORK.bits;
@@ -355,55 +446,75 @@ where
                     parent_columns.insert(column, parent);
 
                     // Generate a line from this column to the old
-                    // parent column.  The pad line for the old parent
-                    // column is now blank.
-                    link_line[column] |= LinkLine::RIGHT_FORK;
+                    // parent column.   We need to continue with the style
+                    // that was being used for the parent column.
+                    let was_direct = link_line[parent_column].contains(LinkLine::VERT_PARENT);
+                    link_line[column] |= if was_direct {
+                        LinkLine::RIGHT_FORK_PARENT
+                    } else {
+                        LinkLine::RIGHT_FORK_ANCESTOR
+                    };
                     #[allow(clippy::needless_range_loop)]
                     for i in column + 1..parent_column {
-                        link_line[i] |= LinkLine::HORIZONTAL;
+                        link_line[i] |= if was_direct {
+                            LinkLine::HORIZ_PARENT
+                        } else {
+                            LinkLine::HORIZ_ANCESTOR
+                        };
                     }
-                    link_line[parent_column] = LinkLine::LEFT_MERGE;
+                    link_line[parent_column] = if was_direct {
+                        LinkLine::LEFT_MERGE_PARENT
+                    } else {
+                        LinkLine::LEFT_MERGE_ANCESTOR
+                    };
                     need_link_line = true;
+                    // The pad line for the old parent column is now blank.
                     pad_lines[parent_column] = PadLine::Blank;
                 }
             }
         }
 
         // Connect the node column to all the parent columns.
-        if let (Some((&min_pi, _)), Some((&max_pi, _))) = (
-            parent_columns.iter().next(),
-            parent_columns.iter().next_back(),
-        ) {
+        if let Some(bounds) = AncestorColumnBounds::new(&parent_columns, column) {
             // If the parents extend beyond the columns adjacent to the node, draw a horizontal
-            // line between the two outermost parents.
-            if min_pi + 1 != column || column + 1 != max_pi {
-                #[allow(clippy::needless_range_loop)]
-                for i in min(min_pi, column) + 1..max(max_pi, column) {
-                    link_line[i] |= LinkLine::HORIZONTAL;
-                    need_link_line = true;
-                }
-            }
-            // If there is a parent to the right of the node column, the node merges from the right.
-            if max_pi > column {
-                link_line[column] |= LinkLine::RIGHT_MERGE;
-                need_link_line = true;
-            }
-            // If there is a parent to the left of the node column, the node merges from the left.
-            if min_pi < column {
-                link_line[column] |= LinkLine::LEFT_MERGE;
+            // ancestor line between the two outermost ancestors.
+            for i in bounds.range() {
+                link_line[i] |= bounds.horizontal_line(i);
                 need_link_line = true;
             }
 
-            // Each parent forks towards the node column.
+            // If there is a parent or ancestor to the right of the node
+            // column, the node merges from the right.
+            if bounds.max_parent > column {
+                link_line[column] |= LinkLine::RIGHT_MERGE_PARENT;
+                need_link_line = true;
+            } else if bounds.max_ancestor > column {
+                link_line[column] |= LinkLine::RIGHT_MERGE_ANCESTOR;
+                need_link_line = true;
+            }
+
+            // If there is a parent or ancestor to the left of the node column, the node merges from the left.
+            if bounds.min_parent < column {
+                link_line[column] |= LinkLine::LEFT_MERGE_PARENT;
+                need_link_line = true;
+            } else if bounds.min_ancestor < column {
+                link_line[column] |= LinkLine::LEFT_MERGE_ANCESTOR;
+                need_link_line = true;
+            }
+
+            // Each parent or ancestor forks towards the node column.
             #[allow(clippy::comparison_chain)]
             for (&i, p) in parent_columns.iter() {
                 pad_lines[i] = self.columns[i].to_pad_line();
                 if i < column {
-                    link_line[i] |= LinkLine::RIGHT_FORK;
+                    link_line[i] |=
+                        p.to_link_line(LinkLine::RIGHT_FORK_PARENT, LinkLine::RIGHT_FORK_ANCESTOR);
                 } else if i == column {
-                    link_line[i] |= LinkLine::CHILD | p.to_link_line();
+                    link_line[i] |= LinkLine::CHILD
+                        | p.to_link_line(LinkLine::VERT_PARENT, LinkLine::VERT_ANCESTOR);
                 } else {
-                    link_line[i] |= LinkLine::LEFT_FORK;
+                    link_line[i] |=
+                        p.to_link_line(LinkLine::LEFT_FORK_PARENT, LinkLine::LEFT_FORK_ANCESTOR);
                 }
             }
         }

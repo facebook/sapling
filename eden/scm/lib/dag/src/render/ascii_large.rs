@@ -112,62 +112,72 @@ where
             for (i, cur) in link_row.iter().enumerate() {
                 // Top left
                 if i > 0 {
-                    if cur.contains(LinkLine::LEFT_MERGE) {
+                    if cur.intersects(LinkLine::LEFT_MERGE_PARENT) {
                         top_link_line.push_str("/");
-                    } else if cur.contains(LinkLine::HORIZONTAL) {
+                    } else if cur.intersects(LinkLine::LEFT_MERGE_ANCESTOR) {
+                        top_link_line.push_str(".");
+                    } else if cur.intersects(LinkLine::HORIZ_PARENT) {
                         top_link_line.push_str("_");
+                    } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
+                        top_link_line.push_str(".");
                     } else {
                         top_link_line.push_str(" ");
                     }
                 }
 
                 // Top center
-                if cur.contains(LinkLine::CHILD | LinkLine::PARENT) {
+                if cur.intersects(LinkLine::VERT_PARENT) {
                     top_link_line.push_str("|");
-                } else if cur.contains(LinkLine::CHILD | LinkLine::ANCESTOR) {
+                } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
                     top_link_line.push_str(".");
-                } else if cur.contains(LinkLine::ANY_MERGE) {
+                } else if cur.intersects(LinkLine::ANY_MERGE) {
                     top_link_line.push_str(" ");
-                } else if cur.contains(LinkLine::HORIZONTAL) {
+                } else if cur.intersects(LinkLine::HORIZ_PARENT) {
                     top_link_line.push_str("_");
-                } else if cur.contains(LinkLine::PARENT) {
-                    top_link_line.push_str("|");
-                } else if cur.contains(LinkLine::ANCESTOR) {
+                } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
                     top_link_line.push_str(".");
                 } else {
                     top_link_line.push_str(" ");
                 }
 
                 // Top right
-                if cur.contains(LinkLine::RIGHT_MERGE) {
+                if cur.intersects(LinkLine::RIGHT_MERGE_PARENT) {
                     top_link_line.push_str("\\");
-                } else if cur.contains(LinkLine::HORIZONTAL) {
+                } else if cur.intersects(LinkLine::RIGHT_MERGE_ANCESTOR) {
+                    top_link_line.push_str(".");
+                } else if cur.intersects(LinkLine::HORIZ_PARENT) {
                     top_link_line.push_str("_");
+                } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
+                    top_link_line.push_str(".");
                 } else {
                     top_link_line.push_str(" ");
                 }
 
                 // Bottom left
                 if i > 0 {
-                    if cur.contains(LinkLine::LEFT_FORK) {
+                    if cur.intersects(LinkLine::LEFT_FORK_PARENT) {
                         bot_link_line.push_str("\\");
+                    } else if cur.intersects(LinkLine::LEFT_FORK_ANCESTOR) {
+                        bot_link_line.push_str(".");
                     } else {
                         bot_link_line.push_str(" ");
                     }
                 }
 
                 // Bottom center
-                if cur.contains(LinkLine::PARENT) {
+                if cur.intersects(LinkLine::VERT_PARENT) {
                     bot_link_line.push_str("|");
-                } else if cur.contains(LinkLine::ANCESTOR) {
+                } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
                     bot_link_line.push_str(".");
                 } else {
                     bot_link_line.push_str(" ");
                 }
 
                 // Bottom Right
-                if cur.contains(LinkLine::RIGHT_FORK) {
+                if cur.intersects(LinkLine::RIGHT_FORK_PARENT) {
                     bot_link_line.push_str("/");
+                } else if cur.intersects(LinkLine::RIGHT_FORK_ANCESTOR) {
+                    bot_link_line.push_str(".");
                 } else {
                     bot_link_line.push_str(" ");
                 }
@@ -317,7 +327,7 @@ mod tests {
             |\    |
             | \   |
             |  o  |     P
-            |  |\___
+            |  |\_|_
             |  |  | \
             |  |  |  o  O
             |  |  |  |
@@ -332,7 +342,7 @@ mod tests {
             |  |  |  |  |
             |  |  |  |  |
             o  |  |  |  |  K
-            | _________/
+            | _|__|__|_/
             |/ |  |  |
             o  |  |  |  J
             |  |  |  |
@@ -344,7 +354,7 @@ mod tests {
             |     |  |
             |     |  |
             o     |  |  G
-            |\______ |
+            |\____|_ |
             |     | \|
             |     |  o  F
             |     | /
@@ -377,7 +387,7 @@ mod tests {
             |  |  |
             |  |  |
             |  o  |        H
-            | /|\______
+            | /|\_|____
             |/ | \| \  \
             |  |  |  |  o  G
             |  |  |  |  |
@@ -389,7 +399,7 @@ mod tests {
             |  |  |\ |
             |  |  | \|
             |  o  |  |  C
-            |  | ___/
+            |  | _|_/
             |  |/ |
             o  |  |  F
             | /   |
@@ -464,14 +474,14 @@ mod tests {
             .
             .
             o     D
-            |\
-            | \
+            |.
+            | .
             |  o  C
             |  .
             |  .
             o  .  B
-            | /
-            |/
+            | .
+            |.
             o  A"#
         );
     }
@@ -482,14 +492,14 @@ mod tests {
             render(&test_fixtures::SPLIT_PARENTS),
             r#"
                      o  E
-              ______/.
-             /  /  / .
+              ...___/.
+             .  /  / .
             .  o  |  .  D
             . / \ |  .
             ./   \|  .
             |     o  .  C
-            |     | /
-            |     |/
+            |     | .
+            |     |.
             o     |  B
             | ___/
             |/
