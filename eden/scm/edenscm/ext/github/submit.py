@@ -166,8 +166,12 @@ async def update_commits_in_stack(ui, repo) -> int:
     # Add the head of the stack to the sapling-pr-archive branch.
     tip = hex(partitions[0][0].node)
 
+    if not repository:
+        repository = await get_repository_for_origin(origin)
     rewrite_and_archive_requests = [
-        rewrite_pull_request_body(partition, index, pr_numbers_and_num_commits, ui)
+        rewrite_pull_request_body(
+            partition, index, pr_numbers_and_num_commits, repository, ui
+        )
         for index, partition in enumerate(partitions)
     ] + [
         add_pr_head_to_archives(
@@ -182,12 +186,16 @@ async def rewrite_pull_request_body(
     partition: List[CommitData],
     index: int,
     pr_numbers_and_num_commits: List[Tuple[int, int]],
+    repository: Repository,
     ui,
 ):
     head_commit_data = partition[0]
     commit_msg = head_commit_data.get_msg()
     title, body = create_pull_request_title_and_body(
-        commit_msg, pr_numbers_and_num_commits, index
+        commit_msg,
+        pr_numbers_and_num_commits,
+        index,
+        repository,
     )
     pr = head_commit_data.pr
     assert pr
@@ -271,22 +279,38 @@ def create_pull_request_title_and_body(
     commit_msg: str,
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     pr_numbers_index: int,
+    repository: Repository,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
 
     >>> commit_msg = 'The original commit message.\nSecond line of message.'
-    >>> pr_numbers_and_num_commits = [(1, 1), (2, 2), (3, 1), (4, 1)]
+    >>> pr_numbers_and_num_commits = [(1, 1), (2, 2), (42, 1), (4, 1)]
     >>> pr_numbers_index = 2
+    >>> repository = Repository(id="abcd=", owner="facebook", name="sapling", default_branch="main", is_fork=42)
     >>> title, body = create_pull_request_title_and_body(
     ...     commit_msg,
     ...     pr_numbers_and_num_commits,
     ...     pr_numbers_index,
+    ...     repository,
     ... )
     >>> title == 'The original commit message.'
     True
-    >>> body == 'Stack created with [Sapling]\n* #1\n* #2 (2 commits)\n* __->__ #3\n* #4\n\nThe original commit message.\nSecond line of message.\n'
+    >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
+    >>> body == ('Stack created with [Sapling](https://sapling-scm.com). ' +
+    ...     f'Best reviewed with [ReviewStack]({reviewstack_url}).\n' +
+    ...     '* #1\n' +
+    ...     '* #2 (2 commits)\n' +
+    ...     '* __->__ #42\n' +
+    ...     '* #4\n' +
+    ...     '\n' +
+    ...     'The original commit message.\n' +
+    ...     'Second line of message.\n')
     True
     """
+    pr = pr_numbers_and_num_commits[pr_numbers_index][0]
+    reviewstack_url = (
+        f"https://reviewstack.dev/{repository.owner}/{repository.name}/pull/{pr}"
+    )
     bulleted_list = "\n".join(
         [
             format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
@@ -294,7 +318,7 @@ def create_pull_request_title_and_body(
         ]
     )
     title = firstline(commit_msg)
-    body = f"""Stack created with [Sapling]
+    body = f"""Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
 {bulleted_list}
 
 {commit_msg}
@@ -373,7 +397,7 @@ async def add_pr_head_to_archives(
     *,
     ui,
     origin: str,
-    repository: Optional[Repository],
+    repository: Repository,
     tip: str,
     get_gitdir: Callable[[], str],
 ):
@@ -389,8 +413,6 @@ async def add_pr_head_to_archives(
     if not username:
         raise error.Abort(_("could not determine GitHub username"))
 
-    if not repository:
-        repository = await get_repository_for_origin(origin)
     branch_name = f"sapling-pr-archive-{username}"
     # Try to merge the tip directly, though this may fail if tip has already
     # been merged or if the branch has not been created before. We try to merge
