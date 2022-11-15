@@ -45,7 +45,7 @@ def convert(s: str) -> str:
 def githelp(ui, repo, *args, **kwargs):
     """suggests the @Product@ equivalent of the given git command
 
-    Usage: @prog@ githelp -- <git command>
+    Usage: @prog@ githelp -- $COMMAND
 
     Example:
 
