@@ -22,6 +22,7 @@ def templatemap():
     currident = default()
     return {
         "@prog@": currident.cliname(),
+        "@PROG@": currident.cliname().upper(),
         "@Product@": currident.productname(),
         "@LongProduct@": currident.longproductname(),
     }

@@ -853,7 +853,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
 
 
 @command(
-    "bisect|bi|bis|bise|bisec",
+    "bisect|bi",
     [
         ("r", "reset", False, _("reset bisect state")),
         ("g", "good", False, _("mark changeset good")),
@@ -869,7 +869,8 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             _("do not skip changesets with no changes in sparse profile"),
         ),
     ],
-    _("[-gbsr] [-U] [-S] [-c CMD] [REV]"),
+    _("[OPTION]... [-c CMD] [REV]"),
+    legacyaliases=["bis", "bise", "bisec"],
 )
 def bisect(
     ui,
@@ -885,52 +886,54 @@ def bisect(
     noupdate=None,
     nosparseskip=None,
 ):
-    """subdivision search of changesets
+    """binary search of commits
 
-    This command helps to find changesets which introduce problems. To
-    use, mark the earliest changeset you know exhibits the problem as
-    bad, then mark the latest changeset which is free from the problem
-    as good. Bisect will update your working directory to a revision
-    for testing (unless the -U/--noupdate option is specified). Once
-    you have performed tests, mark the working directory as good or
-    bad, and bisect will either update to another candidate changeset
-    or announce that it has found the bad revision. The command will
-    also skip changesets, which don't contain changes in the sparse
-    profile, unless the -S/--nosparseskip option is specified.
+    Find the commit that introduced a problem. To use, mark the
+    earliest commit you know exhibits the problem as bad, then mark
+    the latest commit which is free from the problem as good. Bisect
+    will update your working copy to a commit for testing (unless the
+    ``-U/--noupdate`` option is specified). Once you have tested the
+    commit, mark the working copy as good or bad, and bisect will
+    either update to another candidate commit or announce that it has
+    found the bad commit.
 
-    As a shortcut, you can also use the revision argument to mark a
-    revision as good or bad without checking it out first.
+    When using a sparse profile, bisect skips commits that don't
+    overlap with the sparse config unless the ``-S/--nosparseskip``
+    is specified.
 
-    If you supply a command, it will be used for automatic bisection.
-    The environment variable HG_NODE will contain the ID of the
-    changeset being tested. The exit status of the command will be
-    used to mark revisions as good or bad: status 0 means good, 125
-    means to skip the revision, 127 (command not found) will abort the
-    bisection, and any other non-zero exit status means the revision
-    is bad.
+    As a shortcut, you can use the REV argument to mark a
+    commit as good or bad without checking it out first.
+
+    If you supply a command with ``-c/--command``, it will be used for
+    automatic bisection. The environment variable @PROG@_NODE will
+    contain the ID of the commit being tested. The exit status of the
+    command will be used to mark commits as good or bad: status 0
+    means good, 125 means to skip the commit, 127 (command not
+    found) will abort the bisection, and any other non-zero exit
+    status means the commit is bad.
 
     .. container:: verbose
 
       Some examples:
 
-      - start a bisection with known bad revision 34, and good revision 12::
+      - start a bisection with known bad commit 2589fca98, and good commit 3fc9965cd::
 
-          @prog@ bisect --bad 34
-          @prog@ bisect --good 12
+          @prog@ bisect --bad 2589fca98
+          @prog@ bisect --good 3fc9965cd
 
-      - advance the current bisection by marking current revision as good or
+      - advance the current bisection by marking current commit as good or
         bad::
 
           @prog@ bisect --good
           @prog@ bisect --bad
 
-      - mark the current revision, or a known revision, to be skipped (e.g. if
-        that revision is not usable because of another issue)::
+      - mark the current commit, or a known commit, to be skipped (e.g. if
+        that commit is not usable because of another issue)::
 
           @prog@ bisect --skip
-          @prog@ bisect --skip 23
+          @prog@ bisect --skip 530553bab
 
-      - skip all revisions that do not touch directories ``foo`` or ``bar``::
+      - skip all commits that do not touch directories ``foo`` or ``bar``::
 
           @prog@ bisect --skip "!( file('path:foo') & file('path:bar') )"
 
@@ -938,25 +941,25 @@ def bisect(
 
           @prog@ bisect --reset
 
-      - use 'make && make tests' to automatically find the first broken
-        revision::
+      - use ``make && make tests`` to automatically find the first broken
+        commit::
 
           @prog@ bisect --reset
-          @prog@ bisect --bad 34
-          @prog@ bisect --good 12
+          @prog@ bisect --bad 2589fca98
+          @prog@ bisect --good 3fc9965cd
           @prog@ bisect --command "make && make tests"
 
-      - see all changesets whose states are already known in the current
+      - see all commits whose states are already known in the current
         bisection::
 
           @prog@ log -r "bisect(pruned)"
 
-      - see the changeset currently being bisected (especially useful
-        if running with -U/--noupdate)::
+      - see the commit currently being bisected (especially useful
+        if running with ``-U/--noupdate``)::
 
           @prog@ log -r "bisect(current)"
 
-      - see all changesets that took part in the current bisection::
+      - see all commits that took part in the current bisection::
 
           @prog@ log -r "bisect(range)"
 
@@ -1078,8 +1081,11 @@ the sparse profile from the known %s changeset %s\n"
                 # update state
                 state["current"] = [node]
                 hbisect.save_state(repo, state)
+                varname = identity.default().cliname().upper()
                 status = ui.system(
-                    command, environ={"HG_NODE": hex(node)}, blockedtag="bisect_check"
+                    command,
+                    environ={f"{varname}_NODE": hex(node)},
+                    blockedtag="bisect_check",
                 )
                 if status == 125:
                     transition = "skip"
@@ -1192,7 +1198,7 @@ the sparse profile from the known %s changeset %s\n"
         ("i", "inactive", False, _("mark a bookmark inactive")),
     ]
     + formatteropts,
-    _("[OPTIONS]... [NAME]..."),
+    _("[OPTION]... [NAME]..."),
     legacyaliases=["bookmarks", "boo", "bookm", "bookma", "bookmar"],
 )
 def bookmark(ui, repo, *names, **opts):
