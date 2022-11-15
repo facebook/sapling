@@ -260,7 +260,7 @@ interval=60
 [templatealias]
 sl_hash_minlen=9
 sl_phase_label="{ifeq(phase, 'public', 'sl.public', 'sl.draft')}"
-sl_node="{label(sl_phase_label, 'shortest(node, sl_hash_minlen)')}"
+sl_node="{label(sl_phase_label, shortest(node, sl_hash_minlen))}"
 sl_node_debug="{label(sl_phase_label, '{node}')}"
 sl_phase_debug="{ifeq(phase, 'draft', '', '({phase})')}"
 sl_undonode="{label('sl.oldbook', '{shortest(node, sl_hash_minlen)}')}"
