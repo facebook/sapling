@@ -29,8 +29,3 @@ Check if ":hg:`help TOPIC`" is valid:
   $ testrepohg files 'glob:edenscm/**/*.py' \
   > | sed 's|\\|/|g' \
   > | xargs $PYTHON "$TESTTMP/scanhelptopics.py" > $TESTTMP/topics
-
-Remove subversion from the list; it does not work on macOS and casuses this test
-to print errors.
-  $ grep -v subversion $TESTTMP/topics > $TESTTMP/topics_filtered
-  $ cat $TESTTMP/topics_filtered | xargs -n1 -P $NPROC hg --cwd / help >/dev/null

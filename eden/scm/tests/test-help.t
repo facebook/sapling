@@ -487,11 +487,16 @@ Test the textwidth config option
   $ hg root -h  --config ui.textwidth=50
   hg root
   
-  print the root (top) of the current working
-  directory
+  print the repository's root (top) of the current
+  working directory
   
       Print the root directory of the current
       repository.
+  
+      Frequently useful in shells scripts and
+      automation to run commands like:
+  
+        $  ./$(sl root)/bin/script.py
   
       Returns 0 on success.
   
@@ -508,9 +513,13 @@ Test help on a self-referencing alias that is a rust command
   
   hg root
   
-  print the root (top) of the current working directory
+  print the repository's root (top) of the current working directory
   
       Print the root directory of the current repository.
+  
+      Frequently useful in shells scripts and automation to run commands like:
+  
+        $  ./$(sl root)/bin/script.py
   
       Returns 0 on success.
   
@@ -524,9 +533,13 @@ Test help on a self-referencing alias that is a rust command
   
   hg root
   
-  print the root (top) of the current working directory
+  print the repository's root (top) of the current working directory
   
       Print the root directory of the current repository.
+  
+      Frequently useful in shells scripts and automation to run commands like:
+  
+        $  ./$(sl root)/bin/script.py
   
       Returns 0 on success.
   

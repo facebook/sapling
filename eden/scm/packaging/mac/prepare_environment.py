@@ -109,7 +109,7 @@ def get_bottle(bottle_name: str, bottle_hash: str, tmpdir: str):
             url = line.split()[1]
             break
     if url is None:
-        raise Exception(f"Unable to get actual url when querying {auth_url}")
+        raise RuntimeException(f"Unable to get actual url when querying {auth_url}")
     cmd = [
         "curl",
         "--location",

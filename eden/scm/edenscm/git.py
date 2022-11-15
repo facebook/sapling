@@ -144,7 +144,7 @@ def initgit(repo, gitdir, giturl=None):
     """
     from . import visibility
 
-    with repo.lock(), repo.transaction("initgit"):
+    with repo.lock():
         repo.svfs.writeutf8(GIT_DIR_FILE, gitdir)
         repo.storerequirements.add(GIT_FORMAT_REQUIREMENT)
         repo.storerequirements.add(GIT_STORE_REQUIREMENT)

@@ -306,7 +306,7 @@ Testing -h/--help:
   
    previous      check out an ancestor commit
    next          check out a descendant commit
-   split         split a changeset into smaller changesets
+   split         split a commit into smaller commits
    fold          combine multiple commits into a single commit
   
   Undo changes:
@@ -377,7 +377,7 @@ Testing -h/--help:
   
    previous      check out an ancestor commit
    next          check out a descendant commit
-   split         split a changeset into smaller changesets
+   split         split a commit into smaller commits
    fold          combine multiple commits into a single commit
   
   Undo changes:
