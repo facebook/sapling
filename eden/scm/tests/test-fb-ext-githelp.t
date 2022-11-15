@@ -32,27 +32,23 @@ githelp should fail nicely if we don't give it arguments
 
 githelp on a command with options should succeed
   $ hg githelp -- commit -pm "abc"
-  hg record -m 'abc'
+  hg commit -m 'abc' -i
 
 githelp on a command with standalone unrecognized option should succeed with warning
   $ hg githelp -- commit -p -v
   ignoring unknown option -v
-  hg record
+  hg commit -i
 
 githelp on a command with unrecognized option packed with other options should fail with error
   $ hg githelp -- commit -pv
   abort: unknown option -v packed with other options
   Please try passing the option as it's own flag: -v
-  
-  If this is a valid git command, please search/ask in the Source Control @ FB group (and don't forget to tell us what the git command does).
   [255]
 
 githelp with a customized footer for invalid commands
   $ hg --config githelp.unknown.footer="This is a custom footer." githelp -- commit -pv
   abort: unknown option -v packed with other options
   Please try passing the option as it's own flag: -v
-  
-  This is a custom footer.
   [255]
 
 githelp for git rebase --skip
@@ -70,7 +66,7 @@ githelp for git rebase --interactive
 
 githelp for git commit --amend (hg commit --amend pulls up an editor)
   $ hg githelp -- commit --amend
-  hg commit --amend
+  hg amend --edit
 
 githelp for git commit --amend --no-edit (hg amend does not pull up an editor)
   $ hg githelp -- commit --amend --no-edit
@@ -78,98 +74,76 @@ githelp for git commit --amend --no-edit (hg amend does not pull up an editor)
 
 githelp for git checkout -- . (checking out a directory)
   $ hg githelp -- checkout -- .
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert .
 
 
 githelp for git checkout "HEAD^" (should still work to pass a rev)
   $ hg githelp -- checkout "HEAD^"
-  hg update .^
+  hg goto .^
 
 githelp checkout: args after -- should be treated as paths no matter what
   $ hg githelp -- checkout -- HEAD
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert HEAD
 
 
 githelp for git checkout with rev and path
   $ hg githelp -- checkout "HEAD^" -- file.txt
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert -r .^ file.txt
 
 
 githelp for git with rev and path, without separator
   $ hg githelp -- checkout "HEAD^" file.txt
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert -r .^ file.txt
 
 
 githelp for checkout with a file as first argument
   $ hg githelp -- checkout test_file
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert test_file
 
 
 githelp for checkout with a removed file as first argument
   $ hg githelp -- checkout removed_file
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert removed_file
 
 
 githelp for checkout with a deleted file as first argument
   $ hg githelp -- checkout deleted_file
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert deleted_file
 
 
 githelp for checkout with a untracked file as first argument
   $ hg githelp -- checkout untracked_file
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert untracked_file
 
 
 githelp for checkout with a directory as first argument
   $ hg githelp -- checkout dir
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert dir
 
 
 githelp for checkout when not in repo root
   $ cd dir
   $ hg githelp -- checkout file
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert file
 
   $ cd ..
 
 githelp for checkout with an argument that is both a file and a revision
   $ hg githelp -- checkout both
-  hg update both
+  hg goto both
 
 githelp for checkout with the -p option
   $ hg githelp -- git checkout -p xyz
   hg revert -i -r xyz
 
   $ hg githelp -- git checkout -p xyz -- abc
-  note: use --no-backup to avoid creating .orig files
-  
   hg revert -i -r xyz abc
 
 githelp for checkout with the -f option and a rev
   $ hg githelp -- git checkout -f xyz
-  hg update -C xyz
+  hg goto -C xyz
   $ hg githelp -- git checkout --force xyz
-  hg update -C xyz
+  hg goto -C xyz
 
 githelp for checkout with the -f option without an arg
   $ hg githelp -- git checkout -f
@@ -183,11 +157,23 @@ githelp for grep with pattern and path
 
 githelp for reset, checking ~ in git becomes ~1 in mercurial
   $ hg githelp -- reset HEAD~
-  hg reset .~1
+  Mercurial has no strict equivalent to `git reset`.
+  If you want to remove a commit, use `hg hide -r HASH`.
+  If you want to move a bookmark, use `hg book -r HASH NAME`.
+  If you want to undo a commit, use `hg uncommit.
+  If you want to undo an amend, use `hg unamend.
   $ hg githelp -- reset "HEAD^"
-  hg reset .^
+  Mercurial has no strict equivalent to `git reset`.
+  If you want to remove a commit, use `hg hide -r HASH`.
+  If you want to move a bookmark, use `hg book -r HASH NAME`.
+  If you want to undo a commit, use `hg uncommit.
+  If you want to undo an amend, use `hg unamend.
   $ hg githelp -- reset HEAD~3
-  hg reset .~3
+  Mercurial has no strict equivalent to `git reset`.
+  If you want to remove a commit, use `hg hide -r HASH`.
+  If you want to move a bookmark, use `hg book -r HASH NAME`.
+  If you want to undo a commit, use `hg uncommit.
+  If you want to undo an amend, use `hg unamend.
 
 githelp for git show --name-status
   $ hg githelp -- git show --name-status

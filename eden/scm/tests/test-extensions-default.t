@@ -9,19 +9,19 @@ Tests the behavior of the DEFAULT_EXTENSIONS constant in extensions.py
 
 hg githelp works without enabling:
 
-  $ hg githelp -- git reset HEAD
-  hg reset .
+  $ hg githelp -- git checkout HEAD
+  hg goto .
 
 Behaves identically if enabled manually:
 
-  $ hg githelp --config extensions.githelp= -- git reset HEAD
-  hg reset .
+  $ hg githelp --config extensions.githelp= -- git checkout HEAD
+  hg goto .
 
 Not if turned off:
  (note: extension discovery only works for normal layout)
 
 #if normal-layout
-  $ hg githelp --config extensions.githelp=! -- git reset HEAD
+  $ hg githelp --config extensions.githelp=! -- git checkout HEAD
   unknown command 'githelp'
   (use 'hg help' to get help)
   [255]
@@ -41,7 +41,7 @@ Or overriden by a different path:
   >      ui.warn('Custom version of hg githelp\n')
   > 
   > EOF
-  $ hg githelp --config extensions.githelp=`pwd`/githelp2.py -- git reset HEAD
+  $ hg githelp --config extensions.githelp=`pwd`/githelp2.py -- git checkout HEAD
   Custom version of hg githelp
 
 A default extension's reposetup and extsetup are run:

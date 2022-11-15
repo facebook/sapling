@@ -27,16 +27,7 @@ testedwith = "ships-with-fb-ext"
 
 
 class GitUnknownError(error.Abort):
-    defaultfooter = (
-        "If this is a valid git command, please search/ask in the Source "
-        "Control @ FB group (and don't forget to tell us what the git command "
-        "does)."
-    )
-
     def __init__(self, ui, msg):
-        footer = ui.config("githelp", "unknown.footer", GitUnknownError.defaultfooter)
-        if footer:
-            msg = msg + "\n\n" + footer
         super(GitUnknownError, self).__init__(msg)
 
 
@@ -61,6 +52,9 @@ def githelp(ui, repo, *args, **kwargs):
       $ @prog@ git -- checkout my_file.txt baef1046b
 
       @prog@ revert -r my_file.txt baef1046b
+
+    The translation is best effort, and if an unknown command or parameter
+    combination is detected, it simply returns an error.
     """
 
     if len(args) == 0 or (len(args) == 1 and args[0] == "git"):
@@ -73,7 +67,7 @@ def githelp(ui, repo, *args, **kwargs):
 
     cmd = args[0]
     if not cmd in gitcommands:
-        raise GitUnknownError(ui, "error: unknown git command %s" % cmd)
+        raise GitUnknownError(ui, "error: unknown git command `%s`" % cmd)
 
     args = args[1:]
     return gitcommands[cmd](ui, repo, *args, **kwargs)
@@ -167,14 +161,17 @@ def add(ui, repo, *args, **kwargs) -> None:
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if opts.get("patch"):
-        ui.status(_("note: @prog@ crecord has a better UI to record changes\n"))
+        ui.status(
+            _("note: `@prog@ commit -i` has a UI to commit only part of changes\n")
+        )
         ui.status(
             _(
-                "note: record and crecord will commit when complete, "
+                "note: `@prog@ commit -i` will commit when complete, "
                 "as there is no staging area in @Product@\n\n"
             )
         )
-        cmd = Command("record")
+        cmd = Command("commit")
+        cmd.append("-i")
     else:
         cmd = Command("add")
 
@@ -187,25 +184,8 @@ def add(ui, repo, *args, **kwargs) -> None:
                     "been deleted.\n\n"
                 )
             )
-        if not opts.get("all"):
-            cmd.extend(args)
-        else:
-            ui.status(
-                _(
-                    "note: use @prog@ addremove to remove files that have "
-                    "been deleted.\n\n"
-                )
-            )
 
     ui.status((str(cmd)), "\n")
-
-
-def am(ui, repo, *args, **kwargs) -> None:
-    cmdoptions = []
-    args, opts = parseoptions(ui, cmdoptions, args)
-    cmd = Command("mimport -m")
-    ui.status(str(cmd), "\n\n")
-    ui.status(_("note: requires the MboxExtension and the MqExtension.\n"))
 
 
 def apply(ui, repo, *args, **kwargs) -> None:
@@ -270,10 +250,13 @@ def branch(ui, repo, *args, **kwargs) -> None:
                 # shell command to output the active bookmark for the active
                 # revision
                 old = '`%s log -T"{activebookmark}" -r .`' % prog
-        new = args[0]
-        # pyre-fixme[61]: `old` is undefined, or not always defined.
-        cmd["-m"] = old
-        cmd.append(new)
+            new = args[0]
+            # pyre-fixme[61]: `old` is undefined, or not always defined.
+            cmd["-m"] = old
+            cmd.append(new)
+        else:
+            ui.status(_("`git branch` expects a branch name\n"))
+            return
     else:
         if len(args) > 1:
             cmd["-r"] = args[1]
@@ -334,7 +317,7 @@ def checkout(ui, repo, *args, **kwargs) -> None:
         rev = args[0]
         paths = args[1:] + paths
 
-    cmd = Command("update")
+    cmd = Command("goto")
 
     if opts.get("force"):
         if paths or rev:
@@ -355,7 +338,6 @@ def checkout(ui, repo, *args, **kwargs) -> None:
             cmd = cmd & bookcmd
     # if there is any path argument supplied, use revert instead of update
     elif len(paths) > 0:
-        ui.status(_("note: use --no-backup to avoid creating .orig files\n\n"))
         cmd = Command("revert")
         if opts.get("patch"):
             cmd["-i"] = None
@@ -402,7 +384,7 @@ def clean(ui, repo, *args, **kwargs) -> None:
     cmdoptions = [("d", "d", None, ""), ("f", "force", None, ""), ("x", "x", None, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    cmd = Command("purge")
+    cmd = Command("clean")
     if opts.get("x"):
         cmd["--all"] = None
     cmd.extend(args)
@@ -461,13 +443,12 @@ def commit(ui, repo, *args, **kwargs) -> None:
 
     cmd = Command("commit")
     if opts.get("patch"):
-        cmd = Command("record")
+        cmd.append("-i")
 
     if opts.get("amend"):
+        cmd = Command("amend")
         if opts.get("edit"):
-            cmd["--amend"] = None
-        else:
-            cmd = Command("amend")
+            cmd["--edit"] = None
 
     if opts.get("reuse_message"):
         cmd["-M"] = opts.get("reuse_message")
@@ -705,9 +686,7 @@ def lsfiles(ui, repo, *args, **kwargs) -> None:
     else:
         cmd = Command("files")
     if opts.get("stage"):
-        ui.status(
-            _("note: @Product@ doesn't have a staging area, ignoring " "--stage\n")
-        )
+        ui.status(_("note: @Product@ doesn't have a staging area, ignoring --stage\n"))
     if opts.get("_zero"):
         cmd["-0"] = None
     cmd.append(".")
@@ -807,6 +786,14 @@ def push(ui, repo, *args, **kwargs) -> None:
 
     cmd = Command("push")
 
+    ui.status(
+        _(
+            "note: @Product@ requires specifying what destination bookmark you "
+            "want to push to\n"
+        )
+    )
+    cmd.extend(["--to", "DESTINATION"])
+
     if len(args) > 0:
         cmd.append(args[0])
         if len(args) > 1:
@@ -879,7 +866,7 @@ def rebase(ui, repo, *args, **kwargs) -> None:
         cmd["-d"] = convert(opts.get("onto"))
         if len(args) < 2:
             raise GitUnknownError(ui, "Expected format: git rebase --onto X Y Z")
-        cmd["-s"] = "'::%s - ::%s'" % (convert(args[1]), convert(args[0]))
+        cmd["-s"] = "'%s %% %s'" % (convert(args[1]), convert(args[0]))
     else:
         if len(args) == 1:
             cmd["-d"] = convert(args[0])
@@ -928,23 +915,11 @@ def reset(ui, repo, *args, **kwargs) -> None:
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    commit = convert(args[0] if len(args) > 0 else ".")
-    hard = opts.get("hard")
-
-    if opts.get("mixed"):
-        ui.status(
-            _(
-                "NOTE: --mixed has no meaning since @Product@ has no "
-                + "staging area\n\n"
-            )
-        )
-
-    cmd = Command("reset")
-    if hard:
-        cmd.append("--clean")
-    cmd.append(commit)
-
-    ui.status((str(cmd)), "\n")
+    ui.status(_("@Product@ has no strict equivalent to `git reset`.\n"))
+    ui.status(_("If you want to remove a commit, use `@prog@ hide -r HASH`.\n"))
+    ui.status(_("If you want to move a bookmark, use `@prog@ book -r HASH NAME`.\n"))
+    ui.status(_("If you want to undo a commit, use `@prog@ uncommit.\n"))
+    ui.status(_("If you want to undo an amend, use `@prog@ unamend.\n"))
 
 
 def revert(ui, repo, *args, **kwargs) -> None:
@@ -1074,86 +1049,13 @@ def status(ui, repo, *args, **kwargs) -> None:
     ui.status((str(cmd)), "\n")
 
 
-def svn(ui, repo, *args, **kwargs):
-    svncmd = args[0]
-    if not svncmd in gitsvncommands:
-        ui.warn(_("error: unknown git svn command %s\n") % svncmd)
-
-    args = args[1:]
-    return gitsvncommands[svncmd](ui, repo, *args, **kwargs)
-
-
-def svndcommit(ui, repo, *args, **kwargs) -> None:
-    cmdoptions = []
-    args, opts = parseoptions(ui, cmdoptions, args)
-
-    cmd = Command("push")
-
-    ui.status((str(cmd)), "\n")
-
-
-def svnfetch(ui, repo, *args, **kwargs) -> None:
-    cmdoptions = []
-    args, opts = parseoptions(ui, cmdoptions, args)
-
-    cmd = Command("pull")
-    cmd.append("default-push")
-
-    ui.status((str(cmd)), "\n")
-
-
-def svnfindrev(ui, repo, *args, **kwargs) -> None:
-    cmdoptions = []
-    args, opts = parseoptions(ui, cmdoptions, args)
-
-    cmd = Command("log")
-    cmd["-r"] = args[0]
-
-    ui.status((str(cmd)), "\n")
-
-
-def svnrebase(ui, repo, *args, **kwargs) -> None:
-    cmdoptions = [("l", "local", None, "")]
-    args, opts = parseoptions(ui, cmdoptions, args)
-
-    pullcmd = Command("pull")
-    pullcmd.append("default-push")
-    rebasecmd = Command("rebase")
-    rebasecmd.append("tip")
-
-    cmd = pullcmd & rebasecmd
-
-    ui.status((str(cmd)), "\n")
-
-
 def tag(ui, repo, *args, **kwargs) -> None:
-    cmdoptions = [
-        ("f", "force", None, ""),
-        ("l", "list", None, ""),
-        ("d", "delete", None, ""),
-    ]
-    args, opts = parseoptions(ui, cmdoptions, args)
-
-    if opts.get("list"):
-        cmd = Command("tags")
-    else:
-        cmd = Command("tag")
-        cmd.append(args[0])
-        if len(args) > 1:
-            cmd["-r"] = args[1]
-
-        if opts.get("delete"):
-            cmd["--remove"] = None
-
-        if opts.get("force"):
-            cmd["-f"] = None
-
-    ui.status((str(cmd)), "\n")
+    ui.status(_("@Product@ does not have a direct equivalent of a Git tag.\n"))
+    ui.status(_("Bookmarks can be used to add labels to a commit.\n"))
 
 
 gitcommands = {
     "add": add,
-    "am": am,
     "apply": apply,
     "bisect": bisect,
     "blame": blame,
@@ -1186,14 +1088,6 @@ gitcommands = {
     "show": show,
     "stash": stash,
     "status": status,
-    "svn": svn,
     "tag": tag,
     "whatchanged": deprecated,
-}
-
-gitsvncommands = {
-    "dcommit": svndcommit,
-    "fetch": svnfetch,
-    "find-rev": svnfindrev,
-    "rebase": svnrebase,
 }
