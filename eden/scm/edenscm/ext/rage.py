@@ -337,6 +337,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("unixname", lambda: encoding.environ.get("LOGNAME")),
         ("hostname", lambda: socket.gethostname()),
         ("repo location", lambda: repo.root),
+        ("repo svfs location", lambda: repo.svfs.join("")),
         ("cwd", lambda: pycompat.getcwd()),
         ("fstype", lambda: util.getfstype(repo.root)),
         ("active bookmark", lambda: bookmarks._readactive(repo, repo._bookmarks)),
