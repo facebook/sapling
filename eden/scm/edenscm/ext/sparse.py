@@ -470,7 +470,10 @@ def _setupcommit(ui) -> None:
 
 
 def _setuplog(ui) -> None:
-    entry = commands.table["log|history"]
+    entry = commands.table.get("log", None)
+    if entry is None:
+        # Try command with legacy alias.
+        entry = commands.table["log|history"]
     entry[1].append(
         ("", "sparse", None, "limit to changesets affecting the sparse checkout")
     )
