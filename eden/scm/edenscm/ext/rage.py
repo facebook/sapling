@@ -392,6 +392,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("hg summary", lambda: hgcmd("summary")),
         ("hg cloud status", lambda: hgcmd("cloud status")),
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
+        ("hg debugrunlog", lambda: hgcmd("debugrunlog")),
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse", lambda: hgcmd("sparse")),
         ("hg debugchangelog", lambda: hgcmd("debugchangelog")),
