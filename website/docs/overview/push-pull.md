@@ -53,7 +53,7 @@ o  59125794a  20 seconds ago  remote/main
 
 ### Push
 
-Use the push command to push local commits to remote. Specify the `--to` to specify the remote branch/bookmark to push commits to. Specify `-r` to specify local commit you want pushed. If `-r` is ommitted, the currently checkedout commit is pushed.
+Use the push command to push local commits to remote. Specify the `--to` to specify the remote branch/bookmark to push commits to. Specify `-r` to specify local commit you want pushed. If `-r` is ommitted, the currently checked out commit is pushed.
 
 ```bash
 # Push current commit stack to the remote main bookmark.
@@ -64,13 +64,13 @@ During a normal `git push` or an `sl push` to a Git repository, the push simply
 sends the commits to the server and moves the branch or bookmark forward to the
 newly pushed commit.
 
-When `sl push` is used with the Sapling server, `sl push --to BOOKMARK` actually pushes the
-commits to the server and the server rebases them onto the destination bookmark.
-This allows organizations with high push rates avoid races where someone is
-unable to push because someone else pushed first. This server side rebase is
-special in that it does not do any file content merging. If someone else touched
-the same files you touched, your push will fail and you will need to pull,
-rebase, and push again.
+When `sl push` is used with the Sapling server, `sl push --to BOOKMARK` pushes the
+commits to the server and the server additionally rebases them onto the
+destination bookmark.  This allows organizations with high push rates to avoid
+races where someone is unable to push because someone else pushed first. This
+server side rebase is simplified, in that it does not do any file content merging.
+If someone else touched the same files you touched, your push will fail and you
+will need to pull, rebase, and push again.
 
 
 Notable push options (some of these may not work when working with Git repos):
@@ -78,7 +78,7 @@ Notable push options (some of these may not work when working with Git repos):
 - `-r` / `--rev` Specifies which commit to push. Ancestors of this commit will
   also be pushed. Note, only one head can be pushed at a time, so you can't push
   2+ branches at once.
-- `--to` Specifies the remote bookmark to push into.
+- `--to` Specifies the remote bookmark to push onto.
 - `--non-forward-move` Indicates that the push will result in the remote
   bookmark moving backwards or sideways, instead of moving forward to a
   descendant. This is used when a bookmark is in the wrong location and needs to

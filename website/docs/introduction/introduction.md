@@ -82,7 +82,7 @@ o  a555d064c  Today at 09:06
 ~
 
 # Go to the previous commit.
-$ hg prev
+$ sl prev
 $ sl
 o  c448e50fe  Today at 11:06  remote/main
 ╷

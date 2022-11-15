@@ -31,7 +31,7 @@ sl revert -r 060f340a9 my_file.txt
 |--- |--- |--- |
 |Your Commits |N/A |sl |
 |Current History |git log |sl log |
-|Edit Files |git status |sl status |
+|Edited Files |git status |sl status |
 |Current Hash |git rev-parse HEAD |sl whereami |
 |Pending Changes |git diff |sl diff |
 |Current Commit |git show |sl show |
@@ -45,7 +45,7 @@ sl revert -r 060f340a9 my_file.txt
 |All local commits |N/A |draft() |
 |Commits in branch X but not Y |Y..X |X % Y |
 
-See `sl help revset` for my ways of referencing commits.
+See `sl help revset` for more ways of referencing commits.
 
 ### Working with Files
 
