@@ -407,6 +407,7 @@ def copystore(ui, srcrepo, destpath) -> None:
             ui.debug("linked %d files\n" % num)
         else:
             ui.debug("copied %d files\n" % num)
+        # pyre-fixme[7]: Expected `None` but got `Optional[pythonlock]`.
         return destlock
     except:  # re-raises
         release(destlock)

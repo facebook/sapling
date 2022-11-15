@@ -18,6 +18,7 @@ import os
 import socket
 import time
 import warnings
+from typing import Optional
 
 from bindings import lock as nativelock
 
@@ -143,7 +144,9 @@ class lockinfo(object):
         return _("process %r on host %r") % (self.pid, self.host)
 
 
-def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
+def trylock(
+    ui, vfs, lockname, timeout, warntimeout: Optional[int] = None, *args, **kwargs
+):
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
@@ -180,7 +183,7 @@ def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
 
 
 # Temporary method to dispatch based on devel.lockmode during transition to rust locks.
-def lock(*args, ui=None, **kwargs):
+def lock(*args, ui=None, **kwargs) -> "pythonlock":
     lockclass = pythonlock
 
     if ui:
@@ -514,7 +517,7 @@ class rustlock(pythonlock):
         self._lockfd.unlock()
 
 
-def islocked(vfs, name):
+def islocked(vfs, name) -> bool:
     try:
         lock(vfs, name, timeout=0, checkdeadlock=False).release()
         return False
@@ -522,7 +525,7 @@ def islocked(vfs, name):
         return True
 
 
-def release(*locks):
+def release(*locks) -> None:
     for lock in locks:
         if lock is not None:
             lock.release()
