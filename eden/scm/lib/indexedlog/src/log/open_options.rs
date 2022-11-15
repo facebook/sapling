@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::Range;
+use std::sync::Arc;
 
 use tracing::debug_span;
 
@@ -49,7 +50,7 @@ pub struct IndexDef {
     /// This function gets the commit metadata as input. It then parses the
     /// input, and extract parent commit hashes as the output. A git commit can
     /// have 0 or 1 or 2 or even more parents. Therefore the output is a [`Vec`].
-    pub(crate) func: fn(&[u8]) -> Vec<IndexOutput>,
+    pub(crate) func: Arc<dyn Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static>,
 
     /// Name of the index.
     ///
@@ -180,9 +181,12 @@ impl IndexDef {
     ///
     /// When adding new or changing index functions, make sure a different
     /// `name` is used so the existing index won't be reused incorrectly.
-    pub fn new(name: &'static str, index_func: fn(&[u8]) -> Vec<IndexOutput>) -> Self {
+    pub fn new(
+        name: &'static str,
+        index_func: impl Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static,
+    ) -> Self {
         Self {
-            func: index_func,
+            func: Arc::new(index_func),
             name,
             // For a typical commit hash index (20-byte). IndexedLog insertion
             // overhead is about 1500 entries per millisecond. For other things
