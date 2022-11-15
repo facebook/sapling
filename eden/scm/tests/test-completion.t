@@ -399,7 +399,7 @@ Show all commands + options
   $ hg debugcommands
   add: include, exclude, dry-run
   addremove: similarity, include, exclude, dry-run
-  annotate: rev, no-follow, text, user, file, date, number, changeset, line-number, skip, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
+  annotate: rev, no-follow, text, user, file, date, number, changeset, line-number, skip, short-date, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, include, exclude, template
   archive: no-decode, prefix, rev, type, include, exclude
   backout: merge, no-commit, parent, rev, edit, tool, include, exclude, message, logfile, date, user
   bisect: reset, good, bad, skip, extend, command, noupdate, nosparseskip

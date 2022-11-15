@@ -19,6 +19,9 @@ restack:doc=automatically restack commits
 sl=smartlog -T '{sl}'
 ssl=smartlog -T '{ssl}'
 
+[annotate]
+default-flags=user short-date
+
 [automv]
 similarity=75
 

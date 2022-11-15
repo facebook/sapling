@@ -336,6 +336,7 @@ def addremove(ui, repo, *pats, **opts):
         ("c", "changeset", None, _("list the changeset")),
         ("l", "line-number", None, _("show line number at the first appearance")),
         ("", "skip", [], _("revision to not display (EXPERIMENTAL)"), _("REV")),
+        ("", "short-date", None, _("list the brief date (EXPERIMENTAL)")),
     ]
     + diffwsopts
     + walkopts
@@ -364,10 +365,23 @@ def annotate(ui, repo, *pats, **opts):
     if not pats:
         raise error.Abort(_("at least one filename or pattern is required"))
 
+    for f in ui.configlist("annotate", "default-flags"):
+        if opts.get(f) is None:
+            opts[f] = True
+
+    if opts.get("date") is None:
+        # If --date wasn't specified, allow short-date to flow from config.
+        opts["date"] = opts.get("short-date")
+    else:
+        # User specified a date flag - that overrides short-date.
+        opts.pop("short-date", None)
+
     ctx = scmutil.revsingle(repo, opts.get("rev"))
 
     rootfm = ui.formatter("annotate", opts)
-    if ui.quiet:
+    # short-date exists to allow us to enable brief date display via
+    # config without needing to enable --quiet.
+    if ui.quiet or opts.get("short-date"):
         datefunc = util.shortdate
     else:
         datefunc = util.datestr
