@@ -1436,7 +1436,7 @@ class ui(object):
             else:
                 with perftrace.trace("Editor"):
                     self.system(
-                        '%s "%s"' % (editor, name),
+                        f"{editor} {util.shellquote(name)}",
                         environ=environ,
                         onerr=error.Abort,
                         errprefix=_("edit failed"),
