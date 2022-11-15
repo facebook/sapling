@@ -513,7 +513,7 @@ def extsetup(ui):
 
     extensions.wrapcommand(commands.table, "pull", expullcmd)
 
-    entry = extensions.wrapcommand(commands.table, "update", updatecmd)
+    entry = extensions.wrapcommand(commands.table, "goto", updatecmd)
     entry[1].append(("B", "bookmark", "", "create new bookmark"))
 
     exchange.pushdiscoverymapping["bookmarks"] = expushdiscoverybookmarks

@@ -6174,7 +6174,7 @@ def _ensurebaserev(ui, repo, fname):
 
 
 @command(
-    "update|up|checkout|co|goto|go",
+    "goto|go",
     [
         ("C", "clean", None, _("discard uncommitted changes (no backup)")),
         ("c", "check", None, _("require clean working copy")),
@@ -6185,7 +6185,21 @@ def _ensurebaserev(ui, repo, fname):
         ("", "continue", None, _("resume interrupted update --merge (ADVANCED)")),
     ]
     + mergetoolopts,
-    legacyaliases=["upd", "upda", "updat", "che", "chec", "check", "checko", "checkou"],
+    legacyaliases=[
+        "update",
+        "up",
+        "upd",
+        "upda",
+        "updat",
+        "checkout",
+        "co",
+        "che",
+        "chec",
+        "check",
+        "checko",
+        "checkou",
+    ],
+    legacyname="update",
 )
 def update(
     ui,

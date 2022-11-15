@@ -185,7 +185,7 @@ class command(_funcregistrarbase):
 
     possiblecmdtypes = {unrecoverablewrite, recoverablewrite, readonly}
 
-    showlegacyaliases = "hg" in identity.default().cliname()
+    showlegacynames = "hg" in identity.default().cliname()
 
     def _doregister(
         self,
@@ -200,6 +200,7 @@ class command(_funcregistrarbase):
         cmdtype=unrecoverablewrite,
         subonly=False,
         legacyaliases=[],
+        legacyname=None,
     ):
         def subcommand(table=None, categories=None):
             c = command(table)
@@ -212,18 +213,23 @@ class command(_funcregistrarbase):
                 "unknown cmdtype value '%s' for " "'%s' command" % (cmdtype, name)
             )
 
-        if legacyaliases:
-            legacyname = "|".join((name, "|".join(legacyaliases)))
-            if self.showlegacyaliases:
-                name = legacyname
-            elif legacyname in self._table:
-                # This is for compat w/ Rust so Rust doesn't have to
-                # duplicate the legacy alias concept for now. Rust is
-                # expected to include the legacy aliases in its alias
-                # list, and we swap the table entries here (because we
-                # aren't using the legacy aliases, so the "name" is
-                # different between Python and Rust).
-                self._table[name] = self._table.pop(legacyname)
+        nameparts = name.split("|")
+        primaryname = nameparts[0]
+
+        if self.showlegacynames:
+            if legacyname:
+                nameparts = [legacyname, *nameparts]
+
+            if legacyaliases:
+                nameparts += legacyaliases
+
+        name = "|".join(nameparts)
+
+        if primaryname in self._table:
+            # This is for compat w/ Rust. Rust is expected to not
+            # include aliases for commands that exist in Rust and
+            # Python because Python aliases take precedence.
+            self._table[name] = self._table.pop(primaryname)
 
         func.norepo = norepo
         func.optionalrepo = optionalrepo
@@ -249,6 +255,7 @@ class command(_funcregistrarbase):
             self._table[name] = func, list(options), synopsis
         else:
             self._table[name] = func, list(options)
+
         return func
 
 

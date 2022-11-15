@@ -303,13 +303,19 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         let py_table: PyDict = PyDict::new(py);
         for def in table.values() {
             let doc = Str::from(Bytes::from(def.doc().to_string()));
+
+            // Key entry by primary command name which Python knows to
+            // look for. This avoids having to make the alias list
+            // match exactly between Python and Rust.
+            let primary_name = def.aliases().split('|').next().unwrap();
+
             if let Some(synopsis) = def
                 .synopsis()
                 .map(|s| Str::from(Bytes::from(s.to_string())))
             {
-                py_table.set_item(py, def.aliases(), (doc, def.flags(), synopsis))?;
+                py_table.set_item(py, primary_name, (doc, def.flags(), synopsis))?;
             } else {
-                py_table.set_item(py, def.aliases(), (doc, def.flags()))?;
+                py_table.set_item(py, primary_name, (doc, def.flags()))?;
             }
         }
         Ok(py_table)

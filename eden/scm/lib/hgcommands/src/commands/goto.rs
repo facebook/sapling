@@ -130,9 +130,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 }
 
 pub fn aliases() -> &'static str {
-    // NB: This must be the combination of Python aliases and legacy
-    // aliases, in the right order.
-    "update|up|checkout|co|goto|go|upd|upda|updat|che|chec|check|checko|checkou"
+    "goto|go|update|up|checkout|co|upd|upda|updat|che|chec|check|checko|checkou"
 }
 
 pub fn doc() -> &'static str {
