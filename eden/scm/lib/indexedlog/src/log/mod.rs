@@ -687,7 +687,7 @@ impl Log {
             self.meta.indexes.insert(metaname, new_length);
             trace!(
                 name = "Log::flush_lagging_index",
-                index_name = self.open_options.index_defs[index_id].name,
+                index_name = self.open_options.index_defs[index_id].name.as_str(),
                 new_index_length = new_length,
             );
         }
@@ -708,7 +708,7 @@ impl Log {
                 let lag_threshold = def.lag_threshold;
                 trace!(
                     name = "Log::is_index_lagging",
-                    index_name = def.name,
+                    index_name = def.name.as_str(),
                     lag = lag_bytes,
                     threshold = lag_threshold
                 );
@@ -822,7 +822,7 @@ impl Log {
         {
             if let Some(ref dir) = self.dir.as_opt_path() {
                 for (i, def) in self.open_options.index_defs.iter().enumerate() {
-                    let name = def.name;
+                    let name = def.name.as_str();
 
                     if let Some(index) = &self.indexes.get(i) {
                         let should_skip = if force {

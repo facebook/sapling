@@ -59,7 +59,7 @@ pub struct IndexDef {
     ///
     /// When adding new or changing index functions, make sure a different
     /// `name` is used so the existing index won't be reused incorrectly.
-    pub(crate) name: &'static str,
+    pub(crate) name: Arc<String>,
 
     /// How many bytes (as counted in the file backing [`Log`]) could be left not
     /// indexed on-disk.
@@ -182,12 +182,12 @@ impl IndexDef {
     /// When adding new or changing index functions, make sure a different
     /// `name` is used so the existing index won't be reused incorrectly.
     pub fn new(
-        name: &'static str,
+        name: impl ToString,
         index_func: impl Fn(&[u8]) -> Vec<IndexOutput> + Send + Sync + 'static,
     ) -> Self {
         Self {
             func: Arc::new(index_func),
-            name,
+            name: Arc::new(name.to_string()),
             // For a typical commit hash index (20-byte). IndexedLog insertion
             // overhead is about 1500 entries per millisecond. For other things
             // the xxhash check might take some time. 500 entries takes <1ms
@@ -524,7 +524,10 @@ impl fmt::Debug for OpenOptions {
         write!(
             f,
             "index_defs: {:?}, ",
-            self.index_defs.iter().map(|d| d.name).collect::<Vec<_>>()
+            self.index_defs
+                .iter()
+                .map(|d| d.name.as_str())
+                .collect::<Vec<_>>()
         )?;
         write!(
             f,
