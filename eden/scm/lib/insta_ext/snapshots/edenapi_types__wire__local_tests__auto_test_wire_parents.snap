@@ -1,6 +1,0 @@
----
-source: mod.rs
-expression: "WireParents::arbitrary(&mut g)"
-
----
-"1"

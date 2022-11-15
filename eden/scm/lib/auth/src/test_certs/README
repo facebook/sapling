@@ -1,8 +1,0 @@
-This directory contains fake X.509 certificates for use by this crate's tests.
-The certificates are self-signed and were generated using the OpenSSL CLI.
-
-To regenerate them, invoke it like this:
-
-openssl req -x509 -newkey -nodes rsa:2048 -keyout key.pem -out cert.pem -days 1
-
-The generated files can then be concatenated as needed for the tests.

@@ -1,9 +1,0 @@
-packages:
-  fb-mononoke-megarepotool:
-    summary: A Mononoke helper tool to work with megarepo setup
-    packager: source_control
-    build_architectures: [x86_64, aarch64]
-    rules:
-      buck:eden/mononoke/commit_rewriting/megarepo:megarepotool:
-        eden/mononoke/commit_rewriting/megarepo/megarepotool#binary/megarepotool:
-          path: /usr/local/bin/mononoke_megarepotool

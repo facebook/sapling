@@ -1,6 +1,0 @@
----
-source: mod.rs
-expression: "WireRevisionstoreMetadata::arbitrary(&mut g)"
-
----
-{"0":5452211403613372577}

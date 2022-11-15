@@ -1,8 +1,0 @@
-cmake
-g++
-build-essential
-libssl-dev
-make
-zlib1g-dev
-python3-distutils
-pkg-config

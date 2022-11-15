@@ -1,6 +1,0 @@
----
-source: mod.rs
-expression: "WireEdenApiServerError::arbitrary(&mut g)"
-
----
-{"1":""}

@@ -1,6 +1,0 @@
----
-source: mod.rs
-expression: "WireKey::arbitrary(&mut g)"
-
----
-{"0":"jaiffe/nuat/fk/ejkleav/rc/ohh","1":[38,85,25,36,58,55,101,239,1,100,81,21,29,1,4,212,7,211,178,104]}

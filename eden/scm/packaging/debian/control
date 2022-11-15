@@ -1,7 +1,0 @@
-Package: sapling
-Version: %VERSION%
-Architecture: amd64
-Maintainer: Meta Platforms, Inc.
-Description: A source control client.
-Source: https://github.com/facebookexperimental/eden
-Recommends: nodejs

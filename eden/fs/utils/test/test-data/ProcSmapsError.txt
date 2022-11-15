@@ -1,9 +1,0 @@
-Weird line in front
-7ff33e770000-7ff33e771000 rw-p 00029000 fc:03 263921
-/usr/lib64/libtinfo.so.5.9
-Size:                  4 kB
-No Colon
-Private_Dirty:         4 kB
-:Three:Colons:
-line at end
-

@@ -1,6 +1,0 @@
----
-source: errors.rs
-expression: "WireError::arbitrary(&mut g)"
-
----
-{"1":"","2":2786141136387072907}

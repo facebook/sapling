@@ -1,6 +1,0 @@
----
-source: metadata.rs
-expression: "WireFileMetadataRequest::arbitrary(&mut g)"
-
----
-{"3":true,"4":true}

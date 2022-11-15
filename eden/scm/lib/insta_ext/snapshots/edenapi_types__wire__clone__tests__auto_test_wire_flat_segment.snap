@@ -1,6 +1,0 @@
----
-source: clone.rs
-expression: "WireFlatSegment::arbitrary(&mut g)"
-
----
-{"1":75845996241657629,"2":123212350994586056,"3":[124608835705604671]}
