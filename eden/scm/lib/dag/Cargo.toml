@@ -20,7 +20,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog", optional = true }
 indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
 itertools = "0.10.3"
 mincode = { version = "0.1.0", path = "../mincode" }
-minibytes = { version = "0.1.0", path = "../minibytes" }
+minibytes = { version = "0.1.0", path = "../minibytes", default-features = false }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 quickcheck = { version = "1.0", optional = true }

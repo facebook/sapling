@@ -9,7 +9,7 @@ license = "MIT"
 [dependencies]
 abomonation = "0.7"
 abomonation_derive = "0.5"
-minibytes = { version = "0.1.0", path = "../../minibytes" }
+minibytes = { version = "0.1.0", path = "../../minibytes", default-features = false }
 quickcheck = { version = "1.0", optional = true }
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
