@@ -13,8 +13,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::scribe::log_commits_to_scribe_raw;
-use blobrepo::scribe::ScribeCommitInfo;
+use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -39,7 +38,8 @@ use pushrebase_client::ScsPushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
-use scribe_commit_queue::ChangedFilesInfo;
+use repo_update_logger::log_new_commits;
+use repo_update_logger::CommitInfo;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use stats::prelude::*;
@@ -188,11 +188,7 @@ async fn run_push(
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
         let changeset_id = bcs.get_changeset_id();
-        changesets_to_log.push(ScribeCommitInfo {
-            changeset_id,
-            bubble_id: None,
-            changed_files: ChangedFilesInfo::new(&bcs),
-        });
+        changesets_to_log.push(CommitInfo::new(&bcs, None));
         new_changesets.insert(changeset_id, bcs);
     }
 
@@ -219,12 +215,14 @@ async fn run_push(
         maybe_bookmark = Some(bookmark_push.name);
     }
 
-    log_commits_to_scribe_raw(
+    // Since this is a normal push, any bookmark must be public.
+    log_new_commits(
         ctx,
         repo,
-        maybe_bookmark.as_ref(),
+        maybe_bookmark
+            .as_ref()
+            .map(|name| (name, BookmarkKind::Publishing)),
         changesets_to_log,
-        repo.repo_config().push.commit_scribe_category.as_deref(),
     )
     .await;
 
@@ -275,22 +273,16 @@ async fn run_infinitepush(
         None => None,
     };
 
-    log_commits_to_scribe_raw(
+    let changesets_to_log = uploaded_bonsais
+        .iter()
+        .map(|bcs| CommitInfo::new(bcs, None))
+        .collect();
+    // Since this is an infinitepush, any bookmark must be a scratch bookmark.
+    log_new_commits(
         ctx,
         repo,
-        bookmark.as_ref(),
-        uploaded_bonsais
-            .iter()
-            .map(|bcs| ScribeCommitInfo {
-                changeset_id: bcs.get_changeset_id(),
-                bubble_id: None,
-                changed_files: ChangedFilesInfo::new(bcs),
-            })
-            .collect(),
-        repo.repo_config()
-            .infinitepush
-            .commit_scribe_category
-            .as_deref(),
+        bookmark.as_ref().map(|name| (name, BookmarkKind::Scratch)),
+        changesets_to_log,
     )
     .await;
 
@@ -314,11 +306,6 @@ async fn run_pushrebase(
         uploaded_bonsais,
         hook_rejection_remapper,
     } = action;
-    let changed_files_info: HashMap<_, _> = uploaded_bonsais
-        .iter()
-        .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(bcs)))
-        .collect();
-
     // FIXME: stop cloning when this fn is async
     let bookmark = bookmark_spec.get_bookmark_name().clone();
 
@@ -329,6 +316,11 @@ async fn run_pushrebase(
         // `BundleResolverError::Error`, which in turn would render incorrectly
         // (see definition of `BundleResolverError`).
         PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => {
+            let mut changesets_to_log: HashMap<_, _> = uploaded_bonsais
+                .iter()
+                .map(|bcs| (bcs.get_changeset_id(), CommitInfo::new(bcs, None)))
+                .collect();
+
             let (pushrebased_rev, pushrebased_changesets) = normal_pushrebase(
                 ctx,
                 repo,
@@ -341,26 +333,19 @@ async fn run_pushrebase(
                 cross_repo_push_source,
             )
             .await?;
-            log_commits_to_scribe_raw(
+            // Modify the changeset logs with the newly pushrebased hashes.
+            for pair in pushrebased_changesets.iter() {
+                let info = changesets_to_log
+                    .get_mut(&pair.id_old)
+                    .ok_or_else(|| anyhow!("Missing commit info for {}", pair.id_old))?;
+                info.update_changeset_id(pair.id_old, pair.id_new)?;
+            }
+            // Wireprotocol pushrebase is always for public bookmarks
+            log_new_commits(
                 ctx,
                 repo,
-                Some(&bookmark),
-                pushrebased_changesets
-                    .iter()
-                    .map(|p| {
-                        Ok(ScribeCommitInfo {
-                            changeset_id: p.id_new,
-                            bubble_id: None,
-                            changed_files: changed_files_info.get(&p.id_old).copied().ok_or_else(
-                                || anyhow!("Missing changed files info for {}", p.id_old),
-                            )?,
-                        })
-                    })
-                    .collect::<Result<Vec<_>>>()?,
-                repo.repo_config()
-                    .pushrebase
-                    .commit_scribe_category
-                    .as_deref(),
+                Some((&bookmark, BookmarkKind::Publishing)),
+                changesets_to_log.into_values().collect(),
             )
             .await;
             (pushrebased_rev, pushrebased_changesets)
@@ -368,14 +353,10 @@ async fn run_pushrebase(
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
             let changesets_to_log = uploaded_bonsais
                 .iter()
-                .map(|bcs| ScribeCommitInfo {
-                    changeset_id: bcs.get_changeset_id(),
-                    bubble_id: None,
-                    changed_files: ChangedFilesInfo::new(bcs),
-                })
+                .map(|bcs| CommitInfo::new(bcs, None))
                 .collect();
 
-            let (pushrebased_rev, pushrebased_changesets) = force_pushrebase(
+            let pushrebased_rev = force_pushrebase(
                 ctx,
                 repo,
                 lca_hint,
@@ -388,18 +369,16 @@ async fn run_pushrebase(
             )
             .await
             .context("While doing a force pushrebase")?;
-            log_commits_to_scribe_raw(
+            // Wireprotocol pushrebase is always for public bookmarks
+            log_new_commits(
                 ctx,
                 repo,
-                Some(&bookmark),
+                Some((&bookmark, BookmarkKind::Publishing)),
                 changesets_to_log,
-                repo.repo_config()
-                    .pushrebase
-                    .commit_scribe_category
-                    .as_deref(),
             )
             .await;
-            (pushrebased_rev, pushrebased_changesets)
+            // Force pushrebase merely force-moves the bookmark, it does not rebase any commits.
+            (pushrebased_rev, Vec::new())
         }
     };
 
@@ -644,7 +623,7 @@ async fn force_pushrebase(
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
-) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
+) -> Result<ChangesetId, BundleResolverError> {
     let new_target = bookmark_push
         .new
         .ok_or_else(|| anyhow!("new changeset is required for force pushrebase"))?;
@@ -670,9 +649,7 @@ async fn force_pushrebase(
     )
     .await?;
 
-    // Note that this push did not do any actual rebases, so we do not
-    // need to provide any actual mapping, an empty Vec will do
-    Ok((new_target, Vec::new()))
+    Ok(new_target)
 }
 
 async fn plain_push_bookmark(

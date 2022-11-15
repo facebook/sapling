@@ -45,6 +45,25 @@ impl CommitInfo {
             changed_files_info: ChangedFilesInfo::new(bcs),
         }
     }
+
+    pub fn update_changeset_id(
+        &mut self,
+        old_changeset_id: ChangesetId,
+        new_changeset_id: ChangesetId,
+    ) -> Result<()> {
+        if self.changeset_id != old_changeset_id {
+            return Err(anyhow!(
+                concat!(
+                    "programming error: attempting to update CommitInfo for incorrect changeset, ",
+                    "expected {}, but modifying {}",
+                ),
+                old_changeset_id,
+                self.changeset_id
+            ));
+        }
+        self.changeset_id = new_changeset_id;
+        Ok(())
+    }
 }
 
 fn extract_differential_revision(message: &str) -> Option<&str> {

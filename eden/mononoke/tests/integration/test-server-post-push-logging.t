@@ -124,6 +124,7 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   "forcepushrebase"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
+  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
   "repo"
@@ -141,8 +142,7 @@ The timestamp is not stable, so count its digits instead to ensure it is not nul
   "pushrebase"
   $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
 
-Use normal push (non-pushrebase)
-  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
+Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark, this is draft.
   $ echo push > push
   $ hg add -q push
   $ hg ci -m 'commit'
@@ -150,10 +150,11 @@ Use normal push (non-pushrebase)
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
-  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   null
-  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "f76800ae3d688512180e7a0805ff18d39f7ea81617bce1aea4e11364584b007a"
+  $ rm "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY"
 
 Use infinitepush push
   $ cat >> .hg/hgrc <<EOF

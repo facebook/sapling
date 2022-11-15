@@ -1181,6 +1181,11 @@ function write_infinitepush_config {
   local reponame="$1"
   local reponame_urlencoded
   reponame_urlencoded=$(urlencode encode "$reponame")
+
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+[infinitepush]
+CONFIG
+
   if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
      [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]] || \
      [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]];
@@ -1191,18 +1196,17 @@ function write_infinitepush_config {
     fi
 
     cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-[infinitepush]
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
 ${namespace}
 CONFIG
   fi
 
-if [[ -n "${DRAFT_COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-commit_scribe_category = "$DRAFT_COMMIT_SCRIBE_CATEGORY"
+  if [[ -n "${DRAFT_COMMIT_SCRIBE_CATEGORY:-}" ]]; then
+    cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+  commit_scribe_category = "$DRAFT_COMMIT_SCRIBE_CATEGORY"
 CONFIG
-fi
+  fi
 }
 
 function register_hook {

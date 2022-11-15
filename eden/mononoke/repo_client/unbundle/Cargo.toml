@@ -49,7 +49,7 @@ reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 remotefilelog = { version = "0.1.0", path = "../remotefilelog" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-scribe_commit_queue = { version = "0.1.0", path = "../scribe_commit_queue" }
+repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha2 = "0.10"
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
