@@ -30,7 +30,6 @@ import time
 from typing import Optional, Sized
 
 import bindings
-from edenscm.bundle2 import unbundle20
 
 from .. import (
     bookmarks,
@@ -395,7 +394,9 @@ def debugbuilddag(
         release(tr, lock, wlock)
 
 
-def _debugchangegroup(ui, gen: unbundle20, all=None, indent: int = 0, **opts) -> None:
+def _debugchangegroup(
+    ui, gen: bundle2.unbundle20, all=None, indent: int = 0, **opts
+) -> None:
     indent_string = " " * indent
     if all:
         ui.write(
@@ -454,7 +455,7 @@ def _quasirepr(thing) -> str:
     return pycompat.bytestr(repr(thing))
 
 
-def _debugbundle2(ui, gen: unbundle20, all=None, **opts) -> None:
+def _debugbundle2(ui, gen: bundle2.unbundle20, all=None, **opts) -> None:
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_("not a bundle2 file"))
