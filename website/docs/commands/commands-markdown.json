@@ -246,6 +246,132 @@
     ],
     "subcommands": null
   },
+  "annotate": {
+    "name": "annotate",
+    "aliases": [
+      "annotate",
+      "blame",
+      "an"
+    ],
+    "doc": "\n**show per-line commit information for given files**\n\nShow file contents where each line is annotated with information\nabout the commit that last changed that line.\n\nThis command is useful for discovering when a change was made and\nby whom.\n\nIf you include `--file`, `--user`, or `--date`, the revision number is\nsuppressed unless you also include `--number`.\n\nWithout the `-a/--text` option, annotate will skip binary files.\nWith `-a`, binary files will be annotated anyway.\n\nReturns 0 on success.\n",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "annotate the specified revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-follow",
+        "default": false,
+        "description": "don't follow copies and renames"
+      },
+      {
+        "shortname": "a",
+        "fullname": "text",
+        "default": null,
+        "description": "treat all files as text"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": null,
+        "description": "list the author (long with -v)"
+      },
+      {
+        "shortname": "f",
+        "fullname": "file",
+        "default": null,
+        "description": "list the filename"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": null,
+        "description": "list the date (short with -q)"
+      },
+      {
+        "shortname": "n",
+        "fullname": "number",
+        "default": null,
+        "description": "list the revision number"
+      },
+      {
+        "shortname": "c",
+        "fullname": "changeset",
+        "default": null,
+        "description": "list the changeset (default)"
+      },
+      {
+        "shortname": "l",
+        "fullname": "line-number",
+        "default": null,
+        "description": "show line number at the first appearance"
+      },
+      {
+        "shortname": "",
+        "fullname": "skip",
+        "default": [],
+        "description": "revision to not display (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "short-date",
+        "default": null,
+        "description": "list the brief date (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "w",
+        "fullname": "ignore-all-space",
+        "default": null,
+        "description": "ignore white space when comparing lines"
+      },
+      {
+        "shortname": "b",
+        "fullname": "ignore-space-change",
+        "default": null,
+        "description": "ignore changes in the amount of white space"
+      },
+      {
+        "shortname": "B",
+        "fullname": "ignore-blank-lines",
+        "default": null,
+        "description": "ignore changes whose lines are all blank"
+      },
+      {
+        "shortname": "Z",
+        "fullname": "ignore-space-at-eol",
+        "default": null,
+        "description": "ignore changes in whitespace at EOL"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "p",
+        "fullname": "phabdiff",
+        "default": null,
+        "description": "list phabricator diff id"
+      }
+    ],
+    "subcommands": null
+  },
   "backout": {
     "name": "backout",
     "aliases": [
@@ -1047,13 +1173,19 @@
       }
     ]
   },
+  "githelp": {
+    "name": "githelp",
+    "aliases": [
+      "githelp",
+      "git"
+    ],
+    "doc": "\n**suggests the Sapling equivalent of the given git command**\n\nUsage: sl githelp -- $COMMAND\n\nExample:\n\n$ sl git -- checkout my_file.txt baef1046b\n\nsl revert -r my_file.txt baef1046b\n\nThe translation is best effort, and if an unknown command or parameter\ncombination is detected, it simply returns an error.\n",
+    "args": [],
+    "subcommands": null
+  },
   "goto": {
     "name": "goto",
     "aliases": [
-      "update",
-      "up",
-      "checkout",
-      "co",
       "goto",
       "go"
     ],
@@ -1237,7 +1369,7 @@
     "aliases": [
       "hide"
     ],
-    "doc": "\n**hide commits and their descendants**\n\nMark the specified commits as hidden. Hidden commits are not included in\nthe output of most Sapling commands, including `sl log` and\n`sl smartlog.` Any descendants of the specified commits will also be\nhidden.\n\nHidden commits are not deleted. They will remain in the repo indefinitely\nand are still accessible by their hashes. However, `sl hide` will delete\nany bookmarks pointing to hidden commits.\n\nUse the `sl unhide` command to make hidden commits visible again. See\n`sl help unhide` for more information.\n\nTo view hidden commits, run `sl journal`.\n\nWhen you hide the current commit, the most recent visible ancestor is\nchecked out.\n\nTo hide obsolete stacks (stacks that have a newer version), run\n`sl hide --cleanup`. This command is equivalent to:\n\n`sl hide 'obsolete() - ancestors(draft() & not obsolete())'`\n\n--cleanup skips obsolete commits with non-obsolete descendants.\n",
+    "doc": "\n**hide commits and their descendants**\n\nMark the specified commits as hidden. Hidden commits are not included in\nthe output of most Sapling commands, including `sl log` and\n`sl smartlog.` Any descendants of the specified commits will also be\nhidden.\n\nHidden commits are not deleted. They will remain in the repo indefinitely\nand are still accessible by their hashes. However, `sl hide` will delete\nany bookmarks pointing to hidden commits.\n\nUse the `sl unhide` command to make hidden commits visible again. See\n`sl help unhide` for more information.\n\nTo view hidden commits, run `sl journal`.\n\nWhen you hide the current commit, the most recent visible ancestor is\nchecked out.\n\nTo hide obsolete stacks (stacks that have a newer version), run\n`sl hide --cleanup`. This command is equivalent to:\n\n`sl hide 'obsolete() - ancestors(draft() & not obsolete())'`\n\n`--cleanup` skips obsolete commits with non-obsolete descendants.\n",
     "args": [
       {
         "shortname": "r",
@@ -1327,16 +1459,15 @@
   "init": {
     "name": "init",
     "aliases": [
-      "init",
-      "ini"
+      "init"
     ],
-    "doc": "\n**create a new repository in the given directory**\n\nInitialize a new repository in the given directory. If the given\ndirectory does not exist, it will be created.\n\nIf no directory is given, the current directory is used.\n\nIt is possible to specify an `ssh://` URL as the destination.\nSee `sl help urls` for more information.\n\nReturns 0 on success.\n",
+    "doc": "\n**create a new repository in the given directory**\n\nInitialize a new repository in the given directory. If the given\ndirectory does not exist, it will be created. If no directory is\ngiven, the current directory is used.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "",
         "fullname": "git",
         "default": null,
-        "description": "use git as backend (EXPERIMENTAL)"
+        "description": "use git as the backend (EXPERIMENTAL)"
       }
     ],
     "subcommands": null
@@ -1345,14 +1476,9 @@
     "name": "journal",
     "aliases": [
       "journal",
-      "j",
-      "jo",
-      "jou",
-      "jour",
-      "journ",
-      "journa"
+      "jo"
     ],
-    "doc": "\n**show history of the checked out commit or a bookmark**\n\nShow the history of all the commits that were once the current commit. In\nother words, shows a list of your previously checked out commits.\n`sl journal` can be used to find older versions of commits (for example,\nwhen you want to revert to a previous state). It can also be used to\ndiscover commits that were previously hidden.\n\nBy default, `sl journal` displays the history of the current commit. To\ndisplay a list of commits pointed to by a bookmark, specify a bookmark\nname.\n\nSpecify --all to show the history of both the current commit and all\nbookmarks. In the output for --all, bookmarks are listed by name, and '.'\nindicates the current commit.\n\nSpecify -Tjson to produce machine-readable output.\n\nBy default, `sl journal` only shows the commit hash and the\ncorresponding command. Specify --verbose to also include the previous\ncommit hash, user, and timestamp.\n\nUse -c/--commits to output log information about each commit hash. To\ncustomize the log output, you can also specify switches like '--patch',\n'--git', '--stat', and '--template'.\n\nIf a bookmark name starts with 're:', the remainder of the name is\ntreated as a regular expression. To match a name that actually starts\nwith 're:', use the prefix 'literal:'.\n",
+    "doc": "\n**show the history of the checked out commit or a bookmark**\n\nShow the history of all the commits that were once the current commit. In\nother words, shows a list of your previously checked out commits.\n`sl journal` can be used to find older versions of commits (for example,\nwhen you want to revert to a previous state). It can also be used to\ndiscover commits that were previously hidden.\n\nBy default, `sl journal` displays the history of the current commit. To\ndisplay a list of commits pointed to by a bookmark, specify a bookmark\nname.\n\nSpecify `--all` to show the history of both the current commit and all\nbookmarks. In the output for `--all`, bookmarks are listed by name, and\n`.` indicates the current commit.\n\nSpecify `-Tjson` to produce machine-readable output.\n\nBy default, `sl journal` only shows the commit hash and the\ncorresponding command. Specify `--verbose` to also include the\nprevious commit hash, user, and timestamp.\n\nUse `-c/--commits` to output log information about each commit\nhash. To customize the log output, you can also specify switches\nlike `--patch`, `git`, `--stat`, and `--template`.\n\nIf a bookmark name starts with `re:`, the remainder of the name\nis treated as a regular expression. To match a name that actually\nstarts with `re:`, use the prefix `literal:`.\n",
     "args": [
       {
         "shortname": "",
@@ -1411,7 +1537,7 @@
       "log",
       "history"
     ],
-    "doc": "\n**show commit history**\n\nPrint the revision history of the specified files or the entire\nproject.\n\nIf no revision range is specified, the default is `::.`.\n\nFile history is shown without following rename or copy history of\nfiles. Use -f/--follow with a filename to follow history across\nrenames and copies. --follow without a filename will only show\nancestors or descendants of the starting revision.\n\nBy default this command prints revision number and changeset id,\nnon-trivial parents, user, date and time, and a summary for\neach commit. When the -v/--verbose switch is used, the list of\nchanged files and full commit message are shown.\n\nWith --graph the revisions are shown as an ASCII art DAG with the most\nrecent changeset at the top.\n'o' is a changeset, '@' is a working directory parent, 'x' is obsolete,\nand '+' represents a fork where the changeset from the lines below is a\nparent of the 'o' merge on the same line.\nPaths in the DAG are represented with '|', '/' and so forth. ':' in place\nof a '|' indicates one or more revisions in a path are omitted.\n\nUse -L/--line-range FILE,M:N options to follow the history of lines\nfrom M to N in FILE. With -p/--patch only diff hunks affecting\nspecified line range will be shown. This option requires --follow;\nit can be specified multiple times. Currently, this option is not\ncompatible with --graph. This option is experimental.\n\n`sl log --patch` may generate unexpected diff output for merge\nchangesets, as it will only compare the merge changeset against\nits first parent. Also, only files different from BOTH parents\nwill appear in files:.\n\nFor performance reasons, `sl log FILE` may omit duplicate changes\nmade on branches and will not show removals or mode changes. To\nsee all such changes, use the --removed switch.\n\nThe history resulting from -L/--line-range options depends on diff\noptions; for instance if white-spaces are ignored, respective changes\nwith only white-spaces in specified line range will not be listed.\n\nSome examples:\n\n- changesets with full descriptions and file lists:\n\n```\nsl log -v\n```\n\n- changesets ancestral to the working directory:\n\n```\nsl log -f\n```\n\n- last 10 commits on the current branch:\n\n```\nsl log -l 10 -b .\n```\n\n- changesets showing all modifications of a file, including removals:\n\n```\nsl log --removed file.c\n```\n\n- all changesets that touch a directory, with diffs, excluding merges:\n\n```\nsl log -Mp lib/\n```\n\n- all revision numbers that match a keyword:\n\n```\nsl log -k bug --template \"{rev}\\n\"\n```\n\n- the full hash identifier of the working directory parent:\n\n```\nsl log -r . --template \"{node}\\n\"\n```\n\n- list available log templates:\n\n```\nsl log -T list\n```\n\n- check if a given changeset is included in a bookmarked release:\n\n```\nsl log -r \"a21ccf and ancestor(release_1.9)\"\n```\n\n- find all changesets by some user in a date range:\n\n```\nsl log -k alice -d \"may 2008 to jul 2008\"\n```\n\n- changesets touching lines 13 to 23 for file.c:\n\n```\nsl log -L file.c,13:23\n```\n\n- changesets touching lines 13 to 23 for file.c and lines 2 to 6 of  main.c with patch:\n\n```\nsl log -L file.c,13:23 -L main.c,2:6 -p\n```\n\nSee `sl help dates` for a list of formats valid for -d/--date.\n\nSee `sl help revisions` for more about specifying and ordering\nrevisions.\n\nSee `sl help templates` for more about pre-packaged styles and\nspecifying custom templates. The default template used by the log\ncommand can be customized via the `ui.logtemplate` configuration\nsetting.\n\nReturns 0 on success.\n",
+    "doc": "\n**show commit history**\n\nPrint the revision history of the specified files or the entire\nproject.\n\nIf no revision range is specified, the default is the current commit\nand all of its ancestors (`::.`).\n\nFile history is shown without following the rename or copy\nhistory of files. To follow file history across renames and\ncopies, use the `-f/-- follow` option. If the `--follow`\noption is used without a filename, only the ancestors or\ndescendants of the starting revision are shown.\n\nBy default, `sl log` prints the commit's hash, non-trivial\nparents, user, date, time, and the single-line summary. When the\n`-v/--verbose` option is used, the list of changed files and\nfull commit message are shown.\n\nWith the `--graph` option, revisions are shown as an ASCII art\ngraph with the most recent commit at the top. The graph nodes\nare depicted as follows: **o** is a commit, **@** is a working\ndirectory parent, **x** is obsolete, and **+** represents a fork\nwhere the commit from the lines below is a parent of the **o**\nmerge on the same line. Paths in the graph are represented with\n**|**, **/** and so forth. **:** in place of a **|** indicates\none or more revisions in a path are omitted.\n\nUse the `-L/--line-range FILE,M:N` option to follow the\nhistory of lines from **M** to **N** in FILE. With the `-p/--\npatch` option, only diff hunks affecting specified line range\nwill be shown. The `-L` option can be specified multiple\ntimes and requires the `--follow` option. Currently, the line\nrange option is not compatible with `--graph` and is an\nexperimental feature.\n\n`sl log --patch` may generate unexpected diff output for merge\ncommits, as it will only compare the merge commit against\nits first parent. Also, only files different from BOTH parents\nwill appear in the **files:** section.\n\nFor performance reasons, `sl log FILE` may omit duplicate changes\nmade on branches and will not show removals or mode changes. To\nsee all such changes, use the `--removed` switch.\n\nThe history resulting from `-L/--line-range` options depends on\ndiff options: for instance, if white-spaces are ignored,\nrespective changes with only white-spaces in specified line range\nwill not be listed.\n\nSome examples:\n\n- commits with full descriptions and file lists:\n\n```\nsl log -v\n```\n\n- commits ancestral to the working directory:\n\n```\nsl log -f\n```\n\n- last 10 commits on the current branch:\n\n```\nsl log -l 10 -b .\n```\n\n- commits showing all modifications of a file, including removals:\n\n```\nsl log --removed file.c\n```\n\n- all commits that touch a directory, with diffs, excluding merges:\n\n```\nsl log -Mp lib/\n```\n\n- all revision numbers that match a keyword:\n\n```\nsl log -k bug --template \"{rev}\\n\"\n```\n\n- the full hash identifier of the working directory parent:\n\n```\nsl log -r . --template \"{node}\\n\"\n```\n\n- list available log templates:\n\n```\nsl log -T list\n```\n\n- check if a given commit is included in a bookmarked release:\n\n```\nsl log -r \"a21ccf and ancestor(release_1.9)\"\n```\n\n- find all commits by some user in a date range:\n\n```\nsl log -k alice -d \"may 2008 to jul 2008\"\n```\n\n- commits touching lines 13 to 23 for file.c:\n\n```\nsl log -L file.c,13:23\n```\n\n- commits touching lines 13 to 23 for file.c and lines 2 to 6 of  main.c with patch:\n\n```\nsl log -L file.c,13:23 -L main.c,2:6 -p\n```\n\nSee `sl help dates` for a list of formats valid for `-d/--date`.\n\nSee `sl help revisions` for more about specifying and ordering\nrevisions.\n\nSee `sl help templates` for more about pre-packaged styles and\nspecifying custom templates. The default template used by the log\ncommand can be customized via the `ui.logtemplate` configuration\nsetting.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "f",
@@ -1570,13 +1696,10 @@
     "name": "metaedit",
     "aliases": [
       "metaedit",
-      "met",
       "meta",
-      "metae",
-      "metaed",
-      "metaedi"
+      "me"
     ],
-    "doc": "\n**edit commit message and other metadata**\n\nEdit commit message for the current commit. By default, opens your default\neditor so that you can edit the commit message interactively. Specify -m\nto specify the commit message on the command line.\n\nTo edit the message for a different commit, specify -r. To edit the\nmessages of multiple commits, specify --batch.\n\nYou can edit other pieces of commit metadata, namely the user or date,\nby specifying -u or -d, respectively. The expected format for user is\n'Full Name <user@example.com>'.\n\nThere is also automation-friendly JSON input mode which allows the caller\nto provide the mapping between commit and new message and username in the\nfollowing format:\n\n```\n{\n    \"<commit_hash>\": {\n        \"message\": \"<message>\",\n        \"user\": \"<user>\" // optional\n    }\n}\n```\n\nYou can specify --fold to fold multiple revisions into one when the\ngiven revisions form a linear unbroken chain. However, `sl fold` is\nthe preferred command for this purpose. See `sl help fold` for more\ninformation.\n\nSome examples:\n\n- Edit the commit message for the current commit:\n\n```\nsl metaedit\n```\n\n- Change the username for the current commit:\n\n```\nsl metaedit --user 'New User <new-email@example.com>'\n```\n",
+    "doc": "\n**edit commit message and other metadata**\n\n`sl metaedit` lets you edit commit messages. With no\narguments, the current commit message is modified. To edit\nthe commit message for a different commit, specify `-r\nREV`. To edit the commit messages for multiple commits,\nspecify `--batch`.\n\nBy default, `sl metaedit` launches your default editor so that\nyou can interactively edit the commit message. Specify `-m` to\nspecify the commit message on the command line.\n\nYou can edit other pieces of commit metadata such as the user or\ndate, by specifying `-u` or `-d`, respectively. The expected\nformat for the user is 'Full Name <user@example.com>'.\n\nThere is also an automation-friendly JSON input mode which allows\nthe caller to provide the mapping between commit and new message\nand username in the following format:\n\n```\n{\n    \"<commit_hash>\": {\n        \"message\": \"<message>\",\n        \"user\": \"<user>\" // optional\n    }\n}\n```\n\nYou can specify `--fold` to fold multiple revisions into one when the\ngiven revisions form a linear unbroken chain. However, `sl fold` is\nthe preferred command for this purpose. See `sl help fold` for more\ninformation.\n\nSome examples:\n\n- Edit the commit message for the current commit:\n\n```\nsl metaedit\n```\n\n- Change the username for the current commit:\n\n```\nsl metaedit --user 'New User <new-email@example.com>'\n```\n",
     "args": [
       {
         "shortname": "r",
@@ -1644,24 +1767,21 @@
   "next": {
     "name": "next",
     "aliases": [
-      "next",
-      "n",
-      "ne",
-      "nex"
+      "next"
     ],
-    "doc": "\n**check out a child commit**\n",
+    "doc": "\n**check out a descendant commit**\n\nUpdate to a descendant commit of the current commit. When working with a stack\nof commits, you can use `sl next` to move up your stack with ease.\n\n- Use the `--newest` flag to always pick the newest of multiple child commits.  You can set `amend.alwaysnewest` to true in your global Sapling config file  to make this the default.\n\n- Use the `--merge` flag to bring along uncommitted changes to the destination  commit.\n\n- Use the `--bookmark` flag to move to the next commit with a bookmark.\n\n- Use the `--rebase` flag to rebase any child commits that were left behind  after `amend`, `split`, `fold`, or `histedit`.\n\nExamples:\n\n- Move 1 level up the stack:\n\n```\nsl next\n```\n\n- Move 2 levels up the stack:\n\n```\nsl next 2\n```\n\n- Move to the top of the stack:\n\n```\nsl next --top\n```\n",
     "args": [
       {
         "shortname": "",
         "fullname": "newest",
         "default": false,
-        "description": "always pick the newest child when a changeset has multiple children"
+        "description": "always pick the newest child when a commit has multiple children"
       },
       {
         "shortname": "",
         "fullname": "rebase",
         "default": false,
-        "description": "rebase each changeset if necessary"
+        "description": "rebase each commit if necessary"
       },
       {
         "shortname": "",
@@ -1673,13 +1793,13 @@
         "shortname": "",
         "fullname": "bookmark",
         "default": false,
-        "description": "update to the first changeset with a bookmark"
+        "description": "update to the first commit with a bookmark"
       },
       {
         "shortname": "",
         "fullname": "no-activate-bookmark",
         "default": false,
-        "description": "do not activate the bookmark on the destination changeset"
+        "description": "do not activate the bookmark on the destination commit"
       },
       {
         "shortname": "",
@@ -1790,24 +1910,21 @@
     "name": "prev",
     "aliases": [
       "previous",
-      "prev",
-      "previ",
-      "previo",
-      "previou"
+      "prev"
     ],
-    "doc": "\n**check out the parent commit**\n",
+    "doc": "\n**check out an ancestor commit**\n\nUpdate to an ancestor commit of the current commit. When working with a stack\nof commits, you can use `sl previous` to move down your stack with ease.\n\n- Use the `--newest` flag to always pick the newest of multiple parents commits.  You can set `amend.alwaysnewest` to true in your global Sapling config file to make  this the default.\n\n- Use the `--merge` flag to bring along uncommitted changes to the destination  commit.\n\n- Use the `--bookmark` flag to move to the first ancestor commit with a bookmark.\n\nExamples:\n\n- Move 1 level down the stack:\n\n```\nsl prev\n```\n\n- Move 2 levels down the stack:\n\n```\nsl prev 2\n```\n\n- Move to the bottom of the stack:\n\n```\nsl prev --bottom\n```\n",
     "args": [
       {
         "shortname": "",
         "fullname": "newest",
         "default": false,
-        "description": "always pick the newest parent when a changeset has multiple parents"
+        "description": "always pick the newest parent when a commit has multiple parents"
       },
       {
         "shortname": "",
         "fullname": "bottom",
         "default": false,
-        "description": "update to the lowest non-public ancestor of the current changeset"
+        "description": "update to the lowest non-public ancestor of the current commit"
       },
       {
         "shortname": "",
@@ -1819,7 +1936,7 @@
         "shortname": "",
         "fullname": "no-activate-bookmark",
         "default": false,
-        "description": "do not activate the bookmark on the destination changeset"
+        "description": "do not activate the bookmark on the destination commit"
       },
       {
         "shortname": "C",
@@ -1905,7 +2022,7 @@
     "aliases": [
       "push"
     ],
-    "doc": "\n**push changes to the specified destination**\n\nPush changesets from the local repository to the specified\ndestination.\n\nThis operation is symmetrical to pull: it is identical to a pull\nin the destination repository from the current one.\n\nBy default, push will not allow creation of new heads at the\ndestination, since multiple heads would make it unclear which head\nto use. In this situation, it is recommended to pull and merge\nbefore pushing.\n\nExtra care should be taken with the -f/--force option,\nwhich will push all new heads on all branches, an action which will\nalmost always cause confusion for collaborators.\n\nIf -r/--rev is used, the specified revision and all its ancestors\nwill be pushed to the remote repository.\n\nIf -B/--bookmark is used, the specified bookmarked revision, its\nancestors, and the bookmark will be pushed to the remote\nrepository. Specifying `.` is equivalent to specifying the active\nbookmark's name.\n\nPlease see `sl help urls` for important details about `ssh://`\nURLs. If DESTINATION is omitted, a default path will be used.\n\nThe --pushvars option sends strings to the server that become\nenvironment variables prepended with `HG_USERVAR_`. For example,\n`--pushvars ENABLE_FEATURE=true`, provides the server side hooks with\n`HG_USERVAR_ENABLE_FEATURE=true` as part of their environment.\n\npushvars can provide for user-overridable hooks as well as set debug\nlevels. One example is having a hook that blocks commits containing\nconflict markers, but enables the user to override the hook if the file\nis using conflict markers for testing purposes or the file format has\nstrings that look like conflict markers.\n\nBy default, servers will ignore `--pushvars`. To enable it add the\nfollowing to your configuration file:\n\n```\n[push]\npushvars.server = true\n```\n\nIf `push.requirereason` is set to true, users will need to pass\n`--pushvars PUSH_REASON=\"...\"` in order to push, and their reason will\nbe logged via `ui.log(...)`.\n\n`push.requirereasonmsg` can be used to set the message shown to users\nwhen they don't provide a reason.\n\nReturns 0 if push was successful, 1 if nothing to push.\n",
+    "doc": "\n**push changes to the specified destination**\n\nPush commits from the local repository to the specified\ndestination.\n\nBy default, push does not allow creation of new heads at the\ndestination since multiple heads make it unclear which head\nto use. In this situation, it is recommended to pull and merge\nbefore pushing.\n\nExtra care should be taken with the `-f/--force` option,\nwhich will push all new heads on all branches, an action which will\nalmost always cause confusion for collaborators.\n\nIf `-r/--rev` is used, the specified revision and all its ancestors\nwill be pushed to the remote repository.\n\nIf `-B/--bookmark` is used, the specified bookmarked revision, its\nancestors, and the bookmark will be pushed to the remote\nrepository. Specifying `.` is equivalent to specifying the active\nbookmark's name.\n\nPlease see `sl help urls` for important details about `ssh://`\nURLs. If DESTINATION is omitted, a default path will be used.\n\nReturns 0 if push was successful, 1 if nothing to push.\n",
     "args": [
       {
         "shortname": "f",
@@ -2087,7 +2204,7 @@
     "aliases": [
       "redo"
     ],
-    "doc": "\n**undo the last undo**\n\nReverse the effects of an `sl undo` operation.\n\nYou can run `sl redo` multiple times to undo a series of `sl undo`\ncommands. Alternatively, you can explicitly specify the number of\n`sl undo` commands to undo by providing a number as a positional argument.\n\nSpecify `--preview` to see a graphical display that shows what your smartlog\nwill look like after you run the command.\n\nFor an interactive interface, run `sl undo --interactive`. This command\nenables you to visually step backwards and forwards in the undo history.\nRun `sl help undo` for more information.\n\nReturns 0 on success.\n",
+    "doc": "\n**undo the last undo**\n\nReverse the effects of an `sl undo` operation.\n\nYou can run `sl redo` multiple times to undo a series of `sl undo`\ncommands. Alternatively, you can explicitly specify the number of\n`sl undo` commands to undo by providing a number as a positional argument.\n\nSpecify `--preview` to see a graphical display that shows what\nyour smartlog will look like after you run the command.\n\nFor an interactive interface, run `sl undo --interactive`. This command\nenables you to visually step backwards and forwards in the undo history.\nRun `sl help undo` for more information.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "p",
@@ -2102,12 +2219,9 @@
     "name": "remove",
     "aliases": [
       "remove",
-      "rm",
-      "rem",
-      "remo",
-      "remov"
+      "rm"
     ],
-    "doc": "\n**delete the specified tracked files**\n\nRemove the specified tracked files from the repository and delete\nthem. The files will be deleted from the repository at the next\ncommit.\n\nTo undo a remove before files have been committed, use `sl revert`.\nTo stop tracking files without deleting them, use `sl forget`.\n\n-A/--after can be used to remove only files that have already\nbeen deleted, -f/--force can be used to force deletion, and -Af\ncan be used to remove files from the next revision without\ndeleting them from the working directory.\n\nThe following table details the behavior of remove for different\nfile states (columns) and option combinations (rows). The file\nstates are Added [A], Clean [C], Modified [M] and Missing [!]\n(as reported by `sl status`). The actions are Warn, Remove\n(from branch) and Delete (from disk):\n\n| | | | | |\n| - | - | - | - | - |\n| opt/state | A | C | M | ! |\n| none | W | RD | W | R |\n| -f | R | RD | RD | R |\n| -A | W | W | W | R |\n| -Af | R | R | R | R |\n\n`sl remove` never deletes files in Added [A] state from the\nworking directory, not even if `--force` is specified.\n\nReturns 0 on success, 1 if any warnings encountered.\n",
+    "doc": "\n**delete the specified tracked files**\n\nRemove the specified tracked files from the repository and delete\nthem. The files will be deleted from the repository at the next\ncommit.\n\nTo undo a remove before files have been committed, use `sl revert`.\nTo stop tracking files without deleting them, use `sl forget`.\n\n`-A/--after` can be used to remove only files that have already\nbeen deleted, `-f/--force` can be used to force deletion, and `-Af`\ncan be used to remove files from the next revision without\ndeleting them from the working directory.\n\nThe following table details the behavior of remove for different\nfile states (columns) and option combinations (rows). The file\nstates are Added (**A**), Clean (**C**), Modified (**M**) and\nMissing (**!**) (as reported by `sl status`). The actions are\nWarn (**W**), Remove (**R**) (from branch) and Delete (**D**)\n(from disk):\n\n| | | | | |\n| - | - | - | - | - |\n| opt/state | **A** | **C** | **M** | **!** |\n| none | **W** | **RD** | **W** | **R** |\n| ``-f`` | **R** | **RD** | **RD** | **R** |\n| ``-A`` | **W** | **W** | **W** | **R** |\n| ``-Af`` | **R** | **R** | **R** | **R** |\n\n`sl remove` never deletes files in **Added** state from the\nworking directory, not even if `--force` is specified.\n\nReturns 0 on success, 1 if any warnings encountered.\n",
     "args": [
       {
         "shortname": "A",
@@ -2139,12 +2253,9 @@
   "revert": {
     "name": "revert",
     "aliases": [
-      "revert",
-      "rev",
-      "reve",
-      "rever"
+      "revert"
     ],
-    "doc": "\n**change the specified files to match a commit**\n\nWith no revision specified, restore the contents of files to an\nunmodified state and unschedule adds, removes, copies, and renames.\nIn other words, revert the specified files or directories to the\ncontents they had in the current commit. If you are in the middle of\nan unfinished merge state, you must explicitly specify a revision.\n\nUse the -r/--rev option to revert the given files or directories to\ntheir states as of a specific commit. Because revert does not actually\ncheck out the specified commit, the files appear as modified and show\nup as pending changes in `sl status`.\n\nRevert causes files to match their contents in another commit. If\ninstead you want to undo a specific landed commit, use `sl backout`\ninstead. Run `@prog help backout` for more information.\n\nModified files are saved with an .orig suffix before reverting.\nTo disable these backups, use --no-backup. You can configure Sapling\nto store these backup files in a custom directory relative to the root\nof the repository by setting the `ui.origbackuppath` configuration\noption.\n\nReturns 0 on success.\n",
+    "doc": "\n**change the specified files to match a commit**\n\nWith no revision specified, restore the contents of files to an\nunmodified state and unschedule adds, removes, copies, and renames.\nIn other words, revert the specified files or directories to the\ncontents they had in the current commit. If you are in the middle of\nan unfinished merge state, you must explicitly specify a revision.\n\nUse the `-r/--rev` option to revert the given files or directories to\ntheir states as of a specific commit. Because revert does not actually\ncheck out the specified commit, the files appear as modified and show\nup as pending changes in `sl status`.\n\nRevert causes files to match their contents in another commit. If\ninstead you want to undo a specific landed commit, use `sl backout`\ninstead. Run `sl help backout` for more information.\n\nModified files are saved with an .orig suffix before reverting.\nTo disable these backups, use `--no-backup`. You can configure Sapling\nto store these backup files in a custom directory relative to the root\nof the repository by setting the `ui.origbackuppath` configuration\noption.\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "a",
@@ -2202,7 +2313,7 @@
     "aliases": [
       "root"
     ],
-    "doc": "\n**print the root (top) of the current working directory**\n\nPrint the root directory of the current repository.\n\nReturns 0 on success.\n",
+    "doc": "\n**print the repository's root (top) of the current working directory**\n\nPrint the root directory of the current repository.\n\nFrequently useful in shells scripts and automation to run commands like:\n\n```\n$  ./$(sl root)/bin/script.py\n```\n\nReturns 0 on success.\n",
     "args": [
       {
         "shortname": "",
@@ -2318,7 +2429,7 @@
     "aliases": [
       "show"
     ],
-    "doc": "\n**show commit in detail**\n\nShow the commit message and contents for the specified commit. If no commit\nis specified, shows the current commit.\n\nThis behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or\nif called without a REV, `sl log -vp -r . [OPTION]...` Use\n`sl log` for more powerful operations than supported by sl show.\n",
+    "doc": "\n**show commit in detail**\n\nShow the commit message and contents for the specified commit. If no commit\nis specified, shows the current commit.\n\n`sl show` behaves similarly to `sl log -vp -r REV [OPTION]... [FILE]...`, or\nif called without a `REV`, `sl log -vp -r . [OPTION]...` Use\n`sl log` for more powerful operations than supported by `sl show`.\n",
     "args": [
       {
         "shortname": "",
@@ -2405,10 +2516,9 @@
     "name": "split",
     "aliases": [
       "split",
-      "spl",
-      "spli"
+      "spl"
     ],
-    "doc": "\n**split a changeset into smaller changesets**\n\nPrompt for hunks to be selected until exhausted. Each selection of hunks\nwill form a separate changeset, in order from parent to child: the first\nselection will form the first changeset, the second selection will form\nthe second changeset, and so on.\n\nOperates on the current revision by default. Use --rev to split a given\nchangeset instead.\n",
+    "doc": "\n**split a commit into smaller commits**\n\nPrompt for hunks to be selected until exhausted. Each selection of hunks\nwill form a separate commit, in order from parent to child: the first\nselection will form the first commit, the second selection will form\nthe second commit, and so on.\n\nOperates on the current revision by default. Use `--rev` to split a given\ncommit instead.\n",
     "args": [
       {
         "shortname": "r",
@@ -2572,10 +2682,7 @@
     "name": "unamend",
     "aliases": [
       "unamend",
-      "una",
-      "unam",
-      "uname",
-      "unamen"
+      "una"
     ],
     "doc": "\n**undo the last amend operation on the current commit**\n\nReverse the effects of an `sl amend` operation. Hides the current commit\nand checks out the previous version of the commit. `sl unamend` does not\nrevert the state of the working copy, so changes that were added to the\ncommit in the last amend operation become pending changes in the working\ncopy.\n\n`sl unamend` cannot be run on amended commits that have children. In\nother words, you cannot unamend an amended commit in the middle of a\nstack.\n\nRunning `sl unamend` is similar to running `sl undo --keep`\nimmediately after `sl amend`. However, unlike `sl undo`, which can\nonly undo an amend if it was the last operation you performed,\n`sl unamend` can unamend any draft amended commit in the graph that\ndoes not have children.\n\nAlthough `sl unamend` is typically used to reverse the effects of\n`sl amend`, it actually rolls back the current commit to its previous\nversion, regardless of whether the changes resulted from an `sl amend`\noperation or from another operation, such as `sl rebase`.\n",
     "args": [],
@@ -2585,13 +2692,9 @@
     "name": "uncommit",
     "aliases": [
       "uncommit",
-      "unc",
-      "unco",
-      "uncom",
-      "uncomm",
-      "uncommi"
+      "unc"
     ],
-    "doc": "\n**uncommit part or all of the current commit**\n\nReverse the effects of an `sl commit` operation. When run with no\narguments, hides the current commit and checks out the parent commit,\nbut does not revert the state of the working copy. Changes that were\ncontained in the uncommitted commit become pending changes in the\nworking copy.\n\n`sl uncommit` cannot be run on commits that have children. In other words,\nyou cannot uncommit a commit in the middle of a stack. Similarly, by\ndefault you cannot run `sl uncommit` if there are pending changes in the\nworking copy.\n\nYou can selectively uncommit files from the current commit by optionally\nspecifying a list of files to remove. The specified files are removed from\nthe list of changed files in the current commit, but are not modified on\ndisk, so they appear as pending changes in the working copy.\n\nRunning `sl uncommit` is similar to running `sl undo --keep`\nimmediately after `sl commit`. However, unlike `sl undo`, which can\nonly undo a commit if it was the last operation you performed,\n`sl uncommit` can uncommit any draft commit in the graph that does\nnot have children.\n",
+    "doc": "\n**uncommit part or all of the current commit**\n\nReverse the effects of an `sl commit` operation. When run with no\narguments, hides the current commit and checks out the parent commit,\nbut does not revert the state of the working copy. Changes that were\ncontained in the uncommitted commit become pending changes in the\nworking copy.\n\n`sl uncommit` cannot be run on commits that have children. In\nother words, you cannot uncommit a commit in the middle of a\nstack. Similarly, by default, you cannot run `sl uncommit` if\nthere are pending changes in the working copy.\n\nYou can selectively uncommit files from the current commit by optionally\nspecifying a list of files to remove. The specified files are removed from\nthe list of changed files in the current commit, but are not modified on\ndisk, so they appear as pending changes in the working copy.\n\nRunning `sl uncommit` is similar to running `sl undo --keep`\nimmediately after `sl commit`. However, unlike `sl undo`, which can\nonly undo a commit if it was the last operation you performed,\n`sl uncommit` can uncommit any draft commit in the graph that does\nnot have children.\n",
     "args": [
       {
         "shortname": "",
@@ -2619,7 +2722,7 @@
     "aliases": [
       "undo"
     ],
-    "doc": "\n**undo the last local command**\n\nReverse the effects of the last local command. A local command is one that\nchanged the currently checked out commit, that modified the contents of\nlocal commits, or that changed local bookmarks. Examples of local commands\ninclude `sl checkout`, `sl commit`, `sl amend`, and `sl rebase`.\n\nYou cannot use `sl undo` to undo uncommited changes in the working copy,\nor changes to remote bookmarks.\n\nYou can run `sl undo` multiple times to undo a series of local commands.\nAlternatively, you can explicitly specify the number of local commands to\nundo using --step. This number can also be specified as a positional\nargument.\n\nTo undo the effects of `sl undo`, run `sl redo`. Run `sl help redo` for\nmore information.\n\nInclude --keep to preserve the state of the working copy. For example,\nspecify --keep when running `sl undo` to reverse the effects of an\n`sl commit` or `sl amend` operation while still preserving changes\nin the working copy. These changes will appear as pending changes.\n\nSpecify --preview to see a graphical display that shows what your smartlog\nwill look like after you run the command. Specify --interactive for an\ninteractive version of this preview in which you can step backwards and\nforwards in the undo history.\n\n`sl undo` cannot be used with non-local commands, or with commands\nthat are read-only. `sl undo` will skip over these commands in the\nundo history.\n\nFor hybrid commands that result in both local and remote changes,\n`sl undo` will undo the local changes, but not the remote changes.\nFor example, `@prog pull --rebase` might move remote/master and also\nrebase local commits. In this situation, `sl undo` will revert the\nrebase, but not the change to remote/master.\n\nBranch limits the scope of an undo to a group of local (draft)\nchangectxs, identified by any one member of this group.\n",
+    "doc": "\n**undo the last local command**\n\nReverse the effects of the last local command. A local command is one that\nchanged the currently checked out commit, that modified the contents of\nlocal commits, or that changed local bookmarks. Examples of local commands\ninclude `sl checkout`, `sl commit`, `sl amend`, and `sl rebase`.\n\nYou cannot use `sl undo` to undo uncommited changes in the working copy,\nor changes to remote bookmarks.\n\nYou can run `sl undo` multiple times to undo a series of local commands.\nAlternatively, you can explicitly specify the number of local commands to\nundo using `--step`. This number can also be specified as a positional\nargument.\n\nTo undo the effects of `sl undo`, run `sl redo`. Run\n`sl help redo` for more information.\n\nInclude `--keep` to preserve the state of the working copy. For example,\nspecify `--keep` when running `sl undo` to reverse the effects of an\n`sl commit` or `sl amend` operation while still preserving changes\nin the working copy. These changes will appear as pending changes.\n\nSpecify `--preview` to see a graphical display that shows what\nyour smartlog will look like after you run the command. Specify\n`--interactive` for an interactive version of this preview in which\nyou can step backwards and forwards in the undo history.\n\n`sl undo` cannot be used with non-local commands, or with commands\nthat are read-only. `sl undo` will skip over these commands in the\nundo history.\n\nFor hybrid commands that result in both local and remote changes,\n`sl undo` will undo the local changes, but not the remote changes.\nFor example, `@prog pull --rebase` might move remote/master and also\nrebase local commits. In this situation, `sl undo` will revert the\nrebase, but not the change to remote/master.\n\nBranch limits the scope of an undo to a group of local (draft)\nchangectxs, identified by any one member of this group.\n",
     "args": [
       {
         "shortname": "a",
@@ -2669,10 +2772,7 @@
   "unhide": {
     "name": "unhide",
     "aliases": [
-      "unhide",
-      "unh",
-      "unhi",
-      "unhid"
+      "unhide"
     ],
     "doc": "\n**unhide commits and their ancestors**\n\nMark the specified commits as visible. Any ancestors of the specified\ncommits will also become visible.\n",
     "args": [

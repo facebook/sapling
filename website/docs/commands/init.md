@@ -1,10 +1,10 @@
 ---
-sidebar_position: 19
+sidebar_position: 21
 ---
 
-## init | ini
+## init
 <!--
-  @generated SignedSource<<4872d400db389056cde6743bd49fbd06>>
+  @generated SignedSource<<3e8ad988161ec969dafe3252b65d7d4e>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -12,12 +12,8 @@ sidebar_position: 19
 **create a new repository in the given directory**
 
 Initialize a new repository in the given directory. If the given
-directory does not exist, it will be created.
-
-If no directory is given, the current directory is used.
-
-It is possible to specify an `ssh://` URL as the destination.
-See `sl help urls` for more information.
+directory does not exist, it will be created. If no directory is
+given, the current directory is used.
 
 Returns 0 on success.
 

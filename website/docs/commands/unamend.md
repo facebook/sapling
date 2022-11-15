@@ -1,10 +1,10 @@
 ---
-sidebar_position: 37
+sidebar_position: 40
 ---
 
-## unamend | una | unam | uname | unamen
+## unamend | una
 <!--
-  @generated SignedSource<<0d75ab27166cfd80682943e2a2199262>>
+  @generated SignedSource<<fe1b8bea11673686ed501b3cf6dd3a60>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -32,5 +32,4 @@ Although `sl unamend` is typically used to reverse the effects of
 version, regardless of whether the changes resulted from an `sl amend`
 operation or from another operation, such as `sl rebase`.
 
-## arguments
-no arguments
+

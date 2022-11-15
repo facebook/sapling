@@ -1,15 +1,15 @@
 ---
-sidebar_position: 20
+sidebar_position: 22
 ---
 
-## journal | j | jo | jou | jour | journ | journa
+## journal | jo
 <!--
-  @generated SignedSource<<44c5813f7f83cec96f2d9fd1d61aca40>>
+  @generated SignedSource<<0e7de1e471e68d39910eea9d2c9c6638>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
-**show history of the checked out commit or a bookmark**
+**show the history of the checked out commit or a bookmark**
 
 Show the history of all the commits that were once the current commit. In
 other words, shows a list of your previously checked out commits.
@@ -21,23 +21,23 @@ By default, `sl journal` displays the history of the current commit. To
 display a list of commits pointed to by a bookmark, specify a bookmark
 name.
 
-Specify --all to show the history of both the current commit and all
-bookmarks. In the output for --all, bookmarks are listed by name, and '.'
-indicates the current commit.
+Specify `--all` to show the history of both the current commit and all
+bookmarks. In the output for `--all`, bookmarks are listed by name, and
+`.` indicates the current commit.
 
-Specify -Tjson to produce machine-readable output.
+Specify `-Tjson` to produce machine-readable output.
 
 By default, `sl journal` only shows the commit hash and the
-corresponding command. Specify --verbose to also include the previous
-commit hash, user, and timestamp.
+corresponding command. Specify `--verbose` to also include the
+previous commit hash, user, and timestamp.
 
-Use -c/--commits to output log information about each commit hash. To
-customize the log output, you can also specify switches like '--patch',
-'--git', '--stat', and '--template'.
+Use `-c/--commits` to output log information about each commit
+hash. To customize the log output, you can also specify switches
+like `--patch`, `git`, `--stat`, and `--template`.
 
-If a bookmark name starts with 're:', the remainder of the name is
-treated as a regular expression. To match a name that actually starts
-with 're:', use the prefix 'literal:'.
+If a bookmark name starts with `re:`, the remainder of the name
+is treated as a regular expression. To match a name that actually
+starts with `re:`, use the prefix `literal:`.
 
 ## arguments
 | shortname | fullname | default | description |

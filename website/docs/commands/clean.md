@@ -1,10 +1,10 @@
 ---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 ## clean | purge
 <!--
-  @generated SignedSource<<15d58c2d1676f46498cb520d8b92e8a7>>
+  @generated SignedSource<<d452edccaab5cb1ddd0f2705c07d714a>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

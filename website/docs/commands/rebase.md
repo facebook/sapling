@@ -1,10 +1,10 @@
 ---
-sidebar_position: 28
+sidebar_position: 30
 ---
 
 ## rebase
 <!--
-  @generated SignedSource<<4e1af5b94576df90a0cd831eacfb1c0e>>
+  @generated SignedSource<<ddd9dd98682a891d2805940ed5213cbb>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

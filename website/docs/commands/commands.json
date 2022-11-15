@@ -246,6 +246,132 @@
     ],
     "subcommands": null
   },
+  "annotate": {
+    "name": "annotate",
+    "aliases": [
+      "annotate",
+      "blame",
+      "an"
+    ],
+    "doc": "show per-line commit information for given files\n\n    Show file contents where each line is annotated with information\n    about the commit that last changed that line.\n\n    This command is useful for discovering when a change was made and\n    by whom.\n\n    If you include ``--file``, ``--user``, or ``--date``, the revision number is\n    suppressed unless you also include ``--number``.\n\n    Without the ``-a/--text`` option, annotate will skip binary files.\n    With ``-a``, binary files will be annotated anyway.\n\n    Returns 0 on success.\n    ",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "annotate the specified revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-follow",
+        "default": false,
+        "description": "don't follow copies and renames"
+      },
+      {
+        "shortname": "a",
+        "fullname": "text",
+        "default": null,
+        "description": "treat all files as text"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": null,
+        "description": "list the author (long with -v)"
+      },
+      {
+        "shortname": "f",
+        "fullname": "file",
+        "default": null,
+        "description": "list the filename"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": null,
+        "description": "list the date (short with -q)"
+      },
+      {
+        "shortname": "n",
+        "fullname": "number",
+        "default": null,
+        "description": "list the revision number"
+      },
+      {
+        "shortname": "c",
+        "fullname": "changeset",
+        "default": null,
+        "description": "list the changeset (default)"
+      },
+      {
+        "shortname": "l",
+        "fullname": "line-number",
+        "default": null,
+        "description": "show line number at the first appearance"
+      },
+      {
+        "shortname": "",
+        "fullname": "skip",
+        "default": [],
+        "description": "revision to not display (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "short-date",
+        "default": null,
+        "description": "list the brief date (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "w",
+        "fullname": "ignore-all-space",
+        "default": null,
+        "description": "ignore white space when comparing lines"
+      },
+      {
+        "shortname": "b",
+        "fullname": "ignore-space-change",
+        "default": null,
+        "description": "ignore changes in the amount of white space"
+      },
+      {
+        "shortname": "B",
+        "fullname": "ignore-blank-lines",
+        "default": null,
+        "description": "ignore changes whose lines are all blank"
+      },
+      {
+        "shortname": "Z",
+        "fullname": "ignore-space-at-eol",
+        "default": null,
+        "description": "ignore changes in whitespace at EOL"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "p",
+        "fullname": "phabdiff",
+        "default": null,
+        "description": "list phabricator diff id"
+      }
+    ],
+    "subcommands": null
+  },
   "backout": {
     "name": "backout",
     "aliases": [
@@ -1047,13 +1173,19 @@
       }
     ]
   },
+  "githelp": {
+    "name": "githelp",
+    "aliases": [
+      "githelp",
+      "git"
+    ],
+    "doc": "suggests the @Product@ equivalent of the given git command\n\n    Usage: @prog@ githelp -- $COMMAND\n\n    Example:\n\n      $ @prog@ git -- checkout my_file.txt baef1046b\n\n      @prog@ revert -r my_file.txt baef1046b\n\n    The translation is best effort, and if an unknown command or parameter\n    combination is detected, it simply returns an error.\n    ",
+    "args": [],
+    "subcommands": null
+  },
   "goto": {
     "name": "goto",
     "aliases": [
-      "update",
-      "up",
-      "checkout",
-      "co",
       "goto",
       "go"
     ],
@@ -1237,7 +1369,7 @@
     "aliases": [
       "hide"
     ],
-    "doc": "hide commits and their descendants\n\n    Mark the specified commits as hidden. Hidden commits are not included in\n    the output of most @Product@ commands, including :prog:`log` and\n    :prog:`smartlog.` Any descendants of the specified commits will also be\n    hidden.\n\n    Hidden commits are not deleted. They will remain in the repo indefinitely\n    and are still accessible by their hashes. However, :prog:`hide` will delete\n    any bookmarks pointing to hidden commits.\n\n    Use the :prog:`unhide` command to make hidden commits visible again. See\n    :prog:`help unhide` for more information.\n\n    To view hidden commits, run :prog:`journal`.\n\n    When you hide the current commit, the most recent visible ancestor is\n    checked out.\n\n    To hide obsolete stacks (stacks that have a newer version), run\n    :prog:`hide --cleanup`. This command is equivalent to:\n\n    :prog:`hide 'obsolete() - ancestors(draft() & not obsolete())'`\n\n    --cleanup skips obsolete commits with non-obsolete descendants.\n    ",
+    "doc": "hide commits and their descendants\n\n    Mark the specified commits as hidden. Hidden commits are not included in\n    the output of most @Product@ commands, including :prog:`log` and\n    :prog:`smartlog.` Any descendants of the specified commits will also be\n    hidden.\n\n    Hidden commits are not deleted. They will remain in the repo indefinitely\n    and are still accessible by their hashes. However, :prog:`hide` will delete\n    any bookmarks pointing to hidden commits.\n\n    Use the :prog:`unhide` command to make hidden commits visible again. See\n    :prog:`help unhide` for more information.\n\n    To view hidden commits, run :prog:`journal`.\n\n    When you hide the current commit, the most recent visible ancestor is\n    checked out.\n\n    To hide obsolete stacks (stacks that have a newer version), run\n    :prog:`hide --cleanup`. This command is equivalent to:\n\n    :prog:`hide 'obsolete() - ancestors(draft() & not obsolete())'`\n\n    ``--cleanup`` skips obsolete commits with non-obsolete descendants.\n    ",
     "args": [
       {
         "shortname": "r",
@@ -1327,16 +1459,15 @@
   "init": {
     "name": "init",
     "aliases": [
-      "init",
-      "ini"
+      "init"
     ],
-    "doc": "create a new repository in the given directory\n\n    Initialize a new repository in the given directory. If the given\n    directory does not exist, it will be created.\n\n    If no directory is given, the current directory is used.\n\n    It is possible to specify an ``ssh://`` URL as the destination.\n    See :prog:`help urls` for more information.\n\n    Returns 0 on success.\n    ",
+    "doc": "create a new repository in the given directory\n\n    Initialize a new repository in the given directory. If the given\n    directory does not exist, it will be created. If no directory is\n    given, the current directory is used.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "",
         "fullname": "git",
         "default": null,
-        "description": "use git as backend (EXPERIMENTAL)"
+        "description": "use git as the backend (EXPERIMENTAL)"
       }
     ],
     "subcommands": null
@@ -1345,14 +1476,9 @@
     "name": "journal",
     "aliases": [
       "journal",
-      "j",
-      "jo",
-      "jou",
-      "jour",
-      "journ",
-      "journa"
+      "jo"
     ],
-    "doc": "show history of the checked out commit or a bookmark\n\n    Show the history of all the commits that were once the current commit. In\n    other words, shows a list of your previously checked out commits.\n    :prog:`journal` can be used to find older versions of commits (for example,\n    when you want to revert to a previous state). It can also be used to\n    discover commits that were previously hidden.\n\n    By default, :prog:`journal` displays the history of the current commit. To\n    display a list of commits pointed to by a bookmark, specify a bookmark\n    name.\n\n    Specify --all to show the history of both the current commit and all\n    bookmarks. In the output for --all, bookmarks are listed by name, and '.'\n    indicates the current commit.\n\n    Specify -Tjson to produce machine-readable output.\n\n    .. container:: verbose\n\n       By default, :prog:`journal` only shows the commit hash and the\n       corresponding command. Specify --verbose to also include the previous\n       commit hash, user, and timestamp.\n\n       Use -c/--commits to output log information about each commit hash. To\n       customize the log output, you can also specify switches like '--patch',\n       '--git', '--stat', and '--template'.\n\n       If a bookmark name starts with 're:', the remainder of the name is\n       treated as a regular expression. To match a name that actually starts\n       with 're:', use the prefix 'literal:'.\n\n    ",
+    "doc": "show the history of the checked out commit or a bookmark\n\n    Show the history of all the commits that were once the current commit. In\n    other words, shows a list of your previously checked out commits.\n    :prog:`journal` can be used to find older versions of commits (for example,\n    when you want to revert to a previous state). It can also be used to\n    discover commits that were previously hidden.\n\n    By default, :prog:`journal` displays the history of the current commit. To\n    display a list of commits pointed to by a bookmark, specify a bookmark\n    name.\n\n    Specify ``--all`` to show the history of both the current commit and all\n    bookmarks. In the output for ``--all``, bookmarks are listed by name, and\n    ``.`` indicates the current commit.\n\n    Specify ``-Tjson`` to produce machine-readable output.\n\n    .. container:: verbose\n\n      By default, :prog:`journal` only shows the commit hash and the\n      corresponding command. Specify ``--verbose`` to also include the\n      previous commit hash, user, and timestamp.\n\n      Use ``-c/--commits`` to output log information about each commit\n      hash. To customize the log output, you can also specify switches\n      like ``--patch``, ``git``, ``--stat``, and ``--template``.\n\n      If a bookmark name starts with ``re:``, the remainder of the name\n      is treated as a regular expression. To match a name that actually\n      starts with ``re:``, use the prefix ``literal:``.\n\n    ",
     "args": [
       {
         "shortname": "",
@@ -1411,7 +1537,7 @@
       "log",
       "history"
     ],
-    "doc": "show commit history\n\n    Print the revision history of the specified files or the entire\n    project.\n\n    If no revision range is specified, the default is ``::.``.\n\n    File history is shown without following rename or copy history of\n    files. Use -f/--follow with a filename to follow history across\n    renames and copies. --follow without a filename will only show\n    ancestors or descendants of the starting revision.\n\n    By default this command prints revision number and changeset id,\n    non-trivial parents, user, date and time, and a summary for\n    each commit. When the -v/--verbose switch is used, the list of\n    changed files and full commit message are shown.\n\n    With --graph the revisions are shown as an ASCII art DAG with the most\n    recent changeset at the top.\n    'o' is a changeset, '@' is a working directory parent, 'x' is obsolete,\n    and '+' represents a fork where the changeset from the lines below is a\n    parent of the 'o' merge on the same line.\n    Paths in the DAG are represented with '|', '/' and so forth. ':' in place\n    of a '|' indicates one or more revisions in a path are omitted.\n\n    .. container:: verbose\n\n       Use -L/--line-range FILE,M:N options to follow the history of lines\n       from M to N in FILE. With -p/--patch only diff hunks affecting\n       specified line range will be shown. This option requires --follow;\n       it can be specified multiple times. Currently, this option is not\n       compatible with --graph. This option is experimental.\n\n    .. note::\n\n       :prog:`log --patch` may generate unexpected diff output for merge\n       changesets, as it will only compare the merge changeset against\n       its first parent. Also, only files different from BOTH parents\n       will appear in files:.\n\n    .. note::\n\n       For performance reasons, :prog:`log FILE` may omit duplicate changes\n       made on branches and will not show removals or mode changes. To\n       see all such changes, use the --removed switch.\n\n    .. container:: verbose\n\n       .. note::\n\n          The history resulting from -L/--line-range options depends on diff\n          options; for instance if white-spaces are ignored, respective changes\n          with only white-spaces in specified line range will not be listed.\n\n    .. container:: verbose\n\n      Some examples:\n\n      - changesets with full descriptions and file lists::\n\n          @prog@ log -v\n\n      - changesets ancestral to the working directory::\n\n          @prog@ log -f\n\n      - last 10 commits on the current branch::\n\n          @prog@ log -l 10 -b .\n\n      - changesets showing all modifications of a file, including removals::\n\n          @prog@ log --removed file.c\n\n      - all changesets that touch a directory, with diffs, excluding merges::\n\n          @prog@ log -Mp lib/\n\n      - all revision numbers that match a keyword::\n\n          @prog@ log -k bug --template \"{rev}\\n\"\n\n      - the full hash identifier of the working directory parent::\n\n          @prog@ log -r . --template \"{node}\\n\"\n\n      - list available log templates::\n\n          @prog@ log -T list\n\n      - check if a given changeset is included in a bookmarked release::\n\n          @prog@ log -r \"a21ccf and ancestor(release_1.9)\"\n\n      - find all changesets by some user in a date range::\n\n          @prog@ log -k alice -d \"may 2008 to jul 2008\"\n\n      - changesets touching lines 13 to 23 for file.c::\n\n          @prog@ log -L file.c,13:23\n\n      - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of\n        main.c with patch::\n\n          @prog@ log -L file.c,13:23 -L main.c,2:6 -p\n\n    See :prog:`help dates` for a list of formats valid for -d/--date.\n\n    See :prog:`help revisions` for more about specifying and ordering\n    revisions.\n\n    See :prog:`help templates` for more about pre-packaged styles and\n    specifying custom templates. The default template used by the log\n    command can be customized via the ``ui.logtemplate`` configuration\n    setting.\n\n    Returns 0 on success.\n\n    ",
+    "doc": "show commit history\n\n    Print the revision history of the specified files or the entire\n    project.\n\n    If no revision range is specified, the default is the current commit\n    and all of its ancestors (``::.``).\n\n    File history is shown without following the rename or copy\n    history of files. To follow file history across renames and\n    copies, use the ``-f/-- follow`` option. If the ``--follow``\n    option is used without a filename, only the ancestors or\n    descendants of the starting revision are shown.\n\n    By default, :prog:`log` prints the commit's hash, non-trivial\n    parents, user, date, time, and the single-line summary. When the\n    ``-v/--verbose`` option is used, the list of changed files and\n    full commit message are shown.\n\n    With the ``--graph`` option, revisions are shown as an ASCII art\n    graph with the most recent commit at the top. The graph nodes\n    are depicted as follows: **o** is a commit, **@** is a working\n    directory parent, **x** is obsolete, and **+** represents a fork\n    where the commit from the lines below is a parent of the **o**\n    merge on the same line. Paths in the graph are represented with\n    **|**, **/** and so forth. **:** in place of a **|** indicates\n    one or more revisions in a path are omitted.\n\n\n    .. container:: verbose\n\n      Use the ``-L/--line-range FILE,M:N`` option to follow the\n      history of lines from **M** to **N** in FILE. With the ``-p/--\n      patch`` option, only diff hunks affecting specified line range\n      will be shown. The ``-L`` option can be specified multiple\n      times and requires the ``--follow`` option. Currently, the line\n      range option is not compatible with ``--graph`` and is an\n      experimental feature.\n\n    .. note::\n\n      :prog:`log --patch` may generate unexpected diff output for merge\n      commits, as it will only compare the merge commit against\n      its first parent. Also, only files different from BOTH parents\n      will appear in the **files:** section.\n\n    .. note::\n\n      For performance reasons, :prog:`log FILE` may omit duplicate changes\n      made on branches and will not show removals or mode changes. To\n      see all such changes, use the ``--removed`` switch.\n\n    .. container:: verbose\n\n       .. note::\n\n          The history resulting from ``-L/--line-range`` options depends on\n          diff options: for instance, if white-spaces are ignored,\n          respective changes with only white-spaces in specified line range\n          will not be listed.\n\n    .. container:: verbose\n\n      Some examples:\n\n      - commits with full descriptions and file lists::\n\n          @prog@ log -v\n\n      - commits ancestral to the working directory::\n\n          @prog@ log -f\n\n      - last 10 commits on the current branch::\n\n          @prog@ log -l 10 -b .\n\n      - commits showing all modifications of a file, including removals::\n\n          @prog@ log --removed file.c\n\n      - all commits that touch a directory, with diffs, excluding merges::\n\n          @prog@ log -Mp lib/\n\n      - all revision numbers that match a keyword::\n\n          @prog@ log -k bug --template \"{rev}\\n\"\n\n      - the full hash identifier of the working directory parent::\n\n          @prog@ log -r . --template \"{node}\\n\"\n\n      - list available log templates::\n\n          @prog@ log -T list\n\n      - check if a given commit is included in a bookmarked release::\n\n          @prog@ log -r \"a21ccf and ancestor(release_1.9)\"\n\n      - find all commits by some user in a date range::\n\n          @prog@ log -k alice -d \"may 2008 to jul 2008\"\n\n      - commits touching lines 13 to 23 for file.c::\n\n          @prog@ log -L file.c,13:23\n\n      - commits touching lines 13 to 23 for file.c and lines 2 to 6 of\n        main.c with patch::\n\n          @prog@ log -L file.c,13:23 -L main.c,2:6 -p\n\n    See :prog:`help dates` for a list of formats valid for ``-d/--date``.\n\n    See :prog:`help revisions` for more about specifying and ordering\n    revisions.\n\n    See :prog:`help templates` for more about pre-packaged styles and\n    specifying custom templates. The default template used by the log\n    command can be customized via the ``ui.logtemplate`` configuration\n    setting.\n\n    Returns 0 on success.\n\n    ",
     "args": [
       {
         "shortname": "f",
@@ -1570,13 +1696,10 @@
     "name": "metaedit",
     "aliases": [
       "metaedit",
-      "met",
       "meta",
-      "metae",
-      "metaed",
-      "metaedi"
+      "me"
     ],
-    "doc": "edit commit message and other metadata\n\n    Edit commit message for the current commit. By default, opens your default\n    editor so that you can edit the commit message interactively. Specify -m\n    to specify the commit message on the command line.\n\n    To edit the message for a different commit, specify -r. To edit the\n    messages of multiple commits, specify --batch.\n\n    You can edit other pieces of commit metadata, namely the user or date,\n    by specifying -u or -d, respectively. The expected format for user is\n    'Full Name <user@example.com>'.\n\n    There is also automation-friendly JSON input mode which allows the caller\n    to provide the mapping between commit and new message and username in the\n    following format::\n\n        {\n            \"<commit_hash>\": {\n                \"message\": \"<message>\",\n                \"user\": \"<user>\" // optional\n            }\n        }\n\n    .. note::\n\n        You can specify --fold to fold multiple revisions into one when the\n        given revisions form a linear unbroken chain. However, :prog:`fold` is\n        the preferred command for this purpose. See :prog:`help fold` for more\n        information.\n\n    .. container:: verbose\n\n     Some examples:\n\n     - Edit the commit message for the current commit::\n\n         @prog@ metaedit\n\n     - Change the username for the current commit::\n\n         @prog@ metaedit --user 'New User <new-email@example.com>'\n\n    ",
+    "doc": "edit commit message and other metadata\n\n    :prog:`metaedit` lets you edit commit messages. With no\n    arguments, the current commit message is modified. To edit\n    the commit message for a different commit, specify ``-r\n    REV``. To edit the commit messages for multiple commits,\n    specify ``--batch``.\n\n    By default, :prog:`metaedit` launches your default editor so that\n    you can interactively edit the commit message. Specify ``-m`` to\n    specify the commit message on the command line.\n\n    You can edit other pieces of commit metadata such as the user or\n    date, by specifying ``-u`` or ``-d``, respectively. The expected\n    format for the user is 'Full Name <user@example.com>'.\n\n\n    There is also an automation-friendly JSON input mode which allows\n    the caller to provide the mapping between commit and new message\n    and username in the following format::\n\n        {\n            \"<commit_hash>\": {\n                \"message\": \"<message>\",\n                \"user\": \"<user>\" // optional\n            }\n        }\n\n    .. note::\n\n        You can specify ``--fold`` to fold multiple revisions into one when the\n        given revisions form a linear unbroken chain. However, :prog:`fold` is\n        the preferred command for this purpose. See :prog:`help fold` for more\n        information.\n\n    .. container:: verbose\n\n     Some examples:\n\n     - Edit the commit message for the current commit::\n\n         @prog@ metaedit\n\n     - Change the username for the current commit::\n\n         @prog@ metaedit --user 'New User <new-email@example.com>'\n\n    ",
     "args": [
       {
         "shortname": "r",
@@ -1644,24 +1767,21 @@
   "next": {
     "name": "next",
     "aliases": [
-      "next",
-      "n",
-      "ne",
-      "nex"
+      "next"
     ],
-    "doc": "check out a child commit",
+    "doc": "check out a descendant commit\n\n    Update to a descendant commit of the current commit. When working with a stack\n    of commits, you can use :prog:`next` to move up your stack with ease.\n\n    - Use the ``--newest`` flag to always pick the newest of multiple child commits.\n      You can set ``amend.alwaysnewest`` to true in your global @Product@ config file\n      to make this the default.\n\n    - Use the ``--merge`` flag to bring along uncommitted changes to the destination\n      commit.\n\n    - Use the ``--bookmark`` flag to move to the next commit with a bookmark.\n\n    - Use the ``--rebase`` flag to rebase any child commits that were left behind\n      after ``amend``, ``split``, ``fold``, or ``histedit``.\n\n    Examples:\n\n    - Move 1 level up the stack::\n\n        @prog@ next\n\n    - Move 2 levels up the stack::\n\n        @prog@ next 2\n\n    - Move to the top of the stack::\n\n        @prog@ next --top\n    ",
     "args": [
       {
         "shortname": "",
         "fullname": "newest",
         "default": false,
-        "description": "always pick the newest child when a changeset has multiple children"
+        "description": "always pick the newest child when a commit has multiple children"
       },
       {
         "shortname": "",
         "fullname": "rebase",
         "default": false,
-        "description": "rebase each changeset if necessary"
+        "description": "rebase each commit if necessary"
       },
       {
         "shortname": "",
@@ -1673,13 +1793,13 @@
         "shortname": "",
         "fullname": "bookmark",
         "default": false,
-        "description": "update to the first changeset with a bookmark"
+        "description": "update to the first commit with a bookmark"
       },
       {
         "shortname": "",
         "fullname": "no-activate-bookmark",
         "default": false,
-        "description": "do not activate the bookmark on the destination changeset"
+        "description": "do not activate the bookmark on the destination commit"
       },
       {
         "shortname": "",
@@ -1790,24 +1910,21 @@
     "name": "prev",
     "aliases": [
       "previous",
-      "prev",
-      "previ",
-      "previo",
-      "previou"
+      "prev"
     ],
-    "doc": "check out the parent commit",
+    "doc": "check out an ancestor commit\n\n    Update to an ancestor commit of the current commit. When working with a stack\n    of commits, you can use :prog:`previous` to move down your stack with ease.\n\n    - Use the ``--newest`` flag to always pick the newest of multiple parents commits.\n      You can set ``amend.alwaysnewest`` to true in your global @Product@ config file to make\n      this the default.\n\n    - Use the ``--merge`` flag to bring along uncommitted changes to the destination\n      commit.\n\n    - Use the ``--bookmark`` flag to move to the first ancestor commit with a bookmark.\n\n    Examples:\n\n    - Move 1 level down the stack::\n\n        @prog@ prev\n\n    - Move 2 levels down the stack::\n\n        @prog@ prev 2\n\n    - Move to the bottom of the stack::\n\n        @prog@ prev --bottom\n    ",
     "args": [
       {
         "shortname": "",
         "fullname": "newest",
         "default": false,
-        "description": "always pick the newest parent when a changeset has multiple parents"
+        "description": "always pick the newest parent when a commit has multiple parents"
       },
       {
         "shortname": "",
         "fullname": "bottom",
         "default": false,
-        "description": "update to the lowest non-public ancestor of the current changeset"
+        "description": "update to the lowest non-public ancestor of the current commit"
       },
       {
         "shortname": "",
@@ -1819,7 +1936,7 @@
         "shortname": "",
         "fullname": "no-activate-bookmark",
         "default": false,
-        "description": "do not activate the bookmark on the destination changeset"
+        "description": "do not activate the bookmark on the destination commit"
       },
       {
         "shortname": "C",
@@ -1905,7 +2022,7 @@
     "aliases": [
       "push"
     ],
-    "doc": "push changes to the specified destination\n\n    Push changesets from the local repository to the specified\n    destination.\n\n    This operation is symmetrical to pull: it is identical to a pull\n    in the destination repository from the current one.\n\n    By default, push will not allow creation of new heads at the\n    destination, since multiple heads would make it unclear which head\n    to use. In this situation, it is recommended to pull and merge\n    before pushing.\n\n    .. note::\n\n       Extra care should be taken with the -f/--force option,\n       which will push all new heads on all branches, an action which will\n       almost always cause confusion for collaborators.\n\n    If -r/--rev is used, the specified revision and all its ancestors\n    will be pushed to the remote repository.\n\n    If -B/--bookmark is used, the specified bookmarked revision, its\n    ancestors, and the bookmark will be pushed to the remote\n    repository. Specifying ``.`` is equivalent to specifying the active\n    bookmark's name.\n\n    Please see :prog:`help urls` for important details about ``ssh://``\n    URLs. If DESTINATION is omitted, a default path will be used.\n\n    .. container:: verbose\n\n        The --pushvars option sends strings to the server that become\n        environment variables prepended with ``HG_USERVAR_``. For example,\n        ``--pushvars ENABLE_FEATURE=true``, provides the server side hooks with\n        ``HG_USERVAR_ENABLE_FEATURE=true`` as part of their environment.\n\n        pushvars can provide for user-overridable hooks as well as set debug\n        levels. One example is having a hook that blocks commits containing\n        conflict markers, but enables the user to override the hook if the file\n        is using conflict markers for testing purposes or the file format has\n        strings that look like conflict markers.\n\n        By default, servers will ignore `--pushvars`. To enable it add the\n        following to your configuration file::\n\n            [push]\n            pushvars.server = true\n\n        If ``push.requirereason`` is set to true, users will need to pass\n        ``--pushvars PUSH_REASON=\"...\"`` in order to push, and their reason will\n        be logged via ``ui.log(...)``.\n\n        ``push.requirereasonmsg`` can be used to set the message shown to users\n        when they don't provide a reason.\n\n    Returns 0 if push was successful, 1 if nothing to push.\n    ",
+    "doc": "push changes to the specified destination\n\n    Push commits from the local repository to the specified\n    destination.\n\n    By default, push does not allow creation of new heads at the\n    destination since multiple heads make it unclear which head\n    to use. In this situation, it is recommended to pull and merge\n    before pushing.\n\n    .. note::\n\n       Extra care should be taken with the ``-f/--force`` option,\n       which will push all new heads on all branches, an action which will\n       almost always cause confusion for collaborators.\n\n    If ``-r/--rev`` is used, the specified revision and all its ancestors\n    will be pushed to the remote repository.\n\n    If ``-B/--bookmark`` is used, the specified bookmarked revision, its\n    ancestors, and the bookmark will be pushed to the remote\n    repository. Specifying ``.`` is equivalent to specifying the active\n    bookmark's name.\n\n    Please see :prog:`help urls` for important details about ``ssh://``\n    URLs. If DESTINATION is omitted, a default path will be used.\n\n    Returns 0 if push was successful, 1 if nothing to push.\n    ",
     "args": [
       {
         "shortname": "f",
@@ -2087,7 +2204,7 @@
     "aliases": [
       "redo"
     ],
-    "doc": "undo the last undo\n\n    Reverse the effects of an :prog:`undo` operation.\n\n    You can run :prog:`redo` multiple times to undo a series of :prog:`undo`\n    commands. Alternatively, you can explicitly specify the number of\n    :prog:`undo` commands to undo by providing a number as a positional argument.\n\n    Specify ``--preview`` to see a graphical display that shows what your smartlog\n    will look like after you run the command.\n\n    For an interactive interface, run :prog:`undo --interactive`. This command\n    enables you to visually step backwards and forwards in the undo history.\n    Run :prog:`help undo` for more information.\n\n    Returns 0 on success.\n    ",
+    "doc": "undo the last undo\n\n    Reverse the effects of an :prog:`undo` operation.\n\n    You can run :prog:`redo` multiple times to undo a series of :prog:`undo`\n    commands. Alternatively, you can explicitly specify the number of\n    :prog:`undo` commands to undo by providing a number as a positional argument.\n\n    Specify ``--preview`` to see a graphical display that shows what\n    your smartlog will look like after you run the command.\n\n    For an interactive interface, run :prog:`undo --interactive`. This command\n    enables you to visually step backwards and forwards in the undo history.\n    Run :prog:`help undo` for more information.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "p",
@@ -2102,12 +2219,9 @@
     "name": "remove",
     "aliases": [
       "remove",
-      "rm",
-      "rem",
-      "remo",
-      "remov"
+      "rm"
     ],
-    "doc": "delete the specified tracked files\n\n    Remove the specified tracked files from the repository and delete\n    them. The files will be deleted from the repository at the next\n    commit.\n\n    To undo a remove before files have been committed, use :prog:`revert`.\n    To stop tracking files without deleting them, use :prog:`forget`.\n\n    .. container:: verbose\n\n      -A/--after can be used to remove only files that have already\n      been deleted, -f/--force can be used to force deletion, and -Af\n      can be used to remove files from the next revision without\n      deleting them from the working directory.\n\n      The following table details the behavior of remove for different\n      file states (columns) and option combinations (rows). The file\n      states are Added [A], Clean [C], Modified [M] and Missing [!]\n      (as reported by :prog:`status`). The actions are Warn, Remove\n      (from branch) and Delete (from disk):\n\n      ========= == == == ==\n      opt/state A  C  M  !\n      ========= == == == ==\n      none      W  RD W  R\n      -f        R  RD RD R\n      -A        W  W  W  R\n      -Af       R  R  R  R\n      ========= == == == ==\n\n      .. note::\n\n         :prog:`remove` never deletes files in Added [A] state from the\n         working directory, not even if ``--force`` is specified.\n\n    Returns 0 on success, 1 if any warnings encountered.\n    ",
+    "doc": "delete the specified tracked files\n\n    Remove the specified tracked files from the repository and delete\n    them. The files will be deleted from the repository at the next\n    commit.\n\n    To undo a remove before files have been committed, use :prog:`revert`.\n    To stop tracking files without deleting them, use :prog:`forget`.\n\n    .. container:: verbose\n\n      ``-A/--after`` can be used to remove only files that have already\n      been deleted, ``-f/--force`` can be used to force deletion, and ``-Af``\n      can be used to remove files from the next revision without\n      deleting them from the working directory.\n\n      The following table details the behavior of remove for different\n      file states (columns) and option combinations (rows). The file\n      states are Added (**A**), Clean (**C**), Modified (**M**) and\n      Missing (**!**) (as reported by :prog:`status`). The actions are\n      Warn (**W**), Remove (**R**) (from branch) and Delete (**D**)\n      (from disk):\n\n      =========    =====  ====== ====== =====\n      opt/state    **A**  **C**  **M**  **!**\n      =========    =====  ====== ====== =====\n      none         **W**  **RD** **W**  **R**\n      ``-f``       **R**  **RD** **RD** **R**\n      ``-A``       **W**  **W**  **W**  **R**\n      ``-Af``      **R**  **R**  **R**  **R**\n      =========    =====  ====== ====== =====\n\n      .. note::\n\n         :prog:`remove` never deletes files in **Added** state from the\n         working directory, not even if ``--force`` is specified.\n\n    Returns 0 on success, 1 if any warnings encountered.\n    ",
     "args": [
       {
         "shortname": "A",
@@ -2139,12 +2253,9 @@
   "revert": {
     "name": "revert",
     "aliases": [
-      "revert",
-      "rev",
-      "reve",
-      "rever"
+      "revert"
     ],
-    "doc": "change the specified files to match a commit\n\n    With no revision specified, restore the contents of files to an\n    unmodified state and unschedule adds, removes, copies, and renames.\n    In other words, revert the specified files or directories to the\n    contents they had in the current commit. If you are in the middle of\n    an unfinished merge state, you must explicitly specify a revision.\n\n    Use the -r/--rev option to revert the given files or directories to\n    their states as of a specific commit. Because revert does not actually\n    check out the specified commit, the files appear as modified and show\n    up as pending changes in :prog:`status`.\n\n    Revert causes files to match their contents in another commit. If\n    instead you want to undo a specific landed commit, use :prog:`backout`\n    instead. Run `@prog help backout` for more information.\n\n    Modified files are saved with an .orig suffix before reverting.\n    To disable these backups, use --no-backup. You can configure @Product@\n    to store these backup files in a custom directory relative to the root\n    of the repository by setting the ``ui.origbackuppath`` configuration\n    option.\n\n    Returns 0 on success.\n    ",
+    "doc": "change the specified files to match a commit\n\n    With no revision specified, restore the contents of files to an\n    unmodified state and unschedule adds, removes, copies, and renames.\n    In other words, revert the specified files or directories to the\n    contents they had in the current commit. If you are in the middle of\n    an unfinished merge state, you must explicitly specify a revision.\n\n    Use the ``-r/--rev`` option to revert the given files or directories to\n    their states as of a specific commit. Because revert does not actually\n    check out the specified commit, the files appear as modified and show\n    up as pending changes in :prog:`status`.\n\n    Revert causes files to match their contents in another commit. If\n    instead you want to undo a specific landed commit, use :prog:`backout`\n    instead. Run :prog:`help backout` for more information.\n\n    Modified files are saved with an .orig suffix before reverting.\n    To disable these backups, use ``--no-backup``. You can configure @Product@\n    to store these backup files in a custom directory relative to the root\n    of the repository by setting the ``ui.origbackuppath`` configuration\n    option.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "a",
@@ -2202,7 +2313,7 @@
     "aliases": [
       "root"
     ],
-    "doc": "print the root (top) of the current working directory\n\n    Print the root directory of the current repository.\n\n    Returns 0 on success.",
+    "doc": "print the repository's root (top) of the current working directory\n\n    Print the root directory of the current repository.\n\n    Frequently useful in shells scripts and automation to run commands like::\n\n       $  ./$(sl root)/bin/script.py\n\n    Returns 0 on success.",
     "args": [
       {
         "shortname": "",
@@ -2318,7 +2429,7 @@
     "aliases": [
       "show"
     ],
-    "doc": "show commit in detail\n\n    Show the commit message and contents for the specified commit. If no commit\n    is specified, shows the current commit.\n\n    This behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or\n    if called without a REV, :prog:`log -vp -r . [OPTION]...` Use\n    :prog:`log` for more powerful operations than supported by @prog@ show.\n\n    ",
+    "doc": "show commit in detail\n\n    Show the commit message and contents for the specified commit. If no commit\n    is specified, shows the current commit.\n\n    :prog:`show` behaves similarly to :prog:`log -vp -r REV [OPTION]... [FILE]...`, or\n    if called without a ``REV``, :prog:`log -vp -r . [OPTION]...` Use\n    :prog:`log` for more powerful operations than supported by :prog:`show`.\n\n    ",
     "args": [
       {
         "shortname": "",
@@ -2405,10 +2516,9 @@
     "name": "split",
     "aliases": [
       "split",
-      "spl",
-      "spli"
+      "spl"
     ],
-    "doc": "split a changeset into smaller changesets\n\n    Prompt for hunks to be selected until exhausted. Each selection of hunks\n    will form a separate changeset, in order from parent to child: the first\n    selection will form the first changeset, the second selection will form\n    the second changeset, and so on.\n\n    Operates on the current revision by default. Use --rev to split a given\n    changeset instead.\n    ",
+    "doc": "split a commit into smaller commits\n\n    Prompt for hunks to be selected until exhausted. Each selection of hunks\n    will form a separate commit, in order from parent to child: the first\n    selection will form the first commit, the second selection will form\n    the second commit, and so on.\n\n    Operates on the current revision by default. Use ``--rev`` to split a given\n    commit instead.\n    ",
     "args": [
       {
         "shortname": "r",
@@ -2572,10 +2682,7 @@
     "name": "unamend",
     "aliases": [
       "unamend",
-      "una",
-      "unam",
-      "uname",
-      "unamen"
+      "una"
     ],
     "doc": "undo the last amend operation on the current commit\n\n    Reverse the effects of an :prog:`amend` operation. Hides the current commit\n    and checks out the previous version of the commit. :prog:`unamend` does not\n    revert the state of the working copy, so changes that were added to the\n    commit in the last amend operation become pending changes in the working\n    copy.\n\n    :prog:`unamend` cannot be run on amended commits that have children. In\n    other words, you cannot unamend an amended commit in the middle of a\n    stack.\n\n    .. note::\n\n        Running :prog:`unamend` is similar to running :prog:`undo --keep`\n        immediately after :prog:`amend`. However, unlike :prog:`undo`, which can\n        only undo an amend if it was the last operation you performed,\n        :prog:`unamend` can unamend any draft amended commit in the graph that\n        does not have children.\n\n    .. container:: verbose\n\n      Although :prog:`unamend` is typically used to reverse the effects of\n      :prog:`amend`, it actually rolls back the current commit to its previous\n      version, regardless of whether the changes resulted from an :prog:`amend`\n      operation or from another operation, such as :prog:`rebase`.\n    ",
     "args": [],
@@ -2585,13 +2692,9 @@
     "name": "uncommit",
     "aliases": [
       "uncommit",
-      "unc",
-      "unco",
-      "uncom",
-      "uncomm",
-      "uncommi"
+      "unc"
     ],
-    "doc": "uncommit part or all of the current commit\n\n    Reverse the effects of an :prog:`commit` operation. When run with no\n    arguments, hides the current commit and checks out the parent commit,\n    but does not revert the state of the working copy. Changes that were\n    contained in the uncommitted commit become pending changes in the\n    working copy.\n\n    :prog:`uncommit` cannot be run on commits that have children. In other words,\n    you cannot uncommit a commit in the middle of a stack. Similarly, by\n    default you cannot run :prog:`uncommit` if there are pending changes in the\n    working copy.\n\n    You can selectively uncommit files from the current commit by optionally\n    specifying a list of files to remove. The specified files are removed from\n    the list of changed files in the current commit, but are not modified on\n    disk, so they appear as pending changes in the working copy.\n\n    .. note::\n\n       Running :prog:`uncommit` is similar to running :prog:`undo --keep`\n       immediately after :prog:`commit`. However, unlike :prog:`undo`, which can\n       only undo a commit if it was the last operation you performed,\n       :prog:`uncommit` can uncommit any draft commit in the graph that does\n       not have children.\n    ",
+    "doc": "uncommit part or all of the current commit\n\n    Reverse the effects of an :prog:`commit` operation. When run with no\n    arguments, hides the current commit and checks out the parent commit,\n    but does not revert the state of the working copy. Changes that were\n    contained in the uncommitted commit become pending changes in the\n    working copy.\n\n    :prog:`uncommit` cannot be run on commits that have children. In\n    other words, you cannot uncommit a commit in the middle of a\n    stack. Similarly, by default, you cannot run :prog:`uncommit` if\n    there are pending changes in the working copy.\n\n    You can selectively uncommit files from the current commit by optionally\n    specifying a list of files to remove. The specified files are removed from\n    the list of changed files in the current commit, but are not modified on\n    disk, so they appear as pending changes in the working copy.\n\n    .. note::\n\n       Running :prog:`uncommit` is similar to running :prog:`undo --keep`\n       immediately after :prog:`commit`. However, unlike :prog:`undo`, which can\n       only undo a commit if it was the last operation you performed,\n       :prog:`uncommit` can uncommit any draft commit in the graph that does\n       not have children.\n    ",
     "args": [
       {
         "shortname": "",
@@ -2619,7 +2722,7 @@
     "aliases": [
       "undo"
     ],
-    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`checkout`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommited changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using --step. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run :prog:`help redo` for\n    more information.\n\n    Include --keep to preserve the state of the working copy. For example,\n    specify --keep when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify --preview to see a graphical display that shows what your smartlog\n    will look like after you run the command. Specify --interactive for an\n    interactive version of this preview in which you can step backwards and\n    forwards in the undo history.\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
+    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`checkout`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommited changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using ``--step``. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run\n    :prog:`help redo` for more information.\n\n\n    Include ``--keep`` to preserve the state of the working copy. For example,\n    specify ``--keep`` when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify ``--preview`` to see a graphical display that shows what\n    your smartlog will look like after you run the command. Specify\n    ``--interactive`` for an interactive version of this preview in which\n    you can step backwards and forwards in the undo history.\n\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
     "args": [
       {
         "shortname": "a",
@@ -2669,10 +2772,7 @@
   "unhide": {
     "name": "unhide",
     "aliases": [
-      "unhide",
-      "unh",
-      "unhi",
-      "unhid"
+      "unhide"
     ],
     "doc": "unhide commits and their ancestors\n\n    Mark the specified commits as visible. Any ancestors of the specified\n    commits will also become visible.\n    ",
     "args": [

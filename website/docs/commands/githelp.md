@@ -1,15 +1,15 @@
 ---
-sidebar_position: 14
+sidebar_position: 15
 ---
 
 ## githelp | git
 <!--
-  @generated SignedSource<<e7647757f621f8d4649ab549a8d09e86>>
+  @generated SignedSource<<eca63d413bdb08f690b17f75ce93ca0a>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
-suggests the Sapling equivalent of the given git command
+**suggests the Sapling equivalent of the given git command**
 
 Usage: sl githelp -- $COMMAND
 
@@ -22,5 +22,4 @@ sl revert -r my_file.txt baef1046b
 The translation is best effort, and if an unknown command or parameter
 combination is detected, it simply returns an error.
 
-## arguments
-no arguments
+

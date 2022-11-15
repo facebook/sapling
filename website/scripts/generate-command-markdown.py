@@ -39,6 +39,7 @@ DEFAULT_COMMAND_LIST = [
     "add",
     "addremove",
     "amend",
+    "annotate",
     "backout",
     "bookmark",
     "clean",
