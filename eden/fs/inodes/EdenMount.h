@@ -111,13 +111,17 @@ class SharedRenameLock;
  * available during the inode event.
  */
 struct InodeTraceEvent : TraceEventBase {
+  template <typename Path>
   InodeTraceEvent(
       std::chrono::system_clock::time_point startTime,
       InodeNumber ino,
       InodeType inodeType,
       InodeEventType eventType,
       InodeEventProgress progress,
-      folly::StringPiece path);
+      const Path& path)
+      : InodeTraceEvent{startTime, ino, inodeType, eventType, progress} {
+    setPath(path.view());
+  }
 
   // Simple accessor that hides the internal memory representation of the trace
   // event's path. Note this could be just the base filename or it could be the
@@ -129,7 +133,7 @@ struct InodeTraceEvent : TraceEventBase {
 
   // Setter that allocates new memory on the heap and memcpy's a StringPiece's
   // data into the InodeTraceEvent's path attribute
-  void setPath(folly::StringPiece stringPath);
+  void setPath(std::string_view stringPath);
 
   InodeNumber ino;
   InodeType inodeType;
@@ -138,6 +142,14 @@ struct InodeTraceEvent : TraceEventBase {
   std::chrono::microseconds duration;
   // Always null-terminated, and saves space in the trace event structure.
   std::shared_ptr<char[]> path;
+
+ private:
+  InodeTraceEvent(
+      std::chrono::system_clock::time_point startTime,
+      InodeNumber ino,
+      InodeType inodeType,
+      InodeEventType eventType,
+      InodeEventProgress progress);
 };
 
 /**

@@ -85,8 +85,7 @@ InodeTraceEvent::InodeTraceEvent(
     InodeNumber ino,
     InodeType inodeType,
     InodeEventType eventType,
-    InodeEventProgress progress,
-    folly::StringPiece stringPath)
+    InodeEventProgress progress)
     : ino{ino}, inodeType{inodeType}, eventType{eventType}, progress{progress} {
   systemTime = (progress == InodeEventProgress::START)
       ? startTime
@@ -94,10 +93,9 @@ InodeTraceEvent::InodeTraceEvent(
   duration = std::chrono::duration_cast<std::chrono::microseconds>(
       systemTime - startTime);
   monotonicTime = std::chrono::steady_clock::now();
-  setPath(stringPath);
 }
 
-void InodeTraceEvent::setPath(folly::StringPiece stringPath) {
+void InodeTraceEvent::setPath(std::string_view stringPath) {
   path.reset(new char[stringPath.size() + 1]);
   memcpy(path.get(), stringPath.data(), stringPath.size());
   path[stringPath.size()] = 0;

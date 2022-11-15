@@ -492,7 +492,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
           it->second.getInodeType(),
           InodeEventType::LOAD,
           InodeEventProgress::END,
-          it->second.name.stringPiece());
+          it->second.name);
       data->unloadedInodes_.erase(it);
     }
     mount_->publishInodeTraceEvent(std::move(endLoadEvent.value()));
@@ -537,7 +537,7 @@ InodeTraceEvent InodeMap::createInodeLoadStartEvent(
       unloadedData.getInodeType(),
       InodeEventType::LOAD,
       InodeEventProgress::START,
-      unloadedData.name.stringPiece());
+      unloadedData.name);
 }
 
 std::optional<InodeTraceEvent> InodeMap::createInodeLoadFailEvent(
@@ -556,7 +556,7 @@ std::optional<InodeTraceEvent> InodeMap::createInodeLoadFailEvent(
       it->second.getInodeType(),
       InodeEventType::LOAD,
       InodeEventProgress::FAIL,
-      it->second.name.stringPiece());
+      it->second.name);
 }
 
 InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {

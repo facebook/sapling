@@ -872,7 +872,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
           InodeType::TREE,
           InodeEventType::MATERIALIZE,
           InodeEventProgress::START,
-          getLocationInfo(*renameLock).name.stringPiece()));
+          getLocationInfo(*renameLock).name));
       contents->setMaterialized();
       saveOverlayDir(contents->entries);
     }
@@ -890,7 +890,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
         InodeType::TREE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::END,
-        loc.name.stringPiece()));
+        loc.name));
   }
 }
 
@@ -912,7 +912,7 @@ void TreeInode::childMaterialized(
           InodeType::TREE,
           InodeEventType::MATERIALIZE,
           InodeEventProgress::START,
-          getLocationInfo(renameLock).name.stringPiece()));
+          getLocationInfo(renameLock).name));
     }
 
     auto iter = contents->entries.find(childName);
@@ -950,7 +950,7 @@ void TreeInode::childMaterialized(
         InodeType::TREE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::END,
-        location.name.stringPiece()));
+        location.name));
   }
 }
 
@@ -970,7 +970,7 @@ void TreeInode::childDematerialized(
           InodeType::TREE,
           InodeEventType::MATERIALIZE,
           InodeEventProgress::START,
-          getLocationInfo(renameLock).name.stringPiece()));
+          getLocationInfo(renameLock).name));
     }
 
     auto iter = contents->entries.find(childName);
@@ -1022,7 +1022,7 @@ void TreeInode::childDematerialized(
         InodeType::TREE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::END,
-        location.name.stringPiece()));
+        location.name));
   }
 }
 
@@ -1141,7 +1141,7 @@ FileInodePtr TreeInode::createImpl(
         InodeType::FILE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::START,
-        targetName.stringPiece()));
+        targetName));
 
 #ifndef _WIN32
     // Create the overlay file before we insert the file into our entries map.
@@ -1166,7 +1166,7 @@ FileInodePtr TreeInode::createImpl(
     updateMtimeAndCtimeLocked(contents->entries, now);
 #ifndef _WIN32
     getMount()->getServerState()->getFaultInjector().check(
-        "createInodeSaveOverlay", name.stringPiece());
+        "createInodeSaveOverlay", name);
 #endif
 
     getOverlay()->addChild(getNodeId(), *insertion.first, contents->entries);
@@ -1179,7 +1179,7 @@ FileInodePtr TreeInode::createImpl(
         InodeType::FILE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::END,
-        targetName.stringPiece()));
+        targetName));
   }
 
   if (InvalidationRequired::Yes == invalidate) {
@@ -1318,7 +1318,7 @@ TreeInodePtr TreeInode::mkdir(
         InodeType::TREE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::START,
-        targetName.stringPiece()));
+        targetName));
 
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a directory.
@@ -1360,7 +1360,7 @@ TreeInodePtr TreeInode::mkdir(
         InodeType::TREE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::END,
-        targetName.stringPiece()));
+        targetName));
   }
 
   getMount()->getJournal().recordCreated(targetName);

@@ -250,7 +250,7 @@ FileInode::runWhileMaterialized(
         InodeType::FILE,
         InodeEventType::MATERIALIZE,
         InodeEventProgress::START,
-        getNameRacy().stringPiece()));
+        getNameRacy()));
   }
 
   ImmediateFuture<std::shared_ptr<const Blob>> future;
@@ -283,7 +283,7 @@ FileInode::runWhileMaterialized(
               InodeType::FILE,
               InodeEventType::MATERIALIZE,
               InodeEventProgress::END,
-              getNameRacy().stringPiece()));
+              getNameRacy()));
         };
         logAccess(*fetchContext);
         // Note that we explicitly create a temporary LockedState object
@@ -360,7 +360,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
           InodeType::FILE,
           InodeEventType::MATERIALIZE,
           InodeEventProgress::START,
-          getNameRacy().stringPiece()));
+          getNameRacy()));
 
       std::unique_ptr<folly::SharedPromise<std::shared_ptr<const Blob>>>
           loadingPromise;
@@ -392,7 +392,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
             InodeType::FILE,
             InodeEventType::MATERIALIZE,
             InodeEventProgress::END,
-            getNameRacy().stringPiece()));
+            getNameRacy()));
       };
 
       // Now invoke the input function.
