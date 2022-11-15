@@ -1,4 +1,4 @@
-# Differences from Mercurial
+# Internal Differences from Mercurial
 
 :::note
 This page assumes that you are familiar with Mercurial internals.
