@@ -251,7 +251,6 @@ def branch(ui, repo, *args, **kwargs) -> None:
                 # revision
                 old = '`%s log -T"{activebookmark}" -r .`' % prog
             new = args[0]
-            # pyre-fixme[61]: `old` is undefined, or not always defined.
             cmd["-m"] = old
             cmd.append(new)
         else:
