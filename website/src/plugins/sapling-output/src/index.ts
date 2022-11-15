@@ -21,8 +21,15 @@ const EXAMPLE_HEADER = `
   > [ui]
   > color=always
   > EOF
+# hide end
+`
+
+// Compatibility for internal systems where sl is not installed but hg can be
+// used as an alternative.
+const HG_COMPAT_HEADER = `
+# hide begin
   $ sl() {
-  >   hg "$@"
+  >   HGIDENTITY=sl hg "$@"
   > }
 # hide end
 `
@@ -50,7 +57,11 @@ function processInput(text: string): string {
       newLine = `  ${line}`;
     }
     if (firstLine) {
-      newLine = EXAMPLE_HEADER + newLine;
+      let header = EXAMPLE_HEADER;
+      if (!fs.existsSync('/usr/bin/sl')) {
+        header += HG_COMPAT_HEADER;
+      }
+      newLine = header + newLine;
       firstLine = false;
     }
     return newLine;
