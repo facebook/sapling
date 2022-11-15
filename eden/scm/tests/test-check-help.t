@@ -12,7 +12,7 @@
   >     import os, msvcrt
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
   > topics = set()
-  > topicre = re.compile(r':hg:`help ([a-z0-9\-.]+)`')
+  > topicre = re.compile(r':prog:`help ([a-z0-9\-.]+)`')
   > for fname in sys.argv:
   >     with open(fname) as f:
   >         topics.update(m.group(1) for m in topicre.finditer(f.read()))
@@ -22,7 +22,7 @@
 
   $ cd "$TESTDIR"/..
 
-Check if ":hg:`help TOPIC`" is valid:
+Check if ":prog:`help TOPIC`" is valid:
 (use "xargs -n1 -t" to see which help commands are executed)
 
   $ NPROC=`hg debugpython -- -c 'import multiprocessing; print(str(multiprocessing.cpu_count()))'`
