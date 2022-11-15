@@ -1,0 +1,17 @@
+fragment PullsPullRequestFragment on PullRequest {
+  number
+  title
+  updatedAt
+  author {
+    ...ActorFragment
+  }
+  comments {
+    totalCount
+  }
+  reviewDecision
+  labels(first: 20, orderBy: {field: NAME, direction: ASC}) {
+    nodes {
+      ...LabelFragment
+    }
+  }
+}

@@ -1,0 +1,26 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.dark-theme,
+.vscode-dark {
+  --scm-modified-foreground: #e2c08d;
+  --scm-added-foreground: #73c991;
+  --scm-removed-foreground: #e35941;
+  --selected-commit-background: rgba(255, 255, 255, 0.1);
+
+  --tooltip-background: var(--vscode-editorWidget-background, #252526);
+  --tooltip-border: var(--vscode-editorWidget-border, #454545);
+
+  /* github PR colors */
+  --github-badge-fg: white;
+  --github-open-bg: #238636;
+  --github-closed-bg: #da3633;
+  --github-merged-bg: #8957e5;
+  --github-neutral-bg: #6e7781;
+
+  /* VS Code Webview UI Toolkit includes dark theme colors already */
+}

@@ -1,0 +1,46 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.comparison-view-file {
+  width: 100%;
+}
+
+.comparison-view-header {
+  padding: var(--pad) 0 var(--halfpad) 0;
+  margin-bottom: var(--pad);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comparison-view-details {
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: var(--pad);
+}
+
+/*
+ * Override split diff view file header to be sticky.
+ * This also requires adding borders to the file header (previously only on the container)
+ */
+.comparison-view .split-diff-view-file-header {
+  position: sticky;
+  top: 0;
+  margin-left: -1px;
+  margin-right: -1px;
+  border: 1px solid var(--panel-view-border);
+  /* Remove all border radius so the sticky header doesn't show any of the diff behind it */
+  border-radius: 0;
+}
+
+.comparison-view .split-diff-view {
+  border-top-width: 0;
+  border-radius: 0;
+}

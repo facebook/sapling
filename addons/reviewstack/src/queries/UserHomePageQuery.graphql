@@ -1,0 +1,19 @@
+query UserHomePageQuery($reviewRequestedQuery: String!) {
+  viewer {
+    repositories(first: 10, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        nameWithOwner
+      }
+    }
+    pullRequests(first: 10, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        ...HomePagePullRequestFragment
+      }
+    }
+  }
+  search(first: 10, query: $reviewRequestedQuery, type: ISSUE) {
+    nodes {
+      ...HomePagePullRequestFragment
+    }
+  }
+}

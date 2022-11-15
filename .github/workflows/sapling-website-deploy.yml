@@ -1,0 +1,56 @@
+name: Publish https://sapling-scm.com
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: yarn
+          cache-dependency-path: ./website
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # Note this will use whichever release is tagged "Latest."
+      # Ultimately, this website deployment job should:
+      # - For a release, it should depend on the binaries being published and
+      #   run afterwards with the new version.
+      # - For a pull request, `sl` built from the code that is out for review.
+      - name: Download latest Sapling release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ format('gh release download --pattern \*.Ubuntu22.04.deb --repo {0}', github.repository) }}
+      - name: Install Sapling
+        run: sudo apt install -y ./*.Ubuntu22.04.deb
+      - name: Write out release data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ format('./scripts/gen_release_data.py --repo {0} --out ./src/rawReleaseData.ts', github.repository) }}
+
+      - name: Generate docstring docs
+        run: ./scripts/generate-command-markdown.py --full-build
+
+      - name: Build website
+        run: yarn build
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website/build

@@ -1,0 +1,5 @@
+query UsernameQuery {
+  viewer {
+    login
+  }
+}

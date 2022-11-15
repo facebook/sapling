@@ -1,0 +1,6 @@
+fragment CheckRunFragment on CheckRun {
+  conclusion
+  name
+  status
+  url
+}

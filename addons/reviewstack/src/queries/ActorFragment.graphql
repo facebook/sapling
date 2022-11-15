@@ -1,0 +1,7 @@
+fragment ActorFragment on Actor {
+  login
+  avatarUrl(size: 24)
+  ... on User {
+    id
+  }
+}

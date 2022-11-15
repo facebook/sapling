@@ -1,0 +1,14 @@
+fragment TreeFragment on Tree {
+  id
+  oid
+  entries {
+    oid
+    object {
+      oid
+    }
+    name
+    path
+    type
+    mode
+  }
+}

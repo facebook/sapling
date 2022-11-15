@@ -1,0 +1,30 @@
+query PullsQuery(
+  $name: String!
+  $owner: String!
+  $after: String
+  $before: String
+  $first: Int
+  $last: Int
+  $labels: [String!]
+  $states: [PullRequestState!]!
+) {
+  repository(name: $name, owner: $owner) {
+    pullRequests(
+      after: $after
+      before: $before
+      first: $first
+      last: $last
+      labels: $labels
+      states: $states
+      orderBy: {field: UPDATED_AT, direction: DESC}
+    ) {
+      nodes {
+        ...PullsPullRequestFragment
+      }
+      pageInfo {
+        ...PageInfoFragment
+      }
+      totalCount
+    }
+  }
+}

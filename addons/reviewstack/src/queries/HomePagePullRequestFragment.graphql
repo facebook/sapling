@@ -1,0 +1,10 @@
+fragment HomePagePullRequestFragment on PullRequest {
+  __typename
+  number
+  titleHTML
+  repository {
+    nameWithOwner
+  }
+  state
+  reviewDecision
+}

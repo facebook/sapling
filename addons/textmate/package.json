@@ -1,0 +1,16 @@
+{
+  "name": "textmate",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "eslint": "eslint src --ext .ts --ext .tsx"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0",
+    "jsonc-parser": "^2.2.1",
+    "monaco-editor": "^0.21.2",
+    "prettier": "^2.7.1",
+    "typescript": "^4.5.5"
+  }
+}

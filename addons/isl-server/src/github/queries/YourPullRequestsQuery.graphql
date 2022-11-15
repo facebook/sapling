@@ -1,0 +1,28 @@
+query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
+  search(query: $searchQuery, type: ISSUE, first: $numToFetch) {
+    nodes {
+      ... on PullRequest {
+        __typename
+        number
+        title
+        state
+        url
+        comments {
+          totalCount
+        }
+        commits(last: 1) {
+          nodes {
+            commit {
+              checkSuites(first: 100) {
+                nodes {
+                  conclusion
+                  status
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

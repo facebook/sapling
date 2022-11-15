@@ -1,0 +1,63 @@
+name: Release - Homebrew macOS-arm64
+'on':
+  workflow_dispatch: null
+  push:
+    tags:
+    - v*
+    - test-release-*
+jobs:
+  build:
+    runs-on: macos-12
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Grant Access
+      run: git config --global --add safe.directory "$PWD"
+    - name: set-env SAPLING_VERSION
+      shell: bash
+      run: echo "SAPLING_VERSION=$(ci/tag-name.sh | tr \- .)" >> $GITHUB_ENV
+    - name: Prepare build environment
+      run: 'eden/scm/packaging/mac/prepare_environment.py \
+
+        -s c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6 -f openssl@1.1 \
+
+        -s 3e95fbf0f18b59af7aeaa957be4499a9c521ec199f2ec2a419b8a7b9ac627a3a -f python@3.8 \
+
+        -t aarch64-apple-darwin \
+
+        -r ${{ env.SAPLING_VERSION }} \
+
+        -o $(brew tap-info homebrew/core | sed -n ''2p'' | awk ''{printf $1}'')/Formula/sapling.rb'
+    - name: Install and build Sapling bottle
+      run: brew install --build-bottle sapling
+    - name: Create Sapling bottle
+      run: brew bottle sapling
+    - name: Rename bottle to some platform specific name
+      run: mv sapling*monterey.bottle.tar.gz sapling_0.0-${{ env.SAPLING_VERSION }}.arm64_monterey.bottle.tar.gz
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: macos-homebrew-arm64-bottle
+        path: sapling*monterey.bottle.tar.gz
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Grant Access
+      run: git config --global --add safe.directory "$PWD"
+    - name: Download Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: macos-homebrew-arm64-bottle
+    - name: Create pre-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: bash ci/retry.sh bash ci/create-release.sh $(ci/tag-name.sh)
+    - name: Upload Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling*monterey.bottle.tar.gz

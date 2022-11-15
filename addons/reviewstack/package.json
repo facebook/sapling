@@ -1,0 +1,44 @@
+{
+  "name": "reviewstack",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@monaco-editor/react": "^4.3.1",
+    "@primer/react": "35.7.0",
+    "@types/diff": "^5.0.2",
+    "@types/jest": "^27.4.1",
+    "@types/node": "^16.11.25",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "diff": "^5.0.0",
+    "monaco-editor": "^0.28.1",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "recoil": "^0.7.5",
+    "shared": "0.1.0",
+    "typescript": "^4.5.5",
+    "vscode-oniguruma": "^1.6.1",
+    "vscode-textmate": "^6.0.0"
+  },
+  "scripts": {
+    "eslint": "eslint src --ext .ts --ext .tsx",
+    "test": "react-scripts test",
+    "codegen": "node ./codegen.js",
+    "graphql": "graphql-codegen --config codegen.yml",
+    "textmate": "node ./textmate.js"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^2.6.2",
+    "@graphql-codegen/typescript": "^2.4.8",
+    "@graphql-codegen/typescript-document-nodes": "^2.2.8",
+    "@graphql-codegen/typescript-operations": "^2.3.5",
+    "graphql": "^16.3.0",
+    "styled-components": "^5.3.5"
+  },
+  "resolutions": {
+    "@types/eslint": "8.4.1"
+  },
+  "peerDependencies": {
+    "styled-components": "4.x || 5.x"
+  }
+}

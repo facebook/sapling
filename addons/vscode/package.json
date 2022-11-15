@@ -1,0 +1,88 @@
+{
+  "name": "sapling-scm",
+  "displayName": "Sapling SCM",
+  "description": "Sapling: A Scalable, User-Friendly Source Control System",
+  "version": "0.1.1",
+  "publisher": "meta",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.63.0"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:sapling.open-isl",
+    "onWebviewPanel:sapling.isl"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "galleryBanner": {
+    "color": "#2e8555",
+    "theme": "dark"
+  },
+  "main": "./dist/extension.js",
+  "icon": "resources/extensionIcon.png",
+  "homepage": "https://sapling-scm.com/",
+  "bugs": {
+    "url": "https://github.com/facebook/sapling/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/facebook/sapling"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "sapling.open-isl",
+        "title": "%sapling.open-isl-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.open-file-diff-uncommitted",
+        "title": "%sapling.open-diff-uncommitted-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.open-file-diff-head",
+        "title": "%sapling.open-diff-head-command%",
+        "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.open-file-diff-stack",
+        "title": "%sapling.open-diff-stack-command%",
+        "category": "%sapling.command-category%"
+      }
+    ]
+  },
+  "scripts": {
+    "eslint": "eslint extension webview --ext .ts --ext .tsx",
+    "test": "jest --passWithNoTests",
+    "watch-extension": "webpack --watch --config extension.webpack.config.ts",
+    "watch-webview": "webpack --watch --config webview.webpack.config.ts",
+    "build-extension": "cross-env NODE_ENV=production webpack --config extension.webpack.config.ts",
+    "build-webview": "cross-env NODE_ENV=production webpack --config webview.webpack.config.ts",
+    "vscode:prepublish": "./buildForPublish.sh"
+  },
+  "devDependencies": {
+    "@types/circular-dependency-plugin": "^5.0.5",
+    "@types/jest": "27.5.2",
+    "@types/node": "^16.11.7",
+    "@types/react-dom": "^18.0.0",
+    "@types/vscode": "^1.34.0",
+    "circular-dependency-plugin": "^5.2.2",
+    "cross-env": "7.0.3",
+    "isl": "0.1.0",
+    "jest": "27.5.1",
+    "mini-css-extract-plugin": "^2.6.1",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "recoil": "^0.7.5",
+    "ts-jest": "27",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.7.2",
+    "vscode-uri": "^3.0.6"
+  }
+}

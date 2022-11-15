@@ -1,0 +1,9 @@
+fragment PullRequestReviewThreadFragment on PullRequestReviewThread {
+  originalLine
+  diffSide
+  comments(first: $numComments) {
+    nodes {
+      ...PullRequestReviewCommentFragment
+    }
+  }
+}

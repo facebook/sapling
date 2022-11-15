@@ -1,0 +1,9 @@
+query TreeQuery($org: String!, $repo: String!, $oid: GitObjectID!) {
+  repositoryOwner(login: $org) {
+    repository(name: $repo) {
+      object(oid: $oid) {
+        ...TreeFragment
+      }
+    }
+  }
+}

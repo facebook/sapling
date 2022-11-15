@@ -1,0 +1,158 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.commit-info-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  --toolbar-fade-height: 30px;
+}
+
+.commit-info-view-main-content {
+  overflow-y: auto;
+  padding: var(--pad);
+  flex-grow: 1;
+  padding-bottom: var(--toolbar-fade-height);
+}
+
+.commit-info-view vscode-text-area,
+.commit-info-view vscode-text-field {
+  width: 100%;
+  margin: var(--halfpad) 0;
+}
+
+.commit-info-rendered-title {
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+  /* add padding then undo with margin so focus state outline is less cramped */
+  padding: var(--halfpad);
+  margin: calc(-1 * var(--halfpad));
+}
+
+.commit-info-rendered-description {
+  cursor: pointer;
+  white-space: pre-wrap;
+  margin: calc(-1 * var(--pad));
+  margin-bottom: var(--pad);
+  transition: background-color 0.1s;
+  border-radius: var(--pad);
+  padding: var(--pad);
+}
+
+.commit-info-rendered-description:hover {
+  background: var(--tooltip-background);
+}
+
+.commit-info-actions-bar {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  border-top: 1px solid var(--panel-view-border);
+  padding: var(--pad);
+  justify-content: flex-end;
+}
+
+.commit-info-view-toolbar-top {
+  padding: 0 var(--pad);
+  border-bottom: 1px solid var(--panel-view-border);
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  justify-content: flex-end;
+}
+
+.commit-info-section.commit-info-title-field-section {
+  margin-top: 0;
+}
+
+.commit-info-view-toolbar-bottom:before {
+  /* fade to bg color just above toolbar, to hint that you can keep scrolling */
+  background: linear-gradient(0deg, var(--background), transparent);
+  width: 100%;
+  height: var(--toolbar-fade-height);
+  display: block;
+  position: absolute;
+  content: ' ';
+  margin-top: calc(-1 * var(--toolbar-fade-height));
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.hover-edit-button {
+  opacity: 0;
+  transition: opacity 0.1s;
+  display: flex;
+}
+.commit-info-rendered-title:focus-within .hover-edit-button,
+.commit-info-rendered-description:focus-within .hover-edit-button,
+.commit-info-rendered-title:hover .hover-edit-button,
+.commit-info-rendered-description:hover .hover-edit-button {
+  opacity: 1;
+}
+
+.commit-info-small-title {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 90%;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+.min-height-text-area::part(control) {
+  overflow: hidden;
+}
+
+.commit-info-section {
+  margin: var(--pad);
+  margin-top: calc(2 * var(--pad));
+}
+
+.commit-info-title-byline {
+  padding: 5px;
+  margin: 0 var(--halfpad);
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--halfpad);
+  align-items: center;
+}
+
+.overflow-ellipsis {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.overflow-ellipsis.overflow-shrink {
+  flex-shrink: 1;
+}
+
+.commit-info-title-byline .you-are-here-container {
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.commit-info-title-byline .tooltip-creator {
+  display: inline;
+}
+
+.subtle {
+  font-size: 90%;
+  opacity: 0.9;
+}
+
+.commit-info-view .empty-description {
+  display: flex;
+  gap: var(--halfpad);
+  align-items: center;
+  margin: var(--halfpad);
+}

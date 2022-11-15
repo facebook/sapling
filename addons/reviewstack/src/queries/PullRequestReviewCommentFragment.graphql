@@ -1,0 +1,21 @@
+fragment PullRequestReviewCommentFragment on PullRequestReviewComment {
+  id
+  author {
+    ...ActorFragment
+  }
+  replyTo {
+    id
+  }
+  bodyHTML
+  state
+  outdated
+  path
+  originalCommit {
+    oid
+  }
+  originalPosition
+  commit {
+    oid
+  }
+  position
+}

@@ -1,0 +1,7 @@
+query StackPullRequestQuery($name: String!, $owner: String!, $pr: Int!) {
+  repository(name: $name, owner: $owner) {
+    pullRequest(number: $pr) {
+      ...StackPullRequestFragment
+    }
+  }
+}

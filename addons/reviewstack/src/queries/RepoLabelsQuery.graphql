@@ -1,0 +1,9 @@
+query RepoLabelsQuery($name: String!, $owner: String!, $query: String) {
+  repository(name: $name, owner: $owner) {
+    labels(first: 20, query: $query) {
+      nodes {
+        ...LabelFragment
+      }
+    }
+  }
+}

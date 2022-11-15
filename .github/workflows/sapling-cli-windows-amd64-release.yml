@@ -1,0 +1,56 @@
+name: Release - Windows amd64
+'on':
+  workflow_dispatch: null
+  push:
+    tags:
+    - v*
+    - test-release-*
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Grant Access
+      run: git config --global --add safe.directory "$PWD"
+    - name: rustup
+      run: rustup default stable
+    - name: openssl
+      run: vcpkg install openssl:x64-windows-static-md
+    - name: integrate vcpkg
+      run: vcpkg integrate install
+    - name: set-env SAPLING_VERSION
+      shell: bash
+      run: echo "SAPLING_VERSION=$(ci/tag-name.sh | tr \- .)" >> $GITHUB_ENV
+    - name: build and zip
+      run: python3 ./eden/scm/packaging/windows/build_windows_zip.py
+    - name: rename .zip
+      working-directory: ./eden/scm/artifacts
+      run: ${{ format('Rename-Item sapling_windows_amd64.zip -NewName sapling_windows_{0}_amd64.zip', env.SAPLING_VERSION) }}
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-amd64
+        path: ./eden/scm/artifacts/sapling_windows_*.zip
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Grant Access
+      run: git config --global --add safe.directory "$PWD"
+    - name: Download Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: windows-amd64
+    - name: Create pre-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: bash ci/retry.sh bash ci/create-release.sh $(ci/tag-name.sh)
+    - name: Upload Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) sapling_windows_*.zip

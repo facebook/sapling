@@ -1,0 +1,11 @@
+mutation AddLabelsToLabelableMutation($input: AddLabelsToLabelableInput!) {
+  addLabelsToLabelable(input: $input) {
+    labelable {
+      labels(first: 100) {
+        nodes {
+          ...LabelFragment
+        }
+      }
+    }
+  }
+}

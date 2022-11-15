@@ -1,0 +1,101 @@
+query PullRequestQuery(
+  $name: String!
+  $owner: String!
+  $pr: Int!
+  $numComments: Int!
+  $numTimelineItems: Int!
+) {
+  repository(name: $name, owner: $owner) {
+    pullRequest(number: $pr) {
+      id
+      number
+      url
+      title
+      titleHTML
+      body
+      bodyHTML
+      baseRefOid
+      state
+      reviewDecision
+      viewerDidAuthor
+      timelineItems(
+        first: $numTimelineItems
+        itemTypes: [
+          PULL_REQUEST_COMMIT
+          PULL_REQUEST_REVIEW
+          HEAD_REF_FORCE_PUSHED_EVENT
+          # ASSIGNED_EVENT,
+          REVIEW_REQUESTED_EVENT
+          REVIEW_REQUEST_REMOVED_EVENT
+          # REVIEW_DISMISSED_EVENT,
+          # READY_FOR_REVIEW_EVENT,
+
+          ISSUE_COMMENT
+          # COMMENT_DELETED_EVENT,
+
+          # CONNECTED_EVENT,
+
+          # LABELED_EVENT,
+          # UNLABELED_EVENT,
+
+          RENAMED_TITLE_EVENT
+          MERGED_EVENT
+          CLOSED_EVENT
+        ]
+      ) {
+        nodes {
+          ...PullRequestTimelineItemFragment
+        }
+      }
+      reviews(first: 100) {
+        nodes {
+          author {
+            ...UserFragment
+          }
+        }
+      }
+      reviewThreads(first: 100) {
+        nodes {
+          ...PullRequestReviewThreadFragment
+        }
+      }
+      reviewRequests(first: 100) {
+        nodes {
+          requestedReviewer {
+            ...UserFragment
+          }
+        }
+      }
+      labels(first: 100, orderBy: {field: NAME, direction: ASC}) {
+        nodes {
+          ...LabelFragment
+        }
+      }
+      commits(last: 1) {
+        nodes {
+          commit {
+            checkSuites(last: 100) {
+              nodes {
+                workflowRun {
+                  # We do not request the `resourcePath` here, but if we need to
+                  # get additional information about the WorkflowRun that is
+                  # available via the REST API, but not the GraphQL API,
+                  # (such as the event that triggered the WorkflowRun), then
+                  # the `resourcePath` would be the way to get it.
+                  workflow {
+                    name
+                  }
+                }
+                checkRuns(last: 100) {
+                  nodes {
+                    ...CheckRunFragment
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

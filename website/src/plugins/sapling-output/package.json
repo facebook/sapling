@@ -1,0 +1,18 @@
+{
+  "name": "sapling-output-plugin",
+  "private": true,
+  "version": "0.0.0",
+  "main": "dist/index.js",
+  "dependencies": {
+    "@types/unist": "^2.0.6",
+    "ansi-to-html": "^0.7.2",
+    "tmp-promise": "^3.0.3",
+    "typescript": "^4.7.4",
+    "unist-util-visit": "^4.1.1"
+  },
+  "scripts": {
+    "build": "yarn run tsc",
+    "postinstall": "yarn run tsc",
+    "watch": "tsc --watch"
+  }
+}

@@ -1,0 +1,11 @@
+mutation RemoveLabelsFromLabelableMutation($input: RemoveLabelsFromLabelableInput!) {
+  removeLabelsFromLabelable(input: $input) {
+    labelable {
+      labels(first: 100) {
+        nodes {
+          ...LabelFragment
+        }
+      }
+    }
+  }
+}

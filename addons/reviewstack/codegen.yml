@@ -1,0 +1,22 @@
+overwrite: true
+schema: ../shared/third-party/github/schema.docs.graphql
+documents:
+  - src/mutations/*.graphql
+  - src/queries/*.graphql
+generates:
+  src/generated/graphql.ts:
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-document-nodes
+    config:
+      # Ensure that fragments used multiple times within a given query are
+      # defined only once in the generated query string
+      dedupeFragments: true
+      defaultScalarType: string
+      # Generate query strings instead of DocumentNode objects
+      documentMode: string
+      # Allow access to types for individual subtypes
+      exportFragmentSpreadSubTypes: true
+      omitOperationSuffix: true
+      operationResultSuffix: Data

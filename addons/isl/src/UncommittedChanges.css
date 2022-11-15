@@ -1,0 +1,173 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.head-commit-info-container {
+  margin-left: -22px;
+  z-index: 3;
+  position: relative;
+}
+.head-commit-info-container:before {
+  border-left: 2px solid var(--button-primary-hover-background);
+  content: ' ';
+  display: block;
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: calc(-1 * var(--pad));
+  z-index: -1;
+}
+.head-commit-info {
+  margin-left: 28px;
+}
+.head-commit-info-container.head-commit-info-indented {
+  margin-left: 0px;
+  margin-bottom: 20px;
+}
+.head-commit-info-indented .branch-indicator {
+  stroke: var(--button-primary-hover-background);
+  left: -8px;
+  bottom: -25px;
+}
+.isl-root .head-commit-info-container.head-commit-info-indented:before {
+  bottom: 0px;
+}
+.you-are-here {
+  border-radius: 14px;
+  padding: 3px var(--pad);
+  background-color: var(--button-primary-hover-background);
+  color: var(--button-primary-foreground);
+  display: inline-block;
+  font-size: 80%;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+.you-are-here-container {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
+
+.uncommitted-changes {
+  padding: 4px 0;
+}
+.conflicts-header {
+  display: flex;
+  flex-direction: column;
+  margin: var(--pad) 0;
+}
+
+.changed-files {
+  display: flex;
+  flex-direction: column;
+}
+.changed-files .changed-file {
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  margin-right: var(--halfpad);
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.changed-file:hover {
+  color: var(--highlight-foreground);
+}
+
+.changed-file-path {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* ellipsis dots on the start of the file path rather than the end */
+  direction: rtl;
+  text-align: left;
+}
+
+.file-actions .tooltip-creator {
+  display: inline-flex;
+}
+
+.file-added {
+  color: var(--scm-added-foreground);
+}
+.file-modified {
+  color: var(--scm-modified-foreground);
+}
+.file-removed {
+  color: var(--scm-removed-foreground);
+}
+.file-unresolved {
+  color: var(--scm-modified-foreground);
+}
+.file-resolved {
+  color: var(--scm-added-foreground);
+}
+.file-ignored {
+  opacity: 0.9;
+}
+
+.show-on-hover {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.uncommitted-changes:hover .show-on-hover {
+  opacity: 1;
+}
+.show-on-hover:focus-within {
+  opacity: 1;
+}
+
+.uncommitted-changes .button-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 5px 0;
+}
+
+.uncommitted-changes .button-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.quick-commit-inputs vscode-text-field {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.uncommitted-changes:hover vscode-text-field,
+.uncommitted-changes vscode-text-field:focus-within,
+.quick-commit-inputs vscode-text-field:not([current-value='']) {
+  opacity: 1;
+}
+
+.quick-commit-inputs {
+  transition: background-color 0.1s;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 4px;
+  position: relative;
+}
+.quick-commit-inputs:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+}
+.quick-commit-inputs:hover:before {
+  background-color: var(--button-icon-hover-background);
+  transition: opacity 0.3s;
+  opacity: 0.5;
+}
