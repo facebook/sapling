@@ -118,6 +118,37 @@ builtinmapfiles = {
             )
         ],
     ),
+    # Based on facebook.style
+    "sl_default": (
+        {
+            "changeset": "{cset}{branches}{onelinebookmarks}{onelinetags}{user}{ldate}{summary}\n",
+            "changeset_quiet": "{date|localdate|isodate}  {shorthash} {shortuser} {pphabdiff}{smallsummary}\n",
+            "changeset_verbose": "{cset}{branches}{onelinebookmarks}{onelinetags}{parents}{user}{ldate}{fullsummary}\n\n",
+            "current": "{ifcontains(rev, revset('.'), '(@)', '')}",
+            "shorthash": "{label('log.changeset', '{node|short}')}",
+            "pphabdiff": "{if(phabdiff, label('log.changeset', '{pad(phabdiff, 8)} '))}",
+            "shortuser": "{pad(emailuser(author), 12)}",
+            "cset": "{label('log.changeset changeset.{phase}', 'changeset:   {node}')} {pphabdiff} {current}\n",
+            "onelinebookmarks": "{if(bookmarks, label('log.bookmark', 'bookmarks:   {join(bookmarks, ', ')}\n'), '')}",
+            "joinedtags": "{join(tags, ', ')}",
+            "interestingtags": "{if(joinedtags, ifeq(joinedtags, 'tip', '', joinedtags), '')}",
+            "onelinetags": "{if(interestingtags, label('log.tag', 'tags:        {interestingtagstags}\n'), '')}",
+            "parent": "{label('log.parent changeset.{phase}', 'parent:      {node}')}\n",
+            "branch": "{label('log.branch', 'branch:      {branch}')}\n",
+            "user": "{label('log.user', 'user:        {author}')}\n",
+            "summary": "{if(desc|strip, '{label('log.summary', 'summary:     {desc|firstline}')}\n')}",
+            "fullsummary": "{if(desc|strip, '{label('log.summary', '\n{indent(desc, '    ', '    ')}')}')}",
+            "smallsummary": "{firstline(fill68(firstline(desc)))}",
+            "ldate": "{label('log.date', 'date:        {date|localdate|rfc822date}')}\n",
+        },
+        {},
+        [
+            (
+                "labelcset(expr)",
+                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete")),\nexpr)',
+            )
+        ],
+    ),
     "phases": (
         {
             "changeset": "{cset}{bookmarks}{lphase}{user}{ldate}{summary}\\n",

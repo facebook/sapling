@@ -411,6 +411,9 @@ jf_submit_template='\{
  },\n'
 sl_backup="{if(enabled('commitcloud'),sl_backupstatus)}"
 
+[ui]
+style=sl_default
+
 [revsetalias]
 sb(n)=first(sort(bookmark(), -rev), n)
 sba=sort(bookmark(), -rev)
