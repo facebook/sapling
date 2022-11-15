@@ -79,7 +79,7 @@ where
         // Render the previous extra pad line
         if let Some(extra_pad_line) = self.extra_pad_line.take() {
             out.push_str(extra_pad_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
         }
 
         // Render the nodeline
@@ -88,10 +88,10 @@ where
             match entry {
                 NodeLine::Node => {
                     if i > 0 {
-                        node_line.push_str(" ");
+                        node_line.push(' ');
                     }
                     node_line.push_str(&line.glyph);
-                    node_line.push_str(" ");
+                    node_line.push(' ');
                 }
                 NodeLine::Parent => node_line.push_str(if i > 0 { " | " } else { "| " }),
                 NodeLine::Ancestor => node_line.push_str(if i > 0 { " . " } else { ". " }),
@@ -99,11 +99,11 @@ where
             }
         }
         if let Some(msg) = message_lines.next() {
-            node_line.push_str(" ");
+            node_line.push(' ');
             node_line.push_str(msg);
         }
         out.push_str(node_line.trim_end());
-        out.push_str("\n");
+        out.push('\n');
 
         // Render the link line
         if let Some(link_row) = line.link_line {
@@ -113,87 +113,87 @@ where
                 // Top left
                 if i > 0 {
                     if cur.intersects(LinkLine::LEFT_MERGE_PARENT) {
-                        top_link_line.push_str("/");
+                        top_link_line.push('/');
                     } else if cur.intersects(LinkLine::LEFT_MERGE_ANCESTOR) {
-                        top_link_line.push_str(".");
+                        top_link_line.push('.');
                     } else if cur.intersects(LinkLine::HORIZ_PARENT) {
-                        top_link_line.push_str("_");
+                        top_link_line.push('_');
                     } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
-                        top_link_line.push_str(".");
+                        top_link_line.push('.');
                     } else {
-                        top_link_line.push_str(" ");
+                        top_link_line.push(' ');
                     }
                 }
 
                 // Top center
                 if cur.intersects(LinkLine::VERT_PARENT) {
-                    top_link_line.push_str("|");
+                    top_link_line.push('|');
                 } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
-                    top_link_line.push_str(".");
+                    top_link_line.push('.');
                 } else if cur.intersects(LinkLine::ANY_MERGE) {
-                    top_link_line.push_str(" ");
+                    top_link_line.push(' ');
                 } else if cur.intersects(LinkLine::HORIZ_PARENT) {
-                    top_link_line.push_str("_");
+                    top_link_line.push('_');
                 } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
-                    top_link_line.push_str(".");
+                    top_link_line.push('.');
                 } else {
-                    top_link_line.push_str(" ");
+                    top_link_line.push(' ');
                 }
 
                 // Top right
                 if cur.intersects(LinkLine::RIGHT_MERGE_PARENT) {
-                    top_link_line.push_str("\\");
+                    top_link_line.push('\\');
                 } else if cur.intersects(LinkLine::RIGHT_MERGE_ANCESTOR) {
-                    top_link_line.push_str(".");
+                    top_link_line.push('.');
                 } else if cur.intersects(LinkLine::HORIZ_PARENT) {
-                    top_link_line.push_str("_");
+                    top_link_line.push('_');
                 } else if cur.intersects(LinkLine::HORIZ_ANCESTOR) {
-                    top_link_line.push_str(".");
+                    top_link_line.push('.');
                 } else {
-                    top_link_line.push_str(" ");
+                    top_link_line.push(' ');
                 }
 
                 // Bottom left
                 if i > 0 {
                     if cur.intersects(LinkLine::LEFT_FORK_PARENT) {
-                        bot_link_line.push_str("\\");
+                        bot_link_line.push('\\');
                     } else if cur.intersects(LinkLine::LEFT_FORK_ANCESTOR) {
-                        bot_link_line.push_str(".");
+                        bot_link_line.push('.');
                     } else {
-                        bot_link_line.push_str(" ");
+                        bot_link_line.push(' ');
                     }
                 }
 
                 // Bottom center
                 if cur.intersects(LinkLine::VERT_PARENT) {
-                    bot_link_line.push_str("|");
+                    bot_link_line.push('|');
                 } else if cur.intersects(LinkLine::VERT_ANCESTOR) {
-                    bot_link_line.push_str(".");
+                    bot_link_line.push('.');
                 } else {
-                    bot_link_line.push_str(" ");
+                    bot_link_line.push(' ');
                 }
 
                 // Bottom Right
                 if cur.intersects(LinkLine::RIGHT_FORK_PARENT) {
-                    bot_link_line.push_str("/");
+                    bot_link_line.push('/');
                 } else if cur.intersects(LinkLine::RIGHT_FORK_ANCESTOR) {
-                    bot_link_line.push_str(".");
+                    bot_link_line.push('.');
                 } else {
-                    bot_link_line.push_str(" ");
+                    bot_link_line.push(' ');
                 }
             }
             if let Some(msg) = message_lines.next() {
-                top_link_line.push_str(" ");
+                top_link_line.push(' ');
                 top_link_line.push_str(msg);
             }
             if let Some(msg) = message_lines.next() {
-                bot_link_line.push_str(" ");
+                bot_link_line.push(' ');
                 bot_link_line.push_str(msg);
             }
             out.push_str(top_link_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
             out.push_str(bot_link_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
         }
 
         // Render the term line
@@ -203,7 +203,7 @@ where
                 let mut term_line = String::new();
                 for (i, term) in term_row.iter().enumerate() {
                     if i > 0 {
-                        term_line.push_str(" ");
+                        term_line.push(' ');
                     }
                     if *term {
                         term_line.push_str(term_str);
@@ -216,11 +216,11 @@ where
                     }
                 }
                 if let Some(msg) = message_lines.next() {
-                    term_line.push_str(" ");
+                    term_line.push(' ');
                     term_line.push_str(msg);
                 }
                 out.push_str(term_line.trim_end());
-                out.push_str("\n");
+                out.push('\n');
             }
             need_extra_pad_line = true;
         }
@@ -255,10 +255,10 @@ where
         // Render any pad lines
         for msg in message_lines {
             let mut pad_line = base_pad_line.clone();
-            pad_line.push_str(" ");
+            pad_line.push(' ');
             pad_line.push_str(msg);
             out.push_str(pad_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
             need_extra_pad_line = false;
         }
 

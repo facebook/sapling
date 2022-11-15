@@ -143,7 +143,7 @@ where
         // Render the previous extra pad line
         if let Some(extra_pad_line) = self.extra_pad_line.take() {
             out.push_str(extra_pad_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
         }
 
         // Render the nodeline
@@ -152,7 +152,7 @@ where
             match entry {
                 NodeLine::Node => {
                     node_line.push_str(&line.glyph);
-                    node_line.push_str(" ");
+                    node_line.push(' ');
                 }
                 NodeLine::Parent => node_line.push_str(glyphs[glyph::PARENT]),
                 NodeLine::Ancestor => node_line.push_str(glyphs[glyph::ANCESTOR]),
@@ -160,11 +160,11 @@ where
             }
         }
         if let Some(msg) = message_lines.next() {
-            node_line.push_str(" ");
+            node_line.push(' ');
             node_line.push_str(msg);
         }
         out.push_str(node_line.trim_end());
-        out.push_str("\n");
+        out.push('\n');
 
         // Render the link line
         #[allow(clippy::if_same_then_else)]
@@ -245,11 +245,11 @@ where
                 }
             }
             if let Some(msg) = message_lines.next() {
-                link_line.push_str(" ");
+                link_line.push(' ');
                 link_line.push_str(msg);
             }
             out.push_str(link_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
         }
 
         // Render the term line
@@ -265,11 +265,11 @@ where
                     }
                 }
                 if let Some(msg) = message_lines.next() {
-                    term_line.push_str(" ");
+                    term_line.push(' ');
                     term_line.push_str(msg);
                 }
                 out.push_str(term_line.trim_end());
-                out.push_str("\n");
+                out.push('\n');
             }
             need_extra_pad_line = true;
         }
@@ -282,10 +282,10 @@ where
         // Render any pad lines
         for msg in message_lines {
             let mut pad_line = base_pad_line.clone();
-            pad_line.push_str(" ");
+            pad_line.push(' ');
             pad_line.push_str(msg);
             out.push_str(pad_line.trim_end());
-            out.push_str("\n");
+            out.push('\n');
             need_extra_pad_line = false;
         }
 
