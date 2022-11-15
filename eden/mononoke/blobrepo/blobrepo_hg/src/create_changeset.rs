@@ -14,7 +14,6 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::scribe::log_commit_to_scribe;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
@@ -136,8 +135,6 @@ pub struct CreateChangeset {
     pub sub_entries: BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
     pub cs_metadata: ChangesetMetadata,
     pub create_bonsai_changeset_hook: Option<Arc<BonsaiChangesetHook>>,
-    /// Which category to log the changeset to, if any
-    pub scribe_category: Option<String>,
 }
 
 impl CreateChangeset {
@@ -322,7 +319,6 @@ impl CreateChangeset {
 
         let complete_changesets = repo.get_changesets_object();
         let bonsai_hg_mapping = repo.bonsai_hg_mapping_arc().clone();
-        cloned!(repo);
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;
 
@@ -346,10 +342,6 @@ impl CreateChangeset {
                 .add(&ctx, bonsai_hg_entry)
                 .await
                 .context("While inserting mapping")?;
-
-            if let Some(category) = self.scribe_category {
-                log_commit_to_scribe(&ctx, &category, &repo, &bonsai_cs, None).await;
-            }
 
             Ok::<_, Error>((bonsai_cs, hg_cs))
         }

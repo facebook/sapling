@@ -488,7 +488,6 @@ impl UploadChangesets {
                     sub_entries: entries.compat().boxed(),
                     cs_metadata,
                     create_bonsai_changeset_hook: Some(create_and_verify_bonsai.clone()),
-                    scribe_category: None,
                 };
                 let cshandle =
                     create_changeset.create(ctx.clone(), &blobrepo, scuba_logger.clone());

@@ -36,6 +36,7 @@ reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 remotefilelog = { version = "0.1.0", path = "../repo_client/remotefilelog" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_client = { version = "0.1.0", path = "../repo_client" }
+repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 tunables = { version = "0.1.0", path = "../tunables" }

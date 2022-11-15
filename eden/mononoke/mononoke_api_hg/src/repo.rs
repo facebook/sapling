@@ -71,6 +71,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_client::find_commits_to_send;
 use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
 use repo_client::gettreepack_entries;
+use repo_update_logger::log_new_commits;
+use repo_update_logger::CommitInfo;
 use segmented_changelog::CloneData;
 use segmented_changelog::Location;
 use tunables::tunables;
@@ -393,7 +395,6 @@ impl HgRepoContext {
         for (node, revlog_cs) in changesets {
             uploaded_changesets = upload_changeset(
                 self.ctx().clone(),
-                self.config().infinitepush.commit_scribe_category.clone(),
                 self.blob_repo().clone(),
                 self.ctx().scuba().clone(),
                 node,
@@ -406,20 +407,21 @@ impl HgRepoContext {
             .await
             .map_err(MononokeError::from)?;
         }
-        let mut results = vec![];
+        let mut results = Vec::new();
         let mut hg_changesets = HashSet::new();
+        let mut commits_to_log = Vec::new();
         for (hg_cs_id, handle) in uploaded_changesets {
-            let result = handle
-                .get_completed_changeset()
-                .await
-                .map_err(Error::from)
-                .map_err(MononokeError::from)
-                .map(|(bonsai, _)| (hg_cs_id, bonsai));
-            if result.is_ok() {
-                hg_changesets.insert(hg_cs_id);
-            }
+            let result = match handle.get_completed_changeset().await {
+                Ok((bonsai, _)) => {
+                    hg_changesets.insert(hg_cs_id);
+                    commits_to_log.push(CommitInfo::new(&bonsai, None));
+                    Ok((hg_cs_id, bonsai))
+                }
+                Err(e) => Err(MononokeError::from(Error::from(e))),
+            };
             results.push(result);
         }
+        log_new_commits(self.ctx(), self.repo().inner_repo(), None, commits_to_log).await;
         self.blob_repo()
             .hg_mutation_store()
             .add_entries(self.ctx(), hg_changesets, mutations)

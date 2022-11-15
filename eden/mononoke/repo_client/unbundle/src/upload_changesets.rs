@@ -282,7 +282,6 @@ fn get_parent(
 
 pub async fn upload_changeset(
     ctx: CoreContext,
-    scribe_category: Option<String>,
     repo: BlobRepo,
     scuba_logger: MononokeScubaSampleBuilder,
     node: HgChangesetId,
@@ -320,7 +319,6 @@ pub async fn upload_changeset(
         // XXX pass content blobs to CreateChangeset here
         cs_metadata,
         create_bonsai_changeset_hook,
-        scribe_category,
     };
     let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
 

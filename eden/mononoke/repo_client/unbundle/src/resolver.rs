@@ -1210,7 +1210,6 @@ impl<'r> Bundle2Resolver<'r> {
             for (node, revlog_cs) in chunk {
                 uploaded_changesets = upload_changeset(
                     self.ctx.clone(),
-                    None, // No logging to scribe happens through this codepath
                     self.repo.clone(),
                     self.ctx.scuba().clone(),
                     *node,
