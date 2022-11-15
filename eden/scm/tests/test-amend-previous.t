@@ -13,17 +13,43 @@ Check help text for new options and removal of unsupported options.
   
   aliases: prev
   
-  check out the parent commit
+  check out an ancestor commit
+  
+      Update to an ancestor commit of the current commit. When working with a
+      stack of commits, you can use 'hg previous' to move down your stack with
+      ease.
+  
+      - Use the "--newest" flag to always pick the newest of multiple parents
+        commits. You can set "amend.alwaysnewest" to true in your global
+        Mercurial config file to make this the default.
+      - Use the "--merge" flag to bring along uncommitted changes to the
+        destination commit.
+      - Use the "--bookmark" flag to move to the first ancestor commit with a
+        bookmark.
+  
+      Examples:
+  
+      - Move 1 level down the stack:
+  
+          hg prev
+  
+      - Move 2 levels down the stack:
+  
+          hg prev 2
+  
+      - Move to the bottom of the stack:
+  
+          hg prev --bottom
   
   Options:
   
-      --newest               always pick the newest parent when a changeset has
+      --newest               always pick the newest parent when a commit has
                              multiple parents
       --bottom               update to the lowest non-public ancestor of the
-                             current changeset
+                             current commit
       --bookmark             update to the first ancestor with a bookmark
       --no-activate-bookmark do not activate the bookmark on the destination
-                             changeset
+                             commit
    -C --clean                discard uncommitted changes (no backup)
    -B --move-bookmark        move active bookmark
    -m --merge                merge uncommitted changes

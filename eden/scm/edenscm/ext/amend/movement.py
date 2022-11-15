@@ -28,33 +28,61 @@ moveopts = [
 
 
 @command(
-    "previous|prev|previ|previo|previou",
+    "previous|prev",
     [
         (
             "",
             "newest",
             False,
-            _("always pick the newest parent when a changeset has multiple parents"),
+            _("always pick the newest parent when a commit has multiple parents"),
         ),
         (
             "",
             "bottom",
             False,
-            _("update to the lowest non-public ancestor of the current changeset"),
+            _("update to the lowest non-public ancestor of the current commit"),
         ),
         ("", "bookmark", False, _("update to the first ancestor with a bookmark")),
         (
             "",
             "no-activate-bookmark",
             False,
-            _("do not activate the bookmark on the destination changeset"),
+            _("do not activate the bookmark on the destination commit"),
         ),
     ]
     + moveopts,
     _("[OPTIONS]... [STEPS]"),
+    legacyaliases=["previ", "previo", "previou"],
 )
 def previous(ui, repo, *args, **opts):
-    """check out the parent commit"""
+    """check out an ancestor commit
+
+    Update to an ancestor commit of the current commit. When working with a stack
+    of commits, you can use :prog:`previous` to move down your stack with ease.
+
+    - Use the ``--newest`` flag to always pick the newest of multiple parents commits.
+      You can set ``amend.alwaysnewest`` to true in your global @Product@ config file to make
+      this the default.
+
+    - Use the ``--merge`` flag to bring along uncommitted changes to the destination
+      commit.
+
+    - Use the ``--bookmark`` flag to move to the first ancestor commit with a bookmark.
+
+    Examples:
+
+    - Move 1 level down the stack::
+
+        @prog@ prev
+
+    - Move 2 levels down the stack::
+
+        @prog@ prev 2
+
+    - Move to the bottom of the stack::
+
+        @prog@ prev --bottom
+    """
     _moverelative(ui, repo, args, opts, reverse=True)
 
 
