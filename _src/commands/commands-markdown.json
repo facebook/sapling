@@ -246,6 +246,132 @@
     ],
     "subcommands": null
   },
+  "annotate": {
+    "name": "annotate",
+    "aliases": [
+      "annotate",
+      "blame",
+      "an"
+    ],
+    "doc": "\n**show per-line commit information for given files**\n\nShow file contents where each line is annotated with information\nabout the commit that last changed that line.\n\nThis command is useful for discovering when a change was made and\nby whom.\n\nIf you include `--file`, `--user`, or `--date`, the revision number is\nsuppressed unless you also include `--number`.\n\nWithout the `-a/--text` option, annotate will skip binary files.\nWith `-a`, binary files will be annotated anyway.\n\nReturns 0 on success.\n",
+    "args": [
+      {
+        "shortname": "r",
+        "fullname": "rev",
+        "default": "",
+        "description": "annotate the specified revision"
+      },
+      {
+        "shortname": "",
+        "fullname": "no-follow",
+        "default": false,
+        "description": "don't follow copies and renames"
+      },
+      {
+        "shortname": "a",
+        "fullname": "text",
+        "default": null,
+        "description": "treat all files as text"
+      },
+      {
+        "shortname": "u",
+        "fullname": "user",
+        "default": null,
+        "description": "list the author (long with -v)"
+      },
+      {
+        "shortname": "f",
+        "fullname": "file",
+        "default": null,
+        "description": "list the filename"
+      },
+      {
+        "shortname": "d",
+        "fullname": "date",
+        "default": null,
+        "description": "list the date (short with -q)"
+      },
+      {
+        "shortname": "n",
+        "fullname": "number",
+        "default": null,
+        "description": "list the revision number"
+      },
+      {
+        "shortname": "c",
+        "fullname": "changeset",
+        "default": null,
+        "description": "list the changeset (default)"
+      },
+      {
+        "shortname": "l",
+        "fullname": "line-number",
+        "default": null,
+        "description": "show line number at the first appearance"
+      },
+      {
+        "shortname": "",
+        "fullname": "skip",
+        "default": [],
+        "description": "revision to not display (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "short-date",
+        "default": null,
+        "description": "list the brief date (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "w",
+        "fullname": "ignore-all-space",
+        "default": null,
+        "description": "ignore white space when comparing lines"
+      },
+      {
+        "shortname": "b",
+        "fullname": "ignore-space-change",
+        "default": null,
+        "description": "ignore changes in the amount of white space"
+      },
+      {
+        "shortname": "B",
+        "fullname": "ignore-blank-lines",
+        "default": null,
+        "description": "ignore changes whose lines are all blank"
+      },
+      {
+        "shortname": "Z",
+        "fullname": "ignore-space-at-eol",
+        "default": null,
+        "description": "ignore changes in whitespace at EOL"
+      },
+      {
+        "shortname": "I",
+        "fullname": "include",
+        "default": [],
+        "description": "include files matching the given patterns"
+      },
+      {
+        "shortname": "X",
+        "fullname": "exclude",
+        "default": [],
+        "description": "exclude files matching the given patterns"
+      },
+      {
+        "shortname": "T",
+        "fullname": "template",
+        "default": "",
+        "description": "display with template (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "p",
+        "fullname": "phabdiff",
+        "default": null,
+        "description": "list phabricator diff id"
+      }
+    ],
+    "subcommands": null
+  },
   "backout": {
     "name": "backout",
     "aliases": [

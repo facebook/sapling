@@ -1,10 +1,10 @@
 ---
-sidebar_position: 14
+sidebar_position: 15
 ---
 
 ## githelp | git
 <!--
-  @generated SignedSource<<a4b7771e3e88e6f887138b22173bde9b>>
+  @generated SignedSource<<eca63d413bdb08f690b17f75ce93ca0a>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

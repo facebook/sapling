@@ -1,10 +1,10 @@
 ---
-sidebar_position: 21
+sidebar_position: 22
 ---
 
 ## journal | jo
 <!--
-  @generated SignedSource<<8457d4de62855c4dd8eeb7fc6b3c1db7>>
+  @generated SignedSource<<0e7de1e471e68d39910eea9d2c9c6638>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

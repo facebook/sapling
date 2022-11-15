@@ -1,10 +1,10 @@
 ---
-sidebar_position: 36
+sidebar_position: 37
 ---
 
 ## split | spl
 <!--
-  @generated SignedSource<<e19585ba60cc25b0a4d15f3a1007238d>>
+  @generated SignedSource<<9f431471098e07bc9aa15b3b78343166>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

@@ -1,10 +1,10 @@
 ---
-sidebar_position: 31
+sidebar_position: 32
 ---
 
 ## remove | rm
 <!--
-  @generated SignedSource<<bb8eddefb9b2ff14e77164d4c24dedf2>>
+  @generated SignedSource<<8b7776d140c433587dd3376798892d5d>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

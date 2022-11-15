@@ -1,10 +1,10 @@
 ---
-sidebar_position: 11
+sidebar_position: 12
 ---
 
 ## fold | squash
 <!--
-  @generated SignedSource<<f4de8ac511886777395b5d8a3297c24d>>
+  @generated SignedSource<<c3e296c77c7474661372f0d18a1ada98>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
