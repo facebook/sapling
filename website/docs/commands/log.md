@@ -2,9 +2,9 @@
 sidebar_position: 23
 ---
 
-## log | history
+## log
 <!--
-  @generated SignedSource<<3c52bbd5296b7747b8082e476b2c7484>>
+  @generated SignedSource<<193144e419e00c8abfb4dcde9485ecb8>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
