@@ -6,7 +6,7 @@ import {gitHubRepo, gitHubRepoName, latestReleasePage} from '@site/constants'
 
 import {Command, SLCommand} from '@site/elements'
 
-import {findAssetWithFilenameSubstr} from '@site/src/releaseData';
+import {macArmAsset, macIntelAsset, windowsAsset} from '@site/src/releaseData';
 
 import CodeBlock from '@theme/CodeBlock';
 
@@ -30,25 +30,38 @@ First, make sure that [Homebrew](https://brew.sh/) is installed on your system. 
 
 #### Apple Silicon (arm64)
 
+Download using `curl`:
+
 <CodeBlock>
-$ curl -L {findAssetWithFilenameSubstr('arm64_monterey.bottle.tar.gz').url}{'\n'}
-$ brew install {findAssetWithFilenameSubstr('arm64_monterey.bottle.tar.gz').name}{'\n'}
+curl -L --output {macArmAsset.name} {macArmAsset.url}
+</CodeBlock>
+
+Then install:
+
+<CodeBlock>
+brew install ./{macArmAsset.name}{'\n'}
 </CodeBlock>
 
 #### Intel (x86_64)
 
+Download using `curl`:
+
 <CodeBlock>
-$ curl -L {findAssetWithFilenameSubstr('.monterey.bottle.tar.gz').url}{'\n'}
-$ brew install {findAssetWithFilenameSubstr('.monterey.bottle.tar.gz').name}{'\n'}
+curl -L --output {macIntelAsset.name} {macIntelAsset.url}
 </CodeBlock>
 
+Then install:
+
+<CodeBlock>
+brew install ./{macIntelAsset.name}{'\n'}
+</CodeBlock>
 
 :::caution
 
 Downloading the bottle using a web browser instead of `curl` will cause macOS to tag Sapling as "untrusted" and the security manager will prevent you from running it. You can remove this annotation as follows:
 
 <CodeBlock>
-xattr -r -d com.apple.quarantine ~/Downloads/{findAssetWithFilenameSubstr('.monterey.bottle.tar.gz').name}
+xattr -r -d com.apple.quarantine ~/Downloads/{macArmAsset.name}
 </CodeBlock>
 
 :::
@@ -58,7 +71,7 @@ xattr -r -d com.apple.quarantine ~/Downloads/{findAssetWithFilenameSubstr('.mont
 After downloading the `sapling_windows` ZIP from the <a href={latestReleasePage}>latest release</a>, run the following in PowerShell as Administrator (substituting the name of the `.zip` file you downloaded, as appropriate):
 
 <CodeBlock>
-PS> Expand-Archive ~/Downloads/{findAssetWithFilenameSubstr('sapling_windows').name} 'C:\Program Files'{'\n'}
+PS> Expand-Archive ~/Downloads/{windowsAsset.name} 'C:\Program Files'{'\n'}
 </CodeBlock>
 
 This will create `C:\Program Files\Sapling`, which you likely want to add to your `%PATH%` environment variable using:
