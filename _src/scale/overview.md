@@ -1,3 +1,7 @@
+---
+sidebar_position: 10
+---
+
 # Overview
 
 Sapling supports large monorepos that have tens of millions of files and
