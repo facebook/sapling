@@ -4,11 +4,11 @@ sidebar_position: 10
 
 import {Command} from '@site/elements'
 
-# Basic Commands
+# Basic commands
 
 Here are the most commonly used commands in Sapling:
 
-### Working with Commits
+### Working with commits
 
 | Get | View | Change | Move | Remove | Fix | Stack |
 | ---- | ------ | --------- | --- | --- | ----- | --- |
@@ -18,7 +18,7 @@ Here are the most commonly used commands in Sapling:
 | | <Command name="web" />| | | | <Command name="redo" /> | <Command name="histedit" /> |
 | | | | | | | <Command name="restack" /> |
 
-### Working with Your Checkout
+### Working with your checkout
 
 | View | Move | Change | Fix | Save |
 | ---- | --- | ------ | --- | --- |
@@ -37,7 +37,7 @@ This document is a casual introduction to some of the basic commands. It is not 
 
 Many of these examples use the `sl smartlog` output to explain the repo state. See the [Smartlog doc](./smartlog) for an overview of the output format.
 
-## Cloning and Checking out
+## Cloning and checking out
 
 #### Clone
 
@@ -241,7 +241,7 @@ Notable options:
 * `--rev COMMIT` will change the file contents to match their contents in the given commit.
 * `--interactive` will open an interactive editor for choosing which files or lines to revert.
 
-## Making Commits
+## Making commits
 
 #### Commit
 
@@ -269,7 +269,7 @@ Notable options:
 
 Related topics: Amend
 
-## Viewing History
+## Viewing history
 
 Related: [smartlog](smartlog.md)
 

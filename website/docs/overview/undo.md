@@ -91,7 +91,7 @@ This UI is also useful for simply finding old commit hashes. Once you have the
 hash, you can exit the undo UI, then use `sl show HASH` and `sl unhide HASH` to
 view and recover the commit.
 
-### Uncommit / Unamend
+### Uncommit / unamend
 
 The undo command is limited to undoing changes to the commit graph. To undo changes related to the working copy, like a commit or amend, use `sl uncommit` and `sl unamend`.
 

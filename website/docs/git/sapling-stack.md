@@ -4,7 +4,7 @@ sidebar_position: 2
 
 import {Command} from '@site/elements'
 
-# Sapling Stack
+# Sapling stack
 
 Sapling comes with a [`pr` subcommand](../commands/pr.md) to help you work with GitHub pull requests.
 

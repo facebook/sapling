@@ -1,7 +1,7 @@
 ---
 sidebar_position: 80
 ---
-# Pull / Push
+# Pull / push
 
 ### Pull
 

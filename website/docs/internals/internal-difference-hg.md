@@ -1,4 +1,4 @@
-# Internal Differences from Mercurial
+# Internal differences from Mercurial
 
 :::note
 This page assumes that you are familiar with Mercurial internals.
@@ -55,7 +55,7 @@ Implementation wise, mutation uses IndexedLog for `O(log N)` lookup. Nothing in
 Sapling requires `O(N)` loading of the entire mutation data.
 
 
-## Storage Format
+## Storage format
 
 Mercurial uses [Revlog](https://www.mercurial-scm.org/wiki/Revlog) as its main
 file format. Sapling uses IndexedLog instead.
@@ -96,14 +96,14 @@ Treating file names as utf-8 allows Sapling to read and write correct file
 names between Windows and \*nix systems for a given repo.
 
 
-## Pure Python Support
+## Pure Python support
 
 Mercurial maintains a pure Python implementation. It can run without building
 with a C or Rust compiler by setting `HGMODULEPOLICY` to `py`. This is not
 possible for Sapling.
 
 
-## Git Support
+## Git support
 
 There are 2 extensions that add Git support to Mercurial:
 - [hg-git](https://www.mercurial-scm.org/wiki/HgGit)

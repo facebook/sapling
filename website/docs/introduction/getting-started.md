@@ -6,7 +6,7 @@ import {gitHubRepo, gitHubRepoName} from '@site/constants'
 
 import {Command, ReviewStackScreenshot, SLCommand} from '@site/elements'
 
-# Getting Started
+# Getting started
 
 This section will walk you through cloning your first repo, making commits, and submitting them as GitHub pull requests.
 
@@ -113,7 +113,7 @@ Server logs will be written to /var/folders/5c/f3nk25tn7gd7nds59hy_nj7r0000gn/T/
 
 Sapling will open the URL automatically in your browser. See the docs on [Interactive Smartlog](../addons/isl.md) to learn more about its many features. Interactive Smartlog is also available in our [VS Code Extension](../addons/vscode).
 
-## Submitting Pull Requests
+## Submitting pull requests
 
 Sapling supports multiple workflows for interacting with GitHub pull requests. The simplest solution is the <SLCommand name="pr" /> command:
 
@@ -146,7 +146,7 @@ After you have created an initial series of pull requests using <Command name="p
 
 The "overlapping pull requests" approach may not be an appropriate solution for your project. To that end, we also support an alternative pull request workflow, <Command name="ghstack" sl={true} />, which avoids the "overlapping pull requests" issue, but may not be an option for all projects. See the [Pull Requests section](../git/intro.md#pull-requests) in **Using Sapling with GitHub** to determine which workflow is right for you.
 
-## Browsing Pull Requests
+## Browsing pull requests
 
 If you have used Sapling to create pull requests for your commits, then you can use `sl ssl` to include the pull request status in your Smartlog. Note that `sl ssl` is not a subcommand, but a built-in alias for `sl smartlog -T {ssl}`:
 

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 30
 ---
-# Git Cheat Sheet
+# Git cheat sheet
 
 Below is a quick cheat sheet for translating a number of Git commands into equivalent Sapling commands.
 
@@ -15,7 +15,7 @@ $ sl git -- checkout 060f340a9 my_file.txt
 sl revert -r 060f340a9 my_file.txt
 ```
 
-### Cloning and Pulling a Repository
+### Cloning and pulling a repository
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -25,7 +25,7 @@ sl revert -r 060f340a9 my_file.txt
 |Pull From |git fetch origin |sl pull remote |
 |Pull and Rebase |git pull |sl pull —rebase |
 
-### Understanding the Repository
+### Understanding the repository
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -36,7 +36,7 @@ sl revert -r 060f340a9 my_file.txt
 |Pending Changes |git diff |sl diff |
 |Current Commit |git show |sl show |
 
-### Referring to Commits
+### Referring to commits
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -47,7 +47,7 @@ sl revert -r 060f340a9 my_file.txt
 
 See `sl help revset` for more ways of referencing commits.
 
-### Working with Files
+### Working with files
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -63,7 +63,7 @@ See `sl help revset` for more ways of referencing commits.
 |Output File Content |git cat-file -p COMMIT:FILE |sl cat -r COMMIT FILE |
 |Show Blame |git blame FILE |sl blame FILE |
 
-### Working with Commits
+### Working with commits
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -81,7 +81,7 @@ See `sl help revset` for more ways of referencing commits.
 |Stash Changes |git stash |sl shelve |
 |Unstach Changes |git stash pop |sl unshelve |
 
-### Undo, Redo, and Reverting
+### Undo, redo, and reverting
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -93,7 +93,7 @@ See `sl help revset` for more ways of referencing commits.
 |View Recent Commits |git reflog |sl journal |
 |Recover Commit |git reset COMMIT |sl unhide COMMIT |
 
-### Working with Stacks
+### Working with stacks
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -104,7 +104,7 @@ See `sl help revset` for more ways of referencing commits.
 |Reorder Commits |git rebase -i |sl histedit |
 |Amend Down into Stack |N/A |sl absorb |
 
-### Giving Commits Names
+### Giving commits names
 
 | |Git |Sapling |
 |--- |--- |--- |
@@ -113,7 +113,7 @@ See `sl help revset` for more ways of referencing commits.
 |Switch to Branch |git checkout NAME |sl goto NAME |
 |Delete Branch |git branch -d NAME |sl book -d NAME (deletes just the bookmark name) / sl book -D NAME (deletes the bookmark name and hides the commits) |
 
-### Resolving Conflicts
+### Resolving conflicts
 
 | |Git |Sapling |
 |--- |--- |--- |

@@ -3,7 +3,7 @@ sidebar_position: 60
 ---
 import {Command} from '@site/elements'
 
-# Stacks of Commits
+# Stacks of commits
 
 Sapling provides first-class support for editing and manipulating stacks of commits.
 

@@ -7,7 +7,7 @@ sidebar_position: 10
 Sapling supports large monorepos that have tens of millions of files and
 commits, with tens of thousands of contributors.
 
-## Performance Challenges
+## Performance challenges
 
 This scale imposes performance challenges in various areas. Operations that
 require all files or all commits (O(files) or O(commits)) space or time
@@ -27,7 +27,7 @@ Over time, Sapling made many improvements to tackle the above challenges:
 - Faster commit graph algorithms (segmented changelog, 2020)
 - On-demand commit fetching (2021)
 
-## Other Challenges
+## Other challenges
 
 Besides improving scale and performance, we also strove to build a robust
 development experience.  To avoid developers losing their work due to hardware
