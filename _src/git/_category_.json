@@ -1,0 +1,8 @@
+{
+  "label": "Git Interop",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Using Sapling with existing Git repositories."
+  }
+}

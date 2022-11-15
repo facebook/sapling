@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkwebsite=self.webpackChunkwebsite||[]).push([[4474],{6185:t=>{t.exports=JSON.parse('{"title":"Introduction","slug":"/category/introduction","permalink":"/docs/category/introduction","navigation":{"next":{"title":"Sapling SCM","permalink":"/docs/introduction/"}}}')}}]);

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkwebsite=self.webpackChunkwebsite||[]).push([[6012],{30664:e=>{e.exports=JSON.parse('{"title":"Add-ons","slug":"/category/add-ons","permalink":"/docs/category/add-ons","navigation":{"previous":{"title":"web","permalink":"/docs/commands/web"},"next":{"title":"Interactive Smartlog (ISL)","permalink":"/docs/addons/isl"}}}')}}]);

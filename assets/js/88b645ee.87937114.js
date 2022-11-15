@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkwebsite=self.webpackChunkwebsite||[]).push([[8168],{91536:e=>{e.exports=JSON.parse('{"title":"Overview","slug":"/category/overview","permalink":"/docs/category/overview","navigation":{"previous":{"title":"Differences from Mercurial","permalink":"/docs/introduction/differences-hg"},"next":{"title":"Intro","permalink":"/docs/overview/intro"}}}')}}]);
