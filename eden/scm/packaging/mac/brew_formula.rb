@@ -17,6 +17,7 @@ class Sapling < Formula
   depends_on "python@3.8"
   depends_on "node"
   depends_on "openssl@1.1"
+  depends_on "gh"
   depends_on "cmake" => :build
   depends_on "rustup-init" => :build
   depends_on "yarn" => :build
