@@ -86,18 +86,18 @@ impl RepoContext {
         }) = outcome;
         redirector.backsync_latest(ctx).await?;
 
+        // Convert all fields from large to small repo
+        let (Small(old_bookmark_value), head, rebased_changesets) = futures::try_join!(
+            self.convert_old_bookmark_value(redirector, Large(old_bookmark_value)),
+            redirector.get_large_to_small_commit_equivalent(ctx, head),
+            redirector.convert_pushrebased_changesets(ctx, rebased_changesets)
+        )?;
+
         Ok(Small(PushrebaseOutcome {
-            old_bookmark_value: self
-                .convert_old_bookmark_value(redirector, Large(old_bookmark_value))
-                .await?
-                .0,
-            head: redirector
-                .get_large_to_small_commit_equivalent(ctx, head)
-                .await?,
+            old_bookmark_value,
+            head,
             retry_num,
-            rebased_changesets: redirector
-                .convert_pushrebased_changesets(ctx, rebased_changesets)
-                .await?,
+            rebased_changesets,
             pushrebase_distance,
         }))
     }
