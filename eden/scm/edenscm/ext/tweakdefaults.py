@@ -133,11 +133,6 @@ configitem("tweakdefaults", "singlecolonmsg", default=_("use of ':' is deprecate
 
 def uisetup(ui) -> None:
     tweakorder()
-    # if we want to replace command's docstring (not just add stuff to it),
-    # we need to do it in uisetup, not extsetup
-    commands.table["annotate|blame|blam|an|ann|anno|annot|annota|annotat"][
-        0
-    ].__doc__ = blame.__doc__
 
 
 def extsetup(ui) -> None:
@@ -417,26 +412,6 @@ def wrapblame() -> None:
 
 
 def blame(orig, ui, repo, *pats, **opts):
-    """show changeset information by line for each file
-
-    List changes in files, showing the changeset responsible for
-    each line.
-
-    This command is useful for discovering when a change was made and
-    by whom.
-
-    If you include -n, changeset gets replaced by revision id, unless
-    you also include -c, in which case both are shown. -p on the other
-    hand always adds Phabricator Diff Id, not replacing anything with it.
-
-    Without the -a/--text option, annotate will avoid processing files
-    it detects as binary. With -a, annotate will annotate the file
-    anyway, although the results will probably be neither useful
-    nor desirable.
-
-    Returns 0 on success.
-    """
-
     @templater.templatefunc("blame_phabdiffid")
     def phabdiff(context, mapping, args):
         """Fetch the Phab Diff Id from the node in mapping"""

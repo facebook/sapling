@@ -324,7 +324,7 @@ def addremove(ui, repo, *pats, **opts):
 
 
 @command(
-    "annotate|blame|blam|an|ann|anno|annot|annota|annotat",
+    "annotate|blame|an",
     [
         ("r", "rev", "", _("annotate the specified revision"), _("REV")),
         ("", "no-follow", False, _("don't follow copies and renames")),
@@ -340,25 +340,24 @@ def addremove(ui, repo, *pats, **opts):
     + diffwsopts
     + walkopts
     + formatteropts,
-    _("[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."),
+    _("[OPTION] [-r REV] FILE..."),
     inferrepo=True,
+    legacyaliases=["blam", "blam", "ann", "anno", "annot", "annota", "annotat"],
 )
 def annotate(ui, repo, *pats, **opts):
-    """show changeset information by line for each file
+    """show per-line commit information for given files
 
-    List changes in files, showing the revision id responsible for
-    each line.
+    Show file contents where each line is annotated with information
+    about the commit that last changed that line.
 
     This command is useful for discovering when a change was made and
     by whom.
 
-    If you include --file, --user, or --date, the revision number is
-    suppressed unless you also include --number.
+    If you include ``--file``, ``--user``, or ``--date``, the revision number is
+    suppressed unless you also include ``--number``.
 
-    Without the -a/--text option, annotate will avoid processing files
-    it detects as binary. With -a, annotate will annotate the file
-    anyway, although the results will probably be neither useful
-    nor desirable.
+    Without the ``-a/--text`` option, annotate will skip binary files.
+    With ``-a``, binary files will be annotated anyway.
 
     Returns 0 on success.
     """
