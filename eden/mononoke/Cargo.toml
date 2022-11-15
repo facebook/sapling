@@ -380,7 +380,6 @@ members = [
   "repo_client/getbundle_response",
   "repo_client/obsolete",
   "repo_client/remotefilelog",
-  "repo_client/scribe_commit_queue",
   "repo_client/streaming_clone",
   "repo_client/unbundle",
   "repo_client/wirepack",

@@ -6,7 +6,6 @@
  */
 
 mod repo;
-pub mod scribe;
 
 pub use changeset_fetcher::ChangesetFetcher;
 pub use filestore::StoreRequest;
