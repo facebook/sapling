@@ -64,7 +64,7 @@ See `sl help revset` for more ways of referencing commits.
 |Copy file |cp OLD NEW |sl cp OLD NEW |
 |Add/remove all files |git add -A . |sl addremove |
 |Undo changes |git checkout -- FILE |sl revert FILE |
-|Undo all changes |git reset --hard |sl revert —all |
+|Undo all changes |git reset --hard |sl revert --all |
 |Delete untracked files |git clean -f |sl clean |
 |Output file content |git cat-file -p COMMIT:FILE |sl cat -r COMMIT FILE |
 |Show blame |git blame FILE |sl blame FILE |
@@ -94,7 +94,7 @@ See `sl help revset` for more ways of referencing commits.
 |Undo commit |git reset --soft HEAD^ |sl uncommit |
 |Undo partial commit |git reset --soft HEAD^ FILE |sl uncommit FILE |
 |Undo amend |git reset HEAD@{1} |sl unamend |
-|Undo rebase/etc |git reset —hard HEAD@{1} |sl undo |
+|Undo rebase/etc |git reset --hard HEAD@{1} |sl undo |
 |Revert already landed commit |git revert COMMIT |sl backout COMMIT |
 |View recent commits |git reflog |sl journal |
 |Recover commit |git reset COMMIT |sl unhide COMMIT |
@@ -105,7 +105,7 @@ See `sl help revset` for more ways of referencing commits.
 |--- |--- |--- |
 |Modify middle commit |git rebase -i |sl goto COMMIT && sl amend |
 |Move up/down the stack |git rebase -i |sl prev / sl next |
-|Squash last two commits |git reset --soft HEAD^ && git commit —amend |sl fold —from .^ |
+|Squash last two commits |git reset --soft HEAD^ && git commit --amend |sl fold --from .^ |
 |Split a commit into two |N/A |sl split |
 |Reorder commits |git rebase -i |sl histedit |
 |Amend down into stack |N/A |sl absorb |
@@ -123,5 +123,5 @@ See `sl help revset` for more ways of referencing commits.
 
 | |Git |Sapling |
 |--- |--- |--- |
-|List unresolved conflicts |git diff —name-only —diff-filter=U |sl resolve —list |
+|List unresolved conflicts |git diff --name-only --diff-filter=U |sl resolve --list |
 |Mark a file resolved |git add FILE |sl resolve -m FILE |
