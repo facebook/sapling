@@ -81,7 +81,7 @@ pub fn run(ctx: ReqCtx<GotoOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Resu
 
     if dest.len() == 0 {
         bail!(identity::default().punch(
-            r#"You must specify a destination to update to, for example "@prog@ checkout master"."#,
+            r#"You must specify a destination to update to, for example "@prog@ goto main"."#,
         ));
     }
     if dest.len() > 1 {

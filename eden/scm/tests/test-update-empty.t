@@ -17,7 +17,7 @@
   > EOS
   $ hg up -q A
   $ hg up
-  abort: You must specify a destination to update to, for example "hg checkout master".
+  abort: You must specify a destination to update to, for example "hg goto main".
   (If you're trying to move a bookmark forward, try "hg rebase -d <destination>".) (?)
   [255]
 

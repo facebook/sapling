@@ -6300,7 +6300,7 @@ def update(
             raise error.Abort(
                 _(
                     "You must specify a destination to update to,"
-                    + ' for example "@prog@ checkout master".'
+                    + ' for example "@prog@ goto main".'
                 ),
                 hint=_(
                     "If you're trying to move a bookmark forward, try "

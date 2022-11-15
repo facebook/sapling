@@ -308,7 +308,7 @@ addtopicsymbols("templates", ".. functionsmarker", templater.funcs)
 helphomecommands = [
     ("Get the latest commits from the server", ["pull"]),
     ("View commits", ["ssl", "show", "diff"]),
-    ("Check out a commit", ["checkout"]),
+    ("Check out a commit", ["goto"]),
     (
         "Work with your checkout",
         ["status", "add", "remove", "forget", "revert", "purge", "shelve"],

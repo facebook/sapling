@@ -279,7 +279,7 @@ Testing -h/--help:
   
   Check out a commit:
   
-   checkout      update working copy to a given commit
+   goto          update working copy to a given commit
   
   Work with your checkout:
   
@@ -350,7 +350,7 @@ Testing -h/--help:
   
   Check out a commit:
   
-   checkout      update working copy to a given commit
+   goto          update working copy to a given commit
   
   Work with your checkout:
   
