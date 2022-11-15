@@ -33,13 +33,13 @@ First, make sure that [Homebrew](https://brew.sh/) is installed on your system. 
 Download using `curl`:
 
 <CodeBlock>
-curl -L --output {macArmAsset.name} {macArmAsset.url}
+curl -L -O {macArmAsset.url}
 </CodeBlock>
 
 Then install:
 
 <CodeBlock>
-brew install ./{macArmAsset.name}{'\n'}
+brew install ./{macArmAsset.name}
 </CodeBlock>
 
 #### Intel (x86_64)
@@ -47,13 +47,13 @@ brew install ./{macArmAsset.name}{'\n'}
 Download using `curl`:
 
 <CodeBlock>
-curl -L --output {macIntelAsset.name} {macIntelAsset.url}
+curl -L -O {macIntelAsset.url}
 </CodeBlock>
 
 Then install:
 
 <CodeBlock>
-brew install ./{macIntelAsset.name}{'\n'}
+brew install ./{macIntelAsset.name}
 </CodeBlock>
 
 :::caution
