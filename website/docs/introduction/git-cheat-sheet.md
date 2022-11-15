@@ -76,7 +76,7 @@ See `sl help revset` for more ways of referencing commits.
 |Commit changes |git commit -a |sl commit |
 |Modify commit |git commit -a --amend |sl amend |
 |Move to commit |git checkout COMMIT |sl goto COMMIT |
-|Remove a commit |git reset -hard COMMIT |sl hide COMMIT |
+|Remove current commit |git reset --hard HEAD^ |sl hide . |
 |Edit message |git commit --amend |sl metaedit |
 |Rebase commits |git rebase main |sl rebase -d main |
 |Complex rebase |git rebase --onto DEST BOTTOM^ TOP |sl rebase -d DEST -r BOTTOM::TOP |
