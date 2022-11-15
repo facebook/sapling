@@ -48,7 +48,7 @@ impl DerivedDataManager {
         self,
         bubble: Bubble,
         // Perhaps this can be fetched from inside the manager in the future
-        container: impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef,
+        container: &(impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef),
     ) -> Self {
         let changesets = Arc::new(bubble.changesets(container));
         Self {

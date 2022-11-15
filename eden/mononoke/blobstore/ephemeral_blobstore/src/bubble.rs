@@ -30,6 +30,7 @@ use futures::future::try_join_all;
 use futures::pin_mut;
 use futures::stream::TryStreamExt;
 use futures::Stream;
+use metaconfig_types::RepoConfigArc;
 use mononoke_types::repo::EPH_ID_PREFIX;
 use mononoke_types::repo::EPH_ID_SUFFIX;
 use mononoke_types::DateTime;
@@ -376,7 +377,7 @@ impl Bubble {
     fn changesets_with_blobstore(
         &self,
         repo_blobstore: RepoBlobstore,
-        container: impl ChangesetsArc + RepoIdentityRef,
+        container: &(impl ChangesetsArc + RepoIdentityRef),
     ) -> EphemeralChangesets {
         EphemeralChangesets::new(
             container.repo_identity().id(),
@@ -389,7 +390,7 @@ impl Bubble {
 
     pub fn changesets(
         &self,
-        container: impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef,
+        container: &(impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef),
     ) -> EphemeralChangesets {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
         self.changesets_with_blobstore(repo_blobstore, container)
@@ -397,14 +398,18 @@ impl Bubble {
 
     pub fn repo_view(
         &self,
-        container: impl RepoBlobstoreRef + RepoIdentityRef + RepoIdentityArc + ChangesetsArc,
+        container: &(
+             impl RepoBlobstoreRef + RepoIdentityRef + RepoIdentityArc + ChangesetsArc + RepoConfigArc
+         ),
     ) -> EphemeralRepoView {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
         let repo_identity = container.repo_identity_arc();
+        let repo_config = container.repo_config_arc();
         EphemeralRepoView {
             repo_blobstore: Arc::new(repo_blobstore.clone()),
             changesets: Arc::new(self.changesets_with_blobstore(repo_blobstore, container)),
             repo_identity,
+            repo_config,
         }
     }
 

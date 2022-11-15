@@ -28,6 +28,7 @@ use futures::try_join;
 use futures::StreamExt;
 use futures_stats::TimedFutureExt;
 use manifest::PathTree;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -40,6 +41,8 @@ use repo_authorization::RepoWriteOperation;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
+use repo_update_logger::log_new_commits;
+use repo_update_logger::CommitInfo;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
@@ -407,22 +410,18 @@ impl RepoContext {
     async fn save_changeset(
         &self,
         changeset: BonsaiChangeset,
-        container: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
+        repo: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef + RepoConfigRef),
         bubble: Option<&Bubble>,
     ) -> Result<(), MononokeError> {
-        blobrepo::save_bonsai_changesets(vec![changeset.clone()], self.ctx().clone(), container)
-            .await?;
+        blobrepo::save_bonsai_changesets(vec![changeset.clone()], self.ctx().clone(), repo).await?;
 
-        if let Some(category) = self.config().infinitepush.commit_scribe_category.as_deref() {
-            blobrepo::scribe::log_commit_to_scribe(
-                self.ctx(),
-                category,
-                container,
-                &changeset,
-                bubble.map(|x| x.bubble_id()),
-            )
-            .await;
-        }
+        log_new_commits(
+            self.ctx(),
+            repo,
+            None,
+            vec![CommitInfo::new(&changeset, bubble.map(|x| x.bubble_id()))],
+        )
+        .await;
 
         Ok(())
     }
@@ -676,12 +675,12 @@ impl RepoContext {
         if let Some(bubble) = &bubble {
             self.save_changeset(
                 new_changeset,
-                &bubble.repo_view(self.blob_repo()),
+                &bubble.repo_view(self.inner_repo()),
                 Some(bubble),
             )
             .await?;
         } else {
-            self.save_changeset(new_changeset, self.blob_repo(), None)
+            self.save_changeset(new_changeset, self.inner_repo(), None)
                 .await?;
         }
 

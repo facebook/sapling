@@ -6,6 +6,7 @@
  */
 
 use changesets::Changesets;
+use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 
@@ -19,4 +20,7 @@ pub struct EphemeralRepoView {
 
     #[facet]
     pub(crate) repo_identity: RepoIdentity,
+
+    #[facet]
+    pub(crate) repo_config: RepoConfig,
 }
