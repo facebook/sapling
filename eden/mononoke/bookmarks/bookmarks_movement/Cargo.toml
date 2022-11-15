@@ -48,7 +48,6 @@ repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lo
 repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/repo_permission_checker" }
 repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 revset = { version = "0.1.0", path = "../../revset" }
-scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_commit_queue" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.36"

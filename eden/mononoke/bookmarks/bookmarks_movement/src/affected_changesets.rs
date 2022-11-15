@@ -14,8 +14,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::scribe::log_commits_to_scribe_raw;
-use blobrepo::scribe::ScribeCommitInfo;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKind;
@@ -36,8 +34,9 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
+use repo_update_logger::log_new_commits;
+use repo_update_logger::CommitInfo;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scribe_commit_queue::ChangedFilesInfo;
 use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
@@ -552,39 +551,21 @@ pub async fn find_draft_ancestors(
     Ok(drafts)
 }
 
-pub(crate) async fn log_bonsai_commits_to_scribe(
+pub(crate) async fn log_new_bonsai_changesets(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark: Option<&BookmarkName>,
-    commits_to_log: Vec<BonsaiChangeset>,
+    bookmark: &BookmarkName,
     kind: BookmarkKind,
+    commits_to_log: Vec<BonsaiChangeset>,
 ) {
-    let commit_scribe_category = match kind {
-        BookmarkKind::Scratch => repo
-            .repo_config()
-            .infinitepush
-            .commit_scribe_category
-            .as_deref(),
-        BookmarkKind::Publishing | BookmarkKind::PullDefaultPublishing => repo
-            .repo_config()
-            .pushrebase
-            .commit_scribe_category
-            .as_deref(),
-    };
-
-    log_commits_to_scribe_raw(
+    log_new_commits(
         ctx,
         repo,
-        bookmark,
+        Some((bookmark, kind)),
         commits_to_log
             .iter()
-            .map(|bcs| ScribeCommitInfo {
-                changeset_id: bcs.get_changeset_id(),
-                bubble_id: None,
-                changed_files: ChangedFilesInfo::new(bcs),
-            })
+            .map(|bcs| CommitInfo::new(bcs, None))
             .collect(),
-        commit_scribe_category,
     )
     .await;
 }

@@ -26,7 +26,7 @@ use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
 
 use crate::affected_changesets::find_draft_ancestors;
-use crate::affected_changesets::log_bonsai_commits_to_scribe;
+use crate::affected_changesets::log_new_bonsai_changesets;
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
 use crate::repo_lock::check_repo_lock;
@@ -296,14 +296,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         }
 
         if self.log_new_public_commits_to_scribe {
-            log_bonsai_commits_to_scribe(
-                ctx,
-                repo,
-                Some(self.bookmark),
-                commits_to_log.clone(),
-                kind,
-            )
-            .await;
+            log_new_bonsai_changesets(ctx, repo, self.bookmark, kind, commits_to_log.clone()).await;
         }
         let info = BookmarkInfo {
             bookmark_name: self.bookmark.clone(),
