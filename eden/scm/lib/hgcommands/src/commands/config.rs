@@ -302,7 +302,7 @@ pub fn doc() -> &'static str {
 }
 
 pub fn synopsis() -> Option<&'static str> {
-    Some("[-u] [NAME]...")
+    Some("[OPTION]... [NAME]...")
 }
 
 fn short_name() -> &'static str {

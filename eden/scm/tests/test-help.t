@@ -1186,11 +1186,11 @@ test deprecated option is hidden with translation with untranslated description
 Test commands that collide with topics (issue4240)
 
   $ hg config -hq
-  hg config [-u] [NAME]...
+  hg config [OPTION]... [NAME]...
   
   show config settings
   $ hg showconfig -hq
-  hg config [-u] [NAME]...
+  hg config [OPTION]... [NAME]...
   
   show config settings
 

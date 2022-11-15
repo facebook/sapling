@@ -168,5 +168,5 @@ Returns 0 on success, 1 if there are unresolved files."#
 }
 
 pub fn synopsis() -> Option<&'static str> {
-    Some("[-C|-c|-m] [[-r] REV]")
+    Some("[OPTION]... [REV]")
 }

@@ -1318,7 +1318,7 @@ def bookmark(ui, repo, *names, **opts):
         # Note: for compatibility for tweakdefaults users
         ("", "new", None, _("do nothing (DEPRECATED)")),
     ],
-    _("[-fC] [NAME]"),
+    _("[NAME]"),
 )
 def branch(ui, repo, label=None, **opts):
     """(deprecated. use '@prog@ bookmark' instead)
@@ -1736,7 +1736,7 @@ def _docommit(ui, repo, *pats, **opts):
 
 
 @command(
-    "config|showconfig|debugconfig|conf|confi",
+    "config|conf",
     [
         (
             "e",
@@ -1772,6 +1772,7 @@ def _docommit(ui, repo, *pats, **opts):
     + formatteropts,
     optionalrepo=True,
     cmdtype=readonly,
+    legacyaliases=["showconfig", "debugconfig", "confi"],
 )
 def config(ui, repo, *values, **opts):
     if any(opts.get(flag) for flag in {"edit", "user", "local", "system", "global"}):
@@ -1932,7 +1933,7 @@ def continuecmd(ui, repo):
 
 
 @command(
-    "copy|cp|cop",
+    "copy|cp",
     [
         ("A", "after", None, _("record a copy that has already occurred")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
@@ -1940,6 +1941,7 @@ def continuecmd(ui, repo):
     + walkopts
     + dryrunopts,
     _("[OPTION]... [SOURCE]... DEST"),
+    legacyaliases=["cop"],
 )
 def copy(ui, repo, *pats, **opts):
     """mark files as copied for the next commit
@@ -1949,7 +1951,7 @@ def copy(ui, repo, *pats, **opts):
     the source must be a single file.
 
     By default, this command copies the contents of files as they
-    exist in the working directory. If invoked with -A/--after, the
+    exist in the working directory. If invoked with ``-A/--after``, the
     operation is recorded, but no copying is performed.
 
     This command takes effect with the next commit. To undo a copy
@@ -2372,7 +2374,7 @@ def forget(ui, repo, *pats, **opts):
     + commitopts2
     + mergetoolopts
     + dryrunopts,
-    _("[OPTION]... [-r REV]... REV..."),
+    _("[OPTION]... REV..."),
     legacyaliases=["gra", "graf"],
 )
 def graft(ui, repo, *revs, **opts):
@@ -2977,7 +2979,7 @@ def _rungrep(ui, cmd, files, match):
         ("c", "closed", False, _("show normal and closed branch heads")),
     ]
     + templateopts,
-    _("[-ct] [-r STARTREV] [REV]..."),
+    _("[OPTION]... [REV]..."),
     cmdtype=readonly,
 )
 def heads(ui, repo, *branchrevs, **opts):
@@ -3894,7 +3896,7 @@ def locate(ui, repo, *pats, **opts):
 
 
 @command(
-    "log|history",
+    "log",
     [
         (
             "f",
@@ -3948,6 +3950,7 @@ def locate(ui, repo, *pats, **opts):
     _("[OPTION]... [FILE]"),
     inferrepo=True,
     cmdtype=readonly,
+    legacyaliases=["history"],
 )
 def log(ui, repo, *pats, **opts):
     """show commit history
@@ -4223,7 +4226,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
 
 @command(
-    "merge|mer|merg",
+    "merge",
     [
         (
             "f",
@@ -4235,7 +4238,8 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         ("P", "preview", None, _("review revisions to merge (no merge is performed)")),
     ]
     + mergetoolopts,
-    _("[-P] [[-r] REV]"),
+    _("[OPTION].. [REV]"),
+    legacyaliases=["mer", "merg"],
 )
 def merge(ui, repo, node=None, **opts):
     """merge another revision into working directory
@@ -4309,11 +4313,12 @@ def merge(ui, repo, node=None, **opts):
 
 
 @command(
-    "parents|par|pare|paren|parent",
+    "parents|parent",
     [("r", "rev", "", _("show parents of the specified revision"), _("REV"))]
     + templateopts,
     _("[-r REV] [FILE]"),
     inferrepo=True,
+    legacyaliases=["par", "pare", "paren"],
 )
 def parents(ui, repo, file_=None, **opts):
     """show the parents of the working directory or revision (DEPRECATED)
@@ -4447,7 +4452,7 @@ def paths(ui, repo, search=None, **opts):
 
 
 @command(
-    "phase|ph|pha|phas",
+    "phase",
     [
         ("p", "public", False, _("set changeset phase to public")),
         ("d", "draft", False, _("set changeset phase to draft")),
@@ -4455,7 +4460,8 @@ def paths(ui, repo, search=None, **opts):
         ("f", "force", False, _("allow to move boundary backward")),
         ("r", "rev", [], _("target revision"), _("REV")),
     ],
-    _("[-p|-d|-s] [-f] [-r] [REV...]"),
+    _("[OPTION]... [REV...]"),
+    legacyaliases=["ph", "pha", "phas"],
 )
 def phase(ui, repo, *revs, **opts):
     """set or show the current phase name
@@ -4572,7 +4578,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
         ("r", "rev", [], _("a remote commit to pull"), _("REV")),
         ("B", "bookmark", [], _("a bookmark to pull"), _("BOOKMARK")),
     ],
-    _("[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"),
+    _("[OPTION]... [-r REV]... [SOURCE]"),
     legacyaliases=["pul"],
 )
 def pull(ui, repo, source="default", **opts):
@@ -4831,7 +4837,7 @@ def _newpull(ui, repo, source, **opts):
         ("", "new-branch", False, _("allow pushing a new branch (DEPRECATED)")),
         ("", "pushvars", [], _("variables that can be sent to server (ADVANCED)")),
     ],
-    _("[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]"),
+    _("[OPTION]... [-r REV]... [DEST]"),
 )
 def push(ui, repo, dest=None, **opts):
     """push changes to the specified destination
@@ -4965,7 +4971,7 @@ def push(ui, repo, dest=None, **opts):
     + commitopts2
     + diffwsopts
     + walkopts,
-    _("@prog@ record [OPTION]... [FILE]..."),
+    _("[OPTION]... [FILE]..."),
 )
 def record(ui, repo, *pats, **opts):
     """interactively select changes to commit
@@ -5087,7 +5093,7 @@ def remove(ui, repo, *pats, **opts):
 
 
 @command(
-    "rename|move|mv|ren|rena|renam|mo|mov",
+    "rename|move|mv",
     [
         ("A", "after", None, _("record a rename that has already occurred")),
         ("f", "force", None, _("forcibly copy over an existing managed file")),
@@ -5095,6 +5101,7 @@ def remove(ui, repo, *pats, **opts):
     + walkopts
     + dryrunopts,
     _("[OPTION]... SOURCE... DEST"),
+    legacyaliases=["ren", "rena", "renam", "mo", "mov"],
 )
 def rename(ui, repo, *pats, **opts):
     """rename files; equivalent of copy + remove
@@ -5117,7 +5124,7 @@ def rename(ui, repo, *pats, **opts):
 
 
 @command(
-    "resolve|reso|resol|resolv",
+    "resolve",
     [
         ("a", "all", None, _("select all unresolved files")),
         ("l", "list", None, _("list state of files needing merge")),
@@ -5131,6 +5138,7 @@ def rename(ui, repo, *pats, **opts):
     + formatteropts,
     _("[OPTION]... [FILE]..."),
     inferrepo=True,
+    legacyaliases=["reso", "resol", "resolv"],
 )
 def resolve(ui, repo, *pats, **opts):
     """redo merges or set/view the merge status of files
@@ -6037,7 +6045,7 @@ def summary(ui, repo, **opts):
         ("m", "message", "", _("use text as commit message"), _("TEXT")),
     ]
     + commitopts2,
-    _("[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."),
+    _("[OPTION]... [-r REV] NAME..."),
 )
 def tag(ui, repo, name1, *names, **opts):
     """add one or more tags for the current or given revision
@@ -6063,13 +6071,14 @@ def tags(ui, repo, **opts):
 
 
 @command(
-    "tip|ti",
+    "tip",
     [
         ("p", "patch", None, _("show patch")),
         ("g", "git", None, _("use git extended diff format")),
     ]
     + templateopts,
-    _("[-p] [-g]"),
+    _("[OPTION]..."),
+    legacyaliases=["ti"],
 )
 def tip(ui, repo, **opts):
     """show the tip revision (DEPRECATED)
@@ -6095,7 +6104,7 @@ def tip(ui, repo, **opts):
 
 
 @command(
-    "unbundle|unb|unbu|unbun|unbund|unbundl",
+    "unbundle",
     [
         (
             "u",
@@ -6105,6 +6114,7 @@ def tip(ui, repo, **opts):
         )
     ],
     _("[-u] FILE..."),
+    legacyaliases=["unb", "unbu", "unbun", "unbund", "unbundl"],
 )
 def unbundle(ui, repo, fname1, *fnames, **opts):
     """apply one or more bundle files
@@ -6375,7 +6385,13 @@ def verify(ui, repo, **opts):
     return ret
 
 
-@command("version|vers|versi|versio", [] + formatteropts, norepo=True, cmdtype=readonly)
+@command(
+    "version|vers",
+    [] + formatteropts,
+    norepo=True,
+    cmdtype=readonly,
+    legacyaliases=["versi", "versio"],
+)
 def version_(ui, **opts):
     if ui.verbose:
         ui.pager("version")
