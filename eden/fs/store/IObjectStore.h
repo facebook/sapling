@@ -15,6 +15,7 @@
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace folly {
 template <typename T>
@@ -46,13 +47,13 @@ class IObjectStore {
 
   virtual ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
       const RootId& rootId,
-      ObjectFetchContext& context) const = 0;
+      const ObjectFetchContextPtr& context) const = 0;
   virtual ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context) const = 0;
+      const ObjectFetchContextPtr& context) const = 0;
   virtual ImmediateFuture<std::shared_ptr<const Blob>> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context) const = 0;
+      const ObjectFetchContextPtr& context) const = 0;
 
   /**
    * Prefetch all the blobs represented by the HashRange.
@@ -62,7 +63,7 @@ class IObjectStore {
    */
   virtual ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
-      ObjectFetchContext& context) const = 0;
+      const ObjectFetchContextPtr& context) const = 0;
 };
 
 } // namespace facebook::eden

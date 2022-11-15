@@ -22,7 +22,11 @@ namespace facebook::eden {
 FuseRequestContext::FuseRequestContext(
     FuseChannel* channel,
     const fuse_in_header& fuseHeader)
-    : RequestContext(channel->getProcessAccessLog()),
+    : RequestContext(
+          channel->getProcessAccessLog(),
+          makeRefPtr<FuseObjectFetchContext>(
+              static_cast<pid_t>(fuseHeader.pid),
+              fuseHeader.opcode)),
       channel_(channel),
       fuseHeader_(fuseHeader) {}
 

@@ -42,7 +42,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     std::shared_ptr<EdenMount> edenMount,
     std::shared_ptr<ServerState> serverState,
     std::vector<std::string> globs,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   // Compile the list of globs into a tree
   auto globRoot = std::make_shared<GlobNode>(
       includeDotfiles_,
@@ -95,8 +95,10 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
       globFutures.emplace_back(
           edenMount->getObjectStore()
               ->getRootTree(originRootId, fetchContext)
-              .thenValue([edenMount, globRoot, &fetchContext, searchRoot](
-                             std::shared_ptr<const Tree>&& rootTree) {
+              .thenValue([edenMount,
+                          globRoot,
+                          fetchContext = fetchContext.copy(),
+                          searchRoot](std::shared_ptr<const Tree>&& rootTree) {
                 return resolveTree(
                     *edenMount->getObjectStore(),
                     fetchContext,
@@ -106,7 +108,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               .thenValue(
                   [edenMount,
                    globRoot,
-                   &fetchContext,
+                   fetchContext = fetchContext.copy(),
                    fileBlobsToPrefetch,
                    globResults,
                    &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
@@ -125,7 +127,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
         originRootIds->emplace_back(edenMount->getCheckedOutRootId());
     globFutures.emplace_back(
         edenMount->getInodeSlow(searchRoot, fetchContext)
-            .thenValue([&fetchContext,
+            .thenValue([fetchContext = fetchContext.copy(),
                         globRoot,
                         edenMount,
                         fileBlobsToPrefetch,
@@ -185,7 +187,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                fileBlobsToPrefetch,
                suppressFileList = suppressFileList_,
                listOnlyFiles = listOnlyFiles_,
-               &fetchContext,
+               fetchContext = fetchContext.copy(),
                config = serverState->getEdenConfig()](
                   std::vector<GlobNode::GlobResult>&& results) mutable
               -> ImmediateFuture<std::unique_ptr<Glob>> {

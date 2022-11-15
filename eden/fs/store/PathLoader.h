@@ -13,13 +13,12 @@
 
 namespace facebook::eden {
 
-class ObjectFetchContext;
 class ObjectStore;
 class Tree;
 
 ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
     ObjectStore& objectStore,
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     std::shared_ptr<const Tree> root,
     RelativePathPiece path);
 

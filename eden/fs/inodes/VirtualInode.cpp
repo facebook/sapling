@@ -79,7 +79,7 @@ VirtualInode::ContainedType VirtualInode::testGetContainedType() const {
 ImmediateFuture<Hash20> VirtualInode::getSHA1(
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   // Ensure this is a regular file.
   // We intentionally want to refuse to compute the SHA1 of symlinks
   switch (getDtype()) {
@@ -99,8 +99,7 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
   // need for a Tree case, as Trees are always directories.
 
   return std::visit(
-      [path, objectStore, &fetchContext](
-          auto&& arg) -> ImmediateFuture<Hash20> {
+      [&](auto&& arg) -> ImmediateFuture<Hash20> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
           return arg.asFilePtr()->getSha1(fetchContext);
@@ -127,9 +126,9 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
 
 ImmediateFuture<TreeEntryType> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   return std::visit(
-      [&fetchContext, path](auto&& arg) -> ImmediateFuture<TreeEntryType> {
+      [&](auto&& arg) -> ImmediateFuture<TreeEntryType> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
 #ifdef _WIN32
@@ -172,10 +171,9 @@ ImmediateFuture<TreeEntryType> VirtualInode::getTreeEntryType(
 ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   return std::visit(
-      [path, objectStore, &fetchContext](
-          auto&& arg) mutable -> ImmediateFuture<BlobMetadata> {
+      [&](auto&& arg) mutable -> ImmediateFuture<BlobMetadata> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, InodePtr>) {
           return arg.asFilePtr()->getBlobMetadata(fetchContext);
@@ -196,7 +194,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   std::optional<folly::Try<Hash20>> sha1;
   std::optional<folly::Try<uint64_t>> size;
   std::optional<folly::Try<TreeEntryType>> type;
@@ -303,10 +301,9 @@ ImmediateFuture<struct stat> VirtualInode::stat(
     // mis-reporting.
     const struct timespec& lastCheckoutTime,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   return std::visit(
-      [ lastCheckoutTime, treeMode = treeMode_, objectStore, &
-        fetchContext ](auto&& arg) -> ImmediateFuture<struct stat> {
+      [&](auto&& arg) -> ImmediateFuture<struct stat> {
         using T = std::decay_t<decltype(arg)>;
         ObjectId hash;
         mode_t mode;
@@ -323,7 +320,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           // fallthrough
         } else if constexpr (std::is_same_v<T, TreePtr>) {
           struct stat st = {};
-          st.st_mode = static_cast<decltype(st.st_mode)>(treeMode);
+          st.st_mode = static_cast<decltype(st.st_mode)>(treeMode_);
           stMtime(st, lastCheckoutTime);
 #ifdef _WIN32
           // Windows returns zero for st_mode and mtime
@@ -370,7 +367,7 @@ std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
 getChildrenHelper(
     const TreePtr& tree,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result{};
   result.reserve(tree->size());
 
@@ -398,7 +395,7 @@ folly::Try<std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>
 VirtualInode::getChildren(
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   if (!isDirectory()) {
     return folly::Try<
         std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>>(
@@ -438,7 +435,7 @@ VirtualInode::getChildrenAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePath path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto children = this->getChildren(path.piece(), objectStore, fetchContext);
 
   if (children.hasException()) {
@@ -460,7 +457,8 @@ VirtualInode::getChildrenAttributes(
             .thenValue([requestedAttributes,
                         subPath = path + nameAndvirtualInode.first,
                         objectStore,
-                        &fetchContext](VirtualInode virtualInode) {
+                        fetchContext =
+                            fetchContext.copy()](VirtualInode virtualInode) {
               return virtualInode.getEntryAttributes(
                   requestedAttributes, subPath, objectStore, fetchContext);
             }));
@@ -491,7 +489,7 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
     PathComponentPiece childName,
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   // Lookup the next child
   const auto it = tree->find(childName);
   if (it == tree->cend()) {
@@ -522,7 +520,7 @@ ImmediateFuture<VirtualInode> VirtualInode::getOrFindChild(
     PathComponentPiece childName,
     RelativePathPiece path,
     ObjectStore* objectStore,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   if (!isDirectory()) {
     return makeImmediateFuture<VirtualInode>(PathError(ENOTDIR, path));
   }

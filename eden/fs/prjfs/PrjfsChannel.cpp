@@ -410,7 +410,8 @@ HRESULT PrjfsChannelInner::startEnumeration(
 
     FB_LOGF(
         getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid.toString());
-    return dispatcher_->opendir(std::move(path), context)
+    return dispatcher_
+        ->opendir(std::move(path), context->getObjectFetchContext())
         .thenValue([this, context = std::move(context), guid = std::move(guid)](
                        auto&& dirents) {
           addDirectoryEnumeration(std::move(guid), std::move(dirents));
@@ -562,10 +563,10 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
     FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
-    return dispatcher_->lookup(std::move(path), context)
+    return dispatcher_
+        ->lookup(std::move(path), context->getObjectFetchContext())
         .thenValue(
-            [context = std::move(context),
-             virtualizationContext = virtualizationContext](
+            [context, virtualizationContext = virtualizationContext](
                 std::optional<LookupResult>&& optLookupResult)
                 -> ImmediateFuture<folly::Unit> {
               if (!optLookupResult) {
@@ -620,7 +621,8 @@ HRESULT PrjfsChannelInner::queryFileName(
     auto stat = &PrjfsStats::access;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
     FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
-    return dispatcher_->access(std::move(path), context)
+    return dispatcher_
+        ->access(std::move(path), context->getObjectFetchContext())
         .thenValue([context = std::move(context)](bool present) {
           if (present) {
             context->sendSuccess();
@@ -744,7 +746,8 @@ HRESULT PrjfsChannelInner::getFileData(
             path,
             byteOffset,
             length);
-        return dispatcher_->read(std::move(path), context)
+        return dispatcher_
+            ->read(std::move(path), context->getObjectFetchContext())
             .thenValue([context = std::move(context),
                         virtualizationContext = virtualizationContext,
                         dataStreamId = std::move(dataStreamId),
@@ -850,7 +853,7 @@ typedef ImmediateFuture<folly::Unit> (PrjfsChannelInner::*NotificationHandler)(
     RelativePath oldPath,
     RelativePath destPath,
     bool isDirectory,
-    std::shared_ptr<ObjectFetchContext> context);
+    const ObjectFetchContextPtr& context);
 
 typedef std::string (*NotificationArgRenderer)(
     RelativePathPiece relPath,
@@ -985,11 +988,11 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::newFileCreated(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool isDirectory,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   if (isDirectory) {
-    return dispatcher_->dirCreated(std::move(relPath), std::move(context));
+    return dispatcher_->dirCreated(std::move(relPath), context);
   } else {
-    return dispatcher_->fileCreated(std::move(relPath), std::move(context));
+    return dispatcher_->fileCreated(std::move(relPath), context);
   }
 }
 
@@ -997,34 +1000,34 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::fileOverwritten(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
-    std::shared_ptr<ObjectFetchContext> context) {
-  return dispatcher_->fileModified(std::move(relPath), std::move(context));
+    const ObjectFetchContextPtr& context) {
+  return dispatcher_->fileModified(std::move(relPath), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::fileHandleClosedFileModified(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
-    std::shared_ptr<ObjectFetchContext> context) {
-  return dispatcher_->fileModified(std::move(relPath), std::move(context));
+    const ObjectFetchContextPtr& context) {
+  return dispatcher_->fileModified(std::move(relPath), context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsChannelInner::fileRenamed(
     RelativePath oldPath,
     RelativePath newPath,
     bool isDirectory,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
   if (oldPath.empty()) {
     return newFileCreated(
-        std::move(newPath), RelativePath{}, isDirectory, std::move(context));
+        std::move(newPath), RelativePath{}, isDirectory, context);
   } else if (newPath.empty()) {
     return fileHandleClosedFileDeleted(
-        std::move(oldPath), RelativePath{}, isDirectory, std::move(context));
+        std::move(oldPath), RelativePath{}, isDirectory, context);
   } else {
     return dispatcher_->fileRenamed(
-        std::move(oldPath), std::move(newPath), std::move(context));
+        std::move(oldPath), std::move(newPath), context);
   }
 }
 
@@ -1032,13 +1035,13 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::preRename(
     RelativePath oldPath,
     RelativePath newPath,
     bool isDirectory,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   if (isDirectory) {
     return dispatcher_->preDirRename(
-        std::move(oldPath), std::move(newPath), std::move(context));
+        std::move(oldPath), std::move(newPath), context);
   } else {
     return dispatcher_->preFileRename(
-        std::move(oldPath), std::move(newPath), std::move(context));
+        std::move(oldPath), std::move(newPath), context);
   }
 }
 
@@ -1046,11 +1049,11 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::preDelete(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool isDirectory,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   if (isDirectory) {
-    return dispatcher_->preDirDelete(std::move(relPath), std::move(context));
+    return dispatcher_->preDirDelete(std::move(relPath), context);
   } else {
-    return dispatcher_->preFileDelete(std::move(relPath), std::move(context));
+    return dispatcher_->preFileDelete(std::move(relPath), context);
   }
 }
 
@@ -1058,11 +1061,11 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::fileHandleClosedFileDeleted(
     RelativePath oldPath,
     RelativePath /*destPath*/,
     bool isDirectory,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   if (isDirectory) {
-    return dispatcher_->dirDeleted(std::move(oldPath), std::move(context));
+    return dispatcher_->dirDeleted(std::move(oldPath), context);
   } else {
-    return dispatcher_->fileDeleted(std::move(oldPath), std::move(context));
+    return dispatcher_->fileDeleted(std::move(oldPath), context);
   }
 }
 
@@ -1070,7 +1073,7 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::preSetHardlink(
     RelativePath relPath,
     RelativePath /*newPath*/,
     bool /*isDirectory*/,
-    std::shared_ptr<ObjectFetchContext> /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   return folly::Try<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
       fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
@@ -1113,7 +1116,7 @@ HRESULT PrjfsChannelInner::notification(
         std::move(relPath),
         std::move(destPath),
         isDirectory,
-        std::move(context));
+        context->getObjectFetchContext());
 
     // Since the future should just be enqueing to an executor, it should
     // always be ready.

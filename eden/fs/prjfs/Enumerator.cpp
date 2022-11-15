@@ -41,7 +41,7 @@ bool PrjfsDirEntry::operator<(const PrjfsDirEntry& other) const {
   return PrjFileNameCompare(name_.c_str(), other.name_.c_str()) < 0;
 }
 
-Enumerator::Enumerator(std::vector<PrjfsDirEntry>&& entryList)
+Enumerator::Enumerator(std::vector<PrjfsDirEntry> entryList)
     : metadataList_(std::move(entryList)), iter_{metadataList_.begin()} {
   std::sort(
       metadataList_.begin(),

@@ -24,7 +24,7 @@ struct ResolveTreeContext {
 ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
     std::shared_ptr<ResolveTreeContext> ctx,
     ObjectStore& objectStore,
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     std::shared_ptr<const Tree> root,
     size_t index) {
   if (index == ctx->components.size()) {
@@ -49,8 +49,10 @@ ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
   }
 
   return objectStore.getTree(child->second.getHash(), fetchContext)
-      .thenValue([ctx = std::move(ctx), &objectStore, &fetchContext, index](
-                     std::shared_ptr<const Tree>&& tree) mutable {
+      .thenValue([ctx = std::move(ctx),
+                  &objectStore,
+                  fetchContext = fetchContext.copy(),
+                  index](std::shared_ptr<const Tree>&& tree) mutable {
         return resolveTree(
             ctx, objectStore, fetchContext, std::move(tree), index + 1);
       });
@@ -60,7 +62,7 @@ ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
 
 ImmediateFuture<std::shared_ptr<const Tree>> resolveTree(
     ObjectStore& objectStore,
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     std::shared_ptr<const Tree> root,
     RelativePathPiece path) {
   // Don't do anything fancy with lifetimes and just get this correct as simply

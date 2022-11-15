@@ -26,21 +26,23 @@ NfsDispatcherImpl::NfsDispatcherImpl(EdenMount* mount)
 
 ImmediateFuture<struct stat> NfsDispatcherImpl::getattr(
     InodeNumber ino,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino).thenValue(
-      [&context](const InodePtr& inode) { return inode->stat(context); });
+      [context = context.copy()](const InodePtr& inode) {
+        return inode->stat(context);
+      });
 }
 
 ImmediateFuture<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
     InodeNumber ino,
     DesiredMetadata desired,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino)
-      .thenValue(
-          [desired = std::move(desired), &context](const InodePtr& inode) {
-            // TODO(xavierd): Modify setattr to obtain pre stat of the file.
-            return inode->setattr(desired, context);
-          })
+      .thenValue([desired = std::move(desired),
+                  context = context.copy()](const InodePtr& inode) {
+        // TODO(xavierd): Modify setattr to obtain pre stat of the file.
+        return inode->setattr(desired, context);
+      })
       .thenValue([](struct stat st) {
         return NfsDispatcher::SetattrRes{std::nullopt, st};
       });
@@ -48,7 +50,7 @@ ImmediateFuture<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
 
 ImmediateFuture<InodeNumber> NfsDispatcherImpl::getParent(
     InodeNumber ino,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   return inodeMap_->lookupTreeInode(ino).thenValue(
       [](const TreeInodePtr& inode) {
         return inode->getParentRacy()->getNodeId();
@@ -58,12 +60,13 @@ ImmediateFuture<InodeNumber> NfsDispatcherImpl::getParent(
 ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
     InodeNumber dir,
     PathComponent name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir)
-      .thenValue([name = std::move(name), &context](const TreeInodePtr& inode) {
+      .thenValue([name = std::move(name),
+                  context = context.copy()](const TreeInodePtr& inode) {
         return inode->getOrLoadChild(name, context);
       })
-      .thenValue([&context](InodePtr&& inode) {
+      .thenValue([context = context.copy()](InodePtr&& inode) {
         auto statFut = inode->stat(context);
         return std::move(statFut).thenValue(
             [inode = std::move(inode)](
@@ -76,9 +79,9 @@ ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
 
 ImmediateFuture<std::string> NfsDispatcherImpl::readlink(
     InodeNumber ino,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [&context](const FileInodePtr& inode) {
+      [context = context.copy()](const FileInodePtr& inode) {
         return inode->readlink(context).semi();
       });
 }
@@ -87,9 +90,9 @@ ImmediateFuture<NfsDispatcher::ReadRes> NfsDispatcherImpl::read(
     InodeNumber ino,
     size_t size,
     off_t offset,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [&context, size, offset](const FileInodePtr& inode) {
+      [context = context.copy(), size, offset](const FileInodePtr& inode) {
         return inode->read(size, offset, context)
             .thenValue(
                 [](std::tuple<std::unique_ptr<folly::IOBuf>, bool>&& res) {
@@ -103,9 +106,9 @@ ImmediateFuture<NfsDispatcher::WriteRes> NfsDispatcherImpl::write(
     InodeNumber ino,
     std::unique_ptr<folly::IOBuf> data,
     off_t offset,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [data = std::move(data), offset, &context](
+      [data = std::move(data), offset, context = context.copy()](
           const FileInodePtr& inode) mutable {
         // TODO(xavierd): Modify write to obtain pre and post stat of the
         // file.
@@ -120,11 +123,12 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
     InodeNumber dir,
     PathComponent name,
     mode_t mode,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // Make sure that we're attempting to create a file.
   mode = S_IFREG | (0777 & mode);
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, name = std::move(name), mode](const TreeInodePtr& inode) {
+      [context = context.copy(), name = std::move(name), mode](
+          const TreeInodePtr& inode) {
         // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
         // directory.
         // Set dev to 0 as this is unused for a regular file.
@@ -146,9 +150,10 @@ ImmediateFuture<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
     InodeNumber dir,
     PathComponent name,
     mode_t mode,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, name = std::move(name), mode](const TreeInodePtr& inode) {
+      [context = context.copy(), name = std::move(name), mode](
+          const TreeInodePtr& inode) {
         // TODO(xavierd): Modify mkdir to obtain the pre and post stat of the
         // directory.
         auto newDir = inode->mkdir(name, mode, InvalidationRequired::No);
@@ -166,10 +171,11 @@ ImmediateFuture<NfsDispatcher::SymlinkRes> NfsDispatcherImpl::symlink(
     InodeNumber dir,
     PathComponent name,
     std::string data,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, name = std::move(name), data = std::move(data)](
-          const TreeInodePtr& inode) {
+      [context = context.copy(),
+       name = std::move(name),
+       data = std::move(data)](const TreeInodePtr& inode) {
         // TODO(xavierd): Modify symlink to obtain the pre and post stat of the
         // directory.
         auto symlink = inode->symlink(name, data, InvalidationRequired::No);
@@ -191,9 +197,9 @@ ImmediateFuture<NfsDispatcher::MknodRes> NfsDispatcherImpl::mknod(
     PathComponent name,
     mode_t mode,
     dev_t rdev,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, name = std::move(name), mode, rdev](
+      [context = context.copy(), name = std::move(name), mode, rdev](
           const TreeInodePtr& inode) {
         // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
         // directory.
@@ -214,9 +220,10 @@ ImmediateFuture<NfsDispatcher::MknodRes> NfsDispatcherImpl::mknod(
 ImmediateFuture<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
     InodeNumber dir,
     PathComponent name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, name = std::move(name)](const TreeInodePtr& inode) {
+      [context = context.copy(),
+       name = std::move(name)](const TreeInodePtr& inode) {
         return inode->unlink(name, InvalidationRequired::No, context)
             .thenValue([](auto&&) {
               // TODO(xavierd): Modify unlink to obtain the pre and post stat
@@ -229,9 +236,10 @@ ImmediateFuture<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
 ImmediateFuture<NfsDispatcher::RmdirRes> NfsDispatcherImpl::rmdir(
     InodeNumber dir,
     PathComponent name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, name = std::move(name)](const TreeInodePtr& inode) {
+      [context = context.copy(),
+       name = std::move(name)](const TreeInodePtr& inode) {
         return inode->rmdir(name, InvalidationRequired::No, context)
             .thenValue([](auto&&) {
               // TODO(xavierd): Modify rmdir to obtain the pre and post stat of
@@ -246,18 +254,18 @@ ImmediateFuture<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
     PathComponent fromName,
     InodeNumber toIno,
     PathComponent toName,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto fromDir = inodeMap_->lookupTreeInode(fromIno);
   return inodeMap_->lookupTreeInode(toIno)
       .thenValue([fromDir = std::move(fromDir),
                   fromName = std::move(fromName),
                   toName = std::move(toName),
-                  &context](TreeInodePtr&& toDirInode) mutable {
+                  context = context.copy()](TreeInodePtr&& toDirInode) mutable {
         return std::move(fromDir).thenValue(
             [fromName = std::move(fromName),
              toName = std::move(toName),
              toDirInode = std::move(toDirInode),
-             &context](const TreeInodePtr& fromDirInode) {
+             context = context.copy()](const TreeInodePtr& fromDirInode) {
               return fromDirInode->rename(
                   fromName,
                   toDirInode,
@@ -276,9 +284,9 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdir(
     InodeNumber dir,
     off_t offset,
     uint32_t count,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, offset, count](const TreeInodePtr& inode) {
+      [context = context.copy(), offset, count](const TreeInodePtr& inode) {
         auto [dirList, isEof] = inode->nfsReaddir(
             NfsDirList{count, nfsv3Procs::readdir}, offset, context);
         return ReaddirRes{std::move(dirList), isEof};
@@ -289,9 +297,10 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
     InodeNumber dir,
     off_t offset,
     uint32_t count,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, offset, count, this](const TreeInodePtr& inode) {
+      [context = context.copy(), offset, count, this](
+          const TreeInodePtr& inode) {
         auto [dirList, isEof] = inode->nfsReaddir(
             NfsDirList{count, nfsv3Procs::readdirplus}, offset, context);
         auto& dirListRef = dirList.getListRef();
@@ -307,9 +316,10 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
           } else {
             futuresVec.push_back(
                 inode->getOrLoadChild(PathComponent{entry.name}, context)
-                    .thenValue([entry, &context](InodePtr&& inodep) {
-                      return inodep->stat(context);
-                    })
+                    .thenValue(
+                        [entry, context = context.copy()](InodePtr&& inodep) {
+                          return inodep->stat(context);
+                        })
                     .thenTry([&entry](folly::Try<struct stat> st) {
                       entry.name_attributes = statToPostOpAttr(st);
                       return folly::unit;
@@ -327,7 +337,7 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
 
 ImmediateFuture<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   // See the comment in FuseDispatcherImpl::statfs for why we gather the statFs
   // from the overlay.
   return mount_->getOverlay()->statFs();

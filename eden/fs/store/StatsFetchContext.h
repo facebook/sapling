@@ -83,4 +83,6 @@ class StatsFetchContext : public ObjectFetchContext {
   std::unordered_map<std::string, std::string> requestInfo_;
 };
 
+using StatsFetchContextPtr = RefPtr<StatsFetchContext>;
+
 } // namespace facebook::eden

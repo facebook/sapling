@@ -176,7 +176,7 @@ ImmediateFuture<std::invoke_result_t<
 FileInode::runWhileDataLoaded(
     LockedState state,
     BlobCache::Interest interest,
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     std::shared_ptr<const Blob> blob,
     Fn&& fn) {
   ImmediateFuture<std::shared_ptr<const Blob>> future;
@@ -187,7 +187,7 @@ FileInode::runWhileDataLoaded(
         blob = state.getCachedBlob(getMount(), interest);
       }
       if (blob) {
-        logAccess(fetchContext);
+        logAccess(*fetchContext);
         // The blob was still in cache, so we can run the function immediately.
         return makeImmediateFutureWith([&] {
           return std::forward<Fn>(fn)(std::move(state), std::move(blob));
@@ -202,7 +202,7 @@ FileInode::runWhileDataLoaded(
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
-      logAccess(fetchContext);
+      logAccess(*fetchContext);
       return makeImmediateFutureWith(
           [&] { return std::forward<Fn>(fn)(std::move(state), nullptr); });
   }
@@ -211,7 +211,8 @@ FileInode::runWhileDataLoaded(
       [self = inodePtrFromThis(),
        fn = std::forward<Fn>(fn),
        interest,
-       &fetchContext](std::shared_ptr<const Blob> blob) mutable {
+       fetchContext =
+           fetchContext.copy()](std::shared_ptr<const Blob> blob) mutable {
         // Simply call runWhileDataLoaded() again when we we finish loading the
         // blob data.  The state should be BLOB_NOT_LOADING or
         // MATERIALIZED_IN_OVERLAY this time around.
@@ -236,7 +237,7 @@ FileInode::runWhileMaterialized(
     LockedState state,
     std::shared_ptr<const Blob> blob,
     Fn&& fn,
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     std::optional<std::chrono::system_clock::time_point> startTime) {
   // If we don't have a startTime and aren't materialized already, start timing
   // the upcoming materialization. If we have a startTime already, then we came
@@ -284,7 +285,7 @@ FileInode::runWhileMaterialized(
               InodeEventProgress::END,
               getNameRacy().stringPiece()));
         };
-        logAccess(fetchContext);
+        logAccess(*fetchContext);
         // Note that we explicitly create a temporary LockedState object
         // to pass to the caller to ensure that the state lock will be released
         // when they return, even if the caller's function accepts the state as
@@ -308,7 +309,7 @@ FileInode::runWhileMaterialized(
       state.unlock();
       break;
     case State::MATERIALIZED_IN_OVERLAY:
-      logAccess(fetchContext);
+      logAccess(*fetchContext);
       return makeImmediateFutureWith(
           [&] { return std::forward<Fn>(fn)(LockedState{std::move(state)}); });
   }
@@ -316,7 +317,7 @@ FileInode::runWhileMaterialized(
   return std::move(future).thenValue(
       [self = inodePtrFromThis(),
        fn = std::forward<Fn>(fn),
-       &fetchContext,
+       fetchContext = fetchContext.copy(),
        startTime](std::shared_ptr<const Blob> blob) mutable {
         // Simply call runWhileMaterialized() again when we we are finished
         // loading the blob data.
@@ -488,7 +489,7 @@ FileInode::FileInode(
 #ifndef _WIN32
 ImmediateFuture<struct stat> FileInode::setattr(
     const DesiredMetadata& desired,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   if (desired.is_nop(false /* ignoreAtime */)) {
     // Short-circuit completely nop requests as early as possible, without doing
     // any additional work to fetch current metadata.
@@ -557,7 +558,7 @@ ImmediateFuture<struct stat> FileInode::setattr(
 }
 
 ImmediateFuture<std::string> FileInode::readlink(
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     CacheHint cacheHint) {
   if (dtype_t::Symlink != getType()) {
     // man 2 readlink says:  EINVAL The named file is not a symbolic link.
@@ -603,7 +604,7 @@ std::optional<bool> FileInode::isSameAsFast(
 
 ImmediateFuture<bool> FileInode::isSameAsSlow(
     const Hash20& expectedBlobSha1,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   return getSha1(fetchContext)
       .thenTry([expectedBlobSha1](folly::Try<Hash20>&& try_) {
         if (try_.hasException()) {
@@ -618,7 +619,7 @@ ImmediateFuture<bool> FileInode::isSameAsSlow(
 ImmediateFuture<bool> FileInode::isSameAs(
     const Blob& blob,
     TreeEntryType entryType,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto result = isSameAsFast(blob.getHash(), entryType);
   if (result.has_value()) {
     return result.value();
@@ -632,7 +633,7 @@ ImmediateFuture<bool> FileInode::isSameAs(
     const ObjectId& blobID,
     const Hash20& blobSha1,
     TreeEntryType entryType,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto result = isSameAsFast(blobID, entryType);
   if (result.has_value()) {
     return result.value();
@@ -644,7 +645,7 @@ ImmediateFuture<bool> FileInode::isSameAs(
 ImmediateFuture<bool> FileInode::isSameAs(
     const ObjectId& blobID,
     TreeEntryType entryType,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto result = isSameAsFast(blobID, entryType);
   if (result.has_value()) {
     return result.value();
@@ -720,7 +721,7 @@ ImmediateFuture<vector<string>> FileInode::listxattr() {
 
 ImmediateFuture<string> FileInode::getxattr(
     StringPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
   if (name != kXattrSha1) {
     return makeImmediateFuture<string>(
@@ -745,10 +746,11 @@ AbsolutePath FileInode::getMaterializedFilePath() {
 
 #endif
 
-ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
+ImmediateFuture<Hash20> FileInode::getSha1(
+    const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
 
-  logAccess(fetchContext);
+  logAccess(*fetchContext);
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
@@ -768,10 +770,10 @@ ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
 }
 
 ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
 
-  logAccess(fetchContext);
+  logAccess(*fetchContext);
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
@@ -796,7 +798,8 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
-ImmediateFuture<struct stat> FileInode::stat(ObjectFetchContext& context) {
+ImmediateFuture<struct stat> FileInode::stat(
+    const ObjectFetchContextPtr& context) {
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.
   st.st_ino = getNodeId().get();
@@ -871,7 +874,7 @@ void FileInode::fsync(bool datasync) {
 ImmediateFuture<folly::Unit> FileInode::fallocate(
     uint64_t offset,
     uint64_t length,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   return runWhileMaterialized(
       LockedState{this},
       nullptr,
@@ -884,7 +887,7 @@ ImmediateFuture<folly::Unit> FileInode::fallocate(
 #endif
 
 ImmediateFuture<string> FileInode::readAll(
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     CacheHint cacheHint) {
   auto interest = BlobCache::Interest::LikelyNeededAgain;
   switch (cacheHint) {
@@ -950,7 +953,7 @@ void FileInode::materialize() {
 #else
 
 ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     bool followSymlink) {
   if (dtype_t::Symlink == getType()) {
     if (!followSymlink) {
@@ -960,7 +963,7 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
     return ImmediateFuture{
         readlink(fetchContext, CacheHint::LikelyNeededAgain).semi()}
         .thenValue(
-            [this, followSymlink, &fetchContext](
+            [this, followSymlink, fetchContext = fetchContext.copy()](
                 auto target) -> ImmediateFuture<folly::Unit> {
               auto filePath = getPath();
               if (!filePath) {
@@ -986,10 +989,12 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
                          << ", whose target is" << targetPath.value();
               return getMount()
                   ->getInodeSlow(targetPath.value(), fetchContext)
-                  .thenValue([followSymlink, &fetchContext](InodePtr inode) {
-                    return inode->ensureMaterialized(
-                        fetchContext, followSymlink);
-                  });
+                  .thenValue(
+                      [followSymlink,
+                       fetchContext = fetchContext.copy()](InodePtr inode) {
+                        return inode->ensureMaterialized(
+                            fetchContext, followSymlink);
+                      });
             });
   }
 
@@ -1003,7 +1008,7 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
 }
 
 ImmediateFuture<std::tuple<BufVec, bool>>
-FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
+FileInode::read(size_t size, off_t off, const ObjectFetchContextPtr& context) {
   XDCHECK_GE(off, 0);
   return runWhileDataLoaded(
       LockedState{this},
@@ -1078,8 +1083,10 @@ size_t FileInode::writeImpl(
   return xfer;
 }
 
-ImmediateFuture<size_t>
-FileInode::write(BufVec&& buf, off_t off, ObjectFetchContext& fetchContext) {
+ImmediateFuture<size_t> FileInode::write(
+    BufVec&& buf,
+    off_t off,
+    const ObjectFetchContextPtr& fetchContext) {
   return runWhileMaterialized(
       LockedState{this},
       nullptr,
@@ -1094,7 +1101,7 @@ FileInode::write(BufVec&& buf, off_t off, ObjectFetchContext& fetchContext) {
 ImmediateFuture<size_t> FileInode::write(
     folly::StringPiece data,
     off_t off,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto state = LockedState{this};
 
   // If we are currently materialized we don't need to copy the input data.
@@ -1122,7 +1129,7 @@ ImmediateFuture<size_t> FileInode::write(
 ImmediateFuture<std::shared_ptr<const Blob>> FileInode::startLoadingData(
     LockedState state,
     BlobCache::Interest interest,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
   // Start the blob load first in case this throws an exception.
@@ -1201,21 +1208,16 @@ ImmediateFuture<std::shared_ptr<const Blob>> FileInode::startLoadingData(
 void FileInode::materializeNow(
     LockedState& state,
     std::shared_ptr<const Blob> blob,
-    ObjectFetchContext& /*fetchContext*/) {
+    const ObjectFetchContextPtr& fetchContext) {
   // This function should only be called from the BLOB_NOT_LOADING state
   XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
-  // The fetchContext can not be safely used here yet because we are not going
-  // to wait for the metadata fetch future. We need to manage the fetch
-  // context with a shared ptr before we can use it here.
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "FileInode::materializeNow");
   // If the blob metadata is immediately available, use it to populate the SHA-1
   // value in the overlay for this file.
   // Since this uses state->nonMaterializedState->hash we perform this before
   // calling state.setMaterialized().
-  auto blobSha1Future =
-      getObjectStore().getBlobSha1(state->nonMaterializedState->hash, *context);
+  auto blobSha1Future = getObjectStore().getBlobSha1(
+      state->nonMaterializedState->hash, fetchContext);
   std::optional<Hash20> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = std::move(blobSha1Future).get();
@@ -1244,7 +1246,7 @@ OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {
 }
 #endif // !_WIN32
 
-void FileInode::logAccess(ObjectFetchContext& fetchContext) {
+void FileInode::logAccess(const ObjectFetchContext& fetchContext) {
   auto ino = getNodeId();
 
   // Don't log root inode access

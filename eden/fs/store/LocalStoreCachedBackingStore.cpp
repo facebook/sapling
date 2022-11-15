@@ -33,7 +33,7 @@ ObjectComparison LocalStoreCachedBackingStore::compareObjectsById(
 ImmediateFuture<std::unique_ptr<Tree>>
 LocalStoreCachedBackingStore::getRootTree(
     const RootId& rootId,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return backingStore_->getRootTree(rootId, context)
       .thenValue([localStore = localStore_](std::unique_ptr<Tree> tree) {
         // TODO: perhaps this callback should use toUnsafeFuture() to ensure the
@@ -49,7 +49,7 @@ ImmediateFuture<std::unique_ptr<TreeEntry>>
 LocalStoreCachedBackingStore::getTreeEntryForObjectId(
     const ObjectId& objectId,
     TreeEntryType treeEntryType,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return backingStore_->getTreeEntryForObjectId(
       objectId, treeEntryType, context);
 }
@@ -57,10 +57,10 @@ LocalStoreCachedBackingStore::getTreeEntryForObjectId(
 folly::SemiFuture<BackingStore::GetTreeResult>
 LocalStoreCachedBackingStore::getTree(
     const ObjectId& id,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return localStore_->getTree(id)
       .thenValue([id = id,
-                  &context,
+                  context = context.copy(),
                   localStore = localStore_,
                   backingStore =
                       backingStore_](std::unique_ptr<Tree> tree) mutable {
@@ -88,17 +88,17 @@ LocalStoreCachedBackingStore::getTree(
 std::unique_ptr<BlobMetadata>
 LocalStoreCachedBackingStore::getLocalBlobMetadata(
     const ObjectId& id,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return backingStore_->getLocalBlobMetadata(id, context);
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult>
 LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return localStore_->getBlob(id)
       .thenValue([id = id,
-                  &context,
+                  context = context.copy(),
                   localStore = localStore_,
                   backingStore = backingStore_,
                   stats = stats_](std::unique_ptr<Blob> blob) mutable {
@@ -127,7 +127,7 @@ LocalStoreCachedBackingStore::getBlob(
 
 folly::SemiFuture<folly::Unit> LocalStoreCachedBackingStore::prefetchBlobs(
     ObjectIdRange ids,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return backingStore_->prefetchBlobs(ids, context);
 }
 

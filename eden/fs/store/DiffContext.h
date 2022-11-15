@@ -19,7 +19,6 @@ template <typename T>
 class ImmediateFuture;
 class DiffCallback;
 class GitIgnoreStack;
-class ObjectFetchContext;
 class ObjectStore;
 class UserInfo;
 class TopLevelIgnores;
@@ -62,7 +61,12 @@ class DiffContext {
 
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
-  StatsFetchContext& getFetchContext() {
+
+  const StatsFetchContext& getStatsContext() {
+    return *statsContext_;
+  }
+
+  const ObjectFetchContextPtr& getFetchContext() {
     return fetchContext_;
   }
 
@@ -74,10 +78,15 @@ class DiffContext {
  private:
   std::unique_ptr<TopLevelIgnores> topLevelIgnores_;
   const folly::CancellationToken cancellation_;
-  StatsFetchContext fetchContext_;
-  /**
-   * Controls the case sensitivity of the diff operation.
-   */
+
+  // TODO: We could populate pid and cause here.
+  StatsFetchContextPtr statsContext_ = makeRefPtr<StatsFetchContext>();
+
+  // This redundant, upcasted RefPtr exists to avoid needing to bump the
+  // reference count on every fetch.
+  ObjectFetchContextPtr fetchContext_ = statsContext_.copy();
+
+  // Controls the case sensitivity of the diff operation.
   CaseSensitivity caseSensitive_;
 };
 

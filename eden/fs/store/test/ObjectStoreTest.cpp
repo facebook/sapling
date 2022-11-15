@@ -70,7 +70,10 @@ struct ObjectStoreTest : ::testing::Test {
     return storedTree->get().getHash();
   }
 
-  LoggingFetchContext context;
+  RefPtr<LoggingFetchContext> loggingContext =
+      makeRefPtr<LoggingFetchContext>();
+  const ObjectFetchContextPtr& context =
+      loggingContext.as<ObjectFetchContext>();
   std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStore;
   std::shared_ptr<BackingStore> backingStore;
@@ -86,8 +89,8 @@ struct ObjectStoreTest : ::testing::Test {
 
 TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
-  ASSERT_EQ(1, context.requests.size());
-  auto& request = context.requests[0];
+  ASSERT_EQ(1, loggingContext->requests.size());
+  auto& request = loggingContext->requests[0];
   EXPECT_EQ(ObjectFetchContext::Blob, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
@@ -96,8 +99,8 @@ TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
 TEST_F(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
   objectStore->getBlob(readyBlobId, context).get(0ms);
   objectStore->getBlob(readyBlobId, context).get(0ms);
-  ASSERT_EQ(2, context.requests.size());
-  auto& request = context.requests[1];
+  ASSERT_EQ(2, loggingContext->requests.size());
+  auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::Blob, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
@@ -105,8 +108,8 @@ TEST_F(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
 
 TEST_F(ObjectStoreTest, getTree_tracks_backing_store_read) {
   objectStore->getTree(readyTreeId, context).get(0ms);
-  ASSERT_EQ(1, context.requests.size());
-  auto& request = context.requests[0];
+  ASSERT_EQ(1, loggingContext->requests.size());
+  auto& request = loggingContext->requests[0];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
   EXPECT_EQ(readyTreeId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
@@ -115,8 +118,8 @@ TEST_F(ObjectStoreTest, getTree_tracks_backing_store_read) {
 TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   objectStore->getTree(readyTreeId, context).get(0ms);
   objectStore->getTree(readyTreeId, context).get(0ms);
-  ASSERT_EQ(2, context.requests.size());
-  auto& request = context.requests[1];
+  ASSERT_EQ(2, loggingContext->requests.size());
+  auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
   EXPECT_EQ(readyTreeId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
@@ -129,8 +132,8 @@ TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
   treeCache->clear();
 
   objectStore->getTree(readyTreeId, context).get(0ms);
-  ASSERT_EQ(2, context.requests.size());
-  auto& request = context.requests[1];
+  ASSERT_EQ(2, loggingContext->requests.size());
+  auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
   EXPECT_EQ(readyTreeId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
@@ -138,8 +141,8 @@ TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
 
 TEST_F(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
-  ASSERT_EQ(1, context.requests.size());
-  auto& request = context.requests[0];
+  ASSERT_EQ(1, loggingContext->requests.size());
+  auto& request = loggingContext->requests[0];
   EXPECT_EQ(ObjectFetchContext::BlobMetadata, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
@@ -148,8 +151,8 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
 TEST_F(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
-  ASSERT_EQ(2, context.requests.size());
-  auto& request = context.requests[1];
+  ASSERT_EQ(2, loggingContext->requests.size());
+  auto& request = loggingContext->requests[1];
   EXPECT_EQ(ObjectFetchContext::BlobMetadata, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
@@ -243,9 +246,9 @@ class PidFetchContext final : public ObjectFetchContext {
 
 TEST_F(ObjectStoreTest, test_process_access_counts) {
   pid_t pid0{10000};
-  PidFetchContext pidContext0{pid0};
+  ObjectFetchContextPtr pidContext0 = makeRefPtr<PidFetchContext>(pid0);
   pid_t pid1{10001};
-  PidFetchContext pidContext1{pid1};
+  ObjectFetchContextPtr pidContext1 = makeRefPtr<PidFetchContext>(pid1);
 
   // first fetch increments fetch count for pid0
   objectStore->getBlob(readyBlobId, pidContext0).get(0ms);

@@ -14,6 +14,7 @@
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace folly {
 template <typename T>
@@ -32,6 +33,7 @@ class EdenMount;
 class EdenServer;
 class TreeInode;
 class ObjectFetchContext;
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 class EntryAttributes;
 struct EntryAttributeFlags;
 template <typename T>
@@ -143,13 +145,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       EntryAttributeFlags reqBitmask,
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
   ImmediateFuture<std::vector<folly::Try<EntryAttributes>>> getEntryAttributes(
       AbsolutePathPiece mountPath,
       std::vector<std::string>& paths,
       EntryAttributeFlags reqBitmask,
       SyncBehavior sync,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   void getCurrentJournalPosition(
       JournalPosition& out,
@@ -408,7 +410,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   ImmediateFuture<Hash20> getSHA1ForPath(
       const EdenMount& edenMount,
       RelativePath path,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;

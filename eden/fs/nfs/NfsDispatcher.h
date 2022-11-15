@@ -55,7 +55,7 @@ class NfsDispatcher {
    */
   virtual ImmediateFuture<struct stat> getattr(
       InodeNumber ino,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the setattr method.
@@ -76,7 +76,7 @@ class NfsDispatcher {
   virtual ImmediateFuture<SetattrRes> setattr(
       InodeNumber ino,
       DesiredMetadata desired,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Racily obtain the parent directory of the passed in directory.
@@ -85,21 +85,23 @@ class NfsDispatcher {
    */
   virtual ImmediateFuture<InodeNumber> getParent(
       InodeNumber ino,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Find the given file in the passed in directory. It's InodeNumber and
    * attributes are returned.
    */
-  virtual ImmediateFuture<std::tuple<InodeNumber, struct stat>>
-  lookup(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
+  virtual ImmediateFuture<std::tuple<InodeNumber, struct stat>> lookup(
+      InodeNumber dir,
+      PathComponent name,
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * For a symlink, return its destination, fail otherwise.
    */
   virtual ImmediateFuture<std::string> readlink(
       InodeNumber ino,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the read method.
@@ -118,7 +120,7 @@ class NfsDispatcher {
       InodeNumber ino,
       size_t size,
       off_t offset,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the write method.
@@ -143,7 +145,7 @@ class NfsDispatcher {
       InodeNumber ino,
       std::unique_ptr<folly::IOBuf> data,
       off_t offset,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the create method.
@@ -173,7 +175,7 @@ class NfsDispatcher {
       InodeNumber dir,
       PathComponent name,
       mode_t mode,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the mkdir method.
@@ -200,7 +202,7 @@ class NfsDispatcher {
       InodeNumber dir,
       PathComponent name,
       mode_t mode,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the symlink method.
@@ -230,7 +232,7 @@ class NfsDispatcher {
       InodeNumber dir,
       PathComponent name,
       std::string data,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the mknod method.
@@ -259,7 +261,7 @@ class NfsDispatcher {
       PathComponent name,
       mode_t mode,
       dev_t rdev,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the unlink method.
@@ -278,8 +280,10 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual ImmediateFuture<UnlinkRes>
-  unlink(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
+  virtual ImmediateFuture<UnlinkRes> unlink(
+      InodeNumber dir,
+      PathComponent name,
+      const ObjectFetchContextPtr& context) = 0;
 
   struct RmdirRes {
     /** Attributes of the directory prior to removing the directory */
@@ -295,8 +299,10 @@ class NfsDispatcher {
    * For the pre and post dir stat, refer to the documentation of the create
    * method above.
    */
-  virtual ImmediateFuture<RmdirRes>
-  rmdir(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
+  virtual ImmediateFuture<RmdirRes> rmdir(
+      InodeNumber dir,
+      PathComponent name,
+      const ObjectFetchContextPtr& context) = 0;
 
   struct RenameRes {
     /** Attributes of the from directory prior to renaming the file. */
@@ -322,7 +328,7 @@ class NfsDispatcher {
       PathComponent fromName,
       InodeNumber toIno,
       PathComponent toName,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the readdir method.
@@ -347,7 +353,7 @@ class NfsDispatcher {
       InodeNumber dir,
       off_t offset,
       uint32_t count,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Variant of readdir that reads the content of the directory referenced by
@@ -362,11 +368,11 @@ class NfsDispatcher {
       InodeNumber dir,
       off_t offset,
       uint32_t count,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   virtual ImmediateFuture<struct statfs> statfs(
       InodeNumber dir,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
  private:
   EdenStats* stats_{nullptr};

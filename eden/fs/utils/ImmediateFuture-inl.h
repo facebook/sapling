@@ -146,7 +146,7 @@ ImmediateFuture<T>::thenValue(Func&& func) && {
           folly::Try<T>&& try_) mutable -> ImmediateFuture<RetType> {
         if (try_.hasValue()) {
           return detail::makeImmediateFutureFromImmediate(
-              std::forward<Func>(func), std::move(try_).value());
+              std::move(func), std::move(try_).value());
         } else {
           return folly::Try<RetType>(std::move(try_).exception());
         }
@@ -165,7 +165,7 @@ ImmediateFuture<T> ImmediateFuture<T>::thenError(Func&& func) && {
           folly::Try<T>&& try_) mutable -> ImmediateFuture<T> {
         if (try_.hasException()) {
           return detail::makeImmediateFutureFromImmediate(
-              std::forward<Func>(func), std::move(try_).exception());
+              std::move(func), std::move(try_).exception());
         } else {
           return ImmediateFuture{std::move(try_)};
         }

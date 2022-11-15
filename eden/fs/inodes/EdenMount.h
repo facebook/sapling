@@ -603,7 +603,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * the ObjectStore).
    */
   ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
-  getTreeOrTreeEntry(RelativePathPiece path, ObjectFetchContext& context) const;
+  getTreeOrTreeEntry(
+      RelativePathPiece path,
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Walk the Tree hierarchy and return a path whose case matches the Tree path
@@ -617,7 +619,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<RelativePath> canonicalizePathFromTree(
       RelativePathPiece path,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Look up the Inode object for the specified path.
@@ -638,7 +640,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<InodePtr> getInodeSlow(
       RelativePathPiece path,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Look up the Inode, Tree, or TreeEntry for the specified path.
@@ -657,7 +659,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<VirtualInode> getVirtualInode(
       RelativePathPiece path,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Check out the specified commit.
@@ -916,7 +918,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FOLLY_NODISCARD folly::Future<folly::Unit> addBindMount(
       RelativePathPiece repoPath,
       AbsolutePathPiece targetPath,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
   FOLLY_NODISCARD folly::Future<folly::Unit> removeBindMount(
       RelativePathPiece repoPath);
 
@@ -927,7 +929,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD ImmediateFuture<TreeInodePtr> ensureDirectoryExists(
       RelativePathPiece fromRoot,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Request to start a new tree prefetch.
@@ -941,7 +943,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
       TreeInodePtr treeInode,
-      ObjectFetchContext& context);
+      const ObjectFetchContext& context);
 
   /**
    * Get a weak_ptr to this EdenMount object. EdenMounts are stored as shared
@@ -967,7 +969,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   setPathsToObjectIds(
       std::vector<SetPathObjectIdObjectAndPath> objects,
       CheckoutMode checkoutMode,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Should only be called by the mount contructor. We decide wether this

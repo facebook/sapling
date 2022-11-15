@@ -13,6 +13,7 @@
 
 #include <folly/Range.h>
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
@@ -22,6 +23,7 @@ class Glob;
 class GlobParams;
 class PrefetchParams;
 class ObjectFetchContext;
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 class ThriftGlobImpl {
  public:
@@ -32,7 +34,7 @@ class ThriftGlobImpl {
       std::shared_ptr<EdenMount> edenMount,
       std::shared_ptr<ServerState> serverState,
       std::vector<std::string> globs,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   std::string logString();
   std::string logString(const std::vector<std::string>& globs) const;

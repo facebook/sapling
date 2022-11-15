@@ -10,12 +10,12 @@
 #include <folly/futures/Future.h>
 #include <memory>
 #include "eden/fs/store/BlobCache.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook::eden {
 
 class Blob;
 class IObjectStore;
-class ObjectFetchContext;
 
 /**
  * File access in Eden is stateless - we do not receive notifications from the
@@ -55,7 +55,7 @@ class BlobAccess {
    */
   folly::Future<BlobCache::GetResult> getBlob(
       const ObjectId& hash,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);
 
  private:

@@ -54,14 +54,14 @@ ImmediateFuture<std::unique_ptr<TreeEntry>>
 FakeBackingStore::getTreeEntryForObjectId(
     const ObjectId& commitID,
     TreeEntryType treeEntryType,
-    ObjectFetchContext& /* context */) {
+    const ObjectFetchContextPtr& /* context */) {
   return folly::makeSemiFuture(
       std::make_unique<TreeEntry>(commitID, treeEntryType));
 }
 
 ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
     const RootId& commitID,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   StoredHash* storedTreeHash;
   {
     auto data = data_.wlock();
@@ -93,7 +93,7 @@ ImmediateFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
 
 SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
     const ObjectId& id,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
   auto it = data->trees.find(id);
@@ -115,7 +115,7 @@ SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
 
 SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
     const ObjectId& id,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
   auto it = data->blobs.find(id);

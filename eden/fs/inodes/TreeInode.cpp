@@ -182,7 +182,8 @@ TreeInode::TreeInode(
 
 TreeInode::~TreeInode() {}
 
-ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
+ImmediateFuture<struct stat> TreeInode::stat(
+    const ObjectFetchContextPtr& /*context*/) {
   auto st = getMount()->initStatData();
   st.st_ino = folly::to_narrow(getNodeId().get());
   auto contents = contents_.rlock();
@@ -206,7 +207,7 @@ ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
 std::optional<ImmediateFuture<VirtualInode>> TreeInode::rlockGetOrFindChild(
     const TreeInodeState& contents,
     PathComponentPiece name,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     bool loadInodes) {
   // Check if the child is already loaded and return it if so
   auto iter = contents.entries.find(name);
@@ -259,7 +260,7 @@ std::pair<folly::SemiFuture<InodePtr>, TreeInode::LoadChildCleanUp>
 TreeInode::loadChild(
     folly::Synchronized<TreeInodeState>::LockedPtr& contents,
     PathComponentPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto inodeLoadFuture = Future<unique_ptr<InodeBase>>::makeEmpty();
   InodePtr childInodePtr;
   InodeMap::PromiseVector promises;
@@ -317,7 +318,7 @@ void TreeInode::loadChildCleanUp(
 
 ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
     PathComponentPiece name,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     bool loadInodes) {
   TraceBlock block("getOrFindChild");
 
@@ -354,7 +355,7 @@ ImmediateFuture<VirtualInode> TreeInode::getOrFindChild(
 }
 
 std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
-TreeInode::getChildren(ObjectFetchContext& context, bool loadInodes) {
+TreeInode::getChildren(const ObjectFetchContextPtr& context, bool loadInodes) {
   // We could optimize this to take the rlock first and try to get all the
   // VirtualInode with out loading inodes. This would allow for higher
   // concurrency. However, this will significantly increase code
@@ -405,7 +406,7 @@ TreeInode::getChildren(ObjectFetchContext& context, bool loadInodes) {
 
 ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
     PathComponentPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return getOrFindChild(name, context, true).thenValue([](auto&& virtualInode) {
     return virtualInode.asInodePtr();
   });
@@ -413,7 +414,7 @@ ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
 
 ImmediateFuture<TreeInodePtr> TreeInode::getOrLoadChildTree(
     PathComponentPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return getOrLoadChild(name, context).thenValue([](InodePtr child) {
     auto treeInode = child.asTreePtrOrNull();
     if (!treeInode) {
@@ -436,11 +437,13 @@ namespace {
  */
 class LookupProcessor {
  public:
-  explicit LookupProcessor(RelativePathPiece path, ObjectFetchContext& context)
+  explicit LookupProcessor(
+      RelativePathPiece path,
+      ObjectFetchContextPtr context)
       : path_{path},
         iterRange_{path_.components()},
         iter_{iterRange_.begin()},
-        context_{context} {}
+        context_{std::move(context)} {}
 
   ImmediateFuture<InodePtr> next(TreeInodePtr tree) {
     auto name = *iter_++;
@@ -457,23 +460,19 @@ class LookupProcessor {
   RelativePath path_;
   RelativePath::base_type::component_iterator_range iterRange_;
   RelativePath::base_type::component_iterator iter_;
-  // The ObjectFetchContext is allocated at the beginning of a request and
-  // released once the request completes. Since the lifetime of LookupProcessor
-  // is strictly less than the one of a request, we can safely store a
-  // reference to the fetch context.
-  ObjectFetchContext& context_;
+  ObjectFetchContextPtr context_;
 };
 } // namespace
 
 ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
     RelativePathPiece path,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto pathStr = path.stringPiece();
   if (pathStr.empty()) {
     return inodePtrFromThis();
   }
 
-  auto processor = std::make_unique<LookupProcessor>(path, context);
+  auto processor = std::make_unique<LookupProcessor>(path, context.copy());
   auto future = processor->next(inodePtrFromThis());
   // This ensure() callback serves to hold onto the unique_ptr,
   // and makes sure it only gets destroyed when the future is finally resolved.
@@ -599,7 +598,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
     // a null fetch context because we don't need to record statistics.
     static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
         "TreeInode::loadChildInode");
-    future = startLoadingInodeNoThrow(entry, name, *context);
+    future = startLoadingInodeNoThrow(entry, name, context);
   }
   registerInodeLoadComplete(future, name, number);
 }
@@ -664,7 +663,7 @@ void TreeInode::inodeLoadComplete(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     const DirEntry& entry,
     PathComponentPiece name,
-    ObjectFetchContext& fetchContext) noexcept {
+    const ObjectFetchContextPtr& fetchContext) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
   // afterwards.
@@ -731,7 +730,7 @@ std::optional<std::vector<std::string>> findEntryDifferences(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const DirEntry& entry,
     PathComponentPiece name,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
              << getLogPath() << " / \"" << name << "\"";
   XDCHECK(entry.getInode() == nullptr);
@@ -1372,12 +1371,12 @@ TreeInodePtr TreeInode::mkdir(
 ImmediateFuture<folly::Unit> TreeInode::unlink(
     PathComponentPiece name,
     InvalidationRequired invalidate,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return getOrLoadChild(name, context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate,
-                  &context](const InodePtr& child) mutable {
+                  context = context.copy()](const InodePtr& child) mutable {
         return self->removeImpl<FileInodePtr>(
             std::move(childName), child, invalidate, 1, context);
       });
@@ -1386,12 +1385,12 @@ ImmediateFuture<folly::Unit> TreeInode::unlink(
 ImmediateFuture<folly::Unit> TreeInode::rmdir(
     PathComponentPiece name,
     InvalidationRequired invalidate,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return getOrLoadChild(name, context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate,
-                  &context](const InodePtr& child) mutable {
+                  context = context.copy()](const InodePtr& child) mutable {
         return self->removeImpl<TreeInodePtr>(
             std::move(childName), child, invalidate, 1, context);
       });
@@ -1399,7 +1398,7 @@ ImmediateFuture<folly::Unit> TreeInode::rmdir(
 
 void TreeInode::removeAllChildrenRecursively(
     InvalidationRequired invalidate,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     const RenameLock& renameLock) {
   // TODO: Unconditional materialization is slightly conservative. If the
   // BackingStore Tree is empty, then this function can return without
@@ -1523,7 +1522,7 @@ InodePtr TreeInode::tryRemoveUnloadedChild(
 ImmediateFuture<folly::Unit> TreeInode::removeRecursivelyNoFlushInvalidation(
     PathComponentPiece name,
     InvalidationRequired invalidate,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // Fast return if the node is unloaded and removed
   auto child = tryRemoveUnloadedChild(name, invalidate);
   if (!child) {
@@ -1547,7 +1546,7 @@ ImmediateFuture<folly::Unit> TreeInode::removeRecursivelyNoFlushInvalidation(
 ImmediateFuture<folly::Unit> TreeInode::removeRecursively(
     PathComponentPiece name,
     InvalidationRequired invalidate,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return this->removeRecursivelyNoFlushInvalidation(name, invalidate, context)
       .thenValue(
           [self = inodePtrFromThis(),
@@ -1565,7 +1564,7 @@ ImmediateFuture<folly::Unit> TreeInode::removeImpl(
     InodePtr childBasePtr,
     InvalidationRequired invalidate,
     unsigned int attemptNum,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // Make sure the child is of the desired type
   auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
   if (!child) {
@@ -1645,7 +1644,7 @@ ImmediateFuture<folly::Unit> TreeInode::removeImpl(
                   childName = PathComponent{std::move(name)},
                   invalidate,
                   attemptNum,
-                  &context](const InodePtr& loadedChild) {
+                  context = context.copy()](const InodePtr& loadedChild) {
         return self->removeImpl<InodePtrType>(
             childName, loadedChild, invalidate, attemptNum + 1, context);
       });
@@ -1870,7 +1869,7 @@ ImmediateFuture<Unit> TreeInode::rename(
     TreeInodePtr destParent,
     PathComponentPiece destName,
     InvalidationRequired invalidate,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return ImmediateFuture<Unit>{
@@ -1980,7 +1979,7 @@ ImmediateFuture<Unit> TreeInode::rename(
                          destParent,
                          destNameCopy = destName.copy(),
                          invalidate,
-                         &context](auto&&) {
+                         context = context.copy()](auto&&) mutable {
     return self->rename(
         nameCopy, destParent, destNameCopy, invalidate, context);
   };
@@ -1995,11 +1994,11 @@ ImmediateFuture<Unit> TreeInode::rename(
           return std::move(destFuture).thenValue(std::move(onLoadFinished));
         });
   } else if (needSrc) {
-    return getOrLoadChild(name, context).thenValue(onLoadFinished);
+    return getOrLoadChild(name, context).thenValue(std::move(onLoadFinished));
   } else {
     XCHECK(needDest);
     return destParent->getOrLoadChild(destName, context)
-        .thenValue(onLoadFinished);
+        .thenValue(std::move(onLoadFinished));
   }
 }
 
@@ -2220,7 +2219,10 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
 
 #ifndef _WIN32
 template <typename Fn>
-bool TreeInode::readdirImpl(off_t off, ObjectFetchContext& context, Fn add) {
+bool TreeInode::readdirImpl(
+    off_t off,
+    const ObjectFetchContextPtr& context,
+    Fn add) {
   /*
    * Implementing readdir correctly in the presence of concurrent modifications
    * to the directory is nontrivial. This function will be called multiple
@@ -2329,7 +2331,7 @@ bool TreeInode::readdirImpl(off_t off, ObjectFetchContext& context, Fn add) {
 FuseDirList TreeInode::fuseReaddir(
     FuseDirList&& list,
     off_t off,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   readdirImpl(
       off,
       context,
@@ -2344,7 +2346,7 @@ FuseDirList TreeInode::fuseReaddir(
 std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
     NfsDirList&& list,
     off_t off,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   updateAtime();
   bool isEof = readdirImpl(
       off,
@@ -3981,7 +3983,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     PathComponentPiece name,
     DirEntry& entry,
     std::vector<IncompleteInodeLoad>& pendingLoads,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   XDCHECK(!entry.getInode());
 
   folly::Promise<InodePtr> promise;
@@ -4118,7 +4120,7 @@ void TreeInode::forceMetadataUpdate() {
 
 #ifndef _WIN32
 ImmediateFuture<folly::Unit> TreeInode::ensureMaterialized(
-    ObjectFetchContext& fetchContext,
+    const ObjectFetchContextPtr& fetchContext,
     bool followSymlink) {
   std::vector<ImmediateFuture<folly::Unit>> childFutures;
   std::vector<PathComponent> names;
@@ -4134,7 +4136,8 @@ ImmediateFuture<folly::Unit> TreeInode::ensureMaterialized(
   for (auto& name : names) {
     childFutures.emplace_back(
         getOrLoadChild(name, fetchContext)
-            .thenValue([&fetchContext, followSymlink](InodePtr inodePtr) {
+            .thenValue([fetchContext = fetchContext.copy(),
+                        followSymlink](InodePtr inodePtr) {
               return inodePtr->ensureMaterialized(fetchContext, followSymlink);
             }));
   }
@@ -4242,7 +4245,7 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 
-void TreeInode::prefetch(ObjectFetchContext& context) {
+void TreeInode::prefetch(const ObjectFetchContextPtr& context) {
   bool expected = false;
   if (!prefetched_.compare_exchange_strong(expected, true)) {
     return;
@@ -4259,7 +4262,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
     return;
   }
   auto prefetchLease =
-      getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);
+      getMount()->tryStartTreePrefetch(inodePtrFromThis(), *context);
   if (!prefetchLease) {
     XLOG(DBG3) << "skipping prefetch for " << getLogPath()
                << ": too many prefetches already in progress";
@@ -4301,7 +4304,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
                 lease.getTreeInode()
                     ->loadChildLocked(
                         contents->entries, name, entry, pendingLoads, context)
-                    .thenValue([&context](InodePtr inode) {
+                    .thenValue([context = context.copy()](InodePtr inode) {
                       return inode->stat(context).semi();
                     })
                     .unit());
@@ -4325,7 +4328,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
 
 ImmediateFuture<struct stat> TreeInode::setattr(
     const DesiredMetadata& desired,
-    ObjectFetchContext& /*fetchContext*/) {
+    const ObjectFetchContextPtr& /*fetchContext*/) {
   struct stat result(getMount()->initStatData());
   result.st_ino = getNodeId().get();
 
@@ -4368,7 +4371,7 @@ ImmediateFuture<std::vector<std::string>> TreeInode::listxattr() {
 }
 ImmediateFuture<std::string> TreeInode::getxattr(
     folly::StringPiece /*name*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   return makeImmediateFuture<std::string>(
       InodeError(kENOATTR, inodePtrFromThis()));
 }

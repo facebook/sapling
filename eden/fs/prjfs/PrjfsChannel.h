@@ -230,7 +230,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent when a file or directory has been replaced.
@@ -239,7 +239,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent when a file has been modified.
@@ -248,7 +248,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent when a file or directory has been renamed.
@@ -257,7 +257,7 @@ class PrjfsChannelInner {
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent prior to a file or directory being renamed.
@@ -270,7 +270,7 @@ class PrjfsChannelInner {
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent prior to a file or directory being deleted.
@@ -283,7 +283,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent when a file or directory has been removed.
@@ -292,7 +292,7 @@ class PrjfsChannelInner {
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Notification sent prior to a hardlink being created.
@@ -301,7 +301,7 @@ class PrjfsChannelInner {
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
-      std::shared_ptr<ObjectFetchContext> context);
+      const ObjectFetchContextPtr& context);
 
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;

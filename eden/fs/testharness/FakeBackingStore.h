@@ -53,18 +53,18 @@ class FakeBackingStore final : public BackingStore {
 
   ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& commitID,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& /* commitID */,
       TreeEntryType /* treeEntryType */,
-      ObjectFetchContext& /* context */) override;
+      const ObjectFetchContextPtr& /* context */) override;
 
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * Add a Blob to the backing store

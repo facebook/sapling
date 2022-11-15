@@ -229,8 +229,12 @@ class ThriftRequestScope {
         statPtr_{std::move(statPtr)},
         level_(level),
         itcLogger_(logger),
-        fetchContext_{pid, sourceLocation_.function_name()},
-        prefetchFetchContext_{pid, sourceLocation_.function_name()} {
+        thriftFetchContext_{makeRefPtr<ThriftFetchContext>(
+            pid,
+            sourceLocation_.function_name())},
+        prefetchFetchContext_{makeRefPtr<PrefetchFetchContext>(
+            pid,
+            sourceLocation_.function_name())} {
     FB_LOG_RAW(
         itcLogger_,
         level,
@@ -272,15 +276,19 @@ class ThriftRequestScope {
     traceBus_->publish(ThriftRequestTraceEvent::finish(
         requestId_,
         sourceLocation_.function_name(),
-        fetchContext_.getClientPid()));
+        thriftFetchContext_->getClientPid()));
   }
 
-  PrefetchFetchContext& getPrefetchFetchContext() {
-    return prefetchFetchContext_;
+  const ObjectFetchContextPtr& getPrefetchFetchContext() {
+    return prefetchFetchContext_.as<ObjectFetchContext>();
   }
 
-  ThriftFetchContext& getFetchContext() {
-    return fetchContext_;
+  ThriftFetchContext& getThriftFetchContext() {
+    return *thriftFetchContext_;
+  }
+
+  const ObjectFetchContextPtr& getFetchContext() {
+    return thriftFetchContext_.as<ObjectFetchContext>();
   }
 
   folly::StringPiece getFunctionName() {
@@ -296,8 +304,8 @@ class ThriftRequestScope {
   folly::LogLevel level_;
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
-  ThriftFetchContext fetchContext_;
-  PrefetchFetchContext prefetchFetchContext_;
+  RefPtr<ThriftFetchContext> thriftFetchContext_;
+  RefPtr<PrefetchFetchContext> prefetchFetchContext_;
 };
 
 template <typename ReturnType>
@@ -327,7 +335,7 @@ RelativePath relpathFromUserPath(StringPiece userPath) {
 facebook::eden::InodePtr inodeFromUserPath(
     facebook::eden::EdenMount& mount,
     StringPiece rootRelativePath,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto relPath = relpathFromUserPath(rootRelativePath);
   return mount.getInodeSlow(relPath, context).get();
 }
@@ -583,7 +591,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
                               mountPath,
                               *hash,
                               params->hgRootManifest_ref().to_optional(),
-                              helper->getFetchContext().getClientPid(),
+                              helper->getFetchContext()->getClientPid(),
                               helper->getFunctionName(),
                               checkoutMode)
                           .semi()};
@@ -694,7 +702,8 @@ EdenServiceHandler::semifuture_getSHA1(
                  .thenValue([this,
                              mount = std::move(mount),
                              paths = std::move(paths),
-                             &fetchContext](auto&&) mutable {
+                             fetchContext =
+                                 fetchContext.copy()](auto&&) mutable {
                    std::vector<ImmediateFuture<Hash20>> futures;
                    futures.reserve(paths->size());
                    for (auto& path : *paths) {
@@ -728,7 +737,7 @@ EdenServiceHandler::semifuture_getSHA1(
 ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
     const EdenMount& edenMount,
     RelativePath path,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   if (path.empty()) {
     return ImmediateFuture<Hash20>(newEdenError(
         EINVAL,
@@ -739,7 +748,7 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
   auto* objectStore = edenMount.getObjectStore();
   auto inodeFut = edenMount.getVirtualInode(path, fetchContext);
   return std::move(inodeFut).thenValue(
-      [path = std::move(path), objectStore, &fetchContext](
+      [path = std::move(path), objectStore, fetchContext = fetchContext.copy()](
           const VirtualInode& virtualInode) {
         return virtualInode.getSHA1(path, objectStore, fetchContext);
       });
@@ -749,7 +758,7 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     EntryAttributeFlags reqBitmask,
     AbsolutePathPiece mountPoint,
     StringPiece path,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   if (path.empty()) {
     return ImmediateFuture<EntryAttributes>(newEdenError(
         EINVAL,
@@ -763,8 +772,11 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     auto relativePath = RelativePathPiece{path};
 
     return edenMount->getVirtualInode(relativePath, fetchContext)
-        .thenValue([reqBitmask, relativePath, objectStore, &fetchContext](
-                       const VirtualInode& virtualInode) {
+        .thenValue([reqBitmask,
+                    relativePath,
+                    objectStore,
+                    fetchContext =
+                        fetchContext.copy()](const VirtualInode& virtualInode) {
           return virtualInode.getEntryAttributes(
               reqBitmask, relativePath, objectStore, fetchContext);
         });
@@ -1810,7 +1822,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
                  .thenValue([rootInode = std::move(rootInode),
                              paths = std::move(paths),
                              objectStore,
-                             &fetchContext](auto&&) {
+                             fetchContext = fetchContext.copy()](auto&&) {
                    return collectAll(applyToVirtualInode(
                                          rootInode,
                                          *paths,
@@ -1863,14 +1875,15 @@ EdenServiceHandler::semifuture_getFileInformation(
                              paths = std::move(paths),
                              lastCheckoutTime,
                              objectStore,
-                             &fetchContext](auto&&) {
+                             fetchContext = fetchContext.copy()](auto&&) {
                    return collectAll(
                               applyToVirtualInode(
                                   rootInode,
                                   *paths,
                                   [lastCheckoutTime,
                                    objectStore,
-                                   &fetchContext](const VirtualInode& inode) {
+                                   fetchContext = fetchContext.copy()](
+                                      const VirtualInode& inode) {
                                     return inode
                                         .stat(
                                             lastCheckoutTime,
@@ -1938,14 +1951,15 @@ getAllEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     const EdenMount& edenMount,
     std::string path,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto virtualInode =
       edenMount.getVirtualInode(RelativePathPiece{path}, fetchContext);
   return std::move(virtualInode)
       .thenValue([path = std::move(path),
                   requestedAttributes,
                   objectStore = edenMount.getObjectStore(),
-                  &fetchContext](VirtualInode tree) mutable {
+                  fetchContext =
+                      fetchContext.copy()](VirtualInode tree) mutable {
         if (!tree.isDirectory()) {
           return ImmediateFuture<std::vector<
               std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
@@ -2068,7 +2082,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                      [this,
                       requestedAttributes,
                       paths = std::move(paths),
-                      &fetchContext,
+                      fetchContext = fetchContext.copy(),
                       mountPath = mountPath.copy()](auto&&) mutable
                      -> ImmediateFuture<
                          std::vector<DirListAttributeDataOrError>> {
@@ -2120,11 +2134,11 @@ EdenServiceHandler::getEntryAttributes(
     std::vector<std::string>& paths,
     EntryAttributeFlags reqBitmask,
     SyncBehavior sync,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   return waitForPendingNotifications(*server_->getMount(mountPath), sync)
       .thenValue([this,
                   &paths,
-                  &fetchContext,
+                  fetchContext = fetchContext.copy(),
                   mountPath = mountPath.copy(),
                   reqBitmask](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
@@ -2320,15 +2334,15 @@ EdenServiceHandler::semifuture_setPathObjectId(
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG1, mountPoint, toLogArg(object_strings));
 
-  auto& fetchContext = helper->getFetchContext();
   if (auto requestInfo = params->requestInfo_ref()) {
-    fetchContext.updateRequestInfo(std::move(*requestInfo));
+    helper->getThriftFetchContext().updateRequestInfo(std::move(*requestInfo));
   }
+  ObjectFetchContextPtr context = helper->getFetchContext().copy();
   return wrapImmediateFuture(
              std::move(helper),
              edenMount
                  ->setPathsToObjectIds(
-                     std::move(objects), (*params->mode()), fetchContext)
+                     std::move(objects), (*params->mode()), context)
                  .thenValue([](auto&& resultAndTimes) {
                    return std::make_unique<SetPathObjectIdResult>(
                        std::move(resultAndTimes.result));
@@ -2355,16 +2369,19 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(*edenMount, *params->sync())
-                 .thenValue([edenMount, relativePath, &fetchContext](
-                                folly::Unit) {
+                 .thenValue([edenMount,
+                             relativePath,
+                             fetchContext = fetchContext.copy()](folly::Unit) {
                    return edenMount->getInodeSlow(relativePath, fetchContext);
                  })
-                 .thenValue([relativePath, &fetchContext](InodePtr inode) {
-                   return inode->getParentRacy()->removeRecursively(
-                       relativePath.basename(),
-                       InvalidationRequired::Yes,
-                       fetchContext);
-                 }))
+                 .thenValue(
+                     [relativePath = std::move(relativePath),
+                      fetchContext = fetchContext.copy()](InodePtr inode) {
+                       return inode->getParentRacy()->removeRecursively(
+                           relativePath.basename(),
+                           InvalidationRequired::Yes,
+                           fetchContext);
+                     }))
       .semi();
 }
 
@@ -2399,7 +2416,7 @@ void maybeLogExpensiveGlob(
     const std::vector<std::string>& globs,
     const folly::StringPiece searchRoot,
     const ThriftGlobImpl& globber,
-    const ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     const std::shared_ptr<ServerState>& serverState) {
   bool shouldLogExpensiveGlob = false;
 
@@ -2414,7 +2431,7 @@ void maybeLogExpensiveGlob(
   if (shouldLogExpensiveGlob) {
     auto logString = globber.logString(globs);
     std::string client_cmdline;
-    std::optional<pid_t> clientPid = context.getClientPid();
+    std::optional<pid_t> clientPid = context->getClientPid();
     if (clientPid) {
       // TODO: we should look up client scope here instead of command line
       // since it will give move context into the overarching process or
@@ -2449,10 +2466,11 @@ ImmediateFuture<folly::Unit> ensureMaterializedImpl(
         makeNotReadyImmediateFuture()
             .thenValue([edenMount = edenMount.get(),
                         path = RelativePath{path},
-                        &fetchContext](auto&&) {
+                        fetchContext = fetchContext.copy()](auto&&) {
               return edenMount->getInodeSlow(path, fetchContext);
             })
-            .thenValue([&fetchContext, followSymlink](InodePtr inode) {
+            .thenValue([fetchContext = fetchContext.copy(),
+                        followSymlink](InodePtr inode) {
               return inode->ensureMaterialized(fetchContext, followSymlink)
                   .ensure([inode]() {});
             }));
@@ -2587,7 +2605,8 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
           .thenValue([globber = std::move(globber),
                       edenMount = std::move(edenMount),
                       serverState,
-                      &fetchContext](std::vector<std::string>&& globs) mutable {
+                      fetchContext = fetchContext.copy()](
+                         std::vector<std::string>&& globs) mutable {
             return globber.glob(edenMount, serverState, globs, fetchContext);
           })
           .thenTry([params = std::move(params), helper = std::move(helper)](
@@ -2655,7 +2674,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
       *params->mountPoint_ref(),
       toLogArg(*params->globs_ref()),
       globber.logString());
-  auto& context = helper->getPrefetchFetchContext();
+  auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
 
   ImmediateFuture<folly::Unit> backgroundFuture;
@@ -2677,7 +2696,8 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
                       serverState = server_->getServerState(),
                       globs = std::move(*params->globs()),
                       globber = std::move(globber),
-                      &context](auto&&) mutable {
+                      context = helper->getPrefetchFetchContext().copy()](
+                         auto&&) mutable {
             return globber.glob(mount, serverState, std::move(globs), context);
           })
           .thenValue([](std::unique_ptr<Glob>) { return folly::unit; });
@@ -3002,7 +3022,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
     return true;
   }
 
-  void fillBlobSizes(ObjectFetchContext& fetchContext) {
+  void fillBlobSizes(const ObjectFetchContextPtr& fetchContext) {
     std::vector<ImmediateFuture<folly::Unit>> futures;
     futures.reserve(requestedSizes_.size());
     for (auto& request : requestedSizes_) {
@@ -3509,8 +3529,8 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                         inode = std::move(inode),
                         path = std::move(path),
                         edenMount = std::move(edenMount),
-                        &fetchContext =
-                            fetchContext](struct stat&& stat) mutable
+                        fetchContext =
+                            fetchContext.copy()](struct stat&& stat) mutable
                        -> ImmediateFuture<folly::Unit> {
                          nfsChannel->invalidate(
                              canonicalMountPoint + RelativePath{*path},

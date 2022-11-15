@@ -50,9 +50,11 @@ class TreePrefetchLease {
   };
 
  public:
-  explicit TreePrefetchLease(TreeInodePtr inode, ObjectFetchContext& context)
+  explicit TreePrefetchLease(
+      TreeInodePtr inode,
+      const ObjectFetchContext& context)
       : inode_{std::move(inode)},
-        context_(std::make_unique<TreePrefetchContext>(
+        context_(makeRefPtr<TreePrefetchContext>(
             context.getClientPid(),
             context.getCause())) {}
 
@@ -74,8 +76,8 @@ class TreePrefetchLease {
     return inode_;
   }
 
-  ObjectFetchContext& getContext() const {
-    return *context_;
+  const ObjectFetchContextPtr& getContext() const {
+    return context_;
   }
 
  private:
@@ -86,7 +88,7 @@ class TreePrefetchLease {
 
   TreeInodePtr inode_;
 
-  std::unique_ptr<ObjectFetchContext> context_;
+  ObjectFetchContextPtr context_;
 };
 
 } // namespace facebook::eden

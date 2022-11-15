@@ -15,6 +15,18 @@
 
 namespace facebook::eden {
 
+class PrjfsObjectFetchContext : public FsObjectFetchContext {
+ public:
+  PrjfsObjectFetchContext(pid_t pid) : pid_{pid} {}
+
+  std::optional<pid_t> getClientPid() const override {
+    return pid_;
+  }
+
+ private:
+  pid_t pid_;
+};
+
 class PrjfsRequestContext : public RequestContext {
  public:
   PrjfsRequestContext(const PrjfsRequestContext&) = delete;
@@ -25,14 +37,12 @@ class PrjfsRequestContext : public RequestContext {
   explicit PrjfsRequestContext(
       folly::ReadMostlySharedPtr<PrjfsChannelInner> channel,
       const PRJ_CALLBACK_DATA& prjfsData)
-      : RequestContext(channel->getProcessAccessLog()),
+      : RequestContext(
+            channel->getProcessAccessLog(),
+            makeRefPtr<PrjfsObjectFetchContext>(
+                static_cast<pid_t>(prjfsData.TriggeringProcessId))),
         channel_(std::move(channel)),
-        commandId_(prjfsData.CommandId),
-        clientPid_(prjfsData.TriggeringProcessId) {}
-
-  std::optional<pid_t> getClientPid() const override {
-    return clientPid_;
-  }
+        commandId_(prjfsData.CommandId) {}
 
   ImmediateFuture<folly::Unit> catchErrors(ImmediateFuture<folly::Unit>&& fut) {
     return std::move(fut).thenTry([this](folly::Try<folly::Unit>&& try_) {
@@ -67,7 +77,6 @@ class PrjfsRequestContext : public RequestContext {
  private:
   folly::ReadMostlySharedPtr<PrjfsChannelInner> channel_;
   int32_t commandId_;
-  pid_t clientPid_;
 };
 
 } // namespace facebook::eden

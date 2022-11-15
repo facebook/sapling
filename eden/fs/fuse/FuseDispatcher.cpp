@@ -67,7 +67,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::lookup(
     uint64_t /*requestID*/,
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
@@ -75,14 +75,14 @@ void FuseDispatcher::forget(InodeNumber /*ino*/, unsigned long /*nlookup*/) {}
 
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::getattr(
     InodeNumber /*ino*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::setattr(
     InodeNumber /*ino*/,
     const fuse_setattr_in& /*attr*/,
-    ObjectFetchContext& /*context*/
+    const ObjectFetchContextPtr& /*context*/
 ) {
   FUSELL_NOT_IMPL();
 }
@@ -90,7 +90,7 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcher::setattr(
 ImmediateFuture<std::string> FuseDispatcher::readlink(
     InodeNumber /*ino*/,
     bool /*kernelCachesReadlink*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -99,7 +99,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::mknod(
     PathComponentPiece /*name*/,
     mode_t /*mode*/,
     dev_t /*rdev*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -107,17 +107,21 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::mkdir(
     InodeNumber,
     PathComponentPiece,
     mode_t,
-    ObjectFetchContext&) {
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
-ImmediateFuture<folly::Unit>
-FuseDispatcher::unlink(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
+ImmediateFuture<folly::Unit> FuseDispatcher::unlink(
+    InodeNumber,
+    PathComponentPiece,
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
-ImmediateFuture<folly::Unit>
-FuseDispatcher::rmdir(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
+ImmediateFuture<folly::Unit> FuseDispatcher::rmdir(
+    InodeNumber,
+    PathComponentPiece,
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
@@ -125,7 +129,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::symlink(
     InodeNumber,
     PathComponentPiece,
     folly::StringPiece,
-    ObjectFetchContext&) {
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
@@ -134,7 +138,7 @@ ImmediateFuture<folly::Unit> FuseDispatcher::rename(
     PathComponentPiece,
     InodeNumber,
     PathComponentPiece,
-    ObjectFetchContext&) {
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
@@ -171,7 +175,7 @@ ImmediateFuture<BufVec> FuseDispatcher::read(
     InodeNumber /*ino*/,
     size_t /*size*/,
     off_t /*off*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -179,7 +183,7 @@ ImmediateFuture<size_t> FuseDispatcher::write(
     InodeNumber /*ino*/,
     StringPiece /*data*/,
     off_t /*off*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -191,7 +195,7 @@ ImmediateFuture<folly::Unit> FuseDispatcher::fallocate(
     InodeNumber,
     uint64_t,
     uint64_t,
-    ObjectFetchContext&) {
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
@@ -208,7 +212,7 @@ ImmediateFuture<FuseDirList> FuseDispatcher::readdir(
     FuseDirList&&,
     off_t,
     uint64_t,
-    ObjectFetchContext&) {
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 
@@ -254,7 +258,7 @@ const int FuseDispatcher::kENOATTR =
 ImmediateFuture<std::string> FuseDispatcher::getxattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   throwSystemErrorExplicit(kENOATTR);
 }
 
@@ -286,7 +290,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcher::create(
     PathComponentPiece,
     mode_t,
     int,
-    ObjectFetchContext&) {
+    const ObjectFetchContextPtr&) {
   FUSELL_NOT_IMPL();
 }
 

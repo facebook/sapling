@@ -20,7 +20,7 @@ ImmediateFuture<fuse_entry_out> TestDispatcher::lookup(
     uint64_t requestID,
     InodeNumber parent,
     PathComponentPiece name,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   XLOG(DBG5) << "received lookup " << requestID << ": parent=" << parent
              << ", name=" << name;
   ImmediateFuture<fuse_entry_out> result{};

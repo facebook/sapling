@@ -132,15 +132,19 @@ class CheckoutContext {
   /**
    * Return the fetch context associated with this checkout context.
    */
-  StatsFetchContext& getFetchContext() {
-    return fetchContext_;
+  StatsFetchContext& getStatsContext() {
+    return *fetchContext_;
+  }
+
+  const ObjectFetchContextPtr& getFetchContext() const {
+    return fetchContext_.as<ObjectFetchContext>();
   }
 
  private:
   CheckoutMode checkoutMode_;
   EdenMount* const mount_;
   RenameLock renameLock_;
-  StatsFetchContext fetchContext_;
+  RefPtr<StatsFetchContext> fetchContext_;
 
   // The checkout processing may occur across many threads,
   // if some data load operations complete asynchronously on other threads.

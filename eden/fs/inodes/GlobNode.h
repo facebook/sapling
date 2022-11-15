@@ -18,9 +18,12 @@
 
 namespace facebook::eden {
 
-/** Represents the compiled state of a tree-walking glob operation.
+/**
+ * Represents the compiled state of a tree-walking glob operation.
+ *
  * We split the glob into path components and build a tree of name
  * matching operations.
+ *
  * For non-recursive globs this allows an efficient walk and compare
  * as we work through the tree.  Path components that have no glob
  * special characters can be looked up directly from the directory
@@ -100,7 +103,7 @@ class GlobNode {
    */
   ImmediateFuture<folly::Unit> evaluate(
       const ObjectStore* store,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       TreeInodePtr root,
       PrefetchList* fileBlobsToPrefetch,
@@ -114,7 +117,7 @@ class GlobNode {
    */
   ImmediateFuture<folly::Unit> evaluate(
       const ObjectStore* store,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       std::shared_ptr<const Tree> tree,
       PrefetchList* fileBlobsToPrefetch,
@@ -155,7 +158,7 @@ class GlobNode {
   template <typename ROOT>
   ImmediateFuture<folly::Unit> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       RelativePathPiece startOfRecursive,
       ROOT&& root,
@@ -166,7 +169,7 @@ class GlobNode {
   template <typename ROOT>
   ImmediateFuture<folly::Unit> evaluateImpl(
       const ObjectStore* store,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,

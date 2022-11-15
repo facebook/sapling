@@ -41,7 +41,7 @@ TEST(InodeLoader, load) {
 
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
-  auto& fetchContext = ObjectFetchContext::getNullContext();
+  auto fetchContext = ObjectFetchContext::getNullContext();
 
   {
     auto results =
@@ -120,7 +120,7 @@ TEST(InodeLoader, notReady) {
 
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
-  auto& fetchContext = ObjectFetchContext::getNullContext();
+  auto fetchContext = ObjectFetchContext::getNullContext();
   // auto executor = mount.getServerExecutor().get();
 
   {

@@ -35,19 +35,19 @@ class FakeObjectStore final : public IObjectStore {
 
   ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
       const RootId& commitID,
-      ObjectFetchContext& context =
+      const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
   ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context =
+      const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
   ImmediateFuture<std::shared_ptr<const Blob>> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context =
+      const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
   ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
-      ObjectFetchContext& context =
+      const ObjectFetchContextPtr& context =
           ObjectFetchContext::getNullContext()) const override;
 
   size_t getAccessCount(const ObjectId& hash) const;

@@ -44,7 +44,7 @@ class TestDispatcher : public FuseDispatcher {
 
   ImmediateFuture<Attr> getattr(
       InodeNumber ino,
-      ObjectFetchContext& /*context*/) override {
+      const ObjectFetchContextPtr& /*context*/) override {
     if (ino == kRootNodeId) {
       struct stat st = {};
       st.st_ino = ino.get();

@@ -20,11 +20,13 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
 class ObjectStore;
 class ObjectFetchContext;
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 namespace detail {
 using TreePtr = std::shared_ptr<const Tree>;
@@ -97,7 +99,7 @@ class VirtualInode {
 
   ImmediateFuture<TreeEntryType> getTreeEntryType(
       RelativePathPiece path,
-      ObjectFetchContext& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Get the VirtualInode object for a child of this directory.
@@ -110,12 +112,12 @@ class VirtualInode {
       PathComponentPiece childName,
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   ImmediateFuture<Hash20> getSHA1(
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Get all the available attributes for a file entry in this tree. Available
@@ -131,7 +133,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Emulate stat in a way that works for source control.
@@ -144,7 +146,7 @@ class VirtualInode {
   ImmediateFuture<struct stat> stat(
       const struct timespec& lastCheckoutTime,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Retrieves VirtualInode for each of the children of this
@@ -158,7 +160,7 @@ class VirtualInode {
   getChildren(
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   /**
    * Collect all available attributes for all of the children
@@ -175,7 +177,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePath path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
  private:
   /**
@@ -184,7 +186,7 @@ class VirtualInode {
   ImmediateFuture<BlobMetadata> getBlobMetadata(
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& fetchContext) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * The main object this encapsulates
