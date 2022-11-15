@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.20"
 cpython = { version = "0.7", default-features = false }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 io = { path = "../../../../lib/io" }
 parking_lot = "0.11.2"
 pathmatcher = { path = "../../../../lib/pathmatcher" }

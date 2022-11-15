@@ -5,7 +5,7 @@ edition = "2021"
 
 
 [dependencies]
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 repo = { path = "../../../../lib/repo" }
 util = { path = "../../../../lib/util" }
@@ -17,5 +17,3 @@ pymetalog = { path = "../pymetalog" }
 pyworkingcopy = { path = "../pyworkingcopy" }
 workingcopy = { path = "../../../../lib/workingcopy" }
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

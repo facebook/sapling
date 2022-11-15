@@ -10,9 +10,7 @@ use std::ffi::CString;
 use ffi::PyEval_InitThreads;
 use ffi::PyGILState_Ensure;
 use ffi::PySys_SetArgv;
-#[cfg(feature = "python3")]
 use ffi::PyUnicode_AsWideCharString;
-#[cfg(feature = "python3")]
 use ffi::PyUnicode_FromString;
 use ffi::Py_DECREF;
 use ffi::Py_Finalize;
@@ -21,15 +19,11 @@ use ffi::Py_IsInitialized;
 use ffi::Py_Main;
 use ffi::Py_SetProgramName;
 use libc::c_int;
-#[cfg(feature = "python3")]
 use libc::wchar_t;
-#[cfg(feature = "python3")]
 use python3_sys as ffi;
 
-#[cfg(feature = "python3")]
 type PyChar = wchar_t;
 
-#[cfg(feature = "python3")]
 fn to_py_str(s: &str) -> *mut PyChar {
     let c_str = CString::new(s).unwrap();
 

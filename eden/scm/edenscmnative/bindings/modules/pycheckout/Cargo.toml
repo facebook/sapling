@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.20"
 async-runtime = { path = "../../../../lib/async-runtime" }
 checkout = { path = "../../../../lib/checkout" }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 manifest-tree = { path = "../../../../lib/manifest-tree" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
@@ -22,5 +22,3 @@ treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
 vfs = { path = "../../../../lib/vfs" }
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

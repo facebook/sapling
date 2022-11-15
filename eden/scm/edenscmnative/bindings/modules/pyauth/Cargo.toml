@@ -6,10 +6,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 cpython = { version = "0.7", default-features = false }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 auth = { path = "../../../../lib/auth" }
 pyconfigparser = { path = "../pyconfigparser" }
 url = "2.1.0"
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

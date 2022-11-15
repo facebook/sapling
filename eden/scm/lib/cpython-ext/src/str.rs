@@ -13,12 +13,10 @@ use crate::Bytes;
 pub struct Str(crate::Bytes);
 
 impl ToPyObject for Str {
-    #[cfg(feature = "python3")]
     type ObjectType = PyUnicode;
 
     #[inline]
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
-        #[cfg(feature = "python3")]
         PyUnicode::new(py, std::str::from_utf8(self.0.as_ref()).unwrap())
     }
 }

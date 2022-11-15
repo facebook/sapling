@@ -7,7 +7,6 @@
 
 use cpython::*;
 use minibytes::Bytes as MiniBytes;
-#[cfg(feature = "python3")]
 use python3_sys as ffi;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -24,7 +23,6 @@ py_class!(pub class Bytes |py| {
     def asref(&self) -> PyResult<PyObject> {
         let slice: &[u8] = self.inner(py).as_ref();
 
-        #[cfg(feature = "python3")]
         unsafe {
             let raw_obj = ffi::PyMemoryView_FromMemory(
                 slice.as_ptr() as *const _ as *mut _,

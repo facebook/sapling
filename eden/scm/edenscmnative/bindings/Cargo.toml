@@ -6,17 +6,13 @@ edition = "2021"
 [lib]
 name = "bindings"
 
-[features]
-default = []
-python3 = ["pybytes/python3", "pytracing/python3", "pydirs/python3"]
-
 [profile.release]
 debug = true
 incremental = true
 lto = false
 
 [dependencies]
-cpython_ext = { path = "../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 paste = "1.0"
 # see update_modules.sh

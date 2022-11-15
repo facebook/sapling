@@ -9,5 +9,3 @@ lto = "thin"
 [dependencies]
 cpython = { version = "0.7", default-features = false }
 
-[features]
-python3 = ["cpython/python3-sys"]

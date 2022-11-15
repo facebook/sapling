@@ -5,9 +5,6 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7", default-features = false }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 minibytes = { path = "../../../../lib/minibytes" }
-python3-sys = { version = "0.7", optional = true }
-
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3", "python3-sys"]
+python3-sys = { version = "0.7" }

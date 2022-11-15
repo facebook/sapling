@@ -5,13 +5,10 @@ edition = "2021"
 
 [dependencies]
 async-runtime = { path = "../../../../lib/async-runtime" }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 dag = { path = "../../../../lib/dag" }
 pathhistory = { path = "../../../../lib/pathhistory" }
 storemodel = { path = "../../../../lib/storemodel" }
 types = { path = "../../../../lib/types" }
 
-[features]
-default = []
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

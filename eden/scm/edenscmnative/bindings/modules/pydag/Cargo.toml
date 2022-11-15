@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.20"
 async-runtime = { path = "../../../../lib/async-runtime" }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 dag = { path = "../../../../lib/dag" }
 futures = { version = "0.3" }
@@ -18,5 +18,3 @@ pymetalog = { path = "../pymetalog" }
 renderdag = { path = "../../../../lib/renderdag" }
 storemodel = { path = "../../../../lib/storemodel" }
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

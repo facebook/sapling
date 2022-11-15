@@ -9,7 +9,7 @@ async-trait = "0.1.56"
 async-runtime = { path = "../../../../lib/async-runtime" }
 configmodel = { path = "../../../../lib/config/model" }
 configparser = { path = "../../../../lib/config/parser" }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 io = { path = "../../../../lib/io" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
@@ -20,5 +20,3 @@ revisionstore = { path = "../../../../lib/revisionstore" }
 storemodel = { path = "../../../../lib/storemodel" }
 types = { path = "../../../../lib/types" }
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

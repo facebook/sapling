@@ -21,7 +21,6 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-#[cfg(feature = "python3")]
 use python3_sys as ffi;
 use tracing::Level;
 use tracing_collector::model::Action;

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 clientinfo = { path = "../../../../lib/clientinfo" }
 cpython = { version = "0.7", default-features = false }
 pyconfigparser = { path = "../pyconfigparser" }

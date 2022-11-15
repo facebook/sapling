@@ -70,19 +70,16 @@ impl PyPathBuf {
 }
 
 impl ToPyObject for PyPathBuf {
-    #[cfg(feature = "python3")]
     type ObjectType = PyUnicode;
 
     #[inline]
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
-        #[cfg(feature = "python3")]
         self.0.to_py_object(py)
     }
 }
 
 impl<'source> FromPyObject<'source> for PyPathBuf {
     fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
-        #[cfg(feature = "python3")]
         {
             let s = obj.cast_as::<PyUnicode>(py)?.data(py);
             Ok(Self(s.to_string(py)?.into()))
@@ -212,7 +209,6 @@ impl RefFromPyObject for PyPath {
     where
         F: FnOnce(&PyPath) -> R,
     {
-        #[cfg(feature = "python3")]
         {
             let s = obj.cast_as::<PyUnicode>(py)?.to_string(py)?;
             Ok(f(PyPath::from_str(s.as_ref())))

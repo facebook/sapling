@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7", default-features = false }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 hgtime = { path = "../../../../lib/hgtime" }

@@ -11,16 +11,13 @@ use cpython::PyObject as RustPyObject;
 use cpython::Python as RustPythonGILGuard;
 use ffi::PyByteArray_Size;
 use ffi::PyObject;
-#[cfg(feature = "python3")]
 use ffi::PyVarObject;
 use ffi::Py_ssize_t;
-#[cfg(feature = "python3")]
 use python3_sys as ffi;
 
 // Ideally this struct comes from bindgen to ensure it's up-to-date
 // with what the current cpython has. However that significantly
 // complicates the build step.
-#[cfg(feature = "python3")]
 #[repr(C)]
 struct PyByteArrayObject {
     pub ob_base: PyVarObject,
@@ -83,7 +80,6 @@ unsafe fn pybytearray_from_slice(
     // the PyByteArrayObject struct.
     (*typed).ob_alloc = alloc_size.unwrap_or_else(|| value.len()) as Py_ssize_t;
     (*typed).ob_bytes = value.as_mut_ptr();
-    #[cfg(feature = "python3")]
     {
         (*typed).ob_base.ob_size = value.len() as Py_ssize_t;
         (*typed).ob_start = (*typed).ob_bytes;

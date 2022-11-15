@@ -6,7 +6,6 @@
  */
 
 use std::mem;
-#[cfg(feature = "python3")]
 use std::os::raw::c_char;
 use std::slice;
 
@@ -16,15 +15,12 @@ use ffi::PyBytes_Type;
 use ffi::PyObject;
 use ffi::PyTypeObject;
 use ffi::PyVarObject;
-#[cfg(feature = "python3")]
 use ffi::Py_hash_t;
 use ffi::Py_ssize_t;
 use ffi::_PyObject_NewVar;
-#[cfg(feature = "python3")]
 use python3_sys as ffi;
 
 // From Python bytesobject.h. Must match the C definition.
-#[cfg(feature = "python3")]
 #[repr(C)]
 struct PyBytesObject {
     pub ob_base: PyVarObject,
@@ -44,7 +40,6 @@ pub fn allocate_pybytes(py: RustPythonGILGuard<'_>, size: usize) -> (RustPyObjec
         let mut ptr: *mut PyObject = mem::transmute(ptr);
         let typed: *mut PyBytesObject = mem::transmute(ptr);
         (*typed).ob_shash = -1; // hash not calculated
-        #[cfg(feature = "python3")]
         {
             (*typed).ob_base.ob_size = size as Py_ssize_t;
         }

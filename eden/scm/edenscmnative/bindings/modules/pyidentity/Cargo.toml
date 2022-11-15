@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 identity = { path = "../../../../lib/identity" }
 cpython = { version = "0.7", default-features = false }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }

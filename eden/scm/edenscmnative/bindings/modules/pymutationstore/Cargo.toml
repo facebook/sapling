@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.20"
 async-runtime = { path = "../../../../lib/async-runtime" }
 byteorder = "1.2.7"
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 mutationstore = { path = "../../../../lib/mutationstore" }
 pydag = { path = "../pydag" }
@@ -15,5 +15,3 @@ thiserror = "1.0.5"
 types = { path = "../../../../lib/types" }
 vlqencoding = { path = "../../../../lib/vlqencoding" }
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

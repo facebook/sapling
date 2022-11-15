@@ -7,9 +7,7 @@ edition = "2021"
 clidispatch = { path = "../../../../lib/clidispatch" }
 cliparser = { path = "../../../../lib/cliparser", features = ["python"] }
 configmodel = { path = "../../../../lib/config/model" }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 pyconfigparser = { path = "../pyconfigparser" }
 
-[features]
-python3 = ["cpython/python3-sys", "cpython_ext/python3"]

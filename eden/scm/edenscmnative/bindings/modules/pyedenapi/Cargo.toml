@@ -8,7 +8,7 @@ anyhow = "1.0"
 async-runtime = { path = "../../../../lib/async-runtime" }
 blake2 = "0.9"
 cpython_async = { path = "../../../../lib/cpython-async", default-features = false }
-cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 dag-types = { path = "../../../../lib/dag/dag-types" }
 edenapi = { path = "../../../../lib/edenapi" }
@@ -23,6 +23,3 @@ pyrevisionstore = { path = "../pyrevisionstore" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 types = { path = "../../../../lib/types" }
 
-[features]
-default = []
-python3 = ["cpython/python3-sys", "cpython_ext/python3", "cpython_async/python3"]
