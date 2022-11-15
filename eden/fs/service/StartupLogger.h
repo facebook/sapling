@@ -113,10 +113,11 @@ class StartupLogger {
    * process to exit if edenfs has daemonized.
    */
   template <typename... Args>
-  [[noreturn]] void exitUnsuccessfully(uint8_t exitCode, Args&&... args) {
+  [[noreturn]] void exitUnsuccessfully(uint8_t exitCode, const Args&... args) {
     writeMessage(
         folly::LogLevel::ERR,
-        folly::to<std::string>(std::forward<Args>(args)...));
+        fmt::to_string(
+            fmt::join(std::make_tuple<const Args&...>(args...), "")));
     failAndExitImpl(exitCode);
     folly::assume_unreachable();
   }

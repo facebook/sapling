@@ -193,13 +193,13 @@ DaemonStartupLogger::ChildHandler DaemonStartupLogger::spawnImpl(
   auto exePath = executablePath();
   auto canonPath = realpath(exePath.c_str());
   if (exePath != canonPath) {
-    throw std::runtime_error(fmt::format(
+    throwf<std::runtime_error>(
         "Refusing to start because my exePath {} "
         "is not the realpath to myself (which is {}). "
         "This is an unsafe installation and may be an indication of a "
         "symlink attack or similar attempt to escalate privileges",
         exePath,
-        canonPath));
+        canonPath);
   }
 
   SpawnedProcess::Options opts;

@@ -605,8 +605,11 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   struct stat helperStat {};
   struct stat selfStat {};
 
-  checkUnixError(lstat(exePath.c_str(), &selfStat), "lstat ", exePath);
-  checkUnixError(lstat(helperPath.c_str(), &helperStat), "lstat ", helperPath);
+  checkUnixError(
+      lstat(exePath.c_str(), &selfStat), fmt::format("lstat {}", exePath));
+  checkUnixError(
+      lstat(helperPath.c_str(), &helperStat),
+      fmt::format("lstat {}", helperPath));
 
   if (isSetuid) {
     // We are a setuid binary.  Require that our executable be owned by

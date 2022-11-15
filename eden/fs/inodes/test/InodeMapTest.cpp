@@ -377,7 +377,7 @@ TEST(InodeMap, lookingUpAnUnloadedInodeAddsLoadsToTraceBus) {
 
   // Detect inode load events and add events to synchronized queue
   auto handle = trace_bus.subscribeFunction(
-      folly::to<std::string>("inodeMapTest-", edenMount->getPath().basename()),
+      fmt::format("inodeMapTest-{}", edenMount->getPath().basename()),
       [&](const InodeTraceEvent& event) {
         if (event.eventType == InodeEventType::LOAD) {
           std::cout << "Event: " << event.getPath() << " " << event.ino << " "

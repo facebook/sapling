@@ -530,8 +530,8 @@ TEST(TreeInode, addNewMaterializationsToInodeTraceBus) {
 
   // Detect inode materialization events and add events to synchronized queue
   auto handle = trace_bus.subscribeFunction(
-      folly::to<std::string>(
-          "treeInodeTest-", mount.getEdenMount()->getPath().basename()),
+      fmt::format(
+          "treeInodeTest-{}", mount.getEdenMount()->getPath().basename()),
       [&](const InodeTraceEvent& event) {
         if (event.eventType == InodeEventType::MATERIALIZE) {
           queue.enqueue(event);

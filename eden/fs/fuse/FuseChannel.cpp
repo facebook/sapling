@@ -1135,12 +1135,12 @@ void FuseChannel::sendInvalidateEntry(
       throwSystemErrorExplicit(
           exc.code().value(),
           "error invalidating FUSE entry ",
-          name,
+          namePiece,
           " in directory inode ",
           parent);
     } else {
-      XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent << ", name=" << name
-                 << ") failed with ENOENT";
+      XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent
+                 << ", name=" << namePiece << ") failed with ENOENT";
     }
   }
 }
@@ -1222,7 +1222,7 @@ void FuseChannel::setThreadSigmask() {
 void FuseChannel::initWorkerThread() noexcept {
   try {
     setThreadSigmask();
-    setThreadName(to<std::string>("fuse", mountPath_.basename()));
+    setThreadName(fmt::format("fuse{}", mountPath_.basename()));
 
     // Read the INIT packet
     readInitPacket();
@@ -1246,7 +1246,7 @@ void FuseChannel::initWorkerThread() noexcept {
 
 void FuseChannel::fuseWorkerThread() noexcept {
   disablePthreadCancellation();
-  setThreadName(to<std::string>("fuse", mountPath_.basename()));
+  setThreadName(fmt::format("fuse{}", mountPath_.basename()));
   setThreadSigmask();
   *(liveRequestWatches_.get()) =
       std::make_shared<RequestMetricsScope::LockedRequestWatchList>();
@@ -1281,7 +1281,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
 }
 
 void FuseChannel::invalidationThread() noexcept {
-  setThreadName(to<std::string>("inval", mountPath_.basename()));
+  setThreadName(fmt::format("inval{}", mountPath_.basename()));
 
   // We send all FUSE_NOTIFY_INVAL_ENTRY and FUSE_NOTIFY_INVAL_INODE requests
   // in a dedicated thread.  These requests will block in the kernel until it
@@ -2485,10 +2485,9 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseFallocate(
 
 FuseDeviceUnmountedDuringInitialization::
     FuseDeviceUnmountedDuringInitialization(AbsolutePathPiece mountPath)
-    : std::runtime_error{folly::to<string>(
-          "FUSE mount \"",
-          mountPath,
-          "\" was unmounted before we received the INIT packet"_sp)} {}
+    : std::runtime_error{fmt::format(
+          "FUSE mount \"{}\" was unmounted before we received the INIT packet",
+          mountPath)} {}
 
 size_t FuseChannel::getRequestMetric(
     RequestMetricsScope::RequestMetric metric) const {

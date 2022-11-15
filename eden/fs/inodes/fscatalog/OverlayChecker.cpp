@@ -308,8 +308,8 @@ class OverlayChecker::ShardDirectoryEnumerationError
       : path_(path), error_(error) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>(
-        "fsck error attempting to enumerate ", path_, ": ", error_.message());
+    return fmt::format(
+        "fsck error attempting to enumerate {}: {}", path_, error_.message());
   }
 
   bool repair(RepairState& /* repair */) const override {
@@ -336,7 +336,7 @@ class OverlayChecker::UnexpectedOverlayFile : public OverlayChecker::Error {
   explicit UnexpectedOverlayFile(AbsolutePathPiece path) : path_(path) {}
 
   string getMessage(OverlayChecker*) const override {
-    return folly::to<string>("unexpected file present in overlay: ", path_);
+    return fmt::format("unexpected file present in overlay: {}", path_);
   }
 
   bool repair(RepairState& /* repair */) const override {
@@ -392,7 +392,11 @@ class OverlayChecker::InodeDataError : public OverlayChecker::Error {
     auto srcPath = repair.fcs()->getAbsoluteFilePath(number_);
     auto ret = ::rename(srcPath.c_str(), outputPath.c_str());
     folly::checkUnixError(
-        ret, "failed to rename inode data ", srcPath, " to ", outputPath);
+        ret,
+        "failed to rename inode data ",
+        srcPath.view(),
+        " to ",
+        outputPath.view());
 
     // Create replacement data for this inode in the overlay.
     const auto& inodes = repair.checker()->impl_->inodes;
@@ -612,7 +616,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
             "read error while copying symlink data from inode ",
             number,
             " to ",
-            archivePath);
+            archivePath.view());
       }
       if (0 < bytesRead && static_cast<size_t>(bytesRead) < maxLength) {
         auto rc = ::symlink(contents.data(), archivePath.value().c_str());
@@ -641,7 +645,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
             "read error while copying data from inode ",
             number,
             " to ",
-            archivePath);
+            archivePath.view());
       } else if (bytesRead == 0) {
         break;
       }
@@ -652,7 +656,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           "write error while copying data from inode ",
           number,
           " to ",
-          archivePath);
+          archivePath.view());
     }
 
     // Now remove the orphan inode file

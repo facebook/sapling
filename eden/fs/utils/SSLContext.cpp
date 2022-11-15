@@ -18,7 +18,7 @@ std::shared_ptr<folly::SSLContext> buildSSLContext(
     std::optional<AbsolutePath> clientCertificate) {
   auto sslContext = std::make_shared<folly::SSLContext>();
   if (clientCertificate) {
-    auto path = folly::to<std::string>(clientCertificate.value());
+    auto path = fmt::to_string(clientCertificate.value());
     XLOG(DBG2) << "build SSLContext with client certificate: " << path;
     sslContext->loadCertificate(path.c_str(), "PEM");
     sslContext->loadPrivateKey(path.c_str(), "PEM");

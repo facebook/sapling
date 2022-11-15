@@ -635,7 +635,7 @@ SpawnedProcess::SpawnedProcess(
 
   std::wstring execPath, cwd;
   if (options.execPath_) {
-    execPath = multibyteToWideString(options.execPath_->stringPiece());
+    execPath = multibyteToWideString(options.execPath_->view());
   }
   if (options.cwd_) {
     cwd = multibyteToWideString(options.cwd_->viewWithoutUNC());

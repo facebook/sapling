@@ -133,7 +133,7 @@ void HgRepo::appendToHgrc(folly::StringPiece data) {
   auto hgrcPath = path_ + ".hg"_pc + "hgrc"_pc;
   folly::File hgrc{hgrcPath.stringPiece(), O_WRONLY | O_APPEND | O_CREAT};
   if (folly::writeFull(hgrc.fd(), data.data(), data.size()) < 0) {
-    folly::throwSystemError("error writing to ", hgrcPath);
+    folly::throwSystemError("error writing to ", hgrcPath.view());
   }
 }
 
@@ -161,7 +161,7 @@ Hash20 HgRepo::getManifestForCommit(const RootId& commit) {
 void HgRepo::mkdir(RelativePathPiece path, mode_t permissions) {
   auto fullPath = path_ + path;
   auto rc = ::mkdir(fullPath.value().c_str(), permissions);
-  folly::checkUnixError(rc, "mkdir ", fullPath);
+  folly::checkUnixError(rc, "mkdir ", fullPath.view());
 }
 
 void HgRepo::writeFile(
@@ -177,7 +177,7 @@ void HgRepo::writeFile(
 void HgRepo::symlink(StringPiece contents, RelativePathPiece path) {
   auto fullPath = path_ + path;
   auto rc = ::symlink(contents.str().c_str(), fullPath.value().c_str());
-  folly::checkUnixError(rc, "error creating symlink at ", path);
+  folly::checkUnixError(rc, "error creating symlink at ", path.view());
 }
 
 bool testEnvironmentSupportsHg() {

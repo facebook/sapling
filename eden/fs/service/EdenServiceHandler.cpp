@@ -1176,7 +1176,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 #ifdef _WIN32
   if (prjfsChannel) {
     context->subHandle = prjfsChannel->getTraceBusPtr()->subscribeFunction(
-        folly::to<std::string>("strace-", edenMount->getPath().basename()),
+        fmt::format("strace-{}", edenMount->getPath().basename()),
         [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
             const PrjfsTraceEvent& event) {
           FsEvent te;
@@ -1209,7 +1209,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 #else
   if (fuseChannel) {
     context->subHandle = fuseChannel->getTraceBus().subscribeFunction(
-        folly::to<std::string>("strace-", edenMount->getPath().basename()),
+        fmt::format("strace-{}", edenMount->getPath().basename()),
         [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
          serverState = server_->getServerState(),
          eventCategoryMask](const FuseTraceEvent& event) {
@@ -1250,7 +1250,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
         });
   } else if (nfsdChannel) {
     context->subHandle = nfsdChannel->getTraceBus().subscribeFunction(
-        folly::to<std::string>("strace-", edenMount->getPath().basename()),
+        fmt::format("strace-{}", edenMount->getPath().basename()),
         [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
          eventCategoryMask](const NfsTraceEvent& event) {
           if (isEventMasked(eventCategoryMask, event)) {
@@ -1319,10 +1319,9 @@ std::shared_ptr<HgQueuedBackingStore> castToHgQueuedBackingStore(
     auto& r = *backingStore.get();
     throw newEdenError(
         EdenErrorType::GENERIC_ERROR,
-        folly::to<std::string>(
-            "mount ",
+        fmt::format(
+            "mount {} must use HgQueuedBackingStore, type is {}",
             mountPath,
-            " must use HgQueuedBackingStore, type is ",
             typeid(r).name()));
   }
 
@@ -1416,7 +1415,7 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
       });
 
   context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
-      folly::to<std::string>("hgtrace-", edenMount->getPath().basename()),
+      fmt::format("hgtrace-{}", edenMount->getPath().basename()),
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
           const HgImportTraceEvent& event) {
         HgEvent thriftEvent;
@@ -1467,7 +1466,7 @@ apache::thrift::ServerStream<InodeEvent> EdenServiceHandler::traceInodeEvents(
       });
 
   context->subHandle = edenMount->getInodeTraceBus().subscribeFunction(
-      folly::to<std::string>("inodetrace-", edenMount->getPath().basename()),
+      fmt::format("inodetrace-{}", edenMount->getPath().basename()),
       [publisher = ThriftStreamPublisherOwner{std::move(publisher)},
        inodeMap](const InodeTraceEvent& event) {
         InodeEvent thriftEvent;

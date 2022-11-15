@@ -417,14 +417,14 @@ folly::File mountMacFuse(
   std::vector<std::string> args = {
       "/Library/Filesystems/macfuse.fs/Contents/Resources/mount_macfuse",
       "-ofsname=eden",
-      folly::to<std::string>("-ovolname=", canonicalPath.basename()),
+      fmt::format("-ovolname={}", canonicalPath.basename()),
       "-ofstypename=eden",
-      folly::to<std::string>("-oblocksize=", FUSE_DEFAULT_BLOCKSIZE),
-      folly::to<std::string>(
-          "-odaemon_timeout=",
+      fmt::format("-oblocksize={}", FUSE_DEFAULT_BLOCKSIZE),
+      fmt::format(
+          "-odaemon_timeout={}",
           std::chrono::duration_cast<std::chrono::seconds>(fuseTimeout)
               .count()),
-      folly::to<std::string>("-oiosize=", 1024 * 1024),
+      fmt::format("-oiosize={}", 1024 * 1024),
       "-oallow_other",
       "-odefault_permissions",
       canonicalPath.asString(),

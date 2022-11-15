@@ -212,7 +212,7 @@ folly::Expected<RelativePath, int> joinAndNormalize(
   }
   const std::string joined = base.value().empty() ? path.str()
       : path.empty()                              ? std::string{base.value()}
-                     : folly::to<std::string>(base, kDirSeparator, path);
+                     : fmt::format("{}{}{}", base, kDirSeparator, path);
   const CanonicalData cdata{canonicalPathData(joined)};
   const auto& parts{cdata.components};
   XDCHECK(!cdata.isAbsolute);
@@ -286,7 +286,7 @@ std::pair<PathComponentPiece, RelativePathPiece> splitFirst(
 void validatePathComponentLength(PathComponentPiece name) {
   if (name.value().size() > kMaxPathComponentLength) {
     folly::throwSystemErrorExplicit(
-        ENAMETOOLONG, "path component too long: ", name);
+        ENAMETOOLONG, fmt::format("path component too long: {}", name));
   }
 }
 

@@ -123,8 +123,7 @@ std::string TreeEntry::toLogString(PathComponentPiece name) const {
       break;
   }
 
-  return folly::to<std::string>(
-      "(", name, ", ", hash_, ", ", fileTypeChar, ")");
+  return fmt::format("({}, {}, {})", name, hash_, fileTypeChar);
 }
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type) {

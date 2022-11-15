@@ -118,18 +118,14 @@ std::string EdenConfig::toString(ConfigSource cs) const {
 }
 
 std::string EdenConfig::toString() const {
-  std::string rslt;
-  rslt += folly::to<std::string>(
-      "[ EdenConfig settings ]\n",
-      "userConfigPath=",
+  std::string rslt = fmt::format(
+      "[ EdenConfig settings ]\n"
+      "userConfigPath={}\n"
+      "systemConfigDir={}\n"
+      "systemConfigPath={}\n",
       userConfigPath_,
-      "\n"
-      "systemConfigDir=",
       systemConfigDir_,
-      "\n"
-      "systemConfigPath=",
-      systemConfigPath_,
-      "\n");
+      systemConfigPath_);
 
   rslt += "[ EdenConfig values ]\n";
   for (const auto& sectionEntry : configMap_) {

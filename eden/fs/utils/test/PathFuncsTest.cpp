@@ -205,7 +205,7 @@ TEST(PathFuncs, IteratorDecrement) {
                            StringPiece function,
                            const auto& range,
                            const vector<string>& expectedList) {
-    SCOPED_TRACE(folly::to<string>(path, ".", function, "()"));
+    SCOPED_TRACE(fmt::format("{}.{}()", path, function));
     auto iter = range.end();
     for (const auto& expectedPath : expectedList) {
       ASSERT_FALSE(iter == range.begin());

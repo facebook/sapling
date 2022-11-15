@@ -113,7 +113,7 @@ bool FileContentStore::initialize(bool createIfNonExisting) {
         "error reading eden overlay info file ", infoPath.stringPiece());
   } else {
     if (!createIfNonExisting) {
-      folly::throwSystemError("overlay does not exist at ", localDir_);
+      folly::throwSystemError("overlay does not exist at ", localDir_.view());
     }
     // This is a brand new overlay directory.
     initNewOverlay();
@@ -122,7 +122,8 @@ bool FileContentStore::initialize(bool createIfNonExisting) {
   }
 
   if (!infoFile_.try_lock()) {
-    folly::throwSystemError("failed to acquire overlay lock on ", infoPath);
+    folly::throwSystemError(
+        "failed to acquire overlay lock on ", infoPath.view());
   }
 
   // Open a handle on the overlay directory itself
@@ -372,7 +373,7 @@ std::optional<overlay::OverlayDir> FileContentStore::deserializeOverlayDir(
         "error opening overlay file for inode ",
         inodeNumber,
         " in ",
-        localDir_);
+        localDir_.view());
   }
   folly::File file{fd, /* ownsFd */ true};
 
@@ -385,7 +386,7 @@ std::optional<overlay::OverlayDir> FileContentStore::deserializeOverlayDir(
       return std::nullopt;
     }
     folly::throwSystemErrorExplicit(
-        errno, "failed to read ", RelativePathPiece{path});
+        errno, "failed to read ", RelativePathPiece{path}.view());
   }
 
   StringPiece contents{serializedData};
@@ -437,7 +438,7 @@ folly::File FileContentStore::openFile(
         "failed to read overlay file for inode ",
         inodeNumber,
         " in ",
-        localDir_);
+        localDir_.view());
   }
 
   validateHeader(inodeNumber, contents, headerId);
@@ -453,7 +454,7 @@ folly::File FileContentStore::openFileNoVerify(InodeNumber inodeNumber) {
       "error opening overlay file for inode ",
       inodeNumber,
       " in ",
-      localDir_);
+      localDir_.view());
   return folly::File{fd, /* ownsFd */ true};
 }
 
@@ -507,7 +508,7 @@ folly::File FileContentStore::createOverlayFileImpl(
       "failed to create temporary overlay file for inode ",
       inodeNumber,
       " in ",
-      localDir_);
+      localDir_.view());
   folly::File file{tmpFD, /* ownsFd */ true};
   bool success = false;
   SCOPE_EXIT {
@@ -522,7 +523,7 @@ folly::File FileContentStore::createOverlayFileImpl(
       "error writing to overlay file for inode ",
       inodeNumber,
       " in ",
-      localDir_);
+      localDir_.view());
 
   // fdatasync() is required to ensure that we are really reliably and
   // atomically writing out the new file.  Without calling fdatasync() the file
@@ -546,7 +547,7 @@ folly::File FileContentStore::createOverlayFileImpl(
         "error flushing data to overlay file for inode ",
         inodeNumber,
         " in ",
-        localDir_);
+        localDir_.view());
   }
 
   auto returnCode =
@@ -556,7 +557,7 @@ folly::File FileContentStore::createOverlayFileImpl(
       "error committing overlay file for inode ",
       inodeNumber,
       " in ",
-      localDir_);
+      localDir_.view());
   // We do not want to unlink the temporary file on exit now that we have
   // successfully renamed it.
   success = true;
@@ -648,7 +649,7 @@ void FileContentStore::removeOverlayFile(InodeNumber inodeNumber) {
     XLOG(DBG4) << "removed overlay data for inode " << inodeNumber;
   } else if (errno != ENOENT) {
     folly::throwSystemError(
-        "error unlinking overlay file: ", RelativePathPiece{path});
+        "error unlinking overlay file: ", RelativePathPiece{path}.view());
   }
 }
 

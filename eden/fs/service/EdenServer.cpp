@@ -860,9 +860,9 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     //
     // If --takeover was not specified, fail now.
     if (!FLAGS_takeover) {
-      throw std::runtime_error(folly::to<string>(
-          "another instance of Eden appears to be running for ",
-          edenDir_.getPath()));
+      throwf<std::runtime_error>(
+          "another instance of Eden appears to be running for {}",
+          edenDir_.getPath());
     }
     doingTakeover = true;
   }
@@ -977,7 +977,7 @@ std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {
   if (!inputFile.is_open()) {
     if (errno != ENOENT) {
       folly::throwSystemErrorExplicit(
-          errno, "unable to open EdenFS config ", configPath);
+          errno, "unable to open EdenFS config ", configPath.view());
     }
     // No config file, assume an empty table.
     return cpptoml::make_table();
@@ -1282,8 +1282,7 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
       throw newEdenError(
           EEXIST,
           EdenErrorType::POSIX_ERROR,
-          folly::to<string>(
-              "mount point \"", mountPath, "\" is already mounted"));
+          fmt::format("mount point \"{}\" is already mounted", mountPath));
     }
   }
 }
@@ -1735,8 +1734,7 @@ shared_ptr<EdenMount> EdenServer::getMount(AbsolutePathPiece mountPath) const {
     throw newEdenError(
         EBUSY,
         EdenErrorType::POSIX_ERROR,
-        folly::to<string>(
-            "mount point \"", mountPath, "\" is still initializing"));
+        fmt::format("mount point \"{}\" is still initializing", mountPath));
   }
   return mount;
 }
@@ -1749,10 +1747,9 @@ shared_ptr<EdenMount> EdenServer::getMountUnsafe(
     throw newEdenError(
         ENOENT,
         EdenErrorType::POSIX_ERROR,
-        folly::to<string>(
-            "mount point \"",
-            mountPath,
-            "\" is not known to this eden instance"));
+        fmt::format(
+            "mount point \"{}\" is not known to this eden instance",
+            mountPath));
   }
   return it->second.edenMount;
 }

@@ -427,8 +427,8 @@ TEST_F(FileInodeTest, addNewMaterializationsToInodeTraceBus) {
 
   // Detect inode materialization events and add events to synchronized queue
   auto handle = trace_bus.subscribeFunction(
-      folly::to<std::string>(
-          "fileInodeTest-", mount_.getEdenMount()->getPath().basename()),
+      fmt::format(
+          "fileInodeTest-{}", mount_.getEdenMount()->getPath().basename()),
       [&](const InodeTraceEvent& event) {
         if (event.eventType == InodeEventType::MATERIALIZE) {
           queue_.enqueue(event);

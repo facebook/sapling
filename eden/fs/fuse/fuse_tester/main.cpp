@@ -70,8 +70,8 @@ void ensureEmptyDirectory(AbsolutePathPiece path) {
   if (!boost::filesystem::create_directories(boostPath)) {
     // This directory already existed.  Make sure it is empty.
     if (!boost::filesystem::is_empty(boostPath)) {
-      throw std::runtime_error(
-          folly::to<string>(path, " does not refer to an empty directory"));
+      throwf<std::runtime_error>(
+          "{} does not refer to an empty directory", path);
     }
   }
 }

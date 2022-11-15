@@ -7,7 +7,6 @@
 
 #include "eden/fs/testharness/FakePrivHelper.h"
 
-#include <folly/Conv.h>
 #include <folly/File.h>
 #include <folly/futures/Future.h>
 #include <utility>
@@ -34,10 +33,10 @@ FakeFuseMountDelegate::FakeFuseMountDelegate(
 
 folly::Future<folly::File> FakeFuseMountDelegate::fuseMount() {
   if (fuse_->isStarted()) {
-    throw std::runtime_error(folly::to<string>(
-        "got request to create FUSE mount ",
-        mountPath_,
-        ", but this mount is already running"));
+    throwf<std::runtime_error>(
+        "got request to create FUSE mount {}, "
+        "but this mount is already running",
+        mountPath_);
   }
   return fuse_->start();
 }
@@ -46,10 +45,10 @@ folly::Future<folly::Unit> FakeFuseMountDelegate::fuseUnmount() {
   return folly::makeFutureWith([this] {
     wasFuseUnmountEverCalled_ = true;
     if (!fuse_->isStarted()) {
-      throw std::runtime_error(folly::to<string>(
-          "got request to unmount ",
-          mountPath_,
-          ", but this mount is not moutned"));
+      throwf<std::runtime_error>(
+          "got request to unmount {}, "
+          "but this mount is not mounted",
+          mountPath_);
     }
     return fuse_->close();
   });
@@ -76,8 +75,7 @@ void FakePrivHelper::registerMountDelegate(
   auto ret =
       mountDelegates_.emplace(mountPath.asString(), std::move(mountDelegate));
   if (!ret.second) {
-    throw std::range_error(
-        folly::to<string>("mount ", mountPath, " already defined"));
+    throwf<std::range_error>("mount {} already defined", mountPath);
   }
 }
 
@@ -151,10 +149,10 @@ std::shared_ptr<FakePrivHelper::MountDelegate> FakePrivHelper::getMountDelegate(
     folly::StringPiece mountPath) {
   auto it = mountDelegates_.find(mountPath.str());
   if (it == mountDelegates_.end()) {
-    throw std::range_error(folly::to<string>(
-        "got request to for FUSE mount ",
-        mountPath,
-        ", but no test FUSE endpoint defined for this path"));
+    throwf<std::range_error>(
+        "got request to for FUSE mount {}, "
+        "but no test FUSE endpoint defined for this path",
+        mountPath);
   }
   return it->second;
 }

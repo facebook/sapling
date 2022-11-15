@@ -2375,7 +2375,7 @@ void EdenMount::subscribeInodeActivityBuffer() {
 
   if (inodeActivityBuffer_.has_value()) {
     inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
-        folly::to<std::string>("inode-activitybuffer-", getPath().basename()),
+        fmt::format("inode-activitybuffer-{}", getPath().basename()),
         [this](const InodeTraceEvent& event) {
           // Use full path name for the inode event if available, otherwise
           // default to the filename already stored

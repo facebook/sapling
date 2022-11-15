@@ -1966,21 +1966,6 @@ std::ostream& operator<<(
   return stream;
 }
 
-// toAppend allows folly::to<> to operate on paths
-template <typename A, typename String>
-void toAppend(const detail::PathComponentBase<A>& a, String* result) {
-  toAppend(a.stringPiece(), result);
-}
-
-template <typename A, typename String>
-void toAppend(const detail::RelativePathBase<A>& a, String* result) {
-  toAppend(a.stringPiece(), result);
-}
-
-template <typename A, typename String>
-void toAppend(const detail::AbsolutePathBase<A>& a, String* result) {
-  toAppend(a.stringPiece(), result);
-}
 } // namespace detail
 
 // I'm not really a fan of operator overloading, but these
