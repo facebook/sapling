@@ -78,21 +78,8 @@ def isgitpeer(repo):
     return isgitstore(repo)
 
 
-def createrepo(ui, url, destpath=None):
+def createrepo(ui, url, destpath):
     from . import hg
-
-    if destpath is None:
-        # use basename as fallback, but strip ".git" or "/.git".
-        basename = os.path.basename(url)
-        if basename == ".git":
-            basename = os.path.basename(os.path.dirname(url))
-        elif basename.endswith(".git"):
-            basename = basename[:-4]
-        destpath = os.path.realpath(basename)
-
-    destpath = ui.expandpath(destpath)
-    if os.path.lexists(destpath):
-        raise error.Abort(_("destination '%s' already exists") % destpath)
 
     repo_config = "%include builtin:git.rc\n"
     if url:
@@ -113,6 +100,19 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
     If url is empty, create the repo but do not add a remote.
     """
     from . import hg
+
+    if destpath is None:
+        # use basename as fallback, but strip ".git" or "/.git".
+        basename = os.path.basename(url)
+        if basename == ".git":
+            basename = os.path.basename(os.path.dirname(url))
+        elif basename.endswith(".git"):
+            basename = basename[:-4]
+        destpath = os.path.realpath(basename)
+
+    destpath = ui.expandpath(destpath)
+    if os.path.lexists(destpath):
+        raise error.Abort(_("destination '%s' already exists") % destpath)
 
     try:
         repo = createrepo(ui, url, destpath)
