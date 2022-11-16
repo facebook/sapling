@@ -61,6 +61,12 @@ class GitBackingStore final : public BijectiveBackingStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
+  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+      const ObjectId& /*id*/,
+      const ObjectFetchContextPtr& /*context*/) override {
+    return nullptr;
+  }
+
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {
     XLOG(

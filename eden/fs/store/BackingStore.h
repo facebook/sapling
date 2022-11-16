@@ -121,13 +121,12 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
-   * Fetch blob metadata if available locally.
+   * Fetch blob metadata if available in a local cache. Returns nullptr if not
+   * locally available.
    */
   virtual std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
-      const ObjectId& /*id*/,
-      const ObjectFetchContextPtr& /*context*/) {
-    return nullptr;
-  }
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Prefetch all the blobs represented by the HashRange.
