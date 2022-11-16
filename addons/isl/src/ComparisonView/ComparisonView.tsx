@@ -101,27 +101,25 @@ export default function ComparisonView({comparison}: {comparison: Comparison}) {
   const compared = useRecoilValue(currentComparisonData(comparison));
 
   return (
-    <div data-testid="comparison-view">
+    <div data-testid="comparison-view" className="comparison-view">
       <ThemeProvider colorMode={theme === 'light' ? 'day' : 'night'}>
         <SplitDiffViewPrimerStyles />
-        <BaseStyles>
-          <div className="comparison-view">
-            <ComparisonViewHeader comparison={comparison} />
-            <div className="comparison-view-details">
-              {compared == null ? (
-                <Icon icon="loading" />
-              ) : compared.error != null ? (
-                <ErrorNotice error={compared.error} title={t('Unable to load comparison')} />
-              ) : compared.value.length === 0 ? (
-                <EmptyState>
-                  <T>No Changes</T>
-                </EmptyState>
-              ) : (
-                compared.value.map((parsed, i) => (
-                  <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
-                ))
-              )}
-            </div>
+        <BaseStyles className="comparison-view-base-styles">
+          <ComparisonViewHeader comparison={comparison} />
+          <div className="comparison-view-details">
+            {compared == null ? (
+              <Icon icon="loading" />
+            ) : compared.error != null ? (
+              <ErrorNotice error={compared.error} title={t('Unable to load comparison')} />
+            ) : compared.value.length === 0 ? (
+              <EmptyState>
+                <T>No Changes</T>
+              </EmptyState>
+            ) : (
+              compared.value.map((parsed, i) => (
+                <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
+              ))
+            )}
           </div>
         </BaseStyles>
       </ThemeProvider>

@@ -9,6 +9,12 @@
   width: 100%;
 }
 
+.comparison-view-base-styles,
+.comparison-view-container,
+.comparison-view {
+  display: contents;
+}
+
 .comparison-view-header {
   padding: var(--pad) 0 var(--halfpad) 0;
   margin-bottom: var(--pad);
