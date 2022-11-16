@@ -1903,6 +1903,8 @@ def _normalizepath(rawloc: str) -> str:
     if os.path.sep != "/":
         rawloc = rawloc.replace(":///", ":")
     rawloc = rawloc.replace("://", ":")
+    # remove trailing slash
+    rawloc = rawloc.rstrip("/")
     return rawloc
 
 
