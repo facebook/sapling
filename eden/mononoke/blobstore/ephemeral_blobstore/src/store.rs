@@ -81,11 +81,37 @@ mononoke_queries! {
          VALUES ({created_at}, {expires_at}, {owner_identity})"
     }
 
+    write AddBubbleLabels(
+        values: (
+            bubble_id: BubbleId,
+            label: &str,
+    )) {
+        insert_or_ignore,
+        "{insert_or_ignore} INTO ephemeral_bubble_labels (bubble_id, label)
+        VALUES {values}"
+    }
+
+    write DeleteBubbleLabels(
+        id: BubbleId,
+        >list labels: &str
+    ) {
+        none,
+        "DELETE FROM ephemeral_bubble_labels WHERE
+        bubble_id = {id} AND label IN {labels}"
+    }
+
     cacheable read SelectBubbleById(
         id: BubbleId,
     ) -> (Timestamp, ExpiryStatus, Option<String>) {
         "SELECT expires_at, expired, owner_identity FROM ephemeral_bubbles
          WHERE id = {id}"
+    }
+
+    read SelectBubbleLabelsById(
+        id: BubbleId,
+    ) -> (String, ) {
+        "SELECT label FROM ephemeral_bubble_labels
+        WHERE bubble_id = {id}"
     }
 
     read SelectBubbleFromChangeset(
@@ -151,6 +177,15 @@ mononoke_queries! {
         none,
         "DELETE
         FROM ephemeral_bubble_changeset_mapping
+        WHERE bubble_id IN (SELECT id FROM ephemeral_bubbles WHERE id = {id} AND expired)"
+    }
+
+    write DeleteExpiredBubbleLabels(
+        id: BubbleId,
+    ) {
+        none,
+        "DELETE
+        FROM ephemeral_bubble_labels
         WHERE bubble_id IN (SELECT id FROM ephemeral_bubbles WHERE id = {id} AND expired)"
     }
 }
