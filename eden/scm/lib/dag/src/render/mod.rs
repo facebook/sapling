@@ -30,5 +30,6 @@ pub use self::render::NodeLine;
 pub use self::render::PadLine;
 pub use self::render::Renderer;
 pub use self::render_utils::render_namedag;
+pub use self::render_utils::render_namedag_structured;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use self::render_utils::render_segment_dag;

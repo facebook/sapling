@@ -18,6 +18,7 @@ use super::render::Renderer;
 use crate::nameset::SyncNameSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
+use crate::render::render::GraphRow;
 use crate::DagAlgorithm;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Group;
@@ -68,6 +69,41 @@ pub fn render_namedag(
             .join("\n")
     );
     Ok(output)
+}
+
+/// Render a NameDag or MemNameDag into structured `GraphRow`s.
+/// The `GraphRow` can serialize to other formats.
+pub fn render_namedag_structured(dag: &dyn DagAlgorithm) -> Result<Vec<GraphRow<VertexName>>> {
+    let mut renderer = super::GraphRowRenderer::new();
+    let next_rows = dag_to_renderer_next_rows(dag)?;
+    let mut out = Vec::with_capacity(next_rows.len());
+    for (node, parents) in next_rows {
+        let name = String::from_utf8_lossy(node.as_ref()).into_owned();
+        let message = Default::default();
+        let row = renderer.next_row(node, parents, name, message);
+        out.push(row);
+    }
+    Ok(out)
+}
+
+/// Produce inputs (node, parents) for graph_row.
+fn dag_to_renderer_next_rows(
+    dag: &(impl DagAlgorithm + ?Sized),
+) -> Result<Vec<(VertexName, Vec<Ancestor<VertexName>>)>> {
+    let iter: Vec<_> = non_blocking_result(dag.all())?
+        .iter()?
+        .collect::<crate::Result<_>>()?;
+
+    let mut out = Vec::with_capacity(iter.len());
+    for node in iter {
+        let parents = non_blocking_result(dag.parent_names(node.clone()))?
+            .into_iter()
+            .map(Ancestor::Parent)
+            .collect();
+        out.push((node, parents));
+    }
+
+    Ok(out)
 }
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
