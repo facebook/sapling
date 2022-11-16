@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<5852f6141b4109122d2adad9c45799b1>>
+ * @generated SignedSource<<a391da59ccb8938a2cd04ed52e7f5689>>
  *
  */
 
@@ -194,7 +194,7 @@ RustCFallibleBase rust_test_cfallible_ok();
 
 void rust_test_cfallible_ok_free(uint8_t *val);
 
-/// Returns a `CFallible` with error message "failure!". This function is intended to be called
+/// Returns a `CFallible` with error message "context: failure!". This function is intended to be called
 /// from C++ tests.
 RustCFallibleBase rust_test_cfallible_err();
 

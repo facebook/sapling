@@ -10,6 +10,10 @@
 #
 #   cargo install --force cbindgen
 
+cd "$(dirname "$0")"/..
+
+set -e
+
 CONFIG="cbindgen.toml"
 OUTPUT="c_api/RustBackingStore.h"
 
