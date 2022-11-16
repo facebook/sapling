@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+extern crate identity;
+
 use std::ffi::CString;
 use std::ffi::OsString;
 use std::path::Path;
