@@ -10,7 +10,6 @@
 use std::slice;
 use std::str;
 
-use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
 use libc::c_char;
@@ -27,9 +26,14 @@ use crate::raw::FileAuxData;
 use crate::raw::Request;
 use crate::raw::Tree;
 
-fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [U]> {
-    ensure!(!ptr.is_null(), "string ptr is null");
-    Ok(unsafe { slice::from_raw_parts(ptr as *const U, length) })
+fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> &'a [U] {
+    if ptr.is_null() {
+        assert!(length == 0, "null slices must have zero length");
+        &[]
+    } else {
+        // TODO: validate sizeof(U) * len < isize::MAX
+        unsafe { slice::from_raw_parts(ptr as *const U, length) }
+    }
 }
 
 #[no_mangle]
@@ -42,7 +46,7 @@ pub extern "C" fn rust_backingstore_new(
     CFallible::make_with(|| {
         super::init::backingstore_global_init();
 
-        let repository = stringpiece_to_slice(repository, repository_len)?;
+        let repository = stringpiece_to_slice(repository, repository_len);
         let repo = str::from_utf8(repository)?;
         BackingStore::new(repo, aux_data, allow_retries)
     })
@@ -67,8 +71,8 @@ pub extern "C" fn rust_backingstore_get_blob(
     CFallible::make_with(|| {
         assert!(!store.is_null());
         let store = unsafe { &*store };
-        let path = stringpiece_to_slice(name, name_len)?;
-        let node = stringpiece_to_slice(node, node_len)?;
+        let path = stringpiece_to_slice(name, name_len);
+        let node = stringpiece_to_slice(node, node_len);
 
         store
             .get_blob(path, node, local)
@@ -110,7 +114,7 @@ pub extern "C" fn rust_backingstore_get_tree(
     CFallible::make_with(|| {
         assert!(!store.is_null());
         let store = unsafe { &*store };
-        let node = stringpiece_to_slice(node, node_len)?;
+        let node = stringpiece_to_slice(node, node_len);
 
         store
             .get_tree(node, local)
@@ -152,7 +156,7 @@ pub extern "C" fn rust_backingstore_get_file_aux(
     CFallible::make_with(|| {
         assert!(!store.is_null());
         let store = unsafe { &*store };
-        let node = stringpiece_to_slice(node, node_len)?;
+        let node = stringpiece_to_slice(node, node_len);
 
         store
             .get_file_aux(node, local)
