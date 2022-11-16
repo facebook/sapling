@@ -218,6 +218,8 @@ def print_diagnostic_info(
 
     print_system_mount_table(out)
 
+    print_system_load(out)
+
 
 def report_edenfs_bug(instance: EdenInstance, reporter: str) -> None:
     rage_lambda: Callable[
@@ -466,6 +468,32 @@ def print_system_mount_table(out: IO[bytes]) -> None:
         out.write(output)
     except Exception as e:
         out.write(f"Error printing system mount table: {e}\n".encode())
+
+
+def print_system_load(out: IO[bytes]) -> None:
+    if sys.platform not in ("darwin", "linux"):
+        return
+
+    try:
+        section_title("System load:", out)
+        if sys.platform == "linux":
+            output = subprocess.check_output(["top", "-b", "-n1"])
+
+            # Limit to the first 16 lines of output because top on CentOS
+            # doesn't seem to have a command-line flag for this.
+            output_lines = output.decode("utf-8").split(os.linesep)[:17]
+        elif sys.platform == "darwin":
+            output = subprocess.check_output(["top", "-l2", "-n10"])
+
+            # On macOS the first iteration of `top` will have incorrect CPU
+            # usage values for processes.  So here we wait for the second
+            # iteration and strip the first from the output.
+            output_lines = output.decode("utf-8").split(os.linesep)
+            output_lines = output_lines[len(output_lines) // 2 :]
+
+        out.write(os.linesep.join(output_lines).encode("utf-8"))
+    except Exception as e:
+        out.write(f"Error printing system load: {e}\n".encode())
 
 
 def print_eden_config(instance: EdenInstance, out: IO[bytes]) -> None:
