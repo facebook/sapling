@@ -14,6 +14,8 @@ if [ -f ./facebook/README.facebook.md ]; then
 fi
 
 export NODE_ENV=production
+echo "Cleaning dist"
+rm -rf ./dist
 echo "Building Extension"
 webpack --config extension.webpack.config.ts
 echo "Building Webview"
