@@ -32,21 +32,6 @@ fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [
     Ok(unsafe { slice::from_raw_parts(ptr as *const U, length) })
 }
 
-fn backingstore_new(
-    repository: *const c_char,
-    repository_len: size_t,
-    aux_data: bool,
-    allow_retries: bool,
-) -> Result<*mut BackingStore> {
-    super::init::backingstore_global_init();
-
-    let repository = stringpiece_to_slice(repository, repository_len)?;
-    let repo = str::from_utf8(repository)?;
-    let store = Box::new(BackingStore::new(repo, aux_data, allow_retries)?);
-
-    Ok(Box::into_raw(store))
-}
-
 #[no_mangle]
 pub extern "C" fn rust_backingstore_new(
     repository: *const c_char,
@@ -54,7 +39,13 @@ pub extern "C" fn rust_backingstore_new(
     aux_data: bool,
     allow_retries: bool,
 ) -> CFallible<BackingStore> {
-    backingstore_new(repository, repository_len, aux_data, allow_retries).into()
+    CFallible::make_with(|| {
+        super::init::backingstore_global_init();
+
+        let repository = stringpiece_to_slice(repository, repository_len)?;
+        let repo = str::from_utf8(repository)?;
+        BackingStore::new(repo, aux_data, allow_retries)
+    })
 }
 
 #[no_mangle]
@@ -62,26 +53,6 @@ pub extern "C" fn rust_backingstore_free(store: *mut BackingStore) {
     assert!(!store.is_null());
     let store = unsafe { Box::from_raw(store) };
     drop(store);
-}
-
-fn backingstore_get_blob(
-    store: *mut BackingStore,
-    name: *const u8,
-    name_len: usize,
-    node: *const u8,
-    node_len: usize,
-    local: bool,
-) -> Result<*mut CBytes> {
-    assert!(!store.is_null());
-    let store = unsafe { &*store };
-    let path = stringpiece_to_slice(name, name_len)?;
-    let node = stringpiece_to_slice(node, node_len)?;
-
-    store
-        .get_blob(path, node, local)
-        .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-        .map(CBytes::from_vec)
-        .map(|result| Box::into_raw(Box::new(result)))
 }
 
 #[no_mangle]
@@ -93,7 +64,17 @@ pub extern "C" fn rust_backingstore_get_blob(
     node_len: usize,
     local: bool,
 ) -> CFallible<CBytes> {
-    backingstore_get_blob(store, name, name_len, node, node_len, local).into()
+    CFallible::make_with(|| {
+        assert!(!store.is_null());
+        let store = unsafe { &*store };
+        let path = stringpiece_to_slice(name, name_len)?;
+        let node = stringpiece_to_slice(node, node_len)?;
+
+        store
+            .get_blob(path, node, local)
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
+            .map(CBytes::from_vec)
+    })
 }
 
 #[no_mangle]
@@ -119,23 +100,6 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
     });
 }
 
-fn backingstore_get_tree(
-    store: *mut BackingStore,
-    node: *const u8,
-    node_len: usize,
-    local: bool,
-) -> Result<*mut Tree> {
-    assert!(!store.is_null());
-    let store = unsafe { &*store };
-    let node = stringpiece_to_slice(node, node_len)?;
-
-    store
-        .get_tree(node, local)
-        .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
-        .and_then(|list| list.try_into())
-        .map(|result| Box::into_raw(Box::new(result)))
-}
-
 #[no_mangle]
 pub extern "C" fn rust_backingstore_get_tree(
     store: *mut BackingStore,
@@ -143,7 +107,16 @@ pub extern "C" fn rust_backingstore_get_tree(
     node_len: usize,
     local: bool,
 ) -> CFallible<Tree> {
-    backingstore_get_tree(store, node, node_len, local).into()
+    CFallible::make_with(|| {
+        assert!(!store.is_null());
+        let store = unsafe { &*store };
+        let node = stringpiece_to_slice(node, node_len)?;
+
+        store
+            .get_tree(node, local)
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
+            .and_then(|list| list.try_into())
+    })
 }
 
 #[no_mangle]
@@ -169,23 +142,6 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
     });
 }
 
-fn backingstore_get_file_aux(
-    store: *mut BackingStore,
-    node: *const u8,
-    node_len: usize,
-    local: bool,
-) -> Result<*mut FileAuxData> {
-    assert!(!store.is_null());
-    let store = unsafe { &*store };
-    let node = stringpiece_to_slice(node, node_len)?;
-
-    store
-        .get_file_aux(node, local)
-        .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))
-        .map(|aux| aux.into())
-        .map(|result| Box::into_raw(Box::new(result)))
-}
-
 #[no_mangle]
 pub extern "C" fn rust_backingstore_get_file_aux(
     store: *mut BackingStore,
@@ -193,7 +149,16 @@ pub extern "C" fn rust_backingstore_get_file_aux(
     node_len: usize,
     local: bool,
 ) -> CFallible<FileAuxData> {
-    backingstore_get_file_aux(store, node, node_len, local).into()
+    CFallible::make_with(|| {
+        assert!(!store.is_null());
+        let store = unsafe { &*store };
+        let node = stringpiece_to_slice(node, node_len)?;
+
+        store
+            .get_file_aux(node, local)
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))
+            .map(|aux| aux.into())
+    })
 }
 
 #[no_mangle]

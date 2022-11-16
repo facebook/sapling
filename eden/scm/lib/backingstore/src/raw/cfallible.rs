@@ -34,6 +34,10 @@ pub struct CFallible<T> {
 }
 
 impl<T> CFallible<T> {
+    pub fn make_with<F: FnOnce() -> Result<T>>(f: F) -> CFallible<T> {
+        f().map(|x| Box::into_raw(Box::new(x))).into()
+    }
+
     /// Creates a `CFallible` with a valid pointer and no error.
     pub fn ok(value: *mut T) -> Self {
         CFallible {
