@@ -1,0 +1,4 @@
+Cargo.lock
+target
+wasm-pack.log
+pkg/README.md

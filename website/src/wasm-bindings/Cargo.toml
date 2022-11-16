@@ -1,0 +1,30 @@
+[package]
+name = "wasm-bindings"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+console_error_panic_hook = "0.1"
+dag = { path = "../../../scm/lib/dag", default-features = false }
+drawdag = { path = "../../../scm/lib/drawdag" }
+getrandom = { version = "0.2", features = ["js"] }
+js-sys = "0.3"
+minibytes = { path = "../../../scm/lib/minibytes", default-features = false, features = [] }
+nonblocking = { path = "../../../scm/lib/nonblocking" }
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.4"
+tracing = "0.1"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wee_alloc = { version = "0.4.5" }
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
+
+[package.metadata.wasm-pack.profile.release]
+# wasm-pack might run wasm-opt indefinitely on EdenFS.
+# See https://github.com/rustwasm/wasm-pack/issues/1190
+wasm-opt = false
