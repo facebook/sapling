@@ -116,7 +116,6 @@ class RepositoryCache {
       // individual file paths to add diff gutters.
       const repoInfo = await this.RepositoryType.getRepoInfo(cmd, logger, cwd);
       // important: there should be no `await` points after here, to ensure there is no race when re-using Repositories.
-
       if (repoInfo.type !== 'success') {
         // No repository found at this root, or some other error prevents the repo from being created
         return repoInfo;

@@ -22,17 +22,20 @@ import {unwrap} from 'shared/utils';
  */
 export interface ServerPlatform {
   handleMessageFromClient(
-    repo: Repository,
+    repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
   ): void | Promise<void>;
 }
 
 export const browserServerPlatform: ServerPlatform = {
-  handleMessageFromClient: (repo: Repository, message: PlatformSpecificClientToServerMessages) => {
+  handleMessageFromClient: (
+    repo: Repository | undefined,
+    message: PlatformSpecificClientToServerMessages,
+  ) => {
     switch (message.type) {
       case 'platform/openFile': {
-        const path: AbsolutePath = pathModule.join(unwrap(repo.info.repoRoot), message.path);
+        const path: AbsolutePath = pathModule.join(unwrap(repo?.info.repoRoot), message.path);
         let command;
         if (command == null) {
           // use OS-builtin open command to open files
@@ -67,7 +70,7 @@ export const browserServerPlatform: ServerPlatform = {
           // Node.js as described here:
           //
           // https://nodejs.org/docs/latest-v10.x/api/child_process.html#child_process_options_detached
-          repo.logger.log('open file', path);
+          repo?.logger.log('open file', path);
           // TODO: Report error if spawn() fails?
           const proc = spawn(command, [path], {
             detached: true,

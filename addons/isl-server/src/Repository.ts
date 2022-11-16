@@ -655,7 +655,7 @@ async function findRoot(
   try {
     return (await runCommand(command, ['root'], logger, cwd)).stdout;
   } catch (error) {
-    if ((error as {code?: string}).code === 'ENOENT') {
+    if (['ENOENT', 'EACCES'].includes((error as {code: string}).code)) {
       logger.error(`command ${command} not found`, error);
       throw error;
     }

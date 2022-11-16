@@ -19,13 +19,16 @@ import * as vscode from 'vscode';
 
 export const VSCodePlatform: ServerPlatform = {
   handleMessageFromClient: async (
-    repo: Repository,
+    repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
     postMessage: (message: ServerToClientMessage) => void,
   ) => {
     try {
       switch (message.type) {
         case 'platform/openFile': {
+          if (repo == null) {
+            break;
+          }
           const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
           const uri = vscode.Uri.file(path);
           vscode.window.showTextDocument(uri);

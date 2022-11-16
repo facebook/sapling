@@ -91,10 +91,10 @@ function populateAndSetISLWebview(
     'Sapling_favicon-light-green.svg',
   );
 
+  logger.log('populate isl webview');
   const disposeConnection = onClientConnection({
     postMessage(message: string) {
-      panel.webview.postMessage(message);
-      return Promise.resolve(true);
+      return panel.webview.postMessage(message) as Promise<boolean>;
     },
     onDidReceiveMessage(handler) {
       return panel.webview.onDidReceiveMessage(m => {

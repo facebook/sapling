@@ -6,7 +6,6 @@
  */
 
 import type {ClientConnection} from '.';
-import type {Repository} from './Repository';
 import type {ServerPlatform} from './serverPlatform';
 import type {
   ServerToClientMessage,
@@ -19,8 +18,10 @@ import type {
   Result,
   MergeConflicts,
   MergeConflictsEvent,
+  RepositoryError,
 } from 'isl/src/types';
 
+import {Repository} from './Repository';
 import {browserServerPlatform} from './serverPlatform';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
@@ -47,6 +48,7 @@ export default class ServerToClientAPI {
   private queuedMessages: Array<IncomingMessage> = [];
   private currentRepository: Repository | undefined = undefined;
   private currentRepoCwd: string | undefined = undefined;
+  private currentRepoError: RepositoryError | undefined = undefined;
 
   // React Dev mode means we subscribe+unsubscribe+resubscribe in the client,
   // causing multiple subscriptions on the server. To avoid that,
@@ -67,7 +69,7 @@ export default class ServerToClientAPI {
       // When the client is connected, we want to immediately start listening to messages.
       // However, we can't properly respond to these messages until we have a repository set up.
       // Queue up messages until a repository is set.
-      if (this.currentRepository == null) {
+      if (this.currentRepoError == null && this.currentRepository == null) {
         this.queuedMessages.push(data);
       } else {
         try {
@@ -79,43 +81,44 @@ export default class ServerToClientAPI {
     });
   }
 
-  setCurrentRepo(repo: Repository, cwd: string) {
-    this.currentRepository = repo;
-    this.currentRepoCwd = cwd;
+  setCurrentRepoOrError(repo: Repository | RepositoryError, cwd: string) {
+    if (!(repo instanceof Repository)) {
+      this.currentRepoError = repo;
+    } else {
+      this.currentRepository = repo;
+      this.currentRepoCwd = cwd;
 
-    if (repo.codeReviewProvider != null) {
-      this.disposables.push(
-        repo.codeReviewProvider.onChangeDiffSummaries(value => {
-          this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
-        }),
-      );
+      if (repo.codeReviewProvider != null) {
+        this.disposables.push(
+          repo.codeReviewProvider.onChangeDiffSummaries(value => {
+            this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
+          }),
+        );
+      }
     }
 
     for (const message of this.queuedMessages) {
       try {
         this.handleIncomingMessage(message);
       } catch (err) {
-        repo.logger?.error('error handling queued message: ', message, err);
+        this.connection.logger?.error('error handling queued message: ', message, err);
       }
     }
     this.queuedMessages = [];
   }
 
   private handleIncomingMessage(data: IncomingMessage) {
-    // invariant: an initialized repository is attached by the time this is called
-    const repo = unwrap(this.currentRepository);
+    const repo = this.currentRepository instanceof Repository ? this.currentRepository : undefined;
 
-    const {logger} = repo;
-
+    const logger = repo?.logger ?? this.connection.logger;
     switch (data.type) {
       case 'requestRepoInfo': {
-        logger.log('repo info requested');
-        this.postMessage({type: 'repoInfo', info: repo.info});
+        this.postMessage({type: 'repoInfo', info: repo?.info ?? unwrap(this.currentRepoError)});
         break;
       }
       case 'subscribeUncommittedChanges': {
-        if (this.hasSubscribedToUncommittedChanges) {
-          return;
+        if (this.hasSubscribedToUncommittedChanges || repo == null) {
+          break;
         }
         this.hasSubscribedToUncommittedChanges = true;
         const {subscriptionID} = data;
@@ -134,7 +137,7 @@ export default class ServerToClientAPI {
         }
 
         // send changes as they come in from watchman
-        repo.subscribeToUncommittedChanges(postUncommittedChanges);
+        repo?.subscribeToUncommittedChanges(postUncommittedChanges);
         // trigger a fetch on startup
         repo.fetchUncommittedChanges();
 
@@ -144,8 +147,8 @@ export default class ServerToClientAPI {
         return;
       }
       case 'subscribeSmartlogCommits': {
-        if (this.hasSubscribedToSmartlogCommits) {
-          return;
+        if (this.hasSubscribedToSmartlogCommits || repo == null) {
+          break;
         }
         this.hasSubscribedToSmartlogCommits = true;
         const {subscriptionID} = data;
@@ -173,8 +176,8 @@ export default class ServerToClientAPI {
         return;
       }
       case 'subscribeMergeConflicts': {
-        if (this.hasSubscribedToMergeConflicts) {
-          return;
+        if (this.hasSubscribedToMergeConflicts || repo == null) {
+          break;
         }
         this.hasSubscribedToMergeConflicts = true;
         const {subscriptionID} = data;
@@ -197,7 +200,7 @@ export default class ServerToClientAPI {
       }
       case 'runOperation': {
         const {operation} = data;
-        repo.runOrQueueOperation(
+        unwrap(repo).runOrQueueOperation(
           operation,
           progress => {
             this.postMessage({type: 'operationProgress', ...progress});
@@ -209,7 +212,7 @@ export default class ServerToClientAPI {
       case 'requestComparison': {
         const {comparison} = data;
         const DIFF_CONTEXT_LINES = 4;
-        const diff: Promise<Result<string>> = repo
+        const diff: Promise<Result<string>> = unwrap(repo)
           .runCommand([
             'diff',
             ...revsetArgsForComparison(comparison),
@@ -225,7 +228,7 @@ export default class ServerToClientAPI {
           ])
           .then(o => ({value: o.stdout}))
           .catch(error => {
-            repo.logger.error('error running diff', error.toString());
+            logger?.error('error running diff', error.toString());
             return {error};
           });
         diff.then(data =>
@@ -251,7 +254,7 @@ export default class ServerToClientAPI {
         // we just need the caller to ask with "after" line numbers instead of "before".
         // Note: we would still need to fall back to cat for comparisons that do not involve
         // the working copy.
-        const cat: Promise<string> = repo
+        const cat: Promise<string> = unwrap(repo)
           .cat(relativePath, revsetForComparison(comparison))
           .catch(() => '');
 
@@ -265,17 +268,20 @@ export default class ServerToClientAPI {
         break;
       }
       case 'refresh': {
-        logger.log('refresh requested');
-        repo.fetchSmartlogCommits();
-        repo.fetchUncommittedChanges();
-        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        logger?.log('refresh requested');
+        repo?.fetchSmartlogCommits();
+        repo?.fetchUncommittedChanges();
+        repo?.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         break;
       }
       case 'pageVisibility': {
-        repo.setPageFocus(this.pageId, data.state);
+        repo?.setPageFocus(this.pageId, data.state);
         break;
       }
       case 'fetchCommitMessageTemplate': {
+        if (repo == null) {
+          break;
+        }
         repo
           .runCommand(['debugcommitmessage'])
           .then(result => {
@@ -285,11 +291,14 @@ export default class ServerToClientAPI {
             this.postMessage({type: 'fetchedCommitMessageTemplate', template});
           })
           .catch(err => {
-            logger.error('Could not fetch commit message template', err);
+            logger?.error('Could not fetch commit message template', err);
           });
         break;
       }
       case 'fetchDiffSummaries': {
+        if (repo == null) {
+          break;
+        }
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         break;
       }
