@@ -40,24 +40,19 @@ pub struct BackingScmStores {
 }
 
 impl BackingScmStores {
-    pub fn new(
-        config: &ConfigSet,
-        hg: impl AsRef<Path>,
-        use_edenapi: bool,
-        aux_data: bool,
-    ) -> Result<Self> {
+    pub fn new(config: &ConfigSet, hg: impl AsRef<Path>, aux_data: bool) -> Result<Self> {
         let store_path = hg.as_ref().join("store");
 
         let mut filestore = FileStoreBuilder::new(&config)
             .local_path(&store_path)
-            .override_edenapi(use_edenapi);
+            .override_edenapi(true);
 
         if aux_data {
             filestore = filestore.store_aux_data();
         }
 
         let treestore = TreeStoreBuilder::new(&config)
-            .override_edenapi(use_edenapi)
+            .override_edenapi(true)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 

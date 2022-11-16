@@ -174,10 +174,8 @@ HgBackingStore::HgBackingStore(
           std::make_shared<HgImporterThreadFactory>(repository, stats))),
       config_(config),
       serverThreadPool_(serverThreadPool),
-      useEdenApi_(config->getEdenConfig()->useEdenApi.getValue()),
       datapackStore_(
           repository,
-          useEdenApi_,
           config->getEdenConfig()->useAuxMetadata.getValue(),
           false, // allowRetries
           config),
@@ -203,8 +201,7 @@ HgBackingStore::HgBackingStore(
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
-      useEdenApi_{false},
-      datapackStore_(repository, false, false, false, config_),
+      datapackStore_(repository, false, false, config_),
       logger_(nullptr) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
@@ -322,7 +319,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                    Importer& importer = getThreadLocalImporter();
                    folly::stop_watch<std::chrono::milliseconds> watch;
                    RequestMetricsScope queueTracker{&liveImportTreeWatches};
-                   if (useEdenApi_ && logger_) {
+                   if (logger_) {
                      logger_->logEvent(EdenApiMiss{
                          repoName_,
                          EdenApiMiss::Tree,
@@ -562,7 +559,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
         Importer& importer = getThreadLocalImporter();
         folly::stop_watch<std::chrono::milliseconds> watch;
         RequestMetricsScope queueTracker{&liveImportBlobWatches};
-        if (useEdenApi_ && logger_) {
+        if (logger_) {
           logger_->logEvent(EdenApiMiss{
               repoName_,
               EdenApiMiss::Blob,

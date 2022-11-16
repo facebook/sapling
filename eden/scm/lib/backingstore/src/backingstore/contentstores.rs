@@ -45,7 +45,7 @@ pub struct BackingContentStores {
 }
 
 impl BackingContentStores {
-    pub fn new(config: &ConfigSet, hg: impl AsRef<Path>, use_edenapi: bool) -> Result<Self> {
+    pub fn new(config: &ConfigSet, hg: impl AsRef<Path>) -> Result<Self> {
         let store_path = hg.as_ref().join("store");
 
         #[allow(unused_mut)]
@@ -67,7 +67,7 @@ impl BackingContentStores {
         }
 
         let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
-            Some(_repo) if use_edenapi => {
+            Some(_repo) => {
                 let edenapi = EdenApiBuilder::from_config(config)?.build()?;
                 let fileremotestore = EdenApiFileStore::new(edenapi.clone());
                 let treeremotestore = EdenApiTreeStore::new(edenapi);

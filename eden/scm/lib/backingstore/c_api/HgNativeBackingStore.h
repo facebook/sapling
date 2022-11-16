@@ -22,7 +22,6 @@ class HgNativeBackingStore {
  public:
   HgNativeBackingStore(
       folly::StringPiece repository,
-      bool useEdenApi,
       bool useAuxData,
       bool allowRetries);
 

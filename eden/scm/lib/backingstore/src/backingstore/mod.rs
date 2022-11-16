@@ -28,12 +28,7 @@ pub enum BackingStore {
 use BackingStore::*;
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(
-        root: P,
-        use_edenapi: bool,
-        aux_data: bool,
-        allow_retries: bool,
-    ) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(root: P, aux_data: bool, allow_retries: bool) -> Result<Self> {
         let root = root.as_ref();
         let mut config = configparser::hg::load(Some(root), &[], &[])?;
 
@@ -48,14 +43,9 @@ impl BackingStore {
         let dot_path = root.join(ident.dot_dir());
 
         Ok(if config.get_or_default("scmstore", "backingstore")? {
-            New(BackingScmStores::new(
-                &config,
-                &dot_path,
-                use_edenapi,
-                aux_data,
-            )?)
+            New(BackingScmStores::new(&config, &dot_path, aux_data)?)
         } else {
-            Old(BackingContentStores::new(&config, &dot_path, use_edenapi)?)
+            Old(BackingContentStores::new(&config, &dot_path)?)
         })
     }
 

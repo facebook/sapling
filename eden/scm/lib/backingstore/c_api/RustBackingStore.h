@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<4380fbbc83996f112bc08c3fae87beab>>
+ * @generated SignedSource<<5852f6141b4109122d2adad9c45799b1>>
  *
  */
 
@@ -135,7 +135,6 @@ extern "C" {
 
 RustCFallibleBase rust_backingstore_new(const char *repository,
                                                           size_t repository_len,
-                                                          bool use_edenapi,
                                                           bool aux_data,
                                                           bool allow_retries);
 

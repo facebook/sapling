@@ -106,7 +106,9 @@ void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
       "treeonly = true\n"
       "[remotefilelog]\n"
       "reponame = test\n"
-      "cachepath = {}\n",
+      "cachepath = {}\n"
+      "[edenapi]\n"
+      "url=http://invalid.invalid\n",
       cacheDirectory));
 }
 

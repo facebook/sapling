@@ -29,11 +29,10 @@ class HgDatapackStore {
  public:
   HgDatapackStore(
       AbsolutePathPiece repository,
-      bool useEdenApi,
       bool useAuxData,
       bool allowRetries,
       std::shared_ptr<ReloadableConfig> config)
-      : store_{repository.stringPiece(), useEdenApi, useAuxData, allowRetries},
+      : store_{repository.stringPiece(), useAuxData, allowRetries},
         config_{std::move(config)} {}
 
   /**

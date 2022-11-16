@@ -35,7 +35,6 @@ fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [
 fn backingstore_new(
     repository: *const c_char,
     repository_len: size_t,
-    use_edenapi: bool,
     aux_data: bool,
     allow_retries: bool,
 ) -> Result<*mut BackingStore> {
@@ -43,12 +42,7 @@ fn backingstore_new(
 
     let repository = stringpiece_to_slice(repository, repository_len)?;
     let repo = str::from_utf8(repository)?;
-    let store = Box::new(BackingStore::new(
-        repo,
-        use_edenapi,
-        aux_data,
-        allow_retries,
-    )?);
+    let store = Box::new(BackingStore::new(repo, aux_data, allow_retries)?);
 
     Ok(Box::into_raw(store))
 }
@@ -57,18 +51,10 @@ fn backingstore_new(
 pub extern "C" fn rust_backingstore_new(
     repository: *const c_char,
     repository_len: size_t,
-    use_edenapi: bool,
     aux_data: bool,
     allow_retries: bool,
 ) -> CFallible<BackingStore> {
-    backingstore_new(
-        repository,
-        repository_len,
-        use_edenapi,
-        aux_data,
-        allow_retries,
-    )
-    .into()
+    backingstore_new(repository, repository_len, aux_data, allow_retries).into()
 }
 
 #[no_mangle]
