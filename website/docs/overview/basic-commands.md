@@ -56,8 +56,8 @@ From https://github.com/facebook/sapling
  * [new ref]               b8422460814900d8f978a8a34a99ae83c6735a70 -> remote/main
 5689 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-`# Clones into a 'some_directory' directory.`
-`$ sl clone https://github.com/facebook/sapling some_directory`
+# Clones into a 'some_directory' directory.
+$ sl clone https://github.com/facebook/sapling some_directory
 ```
 
 :::note
