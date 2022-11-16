@@ -189,14 +189,6 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
                 hint="did you forget to `@prog@ push default`?",
             )
 
-        if scratchpush:
-            ui.log(
-                "infinitepush_destinations",
-                dest=dest,
-                real_dest=realdest,
-                bookmark=bookmark,
-            )
-
         # Remote scratch bookmarks will be deleted because remotenames doesn't
         # know about them. Let's save it before push and restore after
         remotescratchbookmarks = bookmarks.readremotebookmarks(ui, repo, realdest)
