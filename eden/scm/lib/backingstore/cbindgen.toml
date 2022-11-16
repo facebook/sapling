@@ -22,6 +22,7 @@ header = """/*
 
 #include <memory>
 #include <functional>
+#include <string_view>
 #include <folly/Range.h>
 
 extern "C" void rust_cfallible_free_error(char *ptr);
@@ -85,11 +86,20 @@ include = ["Tree", "TreeEntry", "TreeEntryType"]
 
 [export.body]
 "CBytes" = """
-folly::ByteRange asByteRange() const {
-  return folly::ByteRange(ptr, len);
-}
 
-operator folly::ByteRange() const {
-  return asByteRange();
-}
+  folly::ByteRange asByteRange() const {
+    return folly::ByteRange(ptr, len);
+  }
+
+  operator folly::ByteRange() const {
+    return asByteRange();
+  }
+"""
+
+"StringView" = """
+  RustStringView(std::string_view sv) noexcept: ptr{sv.data()}, len{sv.size()} {}
+"""
+
+"ByteView" = """
+  RustByteView(folly::ByteRange range) noexcept: ptr{range.data()}, len{range.size()} {}
 """

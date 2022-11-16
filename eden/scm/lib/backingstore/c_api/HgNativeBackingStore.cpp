@@ -115,12 +115,11 @@ void getTreeBatchCallback(
 } // namespace
 
 HgNativeBackingStore::HgNativeBackingStore(
-    folly::StringPiece repository,
+    std::string_view repository,
     bool useAuxData,
     bool allowRetries) {
   RustCFallible<RustBackingStore> store(
-      rust_backingstore_new(
-          repository.data(), repository.size(), useAuxData, allowRetries),
+      rust_backingstore_new(repository, useAuxData, allowRetries),
       rust_backingstore_free);
 
   if (store.isError()) {
@@ -137,13 +136,7 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
   XLOG(DBG7) << "Importing blob name=" << name.data()
              << " node=" << folly::hexlify(node) << " from hgcache";
   RustCFallible<RustCBytes> result(
-      rust_backingstore_get_blob(
-          store_.get(),
-          name.data(),
-          name.size(),
-          node.data(),
-          node.size(),
-          local),
+      rust_backingstore_get_blob(store_.get(), name, node, local),
       rust_cbytes_free);
 
   if (result.isError()) {
@@ -162,8 +155,7 @@ std::shared_ptr<RustFileAuxData> HgNativeBackingStore::getBlobMetadata(
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
   RustCFallible<RustFileAuxData> result(
-      rust_backingstore_get_file_aux(
-          store_.get(), node.data(), node.size(), local),
+      rust_backingstore_get_file_aux(store_.get(), node, local),
       rust_file_aux_free);
 
   if (result.isError()) {
@@ -373,8 +365,7 @@ std::shared_ptr<RustTree> HgNativeBackingStore::getTree(
              << " from hgcache";
 
   RustCFallible<RustTree> manifest(
-      rust_backingstore_get_tree(store_.get(), node.data(), node.size(), local),
-      rust_tree_free);
+      rust_backingstore_get_tree(store_.get(), node, local), rust_tree_free);
 
   if (manifest.isError()) {
     XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)

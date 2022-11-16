@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <memory>
+#include <string_view>
 
 #include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
 
@@ -21,7 +22,7 @@ namespace facebook::eden {
 class HgNativeBackingStore {
  public:
   HgNativeBackingStore(
-      folly::StringPiece repository,
+      std::string_view repository,
       bool useAuxData,
       bool allowRetries);
 

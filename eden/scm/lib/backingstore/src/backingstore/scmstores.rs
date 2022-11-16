@@ -222,7 +222,7 @@ impl BackingScmStores {
         } else {
             self.treestore.as_ref()
         }
-        .fetch_batch(std::iter::once(key.clone()))?;
+        .fetch_batch(std::iter::once(key))?;
 
         if let Some(mut entry) = fetch_results.single()? {
             Ok(Some(entry.manifest_tree_entry()?.try_into()?))
@@ -346,10 +346,10 @@ impl BackingScmStores {
         } else {
             self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key.clone()), FileAttributes::AUX);
+        .fetch(std::iter::once(key), FileAttributes::AUX);
 
         if let Some(entry) = fetch_results.single()? {
-            Ok(Some(entry.aux_data()?.try_into()?))
+            Ok(Some(entry.aux_data()?))
         } else {
             Ok(None)
         }
