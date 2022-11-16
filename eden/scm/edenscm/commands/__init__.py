@@ -1635,7 +1635,7 @@ def commit(ui, repo, *pats, **opts):
     a new commit, see :prog:`amend`.
 
     If you are committing the result of a merge, such as when merge
-    conflicts occur during :prog:`checkout`, commit all pending changes.
+    conflicts occur during :prog:`goto`, commit all pending changes.
     Do not specify files or use ``-I``, ``-X``, or ``-i``.
 
     Specify the ``-m`` flag to include a free-form commit message. If you do

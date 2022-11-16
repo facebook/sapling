@@ -801,7 +801,7 @@ def undo(ui, repo, *args, **opts):
     Reverse the effects of the last local command. A local command is one that
     changed the currently checked out commit, that modified the contents of
     local commits, or that changed local bookmarks. Examples of local commands
-    include :prog:`checkout`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.
+    include :prog:`goto`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.
 
     You cannot use :prog:`undo` to undo uncommited changes in the working copy,
     or changes to remote bookmarks.

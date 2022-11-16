@@ -43,7 +43,7 @@ $ sl
 # Checkout a commit in main that I want to debug.
 # The dashed line in smartlog indicates we're not showing some commits
 # between main and my checked out commit.
-$ sl checkout a555d064c
+$ sl goto a555d064c
 $ sl
 o  c448e50fe  Today at 11:06  remote/main
 ╷
