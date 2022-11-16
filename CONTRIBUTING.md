@@ -1,9 +1,9 @@
-# Contributing to Eden
+# Contributing to Sapling
 We want to make contributing to this project as easy and transparent as
 possible.
 
 ## Our Development Process
-Eden is currently developed in Facebook's internal repositories and then
+Sapling is currently developed in Facebook's internal repositories and then
 exported out to GitHub by a Facebook team member; however, we invite you to
 submit pull requests as described below.
 
@@ -36,5 +36,5 @@ outlined on that page and do not file a public issue.
 * 80 character line length
 
 ## License
-By contributing to Eden, you agree that your contributions will be licensed
+By contributing to Sapling, you agree that your contributions will be licensed
 under its GPLv2 license.
