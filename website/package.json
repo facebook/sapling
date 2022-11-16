@@ -23,10 +23,13 @@
     "@docusaurus/core": "2.1.0",
     "@docusaurus/preset-classic": "2.1.0",
     "@mdx-js/react": "^1.6.22",
+    "async-mutex": "^0.4.0",
     "clsx": "^1.2.1",
+    "deep-equal": "^2.1.0",
     "docusaurus-plugin-internaldocs-fb": "1.1.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-simple-code-editor": "^0.13.1",
     "sapling-output-plugin": "file:src/plugins/sapling-output"
   },
   "devDependencies": {
