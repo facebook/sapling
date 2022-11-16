@@ -1226,20 +1226,6 @@ def _showfetchedbookmarks(ui, remote, bookmarks, opts, fm):
         fm.plain("\n")
 
 
-def _normalizeremote(remote):
-    """
-    Normalises a remote for grouping
-
-    Remote URL can have QueryStrings or Fragments which we consider to be
-    parameters, rather then being part of the repo path. So normalization strips
-    away the QueryString and Fragments and returns the stripped remote.
-    """
-    u = util.url(remote)
-    u.query = None
-    u.fragment = None
-    return str(u)
-
-
 def activepath(ui, remote):
     local = None
     try:
@@ -1256,48 +1242,9 @@ def activepath(ui, remote):
             # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
             rpath = getattr(getattr(remote, "_repo", None), "root", None)
     elif not isinstance(remote, str):
-        try:
-            rpath = _normalizeremote(remote.url())
-        except AttributeError:
-            # Handled by "isinstance(rpath, basestring)" below
-            pass
-    else:
-        rpath = _normalizeremote(rpath)
+        rpath = remote.url()
 
-    candidates = []
-    for path, uri in ui.configitems("paths"):
-        if local:
-            uri = os.path.realpath(uri)
-        else:
-            uri = _normalizeremote(uri)
-            if uri.startswith("http"):
-                try:
-                    uri = util.url(uri).authinfo()[0]
-                except AttributeError:
-                    uri = url.getauthinfo(uri)[0]
-        uri = uri.rstrip("/")
-        rpath = rpath.rstrip("/")
-        if uri == rpath:
-            candidates.append(path)
-
-    if not candidates:
-        return ""
-
-    # Prefer default paths
-    for preferred in ["default", "default-push"]:
-        if preferred in candidates:
-            bestpath = preferred
-            break
-    else:
-        # Otherwise, pick the shortest (using a stable ordering).
-        # Use alphabetical to break ties in length.
-        candidates.sort()  # alphabetical
-        candidates.sort(key=len)  # sort is stable so first will be the correct one
-        bestpath = candidates[0]
-
-    renames = _getrenames(ui)
-    realpath = renames.get(bestpath, bestpath)
-    return realpath
+    return ui.paths.getname(rpath) or ""
 
 
 # memoization
