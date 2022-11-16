@@ -244,12 +244,19 @@ impl EagerRepo {
     pub fn url_to_dir(value: &str) -> Option<PathBuf> {
         let prefix = "eager:";
         if let Some(path) = value.strip_prefix(prefix) {
-            // Remove '//' prefix from Windows file path. This makes it
-            // possible to use paths like 'eager://C:\foo\bar'.
-            #[cfg(windows)]
-            let path = path.trim_start_matches('/');
-            let path: &Path = Path::new(path);
-            return Some(path.to_path_buf());
+            let path: PathBuf = if cfg!(windows) {
+                // Remove '//' prefix from Windows file path. This makes it
+                // possible to use paths like 'eager://C:\foo\bar'.
+                let path = path.trim_start_matches('/');
+                // Replace '/' with '\' on Windows so one can write code like
+                // eager://$TESTTMP/foo/bar in test. This is important if
+                // $TESTTMP is a UNC path, since / won't work with a UNC path.
+                let path = path.replace('/', "\\");
+                Path::new(&path).to_path_buf()
+            } else {
+                Path::new(path).to_path_buf()
+            };
+            return Some(path);
         }
         let prefix = "test:";
         if let Some(path) = value.strip_prefix(prefix) {
