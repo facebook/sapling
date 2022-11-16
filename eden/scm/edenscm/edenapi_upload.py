@@ -135,6 +135,10 @@ def _uploadchangesets(repo, changesets, mutations):
                     uploaded.append(cs[0])
                 else:
                     failed.append(cs[0])
+
+            repo.ui.log(
+                "edenapi_uploaded_changesets", edenapi_uploaded_changesets=len(uploaded)
+            )
             return uploaded, failed
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
