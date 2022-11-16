@@ -9,6 +9,7 @@ use std::num::NonZeroU64;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use async_trait::async_trait;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkName;
 use changesets::ChangesetsRef;
@@ -19,7 +20,10 @@ use ephemeral_blobstore::BubbleId;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use logger_ext::Loggable;
 use metaconfig_types::RepoConfigRef;
+#[cfg(fbcode_build)]
+use mononoke_new_commit_rust_logger::MononokeNewCommitLogger;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
@@ -178,6 +182,46 @@ impl PlainCommitInfo {
     }
 }
 
+#[async_trait]
+impl Loggable for PlainCommitInfo {
+    #[cfg(fbcode_build)]
+    async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
+        let mut logger = MononokeNewCommitLogger::new(ctx.fb);
+        logger
+            .set_repo_name(self.repo_name.clone())
+            .set_is_public(self.is_public)
+            .set_changeset_id(self.changeset_id.to_string())
+            .set_parents(self.parents.iter().map(ToString::to_string).collect())
+            .set_generation(self.generation.value() as i64)
+            .set_changed_files_count(self.changed_files_count as i64)
+            .set_changed_files_size(self.changed_files_size as i64)
+            .set_pusher_identities(
+                self.user_identities
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect(),
+            )
+            .set_received_timestamp(self.received_timestamp.timestamp());
+
+        if let Some(bubble_id) = &self.bubble_id {
+            logger.set_bubble_id(bubble_id.get() as i64);
+        }
+        if let Some(diff_id) = &self.diff_id {
+            logger.set_diff_id(diff_id.clone());
+        }
+        if let Some(bookmark) = &self.bookmark {
+            logger.set_bookmark_name(bookmark.to_string());
+        }
+        if let Some(source_hostname) = &self.source_hostname {
+            logger.set_source_hostname(source_hostname.clone());
+        }
+
+        logger.log_async()?;
+
+        Ok(())
+    }
+}
+
 pub async fn log_new_commits(
     ctx: &CoreContext,
     repo: &(impl RepoIdentityRef + ChangesetsRef + RepoConfigRef),
@@ -198,8 +242,14 @@ pub async fn log_new_commits(
     };
     let scribe = ctx.scribe();
 
+    let new_commit_logging_destination = repo
+        .repo_config()
+        .update_logging_config
+        .new_commit_logging_destination
+        .as_ref();
+
     // If nothing is going to be logged, we can exit early.
-    if legacy_category.is_none() {
+    if legacy_category.is_none() && new_commit_logging_destination.is_none() {
         return;
     }
 
@@ -212,6 +262,11 @@ pub async fn log_new_commits(
                 PlainCommitInfo::new(ctx, repo, received_timestamp, bookmark, commit_info).await?;
             if let Some(category) = legacy_category {
                 scribe.offer(category, &serde_json::to_string(&plain_commit_info)?)?;
+            }
+            if let Some(new_commit_logging_destination) = new_commit_logging_destination {
+                plain_commit_info
+                    .log(ctx, new_commit_logging_destination)
+                    .await;
             }
             anyhow::Ok(())
         })
