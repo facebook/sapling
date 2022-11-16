@@ -112,6 +112,17 @@ def fetch_python(python_dir: Path):
         ) as py_zip:
             py_zip.extractall(path=python_dir)
 
+    with step("Fetching Curses"):
+        # For example, short_python_version = 39
+        short_py_version = "".join(PY_VERSION.split(".")[:2])
+        curses_distro_url = f"https://files.pythonhosted.org/packages/63/57/5ed9bfbbcbb9c34cdc5f578a57a087200fd09c70b30d78236e4deacf48b0/windows_curses-2.3.1-cp{short_py_version}-cp{short_py_version}-win_amd64.whl"
+        with zipfile.ZipFile(
+            io.BytesIO(request.urlopen(curses_distro_url).read()), "r"
+        ) as py_zip:
+            for info in py_zip.infolist():
+                if info.filename.endswith(".pyd"):
+                    py_zip.extract(info, python_dir)
+
     # The NuPkg contains a full Python install (including build dependencies such as headers and .lib files).
     # We need this for building, but don't need to ship it.
     with step("Fetching NuPkg Python"):
