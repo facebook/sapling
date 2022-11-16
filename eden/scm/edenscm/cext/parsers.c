@@ -814,7 +814,6 @@ static PyMethodDef methods[] = {
      "parse v1 obsolete markers\n"},
     {NULL, NULL}};
 
-void dirs_module_init(PyObject* mod);
 void manifest_module_init(PyObject* mod);
 void revlog_module_init(PyObject* mod);
 
@@ -833,7 +832,6 @@ static void module_init(PyObject* mod) {
    * should not have this module constant. */
   PyModule_AddStringConstant(mod, "versionerrortext", versionerrortext);
 
-  dirs_module_init(mod);
   manifest_module_init(mod);
   revlog_module_init(mod);
 

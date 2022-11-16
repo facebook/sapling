@@ -1399,7 +1399,6 @@ extmodules = [
         "edenscmnative.parsers",
         [
             "edenscm/cext/charencode.c",
-            "edenscm/cext/dirs.c",
             "edenscm/cext/manifest.c",
             "edenscm/cext/parsers.c",
             "edenscm/cext/pathencode.c",
