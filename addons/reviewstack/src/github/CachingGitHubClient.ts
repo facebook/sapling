@@ -32,11 +32,10 @@ import type {CommitComparison} from './restApiTypes';
 import type {Blob, Commit, GitObject, GitObjectID, ID, Tree} from './types';
 
 import {globalCacheStats} from './GitHubClientStats';
+import {DB_VERSION, DB_NAME} from './databaseInfo';
 import {subscribeToLogout} from './logoutBroadcastChannel';
 import rejectAfterTimeout from 'shared/rejectAfterTimeout';
 
-const DB_VERSION = 2;
-const DB_NAME = `github-objects-v${DB_VERSION}`;
 const DB_COMMIT_STORE_NAME = 'commit';
 const DB_TREE_STORE_NAME = 'tree';
 const DB_BLOB_STORE_NAME = 'blob';

@@ -9,6 +9,7 @@ import type {UsernameQueryData, UsernameQueryVariables} from '../generated/graph
 import type {Loadable} from 'recoil';
 
 import {UsernameQuery} from '../generated/graphql';
+import {DB_NAME} from './databaseInfo';
 import {broadcastLogoutMessage, subscribeToLogout} from './logoutBroadcastChannel';
 import queryGraphQL from './queryGraphQL';
 import {atom, selector, DefaultValue, RecoilLoadable} from 'recoil';
@@ -150,7 +151,26 @@ async function clearAllLocalData(): Promise<void> {
   localStorage.clear();
 }
 
-async function dropAllDatabases(indexedDB: IDBFactory) {
+async function dropAllDatabases(indexedDB: IDBFactory): Promise<unknown> {
+  if (indexedDB.databases == null) {
+    // As of Nov 16, 2022, Firefox does not support indexedDB.databases():
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=934640.
+    // While we would prefer to err on the side of safety and delete *all*
+    // databases, we can only attempt to delete the ones we know about, which
+    // may or may not have been created yet.
+    return new Promise((resolve, reject) => {
+      // Firefox appears to consider deleteDatabase a "success" even if no
+      // database exists with the specified name.
+      const request = window.indexedDB.deleteDatabase(DB_NAME);
+      request.onsuccess = _event => {
+        resolve(null);
+      };
+      request.onerror = event => {
+        reject(event);
+      };
+    });
+  }
+
   const databases = await indexedDB.databases();
   return Promise.all(
     databases.map(db => {
