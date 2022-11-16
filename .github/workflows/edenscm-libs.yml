@@ -27,8 +27,8 @@ jobs:
     # openssl does not build
     # - name: Run commitcloudsubscriber tests
     #   run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/commitcloudsubscriber/Cargo.toml
-    - name: Run configparser tests
-      run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/configparser/Cargo.toml
+    - name: Run config/parser tests
+      run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/config/parser/Cargo.toml
     - name: Run cpython-ext tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/cpython-ext/Cargo.toml
     - name: Run dag tests
