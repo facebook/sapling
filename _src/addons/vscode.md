@@ -10,6 +10,15 @@ Sapling provides an extension for [Visual Studio Code](https://code.visualstudio
 
 [You can download the extension from the Microsoft Extension Marketplace](https://marketplace.visualstudio.com/items?itemName=meta.sapling-scm), or by searching from the extensions tab inside VS Code.
 
+:::caution
+
+Sapling must be installed through the normal installation instructions in order for
+the vscode extension to work properly.
+
+[See installation instructions.](../introduction/installation.md)
+
+:::
+
 <ThemedImage alt="ISL in VS Code" light="/img/isl/vscode_light.png" dark="/img/isl/vscode_dark.png" />
 
 

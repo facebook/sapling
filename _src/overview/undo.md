@@ -4,7 +4,7 @@ sidebar_position: 90
 
 # Undo
 
-Since Sapling keeps a full record of the rewrite history of commits, most Sapling commands that modify commits can be easily undone.  The `sl undo` command will revert the commit graph to its state prior to the last run command.
+Since Sapling keeps a full record of the mutation history of commits, most Sapling commands that modify commits can be easily undone.  The `sl undo` command will revert the commit graph to its state prior to the last run command.
 
 ```bash
 $ sl
@@ -91,9 +91,9 @@ This UI is also useful for simply finding old commit hashes. Once you have the
 hash, you can exit the undo UI, then use `sl show HASH` and `sl unhide HASH` to
 view and recover the commit.
 
-### Uncommit / Unamend
+### Uncommit / unamend
 
-The undo command is limited to undoing changes to the comit graph. To undo changes related to the working copy, like a commit or amend, use `sl uncommit` and `sl unamend`.
+The undo command is limited to undoing changes to the commit graph. To undo changes related to the working copy, like a commit or amend, use `sl uncommit` and `sl unamend`.
 
 
 ```bash
@@ -141,4 +141,4 @@ M myproject.cpp
 # now the changes are back as pending changes in our working copy
 ```
 
-You can limit uncommit only specific files by using `sl uncommit FILE1 FILE2 ...`.
+You can limit uncommit to specific files by using `sl uncommit FILE1 FILE2 ...`.

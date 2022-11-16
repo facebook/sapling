@@ -16,7 +16,7 @@ Along the way we realized there were also large opportunities to increase develo
 
 Additionally, as we developed Sapling we ended up with internal abstractions that happened to make it straightforward for us to add Git support. This idea that the UX and scale of your version control could be separated from the repository format has allowed us to, in effect, have our cake and eat it too by letting us use our scalable system internally, and still interact with Git repositories where needed.  We hope that this pattern might also provide an example path for how source control could evolve beyond the current industry wide status quo.
 
-### Basic Concepts
+### Basic concepts
 
 The easiest way to understand the basic usage of Sapling is to see it in action. Below we clone a repo, make some commits/amends, undo some changes, and push the work.
 
@@ -82,7 +82,7 @@ o  a555d064c  Today at 09:06
 ~
 
 # Go to the previous commit.
-$ hg prev
+$ sl prev
 $ sl
 o  c448e50fe  Today at 11:06  remote/main
 ╷

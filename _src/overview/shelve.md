@@ -19,7 +19,7 @@ $ sl shelve
 $ sl status
 ```
 
-You can either use `sl unshelve` to restore the latest shelved change to the working copy, `sl unshelve [shelved name]` to specify a change to unshelve.
+You can either use `sl unshelve` to restore the latest shelved change to the working copy, or `sl unshelve [shelved name]` to specify a change to unshelve.
 
 ```bash
 $ sl status

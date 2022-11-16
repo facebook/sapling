@@ -15,7 +15,7 @@ While we ultimately plan to remove the requirement of installing the GitHub CLI 
 
 While GitHub [gives you the option](https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories) of cloning a repo with either HTTPS or SSH URLs, HTTPS is generally considered easier to use because HTTPS default port 443 is far less likely to be blocked by a firewall than SSH default port 22.
 
-## Cloning a Repo
+## Cloning a repo
 
 Once you have authenticated via `gh auth login --git-protocol https`, you should be able to clone any GitHub repository via its HTTPS URL that you have access to using Sapling:
 
@@ -25,7 +25,7 @@ sl clone https://github.com/facebook/sapling
 
 With the GitHub CLI caching your credentials, you will be able to run commands like `sl ssl` to see the status of any linked pull requests in your Smartlog, as it uses your PAT behind the scenes to query their current state.
 
-## Pull Requests
+## Pull requests
 
 When it comes to working with pull requests from Sapling, you have two options: `sl pr` and `sl ghstack`. Each has its tradeoffs, so you may opt to use a different solution, depending on the scenario:
 

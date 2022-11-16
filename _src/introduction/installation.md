@@ -12,7 +12,7 @@ import CodeBlock from '@theme/CodeBlock';
 
 # Installation
 
-## Prebuilt Binaries
+## Prebuilt binaries
 
 ### Linux
 
@@ -28,7 +28,7 @@ sudo apt install -y ~/Downloads/path-to-the-Ubuntu.deb
 
 First, make sure that [Homebrew](https://brew.sh/) is installed on your system. Then follow the instructions depending on your architecture.
 
-#### Apple Silicon (arm64)
+#### Apple silicon (arm64)
 
 Download using `curl`:
 
@@ -100,7 +100,7 @@ PS> sl --version
 Sapling 20221108.091155.887dee39
 ```
 
-## Building from Source
+## Building from source
 
 In order to build from source, you need at least the following tools available in your environment:
 

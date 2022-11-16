@@ -1,13 +1,13 @@
 ---
 sidebar_position: 30
 ---
-# Organizational Scale
+# Organizational scale
 
 Scale is often thought of as simply a technical matter: handle more data, and do it quickly.  Much less is said about the challenges organizational scale introduces on developer tools.  Over the past 10 years Sapling has encountered these challenges as the number of engineers has grown, as business needs have shifted, and as large repositories have been merged.
 
 This document is a high-level overview of some of the strategies we’ve found useful.
 
-### Scaling Customer Support
+### Scaling customer support
 
 When you have thousands of engineers, every edge case will be hit and strange issues from strange environments will need to be debugged.  To stay on top of this, the Sapling team developed tools to make it easier to debug engineer issues quickly. Note, some of these are not available by default in the open source release since they require logging and services that only make sense within an organization.
 
@@ -15,7 +15,7 @@ When you have thousands of engineers, every edge case will be hit and strange is
 * `sl rage` is a command that gathers state about the engineer’s source control environment and creates a human readable text file with the information.  It contains hostname, filesystem, disk usage, smartlog/status output, configuration, and recent commands, logs, errors, and profiles.  This information allows the engineer to provide us with all the data we need without having to have a bunch of back and forths.  The version of Sapling used inside Meta automatically uploads the rage file to a server for easy viewing by the Sapling team. The open source version does not upload any data.
 * If an engineer complains about a slow command, adding `--profile` to any command allows them to produce a profile in the output. This makes it easy for the Sapling team to identify where the problem is, without having access to their machine or walking the engineer through how to use a profiler.  If a command is hung, a similar traceback is written to .sl/sigtraces/ every 60 seconds, allowing us to see exactly where the current process is stuck.  These tools make debugging tricky performance issues much easier, especially in a distributed environment.
 
-### Managing Configuration
+### Managing configuration
 
 Configuration is a critical part of the Sapling experience at Meta and plays a large part in how we roll out new features.  In the past we used a hierarchy of configuration files (similar to a `/etc/gitconfig` which recursively includes other config files) which were written by various systems (rpms, Chef, tools, etc).  This became unwieldy as the logic that decides which configs are used was distributed across many systems and services, and the order of precedence for the various config files was fragile.
 
@@ -25,7 +25,7 @@ Both the in-code and the remote portions of the configuration allow conditionall
 
 Note, this dynamic configuration system is internal to Meta and does not apply to the open source release. No remote configs are downloaded for an open source Sapling build.  The code for `dynamicconfig` is not currently visible in the repository as it contains internal configuration information. If external groups are interested in similar capabilities we could potentially make the capability public.
 
-### Incremental Migrations
+### Incremental migrations
 
 Being able to make incremental breaking changes on an in-production system was a critical piece of making Sapling scale within Meta. Distributed source control repositories are particularly difficult structures to change because:
 
@@ -46,7 +46,7 @@ Changing the hash scheme of the repository or the on-disk storage formats was pa
 
 Hash scheme changes, while rare, required the additional step of maintaining a mapping between the new and the old hash scheme, and being able to validate past hashes which still used the old scheme.
 
-### Metrics and Logging
+### Metrics and logging
 
 Having real-time metrics on source control commands is critical for maintaining and improving the source control experience within Meta. Internally, we upload a wide variety of metrics for every Sapling command that is run, from command duration, to time waiting on other services, to number of files changed, network throughput, error traces, and more. This lets us not only keep an eye on long-term performance and reliability trends, but enables us to see the impact of current rollouts on performance and catch regressions before they affect everyone.
 

@@ -6,7 +6,7 @@ import {gitHubRepo, gitHubRepoName} from '@site/constants'
 
 import {Command, ReviewStackScreenshot, SLCommand} from '@site/elements'
 
-# Getting Started
+# Getting started
 
 This section will walk you through cloning your first repo, making commits, and submitting them as GitHub pull requests.
 
@@ -18,7 +18,7 @@ Once you have `sl` [installed](./installation.md) on the command line, you shoul
 $ sl config --user ui.username 'Alyssa P. Hacker <alyssa@example.com>'
 ```
 
-If you have not done so already, this will also have the side-effect of creating your global Sapling config file. The location of the file varies by platform, though you can run `cat $(sl configfile --user)` to find it.
+If you do not already have a global Sapling config file, the command above will create it for you. The location of the file varies by platform, though you can run `sl configfile --user` to find it.
 
 - Linux `~/.config/sapling/sapling.conf` (or `$XDG_CONFIG_HOME` instead of `~/.config`, if set)
 - macOS `~/Library/Preferences/sapling/sapling.conf`
@@ -103,7 +103,7 @@ You can also use the <Command name="next" /> and <Command name="prev" /> command
 
 See [Basic Commands](../overview/basic-commands.md) to learn more about maniuplating your stack from the command line.
 
-Though you may also want to try Sapling's built-in GUI that runs in the browser (as well as within our [VS Code Extension](../addons/vscode)). Run <SLCommand name="web" /> to launch it from the command line:
+You may also want to try Sapling's built-in GUI that runs in the browser . Run <SLCommand name="web" /> to launch it from the command line:
 
 ```
 $ sl web
@@ -111,9 +111,9 @@ Listening on http://localhost:3011/?token=929fa2b3d75aa4330e0b7b0a10822ee0&cwd=%
 Server logs will be written to /var/folders/5c/f3nk25tn7gd7nds59hy_nj7r0000gn/T/isl-server-logKktwaj/isl-server.log
 ```
 
-Sapling will open the URL automatically in your browser. See the docs on [Interactive Smartlog](../addons/isl.md) to learn more about its many features.
+Sapling will open the URL automatically in your browser. See the docs on [Interactive Smartlog](../addons/isl.md) to learn more about its many features. Interactive Smartlog is also available in our [VS Code Extension](../addons/vscode).
 
-## Submitting Pull Requests
+## Submitting pull requests
 
 Sapling supports multiple workflows for interacting with GitHub pull requests. The simplest solution is the <SLCommand name="pr" /> command:
 
@@ -140,13 +140,13 @@ $ sl pr
 no pull requests to update
 ```
 
-As shown, running `sl pr` creates a pull request (PR) for every commit in your local stack. Note this creates "overlapping pull requests," which means each PR uses the associated commit as the head of the PR and `remote/main` as the base. Admittedly, this may cause some confusion when reviewing the stack on GitHub, which is why we provide [ReviewStack](../addons/reviewstack.md) as an alternative code review tool.
+As shown, running `sl pr` creates a pull request (PR) for every commit in your local stack. Note this creates "overlapping pull requests," which means each PR uses the associated commit as the head of the PR and `remote/main` as the base.  Reviewing overlapping pull requests on GitHub can be confusing, so we also provide [ReviewStack](../addons/reviewstack.md) as an alternative code review tool that handles these kinds of pull requests better.
 
 After you have created an initial series of pull requests using <Command name="pr" sl={true} />, you will likely make local changes to your commits that need to be submitted for review. To publish these local changes to GitHub, simply run <Command name="pr" sl={true} /> again to update your existing PRs. Note if you have introduced new commits in your stack that are not linked to a PR, <Command name="pr" sl={true} /> will create pull requests for those, as well.
 
-Admittedly, the "overlapping pull requests" approach may not be an appropriate solution for your project. To that end, we also support an alternative pull request workflow, <Command name="ghstack" sl={true} />, which avoids the "overlapping pull requests" issue, but may not be an option for all projects. See the [Pull Requests section](../git/intro.md#pull-requests) in **Using Sapling with GitHub** to determine which workflow is right for you.
+The "overlapping pull requests" approach may not be an appropriate solution for your project. To that end, we also support an alternative pull request workflow, <Command name="ghstack" sl={true} />, which avoids the "overlapping pull requests" issue, but may not be an option for all projects. See the [Pull Requests section](../git/intro.md#pull-requests) in **Using Sapling with GitHub** to determine which workflow is right for you.
 
-## Browsing Pull Requests
+## Browsing pull requests
 
 If you have used Sapling to create pull requests for your commits, then you can use `sl ssl` to include the pull request status in your Smartlog. Note that `sl ssl` is not a subcommand, but a built-in alias for `sl smartlog -T {ssl}`:
 
@@ -168,13 +168,13 @@ o  f22585511  Oct 06 at 17:40  remote/main
 
 In addition to reviewing pull requests on github.com, you may also want to try [ReviewStack](../addons/reviewstack.md), which is our novel user interface for GitHub pull requests with custom support for _stacked changes_.
 
-To view a GitHub pull request on ReviewStack, simply take the original URL:
+To view a GitHub pull request on ReviewStack, take the original URL:
 
-https://github.com/facebook/react/pull/25506
+> https://github.com/facebook/react/pull/25506
 
 and replace the `github.com` domain with `reviewstack.dev`:
 
-https://reviewstack.dev/facebook/react/pull/25506
+> https://reviewstack.dev/facebook/react/pull/25506
 
 On ReviewStack, the diff and the timeline for a pull request are displayed side-by-side rather than split across tabs. Read the [ReviewStack docs](../addons/reviewstack.md) to learn more about the various features it offers.
 

@@ -60,7 +60,7 @@ o  a555d064c  Wednesday at 09:06
 ~
 ```
 
-#### Active Bookmarks
+#### Active bookmarks
 
 The asterisk (`*`) on the `my_feature` bookmark indicates the
 bookmark is active. If you make a commit, the active bookmark
@@ -74,7 +74,7 @@ inactive when you explicitly go to another commit, like with `sl
 goto OTHER_COMMIT`.
 
 
-### Differences from Git Branches
+### Differences from Git branches
 
 * In Git you must always be working on a local branch, otherwise
   you end up in the confusing "detached head" state and any

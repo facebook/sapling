@@ -63,7 +63,7 @@ o  a75ab860a  Jul 15 at 07:59
 
 In an actual terminal it is color coded, making it easy to read at a glance.
 
-### Interactive GUI Smartlog
+### Interactive GUI smartlog
 
 An interactive smartlog GUI is available by running `sl web`. This shows similar information to `sl smartlog` while also refreshing automatically and allow you to run commands and drag and drop commits to rebase them.
 

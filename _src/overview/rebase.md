@@ -81,7 +81,7 @@ o  d78f66e01  15 minutes ago  remote/main
 o  17af69994  Today at 08:33  remote/stable
 ```
 
-#### -s / --revisions
+#### -s / --source
 If you don't want to rebase the entire subtree with `-b`, you can use `-s` to
 rebase a given commit and all of its descendants.
 
@@ -154,7 +154,8 @@ o  17af69994  Today at 08:33  remote/stable
 ```
 
 Note how `6f782187a` is identified with an `x` in the commit graph to denote that it
-has been rewritten to the newer version `8abef7d37f3a`.
+has been rewritten to the newer version `8abef7d37f3a`.  However, it is still visible
+because commit D did not get rebased.
 
 
 #### Other

@@ -1,10 +1,10 @@
 ---
-sidebar_position: 40
+sidebar_position: 41
 ---
 
 ## status | st
 <!--
-  @generated SignedSource<<567e023c0f1362ce436e9639b0787ee2>>
+  @generated SignedSource<<63840291577a2e603dec82d9dda4b062>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 

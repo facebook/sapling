@@ -121,7 +121,7 @@ Here are the steps to check out each revision:
   </TabItem>
 </Tabs>
 
-### Checkout and Annotate
+### Checkout and annotate
 
 Note the lines that are not changed across multiple revisions, such as "a" only
 occurs once as `LINE 1 0` in the bytecode. The `LINE` instruction points to the
@@ -131,7 +131,7 @@ instructions in addition to line contents, LineLog could also produce the
 
 In LineLog, the checkout and annotate operation are basically the same.
 
-### Range of Revisions
+### Range of revisions
 
 A variation of the interpretation is to treat "Current Rev" as a range, not a
 single fixed revision number. More specifically, given an inclusive range from
@@ -145,7 +145,7 @@ like:
     rev 2: 2
     rev 1: c
 
-### Linear History
+### Linear history
 
 LineLog assumes linear history. The revision comparisons are done using direct
 integer comparisons. It might be not too difficult to support non-linear
