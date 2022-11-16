@@ -286,12 +286,13 @@ def create_pull_request_title_and_body(
     >>> commit_msg = 'The original commit message.\nSecond line of message.'
     >>> pr_numbers_and_num_commits = [(1, 1), (2, 2), (42, 1), (4, 1)]
     >>> pr_numbers_index = 2
-    >>> repository = Repository(id="abcd=", owner="facebook", name="sapling", default_branch="main", is_fork=42)
+    >>> upstream_repo = Repository(id="abcd=", owner="facebook", name="sapling", default_branch="main", is_fork=False)
+    >>> contributor_repo = Repository(id="efgh=", owner="keith", name="sapling", default_branch="main", is_fork=True, upstream=upstream_repo)
     >>> title, body = create_pull_request_title_and_body(
     ...     commit_msg,
     ...     pr_numbers_and_num_commits,
     ...     pr_numbers_index,
-    ...     repository,
+    ...     contributor_repo,
     ... )
     >>> title == 'The original commit message.'
     True
@@ -307,10 +308,9 @@ def create_pull_request_title_and_body(
     ...     'Second line of message.\n')
     True
     """
+    owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
-    reviewstack_url = (
-        f"https://reviewstack.dev/{repository.owner}/{repository.name}/pull/{pr}"
-    )
+    reviewstack_url = f"https://reviewstack.dev/{owner}/{name}/pull/{pr}"
     bulleted_list = "\n".join(
         [
             format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
