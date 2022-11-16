@@ -19,12 +19,13 @@ class IOBuf;
 
 namespace facebook::eden {
 
+using BackingStoreOptions = RustBackingStoreOptions;
+
 class HgNativeBackingStore {
  public:
   HgNativeBackingStore(
       std::string_view repository,
-      bool useAuxData,
-      bool allowRetries);
+      const BackingStoreOptions& options);
 
   std::unique_ptr<folly::IOBuf>
   getBlob(folly::ByteRange name, folly::ByteRange node, bool local);

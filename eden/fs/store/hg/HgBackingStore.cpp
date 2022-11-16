@@ -144,6 +144,20 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
   Importer* importer_;
 };
 
+HgDatapackStore::Options computeOptions(const EdenConfig& config) {
+  HgDatapackStore::Options options{};
+  options.aux_data = config.useAuxMetadata.getValue();
+  options.allow_retries = false;
+  return options;
+}
+
+HgDatapackStore::Options testOptions() {
+  HgDatapackStore::Options options{};
+  options.aux_data = false;
+  options.allow_retries = false;
+  return options;
+}
+
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -176,8 +190,7 @@ HgBackingStore::HgBackingStore(
       serverThreadPool_(serverThreadPool),
       datapackStore_(
           repository,
-          config->getEdenConfig()->useAuxMetadata.getValue(),
-          false, // allowRetries
+          computeOptions(*config->getEdenConfig()),
           config),
       logger_(logger) {
   HgImporter importer(repository, stats);
@@ -201,7 +214,7 @@ HgBackingStore::HgBackingStore(
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
-      datapackStore_(repository, false, false, config_),
+      datapackStore_(repository, testOptions(), config_),
       logger_(nullptr) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;

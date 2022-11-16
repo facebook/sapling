@@ -27,13 +27,13 @@ class Tree;
 
 class HgDatapackStore {
  public:
+  using Options = RustBackingStoreOptions;
+
   HgDatapackStore(
       AbsolutePathPiece repository,
-      bool useAuxData,
-      bool allowRetries,
+      const Options& options,
       std::shared_ptr<ReloadableConfig> config)
-      : store_{repository.stringPiece(), useAuxData, allowRetries},
-        config_{std::move(config)} {}
+      : store_{repository.stringPiece(), options}, config_{std::move(config)} {}
 
   /**
    * Imports the blob identified by the given hash from the local store.

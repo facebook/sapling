@@ -116,11 +116,9 @@ void getTreeBatchCallback(
 
 HgNativeBackingStore::HgNativeBackingStore(
     std::string_view repository,
-    bool useAuxData,
-    bool allowRetries) {
+    const BackingStoreOptions& options) {
   RustCFallible<RustBackingStore> store(
-      rust_backingstore_new(repository, useAuxData, allowRetries),
-      rust_backingstore_free);
+      rust_backingstore_new(repository, &options), rust_backingstore_free);
 
   if (store.isError()) {
     throw std::runtime_error(store.getError());

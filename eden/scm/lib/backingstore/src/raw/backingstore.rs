@@ -26,17 +26,22 @@ use crate::raw::Request;
 use crate::raw::StringView;
 use crate::raw::Tree;
 
+#[repr(C)]
+pub struct BackingStoreOptions {
+    aux_data: bool,
+    allow_retries: bool,
+}
+
 #[no_mangle]
 pub extern "C" fn rust_backingstore_new(
     repository: StringView,
-    aux_data: bool,
-    allow_retries: bool,
+    options: &BackingStoreOptions,
 ) -> CFallible<BackingStore> {
     CFallible::make_with(|| {
         super::init::backingstore_global_init();
 
         let repo = str::from_utf8(repository.slice())?;
-        BackingStore::new(repo, aux_data, allow_retries)
+        BackingStore::new(repo, options.aux_data, options.allow_retries)
     })
 }
 

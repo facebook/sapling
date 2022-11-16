@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<68bb936e27a88775207a4d45dc631291>>
+ * @generated SignedSource<<64ce2043b7bad642f77091764fd206fa>>
  *
  */
 
@@ -96,6 +96,11 @@ struct RustStringView {
   RustStringView(std::string_view sv) noexcept: ptr{sv.data()}, len{sv.size()} {}
 };
 
+struct RustBackingStoreOptions {
+  bool aux_data;
+  bool allow_retries;
+};
+
 struct RustCBytes {
   uint8_t *ptr;
   size_t len;
@@ -147,8 +152,7 @@ struct RustFileAuxData {
 extern "C" {
 
 RustCFallibleBase rust_backingstore_new(RustStringView repository,
-                                                          bool aux_data,
-                                                          bool allow_retries);
+                                                          const RustBackingStoreOptions *options);
 
 void rust_backingstore_free(RustBackingStore *store);
 
