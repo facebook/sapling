@@ -11,17 +11,45 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 
+#include "eden/fs/utils/StaticAssert.h"
+
+namespace {
+
 using namespace facebook::eden;
 
-TEST(ImportPriorityTest, value) {
-  EXPECT_LT(ImportPriority::kNormal(), ImportPriority::kHigh());
-  EXPECT_LT(ImportPriority::kLow(), ImportPriority::kNormal());
+static_assert(CheckSize<ImportPriority, sizeof(uint64_t)>());
 
-  // The maximum possible priority
-  auto maximum = ImportPriority{ImportPriorityKind::High, 0xFFFFFFFFFFFFFFF};
-  EXPECT_EQ(maximum.value(), 0x2FFFFFFFFFFFFFFF);
-
-  // the minimum possible priority
-  auto minimum = ImportPriority{ImportPriorityKind::Low, 0};
-  EXPECT_EQ(minimum.value(), 0x0000000000000000);
+TEST(ImportPriorityTest, basic_class_comparison) {
+  EXPECT_LT(
+      ImportPriority{ImportPriority::Class::Normal},
+      ImportPriority{ImportPriority::Class::High});
+  EXPECT_LT(
+      ImportPriority{ImportPriority::Class::Low},
+      ImportPriority{ImportPriority::Class::Normal});
 }
+
+TEST(ImportPriorityTest, deprioritized_keeps_class_but_compares_lower) {
+  auto initial = ImportPriority{};
+  auto lower = initial.adjusted(-1);
+  EXPECT_EQ(initial.getClass(), lower.getClass());
+  EXPECT_LT(lower, initial);
+}
+
+TEST(ImportPriorityTest, format) {
+  EXPECT_EQ(
+      "(Normal, +0)",
+      fmt::to_string(ImportPriority{ImportPriority::Class::Normal}));
+  EXPECT_EQ(
+      "(High, -10)",
+      fmt::to_string(ImportPriority{ImportPriority::Class::High, -10}));
+  EXPECT_EQ(
+      "(Low, +10)",
+      fmt::to_string(ImportPriority{ImportPriority::Class::Low, 10}));
+}
+
+TEST(ImportPriorityTest, minimum_value_cannot_be_deprioritized) {
+  auto minimum = ImportPriority::minimumValue();
+  EXPECT_EQ(minimum, minimum.adjusted(-1));
+}
+
+} // namespace

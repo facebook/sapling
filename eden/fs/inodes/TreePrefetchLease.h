@@ -31,7 +31,7 @@ class TreePrefetchLease {
         ObjectFetchContext::Cause cause)
         : clientPid_(clientPid), cause_(cause) {}
     ImportPriority getPriority() const override {
-      return ImportPriority::kLow();
+      return kReaddirPrefetchPriority;
     }
     std::optional<pid_t> getClientPid() const override {
       return clientPid_;

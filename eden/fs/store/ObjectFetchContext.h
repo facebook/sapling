@@ -84,7 +84,7 @@ class ObjectFetchContext : public RefCounted {
   }
 
   virtual ImportPriority getPriority() const {
-    return ImportPriority::kNormal();
+    return kDefaultImportPriority;
   }
 
   virtual const std::unordered_map<std::string, std::string>* getRequestInfo()

@@ -124,7 +124,7 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
       return std::vector<std::shared_ptr<HgImportRequest>>();
     }
 
-    ImportPriority highestPriority{ImportPriorityKind::Low, 0};
+    auto highestPriority = ImportPriority::minimumValue();
 
     // Trees have a higher priority than blobs, thus check the queues in that
     // order.  The reason for trees having a higher priority is due to trees

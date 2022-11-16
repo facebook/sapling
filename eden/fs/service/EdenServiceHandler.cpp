@@ -188,7 +188,7 @@ class PrefetchFetchContext : public ObjectFetchContext {
   }
 
   virtual ImportPriority getPriority() const override {
-    return ImportPriority::kLow();
+    return kThriftPrefetchPriority;
   }
 
   const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
@@ -1359,13 +1359,13 @@ void convertHgImportTraceEventToHgEvent(
   }
 
   switch (event.importPriority) {
-    case ImportPriorityKind::Low:
+    case ImportPriority::Class::Low:
       te.importPriority_ref() = HgImportPriority::LOW;
       break;
-    case ImportPriorityKind::Normal:
+    case ImportPriority::Class::Normal:
       te.importPriority_ref() = HgImportPriority::NORMAL;
       break;
-    case ImportPriorityKind::High:
+    case ImportPriority::Class::High:
       te.importPriority_ref() = HgImportPriority::HIGH;
       break;
   }

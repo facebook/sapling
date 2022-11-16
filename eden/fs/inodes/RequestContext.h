@@ -64,7 +64,7 @@ class FsObjectFetchContext : public ObjectFetchContext {
   void deprioritize(uint64_t delta) override {
     ImportPriority prev = priority_.load(std::memory_order_acquire);
     priority_.compare_exchange_strong(
-        prev, prev.getDeprioritized(delta), std::memory_order_acq_rel);
+        prev, prev.adjusted(-delta), std::memory_order_acq_rel);
     if (getClientPid().has_value()) {
       XLOG(DBG7) << "priority for " << getClientPid().value()
                  << " has changed to: " << priority_.load().value();
@@ -81,8 +81,7 @@ class FsObjectFetchContext : public ObjectFetchContext {
    * might be rare cases where multiple threads access priority_
    * at the same time.
    */
-  std::atomic<ImportPriority> priority_{
-      ImportPriority(ImportPriorityKind::High)};
+  std::atomic<ImportPriority> priority_{kDefaultFsImportPriority};
 };
 
 using FsObjectFetchContextPtr = RefPtr<FsObjectFetchContext>;

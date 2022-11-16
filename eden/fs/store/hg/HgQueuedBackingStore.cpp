@@ -15,6 +15,7 @@
 #include <re2/re2.h>
 
 #include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
@@ -38,8 +39,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/Throw.h"
-#include "folly/ScopeGuard.h"
-#include "folly/String.h"
 
 namespace facebook::eden {
 
@@ -58,7 +57,7 @@ HgImportTraceEvent::HgImportTraceEvent(
     EventType eventType,
     ResourceType resourceType,
     const HgProxyHash& proxyHash,
-    ImportPriorityKind priority,
+    ImportPriority::Class priority,
     ObjectFetchContext::Cause cause)
     : unique{unique},
       manifestNodeId{proxyHash.revHash()},
@@ -148,7 +147,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
         request->getUnique(),
         HgImportTraceEvent::BLOB,
         blobImport->proxyHash,
-        request->getPriority().kind,
+        request->getPriority().getClass(),
         request->getCause()));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
@@ -201,7 +200,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
         request->getUnique(),
         HgImportTraceEvent::TREE,
         treeImport->proxyHash,
-        request->getPriority().kind,
+        request->getPriority().getClass(),
         request->getCause()));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
@@ -420,7 +419,7 @@ HgQueuedBackingStore::getTreeImpl(
         unique,
         HgImportTraceEvent::TREE,
         proxyHash,
-        context->getPriority().kind,
+        context->getPriority().getClass(),
         context->getCause()));
 
     return queue_.enqueueTree(std::move(request))
@@ -433,7 +432,7 @@ HgQueuedBackingStore::getTreeImpl(
               unique,
               HgImportTraceEvent::TREE,
               proxyHash,
-              context->getPriority().kind,
+              context->getPriority().getClass(),
               context->getCause()));
         });
   });
@@ -491,7 +490,7 @@ HgQueuedBackingStore::getBlobImpl(
         unique,
         HgImportTraceEvent::BLOB,
         proxyHash,
-        context->getPriority().kind,
+        context->getPriority().getClass(),
         context->getCause()));
 
     return queue_.enqueueBlob(std::move(request))
@@ -504,7 +503,7 @@ HgQueuedBackingStore::getBlobImpl(
               unique,
               HgImportTraceEvent::BLOB,
               proxyHash,
-              context->getPriority().kind,
+              context->getPriority().getClass(),
               context->getCause()));
         });
   });

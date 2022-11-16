@@ -50,7 +50,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause) {
     return HgImportTraceEvent{
         unique, QUEUE, resourceType, proxyHash, priority, cause};
@@ -60,7 +60,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause) {
     return HgImportTraceEvent{
         unique, START, resourceType, proxyHash, priority, cause};
@@ -70,7 +70,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause) {
     return HgImportTraceEvent{
         unique, FINISH, resourceType, proxyHash, priority, cause};
@@ -81,7 +81,7 @@ struct HgImportTraceEvent : TraceEventBase {
       EventType eventType,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause);
 
   // Simple accessor that hides the internal memory representation of paths.
@@ -98,7 +98,7 @@ struct HgImportTraceEvent : TraceEventBase {
   Hash20 manifestNodeId;
   EventType eventType;
   ResourceType resourceType;
-  ImportPriorityKind importPriority;
+  ImportPriority::Class importPriority;
   ObjectFetchContext::Cause importCause;
 };
 
