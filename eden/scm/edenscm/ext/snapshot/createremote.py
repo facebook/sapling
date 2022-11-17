@@ -151,6 +151,7 @@ def uploadsnapshot(
         lifetime,
         previousbubble,
         previousbubble if reusestorage else None,
+        None,  # TODO: Include labels as additional argument
     )
 
 

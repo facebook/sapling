@@ -74,6 +74,7 @@ pub async fn upload_snapshot(
     custom_duration_secs: Option<u64>,
     copy_from_bubble_id: Option<NonZeroU64>,
     use_bubble: Option<NonZeroU64>,
+    labels: Option<Vec<String>>,
 ) -> Result<UploadSnapshotResponse> {
     let SnapshotRawData {
         files,
@@ -126,7 +127,7 @@ pub async fn upload_snapshot(
     let bubble_id = if let Some(id) = use_bubble {
         id
     } else {
-        api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs))
+        api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs), labels)
             .await?
             .entries
             .next()

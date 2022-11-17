@@ -29,5 +29,5 @@ Start up EdenAPI server.
   $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Check response.
-  $ hgedenapi debugapi -e ephemeralprepare -i None
+  $ hgedenapi debugapi -e ephemeralprepare -i None -i "['some', 'label']"
   [{"bubble_id": 1}]

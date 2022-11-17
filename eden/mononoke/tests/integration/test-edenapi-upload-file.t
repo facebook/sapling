@@ -55,7 +55,7 @@ Check responses.
                                 114,
                                 101]}}]
 
-  $ hgedenapi debugapi -e ephemeralprepare -i None
+  $ hgedenapi debugapi -e ephemeralprepare -i None -i None
   [{"bubble_id": 1}]
 
   $ hgedenapi debugapi -e uploadfilecontents -i '[({"Sha1":"7b18d017f89f61cf17d47f92749ea6930a3f1deb"}, b"def\n")]' -i 1

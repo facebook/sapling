@@ -1,6 +1,5 @@
 ---
 source: commit.rs
 expression: "WireEphemeralPrepareRequest::arbitrary(&mut g)"
-
 ---
 {"1":5452211403613372577}

@@ -382,6 +382,7 @@ py_class!(pub class client |py| {
         custom_duration_secs: Option<u64>,
         copy_from_bubble_id: Option<u64>,
         use_bubble: Option<u64>,
+        labels: Option<Vec<String>>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
         let api = self.inner(py).as_ref();
         let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
@@ -393,6 +394,7 @@ py_class!(pub class client |py| {
                 custom_duration_secs,
                 copy_from_bubble_id,
                 use_bubble,
+                labels,
             ))
         })
         .map_pyerr(py)?
@@ -450,12 +452,12 @@ py_class!(pub class client |py| {
         self.inner(py).as_ref().downloadfiletomemory_py(py, token)
     }
 
-    def ephemeralprepare(&self, custom_duration: Option<u64>)
+    def ephemeralprepare(&self, custom_duration: Option<u64>, labels: Option<Vec<String>>)
         -> PyResult<TStream<anyhow::Result<Serde<EphemeralPrepareResponse>>>>
     {
         let api = self.inner(py).as_ref();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(api.ephemeral_prepare(custom_duration.map(Duration::from_secs))))
+            .allow_threads(|| block_unless_interrupted(api.ephemeral_prepare(custom_duration.map(Duration::from_secs), labels)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

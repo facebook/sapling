@@ -1162,11 +1162,13 @@ impl EdenApi for Client {
     async fn ephemeral_prepare(
         &self,
         custom_duration: Option<Duration>,
+        labels: Option<Vec<String>>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         tracing::info!("Preparing ephemeral bubble");
         let url = self.build_url(paths::EPHEMERAL_PREPARE)?;
         let req = EphemeralPrepareRequest {
             custom_duration_secs: custom_duration.map(|d| d.as_secs()),
+            labels,
         }
         .to_wire();
         let request = self

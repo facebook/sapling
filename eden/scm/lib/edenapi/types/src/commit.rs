@@ -374,6 +374,8 @@ pub struct UploadSnapshotResponse {
 pub struct EphemeralPrepareRequest {
     #[id(1)]
     pub custom_duration_secs: Option<u64>,
+    #[id(2)]
+    pub labels: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

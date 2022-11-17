@@ -276,8 +276,9 @@ pub trait EdenApi: Send + Sync + 'static {
     async fn ephemeral_prepare(
         &self,
         custom_duration: Option<Duration>,
+        labels: Option<Vec<String>>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        let _ = custom_duration;
+        let _ = (custom_duration, labels);
         Err(EdenApiError::NotSupported)
     }
 

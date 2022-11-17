@@ -513,7 +513,7 @@ impl EdenApiHandler for EphemeralPrepareHandler {
                 bubble_id: repo
                     .create_bubble(
                         request.custom_duration_secs.map(Duration::from_secs),
-                        vec![],
+                        request.labels.unwrap_or_else(Vec::new),
                     )
                     .await?
                     .bubble_id()
