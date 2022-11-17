@@ -1328,8 +1328,18 @@ def branch(ui, repo, label=None, **opts):
     For now, it always prints "default" or raise an exception if NAME or -C is
     provided.
     """
+    if ui.identity.cliname() != "hg":
+        # we don't need compatibility layer and deprecation messages for Sapling identity
+        ui.write(("unknown command 'branch'\n"))
+        ui.write(
+            _(
+                'hint: perhaps you\'d like to use "@prog@ bookmark".\nMore info: '
+                "https://sapling-scm.com/docs/overview/bookmarks\n"
+            )
+        )
+        return 255
     if not util.istest():
-        ui.deprecate("hg-branch", "branches are deprecated at Facebook")
+        ui.deprecate("hg-branch", "branches are deprecated at Meta")
     hintutil.trigger("branch-command-deprecate")
     if not opts.get("clean") and not label:
         ui.write("%s\n" % repo.dirstate.branch())
