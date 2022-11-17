@@ -309,7 +309,7 @@ ImmediateFuture<OnDiskState> getOnDiskState(
     std::chrono::steady_clock::time_point receivedAt,
     int retry = 0) {
   auto absPath = mount.getPath() + path;
-  auto boostPath = boost::filesystem::path(absPath.stringPiece());
+  auto boostPath = boost::filesystem::path(absPath.asString());
 
   boost::system::error_code ec;
   auto fileType = boost::filesystem::symlink_status(boostPath, ec).type();

@@ -496,7 +496,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
   header.command = Endian::big<uint32_t>(CMD_CAT_FILE);
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
-  StringPiece pathStr = path.stringPiece();
+  std::string_view pathStr = path.view();
   header.dataLength = Endian::big<uint32_t>(
       folly::to_narrow(Hash20::RAW_SIZE + pathStr.size()));
 
@@ -524,7 +524,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   header.command = Endian::big<uint32_t>(cmd);
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
-  StringPiece pathStr = path.stringPiece();
+  std::string_view pathStr = path.view();
   header.dataLength = Endian::big<uint32_t>(
       folly::to_narrow(Hash20::RAW_SIZE + pathStr.size()));
 

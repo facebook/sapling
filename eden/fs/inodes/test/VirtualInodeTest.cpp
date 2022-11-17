@@ -77,7 +77,7 @@ struct TestFileInfo {
         mode(mode_),
         path(std::move(path_)),
         flags(flags_),
-        contents(dtype_ == dtype_t::Regular ? path.stringPiece() : "") {}
+        contents(dtype_ == dtype_t::Regular ? path.view() : "") {}
 
   bool operator==(const TestFileInfo& rhs) const {
     return dtype == rhs.dtype && containedType == rhs.containedType &&
@@ -327,7 +327,7 @@ class TestFileDatabase {
   std::vector<TestFileInfo*> getChildren(RelativePathPiece path) {
     std::vector<TestFileInfo*> kids;
     for (auto& info : initialInfos_) {
-      if (info->path.stringPiece().size() && info->path.dirname() == path) {
+      if (info->path.view().size() && info->path.dirname() == path) {
         kids.emplace_back(&getEntry(info->path));
       }
     }
@@ -347,7 +347,7 @@ class TestFileDatabase {
   }
 
   void onDelete(RelativePathPiece path) {
-    XCHECK_NE(path.stringPiece().size(), 0U);
+    XCHECK_NE(path.view().size(), 0U);
     // Unlinking a file causes the parents to be
     // loaded/materialized
     setFlags(path.dirname(), FLAG_M | FLAG_L);
@@ -723,7 +723,7 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
 
         for (auto child : files.getChildren(RelativePathPiece{info->path})) {
           auto childVirtualInode = mount.getVirtualInode(child->path);
-          auto entryName = basename(child->path.stringPiece());
+          auto entryName = basename(child->path.view());
           EXPECT_THAT(
               result,
               testing::Contains(testing::Pair(
@@ -957,7 +957,7 @@ TEST(VirtualInodeTest, materializationPropagation) {
     // Materialize this one file
     std::string oldContents = info.pathStr();
     std::string newContents = oldContents + "~newContent";
-    mount.overwriteFile(info.path.stringPiece(), newContents);
+    mount.overwriteFile(info.path.view(), newContents);
     files.setContents(info.path, newContents);
     VERIFY_TREE_DEFAULT();
 
@@ -986,7 +986,7 @@ TEST(VirtualInodeTest, materializationPropagation) {
 
       std::string oldContents = info.pathStr();
       std::string newContents = oldContents + "~newContent";
-      mount.overwriteFile(info.path.stringPiece(), newContents);
+      mount.overwriteFile(info.path.view(), newContents);
       files.setContents(info.path, newContents);
       VERIFY_TREE_DEFAULT();
     }
@@ -998,7 +998,7 @@ TEST(VirtualInodeTest, materializationPropagation) {
 }
 
 TEST(VirtualInodeTest, loadPropagation) {
-  const size_t M = 10;
+  const size_t C = 10;
 
   // One by one, start with something fresh, load the one, and check the state
   TestFileDatabase files;
@@ -1021,7 +1021,7 @@ TEST(VirtualInodeTest, loadPropagation) {
   }
 
   // Now do a set of random sets
-  for (size_t iteration = 0; iteration < M; ++iteration) {
+  for (size_t iteration = 0; iteration < C; ++iteration) {
     // TestFileDatabase files;
     VERIFY_TREE(VERIFY_INITIAL);
     // Load a random set of files

@@ -89,8 +89,8 @@ std::unique_ptr<Tree> fromRawTree(
 std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
     const ObjectId& id,
     const HgProxyHash& hgInfo) {
-  auto content =
-      store_.getBlob(hgInfo.path().stringPiece(), hgInfo.byteHash(), true);
+  auto content = store_.getBlob(
+      folly::ByteRange{hgInfo.path().view()}, hgInfo.byteHash(), true);
   if (content) {
     return std::make_unique<Blob>(id, std::move(*content));
   }
@@ -122,7 +122,7 @@ void HgDatapackStore::getBlobBatch(
     auto& proxyHash =
         importRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash;
     requests.emplace_back(
-        folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
+        folly::ByteRange{proxyHash.path().view()}, proxyHash.byteHash());
   }
 
   std::vector<RequestMetricsScope> requestsWatches;
@@ -166,7 +166,7 @@ void HgDatapackStore::getTreeBatch(
     auto& proxyHash =
         importRequest->getRequest<HgImportRequest::TreeImport>()->proxyHash;
     requests.emplace_back(
-        folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
+        folly::ByteRange{proxyHash.path().view()}, proxyHash.byteHash());
   }
   std::vector<RequestMetricsScope> requestsWatches;
   requestsWatches.reserve(count);

@@ -121,9 +121,9 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
     auto args = originalCommandLine;
     args.push_back(name.str());
     args.push_back(logPath().asString());
-    auto child = logger.spawnImpl(logPath().stringPiece(), nullptr, args);
+    auto child = logger.spawnImpl(logPath().view(), nullptr, args);
     auto result = logger.waitForChildStatus(
-        child.exitStatusPipe, child.process, logPath().stringPiece());
+        child.exitStatusPipe, child.process, logPath().view());
     child.process.kill();
     child.process.wait();
     return result;
@@ -437,7 +437,7 @@ TEST_F(FileStartupLoggerTest, loggerCreatesFileIfMissing) {
 }
 
 TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
-  auto logger = FileStartupLogger{logPath().stringPiece()};
+  auto logger = FileStartupLogger{logPath().view()};
   logger.log("hello world");
   logger.warn("warning message");
   EXPECT_EQ("hello world\nwarning message\n", readLogContents());
@@ -445,13 +445,13 @@ TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
 
 TEST_F(FileStartupLoggerTest, loggingAppendsToFileIfItAlreadyExists) {
   writeFile(logPath(), "existing line\n"_sp).throwUnlessValue();
-  auto logger = FileStartupLogger{logPath().stringPiece()};
+  auto logger = FileStartupLogger{logPath().view()};
   logger.log("new line");
   EXPECT_EQ("existing line\nnew line\n", readLogContents());
 }
 
 TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
-  auto logger = FileStartupLogger{logPath().stringPiece()};
+  auto logger = FileStartupLogger{logPath().view()};
   logger.success(41);
   EXPECT_EQ(
       folly::to<std::string>(

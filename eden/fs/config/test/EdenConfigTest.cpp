@@ -378,7 +378,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       canonicalPath("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
       edenConfig->getClientCertificate(),
-      normalizeBestEffort(clientConfigPath.stringPiece()));
+      normalizeBestEffort(clientConfigPath.view()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), true);
 
   edenConfig->loadUserConfig();
@@ -392,7 +392,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       canonicalPath("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
       edenConfig->getClientCertificate(),
-      normalizeBestEffort(clientConfigPath.stringPiece()));
+      normalizeBestEffort(clientConfigPath.view()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
 }
 

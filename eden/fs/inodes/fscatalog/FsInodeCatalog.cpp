@@ -110,7 +110,7 @@ bool FileContentStore::initialize(bool createIfNonExisting) {
     readExistingOverlay(infoFile_.fd());
   } else if (errno != ENOENT) {
     folly::throwSystemError(
-        "error reading eden overlay info file ", infoPath.stringPiece());
+        "error reading eden overlay info file ", infoPath.view());
   } else {
     if (!createIfNonExisting) {
       folly::throwSystemError("overlay does not exist at ", localDir_.view());
@@ -233,9 +233,7 @@ void FileContentStore::readExistingOverlay(int infoFD) {
   std::array<uint8_t, kInfoHeaderSize> infoHeader;
   auto sizeRead = folly::readFull(infoFD, infoHeader.data(), infoHeader.size());
   folly::checkUnixError(
-      sizeRead,
-      "error reading from overlay info file in ",
-      localDir_.stringPiece());
+      sizeRead, "error reading from overlay info file in ", localDir_.view());
   if (sizeRead != infoHeader.size()) {
     throw_<std::runtime_error>(
         "truncated info file in overlay directory ", localDir_);
@@ -266,9 +264,9 @@ void FileContentStore::initNewOverlay() {
   auto result = ::mkdir(localDir_.value().c_str(), 0755);
   if (result != 0 && errno != EEXIST) {
     folly::throwSystemError(
-        "error creating eden overlay directory ", localDir_.stringPiece());
+        "error creating eden overlay directory ", localDir_.view());
   }
-  auto localDirFile = File(localDir_.stringPiece(), O_RDONLY);
+  auto localDirFile = File(localDir_.view(), O_RDONLY);
 
   // We split the inode files across 256 subdirectories.
   // Populate these subdirectories now.

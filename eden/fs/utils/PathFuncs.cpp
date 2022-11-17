@@ -22,25 +22,23 @@
 #endif
 
 using folly::Expected;
-using folly::StringPiece;
 
 namespace facebook::eden {
 
-StringPiece dirname(StringPiece path) {
+std::string_view dirname(std::string_view path) {
   auto dirSeparator = detail::rfindPathSeparator(path);
 
   if (dirSeparator != std::string::npos) {
-    return path.subpiece(0, dirSeparator);
+    return path.substr(0, dirSeparator);
   }
   return "";
 }
 
-StringPiece basename(StringPiece path) {
+std::string_view basename(std::string_view path) {
   auto dirSeparator = detail::rfindPathSeparator(path);
 
   if (dirSeparator != std::string::npos) {
-    path.advance(dirSeparator + 1);
-    return path;
+    return path.substr(dirSeparator + 1);
   }
   return path;
 }
@@ -55,12 +53,12 @@ AbsolutePath getcwd() {
 
 namespace {
 struct CanonicalData {
-  std::vector<StringPiece> components;
+  std::vector<std::string_view> components;
   bool isAbsolute{false};
 };
 
-bool startsWithUNC(StringPiece path) {
-  return folly::kIsWindows && path.startsWith(detail::kUNCPrefix);
+bool startsWithUNC(string_view path) {
+  return folly::kIsWindows && path.starts_with(detail::kUNCPrefix);
 }
 
 /**
@@ -70,17 +68,17 @@ bool startsWithUNC(StringPiece path) {
  *   parsed path component, or becomes the first component when
  *   the vector of previously extracted components is empty.
  */
-CanonicalData canonicalPathData(StringPiece path) {
+CanonicalData canonicalPathData(std::string_view path) {
   CanonicalData data;
 
   if (startsWithUNC(path)) {
-    path = path.subpiece(detail::kUNCPrefix.size());
+    path = path.substr(detail::kUNCPrefix.size());
     data.isAbsolute = true;
   }
 
-  const char* componentStart = path.begin();
+  const char* componentStart = path.data();
   auto processSlash = [&](const char* end) {
-    auto component = StringPiece{componentStart, end};
+    auto component = detail::string_view_range(componentStart, end);
     componentStart = end + 1;
     if (component.empty()) {
       // Ignore empty components (doubled slash characters)
@@ -116,22 +114,22 @@ CanonicalData canonicalPathData(StringPiece path) {
     }
   };
 
-  for (const char* p = path.begin(); p != path.end(); ++p) {
+  for (const char* p = path.data(); p != path.data() + path.size(); ++p) {
     if (detail::isDirSeparator(*p)) {
       processSlash(p);
     }
   }
-  if (componentStart != path.end()) {
-    processSlash(path.end());
+  if (componentStart != path.data() + path.size()) {
+    processSlash(path.data() + path.size());
   }
 
   return data;
 }
 
 AbsolutePath canonicalPathImpl(
-    StringPiece path,
+    std::string_view path,
     std::optional<AbsolutePathPiece> base) {
-  auto makeAbsolutePath = [](const std::vector<StringPiece>& parts) {
+  auto makeAbsolutePath = [](const std::vector<std::string_view>& parts) {
     if (parts.empty()) {
       return AbsolutePath{};
     }
@@ -166,13 +164,13 @@ AbsolutePath canonicalPathImpl(
   CanonicalData baseCanon;
   AbsolutePath cwd;
   if (!base.has_value()) {
-    // canonicalPathData() returns StringPieces pointing to the input,
+    // canonicalPathData() returns std::string_views pointing to the input,
     // so we have to store the cwd in a variable that will persist until the
     // end of this function.
     cwd = getcwd();
-    baseCanon = canonicalPathData(cwd.stringPiece());
+    baseCanon = canonicalPathData(cwd.view());
   } else {
-    baseCanon = canonicalPathData(base.value().stringPiece());
+    baseCanon = canonicalPathData(base.value().view());
   }
 
   for (auto it = canon.components.begin(); it != canon.components.end(); ++it) {
@@ -194,23 +192,23 @@ AbsolutePath canonicalPathImpl(
 }
 } // namespace
 
-AbsolutePath canonicalPath(folly::StringPiece path) {
+AbsolutePath canonicalPath(std::string_view path) {
   // Pass in std::nullopt.
   // canonicalPathImpl() will only call getcwd() if it is actually necessary.
   return canonicalPathImpl(path, std::nullopt);
 }
 
-AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base) {
+AbsolutePath canonicalPath(std::string_view path, AbsolutePathPiece base) {
   return canonicalPathImpl(path, std::optional<AbsolutePathPiece>{base});
 }
 
 folly::Expected<RelativePath, int> joinAndNormalize(
     RelativePathPiece base,
-    folly::StringPiece path) {
-  if (path.startsWith(kDirSeparator)) {
+    string_view path) {
+  if (path.starts_with(kDirSeparator)) {
     return folly::makeUnexpected(EPERM);
   }
-  const std::string joined = base.value().empty() ? path.str()
+  const std::string joined = base.value().empty() ? std::string{path}
       : path.empty()                              ? std::string{base.value()}
                      : fmt::format("{}{}{}", base, kDirSeparator, path);
   const CanonicalData cdata{canonicalPathData(joined)};
@@ -235,9 +233,9 @@ Expected<AbsolutePath, int> realpathExpected(const char* path) {
   return folly::makeExpected<int>(canonicalPath(pathBuffer));
 }
 
-Expected<AbsolutePath, int> realpathExpected(StringPiece path) {
+Expected<AbsolutePath, int> realpathExpected(string_view path) {
   // The input may not be nul-terminated, so we have to construct a std::string
-  return realpath(path.str().c_str());
+  return realpath(std::string{path}.c_str());
 }
 
 AbsolutePath realpath(const char* path) {
@@ -249,9 +247,9 @@ AbsolutePath realpath(const char* path) {
   return result.value();
 }
 
-AbsolutePath realpath(StringPiece path) {
+AbsolutePath realpath(std::string_view path) {
   // The input may not be nul-terminated, so we have to construct a std::string
-  return realpath(path.str().c_str());
+  return realpath(std::string{path}.c_str());
 }
 
 AbsolutePath normalizeBestEffort(const char* path) {
@@ -263,21 +261,20 @@ AbsolutePath normalizeBestEffort(const char* path) {
   return canonicalPathImpl(path, std::nullopt);
 }
 
-AbsolutePath normalizeBestEffort(folly::StringPiece path) {
-  return normalizeBestEffort(path.str().c_str());
+AbsolutePath normalizeBestEffort(std::string_view path) {
+  return normalizeBestEffort(std::string{path}.c_str());
 }
 
 std::pair<PathComponentPiece, RelativePathPiece> splitFirst(
     RelativePathPiece path) {
-  auto piece = path.stringPiece();
+  auto piece = path.view();
   auto dirSeparator = detail::findPathSeparator(piece);
 
   if (dirSeparator != std::string::npos) {
     return {
-        PathComponentPiece{
-            folly::StringPiece{piece.begin(), piece.begin() + dirSeparator}},
-        RelativePathPiece{
-            folly::StringPiece{piece.begin() + dirSeparator + 1, piece.end()}}};
+        PathComponentPiece{std::string_view{piece.data(), dirSeparator}},
+        RelativePathPiece{detail::string_view_range(
+            piece.data() + dirSeparator + 1, piece.data() + piece.size())}};
   } else {
     return {PathComponentPiece{piece}, RelativePathPiece{}};
   }
@@ -292,7 +289,7 @@ void validatePathComponentLength(PathComponentPiece name) {
 
 namespace {
 boost::filesystem::path asBoostPath(AbsolutePathPiece path) {
-  return boost::filesystem::path{path.stringPiece()};
+  return boost::filesystem::path{path.asString()};
 }
 } // namespace
 
@@ -321,13 +318,13 @@ void renameWithAbsolutePath(
 }
 
 AbsolutePath expandUser(
-    folly::StringPiece path,
-    std::optional<folly::StringPiece> homeDir) {
-  if (!path.startsWith("~")) {
+    string_view path,
+    std::optional<std::string_view> homeDir) {
+  if (!path.starts_with("~")) {
     return canonicalPath(path);
   }
 
-  if (path.size() > 1 && !path.startsWith("~/")) {
+  if (path.size() > 1 && !path.starts_with("~/")) {
     // path is not "~" and doesn't start with "~/".
     // Most likely the input is something like "~user" which
     // we don't support.
@@ -351,12 +348,12 @@ AbsolutePath expandUser(
     return canonicalPath(*homeDir);
   }
 
-  // Otherwise: we know the path startsWith("~/") due to the
+  // Otherwise: we know the path starts_with("~/") due to the
   // checks made above, so we can skip the first 2 characters
   // to build the expansion here.
 
   auto expanded =
-      folly::to<std::string>(*homeDir, kDirSeparator, path.subpiece(2));
+      folly::to<std::string>(*homeDir, kDirSeparator, path.substr(2));
   return canonicalPath(expanded);
 }
 
@@ -369,7 +366,7 @@ AbsolutePath executablePath() {
   auto result = readlink("/proc/self/exe", buf.data(), buf.size());
   folly::checkUnixError(result, "failed to read /proc/self/exe");
   return AbsolutePath(
-      folly::StringPiece(buf.data(), static_cast<size_t>(result)));
+      std::string_view(buf.data(), static_cast<size_t>(result)));
 #elif defined(__APPLE__)
   std::vector<char> buf;
   buf.resize(4096, 0);
@@ -382,7 +379,7 @@ AbsolutePath executablePath() {
   }
   // Note that on success, the size is not updated and we need to look
   // for NUL termination
-  return AbsolutePath(folly::StringPiece(buf.data()));
+  return AbsolutePath(std::string_view(buf.data()));
 #elif defined(_WIN32)
   std::vector<WCHAR> buf;
   buf.resize(4096);

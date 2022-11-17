@@ -133,7 +133,7 @@ void HgRepo::cloneFrom(
 
 void HgRepo::appendToHgrc(folly::StringPiece data) {
   auto hgrcPath = path_ + ".hg"_pc + "hgrc"_pc;
-  folly::File hgrc{hgrcPath.stringPiece(), O_WRONLY | O_APPEND | O_CREAT};
+  folly::File hgrc{hgrcPath.view(), O_WRONLY | O_APPEND | O_CREAT};
   if (folly::writeFull(hgrc.fd(), data.data(), data.size()) < 0) {
     folly::throwSystemError("error writing to ", hgrcPath.view());
   }

@@ -467,7 +467,7 @@ class LookupProcessor {
 ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
     RelativePathPiece path,
     const ObjectFetchContextPtr& context) {
-  auto pathStr = path.stringPiece();
+  auto pathStr = path.view();
   if (pathStr.empty()) {
     return inodePtrFromThis();
   }
@@ -2320,7 +2320,7 @@ bool TreeInode::readdirImpl(
     auto& [name, entry] = entries.begin()[indices.back().second];
     indices.pop_back();
 
-    if (!add(name.stringPiece(), entry, entry.getInodeNumber().get() + 2)) {
+    if (!add(name.view(), entry, entry.getInodeNumber().get() + 2)) {
       return false;
     }
   }

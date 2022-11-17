@@ -210,7 +210,7 @@ TEST(PathFuncs, IteratorDecrement) {
     for (const auto& expectedPath : expectedList) {
       ASSERT_FALSE(iter == range.begin());
       --iter;
-      EXPECT_EQ(expectedPath, (*iter).stringPiece());
+      EXPECT_EQ(expectedPath, (*iter).view());
     }
     EXPECT_TRUE(iter == range.begin());
   };
@@ -482,7 +482,7 @@ TEST(PathFuncs, InitializeFromIter) {
 
   // This form uses iterators explicitly
   RelativePath rel(components.begin(), components.end());
-  EXPECT_EQ("a/b/c", rel.stringPiece());
+  EXPECT_EQ("a/b/c", rel.view());
 
   // This form constructs from the container directly (which uses the
   // iterator form under the covers)
@@ -494,7 +494,7 @@ TEST(PathFuncs, InitializeFromIter) {
   // Note that we're mixing both the Stored and Piece flavors of the
   // PathComponent in the initializer.
   RelativePath rel3{PathComponent("stored"), "notstored"_pc};
-  EXPECT_EQ("stored/notstored", rel3.stringPiece());
+  EXPECT_EQ("stored/notstored", rel3.view());
 }
 
 TEST(PathFuncs, Hash20) {
@@ -525,17 +525,15 @@ TEST(PathFuncs, ImplicitPiece) {
   // which is a pattern we desire for passing either Stored or Piece
   // to a method that accepts a Piece.
   PathComponent comp("stored");
-  [](PathComponentPiece piece) {
-    EXPECT_EQ("stored", piece.stringPiece());
-  }(comp);
+  [](PathComponentPiece piece) { EXPECT_EQ("stored", piece.view()); }(comp);
 }
 
 TEST(PathFuncs, PathComponent) {
   PathComponent comp("hello");
-  EXPECT_EQ("hello", comp.stringPiece());
+  EXPECT_EQ("hello", comp.view());
 
   PathComponentPiece compPiece("helloPiece");
-  EXPECT_EQ("helloPiece", compPiece.stringPiece());
+  EXPECT_EQ("helloPiece", compPiece.view());
 
   PathComponent storedFromStored(comp);
   EXPECT_EQ(comp, storedFromStored);
@@ -565,7 +563,7 @@ TEST(PathFuncs, PathComponent) {
 
 TEST(PathFuncs, RelativePath) {
   RelativePath emptyRel;
-  EXPECT_EQ("", emptyRel.stringPiece());
+  EXPECT_EQ("", emptyRel.view());
   EXPECT_EQ("", (emptyRel + RelativePath()).value());
 
   EXPECT_THROW_RE(RelativePath("/foo/bar"), std::domain_error, "absolute path");
@@ -573,29 +571,29 @@ TEST(PathFuncs, RelativePath) {
       RelativePath("foo/"), std::domain_error, "must not end with a slash");
 
   RelativePathPiece relPiece("foo/bar");
-  EXPECT_EQ("foo/bar", relPiece.stringPiece());
+  EXPECT_EQ("foo/bar", relPiece.view());
   EXPECT_NE(emptyRel, relPiece);
 
   EXPECT_EQ("a", (emptyRel + "a"_relpath).value());
   EXPECT_EQ("a", ("a"_relpath + emptyRel).value());
 
   auto comp = "top"_pc + "sub"_pc;
-  EXPECT_EQ("top/sub", comp.stringPiece());
+  EXPECT_EQ("top/sub", comp.view());
 
   auto comp2 = comp + "third"_pc;
-  EXPECT_EQ("top/sub/third", comp2.stringPiece());
+  EXPECT_EQ("top/sub/third", comp2.view());
 
   auto comp3 = comp + emptyRel;
-  EXPECT_EQ("top/sub", comp3.stringPiece());
+  EXPECT_EQ("top/sub", comp3.view());
 
   auto comp4 = emptyRel + comp;
-  EXPECT_EQ("top/sub", comp4.stringPiece());
+  EXPECT_EQ("top/sub", comp4.view());
 
-  EXPECT_EQ("third", comp2.basename().stringPiece());
-  EXPECT_EQ("top/sub", comp2.dirname().stringPiece());
-  EXPECT_EQ("top", comp2.dirname().dirname().stringPiece());
-  EXPECT_EQ("", comp2.dirname().dirname().dirname().stringPiece());
-  EXPECT_EQ("", comp2.dirname().dirname().dirname().dirname().stringPiece());
+  EXPECT_EQ("third", comp2.basename().view());
+  EXPECT_EQ("top/sub", comp2.dirname().view());
+  EXPECT_EQ("top", comp2.dirname().dirname().view());
+  EXPECT_EQ("", comp2.dirname().dirname().dirname().view());
+  EXPECT_EQ("", comp2.dirname().dirname().dirname().dirname().view());
 }
 
 TEST(PathFuncs, AbsolutePath) {
@@ -616,25 +614,25 @@ TEST(PathFuncs, AbsolutePath) {
 
   if (folly::kIsWindows) {
     AbsolutePath abs("\\\\?\\some\\dir");
-    EXPECT_EQ("dir", abs.basename().stringPiece());
-    EXPECT_EQ("\\\\?\\some", abs.dirname().stringPiece());
+    EXPECT_EQ("dir", abs.basename().view());
+    EXPECT_EQ("\\\\?\\some", abs.dirname().view());
 
     EXPECT_EQ("\\\\?\\some\\dir", (abs + ""_relpath).value());
 
     auto rel = "one"_pc + "two"_pc;
     auto comp = abs + rel;
-    EXPECT_EQ("\\\\?\\some\\dir\\one\\two", comp.stringPiece());
+    EXPECT_EQ("\\\\?\\some\\dir\\one\\two", comp.view());
 
     auto comp2 = abs + RelativePathPiece();
-    EXPECT_EQ("\\\\?\\some\\dir", comp2.stringPiece());
+    EXPECT_EQ("\\\\?\\some\\dir", comp2.view());
 
     auto comp3 = abs + PathComponent("comp");
-    EXPECT_EQ("\\\\?\\some\\dir\\comp", comp3.stringPiece());
+    EXPECT_EQ("\\\\?\\some\\dir\\comp", comp3.view());
 
-    EXPECT_EQ("\\\\?\\", AbsolutePathPiece().stringPiece());
-    EXPECT_EQ("\\\\?\\", "\\\\?\\"_abspath.stringPiece());
+    EXPECT_EQ("\\\\?\\", AbsolutePathPiece().view());
+    EXPECT_EQ("\\\\?\\", "\\\\?\\"_abspath.view());
     auto comp4 = AbsolutePathPiece() + "foo"_relpath;
-    EXPECT_EQ("\\\\?\\foo", comp4.stringPiece());
+    EXPECT_EQ("\\\\?\\foo", comp4.view());
 
     AbsolutePath root("\\\\?\\");
     EXPECT_EQ(RelativePathPiece(), root.relativize(root));
@@ -644,25 +642,25 @@ TEST(PathFuncs, AbsolutePath) {
     EXPECT_EQ("foo\\bar"_relpath, abs.relativize(abs + "foo/bar"_relpath));
   } else {
     AbsolutePath abs("/some/dir");
-    EXPECT_EQ("dir", abs.basename().stringPiece());
-    EXPECT_EQ("/some", abs.dirname().stringPiece());
+    EXPECT_EQ("dir", abs.basename().view());
+    EXPECT_EQ("/some", abs.dirname().view());
 
     EXPECT_EQ("/some/dir", (abs + ""_relpath).value());
 
     auto rel = "one"_pc + "two"_pc;
     auto comp = abs + rel;
-    EXPECT_EQ("/some/dir/one/two", comp.stringPiece());
+    EXPECT_EQ("/some/dir/one/two", comp.view());
 
     auto comp2 = abs + RelativePathPiece();
-    EXPECT_EQ("/some/dir", comp2.stringPiece());
+    EXPECT_EQ("/some/dir", comp2.view());
 
     auto comp3 = abs + PathComponent("comp");
-    EXPECT_EQ("/some/dir/comp", comp3.stringPiece());
+    EXPECT_EQ("/some/dir/comp", comp3.view());
 
-    EXPECT_EQ("/", AbsolutePathPiece().stringPiece());
-    EXPECT_EQ("/", "/"_abspath.stringPiece());
+    EXPECT_EQ("/", AbsolutePathPiece().view());
+    EXPECT_EQ("/", "/"_abspath.view());
     auto comp4 = AbsolutePathPiece() + "foo"_relpath;
-    EXPECT_EQ("/foo", comp4.stringPiece());
+    EXPECT_EQ("/foo", comp4.view());
 
     AbsolutePath root("/");
     EXPECT_EQ(RelativePathPiece(), root.relativize(root));
@@ -1208,7 +1206,7 @@ TEST(PathFuncs, noThrow) {
 #ifdef _WIN32
 TEST(PathFuncs, PathComponentWide) {
   PathComponent comp(L"hello");
-  EXPECT_EQ("hello", comp.stringPiece());
+  EXPECT_EQ("hello", comp.view());
   EXPECT_EQ(L"hello", comp.wide());
 
   EXPECT_THROW_RE(

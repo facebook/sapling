@@ -472,7 +472,7 @@ SpawnedProcess::SpawnedProcess(
     //
     // We use the shell for this.
     std::string shellCommand =
-        "cd " + folly::shellQuote(options.cwd_->stringPiece()) + " && exec";
+        "cd " + folly::shellQuote(options.cwd_->view()) + " && exec";
 
     if (options.execPath_.has_value()) {
       // When using the shell for chdir, we need to jump through a couple

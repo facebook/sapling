@@ -56,7 +56,7 @@ TEST_F(ConfigSettingTest, configSetStringValue) {
 
   std::map<std::string, std::string> attrMap;
   auto rslt = testDir.setStringValue(
-      systemConfigDir_.stringPiece(), attrMap, ConfigSource::UserConfig);
+      systemConfigDir_.view(), attrMap, ConfigSource::UserConfig);
   rslt.value();
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
@@ -64,7 +64,7 @@ TEST_F(ConfigSettingTest, configSetStringValue) {
   EXPECT_EQ(systemConfigDir_, testDir.getStringValue());
 
   rslt = testDir.setStringValue(
-      userConfigDir_.stringPiece(), attrMap, ConfigSource::UserConfig);
+      userConfigDir_.view(), attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), userConfigDir_);
@@ -88,7 +88,7 @@ TEST_F(ConfigSettingTest, configSetAssign) {
 
     std::map<std::string, std::string> attrMap;
     auto rslt = testDir.setStringValue(
-        systemConfigDir_.stringPiece(), attrMap, ConfigSource::UserConfig);
+        systemConfigDir_.view(), attrMap, ConfigSource::UserConfig);
     EXPECT_EQ(rslt.hasError(), false);
 
     EXPECT_EQ(testDir.getConfigKey(), dirKey);
@@ -113,7 +113,7 @@ TEST_F(ConfigSettingTest, configSetInvalidStringValue) {
 
   std::map<std::string, std::string> attrMap;
   auto rslt = testDir.setStringValue(
-      systemConfigDir_.stringPiece(), attrMap, ConfigSource::SystemConfig);
+      systemConfigDir_.view(), attrMap, ConfigSource::SystemConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::SystemConfig);
   EXPECT_EQ(testDir.getValue(), systemConfigDir_);
@@ -136,7 +136,7 @@ TEST_F(ConfigSettingTest, configSetEnvSubTest) {
 
   folly::StringPiece userConfigDir{"${HOME}/test_dir"};
   std::map<std::string, std::string> attrMap;
-  attrMap["HOME"] = canonicalPath("/home/bob").stringPiece().str();
+  attrMap["HOME"] = canonicalPath("/home/bob").asString();
   attrMap["USER"] = "bob";
   auto rslt =
       testDir.setStringValue(userConfigDir, attrMap, ConfigSource::UserConfig);
@@ -148,7 +148,7 @@ TEST_F(ConfigSettingTest, configSetEnvSubTest) {
 
   AbsolutePath homeUserConfigDir = canonicalPath("/home/${USER}/test_dir");
   rslt = testDir.setStringValue(
-      homeUserConfigDir.stringPiece(), attrMap, ConfigSource::UserConfig);
+      homeUserConfigDir.view(), attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
   EXPECT_EQ(testDir.getValue(), bobTestDir);

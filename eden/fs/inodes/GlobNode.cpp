@@ -315,7 +315,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
         // We need to match it out of the entries in this inode
         for (auto& entry : root.iterate(contents)) {
           PathComponentPiece name = entry.first;
-          if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
+          if (node->alwaysMatch_ || node->matcher_.match(name.view())) {
             if (node->isLeaf_) {
               globResult.wlock()->emplace_back(
                   rootPath + name, entry.second.getDtype(), originRootId);
@@ -461,8 +461,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
       auto candidateName = startOfRecursive + entry.first;
 
       for (auto& node : recursiveChildren_) {
-        if (node->alwaysMatch_ ||
-            node->matcher_.match(candidateName.stringPiece())) {
+        if (node->alwaysMatch_ || node->matcher_.match(candidateName.view())) {
           globResult.wlock()->emplace_back(
               rootPath + candidateName, entry.second.getDtype(), originRootId);
           if (fileBlobsToPrefetch && root.entryShouldPrefetch(&entry.second)) {

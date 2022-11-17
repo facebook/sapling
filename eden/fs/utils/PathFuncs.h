@@ -23,16 +23,17 @@
 
 #include "eden/common/utils/StringConv.h"
 #include "eden/fs/utils/CaseSensitivity.h"
+#include "eden/fs/utils/String.h"
 #include "eden/fs/utils/Throw.h"
 #include "eden/fs/utils/Utf8.h"
 
 namespace facebook::eden {
 
 /** Given a path like "foo/bar/baz" returns "baz" */
-folly::StringPiece basename(folly::StringPiece path);
+std::string_view basename(std::string_view path);
 
 /** Given a path like "foo/bar/baz" returns "foo/bar" */
-folly::StringPiece dirname(folly::StringPiece path);
+std::string_view dirname(std::string_view path);
 
 /**
  * Path directory separator.
@@ -46,33 +47,34 @@ folly::StringPiece dirname(folly::StringPiece path);
  */
 
 enum : char { kDirSeparator = '/', kWinDirSeparator = '\\' };
-constexpr folly::StringPiece kDirSeparatorStr{"/"};
+constexpr std::string_view kDirSeparatorStr{"/"};
 constexpr char kAbsDirSeparator =
     folly::kIsWindows ? kWinDirSeparator : kDirSeparator;
 
 namespace detail {
-constexpr folly::StringPiece kUNCPrefix{"\\\\?\\"};
-constexpr folly::StringPiece kRootStr =
+
+constexpr std::string_view kUNCPrefix{"\\\\?\\"};
+constexpr std::string_view kRootStr =
     folly::kIsWindows ? kUNCPrefix : kDirSeparatorStr;
 
 inline constexpr bool isDirSeparator(char c) {
   return c == kDirSeparator || (folly::kIsWindows && c == kWinDirSeparator);
 }
 
-inline constexpr bool isDirSeparator(folly::StringPiece str) {
+inline constexpr bool isDirSeparator(std::string_view str) {
   return str.size() == 1 && isDirSeparator(str[0]);
 }
 
-inline bool isAbsoluteRoot(folly::StringPiece path) {
+inline bool isAbsoluteRoot(std::string_view path) {
   return path == kRootStr;
 }
 
-inline size_t findPathSeparator(folly::StringPiece str, size_t start = 0) {
+inline size_t findPathSeparator(std::string_view str, size_t start = 0) {
   auto index = str.find(kDirSeparator, start);
   if (folly::kIsWindows) {
     auto winIndex = str.find(kWinDirSeparator, start);
-    if (winIndex != folly::StringPiece::npos) {
-      if (index == folly::StringPiece::npos) {
+    if (winIndex != std::string_view::npos) {
+      if (index == std::string_view::npos) {
         return winIndex;
       } else {
         return std::min(index, winIndex);
@@ -83,12 +85,12 @@ inline size_t findPathSeparator(folly::StringPiece str, size_t start = 0) {
   return index;
 }
 
-inline size_t rfindPathSeparator(folly::StringPiece str) {
+inline size_t rfindPathSeparator(std::string_view str) {
   auto index = str.rfind(kDirSeparator);
   if (folly::kIsWindows) {
     auto winIndex = str.rfind(kWinDirSeparator);
-    if (winIndex != folly::StringPiece::npos) {
-      if (index == folly::StringPiece::npos) {
+    if (winIndex != std::string_view::npos) {
+      if (index == std::string_view::npos) {
         return winIndex;
       } else {
         return std::max(index, winIndex);
@@ -124,6 +126,14 @@ T move_or_copy(T& t) {
   } else {
     return std::move(t);
   }
+}
+
+/**
+ * C++20 introduces this constructor for std::string_view, but EdenFS is C++17.
+ */
+inline std::string_view string_view_range(const char* begin, const char* end) {
+  XDCHECK_LE(begin, end);
+  return std::string_view{begin, static_cast<size_t>(end - begin)};
 }
 
 } // namespace detail
@@ -263,9 +273,9 @@ template <typename A, typename B, typename Stored, typename Piece>
 struct StoredOrPieceComparableAsStringPiece {
   enum {
     value =
-        (std::is_convertible<A, folly::StringPiece>::value &&
+        (std::is_convertible<A, std::string_view>::value &&
          (std::is_same<B, Stored>::value || std::is_same<B, Piece>::value)) ||
-        (std::is_convertible<B, folly::StringPiece>::value &&
+        (std::is_convertible<B, std::string_view>::value &&
          (std::is_same<A, Stored>::value || std::is_same<A, Piece>::value))
   };
 };
@@ -314,8 +324,8 @@ struct PathOperators {
         bool operator()(
             const typename Piece::component_iterator::value_type& left,
             const typename Piece::component_iterator::value_type& right) {
-          auto leftStringPiece = left.stringPiece();
-          auto rightStringPiece = right.stringPiece();
+          auto leftStringPiece = left.view();
+          auto rightStringPiece = right.view();
           if (caseSensitive == CaseSensitivity::Sensitive) {
             return leftStringPiece < rightStringPiece;
           } else {
@@ -340,8 +350,8 @@ struct PathOperators {
           rightComponents.end(),
           LessComponentComparator{caseSensitive});
     } else {
-      auto leftStringPiece = left.stringPiece();
-      auto rightStringPiece = right.stringPiece();
+      auto leftStringPiece = left.view();
+      auto rightStringPiece = right.view();
       if (caseSensitive == CaseSensitivity::Sensitive) {
         return leftStringPiece < rightStringPiece;
       } else {
@@ -384,8 +394,8 @@ struct PathOperators {
         bool operator()(
             const typename Piece::component_iterator::value_type& left,
             const typename Piece::component_iterator::value_type& right) {
-          auto leftStringPiece = left.stringPiece();
-          auto rightStringPiece = right.stringPiece();
+          auto leftStringPiece = left.view();
+          auto rightStringPiece = right.view();
           if (caseSensitive == CaseSensitivity::Sensitive) {
             return leftStringPiece == rightStringPiece;
           } else {
@@ -410,8 +420,8 @@ struct PathOperators {
           rightComponents.end(),
           EqualComponentComparator{caseSensitive});
     } else {
-      auto leftStringPiece = left.stringPiece();
-      auto rightStringPiece = right.stringPiece();
+      auto leftStringPiece = left.view();
+      auto rightStringPiece = right.view();
       if (caseSensitive == CaseSensitivity::Sensitive) {
         return leftStringPiece == rightStringPiece;
       } else {
@@ -438,7 +448,7 @@ struct PathOperators {
       StoredOrPieceComparableAsStringPiece<A, B, Stored, Piece>::value,
       bool>::type
   operator==(const A& a, const B& rhs) {
-    return folly::StringPiece(a) == folly::StringPiece(rhs);
+    return std::string_view(a) == std::string_view(rhs);
   }
 
   template <typename A, typename B>
@@ -446,7 +456,7 @@ struct PathOperators {
       StoredOrPieceComparableAsStringPiece<A, B, Stored, Piece>::value,
       bool>::type
   operator!=(const A& a, const B& rhs) {
-    return folly::StringPiece(a) != folly::StringPiece(rhs);
+    return std::string_view(a) != std::string_view(rhs);
   }
 
   /**
@@ -515,7 +525,7 @@ class PathBase :
 
   /** Construct from an untyped string value.
    * Applies sanity checks. */
-  constexpr explicit PathBase(folly::StringPiece src)
+  constexpr explicit PathBase(std::string_view src)
       : path_(src.data(), src.size()) {
     SanityChecker()(src);
   }
@@ -523,24 +533,26 @@ class PathBase :
 #ifdef _WIN32
   constexpr explicit PathBase(std::wstring_view src)
       : path_(wideToMultibyteString<Storage>(src)) {
-    SanityChecker()(stringPiece());
+    SanityChecker()(view());
   }
 #endif
 
   /** Construct from an untyped string value.
    * Skips sanity checks. */
-  constexpr explicit PathBase(folly::StringPiece src, SkipPathSanityCheck)
+  constexpr explicit PathBase(
+      std::string_view src,
+      SkipPathSanityCheck) noexcept(noexcept(Storage{src.data(), src.size()}))
       : path_(src.data(), src.size()) {}
 
   /** Construct from a stored variation of this type.
    * Skips sanity checks. */
   explicit PathBase(const Stored& other)
-      : path_(other.stringPiece().data(), other.stringPiece().size()) {}
+      : path_(other.view().data(), other.view().size()) {}
 
   /** Construct from a non-stored variation of this type.
    * Skips sanity checks. */
   explicit PathBase(const Piece& other)
-      : path_(other.stringPiece().data(), other.stringPiece().size()) {}
+      : path_(other.view().data(), other.view().size()) {}
 
   /** Move construct from a Stored value.
    * Skips sanity checks.
@@ -631,11 +643,6 @@ class PathBase :
     }
   }
 
-  /// Return the path as a StringPiece
-  folly::StringPiece stringPiece() const {
-    return folly::StringPiece{path_};
-  }
-
   /// Return the path as a std::string_view
   std::string_view view() const {
     return std::string_view{path_};
@@ -643,12 +650,12 @@ class PathBase :
 
   /// Return a stored copy of this path
   Stored copy() const {
-    return Stored(stringPiece(), SkipPathSanityCheck());
+    return Stored(view(), SkipPathSanityCheck());
   }
 
   /// Return a non-stored reference to this path
   Piece piece() const {
-    return Piece(stringPiece(), SkipPathSanityCheck());
+    return Piece(view(), SkipPathSanityCheck());
   }
 
   /// Implicit conversion to Piece
@@ -656,8 +663,8 @@ class PathBase :
     return piece();
   }
 
-  explicit operator folly::StringPiece() const {
-    return stringPiece();
+  explicit operator std::string_view() const {
+    return view();
   }
 
   /// Return a reference to the underlying stored value
@@ -675,7 +682,7 @@ class PathBase :
 
 #ifdef _WIN32
   std::wstring wide() const {
-    auto str = multibyteToWideString(stringPiece());
+    auto str = multibyteToWideString(view());
     if (std::is_same_v<Piece, RelativePathPiece>) {
       // TODO(xavierd): Not sure if this replace is still necessary, for
       // relative paths, Windows should normalize them and thus not care about
@@ -689,7 +696,7 @@ class PathBase :
 
 /// Asserts that val is a well formed path component
 struct PathComponentSanityCheck {
-  constexpr void operator()(folly::StringPiece val) const {
+  constexpr void operator()(std::string_view val) const {
     for (auto c : val) {
       if (isDirSeparator(c)) {
         throw_<PathComponentContainsDirectorySeparator>(
@@ -787,7 +794,7 @@ class ComposedPathIterator {
   using pointer = value_type*;
   using reference = value_type&;
 
-  using position_type = folly::StringPiece::const_iterator;
+  using position_type = const char*;
 
   explicit ComposedPathIterator() : path_(), pos_(nullptr) {}
 
@@ -796,11 +803,11 @@ class ComposedPathIterator {
 
   /// Initialize the iterator and point to the start of the path.
   explicit ComposedPathIterator(Piece path)
-      : path_(path.stringPiece()), pos_(pathBegin()) {}
+      : path_(path.view()), pos_(pathBegin()) {}
 
   /** Initialize the iterator at an arbitrary position. */
   ComposedPathIterator(Piece path, position_type pos)
-      : path_(path.stringPiece()), pos_(pos) {}
+      : path_(path.view()), pos_(pos) {}
 
   bool operator==(const ComposedPathIterator& other) const {
     XDCHECK_EQ(path_, other.path_);
@@ -850,8 +857,7 @@ class ComposedPathIterator {
   Piece piece() const {
     XCHECK_NE(pos_, nullptr);
     // Return everything preceding the slash to which pos_ points.
-    return Piece(
-        folly::StringPiece(path_.begin(), pos_), SkipPathSanityCheck{});
+    return Piece(string_view_range(path_.data(), pos_), SkipPathSanityCheck{});
   }
 
   /*
@@ -884,9 +890,9 @@ class ComposedPathIterator {
       // Always start iterators at the initial "/" character, so
       // that begin() yields "/" instead of the empty string.
       XDCHECK_GE(path_.size(), kRootStr.size());
-      return path_.begin() + kRootStr.size();
+      return path_.data() + kRootStr.size();
     } else {
-      return path_.begin();
+      return path_.data();
     }
   }
 
@@ -897,17 +903,17 @@ class ComposedPathIterator {
         pos_ = pathBegin();
         return;
       }
-      XCHECK_NE(pos_, path_.end());
+      XCHECK_NE(pos_, path_.data() + path_.size());
     } else {
       XCHECK_NE(pos_, nullptr);
-      if (pos_ == path_.end()) {
+      if (pos_ == path_.data() + path_.size()) {
         pos_ = nullptr;
         return;
       }
     }
 
     ++pos_;
-    while (pos_ < path_.end() && !isDirSeparator(*pos_)) {
+    while (pos_ < path_.data() + path_.size() && !isDirSeparator(*pos_)) {
       ++pos_;
     }
   }
@@ -923,7 +929,7 @@ class ComposedPathIterator {
       }
     } else {
       if (pos_ == nullptr) {
-        pos_ = path_.end();
+        pos_ = path_.data() + path_.size();
         return;
       }
       XCHECK_NE(pos_, stopPos);
@@ -936,7 +942,7 @@ class ComposedPathIterator {
   }
 
   /// the path we're iterating over.
-  folly::StringPiece path_;
+  std::string_view path_;
   /// our current position within that path.
   position_type pos_;
 };
@@ -953,7 +959,7 @@ class PathComponentIterator {
   using pointer = value_type*;
   using reference = value_type&;
 
-  using position_type = folly::StringPiece::const_iterator;
+  using position_type = const char*;
   enum EndEnum { END };
 
   explicit PathComponentIterator() {}
@@ -965,8 +971,8 @@ class PathComponentIterator {
   // Construct a PathComponentIterator from a composed path
   template <typename ComposedPathType>
   explicit PathComponentIterator(const ComposedPathType& path)
-      : pathBegin_{path.stringPiece().begin() + (std::is_same_v<ComposedPathType, AbsolutePathPiece> ? kRootStr.size() : 0)},
-        pathEnd_{path.stringPiece().end()} {
+      : pathBegin_{path.view().data() + (std::is_same_v<ComposedPathType, AbsolutePathPiece> ? kRootStr.size() : 0)},
+        pathEnd_{path.view().data() + path.view().size()} {
     static_assert(
         std::is_same_v<ComposedPathType, AbsolutePathPiece> ||
             std::is_same_v<ComposedPathType, RelativePathPiece>,
@@ -993,8 +999,8 @@ class PathComponentIterator {
 
   template <typename ComposedPathType>
   explicit PathComponentIterator(const ComposedPathType& path, EndEnum)
-      : pathBegin_{path.stringPiece().begin() + (std::is_same_v<ComposedPathType, AbsolutePathPiece> ? kRootStr.size() : 0)},
-        pathEnd_{path.stringPiece().end()} {
+      : pathBegin_{path.view().data() + (std::is_same_v<ComposedPathType, AbsolutePathPiece> ? kRootStr.size() : 0)},
+        pathEnd_{path.view().data() + path.view().size()} {
     static_assert(
         std::is_same_v<ComposedPathType, AbsolutePathPiece> ||
             std::is_same_v<ComposedPathType, RelativePathPiece>,
@@ -1063,7 +1069,7 @@ class PathComponentIterator {
   /// Returns the piece for the current iterator position.
   PathComponentPiece piece() const {
     return PathComponentPiece{
-        folly::StringPiece{start_, end_}, SkipPathSanityCheck{}};
+        string_view_range(start_, end_), SkipPathSanityCheck{}};
   }
 
   /*
@@ -1181,8 +1187,7 @@ class ComposedPathBase : public PathBase<Storage, SanityChecker, Stored, Piece>,
    * That is a non-stored reference to everything except the final
    * component of the path. */
   Piece dirname() const {
-    return Piece(
-        facebook::eden::dirname(this->stringPiece()), SkipPathSanityCheck());
+    return Piece(facebook::eden::dirname(this->view()), SkipPathSanityCheck());
   }
 
   /** Return an iterator range that will yield all components of this path.
@@ -1217,7 +1222,7 @@ class ComposedPathBase : public PathBase<Storage, SanityChecker, Stored, Piece>,
 /// Asserts that val is formed of multiple well formed PathComponents.
 struct ComposedPathSanityCheck {
   constexpr size_t nextSeparator(
-      folly::StringPiece val,
+      std::string_view val,
       size_t start,
       std::optional<char> pathSeparator) const {
     const char* data = val.data();
@@ -1232,33 +1237,31 @@ struct ComposedPathSanityCheck {
       }
     }
 
-    return folly::StringPiece::npos;
+    return std::string_view::npos;
   }
 
   constexpr void operator()(
-      folly::StringPiece val,
+      std::string_view val,
       std::optional<char> pathSeparator = std::nullopt) const {
     size_t start = 0;
     while (true) {
       auto next = nextSeparator(val, start, pathSeparator);
-      if (next == folly::StringPiece::npos) {
+      if (next == std::string_view::npos) {
         break;
       }
 
-      PathComponentSanityCheck()(
-          folly::StringPiece{val.begin() + start, next - start});
+      PathComponentSanityCheck()(val.substr(start, next - start));
       start = next + 1;
     }
 
     // Last component
-    PathComponentSanityCheck()(
-        folly::StringPiece{val.begin() + start, val.end()});
+    PathComponentSanityCheck()(val.substr(start));
   }
 };
 
 /// Asserts that val is well formed relative path
 struct RelativePathSanityCheck {
-  constexpr void operator()(folly::StringPiece val) const {
+  constexpr void operator()(std::string_view val) const {
     if (!val.empty()) {
       const char* data = val.data();
       if (isDirSeparator(data[0])) {
@@ -1302,7 +1305,7 @@ class RelativePathBase : public ComposedPathBase<
   /** Construct from a PathComponent */
   template <typename T>
   explicit RelativePathBase(const PathComponentBase<T>& comp)
-      : base_type(comp.stringPiece(), SkipPathSanityCheck()) {}
+      : base_type(comp.view(), SkipPathSanityCheck()) {}
 
   /** Allow constructing empty */
   RelativePathBase() {}
@@ -1367,8 +1370,8 @@ class RelativePathBase : public ComposedPathBase<
   reverse_iterator_range rpaths() const {
     auto p = this->piece();
     return reverse_iterator_range(
-        reverse_iterator{p, this->stringPiece().end()},
-        reverse_iterator{p, this->stringPiece().begin()});
+        reverse_iterator{p, this->view().data() + this->view().size()},
+        reverse_iterator{p, this->view().data()});
   }
 
   /** Return a reverse_iterator over this path and all parent directories,
@@ -1377,7 +1380,7 @@ class RelativePathBase : public ComposedPathBase<
   reverse_iterator_range rallPaths() const {
     auto p = this->piece();
     return reverse_iterator_range(
-        reverse_iterator{p, this->stringPiece().end()},
+        reverse_iterator{p, this->view().data() + this->view().size()},
         reverse_iterator{p, nullptr});
   }
 
@@ -1422,7 +1425,7 @@ class RelativePathBase : public ComposedPathBase<
    * range.
    */
   iterator findParent(const RelativePathPiece& parent) const {
-    auto parentPiece = parent.stringPiece();
+    auto parentPiece = parent.view();
     if (this->path_.size() <= parentPiece.size()) {
       return allPaths().end();
     }
@@ -1433,12 +1436,11 @@ class RelativePathBase : public ComposedPathBase<
     if (!isDirSeparator(this->path_[parentPiece.size()])) {
       return allPaths().end();
     }
-    folly::StringPiece prefix{this->path_.data(), parentPiece.size()};
+    std::string_view prefix{this->path_.data(), parentPiece.size()};
     if (prefix != parentPiece) {
       return allPaths().end();
     }
-    return iterator(
-        this->piece(), this->stringPiece().begin() + parentPiece.size());
+    return iterator(this->piece(), this->view().data() + parentPiece.size());
   }
 
   /** Construct from an iterable set of PathComponents.
@@ -1451,9 +1453,9 @@ class RelativePathBase : public ComposedPathBase<
           PathComponentPiece,
           typename std::iterator_traits<Iterator>::reference>::value>::type>
   RelativePathBase(Iterator begin, Iterator end) {
-    folly::fbvector<folly::StringPiece> components;
+    folly::fbvector<std::string_view> components;
     while (begin != end) {
-      components.emplace_back(PathComponentPiece{*begin}.stringPiece());
+      components.emplace_back(PathComponentPiece{*begin}.view());
       ++begin;
     }
     folly::join(kDirSeparatorStr, components, this->path_);
@@ -1498,8 +1500,8 @@ class RelativePathBase : public ComposedPathBase<
 
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
-  void operator()(folly::StringPiece val) const {
-    if (!val.startsWith(detail::kRootStr)) {
+  void operator()(string_view val) const {
+    if (!val.starts_with(detail::kRootStr)) {
       throw_<std::domain_error>(
           "attempt to construct an AbsolutePath from a non-absolute string: \"",
           val,
@@ -1507,7 +1509,7 @@ struct AbsolutePathSanityCheck {
     }
     size_t offset = detail::kRootStr.size();
 
-    if (val.size() > 1 && val.endsWith(kDirSeparator)) {
+    if (val.size() > 1 && val.ends_with(kDirSeparator)) {
       // We do allow "/" though
       throw_<std::domain_error>(
           "AbsolutePath must not end with a slash: ", val);
@@ -1516,9 +1518,7 @@ struct AbsolutePathSanityCheck {
     if (val.size() > offset) {
       // Ensures that components are separated by / on posix systems and \ on
       // Windows.
-      ComposedPathSanityCheck()(
-          folly::StringPiece{val.begin() + offset, val.end()},
-          kAbsDirSeparator);
+      ComposedPathSanityCheck()(val.substr(offset), kAbsDirSeparator);
     }
   }
 };
@@ -1567,7 +1567,7 @@ class AbsolutePathBase : public ComposedPathBase<
   reverse_iterator_range rpaths() const {
     auto p = this->piece();
     return reverse_iterator_range(
-        reverse_iterator{p, this->stringPiece().end()},
+        reverse_iterator{p, this->view().data() + this->view().size()},
         reverse_iterator{p, nullptr});
   }
 
@@ -1609,14 +1609,13 @@ class AbsolutePathBase : public ComposedPathBase<
     auto childIter = childPaths.begin();
     while (true) {
       if (childIter == childPaths.end()) {
-        throw_<std::runtime_error>(
-            child, " should be under ", this->stringPiece());
+        throw_<std::runtime_error>(child, " should be under ", this->view());
       }
 
       // Note that a RelativePath cannot contain "../" path elements.
       if (myIter.piece() != childIter.piece()) {
         throw_<std::runtime_error>(
-            this->stringPiece(), " does not seem to be a prefix of ", child);
+            this->view(), " does not seem to be a prefix of ", child);
       }
 
       myIter++;
@@ -1658,19 +1657,19 @@ class AbsolutePathBase : public ComposedPathBase<
   AbsolutePath operator+(const detail::RelativePathBase<B>& b) const {
     // A RelativePath may be empty, in which case we simply return a copy
     // of the absolute path.
-    if (b.stringPiece().empty()) {
+    if (b.view().empty()) {
       return this->copy();
     }
-    if (isAbsoluteRoot(this->stringPiece())) {
+    if (isAbsoluteRoot(this->view())) {
       // Special case to avoid building a string like "//foo"
       return AbsolutePath(
-          folly::to<std::string>(this->stringPiece(), b.stringPiece()),
+          fmt::format("{}{}", this->view(), b.view()),
           detail::SkipPathSanityCheck());
     }
     return AbsolutePath(
         fmt::format(
             "{}{}{}",
-            this->stringPiece(),
+            this->view(),
             kAbsDirSeparator,
             fmt::join(b.components(), std::string_view{&kAbsDirSeparator, 1})),
         detail::SkipPathSanityCheck());
@@ -1725,19 +1724,19 @@ class PathSuffixIterator {
   using reference = value_type&;
 
   explicit PathSuffixIterator() {}
-  explicit PathSuffixIterator(folly::StringPiece path, size_t start = 0)
+  explicit PathSuffixIterator(std::string_view path, size_t start = 0)
       : path_{path}, start_{start} {}
 
   PathSuffixIterator(const PathSuffixIterator& other) = default;
   PathSuffixIterator& operator=(const PathSuffixIterator& other) = default;
 
   static PathIteratorRange<PathSuffixIterator<IsReverse>> createRange(
-      folly::StringPiece p) {
+      std::string_view p) {
     if (IsReverse) {
       auto end = PathSuffixIterator{p, p.size()};
       ++end;
       return PathIteratorRange<PathSuffixIterator<IsReverse>>(
-          end, PathSuffixIterator{p, folly::StringPiece::npos});
+          end, PathSuffixIterator{p, std::string_view::npos});
     } else {
       return PathIteratorRange<PathSuffixIterator<IsReverse>>(
           PathSuffixIterator{p}, PathSuffixIterator{p, p.size()});
@@ -1795,9 +1794,7 @@ class PathSuffixIterator {
 
   /// Returns the piece for the current iterator position.
   RelativePathPiece piece() const {
-    return RelativePathPiece{
-        folly::StringPiece{path_.begin() + start_, path_.end()},
-        SkipPathSanityCheck{}};
+    return RelativePathPiece{path_.substr(start_), SkipPathSanityCheck{}};
   }
 
   /*
@@ -1824,7 +1821,7 @@ class PathSuffixIterator {
 
     // npos is used to represent one before the beginning (that is,
     // path.rsuffixes().end()).  Advance from npos to 0.
-    if (start_ == folly::StringPiece::npos) {
+    if (start_ == std::string_view::npos) {
       start_ = 0;
       return;
     }
@@ -1832,7 +1829,7 @@ class PathSuffixIterator {
     // In all other cases, move to just past the next /
     auto next = findPathSeparator(path_, start_ + 1);
 
-    if (next == folly::StringPiece::npos) {
+    if (next == std::string_view::npos) {
       start_ = path_.size();
     } else {
       start_ = next + 1;
@@ -1841,18 +1838,17 @@ class PathSuffixIterator {
 
   // Move the iterator backwards in the path.
   void retreat() {
-    XDCHECK_NE(start_, folly::StringPiece::npos);
+    XDCHECK_NE(start_, std::string_view::npos);
     // If we are at the start of the string, move to npos
     if (start_ == 0) {
-      start_ = folly::StringPiece::npos;
+      start_ = std::string_view::npos;
       return;
     }
 
     // Otherwise move to just past the previous /
-    auto next =
-        rfindPathSeparator(folly::StringPiece{path_.begin(), start_ - 1});
+    auto next = rfindPathSeparator(std::string_view{path_.data(), start_ - 1});
 
-    if (next == folly::StringPiece::npos) {
+    if (next == std::string_view::npos) {
       start_ = 0;
     } else {
       start_ = next + 1;
@@ -1862,7 +1858,7 @@ class PathSuffixIterator {
   /**
    * The path we're iterating over.
    */
-  folly::StringPiece path_;
+  std::string_view path_;
   /**
    * Our current position within that path.
    *
@@ -1879,13 +1875,13 @@ class PathSuffixIterator {
 template <typename Storage>
 typename RelativePathBase<Storage>::suffix_iterator_range
 RelativePathBase<Storage>::suffixes() const {
-  return suffix_iterator::createRange(this->stringPiece());
+  return suffix_iterator::createRange(this->view());
 }
 
 template <typename Storage>
 typename RelativePathBase<Storage>::reverse_suffix_iterator_range
 RelativePathBase<Storage>::rsuffixes() const {
-  return reverse_suffix_iterator::createRange(this->stringPiece());
+  return reverse_suffix_iterator::createRange(this->view());
 }
 
 template <typename Storage>
@@ -1894,8 +1890,7 @@ AbsolutePathBase<Storage>::suffixes() const {
   // The PathSuffixIterator code assumes that the StringPiece it is given is
   // relative, so for absolute paths just strip off the leading directory
   // separator.
-  return suffix_iterator::createRange(
-      this->stringPiece().subpiece(kRootStr.size()));
+  return suffix_iterator::createRange(this->view().substr(kRootStr.size()));
 }
 
 template <typename Storage>
@@ -1905,14 +1900,14 @@ AbsolutePathBase<Storage>::rsuffixes() const {
   // relative, so for absolute paths just strip off the leading directory
   // separator.
   return reverse_suffix_iterator::createRange(
-      this->stringPiece().subpiece(kRootStr.size()));
+      this->view().substr(kRootStr.size()));
 }
 
 // Allow boost to compute hash values
 template <typename A>
 size_t hash_value(const detail::PathComponentBase<A>& path) {
-  auto s = path.stringPiece();
-  return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
+  auto s = path.view();
+  return folly::hash::SpookyHashV2::Hash64(s.data(), s.size(), 0);
 }
 
 template <
@@ -1927,8 +1922,8 @@ size_t hash_value(
     folly::hash::SpookyHashV2 hash{};
 
     for (const auto component : path.components()) {
-      auto s = component.stringPiece();
-      hash.Update(s.begin(), s.size());
+      auto s = component.view();
+      hash.Update(s.data(), s.size());
     }
 
     uint64_t hash1, hash2;
@@ -1936,8 +1931,8 @@ size_t hash_value(
 
     return hash1;
   } else {
-    auto s = path.stringPiece();
-    return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
+    auto s = path.view();
+    return folly::hash::SpookyHashV2::Hash64(s.data(), s.size(), 0);
   }
 }
 
@@ -1946,7 +1941,7 @@ template <typename A>
 std::ostream& operator<<(
     std::ostream& stream,
     const detail::PathComponentBase<A>& a) {
-  stream << a.stringPiece();
+  stream << a.view();
   return stream;
 }
 
@@ -1954,7 +1949,7 @@ template <typename A>
 std::ostream& operator<<(
     std::ostream& stream,
     const detail::RelativePathBase<A>& a) {
-  stream << a.stringPiece();
+  stream << a.view();
   return stream;
 }
 
@@ -1962,7 +1957,7 @@ template <typename A>
 std::ostream& operator<<(
     std::ostream& stream,
     const detail::AbsolutePathBase<A>& a) {
-  stream << a.stringPiece();
+  stream << a.view();
   return stream;
 }
 
@@ -1982,8 +1977,7 @@ RelativePath operator+(
   // PathComponents can never be empty, so this is always a simple
   // join around a "/" character.
   return RelativePath(
-      folly::to<std::string>(
-          a.stringPiece(), kDirSeparatorStr, b.stringPiece()),
+      fmt::format("{}{}{}", a.view(), kDirSeparatorStr, b.view()),
       detail::SkipPathSanityCheck());
 }
 
@@ -1994,15 +1988,14 @@ RelativePath operator+(
     const detail::RelativePathBase<B>& b) {
   // A RelativePath may be empty, in which case we simply return
   // a copy of the other path value.
-  if (a.stringPiece().empty()) {
+  if (a.view().empty()) {
     return b.copy();
   }
-  if (b.stringPiece().empty()) {
+  if (b.view().empty()) {
     return a.copy();
   }
   return RelativePath(
-      folly::to<std::string>(
-          a.stringPiece(), kDirSeparatorStr, b.stringPiece()),
+      fmt::format("{}{}{}", a.view(), kDirSeparatorStr, b.view()),
       detail::SkipPathSanityCheck());
 }
 
@@ -2018,9 +2011,9 @@ namespace detail {
 template <typename Piece, bool IsReverse>
 RelativePathPiece ComposedPathIterator<Piece, IsReverse>::remainder() const {
   XCHECK_NE(pos_, nullptr);
-  if (pos_ < path_.end()) {
+  if (pos_ < path_.data() + path_.size()) {
     return RelativePathPiece(
-        folly::StringPiece(pos_ + 1, path_.end()),
+        string_view_range(pos_ + 1, path_.data() + path_.size()),
         detail::SkipPathSanityCheck());
   } else {
     return RelativePathPiece();
@@ -2050,14 +2043,14 @@ AbsolutePath getcwd();
  *
  * If the path is relative, the current working directory is prepended to it.
  */
-AbsolutePath canonicalPath(folly::StringPiece path);
+AbsolutePath canonicalPath(std::string_view path);
 
 /**
  * Canonicalize a path string relative to absolute path base
  *
  * If the input is a relative path, the specified base path is prepended to it.
  */
-AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base);
+AbsolutePath canonicalPath(std::string_view path, AbsolutePathPiece base);
 
 /**
  * Canonicalize a path string relative to a relative path base
@@ -2069,7 +2062,7 @@ AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base);
  */
 folly::Expected<RelativePath, int> joinAndNormalize(
     RelativePathPiece base,
-    folly::StringPiece path);
+    string_view path);
 
 /**
  * Convert an arbitrary unsanitized input string to a normalized AbsolutePath.
@@ -2090,7 +2083,7 @@ folly::Expected<RelativePath, int> joinAndNormalize(
  * canonicalPath() if that fails.
  */
 AbsolutePath realpath(const char* path);
-AbsolutePath realpath(folly::StringPiece path);
+AbsolutePath realpath(std::string_view path);
 template <typename T>
 typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 realpath(const T& path) {
@@ -2112,7 +2105,7 @@ AbsolutePath executablePath();
  * AbsolutePath on success or an errno value on error.
  */
 folly::Expected<AbsolutePath, int> realpathExpected(const char* path);
-folly::Expected<AbsolutePath, int> realpathExpected(folly::StringPiece path);
+folly::Expected<AbsolutePath, int> realpathExpected(std::string_view path);
 template <typename T>
 typename std::enable_if<
     folly::IsSomeString<T>::value,
@@ -2140,8 +2133,8 @@ realpathExpected(const T& path) {
  * exception is thrown.
  */
 AbsolutePath expandUser(
-    folly::StringPiece path,
-    std::optional<folly::StringPiece> homeDir = std::nullopt);
+    string_view path,
+    std::optional<std::string_view> homeDir = std::nullopt);
 
 /**
  * Attempt to normalize a path.
@@ -2151,7 +2144,7 @@ AbsolutePath expandUser(
  * not accessible), it falls back to using canonicalPath().
  */
 AbsolutePath normalizeBestEffort(const char* path);
-AbsolutePath normalizeBestEffort(folly::StringPiece path);
+AbsolutePath normalizeBestEffort(std::string_view path);
 template <typename T>
 typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 normalizeBestEffort(const T& path) {
@@ -2217,19 +2210,19 @@ inline namespace path_literals {
 constexpr inline PathComponentPiece operator"" _pc(
     const char* str,
     size_t len) noexcept {
-  return PathComponentPiece{folly::StringPiece{str, str + len}};
+  return PathComponentPiece{std::string_view{str, len}};
 }
 
 inline RelativePathPiece operator"" _relpath(
     const char* str,
     size_t len) noexcept {
-  return RelativePathPiece{folly::StringPiece{str, str + len}};
+  return RelativePathPiece{std::string_view{str, len}};
 }
 
 inline AbsolutePathPiece operator"" _abspath(
     const char* str,
     size_t len) noexcept {
-  return AbsolutePathPiece{folly::StringPiece{str, str + len}};
+  return AbsolutePathPiece{std::string_view{str, len}};
 }
 } // namespace path_literals
 

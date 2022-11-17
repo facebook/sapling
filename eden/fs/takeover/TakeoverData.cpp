@@ -520,7 +520,7 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
     auto mountProtocol = getMountProtocol(mount);
 
     checkCanSerDeMountType(
-        protocolCapabilities, mountProtocol, mount.mountPath.stringPiece());
+        protocolCapabilities, mountProtocol, mount.mountPath.view());
 
     SerializedMountInfo serializedMount;
 

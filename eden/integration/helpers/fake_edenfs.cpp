@@ -351,7 +351,7 @@ int main(int argc, char** argv) {
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir + "socket"_pc;
   folly::SocketAddress thriftAddress;
-  thriftAddress.setFromPath(thriftSocketPath.stringPiece());
+  thriftAddress.setFromPath(thriftSocketPath.view());
 
   // Make sure no socket already exists at this path
   int rc = remove(thriftSocketPath.value().c_str());

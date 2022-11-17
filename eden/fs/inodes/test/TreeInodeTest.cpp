@@ -269,7 +269,7 @@ void runConcurrentModificationAndReaddirIteration(
     for (char& c : name) {
       c = folly::Random::rand32('a', 'z' + 1);
     }
-    return PathComponent{name};
+    return PathComponent{std::string_view{name.data(), name.size()}};
   };
 
   // Selects a random name from names and adds it to modified, throwing

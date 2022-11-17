@@ -267,7 +267,7 @@ ObjectId FakeBackingStore::computeTreeHash(
   digest.hash_init(EVP_sha1());
 
   for (const auto& entry : sortedEntries) {
-    digest.hash_update(ByteRange{entry.first.stringPiece()});
+    digest.hash_update(ByteRange{entry.first.view()});
     digest.hash_update(entry.second.getHash().getBytes());
     mode_t mode = modeFromTreeEntryType(entry.second.getType());
     digest.hash_update(

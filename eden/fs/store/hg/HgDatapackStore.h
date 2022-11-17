@@ -33,7 +33,7 @@ class HgDatapackStore {
       AbsolutePathPiece repository,
       const Options& options,
       std::shared_ptr<ReloadableConfig> config)
-      : store_{repository.stringPiece(), options}, config_{std::move(config)} {}
+      : store_{repository.view(), options}, config_{std::move(config)} {}
 
   /**
    * Imports the blob identified by the given hash from the local store.

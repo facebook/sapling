@@ -253,16 +253,15 @@ void simpleTestImpl(
   TakeoverData serverData;
 
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
 
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mountdSocketPath = tmpDirPath + "mountd"_pc;
   serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mount1Path = tmpDirPath + "mount1"_pc;
   auto client1Path = tmpDirPath + "client1"_pc;
@@ -272,7 +271,7 @@ void simpleTestImpl(
       client1Path,
       std::vector<AbsolutePath>{},
       FuseChannelData{
-          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
       SerializedInodeMap{});
 
@@ -289,7 +288,7 @@ void simpleTestImpl(
       client2Path,
       mount2BindMounts,
       FuseChannelData{
-          folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT},
+          folly::File{mount2FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
       SerializedInodeMap{});
 
@@ -470,14 +469,13 @@ TEST(Takeover, noMounts) {
   // Build the TakeoverData object with no mount points
   TakeoverData serverData;
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
   auto mountdSocketPath = tmpDirPath + "mountd"_pc;
   serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
 
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
@@ -504,14 +502,13 @@ TEST(Takeover, manyMounts) {
   // Build the TakeoverData object
   TakeoverData serverData;
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
   auto mountdSocketPath = tmpDirPath + "mountd"_pc;
   serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
 
   // Build info for 10,000 mounts
   // This exercises the code where we send more FDs than ControlMsg::kMaxFDs.
@@ -539,8 +536,7 @@ TEST(Takeover, manyMounts) {
         stateDirectory,
         bindMounts,
         FuseChannelData{
-            folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT},
-            fuse_init_out{}},
+            folly::File{fusePath.view(), O_RDWR | O_CREAT}, fuse_init_out{}},
         SerializedInodeMap{});
   }
 
@@ -666,16 +662,15 @@ TEST(Takeover, nfs) {
   TakeoverData serverData;
 
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
 
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mountdSocketPath = tmpDirPath + "mountd"_pc;
   serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mount1Path = tmpDirPath + "mount1"_pc;
   auto client1Path = tmpDirPath + "client1"_pc;
@@ -685,7 +680,7 @@ TEST(Takeover, nfs) {
       client1Path,
       std::vector<AbsolutePath>{},
       FuseChannelData{
-          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
       SerializedInodeMap{});
 
@@ -701,8 +696,7 @@ TEST(Takeover, nfs) {
       mount2Path,
       client2Path,
       mount2BindMounts,
-      NfsChannelData{
-          folly::File{mount2NfsPath.stringPiece(), O_RDWR | O_CREAT}},
+      NfsChannelData{folly::File{mount2NfsPath.view(), O_RDWR | O_CREAT}},
       SerializedInodeMap{});
 
   // Perform the takeover
@@ -750,16 +744,15 @@ TEST(Takeover, mixedupFdOrder) {
       FileDescriptorType::THRIFT_SOCKET};
 
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
 
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mountdSocketPath = tmpDirPath + "mountd"_pc;
   serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mount1Path = tmpDirPath + "mount1"_pc;
   auto client1Path = tmpDirPath + "client1"_pc;
@@ -769,7 +762,7 @@ TEST(Takeover, mixedupFdOrder) {
       client1Path,
       std::vector<AbsolutePath>{},
       FuseChannelData{
-          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
       SerializedInodeMap{});
 
@@ -806,16 +799,15 @@ TEST(Takeover, missingFdOrder) {
   serverData.injectedFdOrderForTesting = std::vector<FileDescriptorType>{};
 
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
 
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mountdSocketPath = tmpDirPath + "mountd"_pc;
   serverData.mountdServerSocket =
-      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{mountdSocketPath.view(), O_RDWR | O_CREAT};
 
   auto mount1Path = tmpDirPath + "mount1"_pc;
   auto client1Path = tmpDirPath + "client1"_pc;
@@ -825,7 +817,7 @@ TEST(Takeover, missingFdOrder) {
       client1Path,
       std::vector<AbsolutePath>{},
       FuseChannelData{
-          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
       SerializedInodeMap{});
 
@@ -851,12 +843,11 @@ TEST(Takeover, nfsNotEnabled) {
   TakeoverData serverData;
 
   auto lockFilePath = tmpDirPath + "lock"_pc;
-  serverData.lockFile =
-      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  serverData.lockFile = folly::File{lockFilePath.view(), O_RDWR | O_CREAT};
 
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
-      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+      folly::File{thriftSocketPath.view(), O_RDWR | O_CREAT};
 
   serverData.mountdServerSocket = std::nullopt;
 
@@ -868,7 +859,7 @@ TEST(Takeover, nfsNotEnabled) {
       client1Path,
       std::vector<AbsolutePath>{},
       FuseChannelData{
-          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          folly::File{mount1FusePath.view(), O_RDWR | O_CREAT},
           fuse_init_out{}},
       SerializedInodeMap{});
 

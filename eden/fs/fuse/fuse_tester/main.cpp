@@ -63,8 +63,7 @@ class TestDispatcher : public FuseDispatcher {
 };
 
 void ensureEmptyDirectory(AbsolutePathPiece path) {
-  boost::filesystem::path boostPath(
-      path.stringPiece().begin(), path.stringPiece().end());
+  boost::filesystem::path boostPath(path.view().begin(), path.view().end());
 
   XLOG(INFO) << "boost path: " << boostPath.native();
   if (!boost::filesystem::create_directories(boostPath)) {

@@ -18,7 +18,7 @@ folly::SocketAddress makeNfsSocket(std::optional<AbsolutePath> unixSocketPath) {
       folly::throwSystemError(
           fmt::format("unable to remove socket file {}", *unixSocketPath));
     }
-    return folly::SocketAddress::makeFromPath(unixSocketPath->stringPiece());
+    return folly::SocketAddress::makeFromPath(unixSocketPath->view());
   } else {
     return folly::SocketAddress("127.0.0.1", 0);
   }

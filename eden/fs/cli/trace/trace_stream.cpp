@@ -291,7 +291,7 @@ int trace_hg_retroactive(
       std::make_unique<apache::thrift::Client<EdenService>>(std::move(channel));
 
   GetRetroactiveHgEventsParams params{};
-  params.mountPoint() = mountRoot.stringPiece();
+  params.mountPoint() = mountRoot.view();
   auto future = client->semifuture_getRetroactiveHgEvents(params).via(
       evbThread.getEventBase());
 
@@ -715,7 +715,7 @@ int trace_inode_retroactive(
       std::make_unique<apache::thrift::Client<EdenService>>(std::move(channel));
 
   GetRetroactiveInodeEventsParams params{};
-  params.mountPoint() = mountRoot.stringPiece();
+  params.mountPoint() = mountRoot.view();
   auto future = client->semifuture_getRetroactiveInodeEvents(params).via(
       evbThread.getEventBase());
 
@@ -795,7 +795,7 @@ int main(int argc, char** argv) {
                      evbThread.getEventBase(),
                      [&]() -> apache::thrift::RocketClientChannel::Ptr {
                        auto address = folly::SocketAddress::makeFromPath(
-                           socketPath.stringPiece());
+                           socketPath.view());
                        return apache::thrift::RocketClientChannel::newChannel(
                            folly::AsyncSocket::newSocket(
                                evbThread.getEventBase(), address));

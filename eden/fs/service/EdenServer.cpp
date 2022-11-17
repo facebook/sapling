@@ -228,7 +228,7 @@ std::string getCounterNameForFuseRequests(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
     const EdenMount* mount) {
-  auto mountName = basename(mount->getPath().stringPiece());
+  auto mountName = basename(mount->getPath().view());
   // prefix . mount . stage . metric
   return folly::to<std::string>(
       kFuseRequestPrefix,
@@ -256,7 +256,7 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
   folly::checkUnixError(
       lstat(mount_path, &file_metadata),
       "unable to get FUSE device number for mount ",
-      basename(mount->getPath().stringPiece()));
+      basename(mount->getPath().view()));
 
   auto pending_request_path = folly::to<std::string>(
       kFuseInfoDir,
@@ -614,7 +614,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 return std::nullopt;
               }
               return self->serverState_->getPrivHelper()
-                  ->takeoverShutdown(edenMount->getPath().stringPiece())
+                  ->takeoverShutdown(edenMount->getPath().view())
                   .thenValue([takeover = std::move(takeover)](auto&&) mutable {
                     return std::move(takeover);
                   });
@@ -1453,7 +1453,7 @@ Future<Unit> EdenServer::performTakeoverStart(
        bindMounts = std::move(bindMounts),
        mountPath = std::move(mountPath)](auto&&) mutable {
         return serverState_->getPrivHelper()->takeoverStartup(
-            mountPath.stringPiece(), bindMounts);
+            mountPath.view(), bindMounts);
       });
 #else
   NOT_IMPLEMENTED();
@@ -1601,8 +1601,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               FinishedMount event;
               event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
               event.repo_source =
-                  basename(edenMount->getCheckoutConfig()->getRepoSource())
-                      .str();
+                  basename(edenMount->getCheckoutConfig()->getRepoSource());
               if (auto mountProtocol = edenMount->getMountProtocol()) {
                 event.fs_channel_type =
                     FieldConverter<MountProtocol>{}.toDebugString(
@@ -1925,7 +1924,7 @@ Future<Unit> EdenServer::createThriftServer() {
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
   folly::SocketAddress thriftAddress;
-  thriftAddress.setFromPath(thriftSocketPath.stringPiece());
+  thriftAddress.setFromPath(thriftSocketPath.view());
   server_->setAddress(thriftAddress);
   serverState_->setSocketPath(thriftSocketPath);
 

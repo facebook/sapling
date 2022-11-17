@@ -302,7 +302,7 @@ TakeoverServer::~TakeoverServer() {}
 void TakeoverServer::start() {
   // Build the address for the takeover socket.
   SocketAddress address;
-  address.setFromPath(socketPath_.stringPiece());
+  address.setFromPath(socketPath_.view());
 
   // Remove any old file at this path, so we can bind to it.
   auto rc = unlink(socketPath_.value().c_str());

@@ -1097,7 +1097,7 @@ void FuseChannel::sendInvalidateEntry(
   XLOG(DBG3) << "sendInvalidateEntry(parent=" << parent << ", name=" << name
              << ")";
 
-  auto namePiece = name.stringPiece();
+  auto namePiece = name.view();
 
   fuse_notify_inval_entry_out notify = {};
   notify.parent = parent.get();
@@ -1994,7 +1994,7 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseSymlink(
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
   XLOG(DBG7) << "FUSE_SYMLINK";
   const auto name = extractPathComponent(nameStr, requireUtf8Path_);
-  const StringPiece link{nameStr + name.stringPiece().size() + 1};
+  const StringPiece link{nameStr + name.view().size() + 1};
 
   InodeNumber parent{header.nodeid};
   return dispatcher_

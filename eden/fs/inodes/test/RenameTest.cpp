@@ -635,7 +635,7 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
     EXPECT_THROW_ERRNO(std::move(inodeFuture).get(), ENOENT);
   } else {
     auto cInode = std::move(inodeFuture).get();
-    EXPECT_EQ("a/b/x", cInode->getPath().value().stringPiece());
+    EXPECT_EQ("a/b/x", cInode->getPath().value().view());
   }
 }
 
@@ -687,7 +687,7 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
     EXPECT_THROW_ERRNO(std::move(inodeFuture).get(), ENOENT);
   } else {
     auto cInode = std::move(inodeFuture).get();
-    EXPECT_EQ("a/b/x", cInode->getPath().value().stringPiece());
+    EXPECT_EQ("a/b/x", cInode->getPath().value().view());
   }
 }
 

@@ -388,7 +388,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenMount::initialize");
   return serverState_->getFaultInjector()
-      .checkAsync("mount", getPath().stringPiece())
+      .checkAsync("mount", getPath().view())
       .via(getServerThreadPool().get())
       .thenValue([this, parent](auto&&) {
         return objectStore_->getRootTree(parent, context)
@@ -550,9 +550,7 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
             return folly::unit;
           case Action::CreateSymlink:
             directory->symlink(
-                symlinkName,
-                symlinkTarget.stringPiece(),
-                InvalidationRequired::Yes);
+                symlinkName, symlinkTarget.view(), InvalidationRequired::Yes);
             return folly::unit;
           case Action::UnlinkThenSymlink:
             return directory
@@ -560,7 +558,7 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
                 .thenValue([=](Unit&&) {
                   directory->symlink(
                       symlinkName,
-                      symlinkTarget.stringPiece(),
+                      symlinkTarget.view(),
                       InvalidationRequired::Yes);
                 });
         }
@@ -645,14 +643,14 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
                   target = targetPath.copy(),
                   pathInMountDir = getPath() + repoPath](auto&&) {
         return serverState_->getPrivHelper()->bindMount(
-            target.stringPiece(), pathInMountDir.stringPiece());
+            target.view(), pathInMountDir.view());
       });
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
     RelativePathPiece repoPath) {
   auto absRepoPath = getPath() + repoPath;
-  return serverState_->getPrivHelper()->bindUnMount(absRepoPath.stringPiece());
+  return serverState_->getPrivHelper()->bindUnMount(absRepoPath.view());
 }
 #endif // !_WIN32
 
@@ -793,7 +791,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
     using is_transparent = void;
     bool operator()(const RelativePathPiece& lhs, const RelativePath& rhs)
         const {
-      return lhs.stringPiece() == rhs.stringPiece();
+      return lhs.view() == rhs.view();
     }
   };
 
@@ -1073,11 +1071,9 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               .ensure([this] { channel_.reset(); });
 #else
           if (getNfsdChannel() != nullptr) {
-            return serverState_->getPrivHelper()->nfsUnmount(
-                getPath().stringPiece());
+            return serverState_->getPrivHelper()->nfsUnmount(getPath().view());
           } else {
-            return serverState_->getPrivHelper()->fuseUnmount(
-                getPath().stringPiece());
+            return serverState_->getPrivHelper()->fuseUnmount(getPath().view());
           }
 #endif
         })
@@ -1445,7 +1441,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
   return serverState_->getFaultInjector()
-      .checkAsync("checkout", getPath().stringPiece())
+      .checkAsync("checkout", getPath().view())
       .via(getServerThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         XLOG(DBG7) << "Checkout: getRoots";
@@ -1544,7 +1540,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
         auto rootInode = getRootInode();
         return serverState_->getFaultInjector()
-            .checkAsync("inodeCheckout", getPath().stringPiece())
+            .checkAsync("inodeCheckout", getPath().view())
             .via(getServerThreadPool().get())
             .thenValue([ctx,
                         treeResults = std::move(treeResults),
@@ -1881,7 +1877,7 @@ SharedRenameLock EdenMount::acquireSharedRenameLock() {
 
 std::string EdenMount::getCounterName(CounterName name) {
   const auto& mountPath = getPath();
-  const auto base = basename(mountPath.stringPiece());
+  const auto base = basename(mountPath.view());
   switch (name) {
     case CounterName::INODEMAP_LOADED:
       return folly::to<std::string>("inodemap.", base, ".loaded");
@@ -2041,7 +2037,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
 
                 return serverState_->getPrivHelper()
                     ->nfsMount(
-                        mountPath.stringPiece(),
+                        mountPath.view(),
                         mountdAddr,
                         channel->getAddr(),
                         readOnly,
@@ -2063,7 +2059,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
               });
         } else {
           return serverState_->getPrivHelper()
-              ->fuseMount(mountPath.stringPiece(), readOnly)
+              ->fuseMount(mountPath.view(), readOnly)
               .thenTry(
                   [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
                       -> folly::Future<folly::Unit> {
@@ -2076,7 +2072,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                             ->channelUnmountStarted()) {
                       fuseDevice->close();
                       return serverState_->getPrivHelper()
-                          ->fuseUnmount(mountPath.stringPiece())
+                          ->fuseUnmount(mountPath.view())
                           .thenError(
                               folly::tag<std::exception>,
                               [](std::exception&& unmountError) {
@@ -2387,7 +2383,7 @@ void EdenMount::subscribeInodeActivityBuffer() {
             auto relativePath = inodeMap_->getPathForInode(event.ino);
             if (relativePath.has_value()) {
               InodeTraceEvent newTraceEvent = event;
-              newTraceEvent.setPath(relativePath->stringPiece());
+              newTraceEvent.setPath(relativePath->view());
               inodeActivityBuffer_->addEvent(std::move(newTraceEvent));
               return;
             }

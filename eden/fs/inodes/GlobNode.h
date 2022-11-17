@@ -210,8 +210,8 @@ class GlobNode {
 inline std::ostream& operator<<(
     std::ostream& stream,
     const GlobNode::GlobResult& a) {
-  stream << "GlobResult{\"" << a.name.stringPiece()
-         << "\", dtype=" << enumValue(a.dtype) << "}";
+  stream << "GlobResult{\"" << a.name << "\", dtype=" << enumValue(a.dtype)
+         << "}";
   return stream;
 }
 

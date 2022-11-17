@@ -609,7 +609,7 @@ FileDescriptor openImpl(folly::StringPiece path, OpenFileHandleOptions opts) {
 FileDescriptor FileDescriptor::open(
     AbsolutePathPiece path,
     OpenFileHandleOptions opts) {
-  return openImpl(path.stringPiece(), opts);
+  return openImpl(path.view(), opts);
 }
 
 FileDescriptor FileDescriptor::openNullDevice(OpenFileHandleOptions opts) {

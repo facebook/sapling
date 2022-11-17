@@ -65,7 +65,7 @@ HgImportTraceEvent::HgImportTraceEvent(
       resourceType{resourceType},
       importPriority{priority},
       importCause{cause} {
-  auto hgPath = proxyHash.path().stringPiece();
+  auto hgPath = proxyHash.path().view();
   path.reset(new char[hgPath.size() + 1]);
   memcpy(path.get(), hgPath.data(), hgPath.size());
   path[hgPath.size()] = 0;
@@ -593,7 +593,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   if (logFetchPathRegex) {
     for (const auto& hash : hashes) {
       auto path = hash.path();
-      auto pathPiece = path.stringPiece();
+      auto pathPiece = path.view();
 
       if (RE2::PartialMatch(
               re2::StringPiece{pathPiece.data(), pathPiece.size()},

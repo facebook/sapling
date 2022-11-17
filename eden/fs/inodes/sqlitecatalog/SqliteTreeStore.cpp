@@ -401,7 +401,7 @@ void SqliteTreeStore::removeChild(
   auto db = db_->lock();
   auto stmt = cache_->deleteChild.get(db);
   stmt->bind(1, parent.get());
-  stmt->bind(2, childName.stringPiece());
+  stmt->bind(2, childName.view());
   stmt->step();
 }
 
@@ -411,7 +411,7 @@ bool SqliteTreeStore::hasChild(
   auto db = db_->lock();
   auto stmt = cache_->hasChild.get(db);
   stmt->bind(1, parent.get());
-  stmt->bind(2, childName.stringPiece());
+  stmt->bind(2, childName.view());
   stmt->step();
   return stmt->columnUint64(0) == 1;
 }
@@ -426,7 +426,7 @@ void SqliteTreeStore::renameChild(
   db_->transaction([&](auto& txn) {
     auto overwriteEmpty = cache_->hasChildren.get(txn);
     overwriteEmpty->bind(1, dst.get());
-    overwriteEmpty->bind(2, dstName.stringPiece());
+    overwriteEmpty->bind(2, dstName.view());
 
     if (!(overwriteEmpty->step() && overwriteEmpty->columnUint64(0) == 0)) {
       throw SqliteTreeStoreNonEmptyError(
@@ -436,14 +436,14 @@ void SqliteTreeStore::renameChild(
     // If all the check passes, we delete the child being overwritten
     auto deleteStmt = cache_->deleteChild.get(txn);
     deleteStmt->bind(1, dst.get());
-    deleteStmt->bind(2, dstName.stringPiece());
+    deleteStmt->bind(2, dstName.view());
     deleteStmt->step();
 
     auto stmt = cache_->renameChild.get(txn);
     stmt->bind(1, dst.get());
-    stmt->bind(2, dstName.stringPiece());
+    stmt->bind(2, dstName.view());
     stmt->bind(3, src.get());
-    stmt->bind(4, srcName.stringPiece());
+    stmt->bind(4, srcName.view());
     stmt->step();
   });
 }
@@ -467,7 +467,7 @@ void SqliteTreeStore::insertInodeEntry(
 
   auto start = index * 6; // Number of columns
   inserts.bind(start + 1, parent.get());
-  inserts.bind(start + 2, name.stringPiece());
+  inserts.bind(start + 2, name.view());
   inserts.bind(start + 3, dtype);
   inserts.bind(start + 4, inode);
   inserts.bind(start + 5, nextEntryId_++);

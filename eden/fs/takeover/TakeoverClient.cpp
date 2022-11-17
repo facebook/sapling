@@ -42,7 +42,7 @@ TakeoverData takeoverMounts(
 
   auto connectTimeout = std::chrono::seconds(1);
   FutureUnixSocket socket;
-  socket.connect(&evb, socketPath.stringPiece(), connectTimeout)
+  socket.connect(&evb, socketPath.view(), connectTimeout)
       .thenValue(
           [&socket, supportedVersions, supportedTakeoverCapabilities](auto&&) {
             // Send our protocol version so that the server knows

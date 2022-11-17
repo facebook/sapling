@@ -1525,15 +1525,15 @@ class StreamingDiffCallback : public DiffCallback {
   void ignoredPath(RelativePathPiece, dtype_t) override {}
 
   void addedPath(RelativePathPiece path, dtype_t type) override {
-    publishFile(*publisher_, path.stringPiece(), ScmFileStatus::ADDED, type);
+    publishFile(*publisher_, path.view(), ScmFileStatus::ADDED, type);
   }
 
   void removedPath(RelativePathPiece path, dtype_t type) override {
-    publishFile(*publisher_, path.stringPiece(), ScmFileStatus::REMOVED, type);
+    publishFile(*publisher_, path.view(), ScmFileStatus::REMOVED, type);
   }
 
   void modifiedPath(RelativePathPiece path, dtype_t type) override {
-    publishFile(*publisher_, path.stringPiece(), ScmFileStatus::MODIFIED, type);
+    publishFile(*publisher_, path.view(), ScmFileStatus::MODIFIED, type);
   }
 
   void diffError(RelativePathPiece /*path*/, const folly::exception_wrapper& ew)
@@ -2051,9 +2051,7 @@ DirListAttributeDataOrError serializeEntryAttributes(
     thriftEntryResult.emplace(
         entry.first.asString(),
         serializeEntryAttributes(
-            entry.first.piece().stringPiece(),
-            entry.second,
-            requestedAttributes));
+            entry.first.piece().view(), entry.second, requestedAttributes));
   }
 
   result.dirListAttributeData_ref() = std::move(thriftEntryResult);
