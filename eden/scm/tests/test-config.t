@@ -302,13 +302,11 @@ config editing without an editor
   $ cat .sl/config | dos2unix
   # example repository config (see 'sl help config' for more info)
   [paths]
-  # path aliases to other clones of this repo in URLs or filesystem paths
+  # URL aliases to other repo sources
   # (see 'sl help config.paths' for more info)
   #
-  # default         = http://example.com/sl/example-repo
-  # default:pushurl = ssh://jdoe@example.net/sl/jdoes-fork
-  # my-fork         = ssh://jdoe@example.net/sl/jdoes-fork
-  # my-clone        = /home/jdoe/jdoes-clone
+  # default = https://example.com/example-org/example-repo
+  # my-fork = ssh://jdoe@example.com/jdoe/example-repo
   
   [ui]
   # name and email (local to this repository, optional), e.g.

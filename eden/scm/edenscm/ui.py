@@ -70,23 +70,15 @@ username =
 # uncomment to disable command output pagination
 # (see '@prog@ help pager' for details)
 # paginate = never
-
-[extensions]
-# uncomment these lines to enable some popular extensions
-# (see '@prog@ help extensions' for more info)
-#
-# amend =
 """,
     "cloned": """# example repository config (see '@prog@ help config' for more info)
 [paths]
 default = %s
 
-# path aliases to other clones of this repo in URLs or filesystem paths
+# URL aliases to other repo sources
 # (see '@prog@ help config.paths' for more info)
 #
-# default:pushurl = ssh://jdoe@example.net/@prog@/jdoes-fork
-# my-fork         = ssh://jdoe@example.net/@prog@/jdoes-fork
-# my-clone        = /home/jdoe/jdoes-clone
+# my-fork = https://example.com/jdoe/example-repo
 
 [ui]
 # name and email (local to this repository, optional), e.g.
@@ -94,13 +86,11 @@ default = %s
 """,
     "local": """# example repository config (see '@prog@ help config' for more info)
 [paths]
-# path aliases to other clones of this repo in URLs or filesystem paths
+# URL aliases to other repo sources
 # (see '@prog@ help config.paths' for more info)
 #
-# default         = http://example.com/@prog@/example-repo
-# default:pushurl = ssh://jdoe@example.net/@prog@/jdoes-fork
-# my-fork         = ssh://jdoe@example.net/@prog@/jdoes-fork
-# my-clone        = /home/jdoe/jdoes-clone
+# default = https://example.com/example-org/example-repo
+# my-fork = ssh://jdoe@example.com/jdoe/example-repo
 
 [ui]
 # name and email (local to this repository, optional), e.g.
@@ -116,13 +106,6 @@ default = %s
 # uncomment to disable command output pagination
 # (see '@prog@ help pager' for details)
 # paginate = never
-
-[extensions]
-# uncomment these lines to enable some popular extensions
-# (see '@prog@ help extensions' for more info)
-#
-# blackbox =
-# amend =
 """,
 }
 
