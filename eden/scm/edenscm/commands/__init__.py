@@ -4592,13 +4592,31 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
     legacyaliases=["pul"],
 )
 def pull(ui, repo, source="default", **opts):
-    """pull changes from the specified source
+    """pull commits from the specified source
 
-    Pull changes from a remote repository to a local one. This command modifies
-    the commit graph, but doesn't affect local commits or the working copy.
+    Pull commits from a remote repository to a local one. This command modifies
+    the commit graph, but doesn't mutate local commits or the working copy.
 
-    If SOURCE is omitted, the default path is used.
-    See :prog:`help urls` for more information.
+    Use ``-B/--bookmark`` to specify a remote bookmark to pull. For Git
+    repos, remote bookmarks correspond to branches. If no bookmark is
+    specified, a default set of relevant remote names are pulled.
+
+    If SOURCE is omitted, the default path is used. Use :prog:`path
+    --add` to add a named source.
+
+    See :prog:`help urls` and :prog:`help path` for more information.
+
+    .. container:: verbose
+
+      Examples:
+
+      - pull relevant remote bookmarks from default source::
+
+          @prog@ pull
+
+      - pull a bookmark named my-branch from source my-fork:
+
+          @prog@ pull my-fork --bookmark my-branch
 
     .. container:: verbose
 
