@@ -6,6 +6,7 @@
  */
 
 import type {ClientConnection} from '.';
+import type {Repository} from './Repository';
 import type {ServerPlatform} from './serverPlatform';
 import type {
   ServerToClientMessage,
@@ -21,14 +22,16 @@ import type {
   RepositoryError,
 } from 'isl/src/types';
 
-import {Repository} from './Repository';
 import {browserServerPlatform} from './serverPlatform';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
-import {randomId, unwrap} from 'shared/utils';
+import {randomId} from 'shared/utils';
 
 export type IncomingMessage = ClientToServerMessage;
 export type OutgoingMessage = ServerToClientMessage;
+
+type GeneralMessage = IncomingMessage & {type: 'requestRepoInfo'};
+type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
 
 /**
  * Message passing channel built on top of ClientConnection.
@@ -42,13 +45,16 @@ export default class ServerToClientAPI {
     Set<(message: IncomingMessage) => void | Promise<void>>
   >();
   private incomingListener: Disposable;
-  private disposables: Array<Disposable> = [];
+
+  /** Disposables that must be disposed whenever the current repo is changed */
+  private repoDisposables: Array<Disposable> = [];
   private platform: ServerPlatform;
 
   private queuedMessages: Array<IncomingMessage> = [];
-  private currentRepository: Repository | undefined = undefined;
-  private currentRepoCwd: string | undefined = undefined;
-  private currentRepoError: RepositoryError | undefined = undefined;
+  private currentState:
+    | {type: 'loading'}
+    | {type: 'repo'; repo: Repository; cwd: string}
+    | {type: 'error'; error: RepositoryError} = {type: 'loading'};
 
   // React Dev mode means we subscribe+unsubscribe+resubscribe in the client,
   // causing multiple subscriptions on the server. To avoid that,
@@ -69,7 +75,7 @@ export default class ServerToClientAPI {
       // When the client is connected, we want to immediately start listening to messages.
       // However, we can't properly respond to these messages until we have a repository set up.
       // Queue up messages until a repository is set.
-      if (this.currentRepoError == null && this.currentRepository == null) {
+      if (this.currentState.type === 'loading') {
         this.queuedMessages.push(data);
       } else {
         try {
@@ -81,22 +87,45 @@ export default class ServerToClientAPI {
     });
   }
 
-  setCurrentRepoOrError(repo: Repository | RepositoryError, cwd: string) {
-    if (!(repo instanceof Repository)) {
-      this.currentRepoError = repo;
-    } else {
-      this.currentRepository = repo;
-      this.currentRepoCwd = cwd;
+  setRepoError(error: RepositoryError) {
+    this.disposeRepoDisposables();
 
-      if (repo.codeReviewProvider != null) {
-        this.disposables.push(
-          repo.codeReviewProvider.onChangeDiffSummaries(value => {
-            this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
-          }),
-        );
-      }
+    this.currentState = {type: 'error', error};
+
+    this.processQueuedMessages();
+  }
+
+  setCurrentRepo(repo: Repository, cwd: string) {
+    this.disposeRepoDisposables();
+
+    this.currentState = {type: 'repo', repo, cwd};
+
+    if (repo.codeReviewProvider != null) {
+      this.repoDisposables.push(
+        repo.codeReviewProvider.onChangeDiffSummaries(value => {
+          this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
+        }),
+      );
     }
 
+    this.processQueuedMessages();
+  }
+
+  postMessage(message: OutgoingMessage) {
+    this.connection.postMessage(serializeToString(message));
+  }
+
+  dispose() {
+    this.incomingListener.dispose();
+    this.disposeRepoDisposables();
+  }
+
+  private disposeRepoDisposables() {
+    this.repoDisposables.forEach(disposable => disposable.dispose());
+    this.repoDisposables = [];
+  }
+
+  private processQueuedMessages() {
     for (const message of this.queuedMessages) {
       try {
         this.handleIncomingMessage(message);
@@ -108,14 +137,38 @@ export default class ServerToClientAPI {
   }
 
   private handleIncomingMessage(data: IncomingMessage) {
-    const repo = this.currentRepository instanceof Repository ? this.currentRepository : undefined;
+    this.handleIncomingGeneralMessage(data as GeneralMessage);
+    if (this.currentState.type === 'repo') {
+      const {repo, cwd} = this.currentState;
+      this.handleIncomingMessageWithRepo(data as WithRepoMessage, repo, cwd);
+    }
+  }
 
-    const logger = repo?.logger ?? this.connection.logger;
+  /**
+   * Handle messages which can be handled regardless of if a repo was successfully created or not
+   */
+  private handleIncomingGeneralMessage(data: GeneralMessage) {
     switch (data.type) {
       case 'requestRepoInfo': {
-        this.postMessage({type: 'repoInfo', info: repo?.info ?? unwrap(this.currentRepoError)});
+        switch (this.currentState.type) {
+          case 'repo':
+            this.postMessage({type: 'repoInfo', info: this.currentState.repo.info});
+            break;
+          case 'error':
+            this.postMessage({type: 'repoInfo', info: this.currentState.error});
+            break;
+        }
         break;
       }
+    }
+  }
+
+  /**
+   * Handle messages which require a repository to have been successfully set up to run
+   */
+  private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
+    const logger = repo.logger;
+    switch (data.type) {
       case 'subscribeUncommittedChanges': {
         if (this.hasSubscribedToUncommittedChanges || repo == null) {
           break;
@@ -137,7 +190,7 @@ export default class ServerToClientAPI {
         }
 
         // send changes as they come in from watchman
-        repo?.subscribeToUncommittedChanges(postUncommittedChanges);
+        repo.subscribeToUncommittedChanges(postUncommittedChanges);
         // trigger a fetch on startup
         repo.fetchUncommittedChanges();
 
@@ -147,7 +200,7 @@ export default class ServerToClientAPI {
         return;
       }
       case 'subscribeSmartlogCommits': {
-        if (this.hasSubscribedToSmartlogCommits || repo == null) {
+        if (this.hasSubscribedToSmartlogCommits) {
           break;
         }
         this.hasSubscribedToSmartlogCommits = true;
@@ -176,7 +229,7 @@ export default class ServerToClientAPI {
         return;
       }
       case 'subscribeMergeConflicts': {
-        if (this.hasSubscribedToMergeConflicts || repo == null) {
+        if (this.hasSubscribedToMergeConflicts) {
           break;
         }
         this.hasSubscribedToMergeConflicts = true;
@@ -200,19 +253,19 @@ export default class ServerToClientAPI {
       }
       case 'runOperation': {
         const {operation} = data;
-        unwrap(repo).runOrQueueOperation(
+        repo.runOrQueueOperation(
           operation,
           progress => {
             this.postMessage({type: 'operationProgress', ...progress});
           },
-          unwrap(this.currentRepoCwd),
+          cwd,
         );
         break;
       }
       case 'requestComparison': {
         const {comparison} = data;
         const DIFF_CONTEXT_LINES = 4;
-        const diff: Promise<Result<string>> = unwrap(repo)
+        const diff: Promise<Result<string>> = repo
           .runCommand([
             'diff',
             ...revsetArgsForComparison(comparison),
@@ -254,7 +307,7 @@ export default class ServerToClientAPI {
         // we just need the caller to ask with "after" line numbers instead of "before".
         // Note: we would still need to fall back to cat for comparisons that do not involve
         // the working copy.
-        const cat: Promise<string> = unwrap(repo)
+        const cat: Promise<string> = repo
           .cat(relativePath, revsetForComparison(comparison))
           .catch(() => '');
 
@@ -269,19 +322,16 @@ export default class ServerToClientAPI {
       }
       case 'refresh': {
         logger?.log('refresh requested');
-        repo?.fetchSmartlogCommits();
-        repo?.fetchUncommittedChanges();
-        repo?.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        repo.fetchSmartlogCommits();
+        repo.fetchUncommittedChanges();
+        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         break;
       }
       case 'pageVisibility': {
-        repo?.setPageFocus(this.pageId, data.state);
+        repo.setPageFocus(this.pageId, data.state);
         break;
       }
       case 'fetchCommitMessageTemplate': {
-        if (repo == null) {
-          break;
-        }
         repo
           .runCommand(['debugcommitmessage'])
           .then(result => {
@@ -296,9 +346,6 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fetchDiffSummaries': {
-        if (repo == null) {
-          break;
-        }
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         break;
       }
@@ -313,13 +360,5 @@ export default class ServerToClientAPI {
       return;
     }
     listeners.forEach(handle => handle(data));
-  }
-
-  postMessage(message: OutgoingMessage) {
-    this.connection.postMessage(serializeToString(message));
-  }
-
-  dispose() {
-    this.incomingListener.dispose();
   }
 }

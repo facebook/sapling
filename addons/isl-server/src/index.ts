@@ -8,6 +8,7 @@
 import type {Logger} from './logger';
 import type {ServerPlatform} from './serverPlatform';
 
+import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
 import ServerToClientAPI from './ServerToClientAPI';
 import {fileLogger, stdoutLogger} from './logger';
@@ -51,7 +52,11 @@ export function onClientConnection(connection: ClientConnection): () => void {
 
   const repositoryReference = repositoryCache.getOrCreate(command, logger, connection.cwd);
   repositoryReference.promise.then(repoOrError => {
-    api?.setCurrentRepoOrError(repoOrError, connection.cwd);
+    if (repoOrError instanceof Repository) {
+      api?.setCurrentRepo(repoOrError, connection.cwd);
+    } else {
+      api?.setRepoError(repoOrError);
+    }
   });
 
   return () => {
