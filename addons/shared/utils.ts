@@ -48,3 +48,22 @@ export function defer<T>(): Deferred<T> {
   });
   return deferred;
 }
+
+/**
+ * Returns the part of the string after the last occurrence of delimiter,
+ * or the entire string if no matches are found.
+ * (default delimiter is '/')
+ *
+ * ```
+ * basename('/path/to/foo.txt', '/') -> 'foo.txt'
+ * basename('foo.txt', '/') -> 'foo.txt'
+ * basename('/path/', '/') -> ''
+ * ```
+ */
+export function basename(s: string, delimiter = '/') {
+  const foundIndex = s.lastIndexOf(delimiter);
+  if (foundIndex === -1) {
+    return s;
+  }
+  return s.slice(foundIndex + 1);
+}
