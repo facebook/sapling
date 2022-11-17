@@ -4472,49 +4472,20 @@ Some sample command line templates:
 
 urls = r"""Valid URLs are of the form::
 
-  local/filesystem/path[#revision]
-  file://local/filesystem/path[#revision]
-  http://[user[:pass]@]host[:port]/[path][#revision]
-  https://[user[:pass]@]host[:port]/[path][#revision]
-  ssh://[user@]host[:port]/[path][#revision]
+  local/filesystem/path
+  file://local/filesystem/path
+  https://[user[:pass]@]host[:port]/[path]
+  ssh://[user@]host[:port]/[path]
 
 Paths in the local filesystem can either point to @Product@
 repositories or to bundle files (as created by :prog:`bundle` or
 :prog:`incoming --bundle`). See also :prog:`help paths`.
 
-An optional identifier after # indicates a particular branch, tag, or
-changeset to use from the remote repository. See also :prog:`help
-revisions`.
-
-Some features, such as pushing to http:// and https:// URLs are only
-possible if the feature is explicitly enabled on the remote @Product@
-server.
-
-Note that the security of HTTPS URLs depends on proper configuration of
-web.cacerts.
-
-Some notes about using SSH with @Product@:
-
-- SSH requires an accessible shell account on the destination machine
-  and a copy of @prog@ in the remote path or specified with as remotecmd.
-- path is relative to the remote user's home directory by default. Use
-  an extra slash at the start of a path to specify an absolute path::
-
-    ssh://example.com//tmp/repository
-
-- @Product@ doesn't use its own compression via SSH; the right thing
-  to do is to configure it in your ~/.ssh/config, e.g.::
-
-    Host *.mylocalnetwork.example.com
-      Compression no
-    Host *
-      Compression yes
-
-  Alternatively specify "ssh -C" as your ssh command in your
-  configuration file or with the --ssh command line option.
+For non-Git servers, note that HTTPS URLs depend on proper configuration
+of ``web.cacerts``.
 
 These URLs can all be stored in your configuration file with path
-aliases under the [paths] section like so::
+aliases under the ``[paths]`` section like so::
 
   [paths]
   alias1 = URL1
@@ -4524,8 +4495,8 @@ aliases under the [paths] section like so::
 You can then use the alias for any command that uses a URL (for
 example :prog:`pull alias1` will be treated as :prog:`pull URL1`).
 
-Two path aliases are special because they are used as defaults when
-you do not provide the URL to a command:
+There are two special aliases used as defaults when you do not provide
+the URL to a command:
 
 default:
   When you create a repository with @prog@ clone, the clone command saves
