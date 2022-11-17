@@ -142,6 +142,10 @@ class CheckoutConfig {
     return useWriteBackCache_;
   }
 
+  const std::string& getReUseCase() const {
+    return reUseCase_;
+  }
+
 #ifdef _WIN32
   /** Guid for that repository */
   Guid getRepoGuid() const {
@@ -162,6 +166,8 @@ class CheckoutConfig {
   bool enableTreeOverlay_{folly::kIsWindows};
 
   bool useWriteBackCache_{false};
+
+  std::string reUseCase_{"buck2-default"};
 
 #ifdef _WIN32
   Guid repoGuid_;

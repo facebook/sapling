@@ -512,14 +512,14 @@ def get_repo(path: str, backing_store_type: Optional[str] = None) -> Optional[Re
         # Skip checking if the local path exists with the repo source name.
         return get_http_repo(path)
 
-    path = os.path.realpath(path)
-    if not os.path.exists(path):
-        return None
-
     if backing_store_type is not None and backing_store_type == "recas":
         recas_repo = get_recas_repo(path)
         if recas_repo is not None:
             return recas_repo
+
+    path = os.path.realpath(path)
+    if not os.path.exists(path):
+        return None
 
     while True:
         hg_repo = get_hg_repo(path)

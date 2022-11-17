@@ -1502,7 +1502,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   auto backingStore = getBackingStore(
       toBackingStoreType(initialConfig->getRepoType()),
-      initialConfig->getRepoSource());
+      initialConfig->getRepoSource(),
+      *initialConfig);
 
   auto objectStore = ObjectStore::create(
       getLocalStore(),
@@ -1841,7 +1842,8 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
     BackingStoreType type,
-    StringPiece name) {
+    StringPiece name,
+    const CheckoutConfig& config) {
   BackingStoreKey key{type, name.str()};
   auto lockedStores = backingStores_.wlock();
   const auto it = lockedStores->find(key);
@@ -1852,7 +1854,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   const auto store = backingStoreFactory_->createBackingStore(
       type,
       BackingStoreFactory::CreateParams{
-          name, serverState_.get(), localStore_, getSharedStats()});
+          name, serverState_.get(), localStore_, getSharedStats(), config});
   lockedStores->emplace(key, store);
   return store;
 }

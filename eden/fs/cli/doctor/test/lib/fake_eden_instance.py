@@ -138,6 +138,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             predictive_prefetch_num_dirs=0,
             enable_tree_overlay=True,
             use_write_back_cache=False,
+            re_use_case="buck2-default",
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
         self._checkouts_by_path[full_path] = checkout
