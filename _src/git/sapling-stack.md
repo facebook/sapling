@@ -12,7 +12,7 @@ Once you have a stack of commits, you can use <Command name="pr" linkText="sl pr
 
 :::caution
 
-Make sure you have followed the instructions to [authenticate with GitHub using the GitHub CLI `hg`](../introduction/getting-started#authenticating-with-github) before using `sl pr`.
+Make sure you have followed the instructions to [authenticate with GitHub using the GitHub CLI `gh`](../introduction/getting-started#authenticating-with-github) before using `sl pr`.
 
 :::
 
