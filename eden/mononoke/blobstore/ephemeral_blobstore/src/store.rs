@@ -300,6 +300,13 @@ impl RepoEphemeralStoreInner {
         Ok(rows.into_iter().next().map(|b| b.0))
     }
 
+    /// Given a Bubble ID, fetch labels corresponding to that bubble.
+    async fn labels_from_bubble(&self, bubble_id: &BubbleId) -> Result<Vec<String>> {
+        let rows =
+            SelectBubbleLabelsById::query(&self.connections.read_connection, bubble_id).await?;
+        Ok(rows.into_iter().map(|l| l.0).collect::<Vec<_>>())
+    }
+
     async fn changesets_from_bubble(&self, bubble_id: &BubbleId) -> Result<Vec<ChangesetId>> {
         let rows =
             SelectChangesetFromBubble::query(&self.connections.read_connection, bubble_id).await?;
@@ -560,15 +567,24 @@ impl RepoEphemeralStore {
     /// Associate the given labels with the bubble corresponding to the input
     /// bubble ID.
     #[allow(dead_code)]
-    async fn add_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
+    pub async fn add_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
         self.inner()?.add_bubble_labels(bubble_id, labels).await
     }
 
     /// Disassociate the given labels from the bubble corresponding to the input
     /// bubble ID.
     #[allow(dead_code)]
-    async fn remove_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
+    pub async fn remove_bubble_labels(
+        &self,
+        bubble_id: BubbleId,
+        labels: Vec<String>,
+    ) -> Result<()> {
         self.inner()?.remove_bubble_labels(bubble_id, labels).await
+    }
+
+    /// Given a bubble ID, fetches the labels corresponding to that bubble.
+    pub async fn labels_from_bubble(&self, bubble_id: &BubbleId) -> Result<Vec<String>> {
+        self.inner()?.labels_from_bubble(bubble_id).await
     }
 }
 
@@ -789,6 +805,63 @@ mod test {
         // have any labels since we used an empty vec of labels as input.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
         assert!(bubble_read.labels().is_empty());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn empty_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with no labels associated to it.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Fetch the labels associated with the newly created bubble.
+        let id = bubble.bubble_id();
+        let labels = eph.labels_from_bubble(&id).await?;
+        // Validate that no labels are associated with the bubble.
+        assert!(labels.is_empty());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn non_empty_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let labels = vec!["workspace".to_string(), "debug".to_string()];
+        // Create a bubble with some labels associated to it.
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Fetch the labels associated with the newly created bubble.
+        let id = bubble.bubble_id();
+        let returned_labels = eph.labels_from_bubble(&id).await?;
+        // Validate that the labels returned are the same as the stored labels.
+        assert_eq!(returned_labels.len(), labels.len());
+        assert!(returned_labels.iter().all(|label| labels.contains(label)));
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn added_removed_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with no labels associated to it.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Add labels to the newly created bubble.
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        eph.add_bubble_labels(bubble.bubble_id(), labels.clone())
+            .await?;
+        // Fetch the labels associated with the bubble.
+        let id = bubble.bubble_id();
+        let returned_labels = eph.labels_from_bubble(&id).await?;
+        // Validate that the labels returned are the same as the added labels.
+        assert_eq!(returned_labels.len(), labels.len());
+        assert!(returned_labels.iter().all(|label| labels.contains(label)));
+        // Remove all labels associated with the bubble.
+        eph.remove_bubble_labels(bubble.bubble_id(), labels).await?;
+        let returned_labels = eph.labels_from_bubble(&id).await?;
+        // Validate that no labels are returned since all labels were deleted.
+        assert!(returned_labels.is_empty());
         Ok(())
     }
 

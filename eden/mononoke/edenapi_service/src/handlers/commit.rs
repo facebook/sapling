@@ -433,6 +433,11 @@ impl EdenApiHandler for FetchSnapshotHandler {
             .bubble_from_changeset(&cs_id)
             .await?
             .context("Snapshot not in a bubble")?;
+        let labels = repo
+            .ephemeral_store()
+            .labels_from_bubble(&bubble_id)
+            .await
+            .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
         let cs = cs_id.load(repo.ctx(), &blobstore).await?.into_mut();
         let time = cs.author_date.timestamp_secs();
@@ -485,6 +490,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                 })
                 .collect::<Result<_, Error>>()?,
             bubble_id: Some(bubble_id.into()),
+            labels,
         };
         Ok(stream::once(async move { Ok(response) }).boxed())
     }

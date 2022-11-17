@@ -360,6 +360,8 @@ pub struct FetchSnapshotResponse {
     pub tz: i32,
     #[id(6)]
     pub bubble_id: Option<NonZeroU64>,
+    #[id(7)]
+    pub labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
