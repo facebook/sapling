@@ -10,6 +10,8 @@ use std::num::NonZeroU64;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use edenapi_types::AlterSnapshotRequest;
+use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
@@ -287,6 +289,15 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+        let _ = request;
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Alter the properties of an existing snapshot
+    async fn alter_snapshot(
+        &self,
+        request: AlterSnapshotRequest,
+    ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
         let _ = request;
         Err(EdenApiError::NotSupported)
     }

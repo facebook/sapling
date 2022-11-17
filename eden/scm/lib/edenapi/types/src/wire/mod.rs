@@ -334,20 +334,25 @@ transparent_wire!(
 #[serde(transparent)]
 pub struct WrapNonZero<T>(T);
 
-impl ToWire for Option<NonZeroU64> {
+impl ToWire for NonZeroU64 {
     type Wire = WrapNonZero<u64>;
 
     fn to_wire(self) -> Self::Wire {
-        WrapNonZero(self.map_or(0, |x| x.get()))
+        WrapNonZero(self.get())
     }
 }
 
 impl ToApi for WrapNonZero<u64> {
-    type Api = Option<NonZeroU64>;
-    type Error = Infallible;
+    type Api = NonZeroU64;
+    type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(NonZeroU64::new(self.0))
+        match NonZeroU64::new(self.0) {
+            Some(val) => Ok(val),
+            None => Err(WireToApiConversionError::CannotPopulateRequiredField(
+                "Invalid value provided for NonZeroU64",
+            )),
+        }
     }
 }
 

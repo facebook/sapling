@@ -18,6 +18,8 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use bytes::Bytes as RawBytes;
 use edenapi_types::make_hash_lookup_request;
+use edenapi_types::AlterSnapshotRequest;
+use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
@@ -147,6 +149,7 @@ mod paths {
     pub const UPLOAD_BONSAI_CHANGESET: &str = "upload/changeset/bonsai";
     pub const EPHEMERAL_PREPARE: &str = "ephemeral/prepare";
     pub const FETCH_SNAPSHOT: &str = "snapshot";
+    pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const DOWNLOAD_FILE: &str = "download/file";
 }
 
@@ -1198,6 +1201,22 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self.fetch::<FetchSnapshotResponse>(vec![request])?)
+    }
+
+    /// Alter the properties of an existing snapshot
+    async fn alter_snapshot(
+        &self,
+        request: AlterSnapshotRequest,
+    ) -> Result<Response<AlterSnapshotResponse>, EdenApiError> {
+        tracing::info!("Altering snapshot {}", request.cs_id,);
+        let url = self.build_url(paths::ALTER_SNAPSHOT)?;
+        let req = request.to_wire();
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        Ok(self.fetch::<AlterSnapshotResponse>(vec![request])?)
     }
 
     async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {

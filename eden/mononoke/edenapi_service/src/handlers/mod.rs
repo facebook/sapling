@@ -95,6 +95,7 @@ pub enum EdenApiMethod {
     PullLazy,
     EphemeralPrepare,
     FetchSnapshot,
+    AlterSnapshot,
     CommitGraph,
     DownloadFile,
     CommitMutations,
@@ -128,6 +129,7 @@ impl fmt::Display for EdenApiMethod {
             Self::UploadBonsaiChangeset => "upload_bonsai_changeset",
             Self::EphemeralPrepare => "ephemeral_prepare",
             Self::FetchSnapshot => "fetch_snapshot",
+            Self::AlterSnapshot => "alter_snapshot",
             Self::DownloadFile => "download_file",
             Self::CommitMutations => "commit_mutations",
             Self::CommitTranslateId => "commit_translate_id",
@@ -314,6 +316,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
+        Handlers::setup::<commit::AlterSnapshotHandler>(route);
         Handlers::setup::<commit::GraphHandler>(route);
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);

@@ -365,6 +365,26 @@ pub struct FetchSnapshotResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+#[auto_wire]
+pub struct AlterSnapshotRequest {
+    #[id(1)]
+    pub cs_id: BonsaiChangesetId,
+    #[id(2)]
+    pub labels_to_add: Vec<String>,
+    #[id(3)]
+    pub labels_to_remove: Vec<String>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct AlterSnapshotResponse {
+    #[id(1)]
+    pub current_labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadSnapshotResponse {
     pub changeset_token: UploadToken,
     pub bubble_id: NonZeroU64,
