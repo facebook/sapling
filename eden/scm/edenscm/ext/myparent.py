@@ -89,7 +89,7 @@ def showmyparenttags(repo, ctx, templ, **args):
 
 
 @templatekeyword("myparenttitleprefix")
-def showmyparenttitleprefix(repo, ctx, templ, **args):
+def showmyparenttitleprefix(repo, ctx, templ, **args) -> str:
     """Show the title prefix of the commit's parent, if it has the
     same author as this commit.
     """
