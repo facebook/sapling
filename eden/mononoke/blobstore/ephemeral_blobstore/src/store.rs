@@ -235,7 +235,8 @@ impl RepoEphemeralStoreInner {
                         .map(|label| (&bubble_id, label as &str))
                         .collect::<Vec<_>>();
                     let (txn, _res) =
-                        AddBubbleLabels::query_with_transaction(txn, &bubble_labels[..]).await?;
+                        AddBubbleLabels::query_with_transaction(txn, bubble_labels.as_slice())
+                            .await?;
                     txn.commit().await?;
                 } else {
                     txn.commit().await?;
@@ -251,6 +252,40 @@ impl RepoEphemeralStoreInner {
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
         }
+    }
+
+    /// Add labels to an existing bubble
+    #[allow(dead_code)]
+    async fn add_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
+        // Open the bubble to validate if the bubble exists and has not expired.
+        self.open_bubble(bubble_id).await?;
+        let bubble_labels = labels
+            .iter()
+            .map(|label| (&bubble_id, label.as_str()))
+            .collect::<Vec<_>>();
+        // The bubble exists, add labels to it.
+        AddBubbleLabels::query(&self.connections.write_connection, bubble_labels.as_slice())
+            .await?;
+        Ok(())
+    }
+
+    /// Remove labels associated with an existing bubble
+    #[allow(dead_code)]
+    async fn remove_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
+        // Open the bubble to validate if the bubble exists and has not expired.
+        let bubble = self.open_bubble(bubble_id).await?;
+        let labels = labels
+            .iter()
+            .map(|label| label.as_str())
+            .collect::<Vec<_>>();
+        // The bubble exists, remove labels from it.
+        DeleteBubbleLabels::query(
+            &self.connections.write_connection,
+            &bubble.bubble_id(),
+            labels.as_slice(),
+        )
+        .await?;
+        Ok(())
     }
 
     /// Given a changeset ID, fetch the corresponding Bubble ID.
@@ -521,6 +556,20 @@ impl RepoEphemeralStore {
     pub async fn changesets_from_bubble(&self, bubble_id: &BubbleId) -> Result<Vec<ChangesetId>> {
         self.inner()?.changesets_from_bubble(bubble_id).await
     }
+
+    /// Associate the given labels with the bubble corresponding to the input
+    /// bubble ID.
+    #[allow(dead_code)]
+    async fn add_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
+        self.inner()?.add_bubble_labels(bubble_id, labels).await
+    }
+
+    /// Disassociate the given labels from the bubble corresponding to the input
+    /// bubble ID.
+    #[allow(dead_code)]
+    async fn remove_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
+        self.inner()?.remove_bubble_labels(bubble_id, labels).await
+    }
 }
 
 #[cfg(test)]
@@ -664,6 +713,216 @@ mod test {
                 .filter(|&(l, r)| l == r)
                 .count()
                 == labels.len()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Ensure that the bubble is created with no labels.
+        assert!(bubble.labels().is_empty());
+        // Add labels to the newly created bubble.
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        eph.add_bubble_labels(bubble.bubble_id(), labels.clone())
+            .await?;
+        // Reopen bubble from the store and verify it has the added labels.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().len(), labels.len());
+        assert!(
+            bubble_read
+                .labels()
+                .iter()
+                .all(|label| labels.contains(label))
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_duplicate_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Ensure that the bubble is created with no labels.
+        assert!(bubble.labels().is_empty());
+        // Add unique + duplicate labels to the newly created bubble.
+        let labels = vec![
+            "workspace".to_string(),
+            "debug_version".to_string(),
+            "workspace".to_string(),
+            "workspace".to_string(),
+        ];
+        eph.add_bubble_labels(bubble.bubble_id(), labels).await?;
+        // Reopen bubble from the store and verify it has the added labels
+        // and the labels are not duplicated.
+        let unique_labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().len(), unique_labels.len());
+        assert!(
+            bubble_read
+                .labels()
+                .iter()
+                .all(|label| unique_labels.contains(label))
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_empty_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Ensure that the bubble is created with no labels.
+        assert!(bubble.labels().is_empty());
+        // Add an empty vec of labels.
+        let labels = vec![];
+        eph.add_bubble_labels(bubble.bubble_id(), labels).await?;
+        // Reopen bubble from the store and verify it still doesn't
+        // have any labels since we used an empty vec of labels as input.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert!(bubble_read.labels().is_empty());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        // Create a bubble with labels associated to it.
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Reopen bubble and verify all the labels are associated with the bubble.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().len(), labels.len());
+        assert!(
+            bubble_read
+                .labels()
+                .iter()
+                .all(|label| labels.contains(label))
+        );
+        // Remove all labels associated with the bubble.
+        eph.remove_bubble_labels(bubble.bubble_id(), labels).await?;
+        // Reopen the bubble and validate that it has no labels associated with it.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert!(bubble_read.labels().is_empty());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn partial_remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let bubble = eph
+            .create_bubble(
+                None,
+                vec!["workspace".to_string(), "debug_version".to_string()],
+            )
+            .await?;
+        // Remove a subset of the labels associated with the bubble.
+        eph.remove_bubble_labels(bubble.bubble_id(), vec!["workspace".to_string()])
+            .await?;
+        // Reopen the bubble and validate it has the remaining labels associated with it.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels(), &vec!["debug_version"]);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn remove_absent_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Remove labels that are not part of the bubble. This should be a no-op
+        // from the bubble's perspective.
+        eph.remove_bubble_labels(bubble.bubble_id(), vec!["some_random_label".to_string()])
+            .await?;
+        // Reopen the bubble and validate it has the same labels as before since the
+        // no existing labels were deleted.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().len(), labels.len());
+        assert!(
+            bubble_read
+                .labels()
+                .iter()
+                .all(|label| labels.contains(label))
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn remove_duplicate_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Remove labels that are not part of the bubble. This should be a no-op
+        // from the bubble's perspective.
+        eph.remove_bubble_labels(
+            bubble.bubble_id(),
+            vec![
+                "workspace".to_string(),
+                "workspace".to_string(),
+                "workspace".to_string(),
+            ],
+        )
+        .await?;
+        // Reopen the bubble and validate it has only "debug_version" label since
+        // the other label was deleted. Passing input vec with duplicate labels
+        // should not have any other effect.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels(), &vec!["debug_version"]);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_and_remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Ensure that the bubble is created with no labels.
+        assert!(bubble.labels().is_empty());
+        // Add labels to the newly created bubble.
+        let labels = vec![
+            "workspace".to_string(),
+            "debug_version".to_string(),
+            "some_label".to_string(),
+            "important_snapshot".to_string(),
+        ];
+        eph.add_bubble_labels(bubble.bubble_id(), labels).await?;
+        // Remove a partial subset of the labels associated to the bubble.
+        eph.remove_bubble_labels(
+            bubble.bubble_id(),
+            vec!["workspace".to_string(), "debug_version".to_string()],
+        )
+        .await?;
+        // Reopen the bubble and verify that it has the right set of labels after the
+        // add and remove operation.
+        let remaining_labels = vec!["some_label".to_string(), "important_snapshot".to_string()];
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().len(), remaining_labels.len());
+        assert!(
+            bubble_read
+                .labels()
+                .iter()
+                .all(|label| remaining_labels.contains(label))
         );
         Ok(())
     }
@@ -918,7 +1177,7 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn get_expired_bubbles_with_label_test(fb: FacebookInit) -> Result<()> {
+    async fn get_expired_bubbles_with_labels_test(fb: FacebookInit) -> Result<()> {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
         let grace = Duration::from_secs(0);
@@ -932,6 +1191,87 @@ mod test {
         // Even though there exists one bubble beyond its expiry time, it should
         // not be returned since it has labels associated with it.
         assert_eq!(res.len(), 0);
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn get_expired_bubbles_with_removed_labels_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create an empty bubble that would expire immediately but has labels
+        // associated with it.
+        let labels = vec!["workspace".to_string(), "test".to_string()];
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Get expired bubbles
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
+        // Even though there exists one bubble beyond its expiry time, it should
+        // not be returned since it has labels associated with it.
+        assert_eq!(res.len(), 0);
+        // Remove the labels associated with the bubble.
+        eph.remove_bubble_labels(bubble.bubble_id(), labels).await?;
+        // Get expired bubbles
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
+        // Now that the labels are removed, we should get the above bubble as
+        // an expired bubble.
+        assert_eq!(res.len(), 1);
+        let res_bubble_id = res.first().expect("Invalid number of expired bubbles");
+        assert_eq!(res_bubble_id, &bubble.bubble_id());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_labels_to_expired_bubble_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create an empty bubble that would expire immediately.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Get expired bubbles.
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
+        // Since the bubble is past its expiry period and has no labels associated with it,
+        // it should be returned as an expired bubble.
+        assert_eq!(res.len(), 1);
+        let res_bubble_id = res.first().expect("Invalid number of expired bubbles");
+        assert_eq!(res_bubble_id, &bubble.bubble_id());
+        // Add new labels to the bubble. This operation should fail since adding or
+        // removing labels from an expired bubble is not permitted.
+        let res = eph
+            .add_bubble_labels(
+                bubble.bubble_id(),
+                vec!["workspace".to_string(), "test".to_string()],
+            )
+            .await;
+        assert!(res.is_err());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn remove_labels_from_expired_bubble_test(fb: FacebookInit) -> Result<()> {
+        // We want immediately expiring bubbles
+        let initial = Duration::from_secs(0);
+        let grace = Duration::from_secs(0);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create an empty bubble that would expire immediately.
+        let bubble = eph.create_bubble(None, vec![]).await?;
+        // Get expired bubbles.
+        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
+        // Since the bubble is past its expiry period and has no labels associated with it,
+        // it should be returned as an expired bubble.
+        assert_eq!(res.len(), 1);
+        let res_bubble_id = res.first().expect("Invalid number of expired bubbles");
+        assert_eq!(res_bubble_id, &bubble.bubble_id());
+        // Attempt to remove labels from this bubble. This operation should fail since adding or
+        // removing labels from an expired bubble is not permitted.
+        let res = eph
+            .remove_bubble_labels(
+                bubble.bubble_id(),
+                vec!["workspace".to_string(), "test".to_string()],
+            )
+            .await;
+        assert!(res.is_err());
         Ok(())
     }
 
