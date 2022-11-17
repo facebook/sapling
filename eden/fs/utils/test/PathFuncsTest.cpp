@@ -30,6 +30,11 @@ using std::string;
 using std::vector;
 using testing::ElementsAre;
 
+static_assert(std::is_nothrow_default_constructible_v<AbsolutePathPiece>);
+static_assert(std::is_nothrow_default_constructible_v<RelativePathPiece>);
+// PathComponents are not default-constructible because they may not be empty.
+// static_assert(std::is_nothrow_default_constructible_v<PathComponentPiece>);
+
 TEST(PathFuncs, Sanity) {
   EXPECT_THROW(PathComponentPiece{"."}, std::domain_error);
   EXPECT_THROW(PathComponentPiece{".."}, std::domain_error);

@@ -521,7 +521,7 @@ class PathBase :
   using stored_type = Stored;
 
   /** Default construct an empty value. */
-  constexpr PathBase() {}
+  constexpr PathBase() = default;
 
   /** Construct from an untyped string value.
    * Applies sanity checks. */
@@ -1308,7 +1308,7 @@ class RelativePathBase : public ComposedPathBase<
       : base_type(comp.view(), SkipPathSanityCheck()) {}
 
   /** Allow constructing empty */
-  RelativePathBase() {}
+  RelativePathBase() = default;
 
   // For iteration
   using iterator = ComposedPathIterator<RelativePathPiece, false>;
@@ -1545,7 +1545,9 @@ class AbsolutePathBase : public ComposedPathBase<
   using base_type::base_type;
 
   // Default construct to the root of the VFS
-  AbsolutePathBase() : base_type(kRootStr, SkipPathSanityCheck()) {}
+  AbsolutePathBase() noexcept(
+      noexcept(base_type(kRootStr, SkipPathSanityCheck())))
+      : base_type(kRootStr, SkipPathSanityCheck()) {}
 
   // For iteration
   using iterator = ComposedPathIterator<AbsolutePathPiece, false>;
