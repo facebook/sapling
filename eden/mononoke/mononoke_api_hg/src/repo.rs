@@ -115,11 +115,12 @@ impl HgRepoContext {
     pub async fn create_bubble(
         &self,
         custom_duration: Option<Duration>,
+        labels: Vec<String>,
     ) -> Result<Bubble, MononokeError> {
         Ok(self
             .repo()
             .repo_ephemeral_store_arc()
-            .create_bubble(custom_duration)
+            .create_bubble(custom_duration, labels)
             .await?)
     }
 

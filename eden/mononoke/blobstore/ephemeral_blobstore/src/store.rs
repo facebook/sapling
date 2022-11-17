@@ -15,6 +15,7 @@ use blobstore::BlobstoreEnumerableWithUnlink;
 use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use derivative::Derivative;
+use futures::future;
 use metaconfig_types::BubbleDeletionMode;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -84,7 +85,7 @@ mononoke_queries! {
     write AddBubbleLabels(
         values: (
             bubble_id: BubbleId,
-            label: &str,
+            label: str,
     )) {
         insert_or_ignore,
         "{insert_or_ignore} INTO ephemeral_bubble_labels (bubble_id, label)
@@ -196,16 +197,24 @@ fn to_chrono(duration: Duration) -> ChronoDuration {
 }
 
 impl RepoEphemeralStoreInner {
-    async fn create_bubble(&self, custom_duration: Option<Duration>) -> Result<Bubble> {
+    async fn create_bubble(
+        &self,
+        custom_duration: Option<Duration>,
+        labels: Vec<String>,
+    ) -> Result<Bubble> {
         let created_at = DateTime::now();
         let duration = match custom_duration {
             None => self.initial_bubble_lifespan,
             Some(duration) => to_chrono(duration),
         };
         let expires_at = created_at + duration;
-
-        let res = CreateBubble::query(
-            &self.connections.write_connection,
+        let txn = self
+            .connections
+            .write_connection
+            .start_transaction()
+            .await?;
+        let (txn, res) = CreateBubble::query_with_transaction(
+            txn,
             &Timestamp::from(created_at),
             &Timestamp::from(expires_at),
             &None,
@@ -218,12 +227,24 @@ impl RepoEphemeralStoreInner {
                     std::num::NonZeroU64::new(id)
                         .ok_or(EphemeralBlobstoreError::CreateBubbleFailed)?,
                 );
+                if !labels.is_empty() {
+                    let bubble_labels = labels
+                        .iter()
+                        .map(|label| (&bubble_id, label as &str))
+                        .collect::<Vec<_>>();
+                    let (txn, _res) =
+                        AddBubbleLabels::query_with_transaction(txn, &bubble_labels[..]).await?;
+                    txn.commit().await?;
+                } else {
+                    txn.commit().await?;
+                };
                 Ok(Bubble::new(
                     bubble_id,
                     expires_at + self.bubble_expiration_grace,
                     self.blobstore.clone(),
                     self.connections.clone(),
                     ExpiryStatus::Active,
+                    labels,
                 ))
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
@@ -337,29 +358,35 @@ impl RepoEphemeralStoreInner {
     }
 
     async fn open_bubble_raw(&self, bubble_id: BubbleId, fail_on_expired: bool) -> Result<Bubble> {
-        let mut rows = SelectBubbleById::query(
+        let bubble_rows = SelectBubbleById::query(
             self.sql_config.as_ref(),
             &self.connections.read_connection,
             &bubble_id,
-        )
-        .await?;
+        );
+        let label_rows =
+            SelectBubbleLabelsById::query(&self.connections.read_connection, &bubble_id);
+        let (mut bubble_rows, label_rows) = future::try_join(bubble_rows, label_rows).await?;
 
-        if rows.is_empty() {
+        if bubble_rows.is_empty() {
             // Perhaps the bubble hasn't showed up yet due to replication lag.
             // Let's retry on master just in case.
-            rows = SelectBubbleById::query(
+            bubble_rows = SelectBubbleById::query(
                 self.sql_config.as_ref(),
                 &self.connections.read_master_connection,
                 &bubble_id,
             )
             .await?;
-            if rows.is_empty() {
+            if bubble_rows.is_empty() {
                 return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
             }
         }
-
+        let labels = if label_rows.is_empty() {
+            Vec::new()
+        } else {
+            label_rows.into_iter().map(|l| l.0).collect::<Vec<_>>()
+        };
         // TODO(mbthomas): check owner_identity
-        let (expires_at, expiry_status, ref _owner_identity) = rows[0];
+        let (expires_at, expiry_status, ref _owner_identity) = bubble_rows[0];
         let expires_at: DateTime = expires_at.into();
         if fail_on_expired
             && (expiry_status == ExpiryStatus::Expired || expires_at < DateTime::now())
@@ -373,6 +400,7 @@ impl RepoEphemeralStoreInner {
             self.blobstore.clone(),
             self.connections.clone(),
             expiry_status,
+            labels,
         ))
     }
 
@@ -417,8 +445,12 @@ impl RepoEphemeralStore {
             .ok_or(EphemeralBlobstoreError::NoEphemeralBlobstore(self.repo_id))
     }
 
-    pub async fn create_bubble(&self, custom_duration: Option<Duration>) -> Result<Bubble> {
-        self.inner()?.create_bubble(custom_duration).await
+    pub async fn create_bubble(
+        &self,
+        custom_duration: Option<Duration>,
+        labels: Vec<String>,
+    ) -> Result<Bubble> {
+        self.inner()?.create_bubble(custom_duration, labels).await
     }
 
     /// Method responsible for deleting the bubble and all the data contained within.
@@ -550,7 +582,7 @@ mod test {
         let key = "test_key".to_string();
 
         // Create a bubble and put data in it.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         let bubble1_id = bubble1.bubble_id();
         let bubble1 = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
         bubble1
@@ -577,7 +609,7 @@ mod test {
         );
 
         // Create a new bubble and put data in it.
-        let bubble2 = eph.create_bubble(None).await?;
+        let bubble2 = eph.create_bubble(None, vec![]).await?;
         let bubble2_id = bubble2.bubble_id();
         let bubble2 = bubble2.wrap_repo_blobstore(repo_blobstore.clone());
         bubble2
@@ -608,11 +640,53 @@ mod test {
     }
 
     #[fbinit::test]
+    async fn basic_test_with_labels(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        // Create a bubble with labels associated to it.
+        let bubble1 = eph.create_bubble(None, labels.clone()).await?;
+        // Verify all the labels are associated with the bubble.
+        assert!(
+            bubble1
+                .labels()
+                .iter()
+                .zip(&labels)
+                .filter(|&(l, r)| l == r)
+                .count()
+                == labels.len()
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn create_and_fetch_labels_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        // Create a bubble with labels associated to it.
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Re-opening the bubble from storage.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        // Validate that the labels in the stored bubble and the retrieved bubble are the same.
+        assert_eq!(bubble.labels().len(), bubble_read.labels().len());
+        assert!(
+            bubble
+                .labels()
+                .iter()
+                .all(|label| bubble_read.labels().contains(label))
+        );
+        Ok(())
+    }
+
+    #[fbinit::test]
     async fn create_and_fetch_active_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
         let grace = Duration::from_secs(6 * 60 * 60);
         let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         // Ensure a newly created bubble exists in Active status
         assert_eq!(bubble1.expired(), ExpiryStatus::Active);
         // Re-opening the bubble from storage returns the same status
@@ -628,7 +702,7 @@ mod test {
         // We want an ephemeral store where deletion is disabled.
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::Disabled)?;
         // Create an empty bubble.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         // Attempt to delete the bubble
         let res = eph.delete_bubble(bubble1.bubble_id(), &ctx).await;
         // Since the bubble is deleted, reopening the bubble should
@@ -652,7 +726,7 @@ mod test {
         let (ctx, blobstore, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
         // Create a bubble and add data to it.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         let bubble1_repo = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
         bubble1_repo
             .put(
@@ -701,7 +775,7 @@ mod test {
         let grace = Duration::from_secs(6 * 60 * 60);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         // Delete the bubble
         let deleted = eph.delete_bubble(bubble1.bubble_id(), &ctx).await?;
         // Should be 0 since the bubble was empty
@@ -716,7 +790,7 @@ mod test {
         let (ctx, blobstore, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble and add data to it.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         let bubble1_repo = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
         bubble1_repo
             .put(
@@ -768,7 +842,7 @@ mod test {
         let (ctx, _, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble and add data to it.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         let bubble1_repo = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
         bubble1_repo
             .put(
@@ -798,11 +872,13 @@ mod test {
         let grace = Duration::from_secs(0);
         let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble that would expire immediately.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         // Validate bubble is created in active state
         assert_eq!(bubble1.expired(), ExpiryStatus::Active);
         // Create an empty bubble that won't expire anytime soon.
-        let bubble2 = eph.create_bubble(Some(Duration::from_secs(10000))).await?;
+        let bubble2 = eph
+            .create_bubble(Some(Duration::from_secs(10000)), vec![])
+            .await?;
         // Validate bubble is created in active state
         assert_eq!(bubble2.expired(), ExpiryStatus::Active);
         // Get expired bubbles
@@ -825,11 +901,13 @@ mod test {
         let grace = Duration::from_secs(0);
         let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble that would expire immediately.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         // Validate bubble is created in active state
         assert_eq!(bubble1.expired(), ExpiryStatus::Active);
         // Create an empty bubble that won't expire anytime soon.
-        let bubble2 = eph.create_bubble(Some(Duration::from_secs(10000))).await?;
+        let bubble2 = eph
+            .create_bubble(Some(Duration::from_secs(10000)), vec![])
+            .await?;
         // Validate bubble is created in active state
         assert_eq!(bubble2.expired(), ExpiryStatus::Active);
         // Get expired bubbles
@@ -850,9 +928,9 @@ mod test {
         // We want an ephemeral store that only marks the bubbles as expired.
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
         // Create empty bubbles that would expire immediately.
-        eph.create_bubble(None).await?;
-        eph.create_bubble(None).await?;
-        eph.create_bubble(None).await?;
+        eph.create_bubble(None, vec![]).await?;
+        eph.create_bubble(None, vec![]).await?;
+        eph.create_bubble(None, vec![]).await?;
         // Get expired bubbles
         let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
         // All 3 bubbles qualify for expiry and currently have their
@@ -877,11 +955,11 @@ mod test {
         let grace = Duration::from_secs(0);
         let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create empty bubbles that would expire immediately.
-        eph.create_bubble(None).await?;
-        eph.create_bubble(None).await?;
-        eph.create_bubble(None).await?;
-        eph.create_bubble(None).await?;
-        eph.create_bubble(None).await?;
+        eph.create_bubble(None, vec![]).await?;
+        eph.create_bubble(None, vec![]).await?;
+        eph.create_bubble(None, vec![]).await?;
+        eph.create_bubble(None, vec![]).await?;
+        eph.create_bubble(None, vec![]).await?;
         // Get expired bubbles
         let res = eph.get_expired_bubbles(Duration::from_secs(0), 2).await?;
         // Only 2 bubbles should be returned given the input limit of 2
@@ -900,7 +978,7 @@ mod test {
         let grace = Duration::from_secs(0);
         let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble that would expire immediately.
-        let bubble1 = eph.create_bubble(None).await?;
+        let bubble1 = eph.create_bubble(None, vec![]).await?;
         // Opening the expired bubble should give a
         // "No such bubble" error
         let res = eph.open_bubble(bubble1.bubble_id()).await;

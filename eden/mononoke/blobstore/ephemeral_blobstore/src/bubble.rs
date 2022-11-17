@@ -254,6 +254,9 @@ pub struct Bubble {
     /// SQL connection
     #[derivative(Debug = "ignore")]
     connections: SqlConnections,
+
+    /// The labels associated with the bubble. Currently used for lifetime extension.
+    labels: Vec<String>,
 }
 
 impl fmt::Display for Bubble {
@@ -269,6 +272,7 @@ impl Bubble {
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         connections: SqlConnections,
         expired: ExpiryStatus,
+        labels: Vec<String>,
     ) -> Self {
         let blobstore = PrefixBlobstore::new(blobstore, bubble_id.prefix());
 
@@ -278,6 +282,7 @@ impl Bubble {
             blobstore,
             connections,
             expired,
+            labels,
         }
     }
 
@@ -363,6 +368,10 @@ impl Bubble {
 
     pub fn expires_at(&self) -> DateTime {
         self.expires_at
+    }
+
+    pub fn labels(&self) -> &[String] {
+        &self.labels
     }
 
     /// Return a blobstore that gives priority to accessing the bubble, but falls back
