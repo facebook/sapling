@@ -19,4 +19,6 @@ export interface UICodeReviewProvider {
   formatDiffNumber(diffId: DiffId): string;
 
   submitOperation(): Operation;
+
+  RepoInfo(): JSX.Element | null;
 }

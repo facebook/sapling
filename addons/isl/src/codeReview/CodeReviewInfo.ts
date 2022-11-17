@@ -41,7 +41,10 @@ export const codeReviewProvider = selector<UICodeReviewProvider | null>({
       return null;
     }
     if (repoInfo.codeReviewSystem.type === 'github') {
-      return new GithubUICodeReviewProvider(repoInfo.preferredSubmitCommand ?? 'pr');
+      return new GithubUICodeReviewProvider(
+        repoInfo.codeReviewSystem,
+        repoInfo.preferredSubmitCommand ?? 'pr',
+      );
     }
     // prettier-ignore
     // @fb-only

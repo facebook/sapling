@@ -6,7 +6,7 @@
  */
 
 import type {Operation} from '../../operations/Operation';
-import type {DiffId, DiffSummary, PreferredSubmitCommand} from '../../types';
+import type {CodeReviewSystem, DiffId, DiffSummary, PreferredSubmitCommand} from '../../types';
 import type {UICodeReviewProvider} from '../UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
@@ -22,7 +22,10 @@ import './GitHubPRBadge.css';
 export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   name = 'github';
 
-  constructor(private preferredSubmitCommand: PreferredSubmitCommand) {}
+  constructor(
+    private system: CodeReviewSystem & {type: 'github'},
+    private preferredSubmitCommand: PreferredSubmitCommand,
+  ) {}
 
   DiffBadgeContent({
     diff,
@@ -49,6 +52,14 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   formatDiffNumber(diffId: DiffId): string {
     return `#${diffId}`;
   }
+
+  RepoInfo = () => {
+    return (
+      <span>
+        {this.system.owner}/{this.system.repo}
+      </span>
+    );
+  };
 
   submitOperation(): Operation {
     if (this.preferredSubmitCommand === 'ghstack') {
