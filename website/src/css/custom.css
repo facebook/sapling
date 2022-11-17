@@ -37,3 +37,37 @@
   --ifm-color-primary-lighter: #32d8b4;
   --ifm-color-primary-lightest: #4fddbf;
 }
+
+.sl-public {
+  color: #dd0;
+}
+
+.sl-draft {
+  color: #ff0;
+  font-weight: bold;
+}
+
+.sl-bookmark {
+  color: #0d0;
+}
+
+.sl-diff {
+  color: #fff;
+  font-weight: bold;
+}
+
+.sl-current {
+  color: #d0d;
+}
+
+.sl-obsolete {
+  color: #888;
+}
+
+.shell-prompt {
+  color: #90ee90;
+}
+
+.shell-command {
+  font-weight: bold;
+}
