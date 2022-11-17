@@ -15,7 +15,7 @@ use blobstore::BlobstoreEnumerableWithUnlink;
 use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use derivative::Derivative;
-use futures::future;
+use futures_lazy_shared::LazyShared;
 use metaconfig_types::BubbleDeletionMode;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -151,7 +151,7 @@ mononoke_queries! {
         "SELECT B.id
         FROM ephemeral_bubbles B
         WHERE B.expires_at < {expires_at} AND B.expired = {expiry_status}
-        AND NOT EXISTS (SELECT id FROM ephemeral_bubble_labels L WHERE B.id = L.bubble_id)
+        AND NOT EXISTS (SELECT id FROM ephemeral_bubble_labels L WHERE B.id = L.bubble_id LIMIT 1)
         LIMIT {limit}"
     }
 
@@ -247,7 +247,7 @@ impl RepoEphemeralStoreInner {
                     self.blobstore.clone(),
                     self.connections.clone(),
                     ExpiryStatus::Active,
-                    labels,
+                    LazyShared::new_ready(Ok(labels)),
                 ))
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
@@ -405,14 +405,24 @@ impl RepoEphemeralStoreInner {
     }
 
     async fn open_bubble_raw(&self, bubble_id: BubbleId, fail_on_expired: bool) -> Result<Bubble> {
-        let bubble_rows = SelectBubbleById::query(
+        let mut bubble_rows = SelectBubbleById::query(
             self.sql_config.as_ref(),
             &self.connections.read_connection,
             &bubble_id,
-        );
-        let label_rows =
-            SelectBubbleLabelsById::query(&self.connections.read_connection, &bubble_id);
-        let (mut bubble_rows, label_rows) = future::try_join(bubble_rows, label_rows).await?;
+        )
+        .await?;
+        let labels_future = {
+            let connection = self.connections.read_connection.clone();
+            let bubble_id = bubble_id.clone();
+            async move {
+                let label_rows = SelectBubbleLabelsById::query(&connection, &bubble_id)
+                    .await
+                    .map_err(|_| EphemeralBlobstoreError::FetchBubbleLabelsFailed(bubble_id))?;
+                let labels = label_rows.into_iter().map(|l| l.0).collect::<Vec<_>>();
+                Ok(labels)
+            }
+        };
+        let labels_lazy = LazyShared::new_future(labels_future);
 
         if bubble_rows.is_empty() {
             // Perhaps the bubble hasn't showed up yet due to replication lag.
@@ -427,20 +437,12 @@ impl RepoEphemeralStoreInner {
                 return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
             }
         }
-        let labels = if label_rows.is_empty() {
-            Vec::new()
-        } else {
-            label_rows.into_iter().map(|l| l.0).collect::<Vec<_>>()
-        };
         // TODO(mbthomas): check owner_identity
         let (expires_at, expiry_status, ref _owner_identity) = bubble_rows[0];
         let expires_at: DateTime = expires_at.into();
-        // A bubble can be considered expired only when it has no labels associated with it
-        // AND either it has expired status or is past its expiry date.
-        if fail_on_expired
-            && labels.is_empty()
-            && (expiry_status == ExpiryStatus::Expired || expires_at < DateTime::now())
-        {
+        // Checking only the expiry_status and not the expired_date since a bubble could
+        // be active even if its past its expiry date if it has labels associated with it.
+        if fail_on_expired && expiry_status == ExpiryStatus::Expired {
             return Err(EphemeralBlobstoreError::NoSuchBubble(bubble_id).into());
         }
 
@@ -450,7 +452,7 @@ impl RepoEphemeralStoreInner {
             self.blobstore.clone(),
             self.connections.clone(),
             expiry_status,
-            labels,
+            labels_lazy,
         ))
     }
 
@@ -566,14 +568,12 @@ impl RepoEphemeralStore {
 
     /// Associate the given labels with the bubble corresponding to the input
     /// bubble ID.
-    #[allow(dead_code)]
     pub async fn add_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
         self.inner()?.add_bubble_labels(bubble_id, labels).await
     }
 
     /// Disassociate the given labels from the bubble corresponding to the input
     /// bubble ID.
-    #[allow(dead_code)]
     pub async fn remove_bubble_labels(
         &self,
         bubble_id: BubbleId,
@@ -724,6 +724,7 @@ mod test {
         assert!(
             bubble1
                 .labels()
+                .await?
                 .iter()
                 .zip(&labels)
                 .filter(|&(l, r)| l == r)
@@ -741,17 +742,18 @@ mod test {
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(None, vec![]).await?;
         // Ensure that the bubble is created with no labels.
-        assert!(bubble.labels().is_empty());
+        assert!(bubble.labels().await?.is_empty());
         // Add labels to the newly created bubble.
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
         eph.add_bubble_labels(bubble.bubble_id(), labels.clone())
             .await?;
         // Reopen bubble from the store and verify it has the added labels.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels().len(), labels.len());
+        assert_eq!(bubble_read.labels().await?.len(), labels.len());
         assert!(
             bubble_read
                 .labels()
+                .await?
                 .iter()
                 .all(|label| labels.contains(label))
         );
@@ -766,7 +768,7 @@ mod test {
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(None, vec![]).await?;
         // Ensure that the bubble is created with no labels.
-        assert!(bubble.labels().is_empty());
+        assert!(bubble.labels().await?.is_empty());
         // Add unique + duplicate labels to the newly created bubble.
         let labels = vec![
             "workspace".to_string(),
@@ -779,10 +781,11 @@ mod test {
         // and the labels are not duplicated.
         let unique_labels = vec!["workspace".to_string(), "debug_version".to_string()];
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels().len(), unique_labels.len());
+        assert_eq!(bubble_read.labels().await?.len(), unique_labels.len());
         assert!(
             bubble_read
                 .labels()
+                .await?
                 .iter()
                 .all(|label| unique_labels.contains(label))
         );
@@ -797,14 +800,14 @@ mod test {
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(None, vec![]).await?;
         // Ensure that the bubble is created with no labels.
-        assert!(bubble.labels().is_empty());
+        assert!(bubble.labels().await?.is_empty());
         // Add an empty vec of labels.
         let labels = vec![];
         eph.add_bubble_labels(bubble.bubble_id(), labels).await?;
         // Reopen bubble from the store and verify it still doesn't
         // have any labels since we used an empty vec of labels as input.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert!(bubble_read.labels().is_empty());
+        assert!(bubble_read.labels().await?.is_empty());
         Ok(())
     }
 
@@ -875,10 +878,11 @@ mod test {
         let bubble = eph.create_bubble(None, labels.clone()).await?;
         // Reopen bubble and verify all the labels are associated with the bubble.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels().len(), labels.len());
+        assert_eq!(bubble_read.labels().await?.len(), labels.len());
         assert!(
             bubble_read
                 .labels()
+                .await?
                 .iter()
                 .all(|label| labels.contains(label))
         );
@@ -886,7 +890,7 @@ mod test {
         eph.remove_bubble_labels(bubble.bubble_id(), labels).await?;
         // Reopen the bubble and validate that it has no labels associated with it.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert!(bubble_read.labels().is_empty());
+        assert!(bubble_read.labels().await?.is_empty());
         Ok(())
     }
 
@@ -907,7 +911,10 @@ mod test {
             .await?;
         // Reopen the bubble and validate it has the remaining labels associated with it.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels(), &vec!["debug_version"]);
+        assert_eq!(
+            bubble_read.labels().await?,
+            vec!["debug_version".to_string()]
+        );
         Ok(())
     }
 
@@ -926,10 +933,11 @@ mod test {
         // Reopen the bubble and validate it has the same labels as before since the
         // no existing labels were deleted.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels().len(), labels.len());
+        assert_eq!(bubble_read.labels().await?.len(), labels.len());
         assert!(
             bubble_read
                 .labels()
+                .await?
                 .iter()
                 .all(|label| labels.contains(label))
         );
@@ -959,7 +967,10 @@ mod test {
         // the other label was deleted. Passing input vec with duplicate labels
         // should not have any other effect.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels(), &vec!["debug_version"]);
+        assert_eq!(
+            bubble_read.labels().await?,
+            vec!["debug_version".to_string()]
+        );
         Ok(())
     }
 
@@ -971,7 +982,7 @@ mod test {
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(None, vec![]).await?;
         // Ensure that the bubble is created with no labels.
-        assert!(bubble.labels().is_empty());
+        assert!(bubble.labels().await?.is_empty());
         // Add labels to the newly created bubble.
         let labels = vec![
             "workspace".to_string(),
@@ -990,10 +1001,11 @@ mod test {
         // add and remove operation.
         let remaining_labels = vec!["some_label".to_string(), "important_snapshot".to_string()];
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
-        assert_eq!(bubble_read.labels().len(), remaining_labels.len());
+        assert_eq!(bubble_read.labels().await?.len(), remaining_labels.len());
         assert!(
             bubble_read
                 .labels()
+                .await?
                 .iter()
                 .all(|label| remaining_labels.contains(label))
         );
@@ -1011,12 +1023,13 @@ mod test {
         // Re-opening the bubble from storage.
         let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
         // Validate that the labels in the stored bubble and the retrieved bubble are the same.
-        assert_eq!(bubble.labels().len(), bubble_read.labels().len());
+        let bubble_labels = bubble.labels().await?;
+        let bubble_read_labels = bubble_read.labels().await?;
+        assert_eq!(bubble_labels.len(), bubble_read_labels.len());
         assert!(
-            bubble
-                .labels()
+            bubble_labels
                 .iter()
-                .all(|label| bubble_read.labels().contains(label))
+                .all(|label| bubble_read_labels.contains(label))
         );
         Ok(())
     }
@@ -1299,16 +1312,12 @@ mod test {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
         let grace = Duration::from_secs(0);
-        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create in MarkOnly mode since we want to soft delete to test expiration
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
         // Create an empty bubble that would expire immediately.
         let bubble = eph.create_bubble(None, vec![]).await?;
-        // Get expired bubbles.
-        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
-        // Since the bubble is past its expiry period and has no labels associated with it,
-        // it should be returned as an expired bubble.
-        assert_eq!(res.len(), 1);
-        let res_bubble_id = res.first().expect("Invalid number of expired bubbles");
-        assert_eq!(res_bubble_id, &bubble.bubble_id());
+        // Mark bubble as expired (i.e. soft delete)
+        eph.delete_bubble(bubble.bubble_id(), &ctx).await?;
         // Add new labels to the bubble. This operation should fail since adding or
         // removing labels from an expired bubble is not permitted.
         let res = eph
@@ -1326,18 +1335,12 @@ mod test {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
         let grace = Duration::from_secs(0);
-        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create in MarkOnly mode since we want to soft delete to test expiration
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
         // Create an empty bubble that would expire immediately.
         let bubble = eph.create_bubble(None, vec![]).await?;
-        // Get expired bubbles.
-        let res = eph.get_expired_bubbles(Duration::from_secs(0), 10).await?;
-        // Since the bubble is past its expiry period and has no labels associated with it,
-        // it should be returned as an expired bubble.
-        assert_eq!(res.len(), 1);
-        let res_bubble_id = res.first().expect("Invalid number of expired bubbles");
-        assert_eq!(res_bubble_id, &bubble.bubble_id());
-        // Attempt to remove labels from this bubble. This operation should fail since adding or
-        // removing labels from an expired bubble is not permitted.
+        // Mark bubble as expired (i.e. soft delete)
+        eph.delete_bubble(bubble.bubble_id(), &ctx).await?;
         let res = eph
             .remove_bubble_labels(
                 bubble.bubble_id(),
@@ -1430,9 +1433,12 @@ mod test {
         // We want immediately expiring bubbles
         let initial = Duration::from_secs(0);
         let grace = Duration::from_secs(0);
-        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Using MarkOnly mode since we want to mark the bubble as expired (Soft Delete)
+        let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
         // Create an empty bubble that would expire immediately.
         let bubble1 = eph.create_bubble(None, vec![]).await?;
+        // Mark the bubble as expired
+        eph.delete_bubble(bubble1.bubble_id(), &ctx).await?;
         // Opening the expired bubble should give a
         // "No such bubble" error
         let res = eph.open_bubble(bubble1.bubble_id()).await;
@@ -1458,7 +1464,7 @@ mod test {
         // Bubble should be reopened successfully since even though its expired by time
         // ,having labels associated with it should mark it as active.
         assert_eq!(opened_bubble.bubble_id(), bubble1.bubble_id());
-        assert_eq!(opened_bubble.labels(), bubble1.labels());
+        assert_eq!(opened_bubble.labels().await?, bubble1.labels().await?);
         Ok(())
     }
 }

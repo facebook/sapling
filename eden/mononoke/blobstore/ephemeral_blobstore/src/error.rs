@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::bubble::BubbleId;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum EphemeralBlobstoreError {
     /// The repository does not have an ephemeral blobstore.
     #[error("repo {0} does not have an ephemeral blobstore")]
@@ -35,4 +35,8 @@ pub enum EphemeralBlobstoreError {
     /// The bubble deletion action is disabled
     #[error("bubble deletion is disabled")]
     DeleteBubbleDisabled,
+
+    /// Failed to fetch labels associated with the bubble
+    #[error("failed to fetch labels for bubble {0}")]
+    FetchBubbleLabelsFailed(BubbleId),
 }
