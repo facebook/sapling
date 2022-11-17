@@ -43,6 +43,15 @@ subcmd = snapshot.subcommand(
         ),
         (
             "",
+            "labels",
+            "",
+            _(
+                "comma-separated list of named labels to be associated with the snapshot. Named snapshots will not expire"
+            ),
+            _("LABELS"),
+        ),
+        (
+            "",
             "max-untracked-size",
             "1000",
             _("filter out any untracked files larger than this size, in megabytes"),
