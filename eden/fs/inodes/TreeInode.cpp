@@ -3338,7 +3338,11 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
             XLOG(DBG6)
                 << "entry was created on disk while checkout is in progress: "
                 << getLogPath() << "/" << name;
-            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
+            if (oldScmEntry) {
+              ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
+            } else {
+              ctx->addConflict(ConflictType::UNTRACKED_ADDED, this, name);
+            }
             return nullptr;
           }
         }
@@ -3563,7 +3567,12 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             XLOG(DBG6) << "entry changed on disk from a file to a "
                        << "non-empty directory while checkout is in progress: "
                        << inode->getLogPath();
-            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, it->first);
+            if (newScmEntry) {
+              ctx->addConflict(
+                  ConflictType::MODIFIED_MODIFIED, this, it->first);
+            } else {
+              ctx->addConflict(ConflictType::MODIFIED_REMOVED, this, it->first);
+            }
             return InvalidationRequired::No;
           }
         }

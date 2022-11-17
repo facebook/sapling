@@ -1851,7 +1851,7 @@ TEST(Checkout, concurrent_file_to_directory_during_checkout) {
   EXPECT_THAT(
       result.conflicts,
       UnorderedElementsAre(
-          makeConflict(ConflictType::MODIFIED_MODIFIED, "b.txt")));
+          makeConflict(ConflictType::MODIFIED_REMOVED, "b.txt")));
 
   mount.getEdenMount()->getPrjfsChannel()->stop();
 }
@@ -1902,7 +1902,7 @@ TEST(Checkout, concurrent_new_file_during_checkout) {
   EXPECT_THAT(
       result.conflicts,
       UnorderedElementsAre(
-          makeConflict(ConflictType::MODIFIED_MODIFIED, "a/2.txt")));
+          makeConflict(ConflictType::UNTRACKED_ADDED, "a/2.txt")));
 
   mount.getEdenMount()->getPrjfsChannel()->stop();
 }
