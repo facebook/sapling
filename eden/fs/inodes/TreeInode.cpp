@@ -3332,6 +3332,16 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
             newScmEntry->second.getHash());
         XDCHECK(inserted);
       } else {
+        if (folly::kIsWindows) {
+          if (auto* exc = success.tryGetExceptionObject<std::system_error>();
+              exc && isEnotempty(*exc)) {
+            XLOG(DBG6)
+                << "entry was created on disk while checkout is in progress: "
+                << getLogPath() << "/" << name;
+            ctx->addConflict(ConflictType::MODIFIED_MODIFIED, this, name);
+            return nullptr;
+          }
+        }
         ctx->addError(this, name, success.exception());
       }
     }
