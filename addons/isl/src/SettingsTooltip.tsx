@@ -9,6 +9,7 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
+import {DropdownField, DropdownFields} from './DropdownFields';
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {repositoryInfo} from './codeReview/CodeReviewInfo';
@@ -19,7 +20,6 @@ import {useRunOperation} from './serverAPIState';
 import {themeState} from './theme';
 import {
   VSCodeButton,
-  VSCodeDivider,
   VSCodeDropdown,
   VSCodeLink,
   VSCodeOption,
@@ -44,14 +44,7 @@ function SettingsDropdown() {
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const runOperation = useRunOperation();
   return (
-    <div className="settings-dropdown" data-testid="settings-dropdown">
-      <div className="settings-header">
-        <Icon icon="gear" size="M" />
-        <div className="settings-heading" role="heading">
-          <T>Settings</T>
-        </div>
-      </div>
-      <VSCodeDivider />
+    <DropdownFields title={<T>Settings</T>} icon="gear" data-testid="settings-dropdown">
       {platform.theme != null ? null : (
         <Setting title={<T>Theme</T>}>
           <VSCodeDropdown
@@ -115,7 +108,7 @@ function SettingsDropdown() {
           </VSCodeDropdown>
         </Setting>
       ) : null}
-    </div>
+    </DropdownFields>
   );
 }
 
@@ -129,10 +122,9 @@ function Setting({
   description?: ReactNode;
 }) {
   return (
-    <div className="setting">
-      <div className="setting-title">{title}</div>
+    <DropdownField title={title}>
       {description && <div className="setting-description">{description}</div>}
       {children}
-    </div>
+    </DropdownField>
   );
 }
