@@ -573,6 +573,14 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
                 auto& read = tryRead.value();
                 auto length = read.data->computeChainDataLength();
 
+                if (UNLIKELY(tryStat.hasException())) {
+                  XLOG(
+                      WARN,
+                      fmt::format(
+                          "getattr error during NFSv3 read: {}",
+                          exceptionStr(tryStat.exception())));
+                }
+
                 // Make sure that we haven't read more than what we can encode.
                 XDCHECK_LE(
                     length, size_t{std::numeric_limits<uint32_t>::max()});
