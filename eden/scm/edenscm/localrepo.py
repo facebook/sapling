@@ -3284,15 +3284,26 @@ def _remotenodes(repo):
         def isdraft(name):
             return False
 
+    # publicheads is an alternative method to define what "public" means.
+    # publicheads is a list of full names, i.e. <remote>/<name>.
+    publicheads = set(repo.ui.configlist("remotenames", "publicheads"))
+
     remotebookmarks = repo._remotenames["bookmarks"]
     for fullname, nodes in remotebookmarks.items():
         # fullname: remote/foo/bar
         # remote: remote, name: foo/bar
-        remote, name = bookmarks.splitremotename(fullname)
-        if isdraft(name):
-            draftnodes += nodes
+
+        if publicheads:
+            if fullname in publicheads:
+                publicnodes += nodes
+            else:
+                draftnodes += nodes
         else:
-            publicnodes += nodes
+            _, name = bookmarks.splitremotename(fullname)
+            if isdraft(name):
+                draftnodes += nodes
+            else:
+                publicnodes += nodes
 
     return publicnodes, draftnodes
 
