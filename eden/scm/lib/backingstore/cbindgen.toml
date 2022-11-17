@@ -17,15 +17,9 @@ header = """/*
 
 // The generated functions are exported from this Rust library
 // @dep=:backingstore
+"""
 
-#pragma once
-
-#include <memory>
-#include <functional>
-#include <string_view>
-#include <folly/Range.h>
-
-extern "C" void rust_cfallible_free_error(char *ptr);
+after_includes = """
 
 // MSVC toolchain dislikes having template in `extern "C"` functions. So we will
 // have to use void pointer here. Cbindgen does not support generating code like
@@ -34,6 +28,9 @@ struct RustCFallibleBase {
  void *value;
  char *error;
 };
+"""
+
+trailer = """
 
 // Some Rust functions will have the return type `RustCFallibleBase`, and we
 // have this convenient struct to help C++ code to consume the returned
@@ -75,6 +72,15 @@ public:
   }
 };
 """
+
+pragma_once = true
+no_includes = true # avoid iostream
+sys_includes = [
+    "memory",
+    "functional",
+    "string_view",
+    "folly/Range.h",
+]
 
 [export]
 prefix= "Rust"

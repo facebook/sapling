@@ -7,12 +7,13 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<e571ba55aa2dc1100aa29b560b526dea>>
+ * @generated SignedSource<<64ba4fae2b33cd53697d8f807e326e61>>
  *
  */
 
 // The generated functions are exported from this Rust library
 // @dep=:backingstore
+
 
 #pragma once
 
@@ -20,8 +21,6 @@
 #include <functional>
 #include <string_view>
 #include <folly/Range.h>
-
-extern "C" void rust_cfallible_free_error(char *ptr);
 
 // MSVC toolchain dislikes having template in `extern "C"` functions. So we will
 // have to use void pointer here. Cbindgen does not support generating code like
@@ -31,52 +30,6 @@ struct RustCFallibleBase {
  char *error;
 };
 
-// Some Rust functions will have the return type `RustCFallibleBase`, and we
-// have this convenient struct to help C++ code to consume the returned
-// struct. This is the only way to use the returned `RustCFallibleBase` from
-// Rust, and the user must provide a `Deleter` to correctly free the pointer
-// returned from Rust.
-template <typename T, typename Deleter = std::function<void(T*)>>
-class RustCFallible {
-private:
-  std::unique_ptr<T, std::function<void(T*)>> ptr_;
-  char* error_;
-
-public:
-  RustCFallible(RustCFallibleBase&& base, Deleter deleter)
-      : ptr_(reinterpret_cast<T*>(base.value), deleter), error_(base.error) {}
-
-  bool isError() const {
-    return error_ != nullptr;
-  }
-
-  char* getError() {
-    return error_;
-  }
-
-  T* get() {
-    return ptr_.get();
-  }
-
-  std::unique_ptr<T, Deleter> unwrap() {
-    return std::move(ptr_);
-  }
-
-  ~RustCFallible() {
-    if (error_ != nullptr) {
-      rust_cfallible_free_error(error_);
-    }
-
-    unwrap();
-  }
-};
-
-
-#include <cstdarg>
-#include <cstdint>
-#include <cstdlib>
-#include <ostream>
-#include <new>
 
 enum class RustTreeEntryType : uint8_t {
   Tree,
@@ -211,3 +164,44 @@ RustCFallibleBase rust_test_cfallible_err();
 RustCBytes rust_test_cbytes();
 
 } // extern "C"
+
+
+// Some Rust functions will have the return type `RustCFallibleBase`, and we
+// have this convenient struct to help C++ code to consume the returned
+// struct. This is the only way to use the returned `RustCFallibleBase` from
+// Rust, and the user must provide a `Deleter` to correctly free the pointer
+// returned from Rust.
+template <typename T, typename Deleter = std::function<void(T*)>>
+class RustCFallible {
+private:
+  std::unique_ptr<T, std::function<void(T*)>> ptr_;
+  char* error_;
+
+public:
+  RustCFallible(RustCFallibleBase&& base, Deleter deleter)
+      : ptr_(reinterpret_cast<T*>(base.value), deleter), error_(base.error) {}
+
+  bool isError() const {
+    return error_ != nullptr;
+  }
+
+  char* getError() {
+    return error_;
+  }
+
+  T* get() {
+    return ptr_.get();
+  }
+
+  std::unique_ptr<T, Deleter> unwrap() {
+    return std::move(ptr_);
+  }
+
+  ~RustCFallible() {
+    if (error_ != nullptr) {
+      rust_cfallible_free_error(error_);
+    }
+
+    unwrap();
+  }
+};
