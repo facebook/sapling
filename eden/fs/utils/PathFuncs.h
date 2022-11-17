@@ -117,13 +117,15 @@ constexpr bool kPathsAreCopiedOnMove = folly::kIsDebug || folly::kIsSanitize;
  * Make a copy when kPathsAreCopiedOnMove is set or move otherwise
  */
 template <typename T>
-T move_or_copy(T& t) {
+T move_or_copy(T& t) noexcept {
   if (kPathsAreCopiedOnMove) {
+    // If this throws an exception in debug builds, just crash.
     auto copied = t;
     // Make sure that t is also destroyed by moving it into a local variable.
     [[maybe_unused]] auto moved = std::move(t);
     return copied;
   } else {
+    static_assert(std::is_nothrow_move_constructible_v<T>);
     return std::move(t);
   }
 }
@@ -565,8 +567,11 @@ class PathBase :
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
-  explicit PathBase(Stored&& other)
-      : path_(detail::move_or_copy(other.path_)) {}
+  explicit PathBase(Stored&& other) noexcept(
+      std::is_nothrow_move_constructible_v<Storage>)
+      : path_{
+            kPathsAreCopiedOnMove ? Storage{other.path_}
+                                  : std::move(other.path_)} {}
 
   /** Move construct from an std::string value.
    * Applies sanity checks.
@@ -603,7 +608,7 @@ class PathBase :
    * This is roughly equal to the default move constructor, but with
    * extra debugging in debug/sanitized builds.
    */
-  PathBase(PathBase&& other) noexcept(!kPathsAreCopiedOnMove)
+  PathBase(PathBase&& other) noexcept
       : path_(detail::move_or_copy(other.path_)) {}
 
   /**
@@ -612,7 +617,7 @@ class PathBase :
    * This is roughly equal to the default move assignment operator, but with
    * extra debugging in debug/sanitized builds.
    */
-  PathBase& operator=(PathBase&& other) noexcept(!kPathsAreCopiedOnMove) {
+  PathBase& operator=(PathBase&& other) noexcept {
     path_ = detail::move_or_copy(other.path_);
     return *this;
   }

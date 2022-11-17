@@ -35,6 +35,22 @@ static_assert(std::is_nothrow_default_constructible_v<RelativePathPiece>);
 // PathComponents are not default-constructible because they may not be empty.
 // static_assert(std::is_nothrow_default_constructible_v<PathComponentPiece>);
 
+static_assert(std::is_nothrow_move_constructible_v<AbsolutePathPiece>);
+static_assert(std::is_nothrow_move_constructible_v<RelativePathPiece>);
+static_assert(std::is_nothrow_move_constructible_v<PathComponentPiece>);
+
+static_assert(std::is_nothrow_move_assignable_v<AbsolutePathPiece>);
+static_assert(std::is_nothrow_move_assignable_v<RelativePathPiece>);
+static_assert(std::is_nothrow_move_assignable_v<PathComponentPiece>);
+
+static_assert(std::is_nothrow_move_constructible_v<AbsolutePath>);
+static_assert(std::is_nothrow_move_constructible_v<RelativePath>);
+static_assert(std::is_nothrow_move_constructible_v<PathComponent>);
+
+static_assert(std::is_nothrow_move_assignable_v<AbsolutePath>);
+static_assert(std::is_nothrow_move_assignable_v<RelativePath>);
+static_assert(std::is_nothrow_move_assignable_v<PathComponent>);
+
 TEST(PathFuncs, Sanity) {
   EXPECT_THROW(PathComponentPiece{"."}, std::domain_error);
   EXPECT_THROW(PathComponentPiece{".."}, std::domain_error);
