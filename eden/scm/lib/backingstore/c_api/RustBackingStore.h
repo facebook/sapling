@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<64ce2043b7bad642f77091764fd206fa>>
+ * @generated SignedSource<<e571ba55aa2dc1100aa29b560b526dea>>
  *
  */
 
@@ -90,15 +90,19 @@ struct RustBackingStore;
 template<typename T = void>
 struct RustVec;
 
-struct RustStringView {
-  const char *ptr;
-  size_t len;
-  RustStringView(std::string_view sv) noexcept: ptr{sv.data()}, len{sv.size()} {}
-};
-
 struct RustBackingStoreOptions {
   bool aux_data;
   bool allow_retries;
+};
+
+template<typename T>
+struct RustSlice {
+  const T *ptr;
+  size_t len;
+  RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
+    : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
+  RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
+    : ptr{range.data()}, len{range.size()} {}
 };
 
 struct RustCBytes {
@@ -112,12 +116,6 @@ struct RustCBytes {
   operator folly::ByteRange() const {
     return asByteRange();
   }
-};
-
-struct RustByteView {
-  const uint8_t *ptr;
-  size_t len;
-  RustByteView(folly::ByteRange range) noexcept: ptr{range.data()}, len{range.size()} {}
 };
 
 struct RustRequest {
@@ -151,14 +149,14 @@ struct RustFileAuxData {
 
 extern "C" {
 
-RustCFallibleBase rust_backingstore_new(RustStringView repository,
-                                                          const RustBackingStoreOptions *options);
+RustCFallibleBase rust_backingstore_new(const RustBackingStoreOptions *options,
+                                                          RustSlice<uint8_t> repository);
 
 void rust_backingstore_free(RustBackingStore *store);
 
 RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
-                                                         RustByteView name,
-                                                         RustByteView node,
+                                                         RustSlice<uint8_t> name,
+                                                         RustSlice<uint8_t> node,
                                                          bool local);
 
 void rust_backingstore_get_blob_batch(RustBackingStore *store,
@@ -169,7 +167,7 @@ void rust_backingstore_get_blob_batch(RustBackingStore *store,
                                       void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
 RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
-                                                       RustByteView node,
+                                                       RustSlice<uint8_t> node,
                                                        bool local);
 
 void rust_backingstore_get_tree_batch(RustBackingStore *store,
@@ -180,7 +178,7 @@ void rust_backingstore_get_tree_batch(RustBackingStore *store,
                                       void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
 RustCFallibleBase rust_backingstore_get_file_aux(RustBackingStore *store,
-                                                                  RustByteView node,
+                                                                  RustSlice<uint8_t> node,
                                                                   bool local);
 
 void rust_backingstore_get_file_aux_batch(RustBackingStore *store,

@@ -18,12 +18,11 @@ use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 use types::Key;
 
 use crate::backingstore::BackingStore;
-use crate::raw::ByteView;
 use crate::raw::CBytes;
 use crate::raw::CFallible;
 use crate::raw::FileAuxData;
 use crate::raw::Request;
-use crate::raw::StringView;
+use crate::raw::Slice;
 use crate::raw::Tree;
 
 #[repr(C)]
@@ -34,8 +33,8 @@ pub struct BackingStoreOptions {
 
 #[no_mangle]
 pub extern "C" fn rust_backingstore_new(
-    repository: StringView,
     options: &BackingStoreOptions,
+    repository: Slice<u8>,
 ) -> CFallible<BackingStore> {
     CFallible::make_with(|| {
         super::init::backingstore_global_init();
@@ -55,8 +54,8 @@ pub extern "C" fn rust_backingstore_free(store: *mut BackingStore) {
 #[no_mangle]
 pub extern "C" fn rust_backingstore_get_blob(
     store: &mut BackingStore,
-    name: ByteView,
-    node: ByteView,
+    name: Slice<u8>,
+    node: Slice<u8>,
     local: bool,
 ) -> CFallible<CBytes> {
     CFallible::make_with(|| {
@@ -90,7 +89,7 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
 #[no_mangle]
 pub extern "C" fn rust_backingstore_get_tree(
     store: &mut BackingStore,
-    node: ByteView,
+    node: Slice<u8>,
     local: bool,
 ) -> CFallible<Tree> {
     CFallible::make_with(|| {
@@ -125,7 +124,7 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
 #[no_mangle]
 pub extern "C" fn rust_backingstore_get_file_aux(
     store: &mut BackingStore,
-    node: ByteView,
+    node: Slice<u8>,
     local: bool,
 ) -> CFallible<FileAuxData> {
     CFallible::make_with(|| {

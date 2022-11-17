@@ -7,7 +7,6 @@
 
 use std::slice;
 
-use libc::c_char;
 use libc::size_t;
 
 unsafe fn view_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> &'a [U] {
@@ -21,25 +20,13 @@ unsafe fn view_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> &'a [U] {
 }
 
 #[repr(C)]
-pub struct StringView {
-    ptr: *const c_char,
+pub struct Slice<T> {
+    ptr: *const T,
     len: size_t,
 }
 
-impl StringView {
-    pub fn slice<'a>(&'a self) -> &'a [u8] {
-        unsafe { view_to_slice(self.ptr, self.len) }
-    }
-}
-
-#[repr(C)]
-pub struct ByteView {
-    ptr: *const u8,
-    len: size_t,
-}
-
-impl ByteView {
-    pub fn slice<'a>(&'a self) -> &'a [u8] {
+impl<T> Slice<T> {
+    pub fn slice<'a>(&'a self) -> &'a [T] {
         unsafe { view_to_slice(self.ptr, self.len) }
     }
 }

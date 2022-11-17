@@ -24,6 +24,5 @@ pub use auxdata::FileAuxData;
 pub use cbytes::CBytes;
 pub use cfallible::CFallible;
 pub use request::Request;
-pub use slice::ByteView;
-pub use slice::StringView;
+pub use slice::Slice;
 pub use tree::Tree;

@@ -118,7 +118,7 @@ HgNativeBackingStore::HgNativeBackingStore(
     std::string_view repository,
     const BackingStoreOptions& options) {
   RustCFallible<RustBackingStore> store(
-      rust_backingstore_new(repository, &options), rust_backingstore_free);
+      rust_backingstore_new(&options, repository), rust_backingstore_free);
 
   if (store.isError()) {
     throw std::runtime_error(store.getError());
