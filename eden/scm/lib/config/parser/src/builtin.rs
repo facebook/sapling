@@ -23,7 +23,7 @@ automigrate=false
 
 [remotenames]
 autopullhoistpattern=re:tags/\S+$
-autopullpattern=re:^remote/\S+$
+autopullpattern=re:^[A-Za-z0-9._/-]+/\S+$
 disallowedto=^remote/
 disallowhint=please don't specify 'remote/' prefix in remote bookmark's name
 hoist=remote

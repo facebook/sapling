@@ -17,10 +17,15 @@ Prepare upstream server repo w/ two commits on "main":
   $ git add bar
   $ git commit -qa -m bar
 
-Prepare forked server repo:
+Prepare forked server repo with branch "existing-branch" off main:
 
   $ cd
   $ git clone -q upstream fork
+  $ cd fork
+  $ git checkout -qb existing-branch
+  $ echo fork-existing-branch > existing-branch
+  $ git add existing-branch
+  $ git commit -qa -m existing-branch
 
 
 Clone the upstream repo:
@@ -39,6 +44,17 @@ Add "fork" as another remote:
   │
   ~
 
+Can check out our branch without first pulling:
+  $ hg update -q fork/existing-branch
+  $ hg smartlog -T '{desc} {remotebookmarks}'
+  @  existing-branch fork/existing-branch
+  │
+  o  bar remote/main
+  │
+  ~
+
+Prepare and push a new branch:
+  $ hg up -q main
   $ touch baz
   $ hg commit -qAm baz
   $ touch qux
