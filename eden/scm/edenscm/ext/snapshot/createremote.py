@@ -39,7 +39,7 @@ def _parselifetime(opts):
         return None
 
 
-def _parselabels(opts):
+def parselabels(opts):
     if opts["labels"] != "":
         return [label.strip() for label in opts["labels"].split(",") if label.strip()]
     else:
@@ -167,7 +167,7 @@ def createremote(ui, repo, **opts):
     maxuntrackedsize = parsemaxuntracked(opts)
     maxfilecount = parsemaxfilecount(opts)
     reusestorage = opts.get("reuse_storage") is True
-    labels = _parselabels(opts)
+    labels = parselabels(opts)
     overrides = {}
     if ui.plain():
         overrides[("ui", "quiet")] = True

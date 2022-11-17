@@ -28,6 +28,8 @@ use edenapi::EdenApiError;
 use edenapi::Response;
 use edenapi::Stats;
 use edenapi_ext::calc_contentid;
+use edenapi_types::AlterSnapshotRequest;
+use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::CommitGraphEntry;
@@ -743,6 +745,27 @@ pub trait EdenApiPyExt: EdenApi {
                     .next()
                     .await
                     .with_context(|| format_err!("Failed to find snapshot {}", cs_id))?
+            })
+        })
+        .map_pyerr(py)?
+        .map_pyerr(py)
+        .map(Serde)
+    }
+
+    fn altersnapshot_py(
+        &self,
+        py: Python,
+        data: Serde<AlterSnapshotRequest>,
+    ) -> PyResult<Serde<AlterSnapshotResponse>> {
+        py.allow_threads(|| {
+            block_unless_interrupted(async move {
+                let cs_id = data.0.cs_id;
+                self.alter_snapshot(data.0)
+                    .await?
+                    .entries
+                    .next()
+                    .await
+                    .with_context(|| format_err!("Failed to alter snapshot {}", cs_id))?
             })
         })
         .map_pyerr(py)?

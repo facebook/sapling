@@ -24,6 +24,8 @@ use edenapi::EdenApi;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files;
 use edenapi_ext::upload_snapshot;
+use edenapi_types::AlterSnapshotRequest;
+use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitHashLookupResponse;
@@ -408,6 +410,14 @@ py_class!(pub class client |py| {
         data: Serde<FetchSnapshotRequest>,
     ) -> PyResult<Serde<FetchSnapshotResponse>> {
         self.inner(py).as_ref().fetchsnapshot_py(py, data)
+    }
+
+    /// Alter the properties of an existing snapshot
+    def altersnapshot(
+        &self,
+        data: Serde<AlterSnapshotRequest>,
+    ) -> PyResult<Serde<AlterSnapshotResponse>> {
+        self.inner(py).as_ref().altersnapshot_py(py, data)
     }
 
     /// Downloads files from given upload tokens to given paths
