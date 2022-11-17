@@ -46,7 +46,6 @@ from edenscm import (
     scmutil,
     smartset,
     tracing,
-    url,
     util,
     vfs as vfsmod,
     visibility,
@@ -569,17 +568,20 @@ def extsetup(ui):
                 "BOOKMARK",
             ),
         ),
-        (pushcmd, ("t", "to", "", "push revs to this bookmark", "BOOKMARK")),
+        (pushcmd, ("t", "to", "", "push commits to this bookmark", "BOOKMARK")),
         (pushcmd, ("d", "delete", "", "delete remote bookmark", "BOOKMARK")),
         (pushcmd, ("", "create", None, "create a new remote bookmark")),
-        (pushcmd, ("", "allow-anon", None, "allow a new unbookmarked head")),
+        (
+            pushcmd,
+            ("", "allow-anon", None, "allow a new unbookmarked head (DEPRECATED)"),
+        ),
         (
             pushcmd,
             (
                 "",
                 "non-forward-move",
                 None,
-                "allows moving a remote bookmark to an arbitrary place",
+                "allows moving a remote bookmark to an arbitrary place (ADVANCED)",
             ),
         ),
     ]

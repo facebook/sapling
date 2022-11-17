@@ -4840,44 +4840,56 @@ def _newpull(ui, repo, source, **opts):
             "r",
             "rev",
             [],
-            _("a changeset intended to be included in the destination"),
+            _("a commit to push"),
             _("REV"),
         ),
-        ("B", "bookmark", [], _("bookmark to push"), _("BOOKMARK")),
+        ("B", "bookmark", [], _("bookmark to push (ADVANCED)"), _("BOOKMARK")),
         ("", "new-branch", False, _("allow pushing a new branch (DEPRECATED)")),
         ("", "pushvars", [], _("variables that can be sent to server (ADVANCED)")),
     ],
-    _("[OPTION]... [-r REV]... [DEST]"),
+    _("[OPTION]... [--to BOOKMARK] [-r REV]... [DEST]"),
 )
 def push(ui, repo, dest=None, **opts):
-    """push changes to the specified destination
+    """push commits to the specified destination
 
     Push commits from the local repository to the specified
     destination.
 
-    By default, push does not allow creation of new heads at the
-    destination since multiple heads make it unclear which head
-    to use. In this situation, it is recommended to pull and merge
-    before pushing.
+    Use ``-t/--to`` to specify the remote bookmark. For Git repos,
+    remote bookmarks correspond to Git branches.
 
-    .. note::
+    To add a named remote destination, see :prog:`path --add`.
 
-       Extra care should be taken with the ``-f/--force`` option,
-       which will push all new heads on all branches, an action which will
-       almost always cause confusion for collaborators.
+    ``-r/--rev`` specifies the commit(s) (including ancestors) to push to
+    the remote repository. Defaults to the current commit.
 
-    If ``-r/--rev`` is used, the specified revision and all its ancestors
-    will be pushed to the remote repository.
+    Add ``--create`` to create the remote bookmark if it doesn't already exist.
 
-    If ``-B/--bookmark`` is used, the specified bookmarked revision, its
-    ancestors, and the bookmark will be pushed to the remote
-    repository. Specifying ``.`` is equivalent to specifying the active
-    bookmark's name.
+    The ``-f/--force`` flag allows non-fast-forward pushes.
 
-    Please see :prog:`help urls` for important details about ``ssh://``
-    URLs. If DESTINATION is omitted, a default path will be used.
+    If DESTINATION is omitted, the default path will be used. See
+    :prog:`help urls` and :prog:`help path` for more information.
 
-    Returns 0 if push was successful, 1 if nothing to push.
+    .. container:: verbose
+
+      Examples:
+
+      - push your current commit to "main" on the default destination::
+
+          @prog@ push --to main
+
+      - force push commit 05a82320d to "my-branch" on the "my-fork" destination::
+
+          @prog@ push --rev 05a82320d my-fork --to my-branch --force
+
+    .. container:: verbose
+
+        The ``--pushvars`` flag sends key-value metadata to the server.
+        For example, ``--pushvars ENABLE_SOMETHING=true``. Push vars are
+        typically used to override commit hook behavior, or enable extra
+        debugging. Push vars are not supported for Git repos.
+
+    Returns 0 on success.
     """
 
     if opts.get("bookmark"):
