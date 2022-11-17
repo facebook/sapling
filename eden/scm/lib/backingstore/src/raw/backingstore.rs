@@ -80,8 +80,7 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
     store.get_blob_batch(keys, local, |idx, result| {
         let result = result
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-            .map(CBytes::from_vec)
-            .map(|result| Box::into_raw(Box::new(result)));
+            .map(CBytes::from_vec);
         unsafe { resolve(data, idx, result.into()) };
     });
 }
@@ -116,7 +115,6 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
         let result: Result<List> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let result: Result<Tree> = result.and_then(|list| list.try_into());
-        let result: Result<*mut Tree> = result.map(|result| Box::into_raw(Box::new(result)));
         unsafe { resolve(data, idx, result.into()) };
     });
 }
@@ -151,7 +149,6 @@ pub extern "C" fn rust_backingstore_get_file_aux_batch(
         let result: Result<ScmStoreFileAuxData> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
         let result: Result<FileAuxData> = result.map(|aux| aux.into());
-        let result: Result<*mut FileAuxData> = result.map(|result| Box::into_raw(Box::new(result)));
         unsafe { resolve(data, idx, result.into()) };
     });
 }

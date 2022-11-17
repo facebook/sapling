@@ -16,7 +16,7 @@ use crate::raw::CFallible;
 /// C++ tests.
 #[no_mangle]
 pub extern "C" fn rust_test_cfallible_ok() -> CFallible<u8> {
-    CFallible::ok(Box::into_raw(Box::new(0xFB)))
+    CFallible::ok(0xFB)
 }
 
 #[no_mangle]
