@@ -2973,11 +2973,13 @@ class localrepository(object):
         # Do not treat the draft heads returned by remotenames as
         # unconditionally visible. This makes it possible to hide
         # them by "hg hide".
-        publicnodes, _draftnodes = _remotenodes(self)
+        publicnodes, draftnodes = _remotenodes(self)
         cl = self.changelog
         if includepublic:
             nodes += publicnodes
         if includedraft:
+            nodes += draftnodes
+
             if cl._uiconfig.configbool("visibility", "all-heads"):  # aka. --hidden
                 visibleheads = cl._visibleheads.allheads()
             else:

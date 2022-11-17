@@ -2,7 +2,7 @@
 #require git no-windows
 
   $ . $TESTDIR/git.sh
-  $ enable smartlog
+  $ enable smartlog amend
   $ setconfig workingcopy.ruststatus=False
 
 Prepare upstream server repo w/ two commits on "main":
@@ -67,6 +67,20 @@ Test that our stack still shows in smartlog after pushing:
   │
   o  baz
   │
+  │ o  existing-branch fork/existing-branch
+  ├─╯
   o  bar remote/main
+  │
+  ~
+
+Make sure we can hide branches:
+  $ hg up -q main
+  $ hg hide -q 'desc("existing-branch")'
+  $ hg smartlog -T '{desc} {remotebookmarks}'
+  o  qux fork/my-branch
+  │
+  o  baz
+  │
+  @  bar remote/main
   │
   ~
