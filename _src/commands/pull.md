@@ -4,18 +4,36 @@ sidebar_position: 28
 
 ## pull
 <!--
-  @generated SignedSource<<61dacdc31172f952dd419b5f5a1cbd93>>
+  @generated SignedSource<<6aff9248b359c19059123b5153495d02>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
-**pull changes from the specified source**
+**pull commits from the specified source**
 
-Pull changes from a remote repository to a local one. This command modifies
-the commit graph, but doesn't affect local commits or the working copy.
+Pull commits from a remote repository to a local one. This command modifies
+the commit graph, but doesn't mutate local commits or the working copy.
 
-If SOURCE is omitted, the default path is used.
-See `sl help urls` for more information.
+Use `-B/--bookmark` to specify a remote bookmark to pull. For Git
+repos, remote bookmarks correspond to branches. If no bookmark is
+specified, a default set of relevant remote names are pulled.
+
+If SOURCE is omitted, the default path is used. Use `sl path
+--add` to add a named source.
+
+See `sl help urls` and `sl help path` for more information.
+
+Examples:
+
+- pull relevant remote bookmarks from default source:
+
+```
+sl pull
+```
+
+- pull a bookmark named my-branch from source my-fork:
+
+sl pull my-fork --bookmark my-branch
 
 You can use `.` for BOOKMARK to specify the active bookmark.
 

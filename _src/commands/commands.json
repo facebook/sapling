@@ -691,7 +691,7 @@
       "commit",
       "ci"
     ],
-    "doc": "save all pending changes or specified files in a new commit\n\n    Commit changes to the given files to your local repository.\n\n    By default, all pending changes (in other words, those reported by\n    :prog:`status`) are committed. If you want to commit only some of your\n    changes, choose one of the following options:\n\n    - Specify an exact list of files for which you want changes committed.\n\n    - Use the ``-I`` or ``-X`` flags to match or exclude file names\n      using a pattern or fileset. See :prog:`help patterns` and\n      :prog:`help filesets` fot details.\n\n    - Specify the ``--interactive`` flag to open a UI to select\n      individual files, hunks, or lines.\n\n    To meld pending changes into the current commit instead of creating\n    a new commit, see :prog:`amend`.\n\n    If you are committing the result of a merge, such as when merge\n    conflicts occur during :prog:`checkout`, commit all pending changes.\n    Do not specify files or use ``-I``, ``-X``, or ``-i``.\n\n    Specify the ``-m`` flag to include a free-form commit message. If you do\n    not specify ``-m``, @Product@ opens your configured editor where you can\n    enter a message based on a pre-loaded commit template.\n\n    Returns 0 on success, 1 if nothing changed.\n\n    .. container:: verbose\n\n      If your commit fails, you can find a backup of your commit message in\n      ``.@prog@/last-message.txt``.\n\n      Examples:\n\n      - commit all files ending in .py::\n\n          @prog@ commit --include \"glob:**.py\"\n\n      - commit all non-binary files::\n\n          @prog@ commit --exclude \"set:binary()\"\n    ",
+    "doc": "save all pending changes or specified files in a new commit\n\n    Commit changes to the given files to your local repository.\n\n    By default, all pending changes (in other words, those reported by\n    :prog:`status`) are committed. If you want to commit only some of your\n    changes, choose one of the following options:\n\n    - Specify an exact list of files for which you want changes committed.\n\n    - Use the ``-I`` or ``-X`` flags to match or exclude file names\n      using a pattern or fileset. See :prog:`help patterns` and\n      :prog:`help filesets` fot details.\n\n    - Specify the ``--interactive`` flag to open a UI to select\n      individual files, hunks, or lines.\n\n    To meld pending changes into the current commit instead of creating\n    a new commit, see :prog:`amend`.\n\n    If you are committing the result of a merge, such as when merge\n    conflicts occur during :prog:`goto`, commit all pending changes.\n    Do not specify files or use ``-I``, ``-X``, or ``-i``.\n\n    Specify the ``-m`` flag to include a free-form commit message. If you do\n    not specify ``-m``, @Product@ opens your configured editor where you can\n    enter a message based on a pre-loaded commit template.\n\n    Returns 0 on success, 1 if nothing changed.\n\n    .. container:: verbose\n\n      If your commit fails, you can find a backup of your commit message in\n      ``.@prog@/last-message.txt``.\n\n      Examples:\n\n      - commit all files ending in .py::\n\n          @prog@ commit --include \"glob:**.py\"\n\n      - commit all non-binary files::\n\n          @prog@ commit --exclude \"set:binary()\"\n    ",
     "args": [
       {
         "shortname": "A",
@@ -1966,7 +1966,7 @@
     "aliases": [
       "pull"
     ],
-    "doc": "pull changes from the specified source\n\n    Pull changes from a remote repository to a local one. This command modifies\n    the commit graph, but doesn't affect local commits or the working copy.\n\n    If SOURCE is omitted, the default path is used.\n    See :prog:`help urls` for more information.\n\n    .. container:: verbose\n\n        You can use ``.`` for BOOKMARK to specify the active bookmark.\n\n    Returns 0 on success, 1 on failure, including if ``--update`` was\n    specified but the update had unresolved conflicts.\n    ",
+    "doc": "pull commits from the specified source\n\n    Pull commits from a remote repository to a local one. This command modifies\n    the commit graph, but doesn't mutate local commits or the working copy.\n\n    Use ``-B/--bookmark`` to specify a remote bookmark to pull. For Git\n    repos, remote bookmarks correspond to branches. If no bookmark is\n    specified, a default set of relevant remote names are pulled.\n\n    If SOURCE is omitted, the default path is used. Use :prog:`path\n    --add` to add a named source.\n\n    See :prog:`help urls` and :prog:`help path` for more information.\n\n    .. container:: verbose\n\n      Examples:\n\n      - pull relevant remote bookmarks from default source::\n\n          @prog@ pull\n\n      - pull a bookmark named my-branch from source my-fork:\n\n          @prog@ pull my-fork --bookmark my-branch\n\n    .. container:: verbose\n\n        You can use ``.`` for BOOKMARK to specify the active bookmark.\n\n    Returns 0 on success, 1 on failure, including if ``--update`` was\n    specified but the update had unresolved conflicts.\n    ",
     "args": [
       {
         "shortname": "u",
@@ -2018,7 +2018,7 @@
     "aliases": [
       "push"
     ],
-    "doc": "push changes to the specified destination\n\n    Push commits from the local repository to the specified\n    destination.\n\n    By default, push does not allow creation of new heads at the\n    destination since multiple heads make it unclear which head\n    to use. In this situation, it is recommended to pull and merge\n    before pushing.\n\n    .. note::\n\n       Extra care should be taken with the ``-f/--force`` option,\n       which will push all new heads on all branches, an action which will\n       almost always cause confusion for collaborators.\n\n    If ``-r/--rev`` is used, the specified revision and all its ancestors\n    will be pushed to the remote repository.\n\n    If ``-B/--bookmark`` is used, the specified bookmarked revision, its\n    ancestors, and the bookmark will be pushed to the remote\n    repository. Specifying ``.`` is equivalent to specifying the active\n    bookmark's name.\n\n    Please see :prog:`help urls` for important details about ``ssh://``\n    URLs. If DESTINATION is omitted, a default path will be used.\n\n    Returns 0 if push was successful, 1 if nothing to push.\n    ",
+    "doc": "push commits to the specified destination\n\n    Push commits from the local repository to the specified\n    destination.\n\n    Use ``-t/--to`` to specify the remote bookmark. For Git repos,\n    remote bookmarks correspond to Git branches.\n\n    To add a named remote destination, see :prog:`path --add`.\n\n    ``-r/--rev`` specifies the commit(s) (including ancestors) to push to\n    the remote repository. Defaults to the current commit.\n\n    Add ``--create`` to create the remote bookmark if it doesn't already exist.\n\n    The ``-f/--force`` flag allows non-fast-forward pushes.\n\n    If DESTINATION is omitted, the default path will be used. See\n    :prog:`help urls` and :prog:`help path` for more information.\n\n    .. container:: verbose\n\n      Examples:\n\n      - push your current commit to \"main\" on the default destination::\n\n          @prog@ push --to main\n\n      - force push commit 05a82320d to \"my-branch\" on the \"my-fork\" destination::\n\n          @prog@ push --rev 05a82320d my-fork --to my-branch --force\n\n    .. container:: verbose\n\n        The ``--pushvars`` flag sends key-value metadata to the server.\n        For example, ``--pushvars ENABLE_SOMETHING=true``. Push vars are\n        typically used to override commit hook behavior, or enable extra\n        debugging. Push vars are not supported for Git repos.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "f",
@@ -2030,13 +2030,13 @@
         "shortname": "r",
         "fullname": "rev",
         "default": [],
-        "description": "a changeset intended to be included in the destination"
+        "description": "a commit to push"
       },
       {
         "shortname": "B",
         "fullname": "bookmark",
         "default": [],
-        "description": "bookmark to push"
+        "description": "bookmark to push (ADVANCED)"
       },
       {
         "shortname": "",
@@ -2054,7 +2054,7 @@
         "shortname": "t",
         "fullname": "to",
         "default": "",
-        "description": "push revs to this bookmark"
+        "description": "push commits to this bookmark"
       },
       {
         "shortname": "d",
@@ -2072,13 +2072,13 @@
         "shortname": "",
         "fullname": "allow-anon",
         "default": null,
-        "description": "allow a new unbookmarked head"
+        "description": "allow a new unbookmarked head (DEPRECATED)"
       },
       {
         "shortname": "",
         "fullname": "non-forward-move",
         "default": null,
-        "description": "allows moving a remote bookmark to an arbitrary place"
+        "description": "allows moving a remote bookmark to an arbitrary place (ADVANCED)"
       }
     ],
     "subcommands": null
@@ -2718,7 +2718,7 @@
     "aliases": [
       "undo"
     ],
-    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`checkout`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommited changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using ``--step``. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run\n    :prog:`help redo` for more information.\n\n\n    Include ``--keep`` to preserve the state of the working copy. For example,\n    specify ``--keep`` when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify ``--preview`` to see a graphical display that shows what\n    your smartlog will look like after you run the command. Specify\n    ``--interactive`` for an interactive version of this preview in which\n    you can step backwards and forwards in the undo history.\n\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
+    "doc": "undo the last local command\n\n    Reverse the effects of the last local command. A local command is one that\n    changed the currently checked out commit, that modified the contents of\n    local commits, or that changed local bookmarks. Examples of local commands\n    include :prog:`goto`, :prog:`commit`, :prog:`amend`, and :prog:`rebase`.\n\n    You cannot use :prog:`undo` to undo uncommited changes in the working copy,\n    or changes to remote bookmarks.\n\n    You can run :prog:`undo` multiple times to undo a series of local commands.\n    Alternatively, you can explicitly specify the number of local commands to\n    undo using ``--step``. This number can also be specified as a positional\n    argument.\n\n    To undo the effects of :prog:`undo`, run :prog:`redo`. Run\n    :prog:`help redo` for more information.\n\n\n    Include ``--keep`` to preserve the state of the working copy. For example,\n    specify ``--keep`` when running :prog:`undo` to reverse the effects of an\n    :prog:`commit` or :prog:`amend` operation while still preserving changes\n    in the working copy. These changes will appear as pending changes.\n\n    Specify ``--preview`` to see a graphical display that shows what\n    your smartlog will look like after you run the command. Specify\n    ``--interactive`` for an interactive version of this preview in which\n    you can step backwards and forwards in the undo history.\n\n\n    .. note::\n\n       :prog:`undo` cannot be used with non-local commands, or with commands\n       that are read-only. :prog:`undo` will skip over these commands in the\n       undo history.\n\n       For hybrid commands that result in both local and remote changes,\n       :prog:`undo` will undo the local changes, but not the remote changes.\n       For example, `@prog pull --rebase` might move remote/master and also\n       rebase local commits. In this situation, :prog:`undo` will revert the\n       rebase, but not the change to remote/master.\n\n    .. container:: verbose\n\n        Branch limits the scope of an undo to a group of local (draft)\n        changectxs, identified by any one member of this group.\n    ",
     "args": [
       {
         "shortname": "a",

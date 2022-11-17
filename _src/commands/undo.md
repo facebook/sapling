@@ -4,7 +4,7 @@ sidebar_position: 44
 
 ## undo
 <!--
-  @generated SignedSource<<992c9a550285189b8d87856d26eacec3>>
+  @generated SignedSource<<3cc2cbc7f0eb98479a55c103e2495eb4>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -14,7 +14,7 @@ sidebar_position: 44
 Reverse the effects of the last local command. A local command is one that
 changed the currently checked out commit, that modified the contents of
 local commits, or that changed local bookmarks. Examples of local commands
-include `sl checkout`, `sl commit`, `sl amend`, and `sl rebase`.
+include `sl goto`, `sl commit`, `sl amend`, and `sl rebase`.
 
 You cannot use `sl undo` to undo uncommited changes in the working copy,
 or changes to remote bookmarks.
