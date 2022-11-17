@@ -50,6 +50,9 @@ class RefCounted<T extends {dispose: () => void}> {
   public ref() {
     this.references++;
   }
+  public getNumberOfReferences() {
+    return this.references;
+  }
   public dispose() {
     this.references--;
     if (!this.isDisposed && this.references === 0) {
@@ -186,6 +189,14 @@ class RepositoryCache {
     this.reposByRoot.forEach(value => value.dispose());
     this.reposByRoot = new Map();
     this.activeReposEmitter.removeAllListeners();
+  }
+
+  public numberOfActiveServers(): number {
+    let numActive = 0;
+    for (const repo of this.reposByRoot.values()) {
+      numActive += repo.getNumberOfReferences();
+    }
+    return numActive;
   }
 }
 

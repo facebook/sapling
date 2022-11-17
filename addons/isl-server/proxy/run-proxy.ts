@@ -216,8 +216,8 @@ function isValidCustomPlatform(name: unknown): name is PlatformName {
  *   confirmed that the server is up and running, it can exit while the child
  *   will continue to run in the background.
  */
-function callStartServer(foreground: boolean, args: StartServerArgs): Promise<StartServerResult> {
-  if (foreground) {
+function callStartServer(args: StartServerArgs): Promise<StartServerResult> {
+  if (args.foreground) {
     return import('./server').then(({startServer}) => startServer(args));
   } else {
     return new Promise(resolve => {
@@ -229,7 +229,10 @@ function callStartServer(foreground: boolean, args: StartServerArgs): Promise<St
       // We could also consider streaming the input as newline-delimited JSON
       // via stdin, though the max length for an environment variable seems
       // large enough for our needs.
-      const env = {...process.env, ISL_SERVER_ARGS: JSON.stringify({...args, logInfo: null})};
+      const env = {
+        ...process.env,
+        ISL_SERVER_ARGS: JSON.stringify({...args, logInfo: null}),
+      };
       const options = {
         env,
         detached: true,
@@ -359,7 +362,8 @@ async function main() {
 
   /////////////////////////////
 
-  const result = await callStartServer(foreground, {
+  const result = await callStartServer({
+    foreground,
     port,
     sensitiveToken,
     challengeToken,

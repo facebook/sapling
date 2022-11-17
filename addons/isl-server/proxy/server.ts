@@ -9,6 +9,7 @@ import type {ServerPlatform} from '../src/serverPlatform';
 import type {PlatformName} from 'isl/src/types';
 import type {AddressInfo} from 'net';
 
+import {repositoryCache} from '../src/RepositoryCache';
 import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from '../src/constants';
 import {onClientConnection} from '../src/index';
 import {areTokensEqual} from './proxyUtils';
@@ -27,6 +28,7 @@ export type StartServerArgs = {
   logFileLocation: string;
   logInfo: (...args: Parameters<typeof console.log>) => void;
   command: string;
+  foreground: boolean;
 };
 
 export type StartServerResult =
@@ -47,6 +49,7 @@ export function startServer({
   logFileLocation,
   logInfo,
   command,
+  foreground,
 }: StartServerArgs): Promise<StartServerResult> {
   return new Promise(resolve => {
     try {
@@ -200,6 +203,18 @@ export function startServer({
       });
       socket.on('close', () => {
         dispose();
+
+        // After disposing, we may not have anymore servers alive anymore.
+        // We can proactively clean up the server so you get the latest version next time you try.
+        // This way, we only re-use servers if you keep the tab open.
+        // Note: since we trigger this cleanup on dispose, if you start a server with `--no-open`,
+        // it won't clean itself up until you connect at least once.
+        if (!foreground) {
+          // We do this on a 1-minute delay in case you close a tab and quickly re-open it.
+          setTimeout(() => {
+            checkIfServerShouldCleanItselfUp();
+          }, 60_000);
+        }
       });
     });
     httpServer.on('upgrade', (request, socket, head) => {
@@ -215,6 +230,12 @@ export function startServer({
       resolve({type: 'success', port: (server.address() as AddressInfo).port, pid: process.pid}),
     );
   });
+}
+
+function checkIfServerShouldCleanItselfUp() {
+  if (repositoryCache.numberOfActiveServers() === 0) {
+    process.exit(0);
+  }
 }
 
 function getSearchParams(url: string): Map<string, string> {
