@@ -93,13 +93,12 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
 #[no_mangle]
 pub extern "C" fn sapling_backingstore_get_blob(
     store: &mut BackingStore,
-    name: Slice<u8>,
     node: Slice<u8>,
     local: bool,
 ) -> CFallibleBase {
     CFallible::make_with(|| {
         store
-            .get_blob(name.slice(), node.slice(), local)
+            .get_blob(node.slice(), local)
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
             .map(CBytes::from_vec)
     })

@@ -90,8 +90,9 @@ impl BackingStore {
 
     /// Reads file from blobstores. When `local_only` is true, this function will only read blobs
     /// from on disk stores.
-    pub fn get_blob(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
-        let key = key_from_path_node_slice(path, node)?;
+    pub fn get_blob(&self, node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
+        let hgid = HgId::from_slice(node)?;
+        let key = Key::new(RepoPathBuf::new(), hgid);
         self.get_blob_by_key(key, local_only)
     }
 
@@ -233,7 +234,7 @@ impl BackingStore {
         } else {
             self.treestore.as_ref()
         }
-        .fetch_batch(std::iter::once(key.clone()))?;
+        .fetch_batch(std::iter::once(key))?;
 
         if let Some(mut entry) = fetch_results.single()? {
             Ok(Some(entry.manifest_tree_entry()?.try_into()?))
@@ -357,7 +358,7 @@ impl BackingStore {
         } else {
             self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key.clone()), FileAttributes::AUX);
+        .fetch(std::iter::once(key), FileAttributes::AUX);
 
         if let Some(entry) = fetch_results.single()? {
             Ok(Some(entry.aux_data()?.try_into()?))

@@ -205,7 +205,7 @@ std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
   XLOG(DBG7) << "Importing blob name=" << name.data()
              << " node=" << folly::hexlify(node) << " from hgcache";
   CFallible<CBytes, sapling_cbytes_free> result{
-      sapling_backingstore_get_blob(store_.get(), name, node, local)};
+      sapling_backingstore_get_blob(store_.get(), node, local)};
 
   if (result.isError()) {
     XLOG(DBG5) << "Error while getting blob name=" << name.data()
