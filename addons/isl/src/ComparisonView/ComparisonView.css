@@ -23,6 +23,11 @@
   align-items: center;
   justify-content: space-between;
 }
+.comparison-view-header-group {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+}
 
 .comparison-view-details {
   overflow-y: scroll;
