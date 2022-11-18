@@ -40,10 +40,14 @@ import thrift.util.inspect
 from facebook.eden import EdenService
 from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
+    DataFetchOrigin,
     DebugGetRawJournalParams,
+    DebugGetScmBlobRequest,
     DebugJournalDelta,
     EdenError,
+    MountId,
     NoValueForKeyError,
+    ScmBlobOrError,
     SyncBehavior,
     TimeSpec,
     TreeInodeDebugInfo,
@@ -346,11 +350,20 @@ class BlobCmd(Subcmd):
 
         local_only = not args.load
         with instance.get_thrift_client_legacy() as client:
-            data = client.debugGetScmBlob(
-                bytes(checkout.path), blob_id, localStoreOnly=local_only
+            data = client.debugGetBlob(
+                DebugGetScmBlobRequest(
+                    MountId(bytes(checkout.path)),
+                    blob_id,
+                    DataFetchOrigin.DISK_CACHE
+                    if local_only
+                    else DataFetchOrigin.ANYWHERE,
+                )
             )
-
-        sys.stdout.buffer.write(data)
+        blobOrError = data.blobs[0].blob
+        if blobOrError.getType() == ScmBlobOrError.BLOB:
+            sys.stdout.buffer.write(blobOrError.get_blob())
+        else:
+            raise blobOrError.get_error()
         return 0
 
 
