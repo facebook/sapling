@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/SaplingNativeBackingStore.h"
 
 #include <folly/Range.h>
 #include <folly/String.h>
@@ -15,9 +15,7 @@
 #include <memory>
 #include <stdexcept>
 
-namespace facebook::eden {
-
-using namespace sapling;
+namespace sapling {
 
 namespace {
 /**
@@ -116,7 +114,7 @@ void getTreeBatchCallback(
 }
 } // namespace
 
-HgNativeBackingStore::HgNativeBackingStore(
+SaplingNativeBackingStore::SaplingNativeBackingStore(
     std::string_view repository,
     const BackingStoreOptions& options) {
   CFallible<BackingStore, sapling_backingstore_free> store{
@@ -129,7 +127,7 @@ HgNativeBackingStore::HgNativeBackingStore(
   store_ = store.unwrap();
 }
 
-std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
+std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
     folly::ByteRange name,
     folly::ByteRange node,
     bool local) {
@@ -148,7 +146,7 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
   return bytesToIOBuf(result.unwrap().release());
 }
 
-std::shared_ptr<FileAuxData> HgNativeBackingStore::getBlobMetadata(
+std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
     folly::ByteRange node,
     bool local) {
   XLOG(DBG7) << "Importing blob metadata"
@@ -166,7 +164,7 @@ std::shared_ptr<FileAuxData> HgNativeBackingStore::getBlobMetadata(
   return result.unwrap();
 }
 
-void HgNativeBackingStore::getBlobMetadataBatch(
+void SaplingNativeBackingStore::getBlobMetadataBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
     std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve) {
@@ -231,7 +229,7 @@ void HgNativeBackingStore::getBlobMetadataBatch(
       });
 }
 
-void HgNativeBackingStore::getBlobBatch(
+void SaplingNativeBackingStore::getBlobBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
     std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve) {
@@ -295,7 +293,7 @@ void HgNativeBackingStore::getBlobBatch(
       });
 }
 
-void HgNativeBackingStore::getTreeBatch(
+void SaplingNativeBackingStore::getTreeBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
     std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve) {
@@ -355,7 +353,7 @@ void HgNativeBackingStore::getTreeBatch(
       });
 }
 
-std::shared_ptr<Tree> HgNativeBackingStore::getTree(
+std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(
     folly::ByteRange node,
     bool local) {
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
@@ -373,10 +371,10 @@ std::shared_ptr<Tree> HgNativeBackingStore::getTree(
   return manifest.unwrap();
 }
 
-void HgNativeBackingStore::flush() {
+void SaplingNativeBackingStore::flush() {
   XLOG(DBG7) << "Flushing backing store";
 
   sapling_backingstore_flush(store_.get());
 }
 
-} // namespace facebook::eden
+} // namespace sapling

@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
 
 namespace {
 

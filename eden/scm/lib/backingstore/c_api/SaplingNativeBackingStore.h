@@ -11,19 +11,17 @@
 #include <memory>
 #include <string_view>
 
-#include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
 
 namespace folly {
 class IOBuf;
 } // namespace folly
 
-namespace facebook::eden {
+namespace sapling {
 
-using BackingStoreOptions = sapling::BackingStoreOptions;
-
-class HgNativeBackingStore {
+class SaplingNativeBackingStore {
  public:
-  HgNativeBackingStore(
+  SaplingNativeBackingStore(
       std::string_view repository,
       const BackingStoreOptions& options);
 
@@ -74,4 +72,4 @@ class HgNativeBackingStore {
       sapling::sapling_backingstore_free>::Ptr store_;
 };
 
-} // namespace facebook::eden
+} // namespace sapling

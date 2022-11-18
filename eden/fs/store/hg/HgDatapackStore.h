@@ -12,7 +12,7 @@
 
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {
 
@@ -97,7 +97,7 @@ class HgDatapackStore {
   }
 
  private:
-  HgNativeBackingStore store_;
+  sapling::SaplingNativeBackingStore store_;
   std::shared_ptr<ReloadableConfig> config_;
 
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;
