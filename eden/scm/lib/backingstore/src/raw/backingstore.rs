@@ -7,7 +7,6 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use std::slice;
 use std::str;
 
 use anyhow::Error;
