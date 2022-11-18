@@ -108,7 +108,9 @@ void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
       "reponame = test\n"
       "cachepath = {}\n"
       "[edenapi]\n"
-      "url=http://invalid.invalid\n",
+      "url=http://invalid.invalid\n"
+      "[scmstore]\n"
+      "backingstore = true\n",
       cacheDirectory));
 }
 
