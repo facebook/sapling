@@ -21,6 +21,9 @@ namespace sapling {
 
 /**
  * Reference to a 20-byte hg node ID.
+ *
+ * In the future, should we want to continue to encode full repo paths in the
+ * object ID again, this can be made into a struct.
  */
 using NodeId = folly::ByteRange;
 

@@ -8,8 +8,8 @@
 use std::slice;
 
 use types::Key;
-
-use crate::utils::key_from_path_node_slice;
+use types::Node;
+use types::RepoPathBuf;
 
 // Number of bytes of a node.
 const NODE_LENGTH: usize = 20;
@@ -22,6 +22,6 @@ pub struct Request {
 impl Request {
     pub fn key(&self) -> Key {
         let node: &[u8] = unsafe { slice::from_raw_parts(self.node, NODE_LENGTH) };
-        key_from_path_node_slice(node)
+        Key::new(RepoPathBuf::new(), Node::from_slice(node).unwrap())
     }
 }
