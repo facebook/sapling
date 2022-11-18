@@ -480,18 +480,12 @@ class vfs(abstractvfs):
         """
         assert isinstance(path, str)
         assert isinstance(mode, str)
-
-        # This is important on Windows if self.base is a UNC path. We
-        # must convert "/" to local "\" in path before joining.
-        path = util.localpath(path)
-
         if auditpath:
             if self._audit:
                 r = util.checkosfilename(path)
                 if r:
                     raise error.Abort("%s: %r" % (r, path))
             self.audit(path, mode=mode)
-
         f = self.join(path)
 
         if not text and "b" not in mode:
@@ -586,7 +580,7 @@ class vfs(abstractvfs):
 
     def join(self, path: "Optional[str]", *insidef: str) -> str:
         if path:
-            return os.path.join(self.base, util.localpath(path), *insidef)
+            return os.path.join(self.base, path, *insidef)
         else:
             return self.base
 

@@ -64,13 +64,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
 
     let ident = identity::default();
     let dot_path = destination.join(ident.dot_dir());
-
-    let mut segments_path = dot_path.clone();
-    segments_path.push("store");
-    segments_path.push("segments");
-    segments_path.push("v1");
-    let namedag_path = IndexedLogNameDagPath(segments_path);
-
+    let namedag_path = IndexedLogNameDagPath(dot_path.join("store/segments/v1"));
     let mut namedag = namedag_path
         .open()
         .context("error opening segmented changelog")?;
@@ -99,12 +93,8 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
             VertexListWithOptions::from(vec![master.clone()]).with_highest_group(Group::MASTER);
         block_on(namedag.flush(&heads)).context("error writing segmented changelog to disk")?;
 
-        let mut remotenames_path = dot_path.clone();
-        remotenames_path.push("store");
-        remotenames_path.push("remotenames");
-
         fs::write(
-            remotenames_path,
+            dot_path.join("store/remotenames"),
             format!("{} bookmarks remote/master\n", master.to_hex()).as_bytes(),
         )
         .context("error writing to remotenames")?;
@@ -121,12 +111,8 @@ pub fn run(ctx: ReqCtx<StatusOpts>, config: &mut ConfigSet) -> Result<u8> {
     )
     .context("error writing to requires")?;
 
-    let mut store_requires_path = dot_path.clone();
-    store_requires_path.push("store");
-    store_requires_path.push("requires");
-
     fs::write(
-        store_requires_path,
+        dot_path.join("store/requires"),
         b"lazychangelog\n\
           narrowheads\n\
           visibleheads\n",
