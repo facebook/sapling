@@ -111,6 +111,9 @@ export type CodeReviewSystem =
       repo: string;
     }
   | {
+      type: 'none';
+    }
+  | {
       type: 'unknown';
       path?: string;
     };

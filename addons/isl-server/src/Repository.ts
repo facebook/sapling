@@ -372,30 +372,31 @@ export class Repository {
     if (repoRoot instanceof Error) {
       return {type: 'invalidCommand', command};
     }
-    const isGitOnSl = !pathsDefault.startsWith('mononoke://');
-    let codeReviewSystem: CodeReviewSystem;
-    if (isGitOnSl) {
-      const data = extractGithubRepoInfoFromUrl(pathsDefault);
-      if (data == null) {
-        // this doesn't look like a known github url
-        codeReviewSystem = {type: 'unknown', path: pathsDefault};
-      } else {
-        const {owner, repo} = data;
-        codeReviewSystem = {
-          type: 'github',
-          owner,
-          repo,
-        };
-      }
-    } else {
-      // TODO: where should we be getting this from? arcconfig instead? do we need this?
-      const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
-      codeReviewSystem = {type: 'phabricator', repo};
-    }
-
     if (repoRoot == null || dotdir == null) {
       return {type: 'cwdNotARepository', cwd};
     }
+
+    let codeReviewSystem: CodeReviewSystem;
+    const isMononoke = pathsDefault.startsWith('mononoke://');
+    // TODO: this doesn't handle github enterprise
+    const githubInfo = extractGithubRepoInfoFromUrl(pathsDefault);
+    if (githubInfo != null) {
+      const {owner, repo} = githubInfo;
+      codeReviewSystem = {
+        type: 'github',
+        owner,
+        repo,
+      };
+    } else if (isMononoke) {
+      // TODO: where should we be getting this from? arcconfig instead? do we need this?
+      const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
+      codeReviewSystem = {type: 'phabricator', repo};
+    } else if (pathsDefault === '') {
+      codeReviewSystem = {type: 'none'};
+    } else {
+      codeReviewSystem = {type: 'unknown', path: pathsDefault};
+    }
+
     const result: RepoInfo = {
       type: 'success',
       command,
@@ -805,10 +806,24 @@ function splitLine(line: string): Array<string> {
   return line.split(NULL_CHAR).filter(e => e.length > 0);
 }
 
-export function extractGithubRepoInfoFromUrl(url: string): {repo: string; owner: string} {
-  const [, owner, repo] =
+/**
+ * extract repo owner info from a github remote url, in various formats:
+ * https://github.com/owner/repo
+ * https://github.com/owner/repo.git
+ * git@github.com:owner/repo.git
+ * ssh:git@github.com:owner/repo.git
+ * git+ssh:git@github.com:owner/repo.git
+ */
+export function extractGithubRepoInfoFromUrl(url: string): {repo: string; owner: string} | null {
+  const match =
     /(?:https:\/\/github\.com\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@github.com:)([^/]+)\/(.+?)(?:\.git)?$/.exec(
       url,
-    ) ?? [];
+    );
+
+  if (match == null) {
+    return null;
+  }
+
+  const [, owner, repo] = match;
   return {owner, repo};
 }
