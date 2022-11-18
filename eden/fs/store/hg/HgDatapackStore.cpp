@@ -136,8 +136,7 @@ void HgDatapackStore::getBlobBatch(
       requests,
       false,
       // store_.getBlobBatch is blocking, hence we can take these by reference.
-      [&importRequests, &requests, &requestsWatches](
-          size_t index, std::unique_ptr<folly::IOBuf> content) {
+      [&](size_t index, std::unique_ptr<folly::IOBuf> content) {
         XLOGF(
             DBG9,
             "Imported name={} node={}",
@@ -181,8 +180,7 @@ void HgDatapackStore::getTreeBatch(
       requests,
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
-      [hgObjectIdFormat, &requests, &importRequests, &requestsWatches](
-          size_t index, std::shared_ptr<sapling::Tree> content) mutable {
+      [&](size_t index, std::shared_ptr<sapling::Tree> content) mutable {
         XLOGF(
             DBG4,
             "Imported tree name={} node={}",

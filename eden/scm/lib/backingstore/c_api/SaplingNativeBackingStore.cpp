@@ -170,7 +170,7 @@ void SaplingNativeBackingStore::getTreeBatch(
       store_.get(),
       folly::crange(raw_requests),
       local,
-      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+      [&](size_t index, CFallibleBase raw_result) {
         CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
 
         if (result.isError()) {
@@ -248,7 +248,7 @@ void SaplingNativeBackingStore::getBlobBatch(
       store_.get(),
       folly::crange(raw_requests),
       local,
-      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+      [&](size_t index, CFallibleBase raw_result) {
         CFallible<CBytes, sapling_cbytes_free> result{std::move(raw_result)};
 
         if (result.isError()) {
@@ -326,7 +326,7 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
       store_.get(),
       folly::crange(raw_requests),
       local,
-      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+      [&](size_t index, CFallibleBase raw_result) {
         CFallible<FileAuxData, sapling_file_aux_free> result{
             std::move(raw_result)};
 
