@@ -71,14 +71,16 @@ pub extern "C" fn sapling_backingstore_get_tree(
 #[no_mangle]
 pub extern "C" fn sapling_backingstore_get_tree_batch(
     store: &mut BackingStore,
-    requests: *const Request,
-    size: usize,
+    requests: Slice<Request>,
     local: bool,
     data: *mut c_void,
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
-    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
-    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+    let keys: Vec<Result<Key>> = requests
+        .slice()
+        .iter()
+        .map(|req| req.try_into_key())
+        .collect();
 
     store.get_tree_batch(keys, local, |idx, result| {
         let result: Result<List> =
@@ -108,14 +110,16 @@ pub extern "C" fn sapling_backingstore_get_blob(
 #[no_mangle]
 pub extern "C" fn sapling_backingstore_get_blob_batch(
     store: &mut BackingStore,
-    requests: *const Request,
-    size: usize,
+    requests: Slice<Request>,
     local: bool,
     data: *mut c_void,
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
-    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
-    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+    let keys: Vec<Result<Key>> = requests
+        .slice()
+        .iter()
+        .map(|req| req.try_into_key())
+        .collect();
     store.get_blob_batch(keys, local, |idx, result| {
         let result: CFallible<CBytes> = result
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
@@ -143,14 +147,16 @@ pub extern "C" fn sapling_backingstore_get_file_aux(
 #[no_mangle]
 pub extern "C" fn sapling_backingstore_get_file_aux_batch(
     store: &mut BackingStore,
-    requests: *const Request,
-    size: usize,
+    requests: Slice<Request>,
     local: bool,
     data: *mut c_void,
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
-    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
-    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+    let keys: Vec<Result<Key>> = requests
+        .slice()
+        .iter()
+        .map(|req| req.try_into_key())
+        .collect();
 
     store.get_file_aux_batch(keys, local, |idx, result| {
         let result: Result<ScmStoreFileAuxData> =

@@ -100,8 +100,10 @@ include = ["Tree", "TreeEntry", "TreeEntryType"]
 """
 
 "Slice" = """
-  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
+  template <typename Q = T>
+  Slice(std::enable_if_t<std::is_same_v<Q, uint8_t>, std::string_view> sv) noexcept
     : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
-  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
+
+  Slice(folly::Range<const T*> range) noexcept
     : ptr{range.data()}, len{range.size()} {}
 """

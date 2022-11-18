@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<237c8a00fbb4997b26c977888e0b157b>>
+ * @generated SignedSource<<e7e0f1ba771fdf548a05ee800377332c>>
  *
  */
 
@@ -47,9 +47,11 @@ template<typename T>
 struct Slice {
   const T *ptr;
   size_t len;
-  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
+  template <typename Q = T>
+  Slice(std::enable_if_t<std::is_same_v<Q, uint8_t>, std::string_view> sv) noexcept
     : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
-  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
+
+  Slice(folly::Range<const T*> range) noexcept
     : ptr{range.data()}, len{range.size()} {}
 };
 
@@ -110,8 +112,7 @@ void sapling_backingstore_free(BackingStore *store);
 CFallibleBase sapling_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
 
 void sapling_backingstore_get_tree_batch(BackingStore *store,
-                                         const Request *requests,
-                                         uintptr_t size,
+                                         Slice<Request> requests,
                                          bool local,
                                          void *data,
                                          void (*resolve)(void*, uintptr_t, CFallibleBase));
@@ -122,8 +123,7 @@ CFallibleBase sapling_backingstore_get_blob(BackingStore *store,
                                             bool local);
 
 void sapling_backingstore_get_blob_batch(BackingStore *store,
-                                         const Request *requests,
-                                         uintptr_t size,
+                                         Slice<Request> requests,
                                          bool local,
                                          void *data,
                                          void (*resolve)(void*, uintptr_t, CFallibleBase));
@@ -133,8 +133,7 @@ CFallibleBase sapling_backingstore_get_file_aux(BackingStore *store,
                                                 bool local);
 
 void sapling_backingstore_get_file_aux_batch(BackingStore *store,
-                                             const Request *requests,
-                                             uintptr_t size,
+                                             Slice<Request> requests,
                                              bool local,
                                              void *data,
                                              void (*resolve)(void*, uintptr_t, CFallibleBase));

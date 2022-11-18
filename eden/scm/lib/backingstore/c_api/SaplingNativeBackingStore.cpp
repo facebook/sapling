@@ -42,14 +42,12 @@ std::unique_ptr<folly::IOBuf> bytesToIOBuf(CBytes* bytes) {
 template <typename Fn>
 void getBlobBatchCallback(
     BackingStore* store,
-    Request* request,
-    uintptr_t size,
+    Slice<Request> requests,
     bool local,
     Fn&& fn) {
   sapling_backingstore_get_blob_batch(
       store,
-      request,
-      size,
+      requests,
       local,
       // We need to take address of the function, not to forward it.
       // @lint-ignore CLANGTIDY
@@ -69,14 +67,12 @@ void getBlobBatchCallback(
 template <typename Fn>
 void getBlobMetadataBatchCallback(
     BackingStore* store,
-    Request* request,
-    uintptr_t size,
+    Slice<Request> requests,
     bool local,
     Fn&& fn) {
   sapling_backingstore_get_file_aux_batch(
       store,
-      request,
-      size,
+      requests,
       local,
       // We need to take address of the function, not to forward it.
       // @lint-ignore CLANGTIDY
@@ -96,14 +92,12 @@ void getBlobMetadataBatchCallback(
 template <typename Fn>
 void getTreeBatchCallback(
     BackingStore* store,
-    Request* request,
-    uintptr_t size,
+    Slice<Request> requests,
     bool local,
     Fn&& fn) {
   sapling_backingstore_get_tree_batch(
       store,
-      request,
-      size,
+      requests,
       local,
       // We need to take address of the function, not to forward it.
       // @lint-ignore CLANGTIDY
@@ -174,8 +168,7 @@ void SaplingNativeBackingStore::getTreeBatch(
 
   getTreeBatchCallback(
       store_.get(),
-      raw_requests.data(),
-      count,
+      folly::crange(raw_requests),
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
         CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
@@ -253,8 +246,7 @@ void SaplingNativeBackingStore::getBlobBatch(
 
   getBlobBatchCallback(
       store_.get(),
-      raw_requests.data(),
-      count,
+      folly::crange(raw_requests),
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
         CFallible<CBytes, sapling_cbytes_free> result{std::move(raw_result)};
@@ -332,8 +324,7 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
 
   getBlobMetadataBatchCallback(
       store_.get(),
-      raw_requests.data(),
-      count,
+      folly::crange(raw_requests),
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
         CFallible<FileAuxData, sapling_file_aux_free> result{
