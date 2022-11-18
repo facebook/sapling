@@ -20,6 +20,7 @@ use types::Key;
 use crate::backingstore::BackingStore;
 use crate::raw::CBytes;
 use crate::raw::CFallible;
+use crate::raw::CFallibleBase;
 use crate::raw::FileAuxData;
 use crate::raw::Request;
 use crate::raw::Slice;
@@ -33,15 +34,16 @@ pub struct BackingStoreOptions {
 
 #[no_mangle]
 pub extern "C" fn rust_backingstore_new(
-    options: &BackingStoreOptions,
     repository: Slice<u8>,
-) -> CFallible<BackingStore> {
+    options: &BackingStoreOptions,
+) -> CFallibleBase {
     CFallible::make_with(|| {
         super::init::backingstore_global_init();
 
         let repo = str::from_utf8(repository.slice())?;
         BackingStore::new(repo, options.aux_data, options.allow_retries)
     })
+    .into()
 }
 
 #[no_mangle]
@@ -57,13 +59,14 @@ pub extern "C" fn rust_backingstore_get_blob(
     name: Slice<u8>,
     node: Slice<u8>,
     local: bool,
-) -> CFallible<CBytes> {
+) -> CFallibleBase {
     CFallible::make_with(|| {
         store
             .get_blob(name.slice(), node.slice(), local)
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
             .map(CBytes::from_vec)
     })
+    .into()
 }
 
 #[no_mangle]
@@ -73,14 +76,15 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
     size: usize,
     local: bool,
     data: *mut c_void,
-    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallible<CBytes>),
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
     let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
     let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
     store.get_blob_batch(keys, local, |idx, result| {
-        let result = result
+        let result: CFallible<CBytes> = result
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-            .map(CBytes::from_vec);
+            .map(CBytes::from_vec)
+            .into();
         unsafe { resolve(data, idx, result.into()) };
     });
 }
@@ -90,13 +94,14 @@ pub extern "C" fn rust_backingstore_get_tree(
     store: &mut BackingStore,
     node: Slice<u8>,
     local: bool,
-) -> CFallible<Tree> {
-    CFallible::make_with(|| {
+) -> CFallibleBase {
+    CFallible::<Tree>::make_with(|| {
         store
             .get_tree(node.slice(), local)
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
             .and_then(|list| list.try_into())
     })
+    .into()
 }
 
 #[no_mangle]
@@ -106,7 +111,7 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
     size: usize,
     local: bool,
     data: *mut c_void,
-    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallible<Tree>),
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
     let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
     let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
@@ -115,6 +120,7 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
         let result: Result<List> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let result: Result<Tree> = result.and_then(|list| list.try_into());
+        let result: CFallible<Tree> = result.into();
         unsafe { resolve(data, idx, result.into()) };
     });
 }
@@ -124,13 +130,14 @@ pub extern "C" fn rust_backingstore_get_file_aux(
     store: &mut BackingStore,
     node: Slice<u8>,
     local: bool,
-) -> CFallible<FileAuxData> {
-    CFallible::make_with(|| {
+) -> CFallibleBase {
+    CFallible::<FileAuxData>::make_with(|| {
         store
             .get_file_aux(node.slice(), local)
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))
             .map(|aux| aux.into())
     })
+    .into()
 }
 
 #[no_mangle]
@@ -140,7 +147,7 @@ pub extern "C" fn rust_backingstore_get_file_aux_batch(
     size: usize,
     local: bool,
     data: *mut c_void,
-    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallible<FileAuxData>),
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
     let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
     let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
@@ -148,7 +155,7 @@ pub extern "C" fn rust_backingstore_get_file_aux_batch(
     store.get_file_aux_batch(keys, local, |idx, result| {
         let result: Result<ScmStoreFileAuxData> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
-        let result: Result<FileAuxData> = result.map(|aux| aux.into());
+        let result: CFallible<FileAuxData> = result.map(|aux| aux.into()).into();
         unsafe { resolve(data, idx, result.into()) };
     });
 }

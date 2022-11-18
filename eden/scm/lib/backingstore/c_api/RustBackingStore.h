@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<64ba4fae2b33cd53697d8f807e326e61>>
+ * @generated SignedSource<<575ecf8d635340626f7fbca17026938a>>
  *
  */
 
@@ -22,15 +22,6 @@
 #include <string_view>
 #include <folly/Range.h>
 
-// MSVC toolchain dislikes having template in `extern "C"` functions. So we will
-// have to use void pointer here. Cbindgen does not support generating code like
-// this since it's kinda a special case so we manually generate this struct.
-struct RustCFallibleBase {
- void *value;
- char *error;
-};
-
-
 enum class RustTreeEntryType : uint8_t {
   Tree,
   RegularFile,
@@ -43,9 +34,11 @@ struct RustBackingStore;
 template<typename T = void>
 struct RustVec;
 
-struct RustBackingStoreOptions {
-  bool aux_data;
-  bool allow_retries;
+/// The monomorphized version of `CFallible` used solely because MSVC
+/// does not allow returning template functions from extern "C" functions.
+struct RustCFallibleBase {
+  void *value;
+  char *error;
 };
 
 template<typename T>
@@ -56,6 +49,17 @@ struct RustSlice {
     : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
   RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
     : ptr{range.data()}, len{range.size()} {}
+};
+
+struct RustBackingStoreOptions {
+  bool aux_data;
+  bool allow_retries;
+};
+
+struct RustRequest {
+  const uint8_t *path;
+  uintptr_t length;
+  const uint8_t *node;
 };
 
 struct RustCBytes {
@@ -69,12 +73,6 @@ struct RustCBytes {
   operator folly::ByteRange() const {
     return asByteRange();
   }
-};
-
-struct RustRequest {
-  const uint8_t *path;
-  uintptr_t length;
-  const uint8_t *node;
 };
 
 struct RustTreeEntry {
@@ -102,15 +100,15 @@ struct RustFileAuxData {
 
 extern "C" {
 
-RustCFallibleBase rust_backingstore_new(const RustBackingStoreOptions *options,
-                                                          RustSlice<uint8_t> repository);
+RustCFallibleBase rust_backingstore_new(RustSlice<uint8_t> repository,
+                                        const RustBackingStoreOptions *options);
 
 void rust_backingstore_free(RustBackingStore *store);
 
 RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
-                                                         RustSlice<uint8_t> name,
-                                                         RustSlice<uint8_t> node,
-                                                         bool local);
+                                             RustSlice<uint8_t> name,
+                                             RustSlice<uint8_t> node,
+                                             bool local);
 
 void rust_backingstore_get_blob_batch(RustBackingStore *store,
                                       const RustRequest *requests,
@@ -120,8 +118,8 @@ void rust_backingstore_get_blob_batch(RustBackingStore *store,
                                       void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
 RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
-                                                       RustSlice<uint8_t> node,
-                                                       bool local);
+                                             RustSlice<uint8_t> node,
+                                             bool local);
 
 void rust_backingstore_get_tree_batch(RustBackingStore *store,
                                       const RustRequest *requests,
@@ -131,8 +129,8 @@ void rust_backingstore_get_tree_batch(RustBackingStore *store,
                                       void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
 RustCFallibleBase rust_backingstore_get_file_aux(RustBackingStore *store,
-                                                                  RustSlice<uint8_t> node,
-                                                                  bool local);
+                                                 RustSlice<uint8_t> node,
+                                                 bool local);
 
 void rust_backingstore_get_file_aux_batch(RustBackingStore *store,
                                           const RustRequest *requests,

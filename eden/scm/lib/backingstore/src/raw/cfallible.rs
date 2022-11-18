@@ -14,10 +14,19 @@
 //! Consumer of this struct needs to ensure the returned error string freed with
 //! `rust_cfallible_free_error`.
 
+use std::ffi::c_void;
 use std::ffi::CString;
 
 use anyhow::Result;
 use libc::c_char;
+
+/// The monomorphized version of `CFallible` used solely because MSVC
+/// does not allow returning template functions from extern "C" functions.
+#[repr(C)]
+pub struct CFallibleBase {
+    value: *mut c_void,
+    error: *mut c_char,
+}
 
 /// A `repr(C)` struct that can be consumed by C++ code. User of this struct should check
 /// `is_error` field to see if there is an error.
@@ -27,6 +36,8 @@ use libc::c_char;
 /// Note: MSVC toolchain dislikes the usage of template in extern functions. Because of this, we
 /// cannot rely on cbindgen to generate the interface for this struct. All changes to this function
 /// requires manual editing of the corresponding C++ struct definition in `cbindgen.toml`.
+///
+/// Therefore, at the last minute, these are mapped to CFallibleBase.
 #[repr(C)]
 pub struct CFallible<T> {
     value: *mut T,
@@ -59,6 +70,15 @@ impl<T> CFallible<T> {
         CFallible {
             value: std::ptr::null_mut(),
             error: error.into_raw(),
+        }
+    }
+}
+
+impl<T> From<CFallible<T>> for CFallibleBase {
+    fn from(value: CFallible<T>) -> CFallibleBase {
+        CFallibleBase {
+            value: value.value as *mut c_void,
+            error: value.error,
         }
     }
 }

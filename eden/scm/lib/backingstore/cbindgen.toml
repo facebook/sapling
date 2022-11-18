@@ -19,17 +19,6 @@ header = """/*
 // @dep=:backingstore
 """
 
-after_includes = """
-
-// MSVC toolchain dislikes having template in `extern "C"` functions. So we will
-// have to use void pointer here. Cbindgen does not support generating code like
-// this since it's kinda a special case so we manually generate this struct.
-struct RustCFallibleBase {
- void *value;
- char *error;
-};
-"""
-
 trailer = """
 
 // Some Rust functions will have the return type `RustCFallibleBase`, and we
@@ -88,7 +77,6 @@ exclude = ["CFallible"]
 include = ["Tree", "TreeEntry", "TreeEntryType"]
 
 [export.rename]
-"CFallible" = "CFallibleBase"
 
 [export.body]
 "CBytes" = """
