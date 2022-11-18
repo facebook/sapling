@@ -2371,14 +2371,13 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
                              fetchContext = fetchContext.copy()](folly::Unit) {
                    return edenMount->getInodeSlow(relativePath, fetchContext);
                  })
-                 .thenValue(
-                     [relativePath = std::move(relativePath),
-                      fetchContext = fetchContext.copy()](InodePtr inode) {
-                       return inode->getParentRacy()->removeRecursively(
-                           relativePath.basename(),
-                           InvalidationRequired::Yes,
-                           fetchContext);
-                     }))
+                 .thenValue([relativePath, fetchContext = fetchContext.copy()](
+                                InodePtr inode) {
+                   return inode->getParentRacy()->removeRecursively(
+                       relativePath.basename(),
+                       InvalidationRequired::Yes,
+                       fetchContext);
+                 }))
       .semi();
 }
 
