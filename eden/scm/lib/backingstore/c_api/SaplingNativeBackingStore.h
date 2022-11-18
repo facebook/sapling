@@ -19,16 +19,43 @@ class IOBuf;
 
 namespace sapling {
 
+/**
+ * Provides a type-safe layer and a more convenient API around the raw
+ * BackingStoreBindings.h C functions.
+ *
+ * Rather than individually documenting each method, the overall design is
+ * described here:
+ *
+ * - If `local` is true, only disk caches are queried.
+ * - If the object is not found, the error is logged and nullptr is returned.
+ * - Batch methods take a callback function which is evaluated once per
+ *   returned result. Compared to returning a vector, this minimizes the
+ *   amount of time that heavyweight are in RAM.
+ */
 class SaplingNativeBackingStore {
  public:
   SaplingNativeBackingStore(
       std::string_view repository,
       const BackingStoreOptions& options);
 
+  std::shared_ptr<Tree> getTree(folly::ByteRange node, bool local);
+
+  void getTreeBatch(
+      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
+          requests,
+      bool local,
+      std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve);
+
   std::unique_ptr<folly::IOBuf>
   getBlob(folly::ByteRange name, folly::ByteRange node, bool local);
 
-  std::shared_ptr<sapling::FileAuxData> getBlobMetadata(
+  void getBlobBatch(
+      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
+          requests,
+      bool local,
+      std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve);
+
+  std::shared_ptr<FileAuxData> getBlobMetadata(
       folly::ByteRange node,
       bool local);
 
@@ -36,33 +63,7 @@ class SaplingNativeBackingStore {
       const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
           requests,
       bool local,
-      std::function<void(size_t, std::shared_ptr<sapling::FileAuxData>)>&&
-          resolve);
-
-  /**
-   * Imports a list of files from Rust contentstore. `names` and `nodes` are
-   * required to have the same length, and both are combined to constitute a
-   * query for one file.
-   *
-   * Whenever the requested file is read, `resolve` will be called with the
-   * index of the request in the passed vectors, along with an unique pointer
-   * pointing to the file content.
-   *
-   * If `local` is true, this method will only look requested file on disk.
-   */
-  void getBlobBatch(
-      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
-          requests,
-      bool local,
-      std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve);
-
-  void getTreeBatch(
-      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
-          requests,
-      bool local,
-      std::function<void(size_t, std::shared_ptr<sapling::Tree>)>&& resolve);
-
-  std::shared_ptr<sapling::Tree> getTree(folly::ByteRange node, bool local);
+      std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve);
 
   void flush();
 

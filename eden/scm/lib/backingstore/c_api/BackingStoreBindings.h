@@ -7,12 +7,12 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<c37bbeca9e8fe2789b4bbbe60517606d>>
+ * @generated SignedSource<<237c8a00fbb4997b26c977888e0b157b>>
  *
  */
 
 // The generated functions are exported from this Rust library
-// @dep=:backingstore
+// @dep=//eden/scm/lib/backingstore:backingstore
 
 
 #pragma once
@@ -107,21 +107,21 @@ CFallibleBase sapling_backingstore_new(Slice<uint8_t> repository,
 
 void sapling_backingstore_free(BackingStore *store);
 
-CFallibleBase sapling_backingstore_get_blob(BackingStore *store,
-                                            Slice<uint8_t> name,
-                                            Slice<uint8_t> node,
-                                            bool local);
+CFallibleBase sapling_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
 
-void sapling_backingstore_get_blob_batch(BackingStore *store,
+void sapling_backingstore_get_tree_batch(BackingStore *store,
                                          const Request *requests,
                                          uintptr_t size,
                                          bool local,
                                          void *data,
                                          void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-CFallibleBase sapling_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
+CFallibleBase sapling_backingstore_get_blob(BackingStore *store,
+                                            Slice<uint8_t> name,
+                                            Slice<uint8_t> node,
+                                            bool local);
 
-void sapling_backingstore_get_tree_batch(BackingStore *store,
+void sapling_backingstore_get_blob_batch(BackingStore *store,
                                          const Request *requests,
                                          uintptr_t size,
                                          bool local,

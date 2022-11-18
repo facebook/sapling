@@ -16,7 +16,7 @@ header = """/*
  */
 
 // The generated functions are exported from this Rust library
-// @dep=:backingstore
+// @dep=//eden/scm/lib/backingstore:backingstore
 """
 
 trailer = """

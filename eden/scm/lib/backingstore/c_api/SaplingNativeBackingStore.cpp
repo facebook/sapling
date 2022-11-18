@@ -127,6 +127,84 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   store_ = store.unwrap();
 }
 
+std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(
+    folly::ByteRange node,
+    bool local) {
+  XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
+             << " from hgcache";
+
+  CFallible<Tree, sapling_tree_free> manifest{
+      sapling_backingstore_get_tree(store_.get(), node, local)};
+
+  if (manifest.isError()) {
+    XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
+               << " from backingstore: " << manifest.getError();
+    return nullptr;
+  }
+
+  return manifest.unwrap();
+}
+
+void SaplingNativeBackingStore::getTreeBatch(
+    const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
+    bool local,
+    std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve) {
+  size_t count = requests.size();
+
+  XLOG(DBG7) << "Import batch of trees with size:" << count;
+
+  std::vector<Request> raw_requests;
+  raw_requests.reserve(count);
+
+  for (auto& [name, node] : requests) {
+    raw_requests.push_back(Request{
+        name.data(),
+        name.size(),
+        node.data(),
+    });
+
+    XLOGF(
+        DBG9,
+        "Processing path=\"{}\" ({}) node={} ({:p})",
+        name.data(),
+        name.size(),
+        folly::hexlify(node),
+        node.data());
+  }
+
+  getTreeBatchCallback(
+      store_.get(),
+      raw_requests.data(),
+      count,
+      local,
+      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+        CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
+
+        if (result.isError()) {
+          // TODO: It would be nice if we can differentiate not found error with
+          // other errors.
+          auto error = result.getError();
+          XLOGF(
+              DBG6,
+              "Failed to import path=\"{}\" node={} from EdenAPI (batch tree {}/{}): {}",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count,
+              error);
+        } else {
+          XLOGF(
+              DBG6,
+              "Imported path=\"{}\" node={} from EdenAPI (batch tree: {}/{})",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count);
+          resolve(index, result.unwrap());
+        }
+      });
+}
+
 std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
     folly::ByteRange name,
     folly::ByteRange node,
@@ -146,89 +224,6 @@ std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
   return bytesToIOBuf(result.unwrap().release());
 }
 
-std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
-    folly::ByteRange node,
-    bool local) {
-  XLOG(DBG7) << "Importing blob metadata"
-             << " node=" << folly::hexlify(node) << " from hgcache";
-  CFallible<FileAuxData, sapling_file_aux_free> result{
-      sapling_backingstore_get_file_aux(store_.get(), node, local)};
-
-  if (result.isError()) {
-    XLOG(DBG5) << "Error while getting blob metadata"
-               << " node=" << folly::hexlify(node)
-               << " from backingstore: " << result.getError();
-    return nullptr;
-  }
-
-  return result.unwrap();
-}
-
-void SaplingNativeBackingStore::getBlobMetadataBatch(
-    const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
-    bool local,
-    std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve) {
-  size_t count = requests.size();
-
-  XLOG(DBG7) << "Import blob metadatas with size:" << count;
-
-  std::vector<Request> raw_requests;
-  raw_requests.reserve(count);
-
-  for (auto& request : requests) {
-    auto& name = request.first;
-    auto& node = request.second;
-
-    raw_requests.emplace_back(Request{
-        name.data(),
-        name.size(),
-        node.data(),
-    });
-
-    XLOGF(
-        DBG9,
-        "Processing metadata path=\"{}\" ({}) node={} ({:p})",
-        name.data(),
-        name.size(),
-        folly::hexlify(node),
-        node.data());
-  }
-
-  getBlobMetadataBatchCallback(
-      store_.get(),
-      raw_requests.data(),
-      count,
-      local,
-      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<FileAuxData, sapling_file_aux_free> result{
-            std::move(raw_result)};
-
-        if (result.isError()) {
-          // TODO: It would be nice if we can differentiate not found error with
-          // other errors.
-          auto error = result.getError();
-          XLOGF(
-              DBG6,
-              "Failed to import metadata path=\"{}\" node={} from EdenAPI (batch {}/{}): {}",
-              folly::StringPiece{requests[index].first},
-              folly::hexlify(requests[index].second),
-              index,
-              count,
-              error);
-        } else {
-          auto metadata = result.unwrap();
-          XLOGF(
-              DBG6,
-              "Imported metadata path=\"{}\" node={} from EdenAPI (batch: {}/{})",
-              folly::StringPiece{requests[index].first},
-              folly::hexlify(requests[index].second),
-              index,
-              count);
-          resolve(index, std::move(metadata));
-        }
-      });
-}
-
 void SaplingNativeBackingStore::getBlobBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
@@ -240,11 +235,8 @@ void SaplingNativeBackingStore::getBlobBatch(
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
 
-  for (auto& request : requests) {
-    auto& name = request.first;
-    auto& node = request.second;
-
-    raw_requests.emplace_back(Request{
+  for (auto& [name, node] : requests) {
+    raw_requests.push_back(Request{
         name.data(),
         name.size(),
         node.data(),
@@ -293,19 +285,37 @@ void SaplingNativeBackingStore::getBlobBatch(
       });
 }
 
-void SaplingNativeBackingStore::getTreeBatch(
+std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
+    folly::ByteRange node,
+    bool local) {
+  XLOG(DBG7) << "Importing blob metadata"
+             << " node=" << folly::hexlify(node) << " from hgcache";
+  CFallible<FileAuxData, sapling_file_aux_free> result{
+      sapling_backingstore_get_file_aux(store_.get(), node, local)};
+
+  if (result.isError()) {
+    XLOG(DBG5) << "Error while getting blob metadata"
+               << " node=" << folly::hexlify(node)
+               << " from backingstore: " << result.getError();
+    return nullptr;
+  }
+
+  return result.unwrap();
+}
+
+void SaplingNativeBackingStore::getBlobMetadataBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
-    std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve) {
+    std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve) {
   size_t count = requests.size();
 
-  XLOG(DBG7) << "Import batch of trees with size:" << count;
+  XLOG(DBG7) << "Import blob metadatas with size:" << count;
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
 
   for (auto& [name, node] : requests) {
-    raw_requests.emplace_back(Request{
+    raw_requests.push_back(Request{
         name.data(),
         name.size(),
         node.data(),
@@ -313,20 +323,21 @@ void SaplingNativeBackingStore::getTreeBatch(
 
     XLOGF(
         DBG9,
-        "Processing path=\"{}\" ({}) node={} ({:p})",
+        "Processing metadata path=\"{}\" ({}) node={} ({:p})",
         name.data(),
         name.size(),
         folly::hexlify(node),
         node.data());
   }
 
-  getTreeBatchCallback(
+  getBlobMetadataBatchCallback(
       store_.get(),
       raw_requests.data(),
       count,
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
+        CFallible<FileAuxData, sapling_file_aux_free> result{
+            std::move(raw_result)};
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -334,41 +345,24 @@ void SaplingNativeBackingStore::getTreeBatch(
           auto error = result.getError();
           XLOGF(
               DBG6,
-              "Failed to import path=\"{}\" node={} from EdenAPI (batch tree {}/{}): {}",
+              "Failed to import metadata path=\"{}\" node={} from EdenAPI (batch {}/{}): {}",
               folly::StringPiece{requests[index].first},
               folly::hexlify(requests[index].second),
               index,
               count,
               error);
         } else {
+          auto metadata = result.unwrap();
           XLOGF(
               DBG6,
-              "Imported path=\"{}\" node={} from EdenAPI (batch tree: {}/{})",
+              "Imported metadata path=\"{}\" node={} from EdenAPI (batch: {}/{})",
               folly::StringPiece{requests[index].first},
               folly::hexlify(requests[index].second),
               index,
               count);
-          resolve(index, result.unwrap());
+          resolve(index, std::move(metadata));
         }
       });
-}
-
-std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(
-    folly::ByteRange node,
-    bool local) {
-  XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
-             << " from hgcache";
-
-  CFallible<Tree, sapling_tree_free> manifest{
-      sapling_backingstore_get_tree(store_.get(), node, local)};
-
-  if (manifest.isError()) {
-    XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
-               << " from backingstore: " << manifest.getError();
-    return nullptr;
-  }
-
-  return manifest.unwrap();
 }
 
 void SaplingNativeBackingStore::flush() {

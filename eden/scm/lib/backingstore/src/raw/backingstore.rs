@@ -54,42 +54,6 @@ pub extern "C" fn sapling_backingstore_free(store: *mut BackingStore) {
 }
 
 #[no_mangle]
-pub extern "C" fn sapling_backingstore_get_blob(
-    store: &mut BackingStore,
-    name: Slice<u8>,
-    node: Slice<u8>,
-    local: bool,
-) -> CFallibleBase {
-    CFallible::make_with(|| {
-        store
-            .get_blob(name.slice(), node.slice(), local)
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-            .map(CBytes::from_vec)
-    })
-    .into()
-}
-
-#[no_mangle]
-pub extern "C" fn sapling_backingstore_get_blob_batch(
-    store: &mut BackingStore,
-    requests: *const Request,
-    size: usize,
-    local: bool,
-    data: *mut c_void,
-    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
-) {
-    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
-    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
-    store.get_blob_batch(keys, local, |idx, result| {
-        let result: CFallible<CBytes> = result
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
-            .map(CBytes::from_vec)
-            .into();
-        unsafe { resolve(data, idx, result.into()) };
-    });
-}
-
-#[no_mangle]
 pub extern "C" fn sapling_backingstore_get_tree(
     store: &mut BackingStore,
     node: Slice<u8>,
@@ -121,6 +85,42 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let result: Result<Tree> = result.and_then(|list| list.try_into());
         let result: CFallible<Tree> = result.into();
+        unsafe { resolve(data, idx, result.into()) };
+    });
+}
+
+#[no_mangle]
+pub extern "C" fn sapling_backingstore_get_blob(
+    store: &mut BackingStore,
+    name: Slice<u8>,
+    node: Slice<u8>,
+    local: bool,
+) -> CFallibleBase {
+    CFallible::make_with(|| {
+        store
+            .get_blob(name.slice(), node.slice(), local)
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
+            .map(CBytes::from_vec)
+    })
+    .into()
+}
+
+#[no_mangle]
+pub extern "C" fn sapling_backingstore_get_blob_batch(
+    store: &mut BackingStore,
+    requests: *const Request,
+    size: usize,
+    local: bool,
+    data: *mut c_void,
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
+) {
+    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
+    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+    store.get_blob_batch(keys, local, |idx, result| {
+        let result: CFallible<CBytes> = result
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
+            .map(CBytes::from_vec)
+            .into();
         unsafe { resolve(data, idx, result.into()) };
     });
 }
