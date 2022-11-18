@@ -21,7 +21,7 @@ import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButto
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
-import {codeReviewProvider, repositoryInfo} from './codeReview/CodeReviewInfo';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {AmendMessageOperation} from './operations/AmendMessageOperation';
 import {AmendOperation} from './operations/AmendOperation';
@@ -34,7 +34,12 @@ import platform from './platform';
 import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {selectedCommits} from './selection';
-import {commitMessageTemplate, latestCommitTreeMap, useRunOperation} from './serverAPIState';
+import {
+  commitMessageTemplate,
+  latestCommitTreeMap,
+  repositoryInfo,
+  useRunOperation,
+} from './serverAPIState';
 import {assert, firstOfIterable} from './utils';
 import {
   VSCodeBadge,

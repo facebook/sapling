@@ -8,7 +8,7 @@
 import type {EditedMessage} from './CommitInfo';
 import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
-import type {ChangedFile, CommitInfo, Hash, MergeConflicts} from './types';
+import type {ChangedFile, CommitInfo, Hash, MergeConflicts, RepoInfo} from './types';
 import type {CallbackInterface} from 'recoil';
 
 import serverAPI from './ClientToServerAPI';
@@ -16,6 +16,25 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {operationBeingPreviewed} from './previews';
 import {firstLine} from './utils';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
+
+export const repositoryInfo = atom<RepoInfo | null>({
+  key: 'repositoryInfo',
+  default: null,
+  effects: [
+    ({setSelf}) => {
+      const disposable = serverAPI.onMessageOfType('repoInfo', event => {
+        setSelf(event.info);
+      });
+      return () => disposable.dispose();
+    },
+    () =>
+      serverAPI.onConnectOrReconnect(() =>
+        serverAPI.postMessage({
+          type: 'requestRepoInfo',
+        }),
+      ),
+  ],
+});
 
 /**
  * Latest fetched uncommitted file changes from the server, without any previews.

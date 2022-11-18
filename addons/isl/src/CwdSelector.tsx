@@ -8,8 +8,9 @@
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
-import {codeReviewProvider, repositoryInfo} from './codeReview/CodeReviewInfo';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
+import {repositoryInfo} from './serverAPIState';
 import {initialParams} from './urlParams';
 import {VSCodeBadge, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';

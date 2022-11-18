@@ -5,33 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffId, DiffSummary, PageVisibility, RepoInfo, Result} from '../types';
+import type {DiffId, DiffSummary, PageVisibility, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
+import {repositoryInfo} from '../serverAPIState';
 // @fb-only
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom, selector, selectorFamily} from 'recoil';
 import {debounce} from 'shared/debounce';
-
-export const repositoryInfo = atom<RepoInfo | null>({
-  key: 'repositoryInfo',
-  default: null,
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('repoInfo', event => {
-        setSelf(event.info);
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onConnectOrReconnect(() =>
-        serverAPI.postMessage({
-          type: 'requestRepoInfo',
-        }),
-      ),
-  ],
-});
 
 export const codeReviewProvider = selector<UICodeReviewProvider | null>({
   key: 'codeReviewProvider',

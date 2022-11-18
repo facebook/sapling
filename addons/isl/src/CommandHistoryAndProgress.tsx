@@ -10,9 +10,8 @@ import type {ValidatedRepoInfo} from './types';
 
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
-import {repositoryInfo} from './codeReview/CodeReviewInfo';
 import {t} from './i18n';
-import {operationList, queuedOperations} from './serverAPIState';
+import {operationList, queuedOperations, repositoryInfo} from './serverAPIState';
 import {CommandRunner} from './types';
 import {useRecoilValue} from 'recoil';
 

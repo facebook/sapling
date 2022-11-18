@@ -12,11 +12,10 @@ import type {ReactNode} from 'react';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
-import {repositoryInfo} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
-import {useRunOperation} from './serverAPIState';
+import {repositoryInfo, useRunOperation} from './serverAPIState';
 import {themeState} from './theme';
 import {
   VSCodeButton,

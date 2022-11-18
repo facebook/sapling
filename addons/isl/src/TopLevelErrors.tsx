@@ -9,9 +9,10 @@ import type {MessageBusStatus} from './MessageBus';
 
 import {ErrorNotice} from './ErrorNotice';
 import messageBus from './MessageBus';
-import {allDiffSummaries, repositoryInfo} from './codeReview/CodeReviewInfo';
+import {allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import platform from './platform';
+import {repositoryInfo} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useEffect, useState} from 'react';
 import {useRecoilValue} from 'recoil';
