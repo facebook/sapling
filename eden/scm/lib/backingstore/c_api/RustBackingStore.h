@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<309b1270697ee5617db7d9451c3f6aa8>>
+ * @generated SignedSource<<c37bbeca9e8fe2789b4bbbe60517606d>>
  *
  */
 
@@ -17,8 +17,8 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <memory>
-#include <functional>
 #include <string_view>
 #include <folly/Range.h>
 
@@ -173,18 +173,23 @@ namespace sapling {
 // struct. This is the only way to use the returned `CFallibleBase` from
 // Rust, and the user must provide a `Deleter` to correctly free the pointer
 // returned from Rust.
-template <typename T, typename Deleter = std::function<void(T*)>>
+template <typename T, void(*dtor)(T*)>
 class CFallible {
 public:
-  CFallible(CFallibleBase&& base, Deleter deleter)
-      : ptr_(reinterpret_cast<T*>(base.value), deleter), error_(base.error) {}
+  struct Deleter {
+    void operator()(T* ptr) {
+      dtor(ptr);
+    }
+  };
+  using Ptr = std::unique_ptr<T, Deleter>;
+
+  explicit CFallible(CFallibleBase&& base)
+    : ptr_{reinterpret_cast<T*>(base.value)}, error_{base.error} {}
 
   ~CFallible() {
-    if (error_ != nullptr) {
+    if (error_) {
       sapling_cfallible_free_error(error_);
     }
-
-    unwrap();
   }
 
   bool isError() const {
@@ -199,12 +204,12 @@ public:
     return ptr_.get();
   }
 
-  std::unique_ptr<T, Deleter> unwrap() {
+  Ptr unwrap() {
     return std::move(ptr_);
   }
 
 private:
-  std::unique_ptr<T, std::function<void(T*)>> ptr_;
+  Ptr ptr_;
   char* error_;
 };
 

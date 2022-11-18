@@ -69,10 +69,9 @@ class HgNativeBackingStore {
   void flush();
 
  private:
-  std::unique_ptr<
+  sapling::CFallible<
       sapling::BackingStore,
-      std::function<void(sapling::BackingStore*)>>
-      store_;
+      sapling::sapling_backingstore_free>::Ptr store_;
 };
 
 } // namespace facebook::eden

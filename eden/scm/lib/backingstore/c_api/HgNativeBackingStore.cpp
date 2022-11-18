@@ -119,9 +119,8 @@ void getTreeBatchCallback(
 HgNativeBackingStore::HgNativeBackingStore(
     std::string_view repository,
     const BackingStoreOptions& options) {
-  CFallible<BackingStore> store(
-      sapling_backingstore_new(repository, &options),
-      sapling_backingstore_free);
+  CFallible<BackingStore, sapling_backingstore_free> store{
+      sapling_backingstore_new(repository, &options)};
 
   if (store.isError()) {
     throw std::runtime_error(store.getError());
@@ -136,9 +135,8 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
     bool local) {
   XLOG(DBG7) << "Importing blob name=" << name.data()
              << " node=" << folly::hexlify(node) << " from hgcache";
-  CFallible<CBytes> result(
-      sapling_backingstore_get_blob(store_.get(), name, node, local),
-      sapling_cbytes_free);
+  CFallible<CBytes, sapling_cbytes_free> result{
+      sapling_backingstore_get_blob(store_.get(), name, node, local)};
 
   if (result.isError()) {
     XLOG(DBG5) << "Error while getting blob name=" << name.data()
@@ -155,9 +153,8 @@ std::shared_ptr<FileAuxData> HgNativeBackingStore::getBlobMetadata(
     bool local) {
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
-  CFallible<FileAuxData> result(
-      sapling_backingstore_get_file_aux(store_.get(), node, local),
-      sapling_file_aux_free);
+  CFallible<FileAuxData, sapling_file_aux_free> result{
+      sapling_backingstore_get_file_aux(store_.get(), node, local)};
 
   if (result.isError()) {
     XLOG(DBG5) << "Error while getting blob metadata"
@@ -205,8 +202,8 @@ void HgNativeBackingStore::getBlobMetadataBatch(
       count,
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<FileAuxData> result(
-            std::move(raw_result), sapling_file_aux_free);
+        CFallible<FileAuxData, sapling_file_aux_free> result{
+            std::move(raw_result)};
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -270,7 +267,7 @@ void HgNativeBackingStore::getBlobBatch(
       count,
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<CBytes> result(std::move(raw_result), sapling_cbytes_free);
+        CFallible<CBytes, sapling_cbytes_free> result{std::move(raw_result)};
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -331,7 +328,7 @@ void HgNativeBackingStore::getTreeBatch(
       count,
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<Tree> result(std::move(raw_result), sapling_tree_free);
+        CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -364,9 +361,8 @@ std::shared_ptr<Tree> HgNativeBackingStore::getTree(
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
 
-  CFallible<Tree> manifest(
-      sapling_backingstore_get_tree(store_.get(), node, local),
-      sapling_tree_free);
+  CFallible<Tree, sapling_tree_free> manifest{
+      sapling_backingstore_get_tree(store_.get(), node, local)};
 
   if (manifest.isError()) {
     XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
