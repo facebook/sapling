@@ -11,6 +11,10 @@
 
 #include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
 
+namespace {
+
+using namespace sapling;
+
 TEST(CBytes, returns_hello_world) {
   auto result = rust_test_cbytes();
   folly::ByteRange expected = folly::StringPiece("hello world");
@@ -18,3 +22,5 @@ TEST(CBytes, returns_hello_world) {
 
   EXPECT_EQ(resultBytes, expected);
 }
+
+} // namespace

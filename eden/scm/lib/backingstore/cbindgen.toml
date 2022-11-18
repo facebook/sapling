@@ -21,20 +21,26 @@ header = """/*
 
 trailer = """
 
-// Some Rust functions will have the return type `RustCFallibleBase`, and we
+namespace sapling {
+
+// Some Rust functions will have the return type `CFallibleBase`, and we
 // have this convenient struct to help C++ code to consume the returned
-// struct. This is the only way to use the returned `RustCFallibleBase` from
+// struct. This is the only way to use the returned `CFallibleBase` from
 // Rust, and the user must provide a `Deleter` to correctly free the pointer
 // returned from Rust.
 template <typename T, typename Deleter = std::function<void(T*)>>
-class RustCFallible {
-private:
-  std::unique_ptr<T, std::function<void(T*)>> ptr_;
-  char* error_;
-
+class CFallible {
 public:
-  RustCFallible(RustCFallibleBase&& base, Deleter deleter)
+  CFallible(CFallibleBase&& base, Deleter deleter)
       : ptr_(reinterpret_cast<T*>(base.value), deleter), error_(base.error) {}
+
+  ~CFallible() {
+    if (error_ != nullptr) {
+      rust_cfallible_free_error(error_);
+    }
+
+    unwrap();
+  }
 
   bool isError() const {
     return error_ != nullptr;
@@ -52,16 +58,15 @@ public:
     return std::move(ptr_);
   }
 
-  ~RustCFallible() {
-    if (error_ != nullptr) {
-      rust_cfallible_free_error(error_);
-    }
-
-    unwrap();
-  }
+private:
+  std::unique_ptr<T, std::function<void(T*)>> ptr_;
+  char* error_;
 };
+
+}
 """
 
+namespace = "sapling"
 pragma_once = true
 no_includes = true # avoid iostream
 sys_includes = [
@@ -72,7 +77,6 @@ sys_includes = [
 ]
 
 [export]
-prefix= "Rust"
 exclude = ["CFallible"]
 include = ["Tree", "TreeEntry", "TreeEntryType"]
 
@@ -91,8 +95,8 @@ include = ["Tree", "TreeEntry", "TreeEntryType"]
 """
 
 "Slice" = """
-  RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
+  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
     : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
-  RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
+  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
     : ptr{range.data()}, len{range.size()} {}
 """

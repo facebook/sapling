@@ -25,15 +25,15 @@
 namespace facebook::eden {
 
 namespace {
-TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
+TreeEntryType fromRawTreeEntryType(sapling::TreeEntryType type) {
   switch (type) {
-    case RustTreeEntryType::RegularFile:
+    case sapling::TreeEntryType::RegularFile:
       return TreeEntryType::REGULAR_FILE;
-    case RustTreeEntryType::Tree:
+    case sapling::TreeEntryType::Tree:
       return TreeEntryType::TREE;
-    case RustTreeEntryType::ExecutableFile:
+    case sapling::TreeEntryType::ExecutableFile:
       return TreeEntryType::EXECUTABLE_FILE;
-    case RustTreeEntryType::Symlink:
+    case sapling::TreeEntryType::Symlink:
       return TreeEntryType::SYMLINK;
   }
   EDEN_BUG() << "unknown tree entry type " << static_cast<uint32_t>(type)
@@ -41,7 +41,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 }
 
 Tree::value_type fromRawTreeEntry(
-    RustTreeEntry entry,
+    sapling::TreeEntry entry,
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat) {
   std::optional<uint64_t> size;
@@ -67,7 +67,7 @@ Tree::value_type fromRawTreeEntry(
 }
 
 std::unique_ptr<Tree> fromRawTree(
-    const RustTree* tree,
+    const sapling::Tree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat) {
@@ -182,7 +182,7 @@ void HgDatapackStore::getTreeBatch(
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
       [hgObjectIdFormat, &requests, &importRequests, &requestsWatches](
-          size_t index, std::shared_ptr<RustTree> content) mutable {
+          size_t index, std::shared_ptr<sapling::Tree> content) mutable {
         XLOGF(
             DBG4,
             "Imported tree name={} node={}",

@@ -17,17 +17,19 @@
 
 namespace facebook::eden {
 
+using namespace sapling;
+
 namespace {
 /**
- * Convert a `RustCBytes` into `folly::IOBuf` without copying the underlying
+ * Convert a `CBytes` into `folly::IOBuf` without copying the underlying
  * data.
  */
-std::unique_ptr<folly::IOBuf> bytesToIOBuf(RustCBytes* bytes) {
+std::unique_ptr<folly::IOBuf> bytesToIOBuf(CBytes* bytes) {
   return folly::IOBuf::takeOwnership(
       reinterpret_cast<void*>(bytes->ptr),
       bytes->len,
       [](void* /* buf */, void* userData) {
-        rust_cbytes_free(reinterpret_cast<RustCBytes*>(userData));
+        rust_cbytes_free(reinterpret_cast<CBytes*>(userData));
       },
       reinterpret_cast<void*>(bytes));
 }
@@ -41,8 +43,8 @@ std::unique_ptr<folly::IOBuf> bytesToIOBuf(RustCBytes* bytes) {
  */
 template <typename Fn>
 void getBlobBatchCallback(
-    RustBackingStore* store,
-    RustRequest* request,
+    BackingStore* store,
+    Request* request,
     uintptr_t size,
     bool local,
     Fn&& fn) {
@@ -54,7 +56,7 @@ void getBlobBatchCallback(
       // We need to take address of the function, not to forward it.
       // @lint-ignore CLANGTIDY
       &fn,
-      [](void* fn, size_t index, RustCFallibleBase result) {
+      [](void* fn, size_t index, CFallibleBase result) {
         (*static_cast<Fn*>(fn))(index, result);
       });
 }
@@ -68,8 +70,8 @@ void getBlobBatchCallback(
  */
 template <typename Fn>
 void getBlobMetadataBatchCallback(
-    RustBackingStore* store,
-    RustRequest* request,
+    BackingStore* store,
+    Request* request,
     uintptr_t size,
     bool local,
     Fn&& fn) {
@@ -81,7 +83,7 @@ void getBlobMetadataBatchCallback(
       // We need to take address of the function, not to forward it.
       // @lint-ignore CLANGTIDY
       &fn,
-      [](void* fn, size_t index, RustCFallibleBase result) {
+      [](void* fn, size_t index, CFallibleBase result) {
         (*static_cast<Fn*>(fn))(index, result);
       });
 }
@@ -95,8 +97,8 @@ void getBlobMetadataBatchCallback(
  */
 template <typename Fn>
 void getTreeBatchCallback(
-    RustBackingStore* store,
-    RustRequest* request,
+    BackingStore* store,
+    Request* request,
     uintptr_t size,
     bool local,
     Fn&& fn) {
@@ -108,7 +110,7 @@ void getTreeBatchCallback(
       // We need to take address of the function, not to forward it.
       // @lint-ignore CLANGTIDY
       &fn,
-      [](void* fn, size_t index, RustCFallibleBase result) {
+      [](void* fn, size_t index, CFallibleBase result) {
         (*static_cast<Fn*>(fn))(index, result);
       });
 }
@@ -117,7 +119,7 @@ void getTreeBatchCallback(
 HgNativeBackingStore::HgNativeBackingStore(
     std::string_view repository,
     const BackingStoreOptions& options) {
-  RustCFallible<RustBackingStore> store(
+  CFallible<BackingStore> store(
       rust_backingstore_new(repository, &options), rust_backingstore_free);
 
   if (store.isError()) {
@@ -133,7 +135,7 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
     bool local) {
   XLOG(DBG7) << "Importing blob name=" << name.data()
              << " node=" << folly::hexlify(node) << " from hgcache";
-  RustCFallible<RustCBytes> result(
+  CFallible<CBytes> result(
       rust_backingstore_get_blob(store_.get(), name, node, local),
       rust_cbytes_free);
 
@@ -147,12 +149,12 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
   return bytesToIOBuf(result.unwrap().release());
 }
 
-std::shared_ptr<RustFileAuxData> HgNativeBackingStore::getBlobMetadata(
+std::shared_ptr<FileAuxData> HgNativeBackingStore::getBlobMetadata(
     folly::ByteRange node,
     bool local) {
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
-  RustCFallible<RustFileAuxData> result(
+  CFallible<FileAuxData> result(
       rust_backingstore_get_file_aux(store_.get(), node, local),
       rust_file_aux_free);
 
@@ -169,19 +171,19 @@ std::shared_ptr<RustFileAuxData> HgNativeBackingStore::getBlobMetadata(
 void HgNativeBackingStore::getBlobMetadataBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
-    std::function<void(size_t, std::shared_ptr<RustFileAuxData>)>&& resolve) {
+    std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve) {
   size_t count = requests.size();
 
   XLOG(DBG7) << "Import blob metadatas with size:" << count;
 
-  std::vector<RustRequest> raw_requests;
+  std::vector<Request> raw_requests;
   raw_requests.reserve(count);
 
   for (auto& request : requests) {
     auto& name = request.first;
     auto& node = request.second;
 
-    raw_requests.emplace_back(RustRequest{
+    raw_requests.emplace_back(Request{
         name.data(),
         name.size(),
         node.data(),
@@ -201,8 +203,8 @@ void HgNativeBackingStore::getBlobMetadataBatch(
       raw_requests.data(),
       count,
       local,
-      [resolve, requests, count](size_t index, RustCFallibleBase raw_result) {
-        RustCFallible<RustFileAuxData> result(
+      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+        CFallible<FileAuxData> result(
             std::move(raw_result), rust_file_aux_free);
 
         if (result.isError()) {
@@ -239,14 +241,14 @@ void HgNativeBackingStore::getBlobBatch(
 
   XLOG(DBG7) << "Import blobs with size:" << count;
 
-  std::vector<RustRequest> raw_requests;
+  std::vector<Request> raw_requests;
   raw_requests.reserve(count);
 
   for (auto& request : requests) {
     auto& name = request.first;
     auto& node = request.second;
 
-    raw_requests.emplace_back(RustRequest{
+    raw_requests.emplace_back(Request{
         name.data(),
         name.size(),
         node.data(),
@@ -266,9 +268,8 @@ void HgNativeBackingStore::getBlobBatch(
       raw_requests.data(),
       count,
       local,
-      [resolve, requests, count](size_t index, RustCFallibleBase raw_result) {
-        RustCFallible<RustCBytes> result(
-            std::move(raw_result), rust_cbytes_free);
+      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+        CFallible<CBytes> result(std::move(raw_result), rust_cbytes_free);
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -299,16 +300,16 @@ void HgNativeBackingStore::getBlobBatch(
 void HgNativeBackingStore::getTreeBatch(
     const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
     bool local,
-    std::function<void(size_t, std::shared_ptr<RustTree>)>&& resolve) {
+    std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve) {
   size_t count = requests.size();
 
   XLOG(DBG7) << "Import batch of trees with size:" << count;
 
-  std::vector<RustRequest> raw_requests;
+  std::vector<Request> raw_requests;
   raw_requests.reserve(count);
 
   for (auto& [name, node] : requests) {
-    raw_requests.emplace_back(RustRequest{
+    raw_requests.emplace_back(Request{
         name.data(),
         name.size(),
         node.data(),
@@ -328,8 +329,8 @@ void HgNativeBackingStore::getTreeBatch(
       raw_requests.data(),
       count,
       local,
-      [resolve, requests, count](size_t index, RustCFallibleBase raw_result) {
-        RustCFallible<RustTree> result(std::move(raw_result), rust_tree_free);
+      [resolve, requests, count](size_t index, CFallibleBase raw_result) {
+        CFallible<Tree> result(std::move(raw_result), rust_tree_free);
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -356,13 +357,13 @@ void HgNativeBackingStore::getTreeBatch(
       });
 }
 
-std::shared_ptr<RustTree> HgNativeBackingStore::getTree(
+std::shared_ptr<Tree> HgNativeBackingStore::getTree(
     folly::ByteRange node,
     bool local) {
   XLOG(DBG7) << "Importing tree node=" << folly::hexlify(node)
              << " from hgcache";
 
-  RustCFallible<RustTree> manifest(
+  CFallible<Tree> manifest(
       rust_backingstore_get_tree(store_.get(), node, local), rust_tree_free);
 
   if (manifest.isError()) {

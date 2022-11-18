@@ -19,7 +19,7 @@ class IOBuf;
 
 namespace facebook::eden {
 
-using BackingStoreOptions = RustBackingStoreOptions;
+using BackingStoreOptions = sapling::BackingStoreOptions;
 
 class HgNativeBackingStore {
  public:
@@ -30,7 +30,7 @@ class HgNativeBackingStore {
   std::unique_ptr<folly::IOBuf>
   getBlob(folly::ByteRange name, folly::ByteRange node, bool local);
 
-  std::shared_ptr<RustFileAuxData> getBlobMetadata(
+  std::shared_ptr<sapling::FileAuxData> getBlobMetadata(
       folly::ByteRange node,
       bool local);
 
@@ -38,7 +38,8 @@ class HgNativeBackingStore {
       const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
           requests,
       bool local,
-      std::function<void(size_t, std::shared_ptr<RustFileAuxData>)>&& resolve);
+      std::function<void(size_t, std::shared_ptr<sapling::FileAuxData>)>&&
+          resolve);
 
   /**
    * Imports a list of files from Rust contentstore. `names` and `nodes` are
@@ -61,14 +62,16 @@ class HgNativeBackingStore {
       const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
           requests,
       bool local,
-      std::function<void(size_t, std::shared_ptr<RustTree>)>&& resolve);
+      std::function<void(size_t, std::shared_ptr<sapling::Tree>)>&& resolve);
 
-  std::shared_ptr<RustTree> getTree(folly::ByteRange node, bool local);
+  std::shared_ptr<sapling::Tree> getTree(folly::ByteRange node, bool local);
 
   void flush();
 
  private:
-  std::unique_ptr<RustBackingStore, std::function<void(RustBackingStore*)>>
+  std::unique_ptr<
+      sapling::BackingStore,
+      std::function<void(sapling::BackingStore*)>>
       store_;
 };
 

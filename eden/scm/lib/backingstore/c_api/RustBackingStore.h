@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<575ecf8d635340626f7fbca17026938a>>
+ * @generated SignedSource<<7646d3cd603d2156a0adbe52285212a3>>
  *
  */
 
@@ -22,50 +22,52 @@
 #include <string_view>
 #include <folly/Range.h>
 
-enum class RustTreeEntryType : uint8_t {
+namespace sapling {
+
+enum class TreeEntryType : uint8_t {
   Tree,
   RegularFile,
   ExecutableFile,
   Symlink,
 };
 
-struct RustBackingStore;
+struct BackingStore;
 
 template<typename T = void>
-struct RustVec;
+struct Vec;
 
 /// The monomorphized version of `CFallible` used solely because MSVC
 /// does not allow returning template functions from extern "C" functions.
-struct RustCFallibleBase {
+struct CFallibleBase {
   void *value;
   char *error;
 };
 
 template<typename T>
-struct RustSlice {
+struct Slice {
   const T *ptr;
   size_t len;
-  RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
+  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, std::string_view> sv) noexcept
     : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
-  RustSlice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
+  Slice(std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, uint8_t>, folly::ByteRange> range) noexcept
     : ptr{range.data()}, len{range.size()} {}
 };
 
-struct RustBackingStoreOptions {
+struct BackingStoreOptions {
   bool aux_data;
   bool allow_retries;
 };
 
-struct RustRequest {
+struct Request {
   const uint8_t *path;
   uintptr_t length;
   const uint8_t *node;
 };
 
-struct RustCBytes {
+struct CBytes {
   uint8_t *ptr;
   size_t len;
-  RustVec<uint8_t> *vec;
+  Vec<uint8_t> *vec;
   folly::ByteRange asByteRange() const {
     return folly::ByteRange(ptr, len);
   }
@@ -75,109 +77,112 @@ struct RustCBytes {
   }
 };
 
-struct RustTreeEntry {
-  RustCBytes hash;
-  RustCBytes name;
-  RustTreeEntryType ttype;
+struct TreeEntry {
+  CBytes hash;
+  CBytes name;
+  TreeEntryType ttype;
   uint64_t *size;
-  RustCBytes *content_sha1;
+  CBytes *content_sha1;
 };
 
-struct RustTree {
-  const RustTreeEntry *entries;
+struct Tree {
+  const TreeEntry *entries;
   /// This makes sure `entries` above is pointing to a valid memory.
-  RustVec<RustTreeEntry> *entries_ptr;
+  Vec<TreeEntry> *entries_ptr;
   uintptr_t length;
-  RustCBytes hash;
+  CBytes hash;
 };
 
-struct RustFileAuxData {
+struct FileAuxData {
   uint64_t total_size;
-  RustCBytes content_id;
-  RustCBytes content_sha1;
-  RustCBytes content_sha256;
+  CBytes content_id;
+  CBytes content_sha1;
+  CBytes content_sha256;
 };
 
 extern "C" {
 
-RustCFallibleBase rust_backingstore_new(RustSlice<uint8_t> repository,
-                                        const RustBackingStoreOptions *options);
+CFallibleBase rust_backingstore_new(Slice<uint8_t> repository, const BackingStoreOptions *options);
 
-void rust_backingstore_free(RustBackingStore *store);
+void rust_backingstore_free(BackingStore *store);
 
-RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
-                                             RustSlice<uint8_t> name,
-                                             RustSlice<uint8_t> node,
-                                             bool local);
+CFallibleBase rust_backingstore_get_blob(BackingStore *store,
+                                         Slice<uint8_t> name,
+                                         Slice<uint8_t> node,
+                                         bool local);
 
-void rust_backingstore_get_blob_batch(RustBackingStore *store,
-                                      const RustRequest *requests,
+void rust_backingstore_get_blob_batch(BackingStore *store,
+                                      const Request *requests,
                                       uintptr_t size,
                                       bool local,
                                       void *data,
-                                      void (*resolve)(void*, uintptr_t, RustCFallibleBase));
+                                      void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
-                                             RustSlice<uint8_t> node,
-                                             bool local);
+CFallibleBase rust_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
 
-void rust_backingstore_get_tree_batch(RustBackingStore *store,
-                                      const RustRequest *requests,
+void rust_backingstore_get_tree_batch(BackingStore *store,
+                                      const Request *requests,
                                       uintptr_t size,
                                       bool local,
                                       void *data,
-                                      void (*resolve)(void*, uintptr_t, RustCFallibleBase));
+                                      void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-RustCFallibleBase rust_backingstore_get_file_aux(RustBackingStore *store,
-                                                 RustSlice<uint8_t> node,
-                                                 bool local);
+CFallibleBase rust_backingstore_get_file_aux(BackingStore *store, Slice<uint8_t> node, bool local);
 
-void rust_backingstore_get_file_aux_batch(RustBackingStore *store,
-                                          const RustRequest *requests,
+void rust_backingstore_get_file_aux_batch(BackingStore *store,
+                                          const Request *requests,
                                           uintptr_t size,
                                           bool local,
                                           void *data,
-                                          void (*resolve)(void*, uintptr_t, RustCFallibleBase));
+                                          void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-void rust_tree_free(RustTree *tree);
+void rust_tree_free(Tree *tree);
 
-void rust_file_aux_free(RustFileAuxData *aux);
+void rust_file_aux_free(FileAuxData *aux);
 
-void rust_backingstore_flush(RustBackingStore *store);
+void rust_backingstore_flush(BackingStore *store);
 
-void rust_cbytes_free(RustCBytes *vec);
+void rust_cbytes_free(CBytes *vec);
 
 void rust_cfallible_free_error(char *ptr);
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.
-RustCFallibleBase rust_test_cfallible_ok();
+CFallibleBase rust_test_cfallible_ok();
 
 void rust_test_cfallible_ok_free(uint8_t *val);
 
 /// Returns a `CFallible` with error message "context: failure!". This function is intended to be called
 /// from C++ tests.
-RustCFallibleBase rust_test_cfallible_err();
+CFallibleBase rust_test_cfallible_err();
 
-RustCBytes rust_test_cbytes();
+CBytes rust_test_cbytes();
 
 } // extern "C"
 
+} // namespace sapling
 
-// Some Rust functions will have the return type `RustCFallibleBase`, and we
+
+namespace sapling {
+
+// Some Rust functions will have the return type `CFallibleBase`, and we
 // have this convenient struct to help C++ code to consume the returned
-// struct. This is the only way to use the returned `RustCFallibleBase` from
+// struct. This is the only way to use the returned `CFallibleBase` from
 // Rust, and the user must provide a `Deleter` to correctly free the pointer
 // returned from Rust.
 template <typename T, typename Deleter = std::function<void(T*)>>
-class RustCFallible {
-private:
-  std::unique_ptr<T, std::function<void(T*)>> ptr_;
-  char* error_;
-
+class CFallible {
 public:
-  RustCFallible(RustCFallibleBase&& base, Deleter deleter)
+  CFallible(CFallibleBase&& base, Deleter deleter)
       : ptr_(reinterpret_cast<T*>(base.value), deleter), error_(base.error) {}
+
+  ~CFallible() {
+    if (error_ != nullptr) {
+      rust_cfallible_free_error(error_);
+    }
+
+    unwrap();
+  }
 
   bool isError() const {
     return error_ != nullptr;
@@ -195,11 +200,9 @@ public:
     return std::move(ptr_);
   }
 
-  ~RustCFallible() {
-    if (error_ != nullptr) {
-      rust_cfallible_free_error(error_);
-    }
-
-    unwrap();
-  }
+private:
+  std::unique_ptr<T, std::function<void(T*)>> ptr_;
+  char* error_;
 };
+
+}

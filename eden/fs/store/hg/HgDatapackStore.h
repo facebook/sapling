@@ -27,7 +27,7 @@ class Tree;
 
 class HgDatapackStore {
  public:
-  using Options = RustBackingStoreOptions;
+  using Options = sapling::BackingStoreOptions;
 
   HgDatapackStore(
       AbsolutePathPiece repository,
