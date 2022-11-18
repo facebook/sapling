@@ -5,23 +5,18 @@
  * GNU General Public License version 2.
  */
 
-mod contentstores;
 mod scmstores;
 
 use std::path::Path;
 
-use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::ConfigExt;
 use manifest::List;
 use revisionstore::scmstore::file::FileAuxData;
 use types::Key;
 
-use crate::backingstore::contentstores::BackingContentStores;
 use crate::backingstore::scmstores::BackingScmStores;
 
 pub enum BackingStore {
-    Old(BackingContentStores),
     New(BackingScmStores),
 }
 
@@ -42,18 +37,13 @@ impl BackingStore {
         let ident = identity::must_sniff_dir(root)?;
         let dot_path = root.join(ident.dot_dir());
 
-        Ok(if config.get_or_default("scmstore", "backingstore")? {
-            New(BackingScmStores::new(&config, &dot_path, aux_data)?)
-        } else {
-            Old(BackingContentStores::new(&config, &dot_path)?)
-        })
+        Ok(New(BackingScmStores::new(&config, &dot_path, aux_data)?))
     }
 
     /// Reads file from blobstores. When `local_only` is true, this function will only read blobs
     /// from on disk stores.
     pub fn get_blob(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
         match self {
-            Old(stores) => stores.get_blob(path, node, local_only),
             New(stores) => stores.get_blob(path, node, local_only),
         }
     }
@@ -67,14 +57,12 @@ impl BackingStore {
         F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
     {
         match self {
-            Old(stores) => stores.get_blob_batch(keys, local_only, resolve),
             New(stores) => stores.get_blob_batch(keys, local_only, resolve),
         }
     }
 
     pub fn get_tree(&self, node: &[u8], local_only: bool) -> Result<Option<List>> {
         match self {
-            Old(stores) => stores.get_tree(node, local_only),
             New(stores) => stores.get_tree(node, local_only),
         }
     }
@@ -88,16 +76,12 @@ impl BackingStore {
         F: Fn(usize, Result<Option<List>>) -> (),
     {
         match self {
-            Old(stores) => stores.get_tree_batch(keys, local_only, resolve),
             New(stores) => stores.get_tree_batch(keys, local_only, resolve),
         }
     }
 
     pub fn get_file_aux(&self, node: &[u8], local_only: bool) -> Result<Option<FileAuxData>> {
         match self {
-            Old(_stores) => Err(anyhow!(
-                "get_file_aux is not supported on ContentStore-based BackingStores"
-            )),
             New(stores) => stores.get_file_aux(node, local_only),
         }
     }
@@ -107,16 +91,6 @@ impl BackingStore {
         F: Fn(usize, Result<Option<FileAuxData>>) -> (),
     {
         match self {
-            Old(_stores) => {
-                for idx in 0..keys.len() {
-                    resolve(
-                        idx,
-                        Err(anyhow!(
-                            "get_file_aux_batch is not supported on ContentStore-based BackingStores"
-                        )),
-                    )
-                }
-            }
             New(stores) => stores.get_file_aux_batch(keys, local_only, resolve),
         }
     }
@@ -125,7 +99,6 @@ impl BackingStore {
     /// the disk.
     pub fn flush(&self) {
         match self {
-            Old(stores) => stores.flush(),
             New(stores) => stores.flush(),
         }
     }
