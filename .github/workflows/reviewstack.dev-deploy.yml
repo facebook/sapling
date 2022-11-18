@@ -1,0 +1,45 @@
+name: Publish https://reviewstack.dev
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    # Our build container already has Node, Yarn, and Python installed.
+    container:
+      image: ${{ format('ghcr.io/{0}/build_ubuntu_22_04:latest', github.repository) }}
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        working-directory: ./addons
+        run: yarn install --prefer-offline
+
+      # Build codegen and then do some sanity checks so we don't push the site
+      # when the tests are broken.
+      - name: GraphQL/TextMate codegen
+        working-directory: ./addons/reviewstack
+        run: yarn codegen
+      - name: ESLint
+        working-directory: ./addons/reviewstack
+        run: yarn eslint
+      - name: Unit tests
+        working-directory: ./addons/reviewstack
+        run: yarn test --watchAll=false
+      - name: Build the static site
+        working-directory: ./addons/reviewstack.dev
+        run: yarn release
+
+      # Push to the release branch.
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: reviewstack.dev-prod
+          publish_dir: ./addons/reviewstack.dev/build
