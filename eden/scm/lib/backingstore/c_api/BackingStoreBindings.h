@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<e7e0f1ba771fdf548a05ee800377332c>>
+ * @generated SignedSource<<cddc600418f13b1baaf93790a5117e58>>
  *
  */
 
@@ -35,6 +35,26 @@ struct BackingStore;
 
 template<typename T = void>
 struct Vec;
+
+struct CBytes {
+  uint8_t *ptr;
+  size_t len;
+  Vec<uint8_t> *vec;
+  folly::ByteRange asByteRange() const {
+    return folly::ByteRange(ptr, len);
+  }
+
+  operator folly::ByteRange() const {
+    return asByteRange();
+  }
+};
+
+struct FileAuxData {
+  uint64_t total_size;
+  CBytes content_id;
+  CBytes content_sha1;
+  CBytes content_sha256;
+};
 
 /// The monomorphized version of `CFallible` used solely because MSVC
 /// does not allow returning template functions from extern "C" functions.
@@ -66,19 +86,6 @@ struct Request {
   const uint8_t *node;
 };
 
-struct CBytes {
-  uint8_t *ptr;
-  size_t len;
-  Vec<uint8_t> *vec;
-  folly::ByteRange asByteRange() const {
-    return folly::ByteRange(ptr, len);
-  }
-
-  operator folly::ByteRange() const {
-    return asByteRange();
-  }
-};
-
 struct TreeEntry {
   CBytes hash;
   CBytes name;
@@ -95,14 +102,9 @@ struct Tree {
   CBytes hash;
 };
 
-struct FileAuxData {
-  uint64_t total_size;
-  CBytes content_id;
-  CBytes content_sha1;
-  CBytes content_sha256;
-};
-
 extern "C" {
+
+void sapling_file_aux_free(FileAuxData *aux);
 
 CFallibleBase sapling_backingstore_new(Slice<uint8_t> repository,
                                        const BackingStoreOptions *options);
@@ -138,10 +140,6 @@ void sapling_backingstore_get_file_aux_batch(BackingStore *store,
                                              void *data,
                                              void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-void sapling_tree_free(Tree *tree);
-
-void sapling_file_aux_free(FileAuxData *aux);
-
 void sapling_backingstore_flush(BackingStore *store);
 
 void sapling_cbytes_free(CBytes *vec);
@@ -159,6 +157,8 @@ void sapling_test_cfallible_ok_free(uint8_t *val);
 CFallibleBase sapling_test_cfallible_err();
 
 CBytes sapling_test_cbytes();
+
+void sapling_tree_free(Tree *tree);
 
 } // extern "C"
 

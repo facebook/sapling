@@ -166,20 +166,6 @@ pub extern "C" fn sapling_backingstore_get_file_aux_batch(
 }
 
 #[no_mangle]
-pub extern "C" fn sapling_tree_free(tree: *mut Tree) {
-    assert!(!tree.is_null());
-    let tree = unsafe { Box::from_raw(tree) };
-    drop(tree);
-}
-
-#[no_mangle]
-pub extern "C" fn sapling_file_aux_free(aux: *mut FileAuxData) {
-    assert!(!aux.is_null());
-    let aux = unsafe { Box::from_raw(aux) };
-    drop(aux);
-}
-
-#[no_mangle]
 pub extern "C" fn sapling_backingstore_flush(store: &mut BackingStore) {
     store.flush();
 }

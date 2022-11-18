@@ -28,3 +28,10 @@ impl From<ScmStoreFileAuxData> for FileAuxData {
         }
     }
 }
+
+#[no_mangle]
+pub extern "C" fn sapling_file_aux_free(aux: *mut FileAuxData) {
+    assert!(!aux.is_null());
+    let aux = unsafe { Box::from_raw(aux) };
+    drop(aux);
+}
