@@ -10,8 +10,7 @@ import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
-import {repositoryInfo} from './serverAPIState';
-import {initialParams} from './urlParams';
+import {repositoryInfo, serverCwd} from './serverAPIState';
 import {VSCodeBadge, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {basename} from 'shared/utils';
@@ -36,13 +35,14 @@ function CwdSelectorDetails() {
   const info = useRecoilValue(repositoryInfo);
   const repoRoot = info?.type === 'success' ? info.repoRoot : null;
   const provider = useRecoilValue(codeReviewProvider);
+  const cwd = useRecoilValue(serverCwd);
   return (
     <DropdownFields title={<T>Repository Info</T>} icon="folder">
       <DropdownField title={<T>Repository root</T>}>
         <code>{repoRoot}</code>
       </DropdownField>
       <DropdownField title={<T>Current Working Directory</T>}>
-        <code>{initialParams.get('cwd')}</code>
+        <code>{cwd}</code>
       </DropdownField>
       {provider != null ? (
         <DropdownField title={<T>Code Review Provider</T>}>

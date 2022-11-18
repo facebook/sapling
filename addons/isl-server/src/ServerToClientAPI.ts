@@ -152,7 +152,11 @@ export default class ServerToClientAPI {
       case 'requestRepoInfo': {
         switch (this.currentState.type) {
           case 'repo':
-            this.postMessage({type: 'repoInfo', info: this.currentState.repo.info});
+            this.postMessage({
+              type: 'repoInfo',
+              info: this.currentState.repo.info,
+              cwd: this.currentState.cwd,
+            });
             break;
           case 'error':
             this.postMessage({type: 'repoInfo', info: this.currentState.error});

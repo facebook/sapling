@@ -336,7 +336,7 @@ export type ServerToClientMessage =
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | {type: 'fetchedCommitMessageTemplate'; template: string}
-  | {type: 'repoInfo'; info: RepoInfo}
+  | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
