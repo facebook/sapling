@@ -258,6 +258,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> id,
       bool localStoreOnly) override;
 
+  folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
+  semifuture_debugGetBlob(
+      std::unique_ptr<DebugGetScmBlobRequest> request) override;
+
   void debugGetScmBlobMetadata(
       ScmBlobMetadata& metadata,
       std::unique_ptr<std::string> mountPoint,
@@ -411,6 +415,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   std::optional<pid_t> getAndRegisterClientPid();
 
  private:
+  std::shared_ptr<EdenMount> lookupMount(MountId& mountId);
+
   ImmediateFuture<Hash20> getSHA1ForPath(
       const EdenMount& edenMount,
       RelativePath path,

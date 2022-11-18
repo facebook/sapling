@@ -43,6 +43,12 @@ class Blob {
     return contents_;
   }
 
+  const std::string asString() const {
+    auto dataBuf = contents_.cloneCoalescedAsValue();
+    return std::string{
+        reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length()};
+  }
+
   size_t getSize() const {
     return size_;
   }

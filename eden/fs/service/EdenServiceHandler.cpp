@@ -13,7 +13,7 @@
 #include <typeinfo>
 
 #include <fb303/ServiceData.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/Portability.h>
@@ -50,6 +50,7 @@
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/service/ThriftGetObjectImpl.h"
 #include "eden/fs/service/ThriftGlobImpl.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -421,6 +422,14 @@ ThriftRequestTraceEvent ThriftRequestTraceEvent::finish(
       ThriftRequestTraceEvent::FINISH, requestId, method, clientPid};
 }
 
+template <>
+struct fmt::formatter<facebook::eden::MountId> : public formatter<std::string> {
+  template <typename Context>
+  auto format(const facebook::eden::MountId& mountId, Context& ctx) const {
+    return formatter<std::string>::format(*mountId.mountPoint(), ctx);
+  }
+};
+
 namespace facebook::eden {
 
 const char* const kServiceName = "EdenFS";
@@ -511,6 +520,11 @@ EdenServiceHandler::EdenServiceHandler(
 }
 
 EdenServiceHandler::~EdenServiceHandler() = default;
+
+std::shared_ptr<EdenMount> EdenServiceHandler::lookupMount(MountId& mountId) {
+  auto mountPath = absolutePathFromThrift(*mountId.mountPoint());
+  return server_->getMount(mountPath);
+}
 
 std::unique_ptr<apache::thrift::AsyncProcessor>
 EdenServiceHandler::getProcessor() {
@@ -2849,6 +2863,92 @@ void EdenServiceHandler::debugGetScmTree(
   }
 }
 
+folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
+EdenServiceHandler::semifuture_debugGetBlob(
+    std::unique_ptr<DebugGetScmBlobRequest> request) {
+  const auto& mountid = request->mountId();
+  const auto& idStr = request->id();
+  const auto& origins = request->origins();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
+
+  auto edenMount = lookupMount(*mountid);
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
+  auto originFlags = DataFetchOriginFlags::raw(*origins);
+  auto store = edenMount->getObjectStore();
+
+  std::vector<ImmediateFuture<ScmBlobWithOrigin>> blobFutures;
+
+  if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
+    // TODO(kmancini): implement
+    blobFutures.emplace_back(
+        ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
+            edenMount,
+            id,
+            folly::Try<std::unique_ptr<Blob>>(newEdenError(
+                EdenErrorType::GENERIC_ERROR,
+                "direct fetching from object cache not yet supported.")),
+            DataFetchOrigin::MEMORY_CACHE)});
+  }
+  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
+    auto localStore = store->getLocalStore();
+    blobFutures.emplace_back(
+        localStore->getBlob(id).thenTry([edenMount, id](auto&& blob) {
+          return getBlobFromOrigin(
+              edenMount, id, std::move(blob), DataFetchOrigin::DISK_CACHE);
+        }));
+  }
+  if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
+    auto proxyHash = HgProxyHash::load(
+        store->getLocalStore().get(),
+        id,
+        "debugGetScmBlob",
+        server_->getServerState()->getStats());
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
+        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
+
+    blobFutures.emplace_back(
+        ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
+            edenMount,
+            id,
+            folly::Try<std::shared_ptr<Blob>>{
+                hgBackingStore->getHgBackingStore()
+                    .getDatapackStore()
+                    .getBlobLocal(id, proxyHash)},
+            DataFetchOrigin::LOCAL_BACKING_STORE)});
+  }
+  if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
+    // TODO(kmancini): implement
+    blobFutures.emplace_back(
+        ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
+            edenMount,
+            id,
+            folly::Try<std::unique_ptr<Blob>>(newEdenError(
+                EdenErrorType::GENERIC_ERROR,
+                "remote only fetching not yet supported.")),
+            DataFetchOrigin::REMOTE_BACKING_STORE)});
+  }
+  if (originFlags.contains(FROMWHERE_ANYWHERE)) {
+    blobFutures.emplace_back(
+        store->getBlob(id, helper->getFetchContext())
+            .thenTry([edenMount, id](auto&& blob) {
+              return getBlobFromOrigin(
+                  edenMount, id, std::move(blob), DataFetchOrigin::ANYWHERE);
+            }));
+  }
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             collectAllSafe(std::move(blobFutures))
+                 .thenValue([](std::vector<ScmBlobWithOrigin> blobs) {
+                   auto response = std::make_unique<DebugGetScmBlobResponse>();
+                   response->blobs() = std::move(blobs);
+                   return response;
+                 }))
+      .semi();
+}
+
 void EdenServiceHandler::debugGetScmBlob(
     string& data,
     unique_ptr<string> mountPoint,
@@ -2861,6 +2961,7 @@ void EdenServiceHandler::debugGetScmBlob(
 
   std::shared_ptr<const Blob> blob;
   auto store = edenMount->getObjectStore();
+
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     blob = localStore->getBlob(id).get();
