@@ -359,7 +359,7 @@ export class Repository {
    * Throws if `command` is not found.
    */
   static async getRepoInfo(command: string, logger: Logger, cwd: string): Promise<RepoInfo> {
-    const [repoRoot, dotdirFromRoot, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
+    const [repoRoot, dotdir, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
       await Promise.all([
         findRoot(command, logger, cwd).catch((err: Error) => err),
         findDotDir(command, logger, cwd),
@@ -391,22 +391,6 @@ export class Repository {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
       codeReviewSystem = {type: 'phabricator', repo};
-    }
-    // TODO: remove this once `sl root --dotdir` is available to everyone
-    let dotdir = dotdirFromRoot;
-    if (repoRoot != null && dotdir == null) {
-      // prettier-ignore
-      const candidates = [
-        // @fb-only
-        '.sl'
-      ];
-      for (const candidate of candidates) {
-        const newPath = path.join(repoRoot, candidate);
-        // eslint-disable-next-line no-await-in-loop
-        if (await exists(newPath)) {
-          dotdir = newPath;
-        }
-      }
     }
 
     if (repoRoot == null || dotdir == null) {
