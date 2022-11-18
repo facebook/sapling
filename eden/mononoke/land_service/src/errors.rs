@@ -103,7 +103,7 @@ pub(crate) fn internal_error(error: &dyn StdError) -> land_service_if::InternalE
     land_service_if::InternalError {
         reason: error.to_string(),
         backtrace: None,
-        source_chain: Vec::new(),
+        source_chain,
     }
 }
 
