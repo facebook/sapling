@@ -1,0 +1,134 @@
+version: '2.1'
+orbs:
+  macos: circleci/macos@1.0
+  gh: circleci/github-cli@2.0
+jobs:
+  build-macos-x86:
+    macos:
+      xcode: 14.1
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: set-env SAPLING_VERSION
+          command: echo "SAPLING_VERSION=$CIRCLE_TAG" >> $BASH_ENV
+          shell: bash
+      - run:
+          name: Install Python 3.8
+          command: brew install python@3.8
+      - run:
+          name: Prepare build environment
+          command: 'eden/scm/packaging/mac/prepare_environment.py \
+
+                   -s d915175bedb146e38d7a2c95e86888a60a5058a5cd21f835813d43d1372a29d9 -f openssl@1.1 \
+
+                   -s c247a261048c510b963705acfbea23b09cc193b5d4256a5d10b42d199a8f8869 -f python@3.8 \
+
+                   -t x86_64-apple-darwin \
+
+                   -r "$SAPLING_VERSION" \
+
+                   -o $(brew tap-info homebrew/core | sed -n ''2p'' | awk ''{printf $1}'')/Formula/sapling.rb'
+      - run:
+          name: Install and build Sapling bottle
+          command: brew install --build-bottle sapling -v
+      - run:
+          name: Create Sapling bottle
+          command: brew bottle sapling
+      - run:
+          name: Rename bottle to some platform specific name
+          command: mv sapling*monterey.bottle.tar.gz sapling_0.0-"$SAPLING_VERSION".monterey.bottle.tar.gz
+      - run:
+          name: List files
+          command: ls -al
+      - persist_to_workspace:
+          root: .
+          paths:
+            - "*.bottle.tar.gz"
+
+  build-macos-arm64:
+    macos:
+      xcode: 14.1
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: set-env SAPLING_VERSION
+          command: echo "SAPLING_VERSION=$CIRCLE_TAG" >> $BASH_ENV
+          shell: bash
+      - run:
+          name: Install Python 3.8
+          command: brew install python@3.8
+      - run:
+          name: Prepare build environment
+          command: 'eden/scm/packaging/mac/prepare_environment.py \
+
+                   -s c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6 -f openssl@1.1 \
+
+                   -s 3e95fbf0f18b59af7aeaa957be4499a9c521ec199f2ec2a419b8a7b9ac627a3a -f python@3.8 \
+
+                   -t aarch64-apple-darwin \
+
+                   -r "$SAPLING_VERSION" \
+
+                   -o $(brew tap-info homebrew/core | sed -n ''2p'' | awk ''{printf $1}'')/Formula/sapling.rb'
+      - run:
+          name: Install and build Sapling bottle
+          command: brew install --build-bottle sapling -v
+      - run:
+          name: Create Sapling bottle
+          command: brew bottle sapling
+      - run:
+          name: Rename bottle to some platform specific name
+          command: mv sapling*monterey.bottle.tar.gz sapling_0.0-"$SAPLING_VERSION".arm64_monterey.bottle.tar.gz
+      - run:
+          name: List files
+          command: ls -al
+      - persist_to_workspace:
+          root: .
+          paths:
+            - "*.bottle.tar.gz"
+
+  upload-artifacts:
+    docker:
+      - image: 'cimg/base:stable'
+    steps:
+      - gh/install
+      - gh/setup
+      - checkout
+      - attach_workspace:
+          at: ./releases
+      - run:
+          name: "Try to create a Github release"
+          command: bash ci/retry.sh bash ci/create-release.sh $(ci/tag-name.sh)
+      - run:
+          name: "Upload Github artifacts"
+          command: bash ci/retry.sh gh release upload --clobber $(ci/tag-name.sh) ./releases/*
+
+
+workflows:
+  verify:
+    jobs:
+      - build-macos-arm64:
+          filters:
+            tags:
+              only: /^(v.*)|(test-release-.*)$/
+            branches:
+              ignore: /.*/
+      - build-macos-x86:
+          filters:
+            tags:
+              only: /^(v.*)|(test-release-.*)$/
+            branches:
+              ignore: /.*/
+      - upload-artifacts:
+          context:
+            - GITHUB_CREDS
+          requires:
+            - build-macos-arm64
+            - build-macos-x86
+          filters:
+            tags:
+              only: /^(v.*)|(test-release-.*)$/
+            branches:
+              ignore: /.*/
