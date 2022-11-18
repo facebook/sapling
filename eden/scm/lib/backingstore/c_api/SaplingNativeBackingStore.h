@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Function.h>
 #include <folly/Range.h>
 #include <memory>
 #include <string_view>
@@ -56,21 +57,21 @@ class SaplingNativeBackingStore {
   void getTreeBatch(
       NodeIdRange requests,
       bool local,
-      std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve);
+      folly::FunctionRef<void(size_t, std::shared_ptr<Tree>)> resolve);
 
   std::unique_ptr<folly::IOBuf> getBlob(NodeId node, bool local);
 
   void getBlobBatch(
       NodeIdRange requests,
       bool local,
-      std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve);
+      folly::FunctionRef<void(size_t, std::unique_ptr<folly::IOBuf>)> resolve);
 
   std::shared_ptr<FileAuxData> getBlobMetadata(NodeId node, bool local);
 
   void getBlobMetadataBatch(
       NodeIdRange requests,
       bool local,
-      std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve);
+      folly::FunctionRef<void(size_t, std::shared_ptr<FileAuxData>)> resolve);
 
   void flush();
 
