@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<325ea5bc190eccbae3210a2914b7f539>>
+ * @generated SignedSource<<4d66f128d839634b2f11108222a141ae>>
  *
  */
 
@@ -81,8 +81,6 @@ struct BackingStoreOptions {
 };
 
 struct Request {
-  const uint8_t *path;
-  uintptr_t length;
   const uint8_t *node;
 };
 

@@ -75,11 +75,7 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
     data: *mut c_void,
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
-    let keys: Vec<Result<Key>> = requests
-        .slice()
-        .iter()
-        .map(|req| req.try_into_key())
-        .collect();
+    let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
 
     store.get_tree_batch(keys, local, |idx, result| {
         let result: Result<List> =
@@ -113,11 +109,7 @@ pub extern "C" fn sapling_backingstore_get_blob_batch(
     data: *mut c_void,
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
-    let keys: Vec<Result<Key>> = requests
-        .slice()
-        .iter()
-        .map(|req| req.try_into_key())
-        .collect();
+    let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
     store.get_blob_batch(keys, local, |idx, result| {
         let result: CFallible<CBytes> = result
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
@@ -150,11 +142,7 @@ pub extern "C" fn sapling_backingstore_get_file_aux_batch(
     data: *mut c_void,
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
-    let keys: Vec<Result<Key>> = requests
-        .slice()
-        .iter()
-        .map(|req| req.try_into_key())
-        .collect();
+    let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
 
     store.get_file_aux_batch(keys, local, |idx, result| {
         let result: Result<ScmStoreFileAuxData> =

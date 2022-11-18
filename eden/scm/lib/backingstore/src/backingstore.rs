@@ -31,8 +31,6 @@ use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
 
-use crate::utils::key_from_path_node_slice;
-
 pub struct BackingStore {
     filestore: Arc<FileStore>,
     treestore: Arc<TreeStore>,
@@ -117,7 +115,7 @@ impl BackingStore {
 
     fn get_file_attrs_batch<F>(
         &self,
-        keys: Vec<Result<Key>>,
+        keys: Vec<Key>,
         local_only: bool,
         resolve: F,
         attrs: FileAttributes,
@@ -125,17 +123,7 @@ impl BackingStore {
         F: Fn(usize, Result<Option<StoreFile>>) -> (),
     {
         // Resolve key errors
-        let requests = keys
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, key)| match key {
-                Ok(key) => Some((index, key)),
-                Err(e) => {
-                    // return early when the key is invalid
-                    resolve(index, Err(e));
-                    None
-                }
-            });
+        let requests = keys.into_iter().enumerate();
 
         // Crate key-index mapping and fail fast for duplicate keys
         let mut indexes: HashMap<Key, usize> = HashMap::new();
@@ -199,7 +187,7 @@ impl BackingStore {
     /// array. When `local_only` is enabled, this function will only check local disk for the file
     /// content.
     #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_blob_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    pub fn get_blob_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
     {
@@ -248,22 +236,12 @@ impl BackingStore {
     /// array. When `local_only` is enabled, this function will only check local disk for the file
     /// content.
     #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_tree_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    pub fn get_tree_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<List>>) -> (),
     {
         // Handle key errors
-        let requests = keys
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, key)| match key {
-                Ok(key) => Some((index, key)),
-                Err(e) => {
-                    // return early when the key is invalid
-                    resolve(index, Err(e));
-                    None
-                }
-            });
+        let requests = keys.into_iter().enumerate();
 
         // Crate key-index mapping and fail fast for duplicate keys
         let mut indexes: HashMap<Key, usize> = HashMap::new();
@@ -367,7 +345,7 @@ impl BackingStore {
         }
     }
 
-    pub fn get_file_aux_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<FileAuxData>>) -> (),
     {

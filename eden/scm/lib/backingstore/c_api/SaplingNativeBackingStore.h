@@ -20,6 +20,16 @@ class IOBuf;
 namespace sapling {
 
 /**
+ * Reference to a 20-byte hg node ID.
+ */
+using NodeId = folly::ByteRange;
+
+/**
+ * List of NodeIds used in batch requests.
+ */
+using NodeIdRange = folly::Range<const NodeId*>;
+
+/**
  * Provides a type-safe layer and a more convenient API around the raw
  * BackingStoreBindings.h C functions.
  *
@@ -38,30 +48,24 @@ class SaplingNativeBackingStore {
       std::string_view repository,
       const BackingStoreOptions& options);
 
-  std::shared_ptr<Tree> getTree(folly::ByteRange node, bool local);
+  std::shared_ptr<Tree> getTree(NodeId node, bool local);
 
   void getTreeBatch(
-      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
-          requests,
+      NodeIdRange requests,
       bool local,
       std::function<void(size_t, std::shared_ptr<Tree>)>&& resolve);
 
-  std::unique_ptr<folly::IOBuf>
-  getBlob(folly::ByteRange name, folly::ByteRange node, bool local);
+  std::unique_ptr<folly::IOBuf> getBlob(NodeId node, bool local);
 
   void getBlobBatch(
-      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
-          requests,
+      NodeIdRange requests,
       bool local,
       std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve);
 
-  std::shared_ptr<FileAuxData> getBlobMetadata(
-      folly::ByteRange node,
-      bool local);
+  std::shared_ptr<FileAuxData> getBlobMetadata(NodeId node, bool local);
 
   void getBlobMetadataBatch(
-      const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>&
-          requests,
+      NodeIdRange requests,
       bool local,
       std::function<void(size_t, std::shared_ptr<FileAuxData>)>&& resolve);
 
