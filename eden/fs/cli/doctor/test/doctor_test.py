@@ -1379,17 +1379,13 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
 Checking {checkout.path}
 <yellow>- Found problem:<reset>
 Mount point {checkout.path} has 9000000 files on disk, which may impact EdenFS performance
-Reclone your repository to improve performance, if needed: https://fburl.com/wiki/ji8ik51v
+Invalidating all non-materialized files and directories in {checkout.path}...<green>fixed<reset>
 
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Windows Users group if you need help fixing issues with EdenFS:
-https://fb.workplace.com/groups/edenfswindows
+<yellow>Successfully fixed 1 problem.<reset>
 """,
                 out.getvalue(),
             )
-            self.assertEqual(exit_code, 1)
-        else:
-            self.assertEqual(exit_code, 0)
+        self.assertEqual(exit_code, 0)
 
     def test_slow_hg_import(self) -> None:
         tmp_dir = self.make_temporary_directory()

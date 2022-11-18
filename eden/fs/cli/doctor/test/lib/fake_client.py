@@ -131,3 +131,8 @@ class FakeClient:
 
     def getCounter(self, key: str) -> int:
         return self._counter_values[key]
+
+    def debugInvalidateNonMaterialized(
+        self, params: eden_ttypes.DebugInvalidateRequest
+    ) -> eden_ttypes.DebugInvalidateResponse:
+        return eden_ttypes.DebugInvalidateResponse(numInvalidated=0)
