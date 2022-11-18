@@ -33,7 +33,7 @@ pub struct BackingStoreOptions {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_new(
+pub extern "C" fn sapling_backingstore_new(
     repository: Slice<u8>,
     options: &BackingStoreOptions,
 ) -> CFallibleBase {
@@ -47,14 +47,14 @@ pub extern "C" fn rust_backingstore_new(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_free(store: *mut BackingStore) {
+pub extern "C" fn sapling_backingstore_free(store: *mut BackingStore) {
     assert!(!store.is_null());
     let store = unsafe { Box::from_raw(store) };
     drop(store);
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_get_blob(
+pub extern "C" fn sapling_backingstore_get_blob(
     store: &mut BackingStore,
     name: Slice<u8>,
     node: Slice<u8>,
@@ -70,7 +70,7 @@ pub extern "C" fn rust_backingstore_get_blob(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_get_blob_batch(
+pub extern "C" fn sapling_backingstore_get_blob_batch(
     store: &mut BackingStore,
     requests: *const Request,
     size: usize,
@@ -90,7 +90,7 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_get_tree(
+pub extern "C" fn sapling_backingstore_get_tree(
     store: &mut BackingStore,
     node: Slice<u8>,
     local: bool,
@@ -105,7 +105,7 @@ pub extern "C" fn rust_backingstore_get_tree(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_get_tree_batch(
+pub extern "C" fn sapling_backingstore_get_tree_batch(
     store: &mut BackingStore,
     requests: *const Request,
     size: usize,
@@ -126,7 +126,7 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_get_file_aux(
+pub extern "C" fn sapling_backingstore_get_file_aux(
     store: &mut BackingStore,
     node: Slice<u8>,
     local: bool,
@@ -141,7 +141,7 @@ pub extern "C" fn rust_backingstore_get_file_aux(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_get_file_aux_batch(
+pub extern "C" fn sapling_backingstore_get_file_aux_batch(
     store: &mut BackingStore,
     requests: *const Request,
     size: usize,
@@ -161,20 +161,20 @@ pub extern "C" fn rust_backingstore_get_file_aux_batch(
 }
 
 #[no_mangle]
-pub extern "C" fn rust_tree_free(tree: *mut Tree) {
+pub extern "C" fn sapling_tree_free(tree: *mut Tree) {
     assert!(!tree.is_null());
     let tree = unsafe { Box::from_raw(tree) };
     drop(tree);
 }
 
 #[no_mangle]
-pub extern "C" fn rust_file_aux_free(aux: *mut FileAuxData) {
+pub extern "C" fn sapling_file_aux_free(aux: *mut FileAuxData) {
     assert!(!aux.is_null());
     let aux = unsafe { Box::from_raw(aux) };
     drop(aux);
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_flush(store: &mut BackingStore) {
+pub extern "C" fn sapling_backingstore_flush(store: &mut BackingStore) {
     store.flush();
 }

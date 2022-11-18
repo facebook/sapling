@@ -16,7 +16,7 @@ namespace {
 using namespace sapling;
 
 TEST(CBytes, returns_hello_world) {
-  auto result = rust_test_cbytes();
+  auto result = sapling_test_cbytes();
   folly::ByteRange expected = folly::StringPiece("hello world");
   auto resultBytes = result.asByteRange();
 

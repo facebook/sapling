@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<7646d3cd603d2156a0adbe52285212a3>>
+ * @generated SignedSource<<309b1270697ee5617db7d9451c3f6aa8>>
  *
  */
 
@@ -102,61 +102,64 @@ struct FileAuxData {
 
 extern "C" {
 
-CFallibleBase rust_backingstore_new(Slice<uint8_t> repository, const BackingStoreOptions *options);
+CFallibleBase sapling_backingstore_new(Slice<uint8_t> repository,
+                                       const BackingStoreOptions *options);
 
-void rust_backingstore_free(BackingStore *store);
+void sapling_backingstore_free(BackingStore *store);
 
-CFallibleBase rust_backingstore_get_blob(BackingStore *store,
-                                         Slice<uint8_t> name,
-                                         Slice<uint8_t> node,
-                                         bool local);
+CFallibleBase sapling_backingstore_get_blob(BackingStore *store,
+                                            Slice<uint8_t> name,
+                                            Slice<uint8_t> node,
+                                            bool local);
 
-void rust_backingstore_get_blob_batch(BackingStore *store,
-                                      const Request *requests,
-                                      uintptr_t size,
-                                      bool local,
-                                      void *data,
-                                      void (*resolve)(void*, uintptr_t, CFallibleBase));
+void sapling_backingstore_get_blob_batch(BackingStore *store,
+                                         const Request *requests,
+                                         uintptr_t size,
+                                         bool local,
+                                         void *data,
+                                         void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-CFallibleBase rust_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
+CFallibleBase sapling_backingstore_get_tree(BackingStore *store, Slice<uint8_t> node, bool local);
 
-void rust_backingstore_get_tree_batch(BackingStore *store,
-                                      const Request *requests,
-                                      uintptr_t size,
-                                      bool local,
-                                      void *data,
-                                      void (*resolve)(void*, uintptr_t, CFallibleBase));
+void sapling_backingstore_get_tree_batch(BackingStore *store,
+                                         const Request *requests,
+                                         uintptr_t size,
+                                         bool local,
+                                         void *data,
+                                         void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-CFallibleBase rust_backingstore_get_file_aux(BackingStore *store, Slice<uint8_t> node, bool local);
+CFallibleBase sapling_backingstore_get_file_aux(BackingStore *store,
+                                                Slice<uint8_t> node,
+                                                bool local);
 
-void rust_backingstore_get_file_aux_batch(BackingStore *store,
-                                          const Request *requests,
-                                          uintptr_t size,
-                                          bool local,
-                                          void *data,
-                                          void (*resolve)(void*, uintptr_t, CFallibleBase));
+void sapling_backingstore_get_file_aux_batch(BackingStore *store,
+                                             const Request *requests,
+                                             uintptr_t size,
+                                             bool local,
+                                             void *data,
+                                             void (*resolve)(void*, uintptr_t, CFallibleBase));
 
-void rust_tree_free(Tree *tree);
+void sapling_tree_free(Tree *tree);
 
-void rust_file_aux_free(FileAuxData *aux);
+void sapling_file_aux_free(FileAuxData *aux);
 
-void rust_backingstore_flush(BackingStore *store);
+void sapling_backingstore_flush(BackingStore *store);
 
-void rust_cbytes_free(CBytes *vec);
+void sapling_cbytes_free(CBytes *vec);
 
-void rust_cfallible_free_error(char *ptr);
+void sapling_cfallible_free_error(char *ptr);
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.
-CFallibleBase rust_test_cfallible_ok();
+CFallibleBase sapling_test_cfallible_ok();
 
-void rust_test_cfallible_ok_free(uint8_t *val);
+void sapling_test_cfallible_ok_free(uint8_t *val);
 
 /// Returns a `CFallible` with error message "context: failure!". This function is intended to be called
 /// from C++ tests.
-CFallibleBase rust_test_cfallible_err();
+CFallibleBase sapling_test_cfallible_err();
 
-CBytes rust_test_cbytes();
+CBytes sapling_test_cbytes();
 
 } // extern "C"
 
@@ -178,7 +181,7 @@ public:
 
   ~CFallible() {
     if (error_ != nullptr) {
-      rust_cfallible_free_error(error_);
+      sapling_cfallible_free_error(error_);
     }
 
     unwrap();

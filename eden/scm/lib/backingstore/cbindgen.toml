@@ -36,7 +36,7 @@ public:
 
   ~CFallible() {
     if (error_ != nullptr) {
-      rust_cfallible_free_error(error_);
+      sapling_cfallible_free_error(error_);
     }
 
     unwrap();

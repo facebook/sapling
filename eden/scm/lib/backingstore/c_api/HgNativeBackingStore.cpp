@@ -29,7 +29,7 @@ std::unique_ptr<folly::IOBuf> bytesToIOBuf(CBytes* bytes) {
       reinterpret_cast<void*>(bytes->ptr),
       bytes->len,
       [](void* /* buf */, void* userData) {
-        rust_cbytes_free(reinterpret_cast<CBytes*>(userData));
+        sapling_cbytes_free(reinterpret_cast<CBytes*>(userData));
       },
       reinterpret_cast<void*>(bytes));
 }
@@ -48,7 +48,7 @@ void getBlobBatchCallback(
     uintptr_t size,
     bool local,
     Fn&& fn) {
-  rust_backingstore_get_blob_batch(
+  sapling_backingstore_get_blob_batch(
       store,
       request,
       size,
@@ -75,7 +75,7 @@ void getBlobMetadataBatchCallback(
     uintptr_t size,
     bool local,
     Fn&& fn) {
-  rust_backingstore_get_file_aux_batch(
+  sapling_backingstore_get_file_aux_batch(
       store,
       request,
       size,
@@ -102,7 +102,7 @@ void getTreeBatchCallback(
     uintptr_t size,
     bool local,
     Fn&& fn) {
-  rust_backingstore_get_tree_batch(
+  sapling_backingstore_get_tree_batch(
       store,
       request,
       size,
@@ -120,7 +120,8 @@ HgNativeBackingStore::HgNativeBackingStore(
     std::string_view repository,
     const BackingStoreOptions& options) {
   CFallible<BackingStore> store(
-      rust_backingstore_new(repository, &options), rust_backingstore_free);
+      sapling_backingstore_new(repository, &options),
+      sapling_backingstore_free);
 
   if (store.isError()) {
     throw std::runtime_error(store.getError());
@@ -136,8 +137,8 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
   XLOG(DBG7) << "Importing blob name=" << name.data()
              << " node=" << folly::hexlify(node) << " from hgcache";
   CFallible<CBytes> result(
-      rust_backingstore_get_blob(store_.get(), name, node, local),
-      rust_cbytes_free);
+      sapling_backingstore_get_blob(store_.get(), name, node, local),
+      sapling_cbytes_free);
 
   if (result.isError()) {
     XLOG(DBG5) << "Error while getting blob name=" << name.data()
@@ -155,8 +156,8 @@ std::shared_ptr<FileAuxData> HgNativeBackingStore::getBlobMetadata(
   XLOG(DBG7) << "Importing blob metadata"
              << " node=" << folly::hexlify(node) << " from hgcache";
   CFallible<FileAuxData> result(
-      rust_backingstore_get_file_aux(store_.get(), node, local),
-      rust_file_aux_free);
+      sapling_backingstore_get_file_aux(store_.get(), node, local),
+      sapling_file_aux_free);
 
   if (result.isError()) {
     XLOG(DBG5) << "Error while getting blob metadata"
@@ -205,7 +206,7 @@ void HgNativeBackingStore::getBlobMetadataBatch(
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
         CFallible<FileAuxData> result(
-            std::move(raw_result), rust_file_aux_free);
+            std::move(raw_result), sapling_file_aux_free);
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -269,7 +270,7 @@ void HgNativeBackingStore::getBlobBatch(
       count,
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<CBytes> result(std::move(raw_result), rust_cbytes_free);
+        CFallible<CBytes> result(std::move(raw_result), sapling_cbytes_free);
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -330,7 +331,7 @@ void HgNativeBackingStore::getTreeBatch(
       count,
       local,
       [resolve, requests, count](size_t index, CFallibleBase raw_result) {
-        CFallible<Tree> result(std::move(raw_result), rust_tree_free);
+        CFallible<Tree> result(std::move(raw_result), sapling_tree_free);
 
         if (result.isError()) {
           // TODO: It would be nice if we can differentiate not found error with
@@ -364,7 +365,8 @@ std::shared_ptr<Tree> HgNativeBackingStore::getTree(
              << " from hgcache";
 
   CFallible<Tree> manifest(
-      rust_backingstore_get_tree(store_.get(), node, local), rust_tree_free);
+      sapling_backingstore_get_tree(store_.get(), node, local),
+      sapling_tree_free);
 
   if (manifest.isError()) {
     XLOG(DBG5) << "Error while getting tree node=" << folly::hexlify(node)
@@ -378,7 +380,7 @@ std::shared_ptr<Tree> HgNativeBackingStore::getTree(
 void HgNativeBackingStore::flush() {
   XLOG(DBG7) << "Flushing backing store";
 
-  rust_backingstore_flush(store_.get());
+  sapling_backingstore_flush(store_.get());
 }
 
 } // namespace facebook::eden

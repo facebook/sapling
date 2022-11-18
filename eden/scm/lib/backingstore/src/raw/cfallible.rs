@@ -12,7 +12,7 @@
 //! # Memory Management
 //!
 //! Consumer of this struct needs to ensure the returned error string freed with
-//! `rust_cfallible_free_error`.
+//! `sapling_cfallible_free_error`.
 
 use std::ffi::c_void;
 use std::ffi::CString;
@@ -93,7 +93,7 @@ impl<T> From<Result<T>> for CFallible<T> {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_cfallible_free_error(ptr: *mut c_char) {
+pub extern "C" fn sapling_cfallible_free_error(ptr: *mut c_char) {
     let error = unsafe { CString::from_raw(ptr) };
     drop(error);
 }
