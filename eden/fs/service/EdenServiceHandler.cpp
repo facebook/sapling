@@ -3370,6 +3370,40 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 #endif
 }
 
+folly::SemiFuture<std::unique_ptr<DebugInvalidateResponse>>
+EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
+    std::unique_ptr<DebugInvalidateRequest> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *params->mount()->mountPoint());
+  auto mountPath = absolutePathFromThrift(*params->mount()->mountPoint());
+  auto edenMount = server_->getMount(mountPath);
+  auto& fetchContext = helper->getFetchContext();
+
+  if (!(params->age()->seconds() == 0 && params->age()->nanoSeconds() == 0)) {
+    throw newEdenError(
+        EINVAL, EdenErrorType::ARGUMENT_ERROR, "Non-zero age is not supported");
+  }
+
+  TreeInodePtr inode =
+      inodeFromUserPath(*edenMount, *params->path(), fetchContext).asTreePtr();
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             waitForPendingNotifications(*edenMount, *params->sync())
+                 .thenValue([inode = std::move(inode),
+                             &fetchContext](auto&&) mutable {
+                   return inode->invalidateChildrenNotMaterialized(fetchContext)
+                       .ensure([inode]() {
+                         inode->unloadChildrenUnreferencedByFs();
+                       })
+                       .thenValue([inode](uint64_t numInvalidated) {
+                         auto ret = std::make_unique<DebugInvalidateResponse>();
+                         ret->numInvalidated() = numInvalidated;
+                         return ret;
+                       });
+                 }))
+      .semi();
+}
+
 void EdenServiceHandler::getStatInfo(
     InternalStats& result,
     std::unique_ptr<GetStatInfoParams> params) {

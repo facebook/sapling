@@ -156,6 +156,7 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
 if sys.platform != "win32":
     TEST_DISABLED.update(
         {
+            "invalidate_test.InvalidateTest": True,
             "windows_fsck_test.WindowsFsckTest": True,
             "windows_fsck_test.WindowsRebuildOverlayTest": True,
             "prjfs_stress.PrjFSStress": True,

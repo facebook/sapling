@@ -4127,6 +4127,108 @@ size_t TreeInode::unloadChildrenUnreferencedByFs() {
       [](InodeBase* child) { return child->getFsRefcount() == 0; });
 }
 
+namespace {
+ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
+    TreeInode* self,
+    InodeMap* const inodeMap,
+    const ObjectFetchContextPtr& context) {
+  std::vector<ImmediateFuture<TreeInodePtr>> res;
+  std::vector<PathComponent> toLoad;
+  {
+    auto contents = self->getContents().rlock();
+    for (auto& entry : contents->entries) {
+      if (!entry.second.isDirectory()) {
+        continue;
+      }
+
+      if (auto treePtr = entry.second.asTreePtrOrNull()) {
+        res.emplace_back(std::move(treePtr));
+        continue;
+      }
+
+      auto inodeNumber = entry.second.getInodeNumber();
+      // In invalidateChildrenNotMaterialized we want to walk all the directory
+      // inodes that are present on disk so we can have a chance to invalidate
+      // them. Since inodes can be unloaded but still have an fs refcount set,
+      // we need to make sure to load them so we can crawl them.
+      if (inodeMap->isInodeRemembered(inodeNumber)) {
+        toLoad.push_back(entry.first);
+      }
+    }
+  }
+
+  // TODO(xavierd): We could use VirtualInode here to avoid loading inodes
+  // unnecessarily.
+  for (auto& name : toLoad) {
+    res.push_back(self->getOrLoadChildTree(name, context));
+  }
+  return collectAllSafe(std::move(res));
+}
+} // namespace
+
+ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
+    const ObjectFetchContextPtr& context) {
+  return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
+      .thenValue([context =
+                      context.copy()](std::vector<TreeInodePtr> treeChildren) {
+        std::vector<ImmediateFuture<uint64_t>> futures;
+
+        for (auto& tree : treeChildren) {
+          futures.push_back(tree->invalidateChildrenNotMaterialized(context));
+        }
+
+        return collectAllSafe(std::move(futures));
+      })
+      .thenValue([self = inodePtrFromThis()](
+                     const std::vector<uint64_t>& invalidatedCounts) {
+        uint64_t numInvalidated = 0;
+        for (auto invalidated : invalidatedCounts) {
+          numInvalidated += invalidated;
+        }
+
+        std::vector<InodePtr> deletedInodes;
+        {
+          auto* inodeMap = self->getInodeMap();
+          auto contents = self->contents_.wlock();
+          for (auto& entry : contents->entries) {
+            if (entry.second.isMaterialized()) {
+              continue;
+            }
+
+            if (auto inode = entry.second.getInodePtr()) {
+              deletedInodes.push_back(std::move(inode));
+            }
+
+            auto inodeNumber = entry.second.getInodeNumber();
+            if (!inodeMap->isInodeLoadedOrRemembered(inodeNumber)) {
+              continue;
+            }
+
+            // TODO: In the case where the file becomes materialized on disk
+            // now, invalidateChannelEntryCache will happily remove it, leading
+            // to a potential loss of user data. To avoid this, we could try
+            // not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing with the
+            // side effects to close that race.
+
+            // Here, we rely on invalidateChannelEntryCache failing for
+            // non-empty directories to guarantee that we're not losing user
+            // data in the case where a user writes a file in a directory that
+            // we're attempting to invalidate.
+            auto invalidateResult = self->invalidateChannelEntryCache(
+                *contents, entry.first, inodeNumber);
+            if (invalidateResult.hasException()) {
+              XLOG(DBG5) << "Couldn't invalidate: " << self->getLogPath() << "/"
+                         << entry.first << ": " << invalidateResult.exception();
+            } else {
+              numInvalidated++;
+            }
+          }
+        }
+
+        return numInvalidated;
+      });
+}
+
 void TreeInode::updateAtime() {
   auto lock = contents_.wlock();
   InodeBaseMetadata::updateAtimeLocked(lock->entries);

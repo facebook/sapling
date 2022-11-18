@@ -325,6 +325,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> path,
       std::unique_ptr<TimeSpec> age) override;
 
+  folly::SemiFuture<std::unique_ptr<DebugInvalidateResponse>>
+  semifuture_debugInvalidateNonMaterialized(
+      std::unique_ptr<DebugInvalidateRequest> params) override;
+
   void flushStatsNow() override;
 
   folly::SemiFuture<folly::Unit> semifuture_invalidateKernelInodeCache(

@@ -27,7 +27,6 @@ class EdenMount;
 class GitIgnoreStack;
 class DiffCallback;
 class InodeMap;
-class ObjectFetchContext;
 class ObjectStore;
 class Overlay;
 class RenameLock;
@@ -445,6 +444,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
 #endif
+
+  /**
+   * Invalidate all non-materialized childrens recursively.
+   *
+   * Returns the number of inodes invalidated.
+   */
+  ImmediateFuture<uint64_t> invalidateChildrenNotMaterialized(
+      const ObjectFetchContextPtr& context);
 
   /*
    * Update a tree entry as part of a checkout operation.
