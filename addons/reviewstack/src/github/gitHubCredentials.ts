@@ -9,7 +9,7 @@ import type {UsernameQueryData, UsernameQueryVariables} from '../generated/graph
 import type {Loadable} from 'recoil';
 
 import {UsernameQuery} from '../generated/graphql';
-import {DB_NAME} from './databaseInfo';
+import {ALL_DB_NAMES_EVER} from './databaseInfo';
 import {broadcastLogoutMessage, subscribeToLogout} from './logoutBroadcastChannel';
 import queryGraphQL from './queryGraphQL';
 import {atom, selector, DefaultValue, RecoilLoadable} from 'recoil';
@@ -152,34 +152,28 @@ async function clearAllLocalData(): Promise<void> {
 }
 
 async function dropAllDatabases(indexedDB: IDBFactory): Promise<unknown> {
+  let databaseNames: string[];
   if (indexedDB.databases == null) {
     // As of Nov 16, 2022, Firefox does not support indexedDB.databases():
     // https://bugzilla.mozilla.org/show_bug.cgi?id=934640.
-    // While we would prefer to err on the side of safety and delete *all*
-    // databases, we can only attempt to delete the ones we know about, which
-    // may or may not have been created yet.
-    return new Promise((resolve, reject) => {
-      // Firefox appears to consider deleteDatabase a "success" even if no
-      // database exists with the specified name.
-      const request = window.indexedDB.deleteDatabase(DB_NAME);
-      request.onsuccess = _event => {
-        resolve(null);
-      };
-      request.onerror = event => {
-        reject(event);
-      };
+    databaseNames = [...ALL_DB_NAMES_EVER];
+  } else {
+    const databases = await indexedDB.databases();
+    databaseNames = databases.map(db => {
+      const {name} = db;
+      if (name != null) {
+        return name;
+      } else {
+        throw Error('IDBDatabaseInfo with no name');
+      }
     });
   }
 
-  const databases = await indexedDB.databases();
   return Promise.all(
-    databases.map(db => {
+    databaseNames.map(name => {
       return new Promise((resolve, reject) => {
-        const {name} = db;
-        if (name == null) {
-          return reject('IDBDatabaseInfo with no name');
-        }
-
+        // Note: deleteDatabase() is considered a "success" even if no database
+        // exists with the specified name.
         const request = indexedDB.deleteDatabase(name);
         request.onerror = event => reject(`failed to delete db ${name}: ${event}`);
         request.onsuccess = event => resolve(`successfully deleted db ${name}: ${event}`);
