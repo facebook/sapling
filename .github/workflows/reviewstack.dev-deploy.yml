@@ -9,13 +9,13 @@ jobs:
     # Our build container already has Node, Yarn, and Python installed.
     container:
       image: ${{ format('ghcr.io/{0}/build_ubuntu_22_04:latest', github.repository) }}
-    permissions:
-      contents: write
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+      - name: Grant Access
+        run: git config --global --add safe.directory "$PWD"
       - name: Install dependencies
         working-directory: ./addons
         run: yarn install --prefer-offline
