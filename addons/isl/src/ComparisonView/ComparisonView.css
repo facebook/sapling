@@ -35,6 +35,7 @@
   flex-direction: column;
   gap: 20px;
   padding-bottom: var(--pad);
+  align-items: center;
 }
 
 /*
