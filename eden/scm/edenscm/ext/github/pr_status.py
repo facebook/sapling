@@ -8,7 +8,7 @@ from typing import List, Optional
 from edenscm import smartset, util
 
 from . import graphql
-from .github_repo_util import get_pull_request_for_node
+from .pr_parser import get_pull_request_for_node
 from .pullrequest import GraphQLPullRequest, PullRequestId
 from .pullrequeststore import PullRequestStore
 

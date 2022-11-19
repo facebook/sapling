@@ -20,8 +20,10 @@ class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
     entails spawning a new process, which may be problematic for Windows users.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, hostname: str):
+        """The hostname of the GitHub Enterprise instance or 'github.com' if the
+        consumer instance."""
+        self.hostname = hostname
 
     def push_hook(self, refName: Sequence[str]) -> None:
         pass
@@ -30,7 +32,7 @@ class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
         params: Dict[str, Union[str, int, bool]] = dict(kwargs)
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(
-            make_request(params, endpoint=path, method=method)
+            make_request(params, hostname=self.hostname, endpoint=path, method=method)
         )
         if result.is_error():
             raise RuntimeError(result.error)
@@ -41,7 +43,7 @@ class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
         params: Dict[str, Union[str, int, bool]] = dict(kwargs)
         params["query"] = query
         loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(make_request(params))
+        result = loop.run_until_complete(make_request(params, hostname=self.hostname))
         if result.is_error():
             raise RuntimeError(result.error)
         else:

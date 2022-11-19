@@ -24,6 +24,9 @@ _Params = Union[str, int, bool]
 class Repository:
     # ID for the repository for use with other GitHub API calls.
     id: str
+    # If GitHub Enterprise, this is the Enterprise hostname; otherwise, it is
+    # "github.com".
+    hostname: str
     # In GitHub, a "RepositoryOwner" is either an "Organization" or a "User":
     # https://docs.github.com/en/graphql/reference/interfaces#repositoryowner
     owner: str
@@ -52,7 +55,7 @@ class Repository:
             return (self.owner, self.name)
 
 
-async def get_repository(owner: str, name: str) -> Result[Repository]:
+async def get_repository(hostname: str, owner: str, name: str) -> Result[Repository]:
     """Returns an "ID!" for the repository that is necessary in other
     GitHub API calls.
     """
@@ -85,15 +88,17 @@ query ($owner: String!, $name: String!) {
 }
 """
     params: Dict[str, _Params] = {"query": query, "owner": owner, "name": name}
-    result = await make_request(params)
+    result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
 
     data = result.ok["data"]
     repo = data["repository"]
     parent = repo["parent"]
-    upstream = _parse_repository_from_dict(parent) if parent else None
-    repository = _parse_repository_from_dict(repo, upstream=upstream)
+    upstream = (
+        _parse_repository_from_dict(parent, hostname=hostname) if parent else None
+    )
+    repository = _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
     return Result(ok=repository)
 
 
@@ -127,7 +132,7 @@ query ($owner: String!, $name: String!, $number: Int!) {
         "name": pr.name,
         "number": pr.number,
     }
-    result = await make_request(params)
+    result = await make_request(params, hostname=pr.get_hostname())
     if result.is_error():
         return result
 
@@ -143,9 +148,10 @@ query ($owner: String!, $name: String!, $number: Int!) {
     )
 
 
-def _parse_repository_from_dict(repo_obj, upstream=None) -> Repository:
+def _parse_repository_from_dict(repo_obj, hostname: str, upstream=None) -> Repository:
     return Repository(
         id=repo_obj["id"],
+        hostname=hostname,
         owner=repo_obj["owner"]["login"],
         name=repo_obj["name"],
         default_branch=repo_obj["defaultBranchRef"]["name"],
@@ -154,7 +160,9 @@ def _parse_repository_from_dict(repo_obj, upstream=None) -> Repository:
     )
 
 
-async def guess_next_pull_request_number(owner: str, name: str) -> Result[int]:
+async def guess_next_pull_request_number(
+    hostname: str, owner: str, name: str
+) -> Result[int]:
     """Returns our best guess as to the number that will be assigned to the next
     pull request for the specified repo. It is a "guess" because it is based
     on the largest number for either issues or pull requests seen thus far and
@@ -200,7 +208,7 @@ query ($owner: String!, $name: String!) {
 }
 """
     params: Dict[str, _Params] = {"query": query, "owner": owner, "name": name}
-    result = await make_request(params)
+    result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
 
@@ -218,7 +226,7 @@ query ($owner: String!, $name: String!) {
 
 
 async def create_pull_request(
-    owner: str, name: str, base: str, head: str, title: str, body: str
+    hostname: str, owner: str, name: str, base: str, head: str, title: str, body: str
 ) -> Result:
     endpoint = f"repos/{owner}/{name}/pulls"
     params: Dict[str, _Params] = {
@@ -227,10 +235,12 @@ async def create_pull_request(
         "title": title,
         "body": body,
     }
-    return await make_request(params, endpoint=endpoint)
+    return await make_request(params, hostname=hostname, endpoint=endpoint)
 
 
-async def update_pull_request(node_id: str, title: str, body: str) -> Result[str]:
+async def update_pull_request(
+    hostname: str, node_id: str, title: str, body: str
+) -> Result[str]:
     """Returns an "ID!" for the pull request, which should match the node_id
     that was passed in.
     """
@@ -251,14 +261,16 @@ mutation ($pullRequestId: ID!, $title: String!, $body: String!) {
         "title": title,
         "body": body,
     }
-    result = await make_request(params)
+    result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
         return Result(ok=result.ok["data"]["updatePullRequest"]["pullRequest"]["id"])
 
 
-async def create_branch(*, repo_id: str, branch_name: str, oid: str) -> Result[str]:
+async def create_branch(
+    *, hostname: str, repo_id: str, branch_name: str, oid: str
+) -> Result[str]:
     """Attempts to create the branch. If successful, returns the ID of the newly
     created Ref.
     """
@@ -277,7 +289,7 @@ mutation ($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
         "name": f"refs/heads/{branch_name}",
         "oid": oid,
     }
-    result = await make_request(params)
+    result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
@@ -285,7 +297,7 @@ mutation ($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
 
 
 async def merge_into_branch(
-    *, repo_id: str, oid_to_merge: str, branch_name: str
+    *, hostname: str, repo_id: str, oid_to_merge: str, branch_name: str
 ) -> Result[str]:
     """Takes the hash, oid_to_merge, and merges it into the specified branch_name."""
     query = """
@@ -303,14 +315,14 @@ mutation ($repositoryId: ID!, $base: String!, $head: String!) {
         "base": branch_name,
         "head": oid_to_merge,
     }
-    result = await make_request(params)
+    result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
         return Result(ok=result.ok["data"]["mergeBranch"]["mergeCommit"]["oid"])
 
 
-async def get_username() -> Result[str]:
+async def get_username(hostname: str) -> Result[str]:
     """Returns the username associated with the auth token. Note that it is
     slightly faster to call graphql.try_parse_oath_token_from_hosts_yml() and
     read the value from hosts.yml.
@@ -325,7 +337,7 @@ query {
     params: Dict[str, _Params] = {
         "query": query,
     }
-    result = await make_request(params)
+    result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:

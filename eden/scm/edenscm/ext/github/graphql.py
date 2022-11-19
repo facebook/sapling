@@ -49,7 +49,7 @@ query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
 def get_pull_request_data(pr: PullRequestId) -> Optional[GraphQLPullRequest]:
     params = _generate_params(pr)
     loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(make_request(params))
+    result = loop.run_until_complete(make_request(params, hostname=pr.get_hostname()))
     if result.is_error():
         # Log error?
         return None
@@ -61,7 +61,9 @@ def get_pull_request_data(pr: PullRequestId) -> Optional[GraphQLPullRequest]:
 def get_pull_request_data_list(
     pr_list: Iterable[PullRequestId],
 ) -> List[Optional[GraphQLPullRequest]]:
-    requests = [make_request(_generate_params(pr)) for pr in pr_list]
+    requests = [
+        make_request(_generate_params(pr), hostname=pr.get_hostname()) for pr in pr_list
+    ]
     loop = asyncio.get_event_loop()
     responses = loop.run_until_complete(asyncio.gather(*requests))
     result = []

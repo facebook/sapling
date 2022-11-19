@@ -4,68 +4,95 @@
 # GNU General Public License version 2.
 
 import re
-from typing import Optional, Tuple
+import subprocess
+from dataclasses import dataclass
+from functools import lru_cache
+from typing import Optional
 
-from edenscm import git
-
-from .pullrequest import PullRequestId
-from .pullrequeststore import PullRequestStore
+from edenscm import error, git
+from edenscm.i18n import _
 
 
-def is_github_repo(repo) -> bool:
-    """Create or update GitHub pull requests."""
+@dataclass(eq=True, frozen=True)
+class GitHubRepo:
+    # If GitHub Enterprise, this is the Enterprise hostname; otherwise, it is
+    # "github.com".
+    hostname: str
+    # In GitHub, a "RepositoryOwner" is either an "Organization" or a "User":
+    # https://docs.github.com/en/graphql/reference/interfaces#repositoryowner
+    owner: str
+    # Name of the GitHub repo within the organization.
+    name: str
+
+    def to_url(self) -> str:
+        return f"https://{self.hostname}/{self.owner}/{self.name}"
+
+
+def check_github_repo(repo) -> GitHubRepo:
+    """Returns GitHubRepo if the URI for the upstream repo appears to be an
+    identifier for a consumer GitHub or GitHub Enterprise repository; otherwise,
+    raises error.Abort() with an appropriate message.
+    """
     if not git.isgitpeer(repo):
-        return False
+        raise error.Abort(_("not a Git repo"))
 
+    url = None
     try:
-        return repo.ui.paths.get("default", "default-push").url.host == "github.com"
+        url = repo.ui.paths.get("default", "default-push").url
     except AttributeError:  # ex. paths.default is not set
+        raise error.Abort(_("could not read paths.default"))
+
+    hostname = url.host
+    if hostname == "github.com" or is_github_enterprise_hostname(hostname):
+        url_arg = str(url)
+        github_repo = parse_github_repo_from_github_url(url_arg)
+        if github_repo:
+            return github_repo
+        else:
+            raise error.Abort(_("could not parse GitHub URI: %s") % url_arg)
+    else:
+        raise error.Abort(
+            _(
+                (
+                    "Either %s is not a GitHub Enterprise hostname or you are not logged in.\n"
+                    + "Authenticate using the GitHub CLI: `gh auth login --git-protocol https --hostname %s`"
+                )
+                % (hostname, hostname)
+            )
+        )
+
+
+@lru_cache
+def is_github_enterprise_hostname(hostname: str) -> bool:
+    """Returns True if the user is authenticated (via gh, the GitHub CLI)
+    to the GitHub Enterprise instance for the specified hostname. Note that
+    if this returns False, that does not mean that hostname is *not* part of a
+    GitHub Enterprise account, only that Sapling does not know about it because
+    the user is not authenticated.
+    """
+    try:
+        subprocess.check_call(
+            ["gh", "auth", "status", "--hostname", hostname],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        # The user may not be authenticated or may not even have `gh` installed.
         return False
+    return True
 
 
-def get_pull_request_for_node(
-    node: bytes,
-    store: PullRequestStore,
-    ctx,
-) -> Optional[PullRequestId]:
-    """Returns a pull request associated with a commit, if any. Checks the
-    metalog first. If not in the metalog, looks for special patterns in the
-    commit message.
-    """
-    pr = store.find_pull_request(node)
-    return pr if pr else parse_github_pull_request_url(ctx.description())
+def parse_github_repo_from_github_url(url: str) -> Optional[GitHubRepo]:
+    """Assumes the caller has already verified that `url` is a "GitHub URL",
+    i.e., it refers to a repo hosted on consumer github.com or a GitHub
+    Enterprise instance.
 
-
-def parse_github_pull_request_url(descr: str) -> Optional[PullRequestId]:
-    r"""If the commit message has a comment in a special format that indicates
-    it is associated with a GitHub pull request, returns the corresponding
-    PullRequestId.
-
-    >>> descr = 'foo\nPull Request resolved: https://github.com/bolinfest/ghstack-testing/pull/71\nbar'
-    >>> parse_github_pull_request_url(descr)
-    PullRequestId(owner='bolinfest', name='ghstack-testing', number=71)
-    >>> parse_github_pull_request_url('') is None
-    True
-    """
-    # This is the format used by ghstack, though other variants may be supported
-    # in the future.
-    match = re.search(
-        r"^Pull Request resolved: https://github.com/([^/]*)/([^/]*)/pull/([1-9][0-9]*)$",
-        descr,
-        re.MULTILINE,
-    )
-    if not match:
-        return None
-    owner, name, number = match.groups()
-    return PullRequestId(owner=owner, name=name, number=int(number))
-
-
-def parse_owner_and_name_from_github_url(url: str) -> Optional[Tuple[str, str]]:
-    """parses the following URL formats:
+    Parses the following URL formats:
 
     https://github.com/bolinfest/escoria-demo-game
     https://github.com/bolinfest/escoria-demo-game.git
     git@github.com:bolinfest/escoria-demo-game.git
+    git+ssh://git@github.com:bolinfest/escoria-demo-game.git
     ssh://git@github.com/bolinfest/escoria-demo-game.git
 
     and returns:
@@ -74,23 +101,27 @@ def parse_owner_and_name_from_github_url(url: str) -> Optional[Tuple[str, str]]:
 
     which is suitable for constructing URLs to pull requests.
 
-    >>> parse_owner_and_name_from_github_url("https://github.com/bolinfest/escoria-demo-game")
-    ('bolinfest', 'escoria-demo-game')
-    >>> parse_owner_and_name_from_github_url("https://github.com/bolinfest/escoria-demo-game.git")
-    ('bolinfest', 'escoria-demo-game')
-    >>> parse_owner_and_name_from_github_url("git@github.com:bolinfest/escoria-demo-game.git")
-    ('bolinfest', 'escoria-demo-game')
-    >>> parse_owner_and_name_from_github_url("ssh://git@github.com/bolinfest/escoria-demo-game.git")
-    ('bolinfest', 'escoria-demo-game')
+    >>> parse_github_repo_from_github_url("https://github.com/bolinfest/escoria-demo-game").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("https://github.com/bolinfest/escoria-demo-game.git").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("git@github.com:bolinfest/escoria-demo-game.git").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("git+ssh://git@github.com:bolinfest/escoria-demo-game.git").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("ssh://git@github.com/bolinfest/escoria-demo-game.git").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("ssh://git@github.com:bolinfest/escoria-demo-game.git").to_url()
+    'https://github.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("ssh://git@foo.bar.com/bolinfest/escoria-demo-game.git").to_url()
+    'https://foo.bar.com/bolinfest/escoria-demo-game'
+    >>> parse_github_repo_from_github_url("git+ssh://git@foo.bar.com:bolinfest/escoria-demo-game.git").to_url()
+    'https://foo.bar.com/bolinfest/escoria-demo-game'
     """
-    https_pattern = r"^https://github.com/([^/]+)/([^/]+?)(?:\.git)?$"
-    https_match = re.match(https_pattern, url)
-    if https_match:
-        return (https_match[1], https_match[2])
-
-    ssh_pattern = r"^(?:ssh://)?git@github.com[:/]([^/]+)/([^/]+?)(?:\.git)?$"
-    ssh_match = re.match(ssh_pattern, url)
-    if ssh_match:
-        return (ssh_match[1], ssh_match[2])
-
-    return None
+    pattern = r"(?:https://([^/]+)|(?:git\+ssh://|ssh://)?git@([^:/]+))[:/]([^/]+)\/(.+?)(?:\.git)?$"
+    match = re.match(pattern, url)
+    if match:
+        hostname1, hostname2, owner, repo = match.groups()
+        return GitHubRepo(hostname1 or hostname2, owner, repo)
+    else:
+        return None

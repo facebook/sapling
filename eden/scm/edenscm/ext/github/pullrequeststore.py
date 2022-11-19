@@ -77,7 +77,10 @@ class PullRequestStore:
             return None
         else:
             return PullRequestId(
-                owner=entry["owner"], name=entry["name"], number=entry["number"]
+                hostname=entry.get("hostname", "github.com"),
+                owner=entry["owner"],
+                name=entry["name"],
+                number=entry["number"],
             )
 
     def _find_entry(self, node: bytes) -> Optional[_CommitEntry]:

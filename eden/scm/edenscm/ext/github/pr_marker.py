@@ -10,7 +10,8 @@ import typing as t
 from collections import defaultdict
 
 from edenscm import mutation, visibility
-from edenscm.ext.github.github_repo_util import get_pull_request_for_node
+from edenscm.ext.github.github_repo_util import check_github_repo
+from edenscm.ext.github.pr_parser import get_pull_request_for_node
 from edenscm.ext.github.pullrequest import get_pr_state, PullRequestId
 from edenscm.ext.github.pullrequeststore import PullRequestStore
 from edenscm.i18n import _, _n
@@ -23,11 +24,14 @@ Node = bytes
 
 def cleanup_landed_pr(repo, dry_run=False):
     """cleanup landed GitHub PRs"""
+    github_repo = check_github_repo(repo)
     ui = repo.ui
     pr_to_draft = _get_draft_commits(repo)
 
     try:
-        to_hide, mutation_entries = _get_landed_commits(repo, pr_to_draft)
+        to_hide, mutation_entries = _get_landed_commits(
+            repo, pr_to_draft, github_repo.hostname
+        )
     except KeyboardInterrupt:
         ui.warn(
             _("reading from GitHub was interrupted, not marking commits as landed\n")
@@ -68,8 +72,10 @@ def _get_pr_for_node(repo, ctx, node) -> t.Optional[PullRequestId]:
     return get_pull_request_for_node(node, store, ctx)
 
 
-def _get_landed_commits(repo, pr_to_draft) -> t.Tuple[t.Set[Node], t.List]:
-    github = GitHubCLIEndpoint()
+def _get_landed_commits(
+    repo, pr_to_draft, hostname: str
+) -> t.Tuple[t.Set[Node], t.List]:
+    github = GitHubCLIEndpoint(hostname)
     to_hide = set()
     mutation_entries = []
     for pr, draft_nodes in pr_to_draft.items():
