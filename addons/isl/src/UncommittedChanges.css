@@ -111,14 +111,19 @@
   opacity: 0.9;
 }
 
-.show-on-hover {
+.show-on-hover,
+.file-show-on-hover {
   opacity: 0;
   transition: opacity 0.1s;
+}
+.show-on-hover:focus-within,
+.file-show-on-hover:focus-within {
+  opacity: 1;
 }
 .uncommitted-changes:hover .show-on-hover {
   opacity: 1;
 }
-.show-on-hover:focus-within {
+.changed-file:hover .file-show-on-hover {
   opacity: 1;
 }
 

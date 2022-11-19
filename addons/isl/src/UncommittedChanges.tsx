@@ -345,21 +345,48 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
   );
 }
 
+const revertableStatues = new Set(['M', 'A', 'R', '!']);
 function FileActions({file}: {file: ChangedFile}) {
   const runOperation = useRunOperation();
   const actions: Array<React.ReactNode> = [];
+  if (revertableStatues.has(file.status)) {
+    actions.push(
+      <Tooltip title={t('Revert back to original')} key="revert" delayMs={1000}>
+        <VSCodeButton
+          className="file-show-on-hover"
+          key={file.path}
+          appearance="icon"
+          onClick={() => {
+            platform
+              .confirm(t('Are you sure you want to revert $file?', {replace: {$file: file.path}}))
+              .then(ok => {
+                if (!ok) {
+                  return;
+                }
+                runOperation(new RevertOperation([file.path]));
+              });
+          }}>
+          <Icon icon="discard" />
+        </VSCodeButton>
+      </Tooltip>,
+    );
+  }
+
   if (file.status === '?') {
     actions.push(
-      <VSCodeButton
-        key={file.path}
-        appearance="icon"
-        onClick={() => runOperation(new AddOperation(file.path))}>
-        <Icon icon="add" />
-      </VSCodeButton>,
+      <Tooltip title={t('Start tracking this file')} key="add" delayMs={1000}>
+        <VSCodeButton
+          className="file-show-on-hover"
+          key={file.path}
+          appearance="icon"
+          onClick={() => runOperation(new AddOperation(file.path))}>
+          <Icon icon="add" />
+        </VSCodeButton>
+      </Tooltip>,
     );
   } else if (file.status === 'Resolved') {
     actions.push(
-      <Tooltip title="Mark as unresolved" key="unresolve-mark">
+      <Tooltip title={t('Mark as unresolved')} key="unresolve-mark">
         <VSCodeButton
           key={file.path}
           appearance="icon"
@@ -370,36 +397,36 @@ function FileActions({file}: {file: ChangedFile}) {
     );
   } else if (file.status === 'U') {
     actions.push(
-      <Tooltip title="Mark as resolved" key="resolve-mark">
+      <Tooltip title={t('Mark as resolved')} key="resolve-mark">
         <VSCodeButton
-          className="show-on-hover"
+          className="file-show-on-hover"
           key={file.path}
           appearance="icon"
           onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.mark))}>
           <Icon icon="check" />
         </VSCodeButton>
       </Tooltip>,
-      <Tooltip title="Take local version" key="resolve-local">
+      <Tooltip title={t('Take local version')} key="resolve-local">
         <VSCodeButton
-          className="show-on-hover"
+          className="file-show-on-hover"
           key={file.path}
           appearance="icon"
           onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.local))}>
           <Icon icon="fold-up" />
         </VSCodeButton>
       </Tooltip>,
-      <Tooltip title="Take incoming version" key="resolve-other">
+      <Tooltip title={t('Take incoming version')} key="resolve-other">
         <VSCodeButton
-          className="show-on-hover"
+          className="file-show-on-hover"
           key={file.path}
           appearance="icon"
           onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.other))}>
           <Icon icon="fold-down" />
         </VSCodeButton>
       </Tooltip>,
-      <Tooltip title="Combine both incoming and local" key="resolve-both">
+      <Tooltip title={t('Combine both incoming and local')} key="resolve-both">
         <VSCodeButton
-          className="show-on-hover"
+          className="file-show-on-hover"
           key={file.path}
           appearance="icon"
           onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.both))}>
