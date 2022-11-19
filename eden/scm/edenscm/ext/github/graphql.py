@@ -30,6 +30,16 @@ query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
       merged
       reviewDecision
 
+      commits(last: 1) {
+        nodes {
+          commit {
+            statusCheckRollup {
+              state
+            }
+          }
+        }
+      }
+
       baseRefName
       baseRefOid
       baseRepository {
