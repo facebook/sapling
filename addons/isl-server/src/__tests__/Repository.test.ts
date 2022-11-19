@@ -8,7 +8,7 @@
 import type {ResolveCommandConflictOutput} from '../Repository';
 import type {ValidatedRepoInfo} from 'isl/src/types';
 
-import {extractGithubRepoInfoFromUrl, Repository} from '../Repository';
+import {extractRepoInfoFromUrl, Repository} from '../Repository';
 import * as execa from 'execa';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
@@ -31,37 +31,93 @@ describe('Repository', () => {
     expect(spy).toHaveBeenCalledWith('slb', expect.arrayContaining(['root']), expect.anything());
   });
 
-  it('extracting github repo info', async () => {
-    jest.spyOn(execa, 'default').mockImplementation(((_cmd: string, args: Array<string>) => {
-      const argStr = args?.join(' ');
-      if (argStr.startsWith('config paths.default')) {
-        return {stdout: 'https://github.com/myUsername/myRepo.git'};
-      } else if (argStr.startsWith('config github.pull_request_domain')) {
-        return {stdout: 'github.com'};
-      } else if (argStr.startsWith('root --dotdir')) {
-        return {stdout: '/path/to/myRepo/.sl'};
-      } else if (argStr.startsWith('root')) {
-        return {stdout: '/path/to/myRepo'};
-      }
-      return {stdout: ''};
-    }) as unknown as typeof execa.default);
-    const info = (await Repository.getRepoInfo(
-      'sl',
-      mockLogger,
-      '/path/to/cwd',
-    )) as ValidatedRepoInfo;
-    const repo = new Repository(info, mockLogger);
-    expect(repo.info).toEqual({
-      type: 'success',
-      command: 'sl',
-      repoRoot: '/path/to/myRepo',
-      dotdir: '/path/to/myRepo/.sl',
-      codeReviewSystem: {
-        type: 'github',
-        owner: 'myUsername',
-        repo: 'myRepo',
-      },
-      pullRequestDomain: 'github.com',
+  describe('extracting github repo info', () => {
+    let currentMockPathsDefault: string;
+    beforeEach(() => {
+      jest.spyOn(execa, 'default').mockImplementation(((cmd: string, args: Array<string>) => {
+        const argStr = cmd + ' ' + args?.join(' ');
+        if (argStr.startsWith('sl config paths.default')) {
+          return {stdout: currentMockPathsDefault};
+        } else if (argStr.startsWith('sl config github.pull_request_domain')) {
+          return {stdout: 'github.com'};
+        } else if (argStr.startsWith('sl root --dotdir')) {
+          return {stdout: '/path/to/myRepo/.sl'};
+        } else if (argStr.startsWith('sl root')) {
+          return {stdout: '/path/to/myRepo'};
+        } else if (argStr.startsWith('gh auth status --hostname gitlab.myCompany.com')) {
+          throw new Error('not authenticated on this hostname');
+        } else if (argStr.startsWith('gh auth status --hostname ghe.myCompany.com')) {
+          return {};
+        }
+        return {stdout: ''};
+      }) as unknown as typeof execa.default);
+    });
+
+    it('extracting github repo info', async () => {
+      currentMockPathsDefault = 'https://github.com/myUsername/myRepo.git';
+      const info = (await Repository.getRepoInfo(
+        'sl',
+        mockLogger,
+        '/path/to/cwd',
+      )) as ValidatedRepoInfo;
+      const repo = new Repository(info, mockLogger);
+      expect(repo.info).toEqual({
+        type: 'success',
+        command: 'sl',
+        repoRoot: '/path/to/myRepo',
+        dotdir: '/path/to/myRepo/.sl',
+        codeReviewSystem: {
+          type: 'github',
+          owner: 'myUsername',
+          repo: 'myRepo',
+          hostname: 'github.com',
+        },
+        pullRequestDomain: 'github.com',
+      });
+    });
+
+    it('extracting github enterprise repo info', async () => {
+      currentMockPathsDefault = 'https://ghe.myCompany.com/myUsername/myRepo.git';
+      const info = (await Repository.getRepoInfo(
+        'sl',
+        mockLogger,
+        '/path/to/cwd',
+      )) as ValidatedRepoInfo;
+      const repo = new Repository(info, mockLogger);
+      expect(repo.info).toEqual({
+        type: 'success',
+        command: 'sl',
+        repoRoot: '/path/to/myRepo',
+        dotdir: '/path/to/myRepo/.sl',
+        codeReviewSystem: {
+          type: 'github',
+          owner: 'myUsername',
+          repo: 'myRepo',
+          hostname: 'ghe.myCompany.com',
+        },
+        pullRequestDomain: 'github.com',
+      });
+    });
+
+    it('handles non-github-enterprise unknown code review providers', async () => {
+      currentMockPathsDefault = 'https://gitlab.myCompany.com/myUsername/myRepo.git';
+      const info = (await Repository.getRepoInfo(
+        'sl',
+        mockLogger,
+        '/path/to/cwd',
+      )) as ValidatedRepoInfo;
+      const repo = new Repository(info, mockLogger);
+      expect(repo.info).toEqual({
+        type: 'success',
+        command: 'sl',
+        repoRoot: '/path/to/myRepo',
+        dotdir: '/path/to/myRepo/.sl',
+        codeReviewSystem: {
+          type: 'unknown',
+          path: 'https://gitlab.myCompany.com/myUsername/myRepo.git',
+        },
+        pullRequestDomain: 'github.com',
+      });
     });
   });
 
@@ -331,40 +387,98 @@ ${MARK_OUT}
   });
 });
 
-describe('extractGithubRepoInfoFromUrl', () => {
-  it('handles http', () => {
-    expect(extractGithubRepoInfoFromUrl('https://github.com/myUsername/myRepo.git')).toEqual({
-      owner: 'myUsername',
-      repo: 'myRepo',
+describe('extractRepoInfoFromUrl', () => {
+  describe('github.com', () => {
+    it('handles http', () => {
+      expect(extractRepoInfoFromUrl('https://github.com/myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+    it('handles git@github', () => {
+      expect(extractRepoInfoFromUrl('git@github.com:myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+    it('handles ssh', () => {
+      expect(extractRepoInfoFromUrl('ssh://git@github.com:myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+    it('handles git+ssh', () => {
+      expect(extractRepoInfoFromUrl('git+ssh://git@github.com:myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
+    it('handles dotted http', () => {
+      expect(extractRepoInfoFromUrl('https://github.com/myUsername/my.dotted.repo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'my.dotted.repo',
+        hostname: 'github.com',
+      });
+    });
+    it('handles dotted ssh', () => {
+      expect(extractRepoInfoFromUrl('git@github.com:myUsername/my.dotted.repo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'my.dotted.repo',
+        hostname: 'github.com',
+      });
     });
   });
-  it('handles git@github', () => {
-    expect(extractGithubRepoInfoFromUrl('git@github.com:myUsername/myRepo.git')).toEqual({
-      owner: 'myUsername',
-      repo: 'myRepo',
+
+  describe('github enterprise', () => {
+    it('handles http', () => {
+      expect(extractRepoInfoFromUrl('https://ghe.company.com/myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'ghe.company.com',
+      });
     });
-  });
-  it('handles ssh', () => {
-    expect(extractGithubRepoInfoFromUrl('ssh://git@github.com:myUsername/myRepo.git')).toEqual({
-      owner: 'myUsername',
-      repo: 'myRepo',
+    it('handles git@github', () => {
+      expect(extractRepoInfoFromUrl('git@ghe.company.com:myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'ghe.company.com',
+      });
     });
-  });
-  it('handles git+ssh', () => {
-    expect(extractGithubRepoInfoFromUrl('git+ssh://git@github.com:myUsername/myRepo.git')).toEqual({
-      owner: 'myUsername',
-      repo: 'myRepo',
+    it('handles ssh', () => {
+      expect(extractRepoInfoFromUrl('ssh://git@ghe.company.com:myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'ghe.company.com',
+      });
     });
-  });
-  it('handles dotted http', () => {
-    expect(
-      extractGithubRepoInfoFromUrl('https://github.com/myUsername/my.dotted.repo.git'),
-    ).toEqual({owner: 'myUsername', repo: 'my.dotted.repo'});
-  });
-  it('handles dotted ssh', () => {
-    expect(extractGithubRepoInfoFromUrl('git@github.com:myUsername/my.dotted.repo.git')).toEqual({
-      owner: 'myUsername',
-      repo: 'my.dotted.repo',
+    it('handles git+ssh', () => {
+      expect(extractRepoInfoFromUrl('git+ssh://git@ghe.company.com:myUsername/myRepo.git')).toEqual(
+        {
+          owner: 'myUsername',
+          repo: 'myRepo',
+          hostname: 'ghe.company.com',
+        },
+      );
+    });
+    it('handles dotted http', () => {
+      expect(
+        extractRepoInfoFromUrl('https://ghe.company.com/myUsername/my.dotted.repo.git'),
+      ).toEqual({
+        owner: 'myUsername',
+        repo: 'my.dotted.repo',
+        hostname: 'ghe.company.com',
+      });
+    });
+    it('handles dotted ssh', () => {
+      expect(extractRepoInfoFromUrl('git@ghe.company.com:myUsername/my.dotted.repo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'my.dotted.repo',
+        hostname: 'ghe.company.com',
+      });
     });
   });
 });

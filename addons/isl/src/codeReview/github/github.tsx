@@ -56,7 +56,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   RepoInfo = () => {
     return (
       <span>
-        {this.system.owner}/{this.system.repo}
+        {this.system.hostname !== 'github.com' ? this.system.hostname : ''} {this.system.owner}/
+        {this.system.repo}
       </span>
     );
   };

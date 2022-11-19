@@ -105,6 +105,8 @@ export type CodeReviewSystem =
       type: 'github';
       owner: string;
       repo: string;
+      /** github enterprise may use a different hostname than 'github.com' */
+      hostname: string;
     }
   | {
       type: 'phabricator';

@@ -57,7 +57,7 @@ export function simulateRepoConnected() {
       dotdir: '/path/to/repo/.sl',
       command: 'sl',
       pullRequestDomain: undefined,
-      codeReviewSystem: {type: 'github', owner: 'owner', repo: 'repo'},
+      codeReviewSystem: {type: 'github', owner: 'owner', repo: 'repo', hostname: 'github.com'},
     },
   });
 }

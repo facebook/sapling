@@ -59,6 +59,7 @@ describe('GitHubPRBadge', () => {
               type: 'github',
               repo: 'testrepo',
               owner: 'myusername',
+              hostname: 'github.com',
             },
             pullRequestDomain: undefined,
             preferredSubmitCommand: 'pr',
@@ -168,6 +169,7 @@ describe('GitHubPRBadge', () => {
                   type: 'github',
                   repo: 'testrepo',
                   owner: 'myusername',
+                  hostname: 'github.com',
                 },
                 pullRequestDomain: 'https://myreviewsite.dev',
                 preferredSubmitCommand: 'pr',
@@ -198,6 +200,7 @@ describe('GitHubPRBadge', () => {
                   type: 'github',
                   repo: 'testrepo',
                   owner: 'myusername',
+                  hostname: 'github.com',
                 },
                 // no leading https://, adds custom prefix
                 pullRequestDomain: 'myreviewsite.dev/codereview',

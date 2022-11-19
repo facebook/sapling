@@ -36,6 +36,7 @@ import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
 // @fb-only
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
+import {isGithubEnterprise} from './github/queryGraphQL';
 import {serializeAsyncCall} from './utils';
 import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
@@ -378,23 +379,28 @@ export class Repository {
 
     let codeReviewSystem: CodeReviewSystem;
     const isMononoke = pathsDefault.startsWith('mononoke://');
-    // TODO: this doesn't handle github enterprise
-    const githubInfo = extractGithubRepoInfoFromUrl(pathsDefault);
-    if (githubInfo != null) {
-      const {owner, repo} = githubInfo;
-      codeReviewSystem = {
-        type: 'github',
-        owner,
-        repo,
-      };
-    } else if (isMononoke) {
+    if (isMononoke) {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
       codeReviewSystem = {type: 'phabricator', repo};
     } else if (pathsDefault === '') {
       codeReviewSystem = {type: 'none'};
     } else {
-      codeReviewSystem = {type: 'unknown', path: pathsDefault};
+      const repoInfo = extractRepoInfoFromUrl(pathsDefault);
+      if (
+        repoInfo != null &&
+        (repoInfo.hostname === 'github.com' || (await isGithubEnterprise(repoInfo.hostname)))
+      ) {
+        const {owner, repo, hostname} = repoInfo;
+        codeReviewSystem = {
+          type: 'github',
+          owner,
+          repo,
+          hostname,
+        };
+      } else {
+        codeReviewSystem = {type: 'unknown', path: pathsDefault};
+      }
     }
 
     const result: RepoInfo = {
@@ -807,23 +813,27 @@ function splitLine(line: string): Array<string> {
 }
 
 /**
- * extract repo owner info from a github remote url, in various formats:
+ * extract repo info from a remote url, typically for GitHub or GitHub Enterprise,
+ * in various formats:
  * https://github.com/owner/repo
  * https://github.com/owner/repo.git
  * git@github.com:owner/repo.git
  * ssh:git@github.com:owner/repo.git
  * git+ssh:git@github.com:owner/repo.git
+ *
+ * or similar urls with GitHub Enterprise hostnames:
+ * https://ghe.myCompany.com/owner/repo
  */
-export function extractGithubRepoInfoFromUrl(url: string): {repo: string; owner: string} | null {
+export function extractRepoInfoFromUrl(
+  url: string,
+): {repo: string; owner: string; hostname: string} | null {
   const match =
-    /(?:https:\/\/github\.com\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@github.com:)([^/]+)\/(.+?)(?:\.git)?$/.exec(
-      url,
-    );
+    /(?:https:\/\/(.*)\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@(.*):)([^/]+)\/(.+?)(?:\.git)?$/.exec(url);
 
   if (match == null) {
     return null;
   }
 
-  const [, owner, repo] = match;
-  return {owner, repo};
+  const [, hostname1, hostname2, owner, repo] = match;
+  return {owner, repo, hostname: hostname1 ?? hostname2};
 }
