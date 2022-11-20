@@ -182,7 +182,7 @@ std::string InodeBase::getLogPath() const {
   bool unlinked = !getPathHelper(names, false);
   auto path = RelativePath(names);
   if (unlinked) {
-    return folly::to<std::string>("<deleted:", path.stringPiece(), ">");
+    return fmt::format("<deleted:{}>", path);
   }
   return std::move(path).value();
 }

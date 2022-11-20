@@ -143,7 +143,7 @@ class ObjectStore : public IObjectStore,
    */
   ImmediateFuture<std::shared_ptr<const Tree>> getRootTree(
       const RootId& rootId,
-      ObjectFetchContext& context) const override;
+      const ObjectFetchContextPtr& context) const override;
 
   /**
    * Get a TreeEntry by ID
@@ -155,7 +155,7 @@ class ObjectStore : public IObjectStore,
   ImmediateFuture<std::shared_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& objectId,
       TreeEntryType treeEntryType,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Get a Tree by ID.
@@ -166,7 +166,7 @@ class ObjectStore : public IObjectStore,
    */
   ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context) const override;
+      const ObjectFetchContextPtr& context) const override;
 
   /**
    * Prefetch all the blobs represented by the HashRange.
@@ -176,7 +176,7 @@ class ObjectStore : public IObjectStore,
    */
   ImmediateFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
-      ObjectFetchContext& context) const override;
+      const ObjectFetchContextPtr& context) const override;
 
   /**
    * Get a Blob by ID.
@@ -187,7 +187,7 @@ class ObjectStore : public IObjectStore,
    */
   ImmediateFuture<std::shared_ptr<const Blob>> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context) const override;
+      const ObjectFetchContextPtr& context) const override;
 
   /**
    * Get metadata about a Blob.
@@ -198,21 +198,21 @@ class ObjectStore : public IObjectStore,
    */
   ImmediateFuture<BlobMetadata> getBlobMetadata(
       const ObjectId& id,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Returns the size of the contents of the blob with the given ID.
    */
   ImmediateFuture<uint64_t> getBlobSize(
       const ObjectId& id,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
   ImmediateFuture<Hash20> getBlobSha1(
       const ObjectId& id,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Get the LocalStore used by this ObjectStore

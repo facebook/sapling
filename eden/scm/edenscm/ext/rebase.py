@@ -1215,7 +1215,7 @@ def rebase(ui, repo, templ=None, **opts):
         [rebase]
         experimental.inmemorywarning = Using experimental in-memory rebase
 
-    Returns 0 on success, 1 if nothing to rebase or if there are
+    Returns 0 on success (also when nothing to rebase), 1 if there are
     unresolved conflicts.
 
     """

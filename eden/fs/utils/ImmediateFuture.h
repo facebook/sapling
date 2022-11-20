@@ -35,6 +35,10 @@ namespace facebook::eden {
  */
 template <typename T>
 class ImmediateFuture {
+  // SemiFuture is a pointer-sized, move-only type, and we rely on it
+  // being nothrow.
+  static_assert(std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+
  public:
   /**
    * The type of the stored value.
@@ -77,8 +81,7 @@ class ImmediateFuture {
    * described above as well as ensuring that ImmediateFuture::isReady always
    * returns false.
    */
-  /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
-      std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
+  /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept
       : ImmediateFuture{std::move(fut), SemiFutureReadiness::EagerSemiFuture} {}
 
   ~ImmediateFuture();
@@ -87,11 +90,9 @@ class ImmediateFuture {
   ImmediateFuture<T>& operator=(const ImmediateFuture<T>&) = delete;
 
   ImmediateFuture(ImmediateFuture<T>&&) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>&&
-          std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+      std::is_nothrow_move_constructible_v<folly::Try<T>>);
   ImmediateFuture<T>& operator=(ImmediateFuture<T>&&) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>&&
-          std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+      std::is_nothrow_move_constructible_v<folly::Try<T>>);
 
   /**
    * Call the func continuation once this future is ready.
@@ -252,10 +253,7 @@ class ImmediateFuture {
 
   ImmediateFuture(
       folly::SemiFuture<T>&& fut,
-      SemiFutureReadiness
-          readiness) noexcept(std::
-                                  is_nothrow_move_constructible_v<
-                                      folly::SemiFuture<T>>);
+      SemiFutureReadiness readiness) noexcept;
 
   friend ImmediateFuture<folly::Unit> makeNotReadyImmediateFuture();
 

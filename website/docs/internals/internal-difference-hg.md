@@ -102,6 +102,10 @@ Mercurial maintains a pure Python implementation. It can run without building
 with a C or Rust compiler by setting `HGMODULEPOLICY` to `py`. This is not
 possible for Sapling.
 
+## Ignore files
+
+Mercurial supports `.hgignore`, optionally `.gitignore` through extensions.
+Sapling only supports `.gitignore`.
 
 ## Git support
 

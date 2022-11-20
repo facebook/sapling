@@ -175,7 +175,7 @@
 
   $ hg log -f -l1 --style something
   abort: style 'something' not found
-  (available styles: bisect, changelog, compact, default, phases, show, status, xml)
+  (available styles: bisect, changelog, compact, default, phases, show, sl_default, status, xml)
   [255]
 
 # -f, phases style

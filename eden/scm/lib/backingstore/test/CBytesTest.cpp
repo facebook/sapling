@@ -9,12 +9,18 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
+
+namespace {
+
+using namespace sapling;
 
 TEST(CBytes, returns_hello_world) {
-  auto result = rust_test_cbytes();
+  auto result = sapling_test_cbytes();
   folly::ByteRange expected = folly::StringPiece("hello world");
   auto resultBytes = result.asByteRange();
 
   EXPECT_EQ(resultBytes, expected);
 }
+
+} // namespace

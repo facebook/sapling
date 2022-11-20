@@ -9,6 +9,7 @@
 import logging
 
 from edenscm import error, git, rcutil, registrar, util
+from edenscm.ext.github.github_repo_util import check_github_repo
 from edenscm.i18n import _
 
 
@@ -216,7 +217,8 @@ def _create_ghstack_context(ui, repo):
 
     ghstack.logs.rotate()
 
-    github = ghstack.github_cli_endpoint.GitHubCLIEndpoint()
+    github_repo = check_github_repo(repo)
+    github = ghstack.github_cli_endpoint.GitHubCLIEndpoint(github_repo.hostname)
     config_section = "ghstack"
     username_config_name = "github_username"
     github_username = ui.config(config_section, username_config_name)
@@ -240,7 +242,7 @@ query UsernameQuery {
             configfile, config_section, username_config_name, github_username
         )
 
-    github_url = ui.config(config_section, "github_url", "github.com")
+    github_url = ui.config(config_section, "github_url", github_repo.hostname)
     remote_name = ui.config(config_section, "remote_name", "origin")
     conf = ghstack.config.Config(
         proxy=None,

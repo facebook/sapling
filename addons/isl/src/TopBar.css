@@ -13,7 +13,9 @@
   flex-wrap: wrap;
   margin: var(--pad);
   margin-left: var(--halfpad);
+  gap: var(--pad);
 }
+
 .top-bar .button-group {
   display: flex;
   gap: var(--pad);

@@ -5,8 +5,6 @@
 
 from __future__ import absolute_import
 
-import os
-
 import time
 import weakref
 from typing import IO, Optional, Union
@@ -33,10 +31,9 @@ from .i18n import _
 from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
 
-SEGMENTS_DIR = os.path.join("segments", "v1")
-# Used on Windows, for migration.
-SEGMENTS_DIR_NEXT = os.path.join("segments", "v1next")
-HGCOMMITS_DIR = os.path.join("hgcommits", "v1")
+SEGMENTS_DIR = "segments/v1"
+SEGMENTS_DIR_NEXT = "segments/v1next"  # Used on Windows, for migration.
+HGCOMMITS_DIR = "hgcommits/v1"
 
 
 class changelog(object):

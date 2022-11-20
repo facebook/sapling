@@ -45,7 +45,7 @@ class TestDispatcher : public FuseDispatcher {
       uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * Wait for the dispatcher to receive a FUSE_LOOKUP request with the

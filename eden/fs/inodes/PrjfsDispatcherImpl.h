@@ -22,62 +22,62 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
 
   ImmediateFuture<std::vector<PrjfsDirEntry>> opendir(
       RelativePath path,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<std::optional<LookupResult>> lookup(
       RelativePath path,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<bool> access(
       RelativePath path,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<std::string> read(
       RelativePath path,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> fileCreated(
       RelativePath relPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> dirCreated(
       RelativePath relPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> fileModified(
       RelativePath relPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> preDirRename(
       RelativePath oldPath,
       RelativePath newPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> preFileRename(
       RelativePath oldPath,
       RelativePath newPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath oldPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> preFileDelete(
       RelativePath relPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath oldPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> preDirDelete(
       RelativePath relPath,
-      std::shared_ptr<ObjectFetchContext> context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> waitForPendingNotifications() override;
 

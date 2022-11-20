@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use bitflags::bitflags;
+use serde::Serialize;
 
 use super::column::Column;
 use super::column::ColumnsExt;
@@ -176,7 +177,7 @@ impl<N> Column<N> {
 }
 
 /// A column in the node row.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
 pub enum NodeLine {
     /// Blank.
     Blank,
@@ -192,7 +193,7 @@ pub enum NodeLine {
 }
 
 /// A column in a padding row.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
 pub enum PadLine {
     /// Blank.
     Blank,
@@ -206,7 +207,7 @@ pub enum PadLine {
 
 bitflags! {
     /// A column in a linking row.
-    #[derive(Default)]
+    #[derive(Default, Serialize)]
     pub struct LinkLine: u16 {
         /// This cell contains a horizontal line that connects to a parent.
         const HORIZ_PARENT = 0b0_0000_0000_0001;
@@ -266,7 +267,7 @@ bitflags! {
 }
 
 /// An output graph row.
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct GraphRow<N> {
     /// The name of the node for this row.
     pub node: N,

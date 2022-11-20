@@ -98,22 +98,19 @@ class EdenConfigTest : public ::testing::Test {
     ensureDirectoryExists(systemConfigDir);
 
     auto systemConfigPath = systemConfigDir + "edenfs.rc"_pc;
-    auto systemConfigFileData = folly::to<std::string>(
+    auto systemConfigFileData = fmt::format(
         "[core]\n"
-        "ignoreFile='",
-        folly::kIsWindows ? "\\\\?\\should_be_over_ridden"
-                          : "/should_be_over_ridden",
-        "'\n"
-        "systemIgnoreFile='",
-        folly::kIsWindows ? "\\\\?\\etc\\eden\\systemCustomIgnore"
-                          : "/etc/eden/systemCustomIgnore",
-        "'\n"
+        "ignoreFile='{}'\n"
+        "systemIgnoreFile='{}'\n"
         "[mononoke]\n"
         "use-mononoke=true\n"
         "[ssl]\n"
-        "client-certificate-locations=['",
-        clientConfigPath,
-        "']\n");
+        "client-certificate-locations=['{}']\n",
+        folly::kIsWindows ? "\\\\?\\should_be_over_ridden"
+                          : "/should_be_over_ridden",
+        folly::kIsWindows ? "\\\\?\\etc\\eden\\systemCustomIgnore"
+                          : "/etc/eden/systemCustomIgnore",
+        clientConfigPath);
     writeFile(systemConfigPath, folly::StringPiece{systemConfigFileData})
         .value();
 
@@ -381,7 +378,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       canonicalPath("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
       edenConfig->getClientCertificate(),
-      normalizeBestEffort(clientConfigPath.stringPiece()));
+      normalizeBestEffort(clientConfigPath.view()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), true);
 
   edenConfig->loadUserConfig();
@@ -395,7 +392,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       canonicalPath("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
       edenConfig->getClientCertificate(),
-      normalizeBestEffort(clientConfigPath.stringPiece()));
+      normalizeBestEffort(clientConfigPath.view()));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
 }
 

@@ -47,19 +47,25 @@ class GitBackingStore final : public BijectiveBackingStore {
 
   ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& /* objectId */,
       TreeEntryType /* treeEntryType */,
-      ObjectFetchContext& /* context */) override {
+      const ObjectFetchContextPtr& /* context */) override {
     throw std::domain_error("unimplemented");
   }
   folly::SemiFuture<BackingStore::GetTreeResult> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<BackingStore::GetBlobResult> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
+
+  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+      const ObjectId& /*id*/,
+      const ObjectFetchContextPtr& /*context*/) override {
+    return nullptr;
+  }
 
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {

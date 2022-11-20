@@ -6,4 +6,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-insta = "1.16.0"
+insta = { version = "1.21.0", features = ["json"] }

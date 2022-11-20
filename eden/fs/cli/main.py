@@ -750,6 +750,11 @@ class CloneCmd(Subcmd):
             help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and macOS only) and 'http' (Linux only)",
         )
 
+        parser.add_argument(
+            "--re-use-case",
+            help="The Remote Execuation use-case to use when --backing-store=recas",
+        )
+
         case_group = parser.add_mutually_exclusive_group()
         case_group.add_argument(
             "--case-sensitive",
@@ -845,6 +850,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 args.case_sensitive,
                 args.overlay_type,
                 args.backing_store,
+                args.re_use_case,
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
@@ -966,6 +972,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         case_sensitive: bool,
         overlay_type: Optional[str],
         backing_store_type: Optional[str] = None,
+        re_use_case: Optional[str] = None,
     ) -> Tuple[util.Repo, config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing EdenFS mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
@@ -1004,6 +1011,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             predictive_prefetch_num_dirs=0,
             enable_tree_overlay=enable_tree_overlay,
             use_write_back_cache=False,
+            re_use_case=re_use_case or "buck2-default",
         )
 
         return repo, repo_config

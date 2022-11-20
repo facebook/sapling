@@ -18,6 +18,7 @@ use super::render::Renderer;
 use crate::nameset::SyncNameSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
+use crate::render::render::GraphRow;
 use crate::DagAlgorithm;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Group;
@@ -27,6 +28,7 @@ use crate::IdSpan;
 use crate::Level;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::NameDag;
+use crate::Set;
 use crate::VertexName;
 
 /// Render a NameDag or MemNameDag into a String.
@@ -36,16 +38,9 @@ pub fn render_namedag(
 ) -> Result<String> {
     let mut renderer = super::GraphRowRenderer::new().output().build_box_drawing();
 
-    let iter: Vec<_> = non_blocking_result(dag.all())?
-        .iter()?
-        .collect::<crate::Result<_>>()?;
-
     let mut out = String::new();
-    for node in iter {
-        let parents = non_blocking_result(dag.parent_names(node.clone()))?
-            .into_iter()
-            .map(Ancestor::Parent)
-            .collect();
+    let next_rows = dag_to_renderer_next_rows(dag, None)?;
+    for (node, parents) in next_rows {
         let mut name = format!("{:?}", &node);
         let message = get_message(&node).unwrap_or_default();
         let row = if name.len() == 1 {
@@ -68,6 +63,79 @@ pub fn render_namedag(
             .join("\n")
     );
     Ok(output)
+}
+
+/// Render a NameDag or MemNameDag into structured `GraphRow`s.
+/// The `GraphRow` can serialize to other formats.
+///
+/// If `subset` is provided, only render a subset of the graph.
+pub fn render_namedag_structured(
+    dag: &dyn DagAlgorithm,
+    subset: Option<Set>,
+) -> Result<Vec<GraphRow<VertexName>>> {
+    let mut renderer = super::GraphRowRenderer::new();
+    let next_rows = dag_to_renderer_next_rows(dag, subset)?;
+    let mut out = Vec::with_capacity(next_rows.len());
+    for (node, parents) in next_rows {
+        let name = String::from_utf8_lossy(node.as_ref()).into_owned();
+        let message = Default::default();
+        let row = renderer.next_row(node, parents, name, message);
+        out.push(row);
+    }
+    Ok(out)
+}
+
+/// Produce inputs (node, parents) for graph_row.
+///
+/// If `subset` is provided, only render a subset of the graph in
+/// the `subset` order.
+fn dag_to_renderer_next_rows(
+    dag: &(impl DagAlgorithm + ?Sized),
+    subset: Option<Set>,
+) -> Result<Vec<(VertexName, Vec<Ancestor<VertexName>>)>> {
+    let subset = match subset {
+        None => non_blocking_result(dag.all())?,
+        Some(set) => set,
+    };
+    let iter: Vec<_> = subset.iter()?.collect::<crate::Result<_>>()?;
+    let subdag = non_blocking_result(dag.subdag(subset))?;
+
+    let mut out = Vec::with_capacity(iter.len());
+    for node in iter {
+        let direct_parents = non_blocking_result(dag.parent_names(node.clone()))?;
+        let subdag_parents = non_blocking_result(subdag.parent_names(node.clone()))?;
+        let mut parents: Vec<Ancestor<VertexName>> = subdag_parents
+            .iter()
+            .cloned()
+            .map(|p| {
+                if direct_parents.contains(&p) {
+                    Ancestor::Parent(p)
+                } else {
+                    Ancestor::Ancestor(p)
+                }
+            })
+            .collect();
+        if parents.len() < direct_parents.len() {
+            let subdag_ancestors =
+                non_blocking_result(dag.ancestors(Set::from_static_names(subdag_parents.clone())))?;
+            for p in &direct_parents {
+                if subdag_parents.contains(p) {
+                    continue;
+                }
+                // Is the direct parent connect to any of the subdag parents?
+                let direct_reachable = non_blocking_result(dag.ancestors(p.into()))?;
+                if direct_reachable
+                    .intersection(&subdag_ancestors)
+                    .is_empty()?
+                {
+                    parents.push(Ancestor::Anonymous)
+                }
+            }
+        }
+        out.push((node, parents));
+    }
+
+    Ok(out)
 }
 
 #[cfg(any(test, feature = "indexedlog-backend"))]

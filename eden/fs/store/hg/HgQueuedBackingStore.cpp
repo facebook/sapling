@@ -15,6 +15,7 @@
 #include <re2/re2.h>
 
 #include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
@@ -38,8 +39,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/Throw.h"
-#include "folly/ScopeGuard.h"
-#include "folly/String.h"
 
 namespace facebook::eden {
 
@@ -58,7 +57,7 @@ HgImportTraceEvent::HgImportTraceEvent(
     EventType eventType,
     ResourceType resourceType,
     const HgProxyHash& proxyHash,
-    ImportPriorityKind priority,
+    ImportPriority::Class priority,
     ObjectFetchContext::Cause cause)
     : unique{unique},
       manifestNodeId{proxyHash.revHash()},
@@ -66,7 +65,7 @@ HgImportTraceEvent::HgImportTraceEvent(
       resourceType{resourceType},
       importPriority{priority},
       importCause{cause} {
-  auto hgPath = proxyHash.path().stringPiece();
+  auto hgPath = proxyHash.path().view();
   path.reset(new char[hgPath.size() + 1]);
   memcpy(path.get(), hgPath.data(), hgPath.size());
   path[hgPath.size()] = 0;
@@ -148,7 +147,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
         request->getUnique(),
         HgImportTraceEvent::BLOB,
         blobImport->proxyHash,
-        request->getPriority().kind,
+        request->getPriority().getClass(),
         request->getCause()));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
@@ -201,7 +200,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
         request->getUnique(),
         HgImportTraceEvent::TREE,
         treeImport->proxyHash,
-        request->getPriority().kind,
+        request->getPriority().getClass(),
         request->getCause()));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
@@ -357,7 +356,7 @@ std::string HgQueuedBackingStore::staticRenderObjectId(
 
 folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
     const ObjectId& id,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   HgProxyHash proxyHash;
   try {
     proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree", *stats_);
@@ -367,7 +366,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
   }
 
   logBackingStoreFetch(
-      context,
+      *context,
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Tree);
 
@@ -384,7 +383,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
 
 std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
     const ObjectId& id,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   DurationScope scope{stats_, &HgBackingStoreStats::getBlobMetadata};
 
   HgProxyHash proxyHash;
@@ -408,10 +407,10 @@ folly::SemiFuture<BackingStore::GetTreeResult>
 HgQueuedBackingStore::getTreeImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto getTreeFuture = folly::makeFutureWith([&] {
     auto request = HgImportRequest::makeTreeImportRequest(
-        id, proxyHash, context.getPriority(), context.getCause());
+        id, proxyHash, context->getPriority(), context->getCause());
     uint64_t unique = request->getUnique();
 
     auto importTracker =
@@ -420,21 +419,21 @@ HgQueuedBackingStore::getTreeImpl(
         unique,
         HgImportTraceEvent::TREE,
         proxyHash,
-        context.getPriority().kind,
-        context.getCause()));
+        context->getPriority().getClass(),
+        context->getCause()));
 
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
                  unique,
                  proxyHash,
-                 &context,
+                 context = context.copy(),
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(HgImportTraceEvent::finish(
               unique,
               HgImportTraceEvent::TREE,
               proxyHash,
-              context.getPriority().kind,
-              context.getCause()));
+              context->getPriority().getClass(),
+              context->getCause()));
         });
   });
 
@@ -449,7 +448,7 @@ HgQueuedBackingStore::getTreeImpl(
 
 folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
     const ObjectId& id,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   HgProxyHash proxyHash;
   try {
     proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob", *stats_);
@@ -459,7 +458,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
   }
 
   logBackingStoreFetch(
-      context,
+      *context,
       folly::Range{&proxyHash, 1},
       ObjectFetchContext::ObjectType::Blob);
 
@@ -476,13 +475,13 @@ folly::SemiFuture<BackingStore::GetBlobResult>
 HgQueuedBackingStore::getBlobImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto getBlobFuture = folly::makeFutureWith([&] {
     XLOG(DBG4) << "make blob import request for " << proxyHash.path()
                << ", hash is:" << id;
 
     auto request = HgImportRequest::makeBlobImportRequest(
-        id, proxyHash, context.getPriority(), context.getCause());
+        id, proxyHash, context->getPriority(), context->getCause());
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -491,21 +490,21 @@ HgQueuedBackingStore::getBlobImpl(
         unique,
         HgImportTraceEvent::BLOB,
         proxyHash,
-        context.getPriority().kind,
-        context.getCause()));
+        context->getPriority().getClass(),
+        context->getCause()));
 
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
                  unique,
                  proxyHash,
-                 &context,
+                 context = context.copy(),
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(HgImportTraceEvent::finish(
               unique,
               HgImportTraceEvent::BLOB,
               proxyHash,
-              context.getPriority().kind,
-              context.getCause()));
+              context->getPriority().getClass(),
+              context->getCause()));
         });
   });
 
@@ -520,17 +519,17 @@ HgQueuedBackingStore::getBlobImpl(
 
 ImmediateFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
     const RootId& rootId,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   return backingStore_->getRootTree(rootId);
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     ObjectIdRange ids,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return HgProxyHash::getBatch(localStore_.get(), ids, *stats_)
       // The caller guarantees that ids will live at least longer than this
       // future, thus we don't need to deep-copy it.
-      .thenTry([&context, this, ids](
+      .thenTry([context = context.copy(), this, ids](
                    folly::Try<std::vector<HgProxyHash>> tryHashes) {
         if (tryHashes.hasException()) {
           logMissingProxyHash();
@@ -538,7 +537,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         auto& proxyHashes = tryHashes.value();
 
         logBackingStoreFetch(
-            context,
+            *context,
             folly::Range{proxyHashes.data(), proxyHashes.size()},
             ObjectFetchContext::ObjectType::Blob);
 
@@ -585,7 +584,7 @@ void HgQueuedBackingStore::logMissingProxyHash() {
 }
 
 void HgQueuedBackingStore::logBackingStoreFetch(
-    ObjectFetchContext& context,
+    const ObjectFetchContext& context,
     folly::Range<HgProxyHash*> hashes,
     ObjectFetchContext::ObjectType type) {
   const auto& logFetchPathRegex =
@@ -594,7 +593,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   if (logFetchPathRegex) {
     for (const auto& hash : hashes) {
       auto path = hash.path();
-      auto pathPiece = path.stringPiece();
+      auto pathPiece = path.view();
 
       if (RE2::PartialMatch(
               re2::StringPiece{pathPiece.data(), pathPiece.size()},

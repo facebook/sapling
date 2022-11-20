@@ -4,12 +4,13 @@
 # GNU General Public License version 2.
 
 from dataclasses import dataclass
-from typing import Any, Dict, TypedDict
+from typing import Any, Dict, Optional, TypedDict
 
 from ghstack.github_cli_endpoint import GitHubCLIEndpoint
 
 
 class PullRequestIdDict(TypedDict):
+    hostname: Optional[str]
     owner: str
     name: str
     number: int
@@ -18,9 +19,10 @@ class PullRequestIdDict(TypedDict):
 @dataclass(eq=True, frozen=True, order=True)
 class PullRequestId:
     """A structured representation of the fields used to identify a pull
-    request: owner, name, number.
+    request: hostname, owner, name, number.
     """
 
+    hostname: Optional[str]
     # In GitHub, a "RepositoryOwner" is either an "Organization" or a "User":
     # https://docs.github.com/en/graphql/reference/interfaces#repositoryowner
     owner: str
@@ -30,16 +32,25 @@ class PullRequestId:
     number: int
 
     def as_url(self, domain=None) -> str:
-        domain = domain or "github.com"
+        """domain is the hostname used to display the pull request. Note this
+        is orthogonal to self.hostname.
+        """
+        # TODO: When ReviewStack supports GitHub Enterprise, this logic will
+        # have to change.
+        domain = domain or self.get_hostname()
         return f"https://{domain}/{self.owner}/{self.name}/pull/{self.number}"
 
     def as_dict(self) -> PullRequestIdDict:
         """Returns this PullRequestId as a Dict that can be serialized as JSON."""
         return {
+            "hostname": self.hostname,
             "owner": self.owner,
             "name": self.name,
             "number": self.number,
         }
+
+    def get_hostname(self) -> str:
+        return self.hostname or "github.com"
 
 
 class GraphQLPullRequest:

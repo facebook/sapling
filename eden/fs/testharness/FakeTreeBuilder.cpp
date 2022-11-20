@@ -7,7 +7,6 @@
 
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 
-#include <folly/Conv.h>
 #include <stdexcept>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
@@ -71,17 +70,17 @@ void FakeTreeBuilder::setFileImpl(
   if (replace) {
     auto iter = dir->entries->find(name);
     if (iter == dir->entries->end()) {
-      throw std::runtime_error(folly::to<string>(
-          "while building fake tree: expected to replace entry at ",
-          path,
-          " but no entry present with this name"));
+      throwf<std::runtime_error>(
+          "while building fake tree: expected to replace entry at {} "
+          "but no entry present with this name",
+          path);
     }
     iter->second = std::move(info);
   } else {
     auto ret = dir->entries->emplace(name, std::move(info));
     if (!ret.second) {
-      throw std::runtime_error(folly::to<string>(
-          "while building fake tree: an entry already exists at ", path));
+      throwf<std::runtime_error>(
+          "while building fake tree: an entry already exists at {}", path);
     }
   }
 }
@@ -96,10 +95,10 @@ void FakeTreeBuilder::removeFile(
   auto name = path.basename();
   auto iter = dir->entries->find(name);
   if (iter == dir->entries->end()) {
-    throw std::runtime_error(folly::to<string>(
-        "while building fake tree: expected to remove entry at ",
-        path,
-        " but no entry present with this name"));
+    throwf<std::runtime_error>(
+        "while building fake tree: expected to remove entry at {} "
+        "but no entry present with this name",
+        path);
   }
   dir->entries->erase(iter);
 
@@ -191,8 +190,7 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getEntry(RelativePathPiece path) {
   auto* parent = getDirEntry(path.dirname(), false);
   auto iter = parent->entries->find(path.basename());
   if (iter == parent->entries->end()) {
-    throw std::runtime_error(
-        folly::to<string>("tried to look up non-existent entry ", path));
+    throwf<std::runtime_error>("tried to look up non-existent entry {}", path);
   }
   return &iter->second;
 }
@@ -206,8 +204,8 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getDirEntry(
     auto iter = parent->entries->find(name);
     if (iter == parent->entries->end()) {
       if (!create) {
-        throw std::runtime_error(folly::to<string>(
-            "tried to look up non-existent directory ", path));
+        throwf<std::runtime_error>(
+            "tried to look up non-existent directory ", path);
       }
       auto ret = parent->entries->emplace(name, EntryInfo{TreeEntryType::TREE});
       XCHECK(ret.second);
@@ -215,12 +213,10 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getDirEntry(
     } else {
       parent = &iter->second;
       if (parent->type != TreeEntryType::TREE) {
-        throw std::runtime_error(folly::to<string>(
-            "tried to look up directory ",
+        throwf<std::runtime_error>(
+            "tried to look up directory {} but {} is not a directory",
             path,
-            " but ",
-            name,
-            " is not a directory"));
+            name);
       }
     }
   }
@@ -235,12 +231,8 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
   for (auto name : path.components()) {
     const auto& entry = current->get().find(name)->second;
     if (!entry.isTree()) {
-      throw std::runtime_error(folly::to<string>(
-          "tried to look up stored tree ",
-          path,
-          " but ",
-          name,
-          " is not a tree"));
+      throwf<std::runtime_error>(
+          "tried to look up stored tree {} but {} is not a tree", path, name);
     }
 
     current = store_->getStoredTree(entry.getHash());
@@ -253,10 +245,9 @@ StoredBlob* FakeTreeBuilder::getStoredBlob(RelativePathPiece path) {
   auto* parent = getStoredTree(path.dirname());
   const auto& entry = parent->get().find(path.basename())->second;
   if (entry.isTree()) {
-    throw std::runtime_error(folly::to<string>(
-        "tried to look up stored blob at ",
-        path,
-        " but it is a tree rather than a blob"));
+    throwf<std::runtime_error>(
+        "tried to look up stored blob at {} but it is a tree rather than a blob",
+        path);
   }
   return store_->getStoredBlob(entry.getHash());
 }

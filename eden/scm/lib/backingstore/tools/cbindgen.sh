@@ -10,17 +10,15 @@
 #
 #   cargo install --force cbindgen
 
+cd "$(dirname "$0")"/..
+
+set -e
+
 CONFIG="cbindgen.toml"
-OUTPUT="c_api/RustBackingStore.h"
+OUTPUT="c_api/BackingStoreBindings.h"
 
 main() {
   cbindgen --config "$CONFIG" --output "$OUTPUT"
-  # There is no way to customize the return type for functions with cbindgen,
-  # and we don't want cbindgen to generate these template types since MSVC does
-  # not like these. So we use `sed` to strip these templates.
-  #
-  # Note: `-i"" -e` for BSD compatibility.
-  sed -i"" -e "s/CFallibleBase<.*>/CFallibleBase/g"  "$OUTPUT"
   python3 "$(hg root)/xplat/python/signedsource_lib/signedsource.py" sign "$OUTPUT"
 }
 

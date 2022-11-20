@@ -165,7 +165,6 @@ class HgBackingStore {
   folly::Executor* serverThreadPool_;
 
   std::string repoName_;
-  const bool useEdenApi_;
   HgDatapackStore datapackStore_;
 
   std::shared_ptr<StructuredLogger> logger_;

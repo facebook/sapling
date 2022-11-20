@@ -15,6 +15,8 @@ use std::fmt::Formatter;
 use std::ops::Deref;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use std::path::Path;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use indexmap::set::IndexSet;
 use serde::Deserialize;
@@ -73,7 +75,7 @@ pub struct IdDag<Store> {
 }
 
 /// See benches/segment_sizes.rs (D16660078) for this choice.
-const DEFAULT_SEG_SIZE: usize = 16;
+const DEFAULT_SEG_SIZE: AtomicUsize = AtomicUsize::new(16);
 
 /// Maximum meaningful level. 4 is chosen because it is good enough
 /// for an existing large repo (level 5 is not built because it
@@ -126,7 +128,7 @@ impl IdDag<InProcessStore> {
         let store = InProcessStore::new();
         Self {
             store,
-            new_seg_size: DEFAULT_SEG_SIZE,
+            new_seg_size: default_seg_size(),
             version: VerLink::new(),
         }
     }
@@ -136,7 +138,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     pub(crate) fn open_from_store(store: Store) -> Result<Self> {
         let dag = Self {
             store,
-            new_seg_size: DEFAULT_SEG_SIZE, // see D16660078 for this default setting
+            new_seg_size: default_seg_size(),
             version: VerLink::new(),
         };
         Ok(dag)
@@ -1952,7 +1954,19 @@ impl<P: Fn(Id) -> Result<bool>> LazyPredicate<P> {
 }
 
 fn default_seg_size() -> usize {
-    DEFAULT_SEG_SIZE
+    DEFAULT_SEG_SIZE.load(Ordering::Acquire)
+}
+
+/// Update global default segment size. The segment size affects high-level
+/// segments. A level N segment covers at most "segment size" level N-1
+/// segments.
+///
+/// Setting this to a smaller number like 3 can help demonstrate the concept
+/// using smaller graphs. Panic if `new_size` is less than 2.
+///
+/// Existing IdDags are not affected.
+pub fn set_default_seg_size(new_size: usize) {
+    DEFAULT_SEG_SIZE.store(new_size, Ordering::Release);
 }
 
 #[cfg(test)]

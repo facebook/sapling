@@ -123,8 +123,7 @@ std::string TreeEntry::toLogString(PathComponentPiece name) const {
       break;
   }
 
-  return folly::to<std::string>(
-      "(", name, ", ", hash_, ", ", fileTypeChar, ")");
+  return fmt::format("({}, {}, {})", name, hash_, fileTypeChar);
 }
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
@@ -144,7 +143,7 @@ std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
 
 size_t TreeEntry::serializedSize(PathComponentPiece name) const {
   return sizeof(uint8_t) + sizeof(uint16_t) + hash_.size() + sizeof(uint16_t) +
-      name.stringPiece().size() + sizeof(uint64_t) + Hash20::RAW_SIZE;
+      name.view().size() + sizeof(uint64_t) + Hash20::RAW_SIZE;
 }
 
 void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
@@ -153,10 +152,10 @@ void TreeEntry::serialize(PathComponentPiece name, Appender& appender) const {
   XCHECK_LE(hash.size(), std::numeric_limits<uint16_t>::max());
   appender.write<uint16_t>(folly::to_narrow(hash.size()));
   appender.push(hash);
-  auto nameStringPiece = name.stringPiece();
+  auto nameStringPiece = name.view();
   XCHECK_LE(nameStringPiece.size(), std::numeric_limits<uint16_t>::max());
   appender.write<uint16_t>(folly::to_narrow(nameStringPiece.size()));
-  appender.push(nameStringPiece);
+  appender.push(folly::StringPiece{nameStringPiece});
   if (size_) {
     appender.write<uint64_t>(*size_);
   } else {

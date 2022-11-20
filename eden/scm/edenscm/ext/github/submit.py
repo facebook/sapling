@@ -15,6 +15,8 @@ from edenscm.node import hex, nullid
 
 from . import gh_submit, github_repo_util
 from .gh_submit import PullRequestDetails, Repository
+from .github_repo_util import check_github_repo, GitHubRepo
+from .pr_parser import get_pull_request_for_node
 
 from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
@@ -22,10 +24,8 @@ from .pullrequeststore import PullRequestStore
 
 def submit(ui, repo, *args, **opts):
     """Create or update GitHub pull requests."""
-    if not github_repo_util.is_github_repo(repo):
-        raise error.Abort(_("not a Git repo"))
-
-    return asyncio.run(update_commits_in_stack(ui, repo))
+    github_repo = check_github_repo(repo)
+    return asyncio.run(update_commits_in_stack(ui, repo, github_repo))
 
 
 @dataclass
@@ -51,7 +51,7 @@ class CommitData:
         return self.msg
 
 
-async def update_commits_in_stack(ui, repo) -> int:
+async def update_commits_in_stack(ui, repo, github_repo: GitHubRepo) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
         ui.status_err(_("commit has no parent: currently unsupported\n"))
@@ -113,10 +113,12 @@ async def update_commits_in_stack(ui, repo) -> int:
             # top.node will become the head of a new PR, so it needs a branch
             # name.
             if next_pull_request_number is None:
-                repository = await get_repository_for_origin(origin)
+                repository = await get_repository_for_origin(
+                    origin, github_repo.hostname
+                )
                 upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
                 result = await gh_submit.guess_next_pull_request_number(
-                    upstream_owner, upstream_name
+                    github_repo.hostname, upstream_owner, upstream_name
                 )
                 if result.is_error():
                     raise error.Abort(
@@ -167,7 +169,7 @@ async def update_commits_in_stack(ui, repo) -> int:
     tip = hex(partitions[0][0].node)
 
     if not repository:
-        repository = await get_repository_for_origin(origin)
+        repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
             partition, index, pr_numbers_and_num_commits, repository, ui
@@ -199,7 +201,9 @@ async def rewrite_pull_request_body(
     )
     pr = head_commit_data.pr
     assert pr
-    result = await gh_submit.update_pull_request(pr.node_id, title, body)
+    result = await gh_submit.update_pull_request(
+        repository.hostname, pr.node_id, title, body
+    )
     if result.is_error():
         ui.status_err(
             _("warning, updating #%d may not have succeeded: %s\n")
@@ -231,6 +235,7 @@ async def create_pull_requests(
     # Because these will be "overlapping" pull requests, all share the same
     # base.
     base = repository.get_base_branch()
+    hostname = repository.hostname
 
     # Create the pull requests in order serially to give us the best chance of
     # the number in the branch name matching that of the actual pull request.
@@ -239,6 +244,7 @@ async def create_pull_requests(
         body = commit.get_msg()
         title = firstline(body)
         response = await gh_submit.create_pull_request(
+            hostname=repository.hostname,
             owner=owner,
             name=name,
             base=base,
@@ -261,7 +267,7 @@ async def create_pull_requests(
         url = data["html_url"]
         ui.status_err(_("created new pull request: %s\n") % url)
         number = data["number"]
-        pr_id = PullRequestId(owner=owner, name=name, number=number)
+        pr_id = PullRequestId(hostname=hostname, owner=owner, name=name, number=number)
         store.map_commit_to_pull_request(commit.node, pr_id)
         commits_to_update.append((commit, pr_id))
 
@@ -286,12 +292,13 @@ def create_pull_request_title_and_body(
     >>> commit_msg = 'The original commit message.\nSecond line of message.'
     >>> pr_numbers_and_num_commits = [(1, 1), (2, 2), (42, 1), (4, 1)]
     >>> pr_numbers_index = 2
-    >>> repository = Repository(id="abcd=", owner="facebook", name="sapling", default_branch="main", is_fork=42)
+    >>> upstream_repo = Repository(hostname="github.com", id="abcd=", owner="facebook", name="sapling", default_branch="main", is_fork=False)
+    >>> contributor_repo = Repository(hostname="github.com", id="efgh=", owner="keith", name="sapling", default_branch="main", is_fork=True, upstream=upstream_repo)
     >>> title, body = create_pull_request_title_and_body(
     ...     commit_msg,
     ...     pr_numbers_and_num_commits,
     ...     pr_numbers_index,
-    ...     repository,
+    ...     contributor_repo,
     ... )
     >>> title == 'The original commit message.'
     True
@@ -307,10 +314,9 @@ def create_pull_request_title_and_body(
     ...     'Second line of message.\n')
     True
     """
+    owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
-    reviewstack_url = (
-        f"https://reviewstack.dev/{repository.owner}/{repository.name}/pull/{pr}"
-    )
+    reviewstack_url = f"https://reviewstack.dev/{owner}/{name}/pull/{pr}"
     bulleted_list = "\n".join(
         [
             format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
@@ -342,9 +348,9 @@ def format_stack_entry(
     return line
 
 
-async def get_repository_for_origin(origin: str) -> Repository:
+async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
     origin_owner, origin_name = get_owner_and_name(origin)
-    return await get_repo(origin_owner, origin_name)
+    return await get_repo(hostname, origin_owner, origin_name)
 
 
 def get_origin(ui) -> str:
@@ -356,15 +362,15 @@ def get_origin(ui) -> str:
 
 
 def get_owner_and_name(origin: str) -> Tuple[str, str]:
-    owner_and_name = github_repo_util.parse_owner_and_name_from_github_url(origin)
-    if owner_and_name:
-        return owner_and_name
+    github_repo = github_repo_util.parse_github_repo_from_github_url(origin)
+    if github_repo:
+        return (github_repo.owner, github_repo.name)
     else:
         raise error.Abort(_("could not parse GitHub owner and name from %s") % origin)
 
 
-async def get_repo(owner: str, name: str) -> Repository:
-    repo_result = await gh_submit.get_repository(owner, name)
+async def get_repo(hostname: str, owner: str, name: str) -> Repository:
+    repo_result = await gh_submit.get_repository(hostname, owner, name)
     repository = repo_result.ok
     if repository:
         return repository
@@ -374,7 +380,7 @@ async def get_repo(owner: str, name: str) -> Repository:
 
 async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
     ctx = repo[node]
-    pr_id = github_repo_util.get_pull_request_for_node(node, store, ctx)
+    pr_id = get_pull_request_for_node(node, store, ctx)
     pr = await get_pull_request_details_or_throw(pr_id) if pr_id else None
     msg = None
     if pr:
@@ -409,7 +415,7 @@ async def add_pr_head_to_archives(
 
     tip is the hex version of the commit hash to be merged into the archive branch.
     """
-    username = await get_username()
+    username = await get_username(hostname=repository.hostname)
     if not username:
         raise error.Abort(_("could not determine GitHub username"))
 
@@ -419,7 +425,10 @@ async def add_pr_head_to_archives(
     # without checking for the existence of the branch to try to avoid a TOCTOU
     # error.
     result = await gh_submit.merge_into_branch(
-        repo_id=repository.id, oid_to_merge=tip, branch_name=branch_name
+        hostname=repository.hostname,
+        repo_id=repository.id,
+        oid_to_merge=tip,
+        branch_name=branch_name,
     )
     if not result.is_error():
         return
@@ -442,7 +451,10 @@ async def add_pr_head_to_archives(
         # Archive branch does not exist yet, so initialize it with the current
         # tip.
         result = await gh_submit.create_branch(
-            repo_id=repository.id, branch_name=branch_name, oid=tip
+            hostname=repository.hostname,
+            repo_id=repository.id,
+            branch_name=branch_name,
+            oid=tip,
         )
         if result.is_error():
             raise error.Abort(
@@ -629,9 +641,9 @@ def is_branch_does_not_exist_error(response) -> bool:
     return False
 
 
-async def get_username() -> Optional[str]:
+async def get_username(hostname: str) -> Optional[str]:
     """Returns the username for the user authenticated with the GitHub CLI."""
-    result = await gh_submit.get_username()
+    result = await gh_submit.get_username(hostname=hostname)
     if result.is_error():
         return None
     else:

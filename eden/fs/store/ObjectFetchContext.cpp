@@ -40,14 +40,15 @@ class NullObjectFetchContext : public ObjectFetchContext {
 
 namespace facebook::eden {
 
-ObjectFetchContext& ObjectFetchContext::getNullContext() {
+ObjectFetchContextPtr ObjectFetchContext::getNullContext() {
   static auto* p = new NullObjectFetchContext;
-  return *p;
+  return ObjectFetchContextPtr::singleton(*p);
 }
 
-ObjectFetchContext* ObjectFetchContext::getNullContextWithCauseDetail(
+ObjectFetchContextPtr ObjectFetchContext::getNullContextWithCauseDetail(
     std::string_view causeDetail) {
-  return new NullObjectFetchContext(causeDetail);
+  return ObjectFetchContextPtr::singleton(
+      *new NullObjectFetchContext{causeDetail});
 }
 
 } // namespace facebook::eden

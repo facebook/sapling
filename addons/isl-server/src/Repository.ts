@@ -36,6 +36,7 @@ import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
 // @fb-only
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
+import {isGithubEnterprise} from './github/queryGraphQL';
 import {serializeAsyncCall} from './utils';
 import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
@@ -359,7 +360,7 @@ export class Repository {
    * Throws if `command` is not found.
    */
   static async getRepoInfo(command: string, logger: Logger, cwd: string): Promise<RepoInfo> {
-    const [repoRoot, dotdirFromRoot, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
+    const [repoRoot, dotdir, pathsDefault, pullRequestDomain, preferredSubmitCommand] =
       await Promise.all([
         findRoot(command, logger, cwd).catch((err: Error) => err),
         findDotDir(command, logger, cwd),
@@ -372,46 +373,36 @@ export class Repository {
     if (repoRoot instanceof Error) {
       return {type: 'invalidCommand', command};
     }
-    const isGitOnSl = !pathsDefault.startsWith('mononoke://');
+    if (repoRoot == null || dotdir == null) {
+      return {type: 'cwdNotARepository', cwd};
+    }
+
     let codeReviewSystem: CodeReviewSystem;
-    if (isGitOnSl) {
-      const data = extractGithubRepoInfoFromUrl(pathsDefault);
-      if (data == null) {
-        // this doesn't look like a known github url
-        codeReviewSystem = {type: 'unknown', path: pathsDefault};
-      } else {
-        const {owner, repo} = data;
+    const isMononoke = pathsDefault.startsWith('mononoke://');
+    if (isMononoke) {
+      // TODO: where should we be getting this from? arcconfig instead? do we need this?
+      const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
+      codeReviewSystem = {type: 'phabricator', repo};
+    } else if (pathsDefault === '') {
+      codeReviewSystem = {type: 'none'};
+    } else {
+      const repoInfo = extractRepoInfoFromUrl(pathsDefault);
+      if (
+        repoInfo != null &&
+        (repoInfo.hostname === 'github.com' || (await isGithubEnterprise(repoInfo.hostname)))
+      ) {
+        const {owner, repo, hostname} = repoInfo;
         codeReviewSystem = {
           type: 'github',
           owner,
           repo,
+          hostname,
         };
-      }
-    } else {
-      // TODO: where should we be getting this from? arcconfig instead? do we need this?
-      const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
-      codeReviewSystem = {type: 'phabricator', repo};
-    }
-    // TODO: remove this once `sl root --dotdir` is available to everyone
-    let dotdir = dotdirFromRoot;
-    if (repoRoot != null && dotdir == null) {
-      // prettier-ignore
-      const candidates = [
-        // @fb-only
-        '.sl'
-      ];
-      for (const candidate of candidates) {
-        const newPath = path.join(repoRoot, candidate);
-        // eslint-disable-next-line no-await-in-loop
-        if (await exists(newPath)) {
-          dotdir = newPath;
-        }
+      } else {
+        codeReviewSystem = {type: 'unknown', path: pathsDefault};
       }
     }
 
-    if (repoRoot == null || dotdir == null) {
-      return {type: 'cwdNotARepository', cwd};
-    }
     const result: RepoInfo = {
       type: 'success',
       command,
@@ -655,7 +646,7 @@ async function findRoot(
   try {
     return (await runCommand(command, ['root'], logger, cwd)).stdout;
   } catch (error) {
-    if ((error as {code?: string}).code === 'ENOENT') {
+    if (['ENOENT', 'EACCES'].includes((error as {code: string}).code)) {
       logger.error(`command ${command} not found`, error);
       throw error;
     }
@@ -821,10 +812,28 @@ function splitLine(line: string): Array<string> {
   return line.split(NULL_CHAR).filter(e => e.length > 0);
 }
 
-export function extractGithubRepoInfoFromUrl(url: string): {repo: string; owner: string} {
-  const [, owner, repo] =
-    /(?:https:\/\/github\.com\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@github.com:)([^/]+)\/(.+?)(?:\.git)?$/.exec(
-      url,
-    ) ?? [];
-  return {owner, repo};
+/**
+ * extract repo info from a remote url, typically for GitHub or GitHub Enterprise,
+ * in various formats:
+ * https://github.com/owner/repo
+ * https://github.com/owner/repo.git
+ * git@github.com:owner/repo.git
+ * ssh:git@github.com:owner/repo.git
+ * git+ssh:git@github.com:owner/repo.git
+ *
+ * or similar urls with GitHub Enterprise hostnames:
+ * https://ghe.myCompany.com/owner/repo
+ */
+export function extractRepoInfoFromUrl(
+  url: string,
+): {repo: string; owner: string; hostname: string} | null {
+  const match =
+    /(?:https:\/\/(.*)\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@(.*):)([^/]+)\/(.+?)(?:\.git)?$/.exec(url);
+
+  if (match == null) {
+    return null;
+  }
+
+  const [, hostname1, hostname2, owner, repo] = match;
+  return {owner, repo, hostname: hostname1 ?? hostname2};
 }

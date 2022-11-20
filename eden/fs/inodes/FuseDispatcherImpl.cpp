@@ -60,10 +60,11 @@ FuseDispatcherImpl::FuseDispatcherImpl(EdenMount* mount)
 
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::getattr(
     InodeNumber ino,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino)
-      .thenValue(
-          [&context](const InodePtr& inode) { return inode->stat(context); })
+      .thenValue([context = context.copy()](const InodePtr& inode) {
+        return inode->stat(context);
+      })
       .thenValue(
           [](const struct stat& st) { return FuseDispatcher::Attr{st}; });
 }
@@ -93,13 +94,13 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
     uint64_t /*requestID*/,
     InodeNumber parent,
     PathComponentPiece namepiece,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent)
       .thenValue([name = PathComponent(namepiece),
-                  &context](const TreeInodePtr& tree) {
+                  context = context.copy()](const TreeInodePtr& tree) {
         return tree->getOrLoadChild(name, context);
       })
-      .thenValue([&context](const InodePtr& inode) {
+      .thenValue([context = context.copy()](const InodePtr& inode) {
         return makeImmediateFutureWith([&]() { return inode->stat(context); })
             .thenTry([inode](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
@@ -151,7 +152,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
 ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
     InodeNumber ino,
     const fuse_setattr_in& attr,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // Even though mounts are created with the nosuid flag, explicitly disallow
   // setting suid, sgid, and sticky bits on any inodes. This lets us avoid
   // explicitly clearing these bits on writes() which is required for correct
@@ -162,7 +163,7 @@ ImmediateFuture<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
   }
 
   return inodeMap_->lookupInode(ino)
-      .thenValue([this, attr, &context](const InodePtr& inode) {
+      .thenValue([this, attr, context = context.copy()](const InodePtr& inode) {
         auto fuseTimeToTimespec = [](uint64_t time, uint64_t ntime) {
           timespec spec;
           spec.tv_sec = time;
@@ -226,12 +227,12 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::create(
     PathComponentPiece name,
     mode_t mode,
     int /*flags*/,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // force 'mode' to be regular file, in which case rdev arg to mknod is ignored
   // (and thus can be zero)
   mode = S_IFREG | (07777 & mode);
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [mode, childName = PathComponent{name}, &context](
+      [mode, childName = PathComponent{name}, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
         return child->stat(context).thenValue(
@@ -246,9 +247,9 @@ ImmediateFuture<BufVec> FuseDispatcherImpl::read(
     InodeNumber ino,
     size_t size,
     off_t off,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [&context, size, off](FileInodePtr&& inode) {
+      [context = context.copy(), size, off](FileInodePtr&& inode) {
         return inode->read(size, off, context)
             .thenValue([](std::tuple<BufVec, bool>&& readRes) {
               return std::get<BufVec>(std::move(readRes));
@@ -260,9 +261,9 @@ ImmediateFuture<size_t> FuseDispatcherImpl::write(
     InodeNumber ino,
     folly::StringPiece data,
     off_t off,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [copy = data.str(), off, &context](FileInodePtr&& inode) {
+      [copy = data.str(), off, context = context.copy()](FileInodePtr&& inode) {
         return inode->write(copy, off, context);
       });
 }
@@ -279,9 +280,9 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::fallocate(
     InodeNumber ino,
     uint64_t offset,
     uint64_t length,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [offset, length, &context](FileInodePtr inode) {
+      [offset, length, context = context.copy()](FileInodePtr inode) {
         return inode->fallocate(offset, length, context);
       });
 }
@@ -307,9 +308,10 @@ ImmediateFuture<Unit> FuseDispatcherImpl::fsyncdir(
 ImmediateFuture<std::string> FuseDispatcherImpl::readlink(
     InodeNumber ino,
     bool kernelCachesReadlink,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
-      [kernelCachesReadlink, &context](const FileInodePtr& inode) {
+      [kernelCachesReadlink,
+       context = context.copy()](const FileInodePtr& inode) {
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
         return inode
@@ -326,9 +328,9 @@ ImmediateFuture<FuseDirList> FuseDispatcherImpl::readdir(
     FuseDirList&& dirList,
     off_t offset,
     uint64_t /*fh*/,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(ino).thenValue(
-      [dirList = std::move(dirList), offset, &context](
+      [dirList = std::move(dirList), offset, context = context.copy()](
           TreeInodePtr inode) mutable {
         return inode->fuseReaddir(std::move(dirList), offset, context);
       });
@@ -339,9 +341,9 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mknod(
     PathComponentPiece name,
     mode_t mode,
     dev_t rdev,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}, mode, rdev, &context](
+      [childName = PathComponent{name}, mode, rdev, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child =
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
@@ -357,9 +359,9 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mkdir(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}, mode, &context](
+      [childName = PathComponent{name}, mode, context = context.copy()](
           const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
         return child->stat(context).thenValue([child](struct stat st) {
@@ -372,9 +374,10 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::mkdir(
 ImmediateFuture<folly::Unit> FuseDispatcherImpl::unlink(
     InodeNumber parent,
     PathComponentPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [context = context.copy(),
+       childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
         return inode->unlink(childName, InvalidationRequired::No, context);
       });
@@ -383,9 +386,10 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::unlink(
 ImmediateFuture<folly::Unit> FuseDispatcherImpl::rmdir(
     InodeNumber parent,
     PathComponentPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [context = context.copy(),
+       childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
         return inode->rmdir(childName, InvalidationRequired::No, context);
       });
@@ -395,10 +399,11 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::symlink(
     InodeNumber parent,
     PathComponentPiece name,
     StringPiece link,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [linkContents = link.str(), childName = PathComponent{name}, &context](
-          const TreeInodePtr& inode) {
+      [linkContents = link.str(),
+       childName = PathComponent{name},
+       context = context.copy()](const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
         symlinkInode->incFsRefcount();
@@ -414,7 +419,7 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
     PathComponentPiece namePiece,
     InodeNumber newParent,
     PathComponentPiece newNamePiece,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   // Start looking up both parents
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
@@ -423,9 +428,11 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rename(
       .thenValue([npFuture = std::move(newParentFuture),
                   name = PathComponent{namePiece},
                   newName = PathComponent{newNamePiece},
-                  &context](const TreeInodePtr& parent) mutable {
+                  context =
+                      context.copy()](const TreeInodePtr& parent) mutable {
         return std::move(npFuture).thenValue(
-            [parent, name, newName, &context](const TreeInodePtr& newParent) {
+            [parent, name, newName, context = context.copy()](
+                const TreeInodePtr& newParent) {
               return parent->rename(
                   name, newParent, newName, InvalidationRequired::No, context);
             });
@@ -448,9 +455,9 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::link(
 ImmediateFuture<string> FuseDispatcherImpl::getxattr(
     InodeNumber ino,
     StringPiece name,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino).thenValue(
-      [attrName = name.str(), &context](const InodePtr& inode) {
+      [attrName = name.str(), context = context.copy()](const InodePtr& inode) {
         return inode->getxattr(attrName, context);
       });
 }

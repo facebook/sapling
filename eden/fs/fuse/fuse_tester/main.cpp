@@ -44,7 +44,7 @@ class TestDispatcher : public FuseDispatcher {
 
   ImmediateFuture<Attr> getattr(
       InodeNumber ino,
-      ObjectFetchContext& /*context*/) override {
+      const ObjectFetchContextPtr& /*context*/) override {
     if (ino == kRootNodeId) {
       struct stat st = {};
       st.st_ino = ino.get();
@@ -63,15 +63,14 @@ class TestDispatcher : public FuseDispatcher {
 };
 
 void ensureEmptyDirectory(AbsolutePathPiece path) {
-  boost::filesystem::path boostPath(
-      path.stringPiece().begin(), path.stringPiece().end());
+  boost::filesystem::path boostPath(path.view().begin(), path.view().end());
 
   XLOG(INFO) << "boost path: " << boostPath.native();
   if (!boost::filesystem::create_directories(boostPath)) {
     // This directory already existed.  Make sure it is empty.
     if (!boost::filesystem::is_empty(boostPath)) {
-      throw std::runtime_error(
-          folly::to<string>(path, " does not refer to an empty directory"));
+      throwf<std::runtime_error>(
+          "{} does not refer to an empty directory", path);
     }
   }
 }

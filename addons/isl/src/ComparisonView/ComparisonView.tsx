@@ -14,6 +14,7 @@ import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {ErrorNotice} from '../ErrorNotice';
 import {Icon} from '../Icon';
+import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
@@ -21,8 +22,14 @@ import {currentComparisonMode} from './atoms';
 import {ThemeProvider, BaseStyles} from '@primer/react';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
 import {parsePatch} from 'diff';
-import {useEffect} from 'react';
-import {atomFamily, selectorFamily, useRecoilValue, useSetRecoilState} from 'recoil';
+import {useCallback, useEffect} from 'react';
+import {
+  atomFamily,
+  selectorFamily,
+  useRecoilState,
+  useRecoilValue,
+  useSetRecoilState,
+} from 'recoil';
 import {labelForComparison, ComparisonType} from 'shared/Comparison';
 import {SplitDiffView} from 'shared/SplitDiffView';
 import SplitDiffViewPrimerStyles from 'shared/SplitDiffView/PrimerStyles';
@@ -45,17 +52,28 @@ function parsePatchAndFilter(patch: string): ReturnType<typeof parsePatch> {
   );
 }
 
-const currentComparisonData = atomFamily<Result<Array<ParsedDiff>> | null, Comparison>({
+const currentComparisonData = atomFamily<
+  {isLoading: boolean; data: Result<Array<ParsedDiff>> | null},
+  Comparison
+>({
   key: 'currentComparisonData',
-  default: (_comparison: Comparison) => null,
+  default: (_comparison: Comparison) => ({isLoading: true, data: null}),
   effects: (comparison: Comparison) => [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('comparison', event => {
         if (comparison.type === event.comparison.type) {
-          setSelf(mapResult(event.data.diff, parsePatchAndFilter));
+          setSelf({isLoading: false, data: mapResult(event.data.diff, parsePatchAndFilter)});
         }
       });
       return () => disposable.dispose();
+    },
+    // You can trigger a refresh just by setting isLoading: true
+    ({onSet}) => {
+      onSet(value => {
+        if (value.isLoading) {
+          serverAPI.postMessage({type: 'requestComparison', comparison});
+        }
+      });
     },
   ],
 });
@@ -92,36 +110,43 @@ export const lineRange = selectorFamily<
     },
 });
 
+function useComparisonData(comparison: Comparison) {
+  const [compared, setCompared] = useRecoilState(currentComparisonData(comparison));
+  const reloadComparison = useCallback(() => {
+    // setting comparisonData's isLoading: true triggers a fetch
+    setCompared(data => ({...data, isLoading: true}));
+  }, [setCompared]);
+  return [compared, reloadComparison] as const;
+}
+
 export default function ComparisonView({comparison}: {comparison: Comparison}) {
-  useEffect(() => {
-    serverAPI.postMessage({type: 'requestComparison', comparison});
-  }, [comparison]);
+  const [compared, reloadComparison] = useComparisonData(comparison);
+
+  // any time the comparison changes, fetch the diff
+  useEffect(reloadComparison, [comparison, reloadComparison]);
+
   const theme = useRecoilValue(themeState);
 
-  const compared = useRecoilValue(currentComparisonData(comparison));
-
   return (
-    <div data-testid="comparison-view">
+    <div data-testid="comparison-view" className="comparison-view">
       <ThemeProvider colorMode={theme === 'light' ? 'day' : 'night'}>
         <SplitDiffViewPrimerStyles />
-        <BaseStyles>
-          <div className="comparison-view">
-            <ComparisonViewHeader comparison={comparison} />
-            <div className="comparison-view-details">
-              {compared == null ? (
-                <Icon icon="loading" />
-              ) : compared.error != null ? (
-                <ErrorNotice error={compared.error} title={t('Unable to load comparison')} />
-              ) : compared.value.length === 0 ? (
-                <EmptyState>
-                  <T>No Changes</T>
-                </EmptyState>
-              ) : (
-                compared.value.map((parsed, i) => (
-                  <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
-                ))
-              )}
-            </div>
+        <BaseStyles className="comparison-view-base-styles">
+          <ComparisonViewHeader comparison={comparison} />
+          <div className="comparison-view-details">
+            {compared.data == null ? (
+              <Icon icon="loading" />
+            ) : compared.data.error != null ? (
+              <ErrorNotice error={compared.data.error} title={t('Unable to load comparison')} />
+            ) : compared.data.value.length === 0 ? (
+              <EmptyState>
+                <T>No Changes</T>
+              </EmptyState>
+            ) : (
+              compared.data.value.map((parsed, i) => (
+                <ComparisonViewFile diff={parsed} comparison={comparison} key={i} />
+              ))
+            )}
           </div>
         </BaseStyles>
       </ThemeProvider>
@@ -136,32 +161,44 @@ const defaultComparisons = [
 ];
 function ComparisonViewHeader({comparison}: {comparison: Comparison}) {
   const setComparisonMode = useSetRecoilState(currentComparisonMode);
+  const [compared, reloadComparison] = useComparisonData(comparison);
 
   return (
     <>
       <div className="comparison-view-header">
-        <VSCodeDropdown
-          value={comparison.type}
-          onChange={event =>
-            setComparisonMode(previous => ({
-              ...previous,
-              comparison: {
-                type: (event as React.FormEvent<HTMLSelectElement>).currentTarget
-                  .value as typeof defaultComparisons[0],
-              },
-            }))
-          }>
-          {defaultComparisons.map(comparison => (
-            <VSCodeOption value={comparison} key={comparison}>
-              <T>{labelForComparison({type: comparison})}</T>
-            </VSCodeOption>
-          ))}
-          {!defaultComparisons.includes(comparison.type as typeof defaultComparisons[0]) ? (
-            <VSCodeOption value={comparison.type} key={comparison.type}>
-              <T>{labelForComparison(comparison)}</T>
-            </VSCodeOption>
-          ) : null}
-        </VSCodeDropdown>
+        <span className="comparison-view-header-group">
+          <VSCodeDropdown
+            data-testid="comparison-view-picker"
+            value={comparison.type}
+            onChange={event =>
+              setComparisonMode(previous => ({
+                ...previous,
+                comparison: {
+                  type: (event as React.FormEvent<HTMLSelectElement>).currentTarget
+                    .value as typeof defaultComparisons[0],
+                },
+              }))
+            }>
+            {defaultComparisons.map(comparison => (
+              <VSCodeOption value={comparison} key={comparison}>
+                <T>{labelForComparison({type: comparison})}</T>
+              </VSCodeOption>
+            ))}
+            {!defaultComparisons.includes(comparison.type as typeof defaultComparisons[0]) ? (
+              <VSCodeOption value={comparison.type} key={comparison.type}>
+                <T>{labelForComparison(comparison)}</T>
+              </VSCodeOption>
+            ) : null}
+          </VSCodeDropdown>
+          <Tooltip
+            delayMs={1000}
+            title={t('Reload this comparison. Comparisons do not refresh automatically.')}>
+            <VSCodeButton appearance="secondary" onClick={reloadComparison}>
+              <Icon icon="refresh" data-testid="comparison-refresh-button" />
+            </VSCodeButton>
+          </Tooltip>
+          {compared.isLoading ? <Icon icon="loading" data-testid="comparison-loading" /> : null}
+        </span>
         <VSCodeButton
           data-testid="close-comparison-view-button"
           appearance="icon"

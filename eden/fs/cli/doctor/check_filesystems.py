@@ -29,7 +29,7 @@ from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.thrift.legacy import EdenClient
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
-from facebook.eden.ttypes import SyncBehavior
+from facebook.eden.ttypes import DebugInvalidateRequest, MountId, SyncBehavior
 
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
@@ -674,14 +674,33 @@ def check_loaded_content(
         tracker.add_problem(SHA1ComputationFailedForLoadedInode(sha1_errors))
 
 
-class HighInodeCountProblem(Problem):
-    def __init__(self, path: Path, inode_count: int) -> None:
+class HighInodeCountProblem(Problem, FixableProblem):
+    def __init__(self, info: CheckoutInfo, inode_count: int) -> None:
+        self._info = info
         super().__init__(
-            description=f"Mount point {path} has {inode_count} files on disk, which may impact EdenFS performance",
-            # TODO(T94186741): Change remediation instructions once we can unload inodes on demand.
-            remediation="Reclone your repository to improve performance, if needed: https://fburl.com/wiki/ji8ik51v",
+            description=f"Mount point {self._info.path} has {inode_count} files on disk, which may impact EdenFS performance",
             severity=ProblemSeverity.ADVICE,
         )
+
+    def dry_run_msg(self) -> str:
+        return f"Would invalidate all non-materialized files and directories in {self._info.path}"
+
+    def start_msg(self) -> str:
+        return f"Invalidating all non-materialized files and directories in {self._info.path}"
+
+    def perform_fix(self) -> None:
+        """Invalidate all non-materialized inodes."""
+        with self._info.instance.get_thrift_client_legacy() as client:
+            try:
+                client.debugInvalidateNonMaterialized(
+                    DebugInvalidateRequest(
+                        mount=MountId(mountPoint=bytes(self._info.path)), path=b""
+                    )
+                )
+            except Exception as ex:
+                raise RemediationError(
+                    f"Failed to invalidate non-materialized files: {ex}"
+                )
 
 
 class UnknownInodeCountProblem(Problem):
@@ -714,4 +733,4 @@ def check_inode_counts(
         + inode_info.unloadedInodeCount
     )
     if inode_count > threshold:
-        tracker.add_problem(HighInodeCountProblem(checkout.path, inode_count))
+        tracker.add_problem(HighInodeCountProblem(checkout, inode_count))

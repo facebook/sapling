@@ -16,7 +16,7 @@
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-react-hooks": "^4.3.0",
     "eslint-plugin-rulesdir": "^0.2.1",
-    "prettier": "^2.7.1"
+    "prettier": "2.7.1"
   },
   "scripts": {
     "prettier-check": "prettier --check .",

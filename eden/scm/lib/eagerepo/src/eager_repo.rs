@@ -212,8 +212,8 @@ impl EagerRepo {
         // Attempt to match directory layout of a real client repo.
         let hg_dir = dir.join(ident.dot_dir());
         let store_dir = hg_dir.join("store");
-        let dag = Dag::open(store_dir.join("segments/v1"))?;
-        let store = EagerRepoStore::open(&store_dir.join("hgcommits/v1"))?;
+        let dag = Dag::open(store_dir.join("segments").join("v1"))?;
+        let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
         // Write "requires" files.
         write_requires(&hg_dir, &["store", "treestate"])?;
@@ -244,12 +244,19 @@ impl EagerRepo {
     pub fn url_to_dir(value: &str) -> Option<PathBuf> {
         let prefix = "eager:";
         if let Some(path) = value.strip_prefix(prefix) {
-            // Remove '//' prefix from Windows file path. This makes it
-            // possible to use paths like 'eager://C:\foo\bar'.
-            #[cfg(windows)]
-            let path = path.trim_start_matches('/');
-            let path: &Path = Path::new(path);
-            return Some(path.to_path_buf());
+            let path: PathBuf = if cfg!(windows) {
+                // Remove '//' prefix from Windows file path. This makes it
+                // possible to use paths like 'eager://C:\foo\bar'.
+                let path = path.trim_start_matches('/');
+                // Replace '/' with '\' on Windows so one can write code like
+                // eager://$TESTTMP/foo/bar in test. This is important if
+                // $TESTTMP is a UNC path, since / won't work with a UNC path.
+                let path = path.replace('/', "\\");
+                Path::new(&path).to_path_buf()
+            } else {
+                Path::new(path).to_path_buf()
+            };
+            return Some(path);
         }
         let prefix = "test:";
         if let Some(path) = value.strip_prefix(prefix) {

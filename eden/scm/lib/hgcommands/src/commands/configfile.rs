@@ -57,15 +57,14 @@ pub fn run(ctx: ReqCtx<DebugConfigLocationOpts>, repo: &mut OptionalRepo) -> Res
     }
 
     if show_all || ctx.opts.local {
-        let repo = if let OptionalRepo::Some(repo) = repo {
-            repo
-        } else {
+        if let OptionalRepo::Some(repo) = repo {
+            if show_all {
+                write!(ctx.io().output(), "Repo config path: ")?;
+            }
+            write!(ctx.io().output(), "{}\n", repo.config_path().display())?;
+        } else if !show_all {
             abort!("--local must be used inside a repo");
-        };
-        if show_all {
-            write!(ctx.io().output(), "Repo config path: ")?;
         }
-        write!(ctx.io().output(), "{}\n", repo.config_path().display())?;
     }
 
     if show_all || ctx.opts.system {

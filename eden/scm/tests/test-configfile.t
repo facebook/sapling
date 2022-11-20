@@ -37,3 +37,10 @@ Test locating other configs
   $ hg configfile --system
   /etc/mercurial/system.rc (no-windows !)
   C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)
+
+Test outside a repo
+  $ cd
+  $ hg configfile
+  User config path: $TESTTMP/.hgrc
+  System config path: /etc/mercurial/system.rc (no-windows !)
+  System config path: C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)

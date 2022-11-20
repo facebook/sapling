@@ -83,11 +83,14 @@ describe('ComparisonView', () => {
     });
   });
 
-  async function openUncommittedChangesComparison() {
+  function clickComparisonViewButton() {
     act(() => {
       const button = screen.getByTestId('open-comparison-view-button-UNCOMMITTED');
       fireEvent.click(button);
     });
+  }
+  async function openUncommittedChangesComparison() {
+    clickComparisonViewButton();
     await waitFor(() =>
       expectMessageSentToServer({
         type: 'requestComparison',
@@ -255,5 +258,47 @@ describe('ComparisonView', () => {
       expect(inComparisonView().getAllByText('different line 1')[0]).toBeInTheDocument();
       expect(inComparisonView().getAllByText('different line 6')[0]).toBeInTheDocument();
     });
+  });
+
+  it('refresh button requests new data', async () => {
+    await openUncommittedChangesComparison();
+    resetTestMessages();
+
+    act(() => {
+      fireEvent.click(inComparisonView().getByTestId('comparison-refresh-button'));
+    });
+
+    expectMessageSentToServer({
+      type: 'requestComparison',
+      comparison: {type: ComparisonType.UncommittedChanges},
+    });
+  });
+
+  it('changing comparison mode requests new data', async () => {
+    await openUncommittedChangesComparison();
+
+    act(() => {
+      fireEvent.change(inComparisonView().getByTestId('comparison-view-picker'), {
+        target: {value: ComparisonType.StackChanges},
+      });
+    });
+    expectMessageSentToServer({
+      type: 'requestComparison',
+      comparison: {type: ComparisonType.StackChanges},
+    });
+  });
+
+  it('shows a spinner while a fetch is ongoing', () => {
+    clickComparisonViewButton();
+    expect(inComparisonView().getByTestId('comparison-loading')).toBeInTheDocument();
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'comparison',
+        comparison: {type: ComparisonType.UncommittedChanges},
+        data: {diff: {value: UNCOMMITTED_CHANGES_DIFF}},
+      });
+    });
+    expect(inComparisonView().queryByTestId('comparison-loading')).not.toBeInTheDocument();
   });
 });

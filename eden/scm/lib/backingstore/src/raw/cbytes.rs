@@ -45,7 +45,7 @@ impl Drop for CBytes {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_cbytes_free(vec: *mut CBytes) {
+pub extern "C" fn sapling_cbytes_free(vec: *mut CBytes) {
     let ptr = unsafe { Box::from_raw(vec) };
     drop(ptr);
 }

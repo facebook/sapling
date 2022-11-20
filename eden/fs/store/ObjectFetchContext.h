@@ -14,16 +14,21 @@
 #include <folly/portability/SysTypes.h>
 
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
 class ObjectId;
 
+class ObjectFetchContext;
+
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
+
 /**
  * ObjectStore calls methods on this context when fetching objects.
  * It's primarily used to track when and why source control objects are fetched.
  */
-class ObjectFetchContext {
+class ObjectFetchContext : public RefCounted {
  public:
   /**
    * Which object type was fetched.
@@ -79,7 +84,7 @@ class ObjectFetchContext {
   }
 
   virtual ImportPriority getPriority() const {
-    return ImportPriority::kNormal();
+    return kDefaultImportPriority;
   }
 
   virtual const std::unordered_map<std::string, std::string>* getRequestInfo()
@@ -100,17 +105,18 @@ class ObjectFetchContext {
   /**
    * Return a no-op fetch context suitable when no tracking is desired.
    */
-  static ObjectFetchContext& getNullContext();
+  static ObjectFetchContextPtr getNullContext();
 
   /**
    * Return a no-op fetch context which has causeDetail field. This field will
    * be logged which in turn can point out "blind spots" in logging i.e. places
    * where null context should be replaces with a real context.
+   *
    * Note that this function allocates and return a pointer to a newly allocated
    * memory. This pointer is intented to be used as static variable i.e. static
    * auto ptr = ObjectFetchContext::getNullContextWithCauseDetail("someval");
    */
-  static ObjectFetchContext* getNullContextWithCauseDetail(
+  static ObjectFetchContextPtr getNullContextWithCauseDetail(
       std::string_view causeDetail);
 
  private:

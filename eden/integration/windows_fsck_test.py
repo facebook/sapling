@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 from facebook.eden.ttypes import (
@@ -246,6 +247,36 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         # Make sure we can revert the change:
         self._update_clean()
         self.assertEqual(self._eden_status(), {})
+
+    def test_loaded_inodes_not_loaded_on_restart(self) -> None:
+        """Verifies that a loaded inode not present on disk doesn't get loaded
+        with a positive refcount on restart.
+        """
+
+        def get_all_loaded_under(path: str) -> List[Tuple[Path, int]]:
+            with self.eden.get_thrift_client_legacy() as client:
+                all_loaded = client.debugInodeStatus(
+                    self.mount_path_bytes,
+                    path.encode(),
+                    0,
+                    sync=SyncBehavior(),
+                )
+
+            ret: List[Tuple[Path, int]] = []
+            for loaded in all_loaded:
+                ret += [(Path(loaded.path.decode()), loaded.refcount)]
+
+            return ret
+
+        # This relies on debugInodeStatus to load the inode for the directory.
+        loaded = get_all_loaded_under("subdir/bdir")
+        self.assertEqual(loaded, [(Path("subdir/bdir"), 0)])
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        loaded = get_all_loaded_under("subdir/bdir")
+        self.assertEqual(loaded, [(Path("subdir/bdir"), 0)])
 
 
 MATERIALIZED = True

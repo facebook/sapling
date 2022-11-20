@@ -156,10 +156,10 @@ GitIgnore::MatchResult GitIgnorePattern::match(
   bool isMatch = false;
   if (flags_ & FLAG_BASENAME_ONLY) {
     // Match only on the file basename.
-    isMatch = matcher_.match(basename.stringPiece());
+    isMatch = matcher_.match(basename.view());
   } else {
     // Match on full relative path to the file from this directory.
-    isMatch = matcher_.match(path.stringPiece());
+    isMatch = matcher_.match(path.view());
   }
 
   if (isMatch) {

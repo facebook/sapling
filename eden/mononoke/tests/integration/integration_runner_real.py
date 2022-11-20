@@ -85,6 +85,8 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-scs.t",
     "test-land-service-pushrebase-remote.t",
     "test-snapshot.t",
+    "test-snapshot-add-labels.t",
+    "test-snapshot-remove-labels.t",
 }
 
 

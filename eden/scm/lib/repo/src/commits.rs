@@ -23,9 +23,20 @@ use parking_lot::RwLock;
 
 use crate::repo::Repo;
 
-static HG_COMMITS_PATH: &str = "hgcommits/v1";
+macro_rules! concat_os_path {
+    ($p1:literal, $p2:literal) => {
+        // Cannot use std::path::MAIN_SEPARATOR inside concat! yet.
+        if cfg!(windows) {
+            concat!($p1, '\\', $p2)
+        } else {
+            concat!($p1, '/', $p2)
+        }
+    };
+}
+
+static HG_COMMITS_PATH: &str = concat_os_path!("hgcommits", "v1");
 static LAZY_HASH_PATH: &str = "lazyhashdir";
-static SEGMENTS_PATH: &str = "segments/v1";
+static SEGMENTS_PATH: &str = concat_os_path!("segments", "v1");
 
 static DOUBLE_WRITE_REQUIREMENT: &str = "doublewritechangelog";
 static HYBRID_REQUIREMENT: &str = "hybridchangelog";

@@ -67,7 +67,7 @@ class FuseDispatcher {
       uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Forget about an inode
@@ -124,7 +124,7 @@ class FuseDispatcher {
    */
   virtual ImmediateFuture<Attr> getattr(
       InodeNumber ino,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Set file attributes
@@ -143,7 +143,7 @@ class FuseDispatcher {
   virtual ImmediateFuture<Attr> setattr(
       InodeNumber ino,
       const fuse_setattr_in& attr,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Read symbolic link
@@ -155,7 +155,7 @@ class FuseDispatcher {
   virtual ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       bool kernelCachesReadlink,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Create file node
@@ -173,7 +173,7 @@ class FuseDispatcher {
       PathComponentPiece name,
       mode_t mode,
       dev_t rdev,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Create a directory
@@ -186,7 +186,7 @@ class FuseDispatcher {
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Remove a file
@@ -197,7 +197,7 @@ class FuseDispatcher {
   FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> unlink(
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Remove a directory
@@ -208,7 +208,7 @@ class FuseDispatcher {
   FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> rmdir(
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Create a symbolic link
@@ -221,7 +221,7 @@ class FuseDispatcher {
       InodeNumber parent,
       PathComponentPiece name,
       folly::StringPiece link,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Rename a file
@@ -236,7 +236,7 @@ class FuseDispatcher {
       PathComponentPiece name,
       InodeNumber newparent,
       PathComponentPiece newname,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Create a hard link
@@ -304,8 +304,11 @@ class FuseDispatcher {
    * @param size number of bytes to read
    * @param off offset to read from
    */
-  virtual ImmediateFuture<BufVec>
-  read(InodeNumber ino, size_t size, off_t off, ObjectFetchContext& context);
+  virtual ImmediateFuture<BufVec> read(
+      InodeNumber ino,
+      size_t size,
+      off_t off,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Write data
@@ -320,7 +323,7 @@ class FuseDispatcher {
       InodeNumber ino,
       folly::StringPiece data,
       off_t off,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * This is called on each close() of the opened file.
@@ -354,7 +357,7 @@ class FuseDispatcher {
       InodeNumber ino,
       uint64_t offset,
       uint64_t length,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Ensure file content changes are flushed to disk.
@@ -389,7 +392,7 @@ class FuseDispatcher {
       FuseDirList&& dirList,
       off_t offset,
       uint64_t fh,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Get file system statistics
@@ -412,7 +415,7 @@ class FuseDispatcher {
   virtual ImmediateFuture<std::string> getxattr(
       InodeNumber ino,
       folly::StringPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
   static const int kENOATTR;
 
   /**
@@ -472,7 +475,7 @@ class FuseDispatcher {
       PathComponentPiece name,
       mode_t mode,
       int flags,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Map block index within file to block index within device

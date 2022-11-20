@@ -19,15 +19,19 @@ import type {
   Result,
   MergeConflicts,
   MergeConflictsEvent,
+  RepositoryError,
 } from 'isl/src/types';
 
 import {browserServerPlatform} from './serverPlatform';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
-import {randomId, unwrap} from 'shared/utils';
+import {randomId} from 'shared/utils';
 
 export type IncomingMessage = ClientToServerMessage;
 export type OutgoingMessage = ServerToClientMessage;
+
+type GeneralMessage = IncomingMessage & {type: 'requestRepoInfo'};
+type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
 
 /**
  * Message passing channel built on top of ClientConnection.
@@ -41,12 +45,16 @@ export default class ServerToClientAPI {
     Set<(message: IncomingMessage) => void | Promise<void>>
   >();
   private incomingListener: Disposable;
-  private disposables: Array<Disposable> = [];
+
+  /** Disposables that must be disposed whenever the current repo is changed */
+  private repoDisposables: Array<Disposable> = [];
   private platform: ServerPlatform;
 
   private queuedMessages: Array<IncomingMessage> = [];
-  private currentRepository: Repository | undefined = undefined;
-  private currentRepoCwd: string | undefined = undefined;
+  private currentState:
+    | {type: 'loading'}
+    | {type: 'repo'; repo: Repository; cwd: string}
+    | {type: 'error'; error: RepositoryError} = {type: 'loading'};
 
   // React Dev mode means we subscribe+unsubscribe+resubscribe in the client,
   // causing multiple subscriptions on the server. To avoid that,
@@ -67,7 +75,7 @@ export default class ServerToClientAPI {
       // When the client is connected, we want to immediately start listening to messages.
       // However, we can't properly respond to these messages until we have a repository set up.
       // Queue up messages until a repository is set.
-      if (this.currentRepository == null) {
+      if (this.currentState.type === 'loading') {
         this.queuedMessages.push(data);
       } else {
         try {
@@ -79,43 +87,95 @@ export default class ServerToClientAPI {
     });
   }
 
+  setRepoError(error: RepositoryError) {
+    this.disposeRepoDisposables();
+
+    this.currentState = {type: 'error', error};
+
+    this.processQueuedMessages();
+  }
+
   setCurrentRepo(repo: Repository, cwd: string) {
-    this.currentRepository = repo;
-    this.currentRepoCwd = cwd;
+    this.disposeRepoDisposables();
+
+    this.currentState = {type: 'repo', repo, cwd};
 
     if (repo.codeReviewProvider != null) {
-      this.disposables.push(
+      this.repoDisposables.push(
         repo.codeReviewProvider.onChangeDiffSummaries(value => {
           this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
         }),
       );
     }
 
+    this.processQueuedMessages();
+  }
+
+  postMessage(message: OutgoingMessage) {
+    this.connection.postMessage(serializeToString(message));
+  }
+
+  dispose() {
+    this.incomingListener.dispose();
+    this.disposeRepoDisposables();
+  }
+
+  private disposeRepoDisposables() {
+    this.repoDisposables.forEach(disposable => disposable.dispose());
+    this.repoDisposables = [];
+  }
+
+  private processQueuedMessages() {
     for (const message of this.queuedMessages) {
       try {
         this.handleIncomingMessage(message);
       } catch (err) {
-        repo.logger?.error('error handling queued message: ', message, err);
+        this.connection.logger?.error('error handling queued message: ', message, err);
       }
     }
     this.queuedMessages = [];
   }
 
   private handleIncomingMessage(data: IncomingMessage) {
-    // invariant: an initialized repository is attached by the time this is called
-    const repo = unwrap(this.currentRepository);
+    this.handleIncomingGeneralMessage(data as GeneralMessage);
+    if (this.currentState.type === 'repo') {
+      const {repo, cwd} = this.currentState;
+      this.handleIncomingMessageWithRepo(data as WithRepoMessage, repo, cwd);
+    }
+  }
 
-    const {logger} = repo;
-
+  /**
+   * Handle messages which can be handled regardless of if a repo was successfully created or not
+   */
+  private handleIncomingGeneralMessage(data: GeneralMessage) {
     switch (data.type) {
       case 'requestRepoInfo': {
-        logger.log('repo info requested');
-        this.postMessage({type: 'repoInfo', info: repo.info});
+        switch (this.currentState.type) {
+          case 'repo':
+            this.postMessage({
+              type: 'repoInfo',
+              info: this.currentState.repo.info,
+              cwd: this.currentState.cwd,
+            });
+            break;
+          case 'error':
+            this.postMessage({type: 'repoInfo', info: this.currentState.error});
+            break;
+        }
         break;
       }
+    }
+  }
+
+  /**
+   * Handle messages which require a repository to have been successfully set up to run
+   */
+  private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
+    const logger = repo.logger;
+    switch (data.type) {
       case 'subscribeUncommittedChanges': {
-        if (this.hasSubscribedToUncommittedChanges) {
-          return;
+        if (this.hasSubscribedToUncommittedChanges || repo == null) {
+          break;
         }
         this.hasSubscribedToUncommittedChanges = true;
         const {subscriptionID} = data;
@@ -145,7 +205,7 @@ export default class ServerToClientAPI {
       }
       case 'subscribeSmartlogCommits': {
         if (this.hasSubscribedToSmartlogCommits) {
-          return;
+          break;
         }
         this.hasSubscribedToSmartlogCommits = true;
         const {subscriptionID} = data;
@@ -174,7 +234,7 @@ export default class ServerToClientAPI {
       }
       case 'subscribeMergeConflicts': {
         if (this.hasSubscribedToMergeConflicts) {
-          return;
+          break;
         }
         this.hasSubscribedToMergeConflicts = true;
         const {subscriptionID} = data;
@@ -202,7 +262,7 @@ export default class ServerToClientAPI {
           progress => {
             this.postMessage({type: 'operationProgress', ...progress});
           },
-          unwrap(this.currentRepoCwd),
+          cwd,
         );
         break;
       }
@@ -225,7 +285,7 @@ export default class ServerToClientAPI {
           ])
           .then(o => ({value: o.stdout}))
           .catch(error => {
-            repo.logger.error('error running diff', error.toString());
+            logger?.error('error running diff', error.toString());
             return {error};
           });
         diff.then(data =>
@@ -265,7 +325,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'refresh': {
-        logger.log('refresh requested');
+        logger?.log('refresh requested');
         repo.fetchSmartlogCommits();
         repo.fetchUncommittedChanges();
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
@@ -285,7 +345,7 @@ export default class ServerToClientAPI {
             this.postMessage({type: 'fetchedCommitMessageTemplate', template});
           })
           .catch(err => {
-            logger.error('Could not fetch commit message template', err);
+            logger?.error('Could not fetch commit message template', err);
           });
         break;
       }
@@ -304,13 +364,5 @@ export default class ServerToClientAPI {
       return;
     }
     listeners.forEach(handle => handle(data));
-  }
-
-  postMessage(message: OutgoingMessage) {
-    this.connection.postMessage(serializeToString(message));
-  }
-
-  dispose() {
-    this.incomingListener.dispose();
   }
 }

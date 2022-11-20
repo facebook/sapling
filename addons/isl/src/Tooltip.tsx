@@ -176,6 +176,30 @@ function RenderTooltipOnto({
   // We can push it back as needed with an additional offet.
   const viewportAdjust = getViewportAdjustedDelta(effectivePlacement, position, renderedDimensions);
 
+  const viewportDimensions = document.body.getBoundingClientRect();
+  const style: React.CSSProperties = {
+    animationDelay: delayMs ? `${delayMs}ms` : undefined,
+  };
+
+  if (position.left > viewportDimensions.width / 2) {
+    // All our position computations use top+left.
+    // If we position using `left`, but the tooltip is near the right edge,
+    // it will squish itself to fit rather than push itself further left.
+    // Instead, we need to position with `right`, computed from left. based on the viewport dimension.
+    style.right =
+      viewportDimensions.width - (position.left + viewportAdjust.left + renderedDimensions.width);
+  } else {
+    style.left = position.left + viewportAdjust.left;
+  }
+  // Note: The same could technically apply for top/bottom, but only for left/right positioned tooltips which are less common,
+  // so in practice it matters less.
+  if (position.top > viewportDimensions.height / 2) {
+    style.bottom =
+      viewportDimensions.height - (position.top + viewportAdjust.top + renderedDimensions.height);
+  } else {
+    style.top = position.top + viewportAdjust.top;
+  }
+
   // Use a portal so the tooltip element is rendered into the global list of tooltips,
   // rather than as a descendant of the tooltip creator.
   // This allows us to use absolute coordinates for positioning, and for
@@ -188,11 +212,7 @@ function RenderTooltipOnto({
         `tooltip tooltip-${effectivePlacement}` +
         (typeof children === 'string' ? ' simple-text-tooltip' : '')
       }
-      style={{
-        top: position.top + viewportAdjust.top,
-        left: position.left + viewportAdjust.left,
-        animationDelay: delayMs ? `${delayMs}ms` : undefined,
-      }}>
+      style={style}>
       <div
         className={`tooltip-arrow tooltip-arrow-${effectivePlacement}`}
         // If we had to push the tooltip back to prevent overflow,

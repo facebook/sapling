@@ -168,7 +168,7 @@ BlobMetadata computeBlobMetadata(const Blob& blob) {
 
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
     const RootId& rootId,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   XLOG(DBG3) << "getRootTree(" << rootId << ")";
   return ImmediateFuture{backingStore_->getRootTree(rootId, context)}.thenValue(
       [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
@@ -187,7 +187,7 @@ ImmediateFuture<std::shared_ptr<TreeEntry>>
 ObjectStore::getTreeEntryForObjectId(
     const ObjectId& objectId,
     TreeEntryType treeEntryType,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   XLOG(DBG3) << "getTreeEntryForRootId(" << objectId << ")";
 
   return backingStore_
@@ -198,7 +198,7 @@ ObjectStore::getTreeEntryForObjectId(
 
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   DurationScope statScope{stats_, &ObjectStoreStats::getTree};
 
   // Check in the LocalStore first
@@ -215,21 +215,21 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
   // we could avoid that case.
 
   if (auto maybeTree = treeCache_->get(id)) {
-    fetchContext.didFetch(
+    fetchContext->didFetch(
         ObjectFetchContext::Tree, id, ObjectFetchContext::FromMemoryCache);
 
-    updateProcessFetch(fetchContext);
+    updateProcessFetch(*fetchContext);
 
     return changeCaseSensitivity(maybeTree, caseSensitive_);
   }
 
-  deprioritizeWhenFetchHeavy(fetchContext);
+  deprioritizeWhenFetchHeavy(*fetchContext);
 
   return ImmediateFuture{backingStore_->getTree(id, fetchContext)}.thenValue(
       [self = shared_from_this(),
        statScope = std::move(statScope),
        id,
-       &fetchContext](BackingStore::GetTreeResult result) {
+       fetchContext = fetchContext.copy()](BackingStore::GetTreeResult result) {
         if (!result.tree) {
           // TODO: Perhaps we should do some short-term negative
           // caching?
@@ -240,15 +240,15 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
         // promote to shared_ptr so we can store in the cache and return
         auto sharedTree = std::shared_ptr<const Tree>(std::move(result.tree));
         self->treeCache_->insert(sharedTree);
-        fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
-        self->updateProcessFetch(fetchContext);
+        fetchContext->didFetch(ObjectFetchContext::Tree, id, result.origin);
+        self->updateProcessFetch(*fetchContext);
         return changeCaseSensitivity(sharedTree, self->caseSensitive_);
       });
 }
 
 ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
     ObjectIdRange ids,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   // In theory we could/should ask the localStore_ to filter the list
   // of ids down to just the set that we need to load, but there is no
   // bulk key existence check in rocksdb, so we would need to cause it
@@ -265,17 +265,18 @@ ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
 
 ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
-    ObjectFetchContext& fetchContext) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   DurationScope statScope{stats_, &ObjectStoreStats::getBlob};
 
-  deprioritizeWhenFetchHeavy(fetchContext);
+  deprioritizeWhenFetchHeavy(*fetchContext);
   return ImmediateFuture<BackingStore::GetBlobResult>{
       backingStore_->getBlob(id, fetchContext)}
       .thenValue(
           [self = shared_from_this(),
            statScope = std::move(statScope),
            id,
-           &fetchContext](BackingStore::GetBlobResult result)
+           fetchContext =
+               fetchContext.copy()](BackingStore::GetBlobResult result)
               -> std::shared_ptr<const Blob> {
             if (!result.blob) {
               // TODO: Perhaps we should do some short-term negative caching?
@@ -293,15 +294,15 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
               self->localStore_->putBlobMetadata(id, metadata);
               self->metadataCache_.wlock()->set(id, metadata);
             }
-            self->updateProcessFetch(fetchContext);
-            fetchContext.didFetch(ObjectFetchContext::Blob, id, result.origin);
+            self->updateProcessFetch(*fetchContext);
+            fetchContext->didFetch(ObjectFetchContext::Blob, id, result.origin);
             return std::move(result.blob);
           });
 }
 
 ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     const ObjectId& id,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   DurationScope statScope{stats_, &ObjectStoreStats::getBlobMetadata};
 
   // Check in-memory cache
@@ -310,12 +311,12 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
       stats_->increment(&ObjectStoreStats::getBlobMetadataFromMemory);
-      context.didFetch(
+      context->didFetch(
           ObjectFetchContext::BlobMetadata,
           id,
           ObjectFetchContext::FromMemoryCache);
 
-      updateProcessFetch(context);
+      updateProcessFetch(*context);
       return cacheIter->second;
     }
   }
@@ -325,23 +326,26 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
   // Check local store
   return localStore_->getBlobMetadata(id)
       .thenValue(
-          [self, statScope = std::move(statScope), id, &context](
-              std::optional<BlobMetadata>&& metadata) mutable
+          [self,
+           statScope = std::move(statScope),
+           id,
+           context =
+               context.copy()](std::optional<BlobMetadata>&& metadata) mutable
           -> ImmediateFuture<BlobMetadata> {
             if (metadata) {
               self->stats_->increment(
                   &ObjectStoreStats::getBlobMetadataFromLocalStore);
               self->metadataCache_.wlock()->set(id, *metadata);
-              context.didFetch(
+              context->didFetch(
                   ObjectFetchContext::BlobMetadata,
                   id,
                   ObjectFetchContext::FromDiskCache);
 
-              self->updateProcessFetch(context);
+              self->updateProcessFetch(*context);
               return *metadata;
             }
 
-            self->deprioritizeWhenFetchHeavy(context);
+            self->deprioritizeWhenFetchHeavy(*context);
 
             auto localMetadata =
                 self->backingStore_->getLocalBlobMetadata(id, context);
@@ -350,11 +354,11 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                   &ObjectStoreStats::getLocalBlobMetadataFromBackingStore);
               self->metadataCache_.wlock()->set(id, *localMetadata);
               self->localStore_->putBlobMetadata(id, *localMetadata);
-              context.didFetch(
+              context->didFetch(
                   ObjectFetchContext::BlobMetadata,
                   id,
                   ObjectFetchContext::FromDiskCache);
-              self->updateProcessFetch(context);
+              self->updateProcessFetch(*context);
               return *localMetadata;
             }
 
@@ -375,7 +379,8 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                 .thenValue([self,
                             statScope = std::move(statScope),
                             id,
-                            &context](BackingStore::GetBlobResult result) {
+                            context = context.copy()](
+                               BackingStore::GetBlobResult result) {
                   if (result.blob) {
                     self->stats_->increment(
                         &ObjectStoreStats::getBlobMetadataFromBackingStore);
@@ -391,10 +396,10 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
                     // useful in context to know how many metadata fetches
                     // occurred. Also, since backing stores don't directly
                     // support fetching metadata, it should be clear.
-                    context.didFetch(
+                    context->didFetch(
                         ObjectFetchContext::BlobMetadata, id, result.origin);
 
-                    self->updateProcessFetch(context);
+                    self->updateProcessFetch(*context);
                     return makeFuture(metadata);
                   }
 
@@ -407,14 +412,14 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
 
 ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
     const ObjectId& id,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   return getBlobMetadata(id, context)
       .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
 }
 
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   return getBlobMetadata(id, context)
       .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }

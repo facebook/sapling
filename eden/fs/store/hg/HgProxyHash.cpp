@@ -134,7 +134,7 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash1(
     const Hash20& hgRevHash,
     RelativePathPiece path) {
   folly::StringPiece hashPiece{hgRevHash.getBytes()};
-  folly::StringPiece pathPiece{path};
+  std::string_view pathPiece{path};
 
   folly::fbstring str;
   str.reserve(21 + pathPiece.size());

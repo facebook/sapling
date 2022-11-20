@@ -16,11 +16,14 @@ mod cbytes;
 mod cfallible;
 mod init;
 mod request;
+mod slice;
 mod tests;
 mod tree;
 
 pub use auxdata::FileAuxData;
 pub use cbytes::CBytes;
 pub use cfallible::CFallible;
+pub use cfallible::CFallibleBase;
 pub use request::Request;
+pub use slice::Slice;
 pub use tree::Tree;

@@ -43,13 +43,13 @@ void eden_glob(benchmark::State& state) {
   auto eventBase = evbThread.getEventBase();
 
   auto socket = folly::AsyncSocket::newSocket(
-      eventBase, folly::SocketAddress::makeFromPath(socketPath.stringPiece()));
+      eventBase, folly::SocketAddress::makeFromPath(socketPath.view()));
   auto channel =
       apache::thrift::HeaderClientChannel::newChannel(std::move(socket));
   auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
 
   GlobParams param;
-  param.mountPoint_ref() = path.stringPiece();
+  param.mountPoint_ref() = path.view();
   param.globs_ref() = std::vector<std::string>{FLAGS_query};
   param.includeDotfiles_ref() = false;
   param.prefetchFiles_ref() = false;
@@ -84,7 +84,7 @@ void watchman_glob(benchmark::State& state) {
 
   WatchmanClient client(eventBase, std::move(sockPath));
   client.connect().get();
-  auto watch = client.watch(path.stringPiece()).get();
+  auto watch = client.watch(path.view()).get();
 
   folly::dynamic query =
       folly::dynamic::object("glob", folly::dynamic::array(FLAGS_query))(

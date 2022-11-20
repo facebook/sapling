@@ -41,21 +41,21 @@ std::string EmptyBackingStore::renderObjectId(const ObjectId& /*objectId*/) {
 
 ImmediateFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
     const RootId& /* rootId */,
-    ObjectFetchContext& /* context */) {
+    const ObjectFetchContextPtr& /* context */) {
   return makeSemiFuture<unique_ptr<Tree>>(
       std::domain_error("empty backing store"));
 }
 
 SemiFuture<BackingStore::GetTreeResult> EmptyBackingStore::getTree(
     const ObjectId& /* id */,
-    ObjectFetchContext& /* context */) {
+    const ObjectFetchContextPtr& /* context */) {
   return makeSemiFuture<GetTreeResult>(
       std::domain_error("empty backing store"));
 }
 
 SemiFuture<BackingStore::GetBlobResult> EmptyBackingStore::getBlob(
     const ObjectId& /* id */,
-    ObjectFetchContext& /* context */) {
+    const ObjectFetchContextPtr& /* context */) {
   return makeSemiFuture<GetBlobResult>(
       std::domain_error("empty backing store"));
 }

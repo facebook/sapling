@@ -8,11 +8,15 @@
 #include <gtest/gtest.h>
 #include <cstdio>
 
-#include "eden/scm/lib/backingstore/c_api/RustBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/BackingStoreBindings.h"
+
+namespace {
+
+using namespace sapling;
 
 TEST(CFallible, returns_ok) {
-  RustCFallible<uint8_t> result(
-      rust_test_cfallible_ok(), rust_test_cfallible_ok_free);
+  CFallible<uint8_t, sapling_test_cfallible_ok_free> result{
+      sapling_test_cfallible_ok()};
 
   uint8_t abc = *result.get();
 
@@ -22,16 +26,18 @@ TEST(CFallible, returns_ok) {
 
 // Test case for correct memory management when value is not used.
 TEST(CFallible, returns_ok_no_consume) {
-  RustCFallible<uint8_t> result(
-      rust_test_cfallible_ok(), rust_test_cfallible_ok_free);
+  CFallible<uint8_t, sapling_test_cfallible_ok_free> result{
+      sapling_test_cfallible_ok()};
   EXPECT_EQ(result.isError(), false);
 }
 
 TEST(CFallible, returns_err) {
-  RustCFallible<uint8_t> result(
-      rust_test_cfallible_err(), rust_test_cfallible_ok_free);
+  CFallible<uint8_t, sapling_test_cfallible_ok_free> result{
+      sapling_test_cfallible_err()};
 
   EXPECT_EQ(result.get(), nullptr);
   EXPECT_EQ(result.isError(), true);
   EXPECT_STREQ(result.getError(), "context\n\nCaused by:\n    failure!");
 }
+
+} // namespace

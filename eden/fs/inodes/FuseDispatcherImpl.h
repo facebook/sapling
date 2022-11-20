@@ -25,12 +25,13 @@ class FuseDispatcherImpl : public FuseDispatcher {
   explicit FuseDispatcherImpl(EdenMount* mount);
 
   ImmediateFuture<struct fuse_kstatfs> statfs(InodeNumber ino) override;
-  ImmediateFuture<Attr> getattr(InodeNumber ino, ObjectFetchContext& context)
-      override;
+  ImmediateFuture<Attr> getattr(
+      InodeNumber ino,
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<Attr> setattr(
       InodeNumber ino,
       const fuse_setattr_in& attr,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<uint64_t> opendir(InodeNumber ino, int flags) override;
   ImmediateFuture<folly::Unit> releasedir(InodeNumber ino, uint64_t fh)
       override;
@@ -38,44 +39,44 @@ class FuseDispatcherImpl : public FuseDispatcher {
       uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   void forget(InodeNumber ino, unsigned long nlookup) override;
   ImmediateFuture<uint64_t> open(InodeNumber ino, int flags) override;
   ImmediateFuture<std::string> readlink(
       InodeNumber ino,
       bool kernelCachesReadlink,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<fuse_entry_out> mknod(
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
       dev_t rdev,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<fuse_entry_out> mkdir(
       InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<folly::Unit> unlink(
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<folly::Unit> rmdir(
       InodeNumber parent,
       PathComponentPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<fuse_entry_out> symlink(
       InodeNumber parent,
       PathComponentPiece name,
       folly::StringPiece link,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<folly::Unit> rename(
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
       PathComponentPiece newname,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<fuse_entry_out> link(
       InodeNumber ino,
@@ -87,18 +88,18 @@ class FuseDispatcherImpl : public FuseDispatcher {
       PathComponentPiece name,
       mode_t mode,
       int flags,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<BufVec> read(
       InodeNumber ino,
       size_t size,
       off_t off,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<size_t> write(
       InodeNumber ino,
       folly::StringPiece data,
       off_t off,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
       override;
@@ -106,7 +107,7 @@ class FuseDispatcherImpl : public FuseDispatcher {
       InodeNumber ino,
       uint64_t offset,
       uint64_t length,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
   ImmediateFuture<folly::Unit> fsyncdir(InodeNumber ino, bool datasync)
       override;
@@ -116,12 +117,12 @@ class FuseDispatcherImpl : public FuseDispatcher {
       FuseDirList&& dirList,
       off_t offset,
       uint64_t fh,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<std::string> getxattr(
       InodeNumber ino,
       folly::StringPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<std::vector<std::string>> listxattr(InodeNumber ino) override;
 
  private:

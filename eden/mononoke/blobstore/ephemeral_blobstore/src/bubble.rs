@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use abomonation_derive::Abomonation;
+use anyhow::anyhow;
 use anyhow::Result;
 use async_stream::try_stream;
 use blobstore::Blobstore;
@@ -30,6 +31,7 @@ use futures::future::try_join_all;
 use futures::pin_mut;
 use futures::stream::TryStreamExt;
 use futures::Stream;
+use futures_lazy_shared::LazyShared;
 use metaconfig_types::RepoConfigArc;
 use mononoke_types::repo::EPH_ID_PREFIX;
 use mononoke_types::repo::EPH_ID_SUFFIX;
@@ -254,6 +256,10 @@ pub struct Bubble {
     /// SQL connection
     #[derivative(Debug = "ignore")]
     connections: SqlConnections,
+
+    /// The labels associated with the bubble. Currently used for lifetime extension.
+    #[derivative(Debug = "ignore")]
+    labels: LazyShared<Result<Vec<String>, EphemeralBlobstoreError>>,
 }
 
 impl fmt::Display for Bubble {
@@ -269,15 +275,16 @@ impl Bubble {
         blobstore: Arc<dyn BlobstoreEnumerableWithUnlink>,
         connections: SqlConnections,
         expired: ExpiryStatus,
+        labels: LazyShared<Result<Vec<String>, EphemeralBlobstoreError>>,
     ) -> Self {
         let blobstore = PrefixBlobstore::new(blobstore, bubble_id.prefix());
-
         Self {
             bubble_id,
             expires_at,
             blobstore,
             connections,
             expired,
+            labels,
         }
     }
 
@@ -363,6 +370,13 @@ impl Bubble {
 
     pub fn expires_at(&self) -> DateTime {
         self.expires_at
+    }
+
+    pub async fn labels(&self) -> Result<Vec<String>> {
+        self.labels
+            .get_or_init(|| async { Ok(Vec::new()) })
+            .await
+            .map_err(|e| anyhow!(e))
     }
 
     /// Return a blobstore that gives priority to accessing the bubble, but falls back

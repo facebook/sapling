@@ -12,7 +12,7 @@
 
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/c_api/SaplingNativeBackingStore.h"
 
 namespace facebook::eden {
 
@@ -27,14 +27,13 @@ class Tree;
 
 class HgDatapackStore {
  public:
+  using Options = sapling::BackingStoreOptions;
+
   HgDatapackStore(
       AbsolutePathPiece repository,
-      bool useEdenApi,
-      bool useAuxData,
-      bool allowRetries,
+      const Options& options,
       std::shared_ptr<ReloadableConfig> config)
-      : store_{repository.stringPiece(), useEdenApi, useAuxData, allowRetries},
-        config_{std::move(config)} {}
+      : store_{repository.view(), options}, config_{std::move(config)} {}
 
   /**
    * Imports the blob identified by the given hash from the local store.
@@ -98,7 +97,7 @@ class HgDatapackStore {
   }
 
  private:
-  HgNativeBackingStore store_;
+  sapling::SaplingNativeBackingStore store_;
   std::shared_ptr<ReloadableConfig> config_;
 
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;

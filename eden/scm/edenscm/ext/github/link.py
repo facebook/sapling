@@ -57,10 +57,13 @@ def try_parse_int(s: str) -> Optional[int]:
 
 def try_parse_pull_request_url(url: str) -> Optional[PullRequestId]:
     """parses the url into a PullRequest if it is in the expected format"""
-    pattern = r"^https://github.com/([^/]+)/([^/]+)/pull/([1-9][0-9]+)$"
+    pattern = r"^https://([^/]*)/([^/]+)/([^/]+)/pull/([1-9][0-9]+)$"
     match = re.match(pattern, url)
     if match:
-        return PullRequestId(owner=match[1], name=match[2], number=int(match[3]))
+        hostname, owner, name, number = match.groups()
+        return PullRequestId(
+            hostname=hostname, owner=owner, name=name, number=int(number)
+        )
     else:
         return None
 
@@ -78,9 +81,5 @@ def try_find_upstream(ui) -> Optional[str]:
 
 
 def normalize_github_repo_url(url: str) -> Optional[str]:
-    pair = github_repo_util.parse_owner_and_name_from_github_url(url)
-    if pair:
-        owner, name = pair
-        return f"https://github.com/{owner}/{name}"
-    else:
-        return None
+    repo = github_repo_util.parse_github_repo_from_github_url(url)
+    return repo.to_url() if repo else None

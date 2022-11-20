@@ -17,7 +17,7 @@ mod default_impl;
 mod delegate;
 pub mod errors;
 mod fmt;
-mod iddag;
+pub mod iddag;
 pub mod iddagstore;
 pub mod idmap;
 mod integrity;

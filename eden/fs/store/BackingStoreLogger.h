@@ -29,7 +29,7 @@ class BackingStoreLogger {
   BackingStoreLogger() = default;
 
   void logImport(
-      ObjectFetchContext& context,
+      const ObjectFetchContext& context,
       RelativePathPiece importPath,
       ObjectFetchContext::ObjectType fetchedType);
 

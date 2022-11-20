@@ -67,7 +67,7 @@ struct TreeInodePtrRoot {
   /** Arrange to load a child TreeInode */
   ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece name,
-      ObjectFetchContext& context) {
+      const ObjectFetchContextPtr& context) {
     return root->getOrLoadChildTree(name, context);
   }
   /** Returns true if we should call getOrLoadChildTree() for the given
@@ -117,7 +117,7 @@ struct TreeRoot {
    * always returns false. */
   ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece,
-      ObjectFetchContext&) {
+      const ObjectFetchContextPtr&) {
     throw std::runtime_error("impossible to get here");
   }
 
@@ -233,7 +233,7 @@ void GlobNode::parse(StringPiece pattern) {
 template <typename ROOT>
 ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
     const ObjectStore* store,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
     ROOT&& root,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
@@ -265,7 +265,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
                 store->getTree(entry->getHash(), context)
                     .thenValue([candidateName = rootPath + name,
                                 store,
-                                &context,
+                                context = context.copy(),
                                 innerNode = node,
                                 fileBlobsToPrefetch,
                                 &globResult,
@@ -315,7 +315,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
         // We need to match it out of the entries in this inode
         for (auto& entry : root.iterate(contents)) {
           PathComponentPiece name = entry.first;
-          if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
+          if (node->alwaysMatch_ || node->matcher_.match(name.view())) {
             if (node->isLeaf_) {
               globResult.wlock()->emplace_back(
                   rootPath + name, entry.second.getDtype(), originRootId);
@@ -339,7 +339,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
   for (auto& item : recurse) {
     futures.emplace_back(root.getOrLoadChildTree(item.first, context)
                              .thenValue([store,
-                                         &context,
+                                         context = context.copy(),
                                          candidateName = rootPath + item.first,
                                          node = item.second,
                                          fileBlobsToPrefetch,
@@ -371,7 +371,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
 
 ImmediateFuture<folly::Unit> GlobNode::evaluate(
     const ObjectStore* store,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
     TreeInodePtr root,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
@@ -389,7 +389,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
 
 ImmediateFuture<folly::Unit> GlobNode::evaluate(
     const ObjectStore* store,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
     std::shared_ptr<const Tree> tree,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
@@ -446,7 +446,7 @@ GlobNode* GlobNode::lookupToken(
 template <typename ROOT>
 ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
     const ObjectStore* store,
-    ObjectFetchContext& context,
+    const ObjectFetchContextPtr& context,
     RelativePathPiece rootPath,
     RelativePathPiece startOfRecursive,
     ROOT&& root,
@@ -461,8 +461,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
       auto candidateName = startOfRecursive + entry.first;
 
       for (auto& node : recursiveChildren_) {
-        if (node->alwaysMatch_ ||
-            node->matcher_.match(candidateName.stringPiece())) {
+        if (node->alwaysMatch_ || node->matcher_.match(candidateName.view())) {
           globResult.wlock()->emplace_back(
               rootPath + candidateName, entry.second.getDtype(), originRootId);
           if (fileBlobsToPrefetch && root.entryShouldPrefetch(&entry.second)) {
@@ -484,7 +483,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                   .thenValue([candidateName = std::move(candidateName),
                               rootPath = rootPath.copy(),
                               store,
-                              &context,
+                              context = context.copy(),
                               this,
                               fileBlobsToPrefetch,
                               &globResult,
@@ -513,7 +512,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
             .thenValue([candidateName = std::move(candidateName),
                         rootPath = rootPath.copy(),
                         store,
-                        &context,
+                        context = context.copy(),
                         this,
                         fileBlobsToPrefetch,
                         &globResult,

@@ -1040,11 +1040,11 @@
 
   $ hg log --style notexist
   abort: style 'notexist' not found
-  (available styles: bisect, changelog, compact, default, phases, show, status, xml)
+  (available styles: bisect, changelog, compact, default, phases, show, sl_default, status, xml)
   [255]
 
   $ hg log -T list
-  available styles: bisect, changelog, compact, default, phases, show, status, xml
+  available styles: bisect, changelog, compact, default, phases, show, sl_default, status, xml
   abort: specify a template
   [255]
 

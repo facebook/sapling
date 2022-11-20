@@ -1992,7 +1992,7 @@ class changeset_printer(object):
                     self.ui.write(
                         columns[key] % " ".join(value), label="ui.debug log.files"
                     )
-        elif ctx.files() and self.ui.verbose:
+        elif self.ui.verbose and ctx.files():
             self.ui.write(
                 columns["files"] % " ".join(ctx.files()), label="ui.note log.files"
             )

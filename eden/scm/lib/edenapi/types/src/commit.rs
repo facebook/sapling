@@ -360,6 +360,28 @@ pub struct FetchSnapshotResponse {
     pub tz: i32,
     #[id(6)]
     pub bubble_id: Option<NonZeroU64>,
+    #[id(7)]
+    pub labels: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+#[auto_wire]
+pub struct AlterSnapshotRequest {
+    #[id(1)]
+    pub cs_id: BonsaiChangesetId,
+    #[id(2)]
+    pub labels_to_add: Vec<String>,
+    #[id(3)]
+    pub labels_to_remove: Vec<String>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct AlterSnapshotResponse {
+    #[id(1)]
+    pub current_labels: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -374,6 +396,8 @@ pub struct UploadSnapshotResponse {
 pub struct EphemeralPrepareRequest {
     #[id(1)]
     pub custom_duration_secs: Option<u64>,
+    #[id(2)]
+    pub labels: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

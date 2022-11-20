@@ -271,19 +271,17 @@ RUN rm -rf /tmp/repo
                     "name": "rustup",
                     "run": "rustup default stable",
                 },
-                create_set_env_step(
-                    DEB_UPSTREAM_VERSION, "$(ci/tag-name.sh | tr \\- .)"
-                ),
-                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh | tr \\- .)"),
+                create_set_env_step(DEB_UPSTREAM_VERSION, "$(ci/tag-name.sh)"),
+                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh)"),
                 {
                     "name": "Create .deb",
                     "working-directory": "./eden/scm",
-                    "run": f"${{{{ format('VERSION=0.0-{{0}} make deb', env.{DEB_UPSTREAM_VERSION}) }}}}",
+                    "run": f"${{{{ format('VERSION={{0}} make deb', env.{DEB_UPSTREAM_VERSION}) }}}}",
                 },
                 {
                     "name": "Rename .deb",
                     "working-directory": "./eden/scm",
-                    "run": f"${{{{ format('mv sapling_0.0-{{0}}_amd64.deb sapling_0.0-{{0}}_amd64.Ubuntu{ubuntu_version}.deb', env.{DEB_UPSTREAM_VERSION}, env.{DEB_UPSTREAM_VERSION}) }}}}",
+                    "run": f"${{{{ format('mv sapling_{{0}}_amd64.deb sapling_{{0}}_amd64.Ubuntu{ubuntu_version}.deb', env.{DEB_UPSTREAM_VERSION}, env.{DEB_UPSTREAM_VERSION}) }}}}",
                 },
             ],
         }
@@ -312,7 +310,7 @@ RUN rm -rf /tmp/repo
                 },
                 # This makes vcpkg packages available globally.
                 {"name": "integrate vcpkg", "run": "vcpkg integrate install"},
-                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh | tr \\- .)"),
+                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh)"),
                 {
                     "name": "build and zip",
                     "run": "python3 ./eden/scm/packaging/windows/build_windows_zip.py",
@@ -357,7 +355,7 @@ RUN rm -rf /tmp/repo
             "steps": [
                 {"name": "Checkout Code", "uses": "actions/checkout@v3"},
                 grant_repo_access(),
-                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh | tr \\- .)"),
+                create_set_env_step(SAPLING_VERSION, "$(ci/tag-name.sh)"),
                 {
                     "name": "Prepare build environment",
                     "run": "eden/scm/packaging/mac/prepare_environment.py \\\n"
@@ -377,7 +375,7 @@ RUN rm -rf /tmp/repo
                 },
                 {
                     "name": "Rename bottle to some platform specific name",
-                    "run": "mv %s sapling_0.0-${{ env.SAPLING_VERSION }}.%s"
+                    "run": "mv %s sapling_${{ env.SAPLING_VERSION }}.%s"
                     % (artifact_glob, final_ext),
                 },
                 upload_artifact(artifact_key, artifact_glob),

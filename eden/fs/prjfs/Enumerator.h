@@ -74,7 +74,7 @@ class Enumerator {
   Enumerator(const Enumerator&) = delete;
   Enumerator& operator=(const Enumerator&) = delete;
 
-  explicit Enumerator(std::vector<PrjfsDirEntry>&& entryList);
+  explicit Enumerator(std::vector<PrjfsDirEntry> entryList);
   Enumerator(Enumerator&& other) = default;
 
   explicit Enumerator() = delete;

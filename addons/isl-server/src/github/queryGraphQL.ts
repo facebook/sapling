@@ -12,6 +12,7 @@ import execa from 'execa';
 export default async function queryGraphQL<TData, TVariables>(
   query: string,
   variables: TVariables,
+  hostname: string,
 ): Promise<TData> {
   if (Object.prototype.hasOwnProperty.call(variables, 'query')) {
     throw Error('cannot have a variable named query');
@@ -34,6 +35,7 @@ export default async function queryGraphQL<TData, TVariables>(
         throw Error(`unexpected type: ${type} for ${key}: ${value}`);
     }
   }
+  args.push('--hostname', hostname);
   args.push('-f', `query=${query}`);
 
   const {stdout} = await execa('gh', args, {stdout: 'pipe', stderr: 'pipe'}).catch(
@@ -55,4 +57,22 @@ export default async function queryGraphQL<TData, TVariables>(
   }
 
   return json.data;
+}
+
+/**
+ * Query `gh` CLI to test if a hostname is GitHub or GitHub Enterprise.
+ * Returns true if this hostname is a valid, authenticated GitHub instance.
+ * Returns false if the hostname is not github, or if you're not authenticated for that hostname,
+ * or if the network is not working.
+ */
+export async function isGithubEnterprise(hostname: string): Promise<boolean> {
+  const args = ['auth', 'status'];
+  args.push('--hostname', hostname);
+
+  try {
+    await execa('gh', args, {stdout: 'pipe', stderr: 'pipe'});
+    return true;
+  } catch {
+    return false;
+  }
 }

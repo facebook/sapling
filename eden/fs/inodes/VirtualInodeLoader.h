@@ -65,7 +65,7 @@ class VirtualInodeLoader {
       folly::Try<VirtualInode> inodeTreeTry,
       RelativePathPiece path,
       ObjectStore* store,
-      ObjectFetchContext& fetchContext) {
+      const ObjectFetchContextPtr& fetchContext) {
     for (auto& promise : promises_) {
       promise.setValue(inodeTreeTry);
     }
@@ -92,18 +92,14 @@ class VirtualInodeLoader {
             fetchContext);
         continue;
       } else {
-        makeImmediateFutureWith([inodeTree = inodeTreeTry.value(),
-                                 &childName,
-                                 childPath,
-                                 store,
-                                 &fetchContext] {
-          return inodeTree.getOrFindChild(
+        makeImmediateFutureWith([&] {
+          return inodeTreeTry.value().getOrFindChild(
               childName, childPath, store, fetchContext);
         })
             .thenTry([loader = std::move(childLoader),
                       childPath,
                       store,
-                      &fetchContext](
+                      fetchContext = fetchContext.copy()](
                          folly::Try<VirtualInode>&& childInodeTreeTry) {
               loader->loaded(childInodeTreeTry, childPath, store, fetchContext);
             })
@@ -160,17 +156,20 @@ auto applyToVirtualInode(
     const std::vector<std::string>& paths,
     Func func,
     ObjectStore* store,
-    ObjectFetchContext& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext) {
   using FuncRet = folly::invoke_result_t<Func&, VirtualInode&>;
   using Result = typename folly::isFutureOrSemiFuture<FuncRet>::Inner;
 
   detail::VirtualInodeLoader loader;
 
+  // Func may not be copyable, so wrap it in a shared_ptr.
+  auto cb = std::make_shared<Func>(std::move(func));
+
   std::vector<folly::SemiFuture<Result>> results;
   results.reserve(paths.size());
   for (const auto& path : paths) {
     results.emplace_back(loader.load(path).thenValue(
-        [func, path](VirtualInode&& inode) { return func(inode); }));
+        [cb, path](VirtualInode&& inode) { return (*cb)(inode); }));
   }
 
   loader.loaded(

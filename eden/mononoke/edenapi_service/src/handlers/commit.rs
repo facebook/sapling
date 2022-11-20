@@ -15,6 +15,8 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
+use edenapi_types::AlterSnapshotRequest;
+use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
@@ -433,6 +435,11 @@ impl EdenApiHandler for FetchSnapshotHandler {
             .bubble_from_changeset(&cs_id)
             .await?
             .context("Snapshot not in a bubble")?;
+        let labels = repo
+            .ephemeral_store()
+            .labels_from_bubble(&bubble_id)
+            .await
+            .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
         let cs = cs_id.load(repo.ctx(), &blobstore).await?.into_mut();
         let time = cs.author_date.timestamp_secs();
@@ -485,7 +492,60 @@ impl EdenApiHandler for FetchSnapshotHandler {
                 })
                 .collect::<Result<_, Error>>()?,
             bubble_id: Some(bubble_id.into()),
+            labels,
         };
+        Ok(stream::once(async move { Ok(response) }).boxed())
+    }
+}
+
+// Alter the properties of an existing snapshot
+pub struct AlterSnapshotHandler;
+
+#[async_trait]
+impl EdenApiHandler for AlterSnapshotHandler {
+    type Request = AlterSnapshotRequest;
+    type Response = AlterSnapshotResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::AlterSnapshot;
+    const ENDPOINT: &'static str = "/snapshot/alter";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = &repo;
+        let cs_id = ChangesetId::from(request.cs_id);
+        let id = repo
+            .ephemeral_store()
+            .bubble_from_changeset(&cs_id)
+            .await?
+            .context("Snapshot does not exist or has already expired")?;
+        let (label_addition, label_removal) = (
+            !request.labels_to_add.is_empty(),
+            !request.labels_to_remove.is_empty(),
+        );
+        if label_addition && label_removal {
+            Err(anyhow!(
+                "Alter snapshot request cannot have labels_to_add and labels_to_remove both as non-empty"
+            ))?
+        } else if label_addition {
+            repo.ephemeral_store()
+                .add_bubble_labels(id, request.labels_to_add.clone())
+                .await?;
+        } else if label_removal {
+            repo.ephemeral_store()
+                .remove_bubble_labels(id, request.labels_to_remove.clone())
+                .await?;
+        } else {
+            Err(anyhow!(
+                "Alter snapshot request cannot have labels_to_add and labels_to_remove both as empty"
+            ))?
+        }
+        let current_labels = repo.ephemeral_store().labels_from_bubble(&id).await?;
+        let response = AlterSnapshotResponse { current_labels };
         Ok(stream::once(async move { Ok(response) }).boxed())
     }
 }
@@ -511,7 +571,10 @@ impl EdenApiHandler for EphemeralPrepareHandler {
         Ok(stream::once(async move {
             Ok(EphemeralPrepareResponse {
                 bubble_id: repo
-                    .create_bubble(request.custom_duration_secs.map(Duration::from_secs))
+                    .create_bubble(
+                        request.custom_duration_secs.map(Duration::from_secs),
+                        request.labels.unwrap_or_else(Vec::new),
+                    )
                     .await?
                     .bubble_id()
                     .into(),

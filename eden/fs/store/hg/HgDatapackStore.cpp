@@ -25,15 +25,15 @@
 namespace facebook::eden {
 
 namespace {
-TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
+TreeEntryType fromRawTreeEntryType(sapling::TreeEntryType type) {
   switch (type) {
-    case RustTreeEntryType::RegularFile:
+    case sapling::TreeEntryType::RegularFile:
       return TreeEntryType::REGULAR_FILE;
-    case RustTreeEntryType::Tree:
+    case sapling::TreeEntryType::Tree:
       return TreeEntryType::TREE;
-    case RustTreeEntryType::ExecutableFile:
+    case sapling::TreeEntryType::ExecutableFile:
       return TreeEntryType::EXECUTABLE_FILE;
-    case RustTreeEntryType::Symlink:
+    case sapling::TreeEntryType::Symlink:
       return TreeEntryType::SYMLINK;
   }
   EDEN_BUG() << "unknown tree entry type " << static_cast<uint32_t>(type)
@@ -41,7 +41,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 }
 
 Tree::value_type fromRawTreeEntry(
-    RustTreeEntry entry,
+    sapling::TreeEntry entry,
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat) {
   std::optional<uint64_t> size;
@@ -67,7 +67,7 @@ Tree::value_type fromRawTreeEntry(
 }
 
 std::unique_ptr<Tree> fromRawTree(
-    const RustTree* tree,
+    const sapling::Tree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
     HgObjectIdFormat hgObjectIdFormat) {
@@ -89,8 +89,7 @@ std::unique_ptr<Tree> fromRawTree(
 std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
     const ObjectId& id,
     const HgProxyHash& hgInfo) {
-  auto content =
-      store_.getBlob(hgInfo.path().stringPiece(), hgInfo.byteHash(), true);
+  auto content = store_.getBlob(hgInfo.byteHash(), true);
   if (content) {
     return std::make_unique<Blob>(id, std::move(*content));
   }
@@ -115,14 +114,13 @@ void HgDatapackStore::getBlobBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   size_t count = importRequests.size();
 
-  std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
+  std::vector<sapling::NodeId> requests;
   requests.reserve(count);
 
   for (const auto& importRequest : importRequests) {
     auto& proxyHash =
         importRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash;
-    requests.emplace_back(
-        folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
+    requests.emplace_back(proxyHash.byteHash());
   }
 
   std::vector<RequestMetricsScope> requestsWatches;
@@ -133,16 +131,11 @@ void HgDatapackStore::getBlobBatch(
   }
 
   store_.getBlobBatch(
-      requests,
+      folly::range(requests),
       false,
       // store_.getBlobBatch is blocking, hence we can take these by reference.
-      [&importRequests, &requests, &requestsWatches](
-          size_t index, std::unique_ptr<folly::IOBuf> content) {
-        XLOGF(
-            DBG9,
-            "Imported name={} node={}",
-            folly::StringPiece{requests[index].first},
-            folly::hexlify(requests[index].second));
+      [&](size_t index, std::unique_ptr<folly::IOBuf> content) {
+        XLOGF(DBG9, "Imported node={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
         auto* blobRequest =
             importRequest->getRequest<HgImportRequest::BlobImport>();
@@ -159,14 +152,13 @@ void HgDatapackStore::getTreeBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   auto count = importRequests.size();
 
-  std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
+  std::vector<sapling::NodeId> requests;
   requests.reserve(count);
 
   for (const auto& importRequest : importRequests) {
     auto& proxyHash =
         importRequest->getRequest<HgImportRequest::TreeImport>()->proxyHash;
-    requests.emplace_back(
-        folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
+    requests.emplace_back(proxyHash.byteHash());
   }
   std::vector<RequestMetricsScope> requestsWatches;
   requestsWatches.reserve(count);
@@ -178,16 +170,11 @@ void HgDatapackStore::getTreeBatch(
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
   store_.getTreeBatch(
-      requests,
+      folly::range(requests),
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
-      [hgObjectIdFormat, &requests, &importRequests, &requestsWatches](
-          size_t index, std::shared_ptr<RustTree> content) mutable {
-        XLOGF(
-            DBG4,
-            "Imported tree name={} node={}",
-            folly::StringPiece{requests[index].first},
-            folly::hexlify(requests[index].second));
+      [&](size_t index, std::shared_ptr<sapling::Tree> content) mutable {
+        XLOGF(DBG4, "Imported tree node={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
         auto* treeRequest =
             importRequest->getRequest<HgImportRequest::TreeImport>();

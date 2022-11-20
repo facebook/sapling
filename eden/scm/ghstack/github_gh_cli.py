@@ -27,6 +27,7 @@ class Result(Generic[T]):
 
 async def make_request(
     params: Dict[str, Union[str, int, bool]],
+    hostname: str,
     endpoint="graphql",
     method: Optional[str] = None,
 ) -> Result:
@@ -38,7 +39,7 @@ async def make_request(
     else:
         endpoint_args = [endpoint]
     args = (
-        ["gh", "api"]
+        ["gh", "api", "--hostname", hostname]
         + endpoint_args
         + list(itertools.chain(*[_format_param(k, v) for (k, v) in params.items()]))
     )

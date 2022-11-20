@@ -93,7 +93,7 @@ std::string GitBackingStore::renderObjectId(const ObjectId& objectId) {
 
 ImmediateFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
     const RootId& rootId,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   XLOG(DBG4) << "resolving tree for commit " << rootId;
 
@@ -120,7 +120,7 @@ ImmediateFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
 
 SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
     const ObjectId& id,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(BackingStore::GetTreeResult{
       getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
@@ -172,7 +172,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
 
 SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
     const ObjectId& id,
-    ObjectFetchContext& /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(BackingStore::GetBlobResult{
       getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});

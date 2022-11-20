@@ -39,6 +39,13 @@ def _parselifetime(opts):
         return None
 
 
+def parselabels(opts):
+    if opts["labels"] != "":
+        return [label.strip() for label in opts["labels"].split(",") if label.strip()]
+    else:
+        return None
+
+
 def parsemaxuntracked(opts):
     if opts["max_untracked_size"] != "":
         return int(opts["max_untracked_size"]) * 1000 * 1000
@@ -131,7 +138,7 @@ class workingcopy(object):
 
 @util.timefunction("snapshot_upload", 0, "ui")
 def uploadsnapshot(
-    repo, wctx, wc, time, tz, hgparents, lifetime, previousbubble, reusestorage
+    repo, wctx, wc, time, tz, hgparents, lifetime, previousbubble, reusestorage, labels
 ):
     return repo.edenapi.uploadsnapshot(
         {
@@ -151,6 +158,7 @@ def uploadsnapshot(
         lifetime,
         previousbubble,
         previousbubble if reusestorage else None,
+        labels,
     )
 
 
@@ -159,6 +167,7 @@ def createremote(ui, repo, **opts):
     maxuntrackedsize = parsemaxuntracked(opts)
     maxfilecount = parsemaxfilecount(opts)
     reusestorage = opts.get("reuse_storage") is True
+    labels = parselabels(opts)
     overrides = {}
     if ui.plain():
         overrides[("ui", "quiet")] = True
@@ -184,7 +193,16 @@ def createremote(ui, repo, **opts):
         previousbubble = fetchlatestbubble(repo.metalog())
 
         response = uploadsnapshot(
-            repo, wctx, wc, time, tz, hgparents, lifetime, previousbubble, reusestorage
+            repo,
+            wctx,
+            wc,
+            time,
+            tz,
+            hgparents,
+            lifetime,
+            previousbubble,
+            reusestorage,
+            labels,
         )
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
@@ -195,5 +213,11 @@ def createremote(ui, repo, **opts):
 
     if ui.plain():
         ui.status(f"{csid}\n")
+    elif labels:
+        labels = ",".join(labels)
+        ui.status(
+            _("Snapshot created with id {} and labels {}\n").format(csid, labels),
+            component="snapshot",
+        )
     else:
         ui.status(_("Snapshot created with id {}\n").format(csid), component="snapshot")

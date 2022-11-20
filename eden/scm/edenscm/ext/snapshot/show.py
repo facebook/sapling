@@ -93,6 +93,9 @@ def show(ui, repo, csid=None, **opts):
             displayer = jsonchangeset(ui, repo, match, printeropt, buffered)
         else:
             ui.status(_("snapshot: {}\n").format(csid))
+            if snapshot["labels"] and len(snapshot["labels"]) > 0:
+                labels = ",".join(snapshot["labels"])
+                ui.status(_("labels: {}\n").format(labels))
             displayer = changeset_printer(ui, repo, match, printeropt, buffered)
         displayer.show(ctx)
         displayer.close()

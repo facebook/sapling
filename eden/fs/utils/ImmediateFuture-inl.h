@@ -44,9 +44,7 @@ ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept(
 template <typename T>
 ImmediateFuture<T>::ImmediateFuture(
     folly::SemiFuture<T>&& fut,
-    SemiFutureReadiness readiness) noexcept(std::
-                                                is_nothrow_move_constructible_v<
-                                                    folly::SemiFuture<T>>) {
+    SemiFutureReadiness readiness) noexcept {
   if (readiness == SemiFutureReadiness::LazySemiFuture) {
     kind_ = Kind::LazySemiFuture;
     new (&semi_) folly::SemiFuture<T>{std::move(fut)};
@@ -66,8 +64,7 @@ ImmediateFuture<T>::~ImmediateFuture() {
 
 template <typename T>
 ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept(
-    std::is_nothrow_move_constructible_v<folly::Try<T>>&&
-        std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
+    std::is_nothrow_move_constructible_v<folly::Try<T>>)
     : kind_(other.kind_) {
   switch (kind_) {
     case Kind::Immediate:
@@ -86,8 +83,7 @@ ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept(
 template <typename T>
 ImmediateFuture<T>&
 ImmediateFuture<T>::operator=(ImmediateFuture<T>&& other) noexcept(
-    std::is_nothrow_move_constructible_v<folly::Try<T>>&&
-        std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>) {
+    std::is_nothrow_move_constructible_v<folly::Try<T>>) {
   if (this == &other) {
     return *this;
   }
@@ -146,7 +142,7 @@ ImmediateFuture<T>::thenValue(Func&& func) && {
           folly::Try<T>&& try_) mutable -> ImmediateFuture<RetType> {
         if (try_.hasValue()) {
           return detail::makeImmediateFutureFromImmediate(
-              std::forward<Func>(func), std::move(try_).value());
+              std::move(func), std::move(try_).value());
         } else {
           return folly::Try<RetType>(std::move(try_).exception());
         }
@@ -165,7 +161,7 @@ ImmediateFuture<T> ImmediateFuture<T>::thenError(Func&& func) && {
           folly::Try<T>&& try_) mutable -> ImmediateFuture<T> {
         if (try_.hasException()) {
           return detail::makeImmediateFutureFromImmediate(
-              std::forward<Func>(func), std::move(try_).exception());
+              std::move(func), std::move(try_).exception());
         } else {
           return ImmediateFuture{std::move(try_)};
         }

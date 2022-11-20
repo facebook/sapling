@@ -162,23 +162,23 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 #ifndef _WIN32
   ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
-      ObjectFetchContext& fetchContext) override;
+      const ObjectFetchContextPtr& fetchContext) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   ImmediateFuture<std::string> readlink(
-      ObjectFetchContext& fetchContext,
+      const ObjectFetchContextPtr& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
   ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<std::vector<std::string>> listxattr() override;
 #endif
 
-  ImmediateFuture<Hash20> getSha1(ObjectFetchContext& fetchContext);
+  ImmediateFuture<Hash20> getSha1(const ObjectFetchContextPtr& fetchContext);
 
   ImmediateFuture<BlobMetadata> getBlobMetadata(
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   /**
    * Check to see if the file has the same contents as the specified blob
@@ -190,16 +190,16 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   ImmediateFuture<bool> isSameAs(
       const Blob& blob,
       TreeEntryType entryType,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
   ImmediateFuture<bool> isSameAs(
       const ObjectId& blobID,
       const Hash20& blobSha1,
       TreeEntryType entryType,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
   ImmediateFuture<bool> isSameAs(
       const ObjectId& blobID,
       TreeEntryType entryType,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   /**
    * Get the file mode_t value.
@@ -245,7 +245,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Note that this API generally should only be used for fairly small files.
    */
   FOLLY_NODISCARD ImmediateFuture<std::string> readAll(
-      ObjectFetchContext& fetchContext,
+      const ObjectFetchContextPtr& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
 #ifdef _WIN32
@@ -268,25 +268,30 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * May throw exceptions on error.
    */
   ImmediateFuture<std::tuple<BufVec, bool>>
-  read(size_t size, off_t off, ObjectFetchContext& context);
+  read(size_t size, off_t off, const ObjectFetchContextPtr& context);
 
   ImmediateFuture<size_t>
-  write(BufVec&& buf, off_t off, ObjectFetchContext& fetchContext);
-  ImmediateFuture<size_t>
-  write(folly::StringPiece data, off_t off, ObjectFetchContext& fetchContext);
+  write(BufVec&& buf, off_t off, const ObjectFetchContextPtr& fetchContext);
+  ImmediateFuture<size_t> write(
+      folly::StringPiece data,
+      off_t off,
+      const ObjectFetchContextPtr& fetchContext);
 
   void fsync(bool datasync);
 
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit>
-  fallocate(uint64_t offset, uint64_t length, ObjectFetchContext& fetchContext);
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> fallocate(
+      uint64_t offset,
+      uint64_t length,
+      const ObjectFetchContextPtr& fetchContext);
 
   ImmediateFuture<folly::Unit> ensureMaterialized(
-      ObjectFetchContext& fetchContext,
+      const ObjectFetchContextPtr& fetchContext,
       bool followSymlink) override;
 
 #endif // !_WIN32
 
-  ImmediateFuture<struct stat> stat(ObjectFetchContext& context) override;
+  ImmediateFuture<struct stat> stat(
+      const ObjectFetchContextPtr& context) override;
 
  private:
   using State = FileInodeState;
@@ -310,7 +315,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   runWhileDataLoaded(
       LockedState state,
       BlobCache::Interest interest,
-      ObjectFetchContext& fetchContext,
+      const ObjectFetchContextPtr& fetchContext,
       std::shared_ptr<const Blob> blob,
       Fn&& fn);
 
@@ -327,7 +332,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       LockedState state,
       std::shared_ptr<const Blob> blob,
       Fn&& fn,
-      ObjectFetchContext& fetchContext,
+      const ObjectFetchContextPtr& fetchContext,
       std::optional<std::chrono::system_clock::time_point> startTime =
           std::nullopt);
 
@@ -360,7 +365,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   FOLLY_NODISCARD ImmediateFuture<std::shared_ptr<const Blob>> startLoadingData(
       LockedState state,
       BlobCache::Interest interest,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
 #ifndef _WIN32
   /**
@@ -396,7 +401,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   void materializeNow(
       LockedState& state,
       std::shared_ptr<const Blob> blob,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   /**
    * Get a FileInodePtr to ourself.
@@ -439,7 +444,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   ImmediateFuture<bool> isSameAsSlow(
       const Hash20& expectedBlobSha1,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
 #ifndef _WIN32
   /**
@@ -473,7 +478,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   /**
    * Log accesses via the ServerState's HiveLogger.
    */
-  void logAccess(ObjectFetchContext& fetchContext);
+  void logAccess(const ObjectFetchContext& fetchContext);
 
   folly::Synchronized<State> state_;
 

@@ -29,11 +29,11 @@ CheckoutContext::CheckoutContext(
     const std::unordered_map<std::string, std::string>* requestInfo)
     : checkoutMode_{checkoutMode},
       mount_{mount},
-      fetchContext_{
+      fetchContext_{makeRefPtr<StatsFetchContext>(
           clientPid,
           ObjectFetchContext::Cause::Thrift,
           thriftMethodName,
-          requestInfo} {}
+          requestInfo)} {}
 
 CheckoutContext::~CheckoutContext() {}
 

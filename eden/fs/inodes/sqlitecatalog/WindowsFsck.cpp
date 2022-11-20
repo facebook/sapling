@@ -491,7 +491,14 @@ std::optional<InodeNumber> fixup(
           state.desiredHash,
           insensitiveOverlayDir);
     } else {
-      return InodeNumber(*state.overlayEntry->inodeNumber());
+      auto inodeNumber = InodeNumber(*state.overlayEntry->inodeNumber());
+      if (!state.onDisk && state.overlayDtype == dtype_t::Dir) {
+        auto overlayDir = inodeCatalog.loadAndRemoveOverlayDir(inodeNumber);
+        if (overlayDir) {
+          XLOGF(DBG9, "Removed overlay directory for: {}", path);
+        }
+      }
+      return inodeNumber;
     }
   } else {
     if (state.inOverlay) {
@@ -661,7 +668,7 @@ void scanCurrentDir(
     const PathMap<overlay::OverlayEntry>& parentInsensitiveOverlayDir,
     bool recordDeletion,
     SqliteInodeCatalog::LookupCallback& callback) {
-  auto boostPath = boost::filesystem::path(dir.stringPiece());
+  auto boostPath = boost::filesystem::path(dir.asString());
   if (!boost::filesystem::is_directory(boostPath)) {
     XLOGF(WARN, "Attempting to scan '{}' which is not a directory", dir);
     return;
@@ -686,8 +693,9 @@ void scanCurrentDir(
     bool presentInOverlay = false;
     for (auto iter = overlayEntries.begin(); iter != overlayEntries.end();
          ++iter) {
-      if (name.stringPiece().equals(
-              iter->stringPiece(), folly::AsciiCaseInsensitive())) {
+      if (folly::StringPiece{name.view()}.equals(
+              folly::StringPiece{iter->view()},
+              folly::AsciiCaseInsensitive())) {
         // Once we found the entry in inodeCatalog, we remove it from the
         // inodeCatalog, so we know if there are entries missing from disk at
         // the end.

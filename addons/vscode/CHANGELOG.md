@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.0.1 - Initial release
+## 0.1.2
+
+- Fix the comparison view not scrolling
+- Show an error in ISL if Sapling is not yet installed
+
+## 0.1.1 - Initial release
 
 Features:
 

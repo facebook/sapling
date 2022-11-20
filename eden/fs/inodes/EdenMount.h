@@ -111,13 +111,17 @@ class SharedRenameLock;
  * available during the inode event.
  */
 struct InodeTraceEvent : TraceEventBase {
+  template <typename Path>
   InodeTraceEvent(
       std::chrono::system_clock::time_point startTime,
       InodeNumber ino,
       InodeType inodeType,
       InodeEventType eventType,
       InodeEventProgress progress,
-      folly::StringPiece path);
+      const Path& path)
+      : InodeTraceEvent{startTime, ino, inodeType, eventType, progress} {
+    setPath(path.view());
+  }
 
   // Simple accessor that hides the internal memory representation of the trace
   // event's path. Note this could be just the base filename or it could be the
@@ -129,7 +133,7 @@ struct InodeTraceEvent : TraceEventBase {
 
   // Setter that allocates new memory on the heap and memcpy's a StringPiece's
   // data into the InodeTraceEvent's path attribute
-  void setPath(folly::StringPiece stringPath);
+  void setPath(std::string_view stringPath);
 
   InodeNumber ino;
   InodeType inodeType;
@@ -138,6 +142,14 @@ struct InodeTraceEvent : TraceEventBase {
   std::chrono::microseconds duration;
   // Always null-terminated, and saves space in the trace event structure.
   std::shared_ptr<char[]> path;
+
+ private:
+  InodeTraceEvent(
+      std::chrono::system_clock::time_point startTime,
+      InodeNumber ino,
+      InodeType inodeType,
+      InodeEventType eventType,
+      InodeEventProgress progress);
 };
 
 /**
@@ -603,7 +615,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * the ObjectStore).
    */
   ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
-  getTreeOrTreeEntry(RelativePathPiece path, ObjectFetchContext& context) const;
+  getTreeOrTreeEntry(
+      RelativePathPiece path,
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Walk the Tree hierarchy and return a path whose case matches the Tree path
@@ -617,7 +631,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<RelativePath> canonicalizePathFromTree(
       RelativePathPiece path,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Look up the Inode object for the specified path.
@@ -638,7 +652,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<InodePtr> getInodeSlow(
       RelativePathPiece path,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Look up the Inode, Tree, or TreeEntry for the specified path.
@@ -657,7 +671,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   ImmediateFuture<VirtualInode> getVirtualInode(
       RelativePathPiece path,
-      ObjectFetchContext& context) const;
+      const ObjectFetchContextPtr& context) const;
 
   /**
    * Check out the specified commit.
@@ -916,7 +930,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FOLLY_NODISCARD folly::Future<folly::Unit> addBindMount(
       RelativePathPiece repoPath,
       AbsolutePathPiece targetPath,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
   FOLLY_NODISCARD folly::Future<folly::Unit> removeBindMount(
       RelativePathPiece repoPath);
 
@@ -927,7 +941,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD ImmediateFuture<TreeInodePtr> ensureDirectoryExists(
       RelativePathPiece fromRoot,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Request to start a new tree prefetch.
@@ -941,7 +955,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
       TreeInodePtr treeInode,
-      ObjectFetchContext& context);
+      const ObjectFetchContext& context);
 
   /**
    * Get a weak_ptr to this EdenMount object. EdenMounts are stored as shared
@@ -967,7 +981,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   setPathsToObjectIds(
       std::vector<SetPathObjectIdObjectAndPath> objects,
       CheckoutMode checkoutMode,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Should only be called by the mount contructor. We decide wether this

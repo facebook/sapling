@@ -64,6 +64,8 @@ pub use crate::bookmark::BookmarkEntry;
 pub use crate::bookmark::BookmarkRequest;
 pub use crate::bookmark::SetBookmarkRequest;
 pub use crate::commit::make_hash_lookup_request;
+pub use crate::commit::AlterSnapshotRequest;
+pub use crate::commit::AlterSnapshotResponse;
 pub use crate::commit::BonsaiChangesetContent;
 pub use crate::commit::BonsaiFileChange;
 pub use crate::commit::CommitGraphEntry;

@@ -12,12 +12,21 @@
 //! # Memory Management
 //!
 //! Consumer of this struct needs to ensure the returned error string freed with
-//! `rust_cfallible_free_error`.
+//! `sapling_cfallible_free_error`.
 
+use std::ffi::c_void;
 use std::ffi::CString;
 
 use anyhow::Result;
 use libc::c_char;
+
+/// The monomorphized version of `CFallible` used solely because MSVC
+/// does not allow returning template functions from extern "C" functions.
+#[repr(C)]
+pub struct CFallibleBase {
+    value: *mut c_void,
+    error: *mut c_char,
+}
 
 /// A `repr(C)` struct that can be consumed by C++ code. User of this struct should check
 /// `is_error` field to see if there is an error.
@@ -27,6 +36,8 @@ use libc::c_char;
 /// Note: MSVC toolchain dislikes the usage of template in extern functions. Because of this, we
 /// cannot rely on cbindgen to generate the interface for this struct. All changes to this function
 /// requires manual editing of the corresponding C++ struct definition in `cbindgen.toml`.
+///
+/// Therefore, at the last minute, these are mapped to CFallibleBase.
 #[repr(C)]
 pub struct CFallible<T> {
     value: *mut T,
@@ -34,10 +45,14 @@ pub struct CFallible<T> {
 }
 
 impl<T> CFallible<T> {
+    pub fn make_with<F: FnOnce() -> Result<T>>(f: F) -> CFallible<T> {
+        f().into()
+    }
+
     /// Creates a `CFallible` with a valid pointer and no error.
-    pub fn ok(value: *mut T) -> Self {
+    pub fn ok(value: T) -> Self {
         CFallible {
-            value,
+            value: Box::into_raw(Box::new(value)),
             error: std::ptr::null_mut(),
         }
     }
@@ -59,8 +74,17 @@ impl<T> CFallible<T> {
     }
 }
 
-impl<T> From<Result<*mut T>> for CFallible<T> {
-    fn from(value: Result<*mut T>) -> Self {
+impl<T> From<CFallible<T>> for CFallibleBase {
+    fn from(value: CFallible<T>) -> CFallibleBase {
+        CFallibleBase {
+            value: value.value as *mut c_void,
+            error: value.error,
+        }
+    }
+}
+
+impl<T> From<Result<T>> for CFallible<T> {
+    fn from(value: Result<T>) -> Self {
         match value {
             Ok(value) => CFallible::ok(value),
             Err(err) => CFallible::err(err),
@@ -69,7 +93,7 @@ impl<T> From<Result<*mut T>> for CFallible<T> {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_cfallible_free_error(ptr: *mut c_char) {
+pub extern "C" fn sapling_cfallible_free_error(ptr: *mut c_char) {
     let error = unsafe { CString::from_raw(ptr) };
     drop(error);
 }

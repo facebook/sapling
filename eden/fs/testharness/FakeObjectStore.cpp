@@ -47,7 +47,7 @@ void FakeObjectStore::setTreeForCommit(const RootId& commitID, Tree&& tree) {
 
 ImmediateFuture<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
     const RootId& commitID,
-    ObjectFetchContext&) const {
+    const ObjectFetchContextPtr&) const {
   ++commitAccessCounts_[commitID];
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
@@ -60,7 +60,7 @@ ImmediateFuture<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
 
 ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
     const ObjectId& id,
-    ObjectFetchContext&) const {
+    const ObjectFetchContextPtr&) const {
   ++accessCounts_[id];
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
@@ -72,7 +72,7 @@ ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
 
 ImmediateFuture<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
     const ObjectId& id,
-    ObjectFetchContext&) const {
+    const ObjectFetchContextPtr&) const {
   ++accessCounts_[id];
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
@@ -84,7 +84,7 @@ ImmediateFuture<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
 
 ImmediateFuture<folly::Unit> FakeObjectStore::prefetchBlobs(
     ObjectIdRange,
-    ObjectFetchContext&) const {
+    const ObjectFetchContextPtr&) const {
   return folly::unit;
 }
 

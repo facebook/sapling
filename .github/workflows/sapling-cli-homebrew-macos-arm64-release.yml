@@ -15,7 +15,7 @@ jobs:
       run: git config --global --add safe.directory "$PWD"
     - name: set-env SAPLING_VERSION
       shell: bash
-      run: echo "SAPLING_VERSION=$(ci/tag-name.sh | tr \- .)" >> $GITHUB_ENV
+      run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
     - name: Prepare build environment
       run: 'eden/scm/packaging/mac/prepare_environment.py \
 
@@ -33,7 +33,7 @@ jobs:
     - name: Create Sapling bottle
       run: brew bottle sapling
     - name: Rename bottle to some platform specific name
-      run: mv sapling*monterey.bottle.tar.gz sapling_0.0-${{ env.SAPLING_VERSION }}.arm64_monterey.bottle.tar.gz
+      run: mv sapling*monterey.bottle.tar.gz sapling_${{ env.SAPLING_VERSION }}.arm64_monterey.bottle.tar.gz
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:

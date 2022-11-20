@@ -21,7 +21,7 @@ import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButto
 import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
-import {codeReviewProvider, repositoryInfo} from './codeReview/CodeReviewInfo';
+import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {AmendMessageOperation} from './operations/AmendMessageOperation';
 import {AmendOperation} from './operations/AmendOperation';
@@ -34,7 +34,12 @@ import platform from './platform';
 import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {selectedCommits} from './selection';
-import {commitMessageTemplate, latestCommitTreeMap, useRunOperation} from './serverAPIState';
+import {
+  commitMessageTemplate,
+  latestCommitTreeMap,
+  repositoryInfo,
+  useRunOperation,
+} from './serverAPIState';
 import {assert, firstOfIterable} from './utils';
 import {
   VSCodeBadge,
@@ -454,6 +459,11 @@ function ActionsBar({
 
   const showOptionModal = useOptionModal();
 
+  const codeReviewProviderName =
+    repoInfo?.type === 'success' ? repoInfo.codeReviewSystem.type : 'unknown';
+  const canSubmitWithCodeReviewProvider =
+    codeReviewProviderName !== 'none' && codeReviewProviderName !== 'unknown';
+
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       {isAnythingBeingEdited && !isCommitMode ? (
@@ -494,83 +504,93 @@ function ActionsBar({
           <T>Amend Message</T>
         </VSCodeButton>
       )}
-
       {commit.isHead ? (
-        <VSCodeButton
-          onClick={async () => {
-            if (anythingToCommit) {
-              doAmendOrCommit();
-            }
+        <Tooltip
+          title={
+            canSubmitWithCodeReviewProvider
+              ? t('Submit for code review with $provider', {
+                  replace: {$provider: codeReviewProviderName},
+                })
+              : t('Submitting for code review is currently only supported for GitHub-backed repos')
+          }
+          placement="top">
+          <VSCodeButton
+            disabled={!canSubmitWithCodeReviewProvider}
+            onClick={async () => {
+              if (anythingToCommit) {
+                doAmendOrCommit();
+              }
 
-            if (
-              repoInfo?.type === 'success' &&
-              repoInfo.codeReviewSystem.type === 'github' &&
-              repoInfo.preferredSubmitCommand == null
-            ) {
-              const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;
-              const cancel = buttons[0];
-              const answer = await showOptionModal({
-                type: 'confirm',
-                title: t('Preferred Code Review command not yet configured'),
-                message: (
-                  <div>
-                    <p>
-                      <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
-                        You can configure Sapling to use either $pr or $ghstack to submit for code
-                        review on GitHub.
-                      </T>
-                    </p>
-                    <p>
-                      <T
-                        replace={{
-                          $config: <code>github.preferred_submit_command</code>,
-                        }}>
-                        Each submit command has tradeoffs, due to how GitHub creates Pull Requests.
-                        This can be controlled by the $config config.
-                      </T>
-                    </p>
-                    <p>
-                      <T>To continue, select a command to use to submit.</T>
-                    </p>
-                    <VSCodeLink
-                      href="https://sapling-scm.com/docs/git/intro#pull-requests"
-                      target="_blank">
-                      <T>Learn More</T>
-                    </VSCodeLink>
-                  </div>
-                ),
-                buttons,
-              });
-              if (answer === cancel || answer == null) {
+              if (
+                repoInfo?.type === 'success' &&
+                repoInfo.codeReviewSystem.type === 'github' &&
+                repoInfo.preferredSubmitCommand == null
+              ) {
+                const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;
+                const cancel = buttons[0];
+                const answer = await showOptionModal({
+                  type: 'confirm',
+                  title: t('Preferred Code Review command not yet configured'),
+                  message: (
+                    <div>
+                      <p>
+                        <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
+                          You can configure Sapling to use either $pr or $ghstack to submit for code
+                          review on GitHub.
+                        </T>
+                      </p>
+                      <p>
+                        <T
+                          replace={{
+                            $config: <code>github.preferred_submit_command</code>,
+                          }}>
+                          Each submit command has tradeoffs, due to how GitHub creates Pull
+                          Requests. This can be controlled by the $config config.
+                        </T>
+                      </p>
+                      <p>
+                        <T>To continue, select a command to use to submit.</T>
+                      </p>
+                      <VSCodeLink
+                        href="https://sapling-scm.com/docs/git/intro#pull-requests"
+                        target="_blank">
+                        <T>Learn More</T>
+                      </VSCodeLink>
+                    </div>
+                  ),
+                  buttons,
+                });
+                if (answer === cancel || answer == null) {
+                  return;
+                }
+                runOperation(
+                  new SetConfigOperation('local', 'github.preferred_submit_command', answer),
+                );
+                setRepoInfo(info => ({
+                  ...unwrap(info),
+                  preferredSubmitCommand: answer,
+                }));
+                // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
+                // So this one time, we need to manually run the new submit command.
+                // Future submit calls can delegate to provider.submitOperation();
+                runOperation(
+                  answer === 'ghstack' ? new GhStackSubmitOperation() : new PrSubmitOperation(),
+                );
                 return;
               }
-              runOperation(
-                new SetConfigOperation('local', 'github.preferred_submit_command', answer),
-              );
-              setRepoInfo(info => ({
-                ...unwrap(info),
-                preferredSubmitCommand: answer,
-              }));
-              // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
-              // So this one time, we need to manually run the new submit command.
-              // Future submit calls can delegate to provider.submitOperation();
-              runOperation(
-                answer === 'ghstack' ? new GhStackSubmitOperation() : new PrSubmitOperation(),
-              );
-              return;
-            }
-            runOperation(unwrap(provider).submitOperation());
-          }}>
-          {anythingToCommit ? (
-            isCommitMode ? (
-              <T>Commit and Submit</T>
+              runOperation(unwrap(provider).submitOperation());
+            }}>
+            {anythingToCommit ? (
+              isCommitMode ? (
+                <T>Commit and Submit</T>
+              ) : (
+                <T>Amend and Submit</T>
+              )
             ) : (
-              <T>Amend and Submit</T>
-            )
-          ) : (
-            <T>Submit</T>
-          )}
-        </VSCodeButton>
+              <T>Submit</T>
+            )}
+          </VSCodeButton>
+        </Tooltip>
       ) : null}
     </div>
   );

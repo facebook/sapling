@@ -111,14 +111,14 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
 
   for (int i = 0; i < 10; i++) {
     auto [hash, request] =
-        makeBlobImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
+        makeBlobImportRequest(ImportPriority(ImportPriority::Class::Normal, i));
 
     queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
   }
 
   auto [smallHash, smallRequest] =
-      makeBlobImportRequest(ImportPriority(ImportPriorityKind::Low, 0));
+      makeBlobImportRequest(ImportPriority(ImportPriority::Class::Low, 0));
 
   queue.enqueueBlob(std::move(smallRequest));
 
@@ -159,14 +159,14 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
 
   for (int i = 0; i < 10; i++) {
     auto [hash, request] = makeBlobImportRequest(
-        ImportPriority(ImportPriorityKind::Normal, 10 - i));
+        ImportPriority(ImportPriority::Class::Normal, 10 - i));
 
     queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
   }
 
   auto [largeHash, largeRequest] =
-      makeBlobImportRequest(ImportPriority(ImportPriority::kHigh()));
+      makeBlobImportRequest(ImportPriority{ImportPriority::Class::High});
 
   queue.enqueueBlob(std::move(largeRequest));
 
@@ -208,11 +208,11 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
   for (int i = 0; i < 10; i++) {
     {
       auto hash = insertBlobImportRequest(
-          queue, ImportPriority(ImportPriorityKind::Normal, i));
+          queue, ImportPriority(ImportPriority::Class::Normal, i));
       enqueued_blob.emplace(hash);
     }
     auto hash = insertTreeImportRequest(
-        queue, ImportPriority(ImportPriorityKind::Normal, 10 - i));
+        queue, ImportPriority(ImportPriority::Class::Normal, 10 - i));
     enqueued_tree.emplace(hash);
   }
 
@@ -232,7 +232,7 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
         enqueued_tree.end());
     EXPECT_TRUE(
         dequeuedRequest->getPriority().value() ==
-        ImportPriority(ImportPriorityKind::Normal, 10 - i)
+        ImportPriority(ImportPriority::Class::Normal, 10 - i)
             .value()); // assert tree requests of priority 10 and 9
 
     folly::Try<std::unique_ptr<Tree>> tree = folly::makeTryWith(
@@ -257,7 +257,7 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
         enqueued_blob.end());
     EXPECT_TRUE(
         dequeuedRequest->getPriority().value() ==
-        ImportPriority(ImportPriorityKind::Normal, 9 - i)
+        ImportPriority(ImportPriority::Class::Normal, 9 - i)
             .value()); // assert blob requests of priority 9, 8, and 7
 
     folly::Try<std::unique_ptr<Blob>> blob = folly::makeTryWith(
@@ -278,11 +278,11 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
   for (int i = 0; i < 10; i++) {
     {
       auto hash = insertBlobImportRequest(
-          queue, ImportPriority(ImportPriorityKind::Normal, 0));
+          queue, ImportPriority{ImportPriority::Class::Normal});
       enqueued_blob.emplace(hash);
     }
     auto hash = insertTreeImportRequest(
-        queue, ImportPriority(ImportPriorityKind::Normal, 0));
+        queue, ImportPriority{ImportPriority::Class::Normal});
     enqueued_tree.emplace(hash);
   }
 
@@ -337,10 +337,10 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
@@ -373,10 +373,10 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
@@ -411,10 +411,10 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   queue.enqueueBlob(std::move(request));
   enqueued.push_back(hash);
@@ -446,16 +446,16 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [hash, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   auto [hash2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   auto [hash3, request3] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   auto [hash4, request4] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
 
   queue.enqueueBlob(std::move(request2));
   queue.enqueueBlob(std::move(request));
@@ -492,14 +492,14 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
 
   auto [midPriHash, midPriRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 6), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 6), proxyHash);
 
   auto [lowPriHash, lowPriRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriorityKind::Normal, 0), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 0), proxyHash);
 
   for (int i = 1; i < 6; i++) {
     auto [hash, request] =
-        makeBlobImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
+        makeBlobImportRequest(ImportPriority(ImportPriority::Class::Normal, i));
 
     queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);
@@ -507,7 +507,7 @@ TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
 
   for (int i = 7; i < 11; i++) {
     auto [hash, request] =
-        makeBlobImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
+        makeBlobImportRequest(ImportPriority(ImportPriority::Class::Normal, i));
 
     queue.enqueueBlob(std::move(request));
     enqueued.push_back(hash);

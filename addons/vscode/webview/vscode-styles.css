@@ -9,3 +9,10 @@ body {
   padding: 0;
   overflow: hidden;
 }
+
+code {
+  /* vscode webview default styling sets color to var(--vscode-textPreformat-foreground),
+   which is an undesirably noticeable red color.
+   Just unset this to reset to more browser-like style. */
+  color: unset;
+}

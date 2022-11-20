@@ -13,7 +13,7 @@ Short help:
   
   Get the latest commits from the server:
   
-   pull          pull changes from the specified source
+   pull          pull commits from the specified source
   
   View commits:
   
@@ -70,7 +70,7 @@ Short help:
   
   Get the latest commits from the server:
   
-   pull          pull changes from the specified source
+   pull          pull commits from the specified source
   
   View commits:
   
@@ -127,7 +127,7 @@ Short help:
   
   Get the latest commits from the server:
   
-   pull          pull changes from the specified source
+   pull          pull commits from the specified source
   
   View commits:
   
@@ -184,7 +184,7 @@ Short help:
   
   Get the latest commits from the server:
   
-   pull          pull changes from the specified source
+   pull          pull commits from the specified source
   
   View commits:
   
@@ -862,7 +862,7 @@ Test that default list of commands omits extension commands
   
   Get the latest commits from the server:
   
-   pull          pull changes from the specified source
+   pull          pull commits from the specified source
   
   View commits:
   

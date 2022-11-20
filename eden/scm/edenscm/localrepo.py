@@ -2973,11 +2973,13 @@ class localrepository(object):
         # Do not treat the draft heads returned by remotenames as
         # unconditionally visible. This makes it possible to hide
         # them by "hg hide".
-        publicnodes, _draftnodes = _remotenodes(self)
+        publicnodes, draftnodes = _remotenodes(self)
         cl = self.changelog
         if includepublic:
             nodes += publicnodes
         if includedraft:
+            nodes += draftnodes
+
             if cl._uiconfig.configbool("visibility", "all-heads"):  # aka. --hidden
                 visibleheads = cl._visibleheads.allheads()
             else:
@@ -3284,15 +3286,26 @@ def _remotenodes(repo):
         def isdraft(name):
             return False
 
+    # publicheads is an alternative method to define what "public" means.
+    # publicheads is a list of full names, i.e. <remote>/<name>.
+    publicheads = set(repo.ui.configlist("remotenames", "publicheads"))
+
     remotebookmarks = repo._remotenames["bookmarks"]
     for fullname, nodes in remotebookmarks.items():
         # fullname: remote/foo/bar
         # remote: remote, name: foo/bar
-        remote, name = bookmarks.splitremotename(fullname)
-        if isdraft(name):
-            draftnodes += nodes
+
+        if publicheads:
+            if fullname in publicheads:
+                publicnodes += nodes
+            else:
+                draftnodes += nodes
         else:
-            publicnodes += nodes
+            _, name = bookmarks.splitremotename(fullname)
+            if isdraft(name):
+                draftnodes += nodes
+            else:
+                publicnodes += nodes
 
     return publicnodes, draftnodes
 

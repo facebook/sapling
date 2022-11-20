@@ -85,8 +85,7 @@ InodeTraceEvent::InodeTraceEvent(
     InodeNumber ino,
     InodeType inodeType,
     InodeEventType eventType,
-    InodeEventProgress progress,
-    folly::StringPiece stringPath)
+    InodeEventProgress progress)
     : ino{ino}, inodeType{inodeType}, eventType{eventType}, progress{progress} {
   systemTime = (progress == InodeEventProgress::START)
       ? startTime
@@ -94,10 +93,9 @@ InodeTraceEvent::InodeTraceEvent(
   duration = std::chrono::duration_cast<std::chrono::microseconds>(
       systemTime - startTime);
   monotonicTime = std::chrono::steady_clock::now();
-  setPath(stringPath);
 }
 
-void InodeTraceEvent::setPath(folly::StringPiece stringPath) {
+void InodeTraceEvent::setPath(std::string_view stringPath) {
   path.reset(new char[stringPath.size() + 1]);
   memcpy(path.get(), stringPath.data(), stringPath.size());
   path[stringPath.size()] = 0;
@@ -179,7 +177,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
             rawContext->getToplevelIgnore(),
             false)
         .thenValue([diffContext = std::move(diffContext), rootInode](
-                       folly::Unit) { return diffContext->getFetchContext(); });
+                       folly::Unit) { return diffContext->getStatsContext(); });
   }
 
   /** moves the Unclean Path information out of this diff callback instance,
@@ -324,12 +322,12 @@ class TreeLookupProcessor {
   explicit TreeLookupProcessor(
       RelativePathPiece path,
       std::shared_ptr<ObjectStore> objectStore,
-      ObjectFetchContext& context)
+      ObjectFetchContextPtr context)
       : path_{path},
         iterRange_{path_.components()},
         iter_{iterRange_.begin()},
         objectStore_{std::move(objectStore)},
-        context_{context} {}
+        context_{std::move(context)} {}
 
   ImmediateFuture<OverlayChecker::LookupCallbackValue> next(
       std::shared_ptr<const Tree> tree) {
@@ -373,11 +371,7 @@ class TreeLookupProcessor {
   RelativePath::base_type::component_iterator_range iterRange_;
   RelativePath::base_type::component_iterator iter_;
   std::shared_ptr<ObjectStore> objectStore_;
-  // The ObjectFetchContext is allocated at the beginning of a request and
-  // released once the request completes. Since the lifetime of
-  // TreeLookupProcessor is strictly less than the one of a request, we can
-  // safely store a reference to the fetch context.
-  ObjectFetchContext& context_;
+  ObjectFetchContextPtr context_;
 };
 } // namespace
 
@@ -394,10 +388,10 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenMount::initialize");
   return serverState_->getFaultInjector()
-      .checkAsync("mount", getPath().stringPiece())
+      .checkAsync("mount", getPath().view())
       .via(getServerThreadPool().get())
       .thenValue([this, parent](auto&&) {
-        return objectStore_->getRootTree(parent, *context)
+        return objectStore_->getRootTree(parent, context)
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance());
       })
@@ -442,7 +436,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
                 std::move(progressCallback),
                 [this](RelativePathPiece path) {
                   auto lookup = std::make_unique<TreeLookupProcessor>(
-                      path, objectStore_, *context);
+                      path, objectStore_, context.copy());
                   // Do the next() and the ensure() on separate lines to make
                   // the order of 'lookup' accesses explicit, so we don't move
                   // it before calling next.
@@ -508,7 +502,7 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
 
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("ensureDotEdenSymlink");
-  return directory->getOrLoadChild(symlinkName, *context)
+  return directory->getOrLoadChild(symlinkName, context)
       .thenTry([=](Try<InodePtr>&& result) -> ImmediateFuture<Action> {
         if (!result.hasValue()) {
           // If we failed to look up the file this generally means it
@@ -539,7 +533,7 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
         }
 
         // Check if the symlink already has the desired contents.
-        return fileInode->readlink(*context, CacheHint::LikelyNeededAgain)
+        return fileInode->readlink(context, CacheHint::LikelyNeededAgain)
             .thenValue([=](std::string&& contents) {
               if (contents == symlinkTarget) {
                 // The symlink already contains the desired contents.
@@ -556,17 +550,15 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
             return folly::unit;
           case Action::CreateSymlink:
             directory->symlink(
-                symlinkName,
-                symlinkTarget.stringPiece(),
-                InvalidationRequired::Yes);
+                symlinkName, symlinkTarget.view(), InvalidationRequired::Yes);
             return folly::unit;
           case Action::UnlinkThenSymlink:
             return directory
-                ->unlink(symlinkName, InvalidationRequired::Yes, *context)
+                ->unlink(symlinkName, InvalidationRequired::Yes, context)
                 .thenValue([=](Unit&&) {
                   directory->symlink(
                       symlinkName,
-                      symlinkTarget.stringPiece(),
+                      symlinkTarget.view(),
                       InvalidationRequired::Yes);
                 });
         }
@@ -591,7 +583,7 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("setupDotEden");
-  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, *context)
+  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, context)
       .thenTry([=](Try<TreeInodePtr>&& lookupResult) {
         TreeInodePtr dotEdenInode;
         if (lookupResult.hasValue()) {
@@ -641,7 +633,7 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
     RelativePathPiece repoPath,
     AbsolutePathPiece targetPath,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto absRepoPath = getPath() + repoPath;
 
   return this->ensureDirectoryExists(repoPath, context)
@@ -651,14 +643,14 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
                   target = targetPath.copy(),
                   pathInMountDir = getPath() + repoPath](auto&&) {
         return serverState_->getPrivHelper()->bindMount(
-            target.stringPiece(), pathInMountDir.stringPiece());
+            target.view(), pathInMountDir.view());
       });
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
     RelativePathPiece repoPath) {
   auto absRepoPath = getPath() + repoPath;
-  return serverState_->getPrivHelper()->bindUnMount(absRepoPath.stringPiece());
+  return serverState_->getPrivHelper()->bindUnMount(absRepoPath.view());
 }
 #endif // !_WIN32
 
@@ -783,7 +775,7 @@ TreeEntryType toEdenTreeEntryType(facebook::eden::ObjectType objectType) {
 ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
     std::vector<SetPathObjectIdObjectAndPath> objects,
     CheckoutMode checkoutMode,
-    FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   std::vector<ImmediateFuture<SetPathObjectIdResultAndTimes>> futures;
   // Helper structs to heterogeneous lookup parentToObjectsMap by
   // RelativePathPiece whose index is RelativePath
@@ -799,7 +791,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
     using is_transparent = void;
     bool operator()(const RelativePathPiece& lhs, const RelativePath& rhs)
         const {
-      return lhs.stringPiece() == rhs.stringPiece();
+      return lhs.view() == rhs.view();
     }
   };
 
@@ -846,7 +838,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         checkoutMode,
         std::nullopt,
         "setPathObjectId",
-        context.getRequestInfo());
+        context->getRequestInfo());
 
     /**
      * This will update the timestamp for the entire mount,
@@ -928,7 +920,7 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
             })
             .thenTry([this, ctx](
                          Try<SetPathObjectIdResultAndTimes>&& resultAndTimes) {
-              auto fetchStats = ctx->getFetchContext().computeStatistics();
+              auto fetchStats = ctx->getStatsContext().computeStatistics();
               XLOG(DBG4) << (resultAndTimes.hasValue() ? "" : "failed ")
                          << "setPathObjectId for " << this->getPath()
                          << " accessed " << fetchStats.tree.accessCount
@@ -1079,11 +1071,9 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               .ensure([this] { channel_.reset(); });
 #else
           if (getNfsdChannel() != nullptr) {
-            return serverState_->getPrivHelper()->nfsUnmount(
-                getPath().stringPiece());
+            return serverState_->getPrivHelper()->nfsUnmount(getPath().view());
           } else {
-            return serverState_->getPrivHelper()->fuseUnmount(
-                getPath().stringPiece());
+            return serverState_->getPrivHelper()->fuseUnmount(getPath().view());
           }
 #endif
         })
@@ -1234,7 +1224,7 @@ std::shared_ptr<const Tree> EdenMount::getCheckedOutRootTree() const {
 ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 EdenMount::getTreeOrTreeEntry(
     RelativePathPiece path,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   auto rootTree = getCheckedOutRootTree();
   if (path.empty()) {
     return std::variant<std::shared_ptr<const Tree>, TreeEntry>{
@@ -1242,7 +1232,7 @@ EdenMount::getTreeOrTreeEntry(
   }
 
   auto processor =
-      std::make_unique<TreeLookupProcessor>(path, objectStore_, context);
+      std::make_unique<TreeLookupProcessor>(path, objectStore_, context.copy());
   auto future = processor->next(std::move(rootTree));
   return std::move(future).ensure(
       [p = std::move(processor)]() mutable { p.reset(); });
@@ -1254,12 +1244,12 @@ class CanonicalizeProcessor {
   CanonicalizeProcessor(
       RelativePath path,
       std::shared_ptr<ObjectStore> objectStore,
-      ObjectFetchContext& context)
+      ObjectFetchContextPtr context)
       : path_{std::move(path)},
         iterRange_{path_.components()},
         iter_{iterRange_.begin()},
         objectStore_{std::move(objectStore)},
-        context_{context} {}
+        context_{std::move(context)} {}
 
   ImmediateFuture<RelativePath> next(std::shared_ptr<const Tree> tree) {
     auto name = *iter_++;
@@ -1292,11 +1282,7 @@ class CanonicalizeProcessor {
   RelativePath::base_type::component_iterator_range iterRange_;
   RelativePath::base_type::component_iterator iter_;
   std::shared_ptr<ObjectStore> objectStore_;
-  // The ObjectFetchContext is allocated at the beginning of a request and
-  // released once the request completes. Since the lifetime of LookupProcessor
-  // is strictly less than the one of a request, we can safely store a
-  // reference to the fetch context.
-  ObjectFetchContext& context_;
+  ObjectFetchContextPtr context_;
 
   RelativePath retPath_{""};
 };
@@ -1304,14 +1290,14 @@ class CanonicalizeProcessor {
 
 ImmediateFuture<RelativePath> EdenMount::canonicalizePathFromTree(
     RelativePathPiece path,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   if (path.empty()) {
     return path.copy();
   }
 
   auto tree = getCheckedOutRootTree();
   auto processor = std::make_unique<CanonicalizeProcessor>(
-      path.copy(), objectStore_, context);
+      path.copy(), objectStore_, context.copy());
   auto future = processor->next(std::move(tree));
   return std::move(future).ensure(
       [p = std::move(processor)]() mutable { p.reset(); });
@@ -1326,7 +1312,7 @@ InodeNumber EdenMount::getDotEdenInodeNumber() const {
 
 ImmediateFuture<InodePtr> EdenMount::getInodeSlow(
     RelativePathPiece path,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   return inodeMap_->getRootInode()->getChildRecursive(path, context);
 }
 
@@ -1337,12 +1323,12 @@ class VirtualInodeLookupProcessor {
   explicit VirtualInodeLookupProcessor(
       RelativePathPiece path,
       ObjectStore* objectStore,
-      ObjectFetchContext& context)
+      ObjectFetchContextPtr context)
       : path_{path},
         iterRange_{path_.components()},
         iter_{iterRange_.begin()},
         objectStore_(objectStore),
-        context_{context} {}
+        context_{std::move(context)} {}
 
   ImmediateFuture<VirtualInode> next(VirtualInode inodeTreeEntry) {
     if (iter_ == iterRange_.end()) {
@@ -1368,22 +1354,18 @@ class VirtualInodeLookupProcessor {
   // request is against), we can safely store a pointer to the store, rather
   // than a shared_ptr.
   ObjectStore* objectStore_;
-  // The ObjectFetchContext is allocated at the beginning of a request and
-  // released once the request completes. Since the lifetime of
-  // VirtualInodeLookupProcessor is strictly less than the one of a request, we
-  // can safely store a reference to the fetch context.
-  ObjectFetchContext& context_;
+  ObjectFetchContextPtr context_;
 };
 
 } // namespace
 
 ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
     RelativePathPiece path,
-    ObjectFetchContext& context) const {
+    const ObjectFetchContextPtr& context) const {
   auto rootInode = static_cast<InodePtr>(getRootInode());
 
   auto processor = std::make_unique<VirtualInodeLookupProcessor>(
-      path, getObjectStore(), context);
+      path, getObjectStore(), context.copy());
   auto future = processor->next(VirtualInode(std::move(rootInode)));
   return std::move(future).ensure(
       [p = std::move(processor)]() mutable { p.reset(); });
@@ -1459,7 +1441,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
   return serverState_->getFaultInjector()
-      .checkAsync("checkout", getPath().stringPiece())
+      .checkAsync("checkout", getPath().view())
       .via(getServerThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         XLOG(DBG7) << "Checkout: getRoots";
@@ -1510,7 +1492,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             ->performDiff(this, getRootInode(), std::move(trees))
             .thenValue([ctx, journalDiffCallback, treeResults](
                            const StatsFetchContext& diffFetchContext) {
-              ctx->getFetchContext().merge(diffFetchContext);
+              ctx->getStatsContext().merge(diffFetchContext);
               return treeResults;
             })
             .semi()
@@ -1558,7 +1540,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
         auto rootInode = getRootInode();
         return serverState_->getFaultInjector()
-            .checkAsync("inodeCheckout", getPath().stringPiece())
+            .checkAsync("inodeCheckout", getPath().view())
             .via(getServerThreadPool().get())
             .thenValue([ctx,
                         treeResults = std::move(treeResults),
@@ -1625,7 +1607,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
           })
       .thenTry([this, ctx, stopWatch, oldParent, snapshotHash, checkoutMode](
                    Try<CheckoutResult>&& result) {
-        auto fetchStats = ctx->getFetchContext().computeStatistics();
+        auto fetchStats = ctx->getStatsContext().computeStatistics();
 
         XLOG(DBG1) << (result.hasValue() ? "" : "failed ") << "checkout for "
                    << this->getPath() << " from " << oldParent << " to "
@@ -1895,7 +1877,7 @@ SharedRenameLock EdenMount::acquireSharedRenameLock() {
 
 std::string EdenMount::getCounterName(CounterName name) {
   const auto& mountPath = getPath();
-  const auto base = basename(mountPath.stringPiece());
+  const auto base = basename(mountPath.view());
   switch (name) {
     case CounterName::INODEMAP_LOADED:
       return folly::to<std::string>("inodemap.", base, ".loaded");
@@ -2055,7 +2037,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
 
                 return serverState_->getPrivHelper()
                     ->nfsMount(
-                        mountPath.stringPiece(),
+                        mountPath.view(),
                         mountdAddr,
                         channel->getAddr(),
                         readOnly,
@@ -2077,7 +2059,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
               });
         } else {
           return serverState_->getPrivHelper()
-              ->fuseMount(mountPath.stringPiece(), readOnly)
+              ->fuseMount(mountPath.view(), readOnly)
               .thenTry(
                   [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
                       -> folly::Future<folly::Unit> {
@@ -2090,7 +2072,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                             ->channelUnmountStarted()) {
                       fuseDevice->close();
                       return serverState_->getPrivHelper()
-                          ->fuseUnmount(mountPath.stringPiece())
+                          ->fuseUnmount(mountPath.view())
                           .thenError(
                               folly::tag<std::exception>,
                               [](std::exception&& unmountError) {
@@ -2387,7 +2369,7 @@ void EdenMount::subscribeInodeActivityBuffer() {
 
   if (inodeActivityBuffer_.has_value()) {
     inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
-        folly::to<std::string>("inode-activitybuffer-", getPath().basename()),
+        fmt::format("inode-activitybuffer-{}", getPath().basename()),
         [this](const InodeTraceEvent& event) {
           // Use full path name for the inode event if available, otherwise
           // default to the filename already stored
@@ -2401,7 +2383,7 @@ void EdenMount::subscribeInodeActivityBuffer() {
             auto relativePath = inodeMap_->getPathForInode(event.ino);
             if (relativePath.has_value()) {
               InodeTraceEvent newTraceEvent = event;
-              newTraceEvent.setPath(relativePath->stringPiece());
+              newTraceEvent.setPath(relativePath->view());
               inodeActivityBuffer_->addEvent(std::move(newTraceEvent));
               return;
             }
@@ -2428,7 +2410,7 @@ ImmediateFuture<TreeInodePtr> ensureDirectoryExistsHelper(
     TreeInodePtr parent,
     PathComponentPiece childName,
     RelativePathPiece rest,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto contents = parent->getContents().rlock();
   if (auto* child = folly::get_ptr(contents->entries, childName)) {
     if (!child->isDirectory()) {
@@ -2441,7 +2423,8 @@ ImmediateFuture<TreeInodePtr> ensureDirectoryExistsHelper(
       return parent->getOrLoadChildTree(childName, context);
     }
     return parent->getOrLoadChildTree(childName, context)
-        .thenValue([rest = RelativePath{rest}, &context](TreeInodePtr child) {
+        .thenValue([rest = RelativePath{rest},
+                    context = context.copy()](TreeInodePtr child) {
           auto [nextChildName, nextRest] = splitFirst(rest);
           return ensureDirectoryExistsHelper(
               child, nextChildName, nextRest, context);
@@ -2470,7 +2453,7 @@ ImmediateFuture<TreeInodePtr> ensureDirectoryExistsHelper(
 
 ImmediateFuture<TreeInodePtr> EdenMount::ensureDirectoryExists(
     RelativePathPiece fromRoot,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   if (fromRoot.empty()) {
     return getRootInode();
   }
@@ -2480,7 +2463,7 @@ ImmediateFuture<TreeInodePtr> EdenMount::ensureDirectoryExists(
 
 std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
     TreeInodePtr treeInode,
-    ObjectFetchContext& context) {
+    const ObjectFetchContext& context) {
   auto config = serverState_->getEdenConfig(ConfigReloadBehavior::NoReload);
   auto maxTreePrefetches = config->maxTreePrefetches.getValue();
   auto numInProgress =

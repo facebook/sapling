@@ -65,7 +65,7 @@ function base_commit_and_snapshot {
     hg rm deleted_file_then_untracked_modify
     echo b > deleted_file_then_untracked_modify
     ln -s symlink_target symlink_file
-    BASE_SNAPSHOT=$(HGPLAIN=1 hgedenapi snapshot create)
+    BASE_SNAPSHOT=$(HGPLAIN=1 hgedenapi snapshot create --labels testing,labels)
 }
 
 function assert_on_base_snapshot {

@@ -6,12 +6,17 @@
  */
 
 import serverAPI from './ClientToServerAPI';
+import {CwdSelector} from './CwdSelector';
 import {Icon} from './Icon';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {t} from './i18n';
-import {haveCommitsLoadedYet, useClearAllOptimisticState} from './serverAPIState';
+import {
+  haveCommitsLoadedYet,
+  isFetchingCommits,
+  useClearAllOptimisticState,
+} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 
@@ -24,13 +29,22 @@ export function TopBar() {
   }
   return (
     <div className="top-bar">
-      <PullButton />
+      <span className="button-group">
+        <PullButton />
+        <CwdSelector />
+        <FetchingDataIndicator />
+      </span>
       <span className="button-group">
         <SettingsGearButton />
         <RefreshButton />
       </span>
     </div>
   );
+}
+
+function FetchingDataIndicator() {
+  const isFetching = useRecoilValue(isFetchingCommits);
+  return isFetching ? <Icon icon="loading" /> : null;
 }
 
 function RefreshButton() {

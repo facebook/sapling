@@ -50,7 +50,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause) {
     return HgImportTraceEvent{
         unique, QUEUE, resourceType, proxyHash, priority, cause};
@@ -60,7 +60,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause) {
     return HgImportTraceEvent{
         unique, START, resourceType, proxyHash, priority, cause};
@@ -70,7 +70,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause) {
     return HgImportTraceEvent{
         unique, FINISH, resourceType, proxyHash, priority, cause};
@@ -81,7 +81,7 @@ struct HgImportTraceEvent : TraceEventBase {
       EventType eventType,
       ResourceType resourceType,
       const HgProxyHash& proxyHash,
-      ImportPriorityKind priority,
+      ImportPriority::Class priority,
       ObjectFetchContext::Cause cause);
 
   // Simple accessor that hides the internal memory representation of paths.
@@ -98,7 +98,7 @@ struct HgImportTraceEvent : TraceEventBase {
   Hash20 manifestNodeId;
   EventType eventType;
   ResourceType resourceType;
-  ImportPriorityKind importPriority;
+  ImportPriority::Class importPriority;
   ObjectFetchContext::Cause importCause;
 };
 
@@ -157,23 +157,23 @@ class HgQueuedBackingStore final : public BackingStore {
 
   ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& /* objectId */,
       TreeEntryType /* treeEntryType */,
-      ObjectFetchContext& /* context */) override {
+      const ObjectFetchContextPtr& /* context */) override {
     throw std::domain_error("unimplemented");
   }
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * calculates `metric` for `object` imports that are `stage`.
@@ -237,11 +237,11 @@ class HgQueuedBackingStore final : public BackingStore {
   folly::SemiFuture<GetBlobResult> getBlobImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
       const ObjectId& id,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * Fetch a tree from Mercurial.
@@ -253,14 +253,14 @@ class HgQueuedBackingStore final : public BackingStore {
   folly::SemiFuture<GetTreeResult> getTreeImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is in the
    * configured paths to log. The path is derived from the proxy hash.
    */
   void logBackingStoreFetch(
-      ObjectFetchContext& context,
+      const ObjectFetchContext& context,
       folly::Range<HgProxyHash*> hashes,
       ObjectFetchContext::ObjectType type);
 

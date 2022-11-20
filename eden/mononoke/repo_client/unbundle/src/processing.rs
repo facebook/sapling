@@ -306,10 +306,8 @@ async fn run_pushrebase(
         uploaded_bonsais,
         hook_rejection_remapper,
     } = action;
-    // FIXME: stop cloning when this fn is async
-    let bookmark = bookmark_spec.get_bookmark_name().clone();
 
-    let (pushrebased_rev, pushrebased_changesets) = match bookmark_spec {
+    let (bookmark, pushrebased_rev, pushrebased_changesets) = match bookmark_spec {
         // There's no `.context()` after `normal_pushrebase`, as it has
         // `Error=BundleResolverError` and doing `.context("bla").from_err()`
         // would turn some useful variant of `BundleResolverError` into generic
@@ -344,11 +342,11 @@ async fn run_pushrebase(
             log_new_commits(
                 ctx,
                 repo,
-                Some((&bookmark, BookmarkKind::Publishing)),
+                Some((&onto_bookmark, BookmarkKind::Publishing)),
                 changesets_to_log.into_values().collect(),
             )
             .await;
-            (pushrebased_rev, pushrebased_changesets)
+            (onto_bookmark, pushrebased_rev, pushrebased_changesets)
         }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
             let changesets_to_log = uploaded_bonsais
@@ -362,7 +360,7 @@ async fn run_pushrebase(
                 lca_hint,
                 hook_manager,
                 uploaded_bonsais,
-                plain_push,
+                &plain_push,
                 maybe_pushvars.as_ref(),
                 hook_rejection_remapper.as_ref(),
                 cross_repo_push_source,
@@ -373,12 +371,12 @@ async fn run_pushrebase(
             log_new_commits(
                 ctx,
                 repo,
-                Some((&bookmark, BookmarkKind::Publishing)),
+                Some((&plain_push.name, BookmarkKind::Publishing)),
                 changesets_to_log,
             )
             .await;
             // Force pushrebase merely force-moves the bookmark, it does not rebase any commits.
-            (pushrebased_rev, Vec::new())
+            (plain_push.name, pushrebased_rev, Vec::new())
         }
     };
 
@@ -619,7 +617,7 @@ async fn force_pushrebase(
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     uploaded_bonsais: HashSet<BonsaiChangeset>,
-    bookmark_push: PlainBookmarkPush<ChangesetId>,
+    bookmark_push: &PlainBookmarkPush<ChangesetId>,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
@@ -639,7 +637,7 @@ async fn force_pushrebase(
         repo,
         lca_hint,
         hook_manager,
-        &bookmark_push,
+        bookmark_push,
         new_changesets,
         NonFastForwardPolicy::Allowed,
         BookmarkUpdateReason::Pushrebase,

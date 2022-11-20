@@ -4,7 +4,7 @@ sidebar_position: 9
 
 ## commit | ci
 <!--
-  @generated SignedSource<<63c5d5ad2a3b0561efa3a15bdfedc890>>
+  @generated SignedSource<<08bb2205940ddbd1ecbb2817b93e86e1>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -27,7 +27,7 @@ To meld pending changes into the current commit instead of creating
 a new commit, see `sl amend`.
 
 If you are committing the result of a merge, such as when merge
-conflicts occur during `sl checkout`, commit all pending changes.
+conflicts occur during `sl goto`, commit all pending changes.
 Do not specify files or use `-I`, `-X`, or `-i`.
 
 Specify the `-m` flag to include a free-form commit message. If you do

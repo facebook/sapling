@@ -18,6 +18,7 @@
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseDispatcher.h"
@@ -33,6 +34,8 @@ class ParentInodeInfo;
 class RenameLock;
 class SharedRenameLock;
 class TreeInode;
+
+using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 class InodeBase {
  public:
@@ -139,13 +142,14 @@ class InodeBase {
   }
 
   // See EdenDispatcher::getattr
-  virtual ImmediateFuture<struct stat> stat(ObjectFetchContext& context) = 0;
+  virtual ImmediateFuture<struct stat> stat(
+      const ObjectFetchContextPtr& context) = 0;
 
 #ifndef _WIN32
   // See Dispatcher::setattr
   virtual ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
-      ObjectFetchContext& fetchContext) = 0;
+      const ObjectFetchContextPtr& fetchContext) = 0;
 
   FOLLY_NODISCARD folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
@@ -155,7 +159,7 @@ class InodeBase {
   virtual ImmediateFuture<std::vector<std::string>> listxattr() = 0;
   virtual ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
 #endif // !_WIN32
@@ -428,7 +432,7 @@ class InodeBase {
    * to be used and should be used by RECAS backing store only
    */
   FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> ensureMaterialized(
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       bool followSymlink) = 0;
 #endif
 

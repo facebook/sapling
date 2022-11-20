@@ -46,13 +46,13 @@ void call_set_path_object_id(benchmark::State& state) {
   auto eventBase = evbThread.getEventBase();
 
   auto socket = folly::AsyncSocket::newSocket(
-      eventBase, folly::SocketAddress::makeFromPath(socketPath.stringPiece()));
+      eventBase, folly::SocketAddress::makeFromPath(socketPath.view()));
   auto channel =
       apache::thrift::HeaderClientChannel::newChannel(std::move(socket));
   auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
 
   SetPathObjectIdParams param;
-  param.mountPoint_ref() = mount.stringPiece();
+  param.mountPoint_ref() = mount.view();
   param.objectId_ref() = FLAGS_object_id;
   if ("tree" == FLAGS_object_type) {
     param.type_ref() = facebook::eden::ObjectType::TREE;

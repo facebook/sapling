@@ -50,6 +50,9 @@ class RefCounted<T extends {dispose: () => void}> {
   public ref() {
     this.references++;
   }
+  public getNumberOfReferences() {
+    return this.references;
+  }
   public dispose() {
     this.references--;
     if (!this.isDisposed && this.references === 0) {
@@ -116,7 +119,6 @@ class RepositoryCache {
       // individual file paths to add diff gutters.
       const repoInfo = await this.RepositoryType.getRepoInfo(cmd, logger, cwd);
       // important: there should be no `await` points after here, to ensure there is no race when re-using Repositories.
-
       if (repoInfo.type !== 'success') {
         // No repository found at this root, or some other error prevents the repo from being created
         return repoInfo;
@@ -187,6 +189,14 @@ class RepositoryCache {
     this.reposByRoot.forEach(value => value.dispose());
     this.reposByRoot = new Map();
     this.activeReposEmitter.removeAllListeners();
+  }
+
+  public numberOfActiveServers(): number {
+    let numActive = 0;
+    for (const repo of this.reposByRoot.values()) {
+      numActive += repo.getNumberOfReferences();
+    }
+    return numActive;
   }
 }
 

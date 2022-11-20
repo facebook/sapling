@@ -55,7 +55,7 @@ export function onClientConnection(connection: ClientConnection): () => void {
     if (repoOrError instanceof Repository) {
       api?.setCurrentRepo(repoOrError, connection.cwd);
     } else {
-      api?.postMessage({type: 'repoInfo', info: repoOrError});
+      api?.setRepoError(repoOrError);
     }
   });
 

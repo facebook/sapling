@@ -165,7 +165,9 @@ async fn get_repo_context(
     Ok(mononoke
         .repo(ctx, &repo_name)
         .await?
-        .ok_or_else(|| errors::internal_error(anyhow!(repo_name).as_ref()))?
+        .ok_or_else(|| {
+            errors::internal_error(anyhow!("Not finding the repo: {}", repo_name).as_ref())
+        })?
         .with_authorization_context(authz)
         .build()
         .await?)

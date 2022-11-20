@@ -34,7 +34,7 @@ std::string InodeError::computePath() const noexcept {
         path = child_.value().asString();
       } else {
         path = inode_->getLogPath() + "/";
-        auto childName = child_.value().stringPiece();
+        auto childName = child_.value().view();
         path.append(childName.begin(), childName.end());
       }
     } else {

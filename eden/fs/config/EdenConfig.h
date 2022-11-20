@@ -754,8 +754,10 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls whether EdenFS uses EdenApi to import data from remote.
+   *
+   * TODO: Remove once this config value is no longer written.
    */
-  ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};
+  ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", true, this};
 
   /**
    * Controls whether EdenFS exports itself as an NFS server.

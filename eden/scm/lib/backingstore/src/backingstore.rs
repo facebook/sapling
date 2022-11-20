@@ -12,11 +12,10 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configparser::config::ConfigSet;
 use log::warn;
 use manifest::List;
+use revisionstore::scmstore::file::FileAuxData;
 use revisionstore::scmstore::FileAttributes;
-use revisionstore::scmstore::FileAuxData;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::KeyFetchError;
@@ -32,32 +31,37 @@ use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
 
-use crate::utils::key_from_path_node_slice;
-
-pub struct BackingScmStores {
+pub struct BackingStore {
     filestore: Arc<FileStore>,
     treestore: Arc<TreeStore>,
 }
 
-impl BackingScmStores {
-    pub fn new(
-        config: &ConfigSet,
-        hg: impl AsRef<Path>,
-        use_edenapi: bool,
-        aux_data: bool,
-    ) -> Result<Self> {
-        let store_path = hg.as_ref().join("store");
+impl BackingStore {
+    pub fn new<P: AsRef<Path>>(root: P, aux_data: bool, allow_retries: bool) -> Result<Self> {
+        let root = root.as_ref();
+        let mut config = configparser::hg::load(Some(root), &[], &[])?;
+
+        if !allow_retries {
+            let source = configparser::config::Options::new().source("backingstore");
+            config.set("lfs", "backofftimes", Some(""), &source);
+            config.set("lfs", "throttlebackofftimes", Some(""), &source);
+            config.set("edenapi", "max-retry-per-request", Some("0"), &source);
+        }
+
+        let ident = identity::must_sniff_dir(root)?;
+        let hg = root.join(ident.dot_dir());
+        let store_path = hg.join("store");
 
         let mut filestore = FileStoreBuilder::new(&config)
             .local_path(&store_path)
-            .override_edenapi(use_edenapi);
+            .override_edenapi(true);
 
         if aux_data {
             filestore = filestore.store_aux_data();
         }
 
         let treestore = TreeStoreBuilder::new(&config)
-            .override_edenapi(use_edenapi)
+            .override_edenapi(true)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
@@ -84,8 +88,9 @@ impl BackingScmStores {
 
     /// Reads file from blobstores. When `local_only` is true, this function will only read blobs
     /// from on disk stores.
-    pub fn get_blob(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
-        let key = key_from_path_node_slice(path, node)?;
+    pub fn get_blob(&self, node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
+        let hgid = HgId::from_slice(node)?;
+        let key = Key::new(RepoPathBuf::new(), hgid);
         self.get_blob_by_key(key, local_only)
     }
 
@@ -110,7 +115,7 @@ impl BackingScmStores {
 
     fn get_file_attrs_batch<F>(
         &self,
-        keys: Vec<Result<Key>>,
+        keys: Vec<Key>,
         local_only: bool,
         resolve: F,
         attrs: FileAttributes,
@@ -118,17 +123,7 @@ impl BackingScmStores {
         F: Fn(usize, Result<Option<StoreFile>>) -> (),
     {
         // Resolve key errors
-        let requests = keys
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, key)| match key {
-                Ok(key) => Some((index, key)),
-                Err(e) => {
-                    // return early when the key is invalid
-                    resolve(index, Err(e));
-                    None
-                }
-            });
+        let requests = keys.into_iter().enumerate();
 
         // Crate key-index mapping and fail fast for duplicate keys
         let mut indexes: HashMap<Key, usize> = HashMap::new();
@@ -192,7 +187,7 @@ impl BackingScmStores {
     /// array. When `local_only` is enabled, this function will only check local disk for the file
     /// content.
     #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_blob_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    pub fn get_blob_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
     {
@@ -227,7 +222,7 @@ impl BackingScmStores {
         } else {
             self.treestore.as_ref()
         }
-        .fetch_batch(std::iter::once(key.clone()))?;
+        .fetch_batch(std::iter::once(key))?;
 
         if let Some(mut entry) = fetch_results.single()? {
             Ok(Some(entry.manifest_tree_entry()?.try_into()?))
@@ -241,22 +236,12 @@ impl BackingScmStores {
     /// array. When `local_only` is enabled, this function will only check local disk for the file
     /// content.
     #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_tree_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    pub fn get_tree_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<List>>) -> (),
     {
         // Handle key errors
-        let requests = keys
-            .into_iter()
-            .enumerate()
-            .filter_map(|(index, key)| match key {
-                Ok(key) => Some((index, key)),
-                Err(e) => {
-                    // return early when the key is invalid
-                    resolve(index, Err(e));
-                    None
-                }
-            });
+        let requests = keys.into_iter().enumerate();
 
         // Crate key-index mapping and fail fast for duplicate keys
         let mut indexes: HashMap<Key, usize> = HashMap::new();
@@ -351,7 +336,7 @@ impl BackingScmStores {
         } else {
             self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key.clone()), FileAttributes::AUX);
+        .fetch(std::iter::once(key), FileAttributes::AUX);
 
         if let Some(entry) = fetch_results.single()? {
             Ok(Some(entry.aux_data()?.try_into()?))
@@ -360,7 +345,7 @@ impl BackingScmStores {
         }
     }
 
-    pub fn get_file_aux_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
     where
         F: Fn(usize, Result<Option<FileAuxData>>) -> (),
     {
@@ -384,5 +369,12 @@ impl BackingScmStores {
     pub fn flush(&self) {
         self.filestore.refresh().ok();
         self.treestore.refresh().ok();
+    }
+}
+
+impl Drop for BackingStore {
+    fn drop(&mut self) {
+        // Make sure that all the data that was fetched is written to the hgcache.
+        self.flush();
     }
 }

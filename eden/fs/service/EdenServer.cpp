@@ -228,7 +228,7 @@ std::string getCounterNameForFuseRequests(
     RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
     const EdenMount* mount) {
-  auto mountName = basename(mount->getPath().stringPiece());
+  auto mountName = basename(mount->getPath().view());
   // prefix . mount . stage . metric
   return folly::to<std::string>(
       kFuseRequestPrefix,
@@ -256,7 +256,7 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
   folly::checkUnixError(
       lstat(mount_path, &file_metadata),
       "unable to get FUSE device number for mount ",
-      basename(mount->getPath().stringPiece()));
+      basename(mount->getPath().view()));
 
   auto pending_request_path = folly::to<std::string>(
       kFuseInfoDir,
@@ -614,7 +614,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 return std::nullopt;
               }
               return self->serverState_->getPrivHelper()
-                  ->takeoverShutdown(edenMount->getPath().stringPiece())
+                  ->takeoverShutdown(edenMount->getPath().view())
                   .thenValue([takeover = std::move(takeover)](auto&&) mutable {
                     return std::move(takeover);
                   });
@@ -860,9 +860,9 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     //
     // If --takeover was not specified, fail now.
     if (!FLAGS_takeover) {
-      throw std::runtime_error(folly::to<string>(
-          "another instance of Eden appears to be running for ",
-          edenDir_.getPath()));
+      throwf<std::runtime_error>(
+          "another instance of Eden appears to be running for {}",
+          edenDir_.getPath());
     }
     doingTakeover = true;
   }
@@ -977,7 +977,7 @@ std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {
   if (!inputFile.is_open()) {
     if (errno != ENOENT) {
       folly::throwSystemErrorExplicit(
-          errno, "unable to open EdenFS config ", configPath);
+          errno, "unable to open EdenFS config ", configPath.view());
     }
     // No config file, assume an empty table.
     return cpptoml::make_table();
@@ -1282,8 +1282,7 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
       throw newEdenError(
           EEXIST,
           EdenErrorType::POSIX_ERROR,
-          folly::to<string>(
-              "mount point \"", mountPath, "\" is already mounted"));
+          fmt::format("mount point \"{}\" is already mounted", mountPath));
     }
   }
 }
@@ -1454,7 +1453,7 @@ Future<Unit> EdenServer::performTakeoverStart(
        bindMounts = std::move(bindMounts),
        mountPath = std::move(mountPath)](auto&&) mutable {
         return serverState_->getPrivHelper()->takeoverStartup(
-            mountPath.stringPiece(), bindMounts);
+            mountPath.view(), bindMounts);
       });
 #else
   NOT_IMPLEMENTED();
@@ -1503,7 +1502,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   auto backingStore = getBackingStore(
       toBackingStoreType(initialConfig->getRepoType()),
-      initialConfig->getRepoSource());
+      initialConfig->getRepoSource(),
+      *initialConfig);
 
   auto objectStore = ObjectStore::create(
       getLocalStore(),
@@ -1602,8 +1602,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               FinishedMount event;
               event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
               event.repo_source =
-                  basename(edenMount->getCheckoutConfig()->getRepoSource())
-                      .str();
+                  basename(edenMount->getCheckoutConfig()->getRepoSource());
               if (auto mountProtocol = edenMount->getMountProtocol()) {
                 event.fs_channel_type =
                     FieldConverter<MountProtocol>{}.toDebugString(
@@ -1735,8 +1734,7 @@ shared_ptr<EdenMount> EdenServer::getMount(AbsolutePathPiece mountPath) const {
     throw newEdenError(
         EBUSY,
         EdenErrorType::POSIX_ERROR,
-        folly::to<string>(
-            "mount point \"", mountPath, "\" is still initializing"));
+        fmt::format("mount point \"{}\" is still initializing", mountPath));
   }
   return mount;
 }
@@ -1749,10 +1747,9 @@ shared_ptr<EdenMount> EdenServer::getMountUnsafe(
     throw newEdenError(
         ENOENT,
         EdenErrorType::POSIX_ERROR,
-        folly::to<string>(
-            "mount point \"",
-            mountPath,
-            "\" is not known to this eden instance"));
+        fmt::format(
+            "mount point \"{}\" is not known to this eden instance",
+            mountPath));
   }
   return it->second.edenMount;
 }
@@ -1845,7 +1842,8 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
     BackingStoreType type,
-    StringPiece name) {
+    StringPiece name,
+    const CheckoutConfig& config) {
   BackingStoreKey key{type, name.str()};
   auto lockedStores = backingStores_.wlock();
   const auto it = lockedStores->find(key);
@@ -1856,7 +1854,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   const auto store = backingStoreFactory_->createBackingStore(
       type,
       BackingStoreFactory::CreateParams{
-          name, serverState_.get(), localStore_, getSharedStats()});
+          name, serverState_.get(), localStore_, getSharedStats(), config});
   lockedStores->emplace(key, store);
   return store;
 }
@@ -1910,7 +1908,8 @@ Future<Unit> EdenServer::createThriftServer() {
   auto edenConfig = config_->getEdenConfig();
   server_ = make_shared<ThriftServer>();
   server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
-  server_->setNumIOWorkerThreads(edenConfig->thriftNumWorkers.getValue());
+  server_->setNumCPUWorkerThreads(edenConfig->thriftNumWorkers.getValue());
+  server_->setCPUWorkerThreadName("Thrift-");
   server_->setQueueTimeout(std::chrono::floor<std::chrono::milliseconds>(
       edenConfig->thriftQueueTimeout.getValue()));
   server_->setAllowCheckUnimplementedExtraInterfaces(false);
@@ -1928,7 +1927,7 @@ Future<Unit> EdenServer::createThriftServer() {
   // Get the path to the thrift socket.
   auto thriftSocketPath = edenDir_.getThriftSocketPath();
   folly::SocketAddress thriftAddress;
-  thriftAddress.setFromPath(thriftSocketPath.stringPiece());
+  thriftAddress.setFromPath(thriftSocketPath.view());
   server_->setAddress(thriftAddress);
   serverState_->setSocketPath(thriftSocketPath);
 

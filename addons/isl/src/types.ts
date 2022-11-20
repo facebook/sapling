@@ -105,10 +105,15 @@ export type CodeReviewSystem =
       type: 'github';
       owner: string;
       repo: string;
+      /** github enterprise may use a different hostname than 'github.com' */
+      hostname: string;
     }
   | {
       type: 'phabricator';
       repo: string;
+    }
+  | {
+      type: 'none';
     }
   | {
       type: 'unknown';
@@ -333,7 +338,7 @@ export type ServerToClientMessage =
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | {type: 'fetchedCommitMessageTemplate'; template: string}
-  | {type: 'repoInfo'; info: RepoInfo}
+  | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}

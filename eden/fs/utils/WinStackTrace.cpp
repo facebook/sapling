@@ -238,6 +238,11 @@ LONG WINAPI windowsExceptionFilter(LPEXCEPTION_POINTERS excep) {
   size = backtrace(frames, kMaxFrames);
   backtraceSymbols(frames, size, err);
 
+  // Call an exception that bypass all exception handlers. This will create a
+  // crash dump on disk by default.
+  SetUnhandledExceptionFilter(nullptr);
+  UnhandledExceptionFilter(excep);
+
   // Terminate the process.
   // msvcrt abort() ultimately calls exit(3), so we shortcut that.
   // Ideally we'd just exit() or ExitProcess() and be done, but it

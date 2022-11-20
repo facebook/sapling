@@ -95,6 +95,7 @@ class BackingStoreFactory {
     ServerState* serverState;
     const std::shared_ptr<LocalStore>& localStore;
     const std::shared_ptr<EdenStats>& sharedStats;
+    const CheckoutConfig& config;
   };
 
   virtual ~BackingStoreFactory() = default;
@@ -338,7 +339,8 @@ class EdenServer : private TakeoverHandler {
    */
   std::shared_ptr<BackingStore> getBackingStore(
       BackingStoreType type,
-      folly::StringPiece name);
+      folly::StringPiece name,
+      const CheckoutConfig& config);
 
   AbsolutePathPiece getEdenDir() const {
     return edenDir_.getPath();

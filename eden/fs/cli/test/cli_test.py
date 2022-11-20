@@ -89,6 +89,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -112,6 +113,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -135,6 +137,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -158,6 +161,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -181,6 +185,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -305,6 +310,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -328,6 +334,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -351,6 +358,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -466,6 +474,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 
@@ -489,6 +498,7 @@ class ListTest(unittest.TestCase):
                 predictive_prefetch_num_dirs=0,
                 enable_tree_overlay=False,
                 use_write_back_cache=False,
+                re_use_case="buck2-default",
             )
         )
 

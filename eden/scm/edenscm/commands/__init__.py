@@ -1328,8 +1328,18 @@ def branch(ui, repo, label=None, **opts):
     For now, it always prints "default" or raise an exception if NAME or -C is
     provided.
     """
+    if ui.identity.cliname() != "hg":
+        # we don't need compatibility layer and deprecation messages for Sapling identity
+        ui.write(("unknown command 'branch'\n"))
+        ui.write(
+            _(
+                'hint: perhaps you\'d like to use "@prog@ bookmark".\nMore info: '
+                "https://sapling-scm.com/docs/overview/bookmarks\n"
+            )
+        )
+        return 255
     if not util.istest():
-        ui.deprecate("hg-branch", "branches are deprecated at Facebook")
+        ui.deprecate("hg-branch", "branches are deprecated at Meta")
     hintutil.trigger("branch-command-deprecate")
     if not opts.get("clean") and not label:
         ui.write("%s\n" % repo.dirstate.branch())
@@ -1635,7 +1645,7 @@ def commit(ui, repo, *pats, **opts):
     a new commit, see :prog:`amend`.
 
     If you are committing the result of a merge, such as when merge
-    conflicts occur during :prog:`checkout`, commit all pending changes.
+    conflicts occur during :prog:`goto`, commit all pending changes.
     Do not specify files or use ``-I``, ``-X``, or ``-i``.
 
     Specify the ``-m`` flag to include a free-form commit message. If you do
@@ -4582,13 +4592,31 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
     legacyaliases=["pul"],
 )
 def pull(ui, repo, source="default", **opts):
-    """pull changes from the specified source
+    """pull commits from the specified source
 
-    Pull changes from a remote repository to a local one. This command modifies
-    the commit graph, but doesn't affect local commits or the working copy.
+    Pull commits from a remote repository to a local one. This command modifies
+    the commit graph, but doesn't mutate local commits or the working copy.
 
-    If SOURCE is omitted, the default path is used.
-    See :prog:`help urls` for more information.
+    Use ``-B/--bookmark`` to specify a remote bookmark to pull. For Git
+    repos, remote bookmarks correspond to branches. If no bookmark is
+    specified, a default set of relevant remote names are pulled.
+
+    If SOURCE is omitted, the default path is used. Use :prog:`path
+    --add` to add a named source.
+
+    See :prog:`help urls` and :prog:`help path` for more information.
+
+    .. container:: verbose
+
+      Examples:
+
+      - pull relevant remote bookmarks from default source::
+
+          @prog@ pull
+
+      - pull a bookmark named my-branch from source my-fork:
+
+          @prog@ pull my-fork --bookmark my-branch
 
     .. container:: verbose
 
@@ -4830,44 +4858,56 @@ def _newpull(ui, repo, source, **opts):
             "r",
             "rev",
             [],
-            _("a changeset intended to be included in the destination"),
+            _("a commit to push"),
             _("REV"),
         ),
-        ("B", "bookmark", [], _("bookmark to push"), _("BOOKMARK")),
+        ("B", "bookmark", [], _("bookmark to push (ADVANCED)"), _("BOOKMARK")),
         ("", "new-branch", False, _("allow pushing a new branch (DEPRECATED)")),
         ("", "pushvars", [], _("variables that can be sent to server (ADVANCED)")),
     ],
-    _("[OPTION]... [-r REV]... [DEST]"),
+    _("[OPTION]... [--to BOOKMARK] [-r REV]... [DEST]"),
 )
 def push(ui, repo, dest=None, **opts):
-    """push changes to the specified destination
+    """push commits to the specified destination
 
     Push commits from the local repository to the specified
     destination.
 
-    By default, push does not allow creation of new heads at the
-    destination since multiple heads make it unclear which head
-    to use. In this situation, it is recommended to pull and merge
-    before pushing.
+    Use ``-t/--to`` to specify the remote bookmark. For Git repos,
+    remote bookmarks correspond to Git branches.
 
-    .. note::
+    To add a named remote destination, see :prog:`path --add`.
 
-       Extra care should be taken with the ``-f/--force`` option,
-       which will push all new heads on all branches, an action which will
-       almost always cause confusion for collaborators.
+    ``-r/--rev`` specifies the commit(s) (including ancestors) to push to
+    the remote repository. Defaults to the current commit.
 
-    If ``-r/--rev`` is used, the specified revision and all its ancestors
-    will be pushed to the remote repository.
+    Add ``--create`` to create the remote bookmark if it doesn't already exist.
 
-    If ``-B/--bookmark`` is used, the specified bookmarked revision, its
-    ancestors, and the bookmark will be pushed to the remote
-    repository. Specifying ``.`` is equivalent to specifying the active
-    bookmark's name.
+    The ``-f/--force`` flag allows non-fast-forward pushes.
 
-    Please see :prog:`help urls` for important details about ``ssh://``
-    URLs. If DESTINATION is omitted, a default path will be used.
+    If DESTINATION is omitted, the default path will be used. See
+    :prog:`help urls` and :prog:`help path` for more information.
 
-    Returns 0 if push was successful, 1 if nothing to push.
+    .. container:: verbose
+
+      Examples:
+
+      - push your current commit to "main" on the default destination::
+
+          @prog@ push --to main
+
+      - force push commit 05a82320d to "my-branch" on the "my-fork" destination::
+
+          @prog@ push --rev 05a82320d my-fork --to my-branch --force
+
+    .. container:: verbose
+
+        The ``--pushvars`` flag sends key-value metadata to the server.
+        For example, ``--pushvars ENABLE_SOMETHING=true``. Push vars are
+        typically used to override commit hook behavior, or enable extra
+        debugging. Push vars are not supported for Git repos.
+
+    Returns 0 on success.
     """
 
     if opts.get("bookmark"):

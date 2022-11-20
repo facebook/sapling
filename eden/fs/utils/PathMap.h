@@ -14,6 +14,7 @@
 #include <utility>
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
 
@@ -262,7 +263,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   mapped_type& at(Piece key) {
     auto iter = find(key);
     if (iter == end()) {
-      throw std::out_of_range(folly::to<std::string>("no such key ", key));
+      throwf<std::out_of_range>("no such key {}", key);
     }
     return iter->second;
   }
@@ -272,7 +273,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   const mapped_type& at(Piece key) const {
     const auto iter = find(key);
     if (iter == end()) {
-      throw std::out_of_range(folly::to<std::string>("no such key ", key));
+      throwf<std::out_of_range>("no such key {}", key);
     }
     return iter->second;
   }

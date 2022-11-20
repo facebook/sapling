@@ -46,6 +46,7 @@
   display: flex;
   flex: none;
   overflow-y: auto;
+  justify-content: flex-end;
 }
 
 .drawer.drawer-top {

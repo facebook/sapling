@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <string_view>
 
 namespace facebook::eden {
@@ -53,6 +54,12 @@ constexpr bool ends_with(
 }
 
 struct string_view : std::string_view {
+  /*implicit*/ string_view(const std::string& s) noexcept
+      : std::string_view{s} {}
+  /*implicit*/ string_view(std::string_view sv) noexcept
+      : std::string_view{sv} {}
+  using std::string_view::string_view;
+
 #if __cplusplus <= 202002L
   constexpr bool starts_with(std::string_view sv) const noexcept {
     return eden::starts_with(*this, sv);
@@ -81,3 +88,7 @@ struct string_view : std::string_view {
 };
 
 } // namespace facebook::eden
+
+template <>
+struct fmt::formatter<facebook::eden::string_view>
+    : formatter<std::string_view> {};

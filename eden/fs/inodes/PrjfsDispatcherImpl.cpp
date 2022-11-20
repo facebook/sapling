@@ -71,12 +71,12 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
 
 ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   bool isRoot = path.empty();
-  return mount_->getTreeOrTreeEntry(path, *context)
+  return mount_->getTreeOrTreeEntry(path, context)
       .thenValue([isRoot,
                   objectStore = mount_->getObjectStore(),
-                  context = std::move(context)](
+                  context = context.copy()](
                      std::variant<std::shared_ptr<const Tree>, TreeEntry>
                          treeOrTreeEntry) mutable {
         auto& tree = std::get<std::shared_ptr<const Tree>>(treeOrTreeEntry);
@@ -89,8 +89,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                 treeEntry.first, true, ImmediateFuture<uint64_t>(0ull));
           } else {
             auto sizeFut =
-                objectStore->getBlobSize(treeEntry.second.getHash(), *context)
-                    .ensure([context]() {});
+                objectStore->getBlobSize(treeEntry.second.getHash(), context);
             ret.emplace_back(treeEntry.first, false, std::move(sizeFut));
           }
         }
@@ -130,21 +129,21 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
 
 ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
-  return mount_->getTreeOrTreeEntry(path, *context)
-      .thenValue([this, context = std::move(context), path](
+    const ObjectFetchContextPtr& context) {
+  return mount_->getTreeOrTreeEntry(path, context)
+      .thenValue([this, context = context.copy(), path](
                      std::variant<std::shared_ptr<const Tree>, TreeEntry>
                          treeOrTreeEntry) mutable {
         bool isDir = std::holds_alternative<std::shared_ptr<const Tree>>(
             treeOrTreeEntry);
-        auto pathFut = mount_->canonicalizePathFromTree(path, *context);
+        auto pathFut = mount_->canonicalizePathFromTree(path, context);
         auto sizeFut = isDir
             ? ImmediateFuture<uint64_t>{0ull}
             : mount_->getObjectStore()->getBlobSize(
-                  std::get<TreeEntry>(treeOrTreeEntry).getHash(), *context);
+                  std::get<TreeEntry>(treeOrTreeEntry).getHash(), context);
 
         return collectAllSafe(pathFut, sizeFut)
-            .thenValue([this, isDir, context = std::move(context)](
+            .thenValue([this, isDir, context = context.copy()](
                            std::tuple<RelativePath, uint64_t> res) {
               auto [path, size] = std::move(res);
               auto lookupResult = LookupResult{path, size, isDir};
@@ -158,7 +157,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                   notificationExecutor_,
                   [&mount = *mount_,
                    path = std::move(path),
-                   context = std::move(context)]() {
+                   context = context.copy()]() {
                     // Finally, let's tell the TreeInode that this file needs
                     // invalidation during update. This is run in a separate
                     // executor to avoid deadlocks. This is guaranteed to 1) run
@@ -168,7 +167,7 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                     // TreeInode::invalidateChannelEntryCache due to
                     // getInodeSlow needing to acquire the content lock that
                     // invalidateChannelEntryCache is already holding.
-                    mount.getInodeSlow(path, *context)
+                    mount.getInodeSlow(path, context)
                         .thenValue(
                             [](InodePtr inode) { inode->incFsRefcount(); })
                         .get();
@@ -201,8 +200,8 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
 
 ImmediateFuture<bool> PrjfsDispatcherImpl::access(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
-  return mount_->getTreeOrTreeEntry(path, *context)
+    const ObjectFetchContextPtr& context) {
+  return mount_->getTreeOrTreeEntry(path, context)
       .thenValue([](auto&&) { return true; })
       .thenTry([path = std::move(path)](folly::Try<bool> result) {
         if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
@@ -220,20 +219,21 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::access(
 
 ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
-  return mount_->getTreeOrTreeEntry(path, *context)
-      .thenValue([&context = *context, objectStore = mount_->getObjectStore()](
-                     std::variant<std::shared_ptr<const Tree>, TreeEntry>
-                         treeOrTreeEntry) {
-        auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
-        return objectStore->getBlob(treeEntry.getHash(), context)
-            .thenValue([](std::shared_ptr<const Blob> blob) {
-              // TODO(xavierd): directly return the Blob to the caller.
-              std::string res;
-              blob->getContents().appendTo(res);
-              return res;
-            });
-      })
+    const ObjectFetchContextPtr& context) {
+  return mount_->getTreeOrTreeEntry(path, context)
+      .thenValue(
+          [context = context.copy(), objectStore = mount_->getObjectStore()](
+              std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                  treeOrTreeEntry) {
+            auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
+            return objectStore->getBlob(treeEntry.getHash(), context)
+                .thenValue([](std::shared_ptr<const Blob> blob) {
+                  // TODO(xavierd): directly return the Blob to the caller.
+                  std::string res;
+                  blob->getContents().appendTo(res);
+                  return res;
+                });
+          })
       .thenTry([this, path = std::move(path)](folly::Try<std::string> result) {
         if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
           if (isEnoent(*exc) && path == kDotEdenConfigPath) {
@@ -241,21 +241,20 @@ ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
           }
         }
         return result;
-      })
-      .ensure([context = std::move(context)]() {});
+      });
 }
 
 namespace {
 ImmediateFuture<TreeInodePtr> createDirInode(
     const EdenMount& mount,
     RelativePath path,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto treeInodeFut =
       mount.getInodeSlow(path, context).thenValue([](const InodePtr inode) {
         return inode.asTreePtr();
       });
   return std::move(treeInodeFut)
-      .thenTry([path = std::move(path), &mount, &context](
+      .thenTry([path = std::move(path), &mount, context = context.copy()](
                    folly::Try<TreeInodePtr> result) {
         if (auto* exc = result.tryGetExceptionObject<std::system_error>();
             exc && isEnoent(*exc)) {
@@ -275,7 +274,8 @@ ImmediateFuture<TreeInodePtr> createDirInode(
           auto fut = ImmediateFuture<TreeInodePtr>{mount.getRootInode()};
           for (auto parent : path.paths()) {
             fut = std::move(fut).thenValue(
-                [parent = parent.copy(), &context](TreeInodePtr treeInode) {
+                [parent = parent.copy(),
+                 context = context.copy()](TreeInodePtr treeInode) {
                   auto basename = parent.basename();
                   try {
                     auto inode = treeInode->mkdir(
@@ -309,7 +309,7 @@ ImmediateFuture<OnDiskState> getOnDiskState(
     std::chrono::steady_clock::time_point receivedAt,
     int retry = 0) {
   auto absPath = mount.getPath() + path;
-  auto boostPath = boost::filesystem::path(absPath.stringPiece());
+  auto boostPath = boost::filesystem::path(absPath.asString());
 
   boost::system::error_code ec;
   auto fileType = boost::filesystem::symlink_status(boostPath, ec).type();
@@ -359,13 +359,13 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
     const EdenMount& mount,
     RelativePath path,
     std::chrono::steady_clock::time_point receivedAt,
-    ObjectFetchContext& context);
+    const ObjectFetchContextPtr& context);
 
 ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
     const EdenMount& mount,
     RelativePath path,
     std::chrono::steady_clock::time_point receivedAt,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   /**
    * Allows finding the first directory that is not present on disk. This must
    * be heap allocated and kept alive until compute returns.
@@ -407,19 +407,22 @@ ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
   auto fut = getFirstNotPresent->compute(mount, receivedAt);
   return std::move(fut)
       .ensure([getFirstNotPresent = std::move(getFirstNotPresent)] {})
-      .thenValue([&mount, &context, receivedAt](RelativePath path) {
+      .thenValue([&mount, context = context.copy(), receivedAt](
+                     RelativePath path) {
         auto basename = path.basename();
         auto dirname = path.dirname();
 
         // Let's now remove the entire hierarchy.
         return createDirInode(mount, dirname.copy(), context)
-            .thenValue([basename = basename.copy(),
-                        &context](const TreeInodePtr treeInode) {
+            .thenValue([basename = basename.copy(), context = context.copy()](
+                           const TreeInodePtr treeInode) {
               return treeInode->removeRecursively(
                   basename, InvalidationRequired::No, context);
             })
-            .thenValue([&mount, &context, path = std::move(path), receivedAt](
-                           auto&&) mutable {
+            .thenValue([&mount,
+                        context = context.copy(),
+                        path = std::move(path),
+                        receivedAt](auto&&) mutable {
               // Now that the mismatch has been removed, make sure to also
               // trigger a notification on that path. A file might have been
               // created. Note that this may trigger a recursion into
@@ -449,7 +452,7 @@ ImmediateFuture<folly::Unit> recursivelyUpdateChildrens(
     TreeInodePtr tree,
     RelativePath path,
     std::chrono::steady_clock::time_point receivedAt,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   auto absPath = mount.getPath() + path;
   auto direntNamesTry = getAllDirectoryEntryNames(absPath);
   if (direntNamesTry.hasException()) {
@@ -499,13 +502,14 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
     RelativePath path,
     InodeType inodeType,
     std::chrono::steady_clock::time_point receivedAt,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return createDirInode(mount, path.dirname().copy(), context)
       .thenValue([&mount,
                   path = std::move(path),
                   inodeType,
                   receivedAt,
-                  &context](const TreeInodePtr treeInode) mutable {
+                  context =
+                      context.copy()](const TreeInodePtr treeInode) mutable {
         auto basename = path.basename();
         return treeInode->getOrLoadChild(basename, context)
             .thenTry(
@@ -514,7 +518,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                  treeInode,
                  inodeType,
                  receivedAt,
-                 &context](folly::Try<InodePtr> try_) mutable
+                 context = context.copy()](folly::Try<InodePtr> try_) mutable
                 -> ImmediateFuture<folly::Unit> {
                   auto basename = path.basename();
                   if (try_.hasException()) {
@@ -567,7 +571,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                       return treeInode
                           ->unlink(basename, InvalidationRequired::No, context)
                           .thenTry([&mount,
-                                    &context,
+                                    context = context.copy(),
                                     path = std::move(path),
                                     receivedAt,
                                     treeInode](
@@ -633,10 +637,12 @@ ImmediateFuture<folly::Unit> fileNotificationImpl(
     const EdenMount& mount,
     RelativePath path,
     std::chrono::steady_clock::time_point receivedAt,
-    ObjectFetchContext& context) {
+    const ObjectFetchContextPtr& context) {
   return getOnDiskState(mount, path, receivedAt)
-      .thenValue([&mount, path = std::move(path), receivedAt, &context](
-                     OnDiskState state) mutable {
+      .thenValue([&mount,
+                  path = std::move(path),
+                  receivedAt,
+                  context = context.copy()](OnDiskState state) mutable {
         switch (state) {
           case OnDiskState::MaterializedFile:
             return handleMaterializedFileNotification(
@@ -655,17 +661,13 @@ ImmediateFuture<folly::Unit> fileNotification(
     EdenMount& mount,
     RelativePath path,
     folly::Executor::KeepAlive<folly::SequencedExecutor> executor,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   auto receivedAt = std::chrono::steady_clock::now();
   folly::stop_watch<std::chrono::milliseconds> watch;
 
   folly::via(
       executor,
-      [&mount,
-       path,
-       receivedAt,
-       context = std::move(context),
-       watch]() mutable {
+      [&mount, path, receivedAt, context = context.copy(), watch]() mutable {
         auto fault = ImmediateFuture{
             mount.getServerState()->getFaultInjector().checkAsync(
                 "PrjfsDispatcherImpl::fileNotification", path)};
@@ -674,9 +676,9 @@ ImmediateFuture<folly::Unit> fileNotification(
             .thenValue([&mount,
                         path = std::move(path),
                         receivedAt,
-                        context = std::move(context)](auto&&) {
+                        context = context.copy()](auto&&) {
               return fileNotificationImpl(
-                  mount, std::move(path), receivedAt, *context);
+                  mount, std::move(path), receivedAt, context);
             })
             .get();
         mount.getStats()->addDuration(
@@ -698,35 +700,35 @@ ImmediateFuture<folly::Unit> fileNotification(
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileCreated(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirCreated(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileModified(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     RelativePath oldPath,
     RelativePath newPath,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   // A rename is just handled like 2 notifications separate notifications on
   // the old and new paths.
   auto oldNotification = fileNotification(
       *mount_, std::move(oldPath), notificationExecutor_, context);
   auto newNotification = fileNotification(
-      *mount_, std::move(newPath), notificationExecutor_, std::move(context));
+      *mount_, std::move(newPath), notificationExecutor_, context);
 
   return collectAllSafe(std::move(oldNotification), std::move(newNotification))
       .thenValue(
@@ -736,7 +738,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileRename(
     RelativePath oldPath,
     RelativePath newPath,
-    std::shared_ptr<ObjectFetchContext> /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   if (oldPath == kDotEdenConfigPath || newPath == kDotEdenConfigPath) {
     return makeImmediateFuture<folly::Unit>(
         std::system_error(EPERM, std::generic_category()));
@@ -751,7 +753,7 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileRename(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirRename(
     RelativePath oldPath,
     RelativePath newPath,
-    std::shared_ptr<ObjectFetchContext> /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   if (oldPath == kDotEdenRelativePath || newPath == kDotEdenRelativePath) {
     return makeImmediateFuture<folly::Unit>(
         std::system_error(EPERM, std::generic_category()));
@@ -765,14 +767,14 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirRename(
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileDelete(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   if (path == kDotEdenConfigPath) {
     return makeImmediateFuture<folly::Unit>(
         std::system_error(EPERM, std::generic_category()));
@@ -782,14 +784,14 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileDelete(
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> context) {
+    const ObjectFetchContextPtr& context) {
   return fileNotification(
-      *mount_, std::move(path), notificationExecutor_, std::move(context));
+      *mount_, std::move(path), notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
     RelativePath path,
-    std::shared_ptr<ObjectFetchContext> /*context*/) {
+    const ObjectFetchContextPtr& /*context*/) {
   if (path == kDotEdenRelativePath) {
     return makeImmediateFuture<folly::Unit>(
         std::system_error(EPERM, std::generic_category()));

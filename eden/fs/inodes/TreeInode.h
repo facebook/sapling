@@ -27,7 +27,6 @@ class EdenMount;
 class GitIgnoreStack;
 class DiffCallback;
 class InodeMap;
-class ObjectFetchContext;
 class ObjectStore;
 class Overlay;
 class RenameLock;
@@ -113,17 +112,18 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   ~TreeInode() override;
 
-  ImmediateFuture<struct stat> stat(ObjectFetchContext& context) override;
+  ImmediateFuture<struct stat> stat(
+      const ObjectFetchContextPtr& context) override;
 
 #ifndef _WIN32
   ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
-      ObjectFetchContext& fetchContext) override;
+      const ObjectFetchContextPtr& fetchContext) override;
 
   ImmediateFuture<std::vector<std::string>> listxattr() override;
   ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
-      ObjectFetchContext& context) override;
+      const ObjectFetchContextPtr& context) override;
 #endif // !_WIN32
 
   /**
@@ -136,7 +136,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   ImmediateFuture<VirtualInode> getOrFindChild(
       PathComponentPiece name,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       bool loadInodes);
 
   /**
@@ -157,7 +157,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Tree or a DirEntry/TreeEntry representing the entry.
    */
   std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>>
-  getChildren(ObjectFetchContext& context, bool loadInodes);
+  getChildren(const ObjectFetchContextPtr& context, bool loadInodes);
 
   /**
    * Get the inode object for a child of this directory.
@@ -166,10 +166,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   ImmediateFuture<InodePtr> getOrLoadChild(
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
   ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Recursively look up a child inode.
@@ -179,7 +179,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   ImmediateFuture<InodePtr> getChildRecursive(
       RelativePathPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   InodeNumber getChildInodeNumber(PathComponentPiece name);
 
@@ -188,11 +188,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodePtr newParent,
       PathComponentPiece newName,
       InvalidationRequired invalidate,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
 #ifndef _WIN32
-  FuseDirList
-  fuseReaddir(FuseDirList&& list, off_t off, ObjectFetchContext& context);
+  FuseDirList fuseReaddir(
+      FuseDirList&& list,
+      off_t off,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Populate the list with as many directory entries as possible starting from
@@ -201,8 +203,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Return the filled directory list as well as a boolean indicating if the
    * listing is complete.
    */
-  std::tuple<NfsDirList, bool>
-  nfsReaddir(NfsDirList&& list, off_t off, ObjectFetchContext& context);
+  std::tuple<NfsDirList, bool> nfsReaddir(
+      NfsDirList&& list,
+      off_t off,
+      const ObjectFetchContextPtr& context);
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {
@@ -222,11 +226,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> unlink(
       PathComponentPiece name,
       InvalidationRequired invalidate,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> rmdir(
       PathComponentPiece name,
       InvalidationRequired invalidate,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Remove the file or directory starting at name.
@@ -242,7 +246,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<folly::Unit> removeRecursively(
       PathComponentPiece name,
       InvalidationRequired invalidate,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Internal method intended for removeRecursively to use. This method does not
@@ -253,7 +257,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<folly::Unit> removeRecursivelyNoFlushInvalidation(
       PathComponentPiece name,
       InvalidationRequired invalidate,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Attempts to remove and unlink children of this inode. Under concurrent
@@ -262,7 +266,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   void removeAllChildrenRecursively(
       InvalidationRequired invalidate,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       const RenameLock& renameLock);
 
   /**
@@ -441,6 +445,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
 #endif
 
+  /**
+   * Invalidate all non-materialized childrens recursively.
+   *
+   * Returns the number of inodes invalidated.
+   */
+  ImmediateFuture<uint64_t> invalidateChildrenNotMaterialized(
+      const ObjectFetchContextPtr& context);
+
   /*
    * Update a tree entry as part of a checkout operation.
    *
@@ -487,7 +499,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
 #ifndef _WIN32
   ImmediateFuture<folly::Unit> ensureMaterialized(
-      ObjectFetchContext& fetchContext,
+      const ObjectFetchContextPtr& fetchContext,
       bool followSymlink) override;
 #endif
 
@@ -516,12 +528,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       const DirEntry& entry,
       PathComponentPiece name,
-      ObjectFetchContext& context) noexcept;
+      const ObjectFetchContextPtr& context) noexcept;
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
       const DirEntry& entry,
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Materialize this directory in the overlay.
@@ -573,7 +585,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   void updateAtime();
 
-  void prefetch(ObjectFetchContext& context);
+  void prefetch(const ObjectFetchContextPtr& context);
 
   /**
    * Get a TreeInodePtr to ourself.
@@ -595,7 +607,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * directory.
    */
   template <typename Fn>
-  bool readdirImpl(off_t offset, ObjectFetchContext& context, Fn add);
+  bool readdirImpl(off_t offset, const ObjectFetchContextPtr& context, Fn add);
 
   /**
    * createImpl() is a helper function for creating new children inodes.
@@ -624,7 +636,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InodePtr child,
       InvalidationRequired invalidate,
       unsigned int attemptNum,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   /**
    * tryRemoveChild() actually unlinks a child from our entry list.
@@ -686,7 +698,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       DirEntry& entry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
-      ObjectFetchContext& fetchContext);
+      const ObjectFetchContextPtr& fetchContext);
 
   /**
    * Load the .gitignore file for this directory, then call computeDiff() once
@@ -812,7 +824,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   std::optional<ImmediateFuture<VirtualInode>> rlockGetOrFindChild(
       const TreeInodeState& contents,
       PathComponentPiece name,
-      ObjectFetchContext& context,
+      const ObjectFetchContextPtr& context,
       bool loadInodes);
 
   // We need to do some cleanup outside of the lock. So we return some promises
@@ -845,7 +857,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   std::pair<folly::SemiFuture<InodePtr>, LoadChildCleanUp> loadChild(
       folly::Synchronized<TreeInodeState>::LockedPtr& contents,
       PathComponentPiece name,
-      ObjectFetchContext& context);
+      const ObjectFetchContextPtr& context);
 
   /**
    * Handles the inode loading related clean up for a wlockGetOrFindChild call.

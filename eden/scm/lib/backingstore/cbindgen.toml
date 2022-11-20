@@ -16,38 +16,36 @@ header = """/*
  */
 
 // The generated functions are exported from this Rust library
-// @dep=:backingstore
+// @dep=//eden/scm/lib/backingstore:backingstore
+"""
 
-#pragma once
+trailer = """
 
-#include <memory>
-#include <functional>
-#include <folly/Range.h>
+namespace sapling {
 
-extern "C" void rust_cfallible_free_error(char *ptr);
-
-// MSVC toolchain dislikes having template in `extern "C"` functions. So we will
-// have to use void pointer here. Cbindgen does not support generating code like
-// this since it's kinda a special case so we manually generate this struct.
-struct RustCFallibleBase {
- void *value;
- char *error;
-};
-
-// Some Rust functions will have the return type `RustCFallibleBase`, and we
+// Some Rust functions will have the return type `CFallibleBase`, and we
 // have this convenient struct to help C++ code to consume the returned
-// struct. This is the only way to use the returned `RustCFallibleBase` from
+// struct. This is the only way to use the returned `CFallibleBase` from
 // Rust, and the user must provide a `Deleter` to correctly free the pointer
 // returned from Rust.
-template <typename T, typename Deleter = std::function<void(T*)>>
-class RustCFallible {
-private:
-  std::unique_ptr<T, std::function<void(T*)>> ptr_;
-  char* error_;
-
+template <typename T, void(*dtor)(T*)>
+class CFallible {
 public:
-  RustCFallible(RustCFallibleBase&& base, Deleter deleter)
-      : ptr_(reinterpret_cast<T*>(base.value), deleter), error_(base.error) {}
+  struct Deleter {
+    void operator()(T* ptr) {
+      dtor(ptr);
+    }
+  };
+  using Ptr = std::unique_ptr<T, Deleter>;
+
+  explicit CFallible(CFallibleBase&& base)
+    : ptr_{reinterpret_cast<T*>(base.value)}, error_{base.error} {}
+
+  ~CFallible() {
+    if (error_) {
+      sapling_cfallible_free_error(error_);
+    }
+  }
 
   bool isError() const {
     return error_ != nullptr;
@@ -61,35 +59,51 @@ public:
     return ptr_.get();
   }
 
-  std::unique_ptr<T, Deleter> unwrap() {
+  Ptr unwrap() {
     return std::move(ptr_);
   }
 
-  ~RustCFallible() {
-    if (error_ != nullptr) {
-      rust_cfallible_free_error(error_);
-    }
-
-    unwrap();
-  }
+private:
+  Ptr ptr_;
+  char* error_;
 };
+
+}
 """
 
+namespace = "sapling"
+pragma_once = true
+no_includes = true # avoid iostream
+sys_includes = [
+    "stdint.h",
+    "memory",
+    "string_view",
+    "folly/Range.h",
+]
+
 [export]
-prefix= "Rust"
 exclude = ["CFallible"]
 include = ["Tree", "TreeEntry", "TreeEntryType"]
 
 [export.rename]
-"CFallible" = "CFallibleBase"
 
 [export.body]
 "CBytes" = """
-folly::ByteRange asByteRange() const {
-  return folly::ByteRange(ptr, len);
-}
 
-operator folly::ByteRange() const {
-  return asByteRange();
-}
+  folly::ByteRange asByteRange() const {
+    return folly::ByteRange(ptr, len);
+  }
+
+  operator folly::ByteRange() const {
+    return asByteRange();
+  }
+"""
+
+"Slice" = """
+  template <typename Q = T>
+  Slice(std::enable_if_t<std::is_same_v<Q, uint8_t>, std::string_view> sv) noexcept
+    : ptr{reinterpret_cast<const uint8_t*>(sv.data())}, len{sv.size()} {}
+
+  Slice(folly::Range<const T*> range) noexcept
+    : ptr{range.data()}, len{range.size()} {}
 """

@@ -42,7 +42,7 @@ void enqueue(benchmark::State& state) {
   std::vector<std::shared_ptr<HgImportRequest>> requests;
   requests.reserve(state.max_iterations);
   for (size_t i = 0; i < state.max_iterations; i++) {
-    requests.emplace_back(makeBlobImportRequest(ImportPriority::kNormal()));
+    requests.emplace_back(makeBlobImportRequest(kDefaultImportPriority));
   }
 
   auto requestIter = requests.begin();
@@ -60,7 +60,7 @@ void dequeue(benchmark::State& state) {
   auto queue = HgImportRequestQueue{edenConfig};
 
   for (size_t i = 0; i < state.max_iterations; i++) {
-    queue.enqueueBlob(makeBlobImportRequest(ImportPriority::kNormal()));
+    queue.enqueueBlob(makeBlobImportRequest(kDefaultImportPriority));
   }
 
   for (auto _ : state) {

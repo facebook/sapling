@@ -21,6 +21,7 @@ const openSourceWebsite = 'https://opensource.fb.com/';
 const watchmanRepo = 'https://github.com/facebook/watchman';
 const ghstackRepo = 'https://github.com/ezyang/ghstack';
 const vsCodeRepo = 'https://github.com/facebookexperimental/fb-vscode';
+const discord = 'https://discord.gg/X6baZ94Vzh';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -99,6 +100,10 @@ const config = {
                 href: gitHubRepo,
               },
               {
+                label: 'Discord',
+                href: discord,
+              },
+              {
                 label: 'Twitter',
                 href: twitter,
               },
@@ -169,7 +174,7 @@ const config = {
           return {
             experiments: {
               asyncWebAssembly: true,
-            }
+            },
           };
         },
       };

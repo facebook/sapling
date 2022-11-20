@@ -43,7 +43,7 @@ folly::Try<void> writeFileAtomic(
   iov.iov_base = const_cast<unsigned char*>(data.data());
   iov.iov_len = data.size();
 
-  if (auto err = folly::writeFileAtomicNoThrow(path.stringPiece(), &iov, 1)) {
+  if (auto err = folly::writeFileAtomicNoThrow(path.view(), &iov, 1)) {
     return folly::Try<void>{folly::makeSystemErrorExplicit(
         err, fmt::format(FMT_STRING("couldn't update {}"), path))};
   }
@@ -53,7 +53,7 @@ folly::Try<void> writeFileAtomic(
 
 folly::Try<std::vector<PathComponent>> getAllDirectoryEntryNames(
     AbsolutePathPiece path) {
-  auto boostPath = boost::filesystem::path(path.stringPiece());
+  auto boostPath = boost::filesystem::path(path.asString());
   std::vector<PathComponent> direntNames;
 
   boost::system::error_code ec;

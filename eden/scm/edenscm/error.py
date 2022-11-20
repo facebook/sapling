@@ -18,6 +18,8 @@ imports.
 
 from __future__ import absolute_import
 
+from typing import Union
+
 import bindings
 
 # Do not import anything but pycompat here, please
@@ -39,7 +41,7 @@ RustError = bindings.error.RustError
 TlsError = bindings.error.TlsError
 
 
-def _tobytes(exc):
+def _tobytes(exc) -> Union[bytes, str]:
     """Byte-stringify exception in the same way as BaseException_str()"""
     if not exc.args:
         return b""
@@ -535,6 +537,6 @@ class AbortSnapshotFileCountLimit(Abort):
     exitcode = 2
 
 
-def addcontext(ex, messageorfunc):
+def addcontext(ex: Context, messageorfunc) -> None:
     if isinstance(ex, Context):
         ex.addcontext(messageorfunc)

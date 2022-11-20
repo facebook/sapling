@@ -7,6 +7,7 @@
 
 #include "eden/fs/utils/FileDescriptor.h"
 #include <fcntl.h>
+#include <fmt/core.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/portability/SysUio.h>
@@ -52,10 +53,11 @@ FileDescriptor::FileDescriptor(
     FDType fdType)
     : fd_(normalizeHandleValue(fd)), fdType_(resolveFDType(fd, fdType)) {
   if (fd_ == kInvalid) {
+    int err = errno;
     throw std::system_error(
-        errno,
+        err,
         std::generic_category(),
-        std::string(operation) + ": " + folly::errnoStr(errno));
+        fmt::format("{}: {}", operation, folly::errnoStr(err)));
   }
 }
 
@@ -538,7 +540,7 @@ FileDescriptor openImpl(folly::StringPiece path, OpenFileHandleOptions opts) {
   if (fd == -1) {
     int err = errno;
     throw std::system_error(
-        err, std::generic_category(), folly::to<std::string>("open: ", path));
+        err, std::generic_category(), fmt::format("open: {}", path));
   }
   return FileDescriptor(fd, FileDescriptor::FDType::Unknown);
 }
@@ -596,7 +598,7 @@ FileDescriptor openImpl(folly::StringPiece path, OpenFileHandleOptions opts) {
     throw std::system_error(
         err,
         std::system_category(),
-        folly::to<std::string>("CreateFileW for openFileHandle: ", path));
+        fmt::format("CreateFileW for openFileHandle: {}", path));
   }
 
   return file;
@@ -607,7 +609,7 @@ FileDescriptor openImpl(folly::StringPiece path, OpenFileHandleOptions opts) {
 FileDescriptor FileDescriptor::open(
     AbsolutePathPiece path,
     OpenFileHandleOptions opts) {
-  return openImpl(path.stringPiece(), opts);
+  return openImpl(path.view(), opts);
 }
 
 FileDescriptor FileDescriptor::openNullDevice(OpenFileHandleOptions opts) {

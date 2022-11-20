@@ -20,45 +20,20 @@ After that you can use it like::
 
   hg clone py://trunk/
 
-Additionally there is support for some more complex schemas, for
-example used by Google Code::
+If the scheme URL is not to append at the end, use '{1}' to specify its
+location. For example::
 
   [schemes]
   gcode = http://{1}.googlecode.com/hg/
 
-The syntax is taken from Mercurial templates, and you have unlimited
-number of variables, starting with ``{1}`` and continuing with
-``{2}``, ``{3}`` and so on. This variables will receive parts of URL
-supplied, split by ``/``. Anything not specified as ``{part}`` will be
-just appended to an URL.
-
-For convenience, the extension adds these schemes by default::
-
-  [schemes]
-  py = http://hg.python.org/
-  bb = https://bitbucket.org/
-  bb+ssh = ssh://hg@bitbucket.org/
-  gcode = https://{1}.googlecode.com/hg/
-  kiln = https://{1}.kilnhg.com/Repo/
-
-You can override a predefined scheme by defining a new scheme with the
-same name.
+Note only '{1}' is supported. There is no '{2}', '{0}' or other template
+functions.
 """
 from __future__ import absolute_import
 
 import os
-import re
 
-from edenscm import (
-    error,
-    extensions,
-    hg,
-    pycompat,
-    registrar,
-    templater,
-    ui as uimod,
-    util,
-)
+from edenscm import error, extensions, hg, pycompat, registrar, ui as uimod, util
 from edenscm.i18n import _
 
 cmdtable = {}
@@ -69,18 +44,11 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = b"ships-with-hg-core"
 
-_partre = re.compile(r"{(\d+)\}")
-
 
 class ShortRepository(object):
-    def __init__(self, url, scheme, templater):
+    def __init__(self, url, scheme):
         self.scheme = scheme
-        self.templater = templater
         self.url = url
-        try:
-            self.parts = max(map(int, _partre.findall(self.url)))
-        except ValueError:
-            self.parts = 0
 
     def __repr__(self):
         return "<ShortRepository: %s>" % self.scheme
@@ -92,20 +60,14 @@ class ShortRepository(object):
     def resolve(self, url):
         # Should this use the urlutil.url class, or is manual parsing better?
         try:
-            url = url.split("://", 1)[1]
+            short_url = url.split("://", 1)[1]
         except IndexError:
             raise error.Abort(_("no '://' in scheme url '%s'") % url)
-        parts = url.split("/", self.parts)
-        if len(parts) > self.parts:
-            tail = parts[-1]
-            parts = parts[:-1]
+        placeholder = "{1}"
+        if placeholder in self.url:
+            return self.url.replace(placeholder, short_url)
         else:
-            tail = ""
-        context = {"%d" % (i + 1): v for i, v in enumerate(parts)}
-        return (
-            pycompat.decodeutf8(b"".join(self.templater.process(self.url, context)))
-            + tail
-        )
+            return self.url + short_url
 
 
 def hasdriveletter(orig, path):
@@ -131,7 +93,6 @@ schemes = {}
 
 def extsetup(ui):
     schemes.update(dict(ui.configitems("schemes")))
-    t = templater.engine(lambda x: x)
     for scheme, url in schemes.items():
         if (
             pycompat.iswindows
@@ -143,7 +104,7 @@ def extsetup(ui):
                 _("custom scheme %s:// conflicts with drive letter %s:\\\n")
                 % (scheme, scheme.upper())
             )
-        hg.schemes[scheme] = ShortRepository(url, scheme, t)
+        hg.schemes[scheme] = ShortRepository(url, scheme)
 
     extensions.wrapfunction(util, "hasdriveletter", hasdriveletter)
     extensions.wrapfunction(uimod, "_normalizepath", normalizepath)

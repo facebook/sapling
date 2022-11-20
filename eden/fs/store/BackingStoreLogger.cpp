@@ -25,7 +25,7 @@ BackingStoreLogger::BackingStoreLogger(
       loggingAvailable_{true} {}
 
 void BackingStoreLogger::logImport(
-    ObjectFetchContext& context,
+    const ObjectFetchContext& context,
     RelativePathPiece importPath,
     ObjectFetchContext::ObjectType fetchedType) {
   if (!loggingAvailable_) {

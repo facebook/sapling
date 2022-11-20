@@ -75,12 +75,12 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   virtual ImmediateFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   virtual ImmediateFuture<std::unique_ptr<TreeEntry>> getTreeEntryForObjectId(
       const ObjectId& objectId,
       TreeEntryType treeEntryType,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the getTree method.
@@ -99,7 +99,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   virtual folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Return value of the getBlob method.
@@ -118,16 +118,15 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   virtual folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
-      ObjectFetchContext& context) = 0;
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
-   * Fetch blob metadata if available locally.
+   * Fetch blob metadata if available in a local cache. Returns nullptr if not
+   * locally available.
    */
   virtual std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
-      const ObjectId& /*id*/,
-      ObjectFetchContext& /*context*/) {
-    return nullptr;
-  }
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) = 0;
 
   /**
    * Prefetch all the blobs represented by the HashRange.
@@ -137,7 +136,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange /*ids*/,
-      ObjectFetchContext& /*context*/) {
+      const ObjectFetchContextPtr& /*context*/) {
     return folly::unit;
   }
 

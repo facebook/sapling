@@ -92,7 +92,7 @@ TEST(UserInfo, initFromSudo) {
   EXPECT_EQ(65534, info.getUid());
   EXPECT_EQ(65535, info.getGid());
   EXPECT_EQ("eden_test_user", info.getUsername());
-  EXPECT_EQ("/some/a/home/dir", info.getHomeDirectory().stringPiece());
+  EXPECT_EQ("/some/a/home/dir", info.getHomeDirectory().view());
 }
 
 TEST(UserInfo, lookup) {

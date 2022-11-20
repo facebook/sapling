@@ -8,14 +8,56 @@
 import type {EditedMessage} from './CommitInfo';
 import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
-import type {ChangedFile, CommitInfo, Hash, MergeConflicts} from './types';
+import type {ChangedFile, CommitInfo, Hash, MergeConflicts, RepoInfo} from './types';
 import type {CallbackInterface} from 'recoil';
 
 import serverAPI from './ClientToServerAPI';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {operationBeingPreviewed} from './previews';
+import {initialParams} from './urlParams';
 import {firstLine} from './utils';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
+
+const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
+  key: 'repositoryData',
+  default: {info: undefined, cwd: undefined},
+  effects: [
+    ({setSelf}) => {
+      const disposable = serverAPI.onMessageOfType('repoInfo', event => {
+        setSelf({info: event.info, cwd: event.cwd});
+      });
+      return () => disposable.dispose();
+    },
+    () =>
+      serverAPI.onConnectOrReconnect(() =>
+        serverAPI.postMessage({
+          type: 'requestRepoInfo',
+        }),
+      ),
+  ],
+});
+
+export const repositoryInfo = selector<RepoInfo | undefined>({
+  key: 'repositoryInfo',
+  get: ({get}) => {
+    const data = get(repositoryData);
+    return data?.info;
+  },
+  set: ({set}, value) => {
+    set(repositoryData, last => ({
+      ...last,
+      info: value instanceof DefaultValue ? undefined : value,
+    }));
+  },
+});
+
+export const serverCwd = selector<string>({
+  key: 'serverCwd',
+  get: ({get}) => {
+    const data = get(repositoryData);
+    return data?.cwd ?? initialParams.get('cwd') ?? '';
+  },
+});
 
 /**
  * Latest fetched uncommitted file changes from the server, without any previews.

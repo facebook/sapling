@@ -6,7 +6,7 @@
 from edenscm import error, registrar
 from edenscm.i18n import _
 
-from . import createremote, isworkingcopy, latest, show, update
+from . import createremote, isworkingcopy, labels, latest, show, update
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -23,7 +23,7 @@ def snapshot(ui, repo, **opts):
 
 subcmd = snapshot.subcommand(
     categories=[
-        ("Manage snapshots", ["create", "update"]),
+        ("Manage snapshots", ["create", "update", "add-labels", "remove-labels"]),
         ("Query snapshots", ["show"]),
     ]
 )
@@ -40,6 +40,15 @@ subcmd = snapshot.subcommand(
                 "how long the snapshot should last for, seconds to days supported (e.g. 60s, 90d, 1h30m)"
             ),
             _("LIFETIME"),
+        ),
+        (
+            "",
+            "labels",
+            "",
+            _(
+                "comma-separated list of named labels to be associated with the snapshot. Named snapshots will not expire"
+            ),
+            _("LABELS"),
         ),
         (
             "",
@@ -143,3 +152,37 @@ def isworkingcopycmd(*args, **kwargs):
 def latestcmd(*args, **kwargs):
     """information regarding the latest created/restored snapshot"""
     latest.latest(*args, **kwargs)
+
+
+@subcmd(
+    "add-labels",
+    [
+        (
+            "",
+            "labels",
+            "",
+            _("comma-separated list of named labels to be added to the snapshot"),
+        ),
+    ],
+    _("ID"),
+)
+def add_labels(*args, **kwargs):
+    """Associate new labels with an existing snapshot"""
+    labels.add_labels(*args, **kwargs)
+
+
+@subcmd(
+    "remove-labels",
+    [
+        (
+            "",
+            "labels",
+            "",
+            _("comma-separated list of named labels to be removed from the snapshot"),
+        ),
+    ],
+    _("ID"),
+)
+def remove_labels(*args, **kwargs):
+    """Remove associated labels from an existing snapshot"""
+    labels.remove_labels(*args, **kwargs)

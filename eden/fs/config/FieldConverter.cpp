@@ -27,12 +27,12 @@ constexpr std::array<folly::StringPiece, 4> kEnvVars = {
 /**
  * Check if string represents a well-formed file path.
  */
-bool isValidAbsolutePath(folly::StringPiece path) {
+bool isValidAbsolutePath(string_view path) {
   // All we really care about here is making sure that
   // normalizeBestEffort() isn't going to treat the path as relatively.  We
   // probably should just add an option to normalizeBestEffort() to make it
   // reject relative paths.
-  return path.startsWith(detail::kRootStr);
+  return path.starts_with(detail::kRootStr);
 }
 } // namespace
 

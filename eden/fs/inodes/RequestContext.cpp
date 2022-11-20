@@ -31,17 +31,17 @@ RequestContext::~RequestContext() noexcept {
       requestWatchList_.reset();
     }
 
-    if (auto pid = getClientPid(); pid.has_value()) {
-      switch (getEdenTopStats().getFetchOrigin()) {
-        case Origin::FromMemoryCache:
+    if (auto pid = fsObjectFetchContext_->getClientPid()) {
+      switch (fsObjectFetchContext_->getEdenTopStats().getFetchOrigin()) {
+        case ObjectFetchContext::Origin::FromMemoryCache:
           pal_.recordAccess(
               *pid, ProcessAccessLog::AccessType::FsChannelMemoryCacheImport);
           break;
-        case Origin::FromDiskCache:
+        case ObjectFetchContext::Origin::FromDiskCache:
           pal_.recordAccess(
               *pid, ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
           break;
-        case Origin::FromNetworkFetch:
+        case ObjectFetchContext::Origin::FromNetworkFetch:
           pal_.recordAccess(
               *pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
           break;

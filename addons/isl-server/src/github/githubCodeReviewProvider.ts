@@ -104,7 +104,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   );
 
   private query<D, V>(query: string, variables: V): Promise<D | undefined> {
-    return queryGraphQL<D, V>(query, variables);
+    return queryGraphQL<D, V>(query, variables, this.codeReviewSystem.hostname);
   }
 
   public dispose() {

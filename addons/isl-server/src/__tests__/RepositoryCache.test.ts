@@ -81,8 +81,11 @@ describe('RepositoryCache', () => {
     const repo = await ref.promise;
     const disposeFunc = (repo as Repository).dispose;
 
+    expect(cache.numberOfActiveServers()).toBe(1);
+
     ref.unref();
     expect(disposeFunc).toHaveBeenCalledTimes(1);
+    expect(cache.numberOfActiveServers()).toBe(0);
   });
 
   it('Can dispose references before the repo promise has resolved', async () => {
@@ -105,6 +108,8 @@ describe('RepositoryCache', () => {
     const ref2 = cache.getOrCreate('sl', mockLogger, '/path/to/repo');
     const repo2 = await ref2.promise;
 
+    expect(cache.numberOfActiveServers()).toBe(2);
+
     expect(repo1).toBe(repo2);
 
     ref1.unref();
@@ -118,6 +123,8 @@ describe('RepositoryCache', () => {
 
     const ref2 = cache.getOrCreate('sl', mockLogger, '/path/to/repo/cwd2');
     const repo2 = await ref2.promise;
+
+    expect(cache.numberOfActiveServers()).toBe(2);
 
     expect(repo1).toBe(repo2);
 
@@ -146,6 +153,7 @@ describe('RepositoryCache', () => {
 
     const repo = await ref1.promise;
     await ref2.promise;
+    expect(cache.numberOfActiveServers()).toBe(2);
 
     const disposeFunc = (repo as Repository).dispose;
 
@@ -153,6 +161,8 @@ describe('RepositoryCache', () => {
     expect(disposeFunc).not.toHaveBeenCalled();
     ref2.unref();
     expect(disposeFunc).toHaveBeenCalledTimes(1);
+
+    expect(cache.numberOfActiveServers()).toBe(0);
   });
 
   it('does not re-use diposed repos', async () => {
@@ -164,6 +174,8 @@ describe('RepositoryCache', () => {
 
     const ref2 = cache.getOrCreate('sl', mockLogger, '/path/to/repo/cwd2');
     const repo2 = await ref2.promise;
+
+    expect(cache.numberOfActiveServers()).toBe(1);
 
     expect(repo1).not.toBe(repo2);
     expect((repo1 as Repository).dispose).toHaveBeenCalledTimes(1);

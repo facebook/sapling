@@ -59,12 +59,10 @@ Cloning adds --configfile values to .hg/hgrc
   [paths]
   default = test:repo_server
   
-  # path aliases to other clones of this repo in URLs or filesystem paths
+  # URL aliases to other repo sources
   # (see 'hg help config.paths' for more info)
   #
-  # default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
-  # my-clone        = /home/jdoe/jdoes-clone
+  # my-fork = https://example.com/jdoe/example-repo
   
   [ui]
   # name and email (local to this repository, optional), e.g.

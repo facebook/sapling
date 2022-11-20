@@ -21,7 +21,7 @@ jobs:
       run: vcpkg integrate install
     - name: set-env SAPLING_VERSION
       shell: bash
-      run: echo "SAPLING_VERSION=$(ci/tag-name.sh | tr \- .)" >> $GITHUB_ENV
+      run: echo "SAPLING_VERSION=$(ci/tag-name.sh)" >> $GITHUB_ENV
     - name: build and zip
       run: python3 ./eden/scm/packaging/windows/build_windows_zip.py
     - name: rename .zip

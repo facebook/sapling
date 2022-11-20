@@ -28,7 +28,7 @@ pub struct Identity {
 struct UserIdentity {
     /// Name of the binary. Used for showing help messages
     ///
-    /// Example: `Checkout failed. Resume with 'sl checkout --continue'`
+    /// Example: `Checkout failed. Resume with 'sl goto --continue'`
     cli_name: &'static str,
 
     /// Name of the product
