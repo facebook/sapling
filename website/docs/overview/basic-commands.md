@@ -148,7 +148,7 @@ diff --git a/build.sh b/build.sh
      PATH="$TOOLCHAIN_DIR:$PATH"
  fi
 
-+if [[ -n $TEST_ENVRIONMENT ]]; then
++if [[ -n $TEST_ENVIRONMENT ]]; then
 +    exit 1
 +fi
 +
@@ -293,7 +293,7 @@ diff --git a/build.sh b/build.sh
      PATH="$TOOLCHAIN_DIR:$PATH"
  fi
 
-+if [[ -n $TEST_ENVRIONMENT ]]; then
++if [[ -n $TEST_ENVIRONMENT ]]; then
 +    exit 1
 +fi
 +
