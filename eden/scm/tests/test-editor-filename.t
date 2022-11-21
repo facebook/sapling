@@ -74,8 +74,6 @@ FIXME: Fails (in ui.loadrepoconfig) if path includes something like $HOME.
   $ newrepo 'a && " b"'
 #endif
 
-  $ pwd
-  $TESTTMP/a && " b"
   $ cat >> edit.py << 'EOF'
   > import sys
   > paths = sys.argv[1:]
@@ -85,6 +83,20 @@ FIXME: Fails (in ui.loadrepoconfig) if path includes something like $HOME.
   >         print(f"content: {f.read()}")
   > EOF
 
+#if windows
+  $ pwd
+  $TESTTMP\a && b
+  $ HGEDITOR='python edit.py' hg debugshell << 'EOS'
+  > repopath = repo.svfs.join("")
+  > text = "<message for editor>"
+  > user = "Foo Bar <foo@bar.com>"
+  > ui.edit(text=text, user=user, repopath=repopath, action="test")
+  > EOS
+  editor got 1 path(s)\r (esc)
+  content: <message for editor>\r (esc)
+#else
+  $ pwd
+  $TESTTMP/a && " b"
   $ HGEDITOR='python edit.py' hg debugshell << 'EOS'
   > repopath = repo.svfs.join("")
   > text = "<message for editor>"
@@ -93,4 +105,4 @@ FIXME: Fails (in ui.loadrepoconfig) if path includes something like $HOME.
   > EOS
   editor got 1 path(s)
   content: <message for editor>
-
+#endif
