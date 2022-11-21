@@ -360,7 +360,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <OpenComparisonViewButton
               comparison={{type: ComparisonType.Committed, hash: commit.hash}}
             />
-            <ChangedFiles files={commit.filesSample} />
+            <ChangedFiles files={commit.filesSample} showFileActions={false} />
           </Section>
         )}
       </div>

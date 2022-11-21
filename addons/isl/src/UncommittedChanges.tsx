@@ -45,7 +45,8 @@ export function ChangedFiles({
   files,
   deselectedFiles,
   setDeselectedFiles,
-}: {files: Array<ChangedFile>} & EnsureAssignedTogether<{
+  showFileActions,
+}: {files: Array<ChangedFile>; showFileActions: boolean} & EnsureAssignedTogether<{
   deselectedFiles?: Set<string>;
   setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
 }>) {
@@ -94,7 +95,7 @@ export function ChangedFiles({
               }}>
               {file.path}
             </span>
-            <FileActions file={file} />
+            {showFileActions ? <FileActions file={file} /> : null}
           </div>
         );
       })}
@@ -260,12 +261,13 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         )}
       </div>
       {conflicts?.files != null ? (
-        <ChangedFiles files={conflicts.files} />
+        <ChangedFiles files={conflicts.files} showFileActions={true} />
       ) : (
         <ChangedFiles
           files={uncommittedChanges}
           deselectedFiles={deselectedFiles}
           setDeselectedFiles={setDeselectedFiles}
+          showFileActions={true}
         />
       )}
       {conflicts != null || place !== 'main' ? null : (
@@ -356,6 +358,7 @@ function FileActions({file}: {file: ChangedFile}) {
           className="file-show-on-hover"
           key={file.path}
           appearance="icon"
+          data-testid="file-revert-button"
           onClick={() => {
             platform
               .confirm(t('Are you sure you want to revert $file?', {replace: {$file: file.path}}))
@@ -435,7 +438,11 @@ function FileActions({file}: {file: ChangedFile}) {
       </Tooltip>,
     );
   }
-  return <div className="file-actions">{actions}</div>;
+  return (
+    <div className="file-actions" data-testid="file-actions">
+      {actions}
+    </div>
+  );
 }
 
 /**

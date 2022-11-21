@@ -15,7 +15,8 @@ import {
   closeCommitInfoSidebar,
   simulateRepoConnected,
 } from '../testUtils';
-import {render, screen} from '@testing-library/react';
+import {CommandRunner} from '../types';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
@@ -61,28 +62,58 @@ describe('CommitTreeList', () => {
       expect(screen.getByText('You are here')).toBeInTheDocument();
     });
 
-    it('renders uncommitted changes', () => {
-      act(() => {
-        expectMessageSentToServer({
-          type: 'subscribeUncommittedChanges',
-          subscriptionID: expect.anything(),
-        });
-        simulateUncommittedChangedFiles({
-          value: [
-            {path: 'src/file.js', status: 'M'},
-            {path: 'src/file_add.js', status: 'A'},
-            {path: 'src/file_removed.js', status: 'R'},
-            {path: 'src/file_untracked.js', status: '?'},
-            {path: 'src/file_missing.js', status: '!'},
-          ],
+    describe('uncommitted changes', () => {
+      beforeEach(() => {
+        act(() => {
+          expectMessageSentToServer({
+            type: 'subscribeUncommittedChanges',
+            subscriptionID: expect.anything(),
+          });
+          simulateUncommittedChangedFiles({
+            value: [
+              {path: 'src/file.js', status: 'M'},
+              {path: 'src/file_add.js', status: 'A'},
+              {path: 'src/file_removed.js', status: 'R'},
+              {path: 'src/file_untracked.js', status: '?'},
+              {path: 'src/file_missing.js', status: '!'},
+            ],
+          });
         });
       });
 
-      expect(screen.getByText('src/file.js', {exact: false})).toBeInTheDocument();
-      expect(screen.getByText('src/file_add.js', {exact: false})).toBeInTheDocument();
-      expect(screen.getByText('src/file_removed.js', {exact: false})).toBeInTheDocument();
-      expect(screen.getByText('src/file_untracked.js', {exact: false})).toBeInTheDocument();
-      expect(screen.getByText('src/file_missing.js', {exact: false})).toBeInTheDocument();
+      it('renders uncommitted changes', () => {
+        expect(screen.getByText('src/file.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('src/file_add.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('src/file_removed.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('src/file_untracked.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('src/file_missing.js', {exact: false})).toBeInTheDocument();
+      });
+
+      it('shows file actions', () => {
+        const fileActions = screen.getAllByTestId('file-actions');
+        expect(fileActions).toHaveLength(5);
+        const revertButtons = screen.getAllByTestId('file-revert-button');
+        expect(revertButtons).toHaveLength(4); // modified, added, removed, missing
+      });
+
+      it('runs revert command when clicking revert button', async () => {
+        const revertButtons = screen.getAllByTestId('file-revert-button');
+        jest.spyOn(window, 'confirm').mockImplementation(() => true);
+        act(() => {
+          fireEvent.click(revertButtons[0]);
+        });
+        expect(window.confirm).toHaveBeenCalled();
+        await waitFor(() => {
+          expectMessageSentToServer({
+            type: 'runOperation',
+            operation: {
+              args: ['revert', {path: 'src/file.js', type: 'repo-relative-file'}],
+              id: expect.anything(),
+              runner: CommandRunner.Sapling,
+            },
+          });
+        });
+      });
     });
 
     it('shows log errors', () => {
