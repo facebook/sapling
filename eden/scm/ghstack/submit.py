@@ -99,7 +99,7 @@ def strip_mentions(body: str) -> str:
     return RE_MENTION.sub(r'\1', body)
 
 
-STACK_HEADER = "Stack from [ghstack](https://{github_url}/ezyang/ghstack) (oldest at bottom)"
+STACK_HEADER = "Stack from [ghstack](https://github.com/ezyang/ghstack) (oldest at bottom)"
 
 
 @dataclass
@@ -342,7 +342,7 @@ class Submitter(object):
         self.base_tree = base_tree
         self.stack_base = stack_base
         self.update_fields = update_fields
-        self.stack_header = stack_header.format(github_url=github_url)
+        self.stack_header = stack_header
         self.stack_meta = []
         self.ignored_diffs = []
         self.stack = stack
