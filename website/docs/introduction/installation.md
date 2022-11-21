@@ -16,36 +16,6 @@ import CodeBlock from '@theme/CodeBlock';
 
 ## Prebuilt binaries
 
-### Linux
-
-#### Ubuntu 22.04
-
-Download using `curl`:
-
-<CodeBlock>
-curl -L -O {ubuntu22.url}
-</CodeBlock>
-
-Then install:
-
-<CodeBlock>
-sudo apt install -y ./{ubuntu22.name}
-</CodeBlock>
-
-#### Ubuntu 20.04
-
-Download using `curl`:
-
-<CodeBlock>
-curl -L -O {ubuntu20.url}
-</CodeBlock>
-
-Then install:
-
-<CodeBlock>
-sudo apt install -y ./{ubuntu20.name}
-</CodeBlock>
-
 ### macOS
 
 First, make sure that [Homebrew](https://brew.sh/) is installed on your system. Then follow the instructions depending on your architecture.
@@ -121,6 +91,36 @@ PS> Set-Alias -Name sl -Value 'C:\Program Files\Sapling\sl.exe' -Force -Option C
 PS> sl --version
 Sapling 20221108.091155.887dee39
 ```
+
+### Linux
+
+#### Ubuntu 22.04
+
+Download using `curl`:
+
+<CodeBlock>
+curl -L -O {ubuntu22.url}
+</CodeBlock>
+
+Then install:
+
+<CodeBlock>
+sudo apt install -y ./{ubuntu22.name}
+</CodeBlock>
+
+#### Ubuntu 20.04
+
+Download using `curl`:
+
+<CodeBlock>
+curl -L -O {ubuntu20.url}
+</CodeBlock>
+
+Then install:
+
+<CodeBlock>
+sudo apt install -y ./{ubuntu20.name}
+</CodeBlock>
 
 ## Building from source
 
