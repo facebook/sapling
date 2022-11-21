@@ -17,9 +17,9 @@ context = { version = "0.1.0", path = "../../server/context" }
 encoding_rs = "0.8"
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
-git-actor = "0.10"
+git-actor = "0.13"
 git-hash = "0.9"
-git-object = "0.19"
+git-object = "0.22"
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 hyper-openssl = "0.9"
