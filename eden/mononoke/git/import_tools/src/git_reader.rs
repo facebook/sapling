@@ -110,7 +110,10 @@ impl GitRepoReader {
         let send_request = self.send_request.clone();
         let oid = oid.to_owned();
         async move {
-            let permit = send_request.reserve().await?;
+            let permit = send_request
+                .reserve()
+                .await
+                .context("get_object: failed to send request")?;
             let (sender, recv) = oneshot::channel();
             outstanding_requests
                 .lock()
@@ -121,7 +124,7 @@ impl GitRepoReader {
 
             permit.send(oid);
 
-            recv.await?
+            recv.await.context("get_object: received an error")?
         }
     }
 }
@@ -154,7 +157,13 @@ fn parse_cat_header(header: &str) -> Result<(ObjectId, Result<(Kind, usize)>)> {
 }
 
 fn convert_to_object(kind: Kind, bytes: Vec<u8>) -> Result<Object> {
-    let object_ref = ObjectRef::from_bytes(kind, &bytes)?;
+    let object_ref = ObjectRef::from_bytes(kind, &bytes).with_context(|| {
+        format!(
+            "Failed to parse:\n```\n{}\n```\ninto object of kind {:?}",
+            String::from_utf8_lossy(&bytes),
+            kind
+        )
+    })?;
     Ok(object_ref.into_owned())
 }
 
@@ -189,7 +198,10 @@ async fn read_objects_task(
                 Ok(d) => d,
                 Err(e) => {
                     if let Some(sender) = maybe_sender {
-                        let _ = sender.send(Err(e));
+                        let _ = sender.send(
+                            Err(e)
+                                .with_context(|| format!("read_objects_task failed for {}", &buf)),
+                        );
                     }
                     continue;
                 }
@@ -200,13 +212,19 @@ async fn read_objects_task(
             // We need to read size bytes, and then send it on as an object to unblock our listener
             let mut bytes = Vec::new();
             bytes.resize(size, 0u8);
-            reader.read_exact(&mut bytes).await?;
+            reader
+                .read_exact(&mut bytes)
+                .await
+                .with_context(|| format!("failed to read exactly {} bytes", size))?;
             if let Some(sender) = maybe_sender {
                 let object = convert_to_object(kind, bytes);
                 let _ = sender.send(object);
             }
             // Finally, there's an empty line after the object, but before the next header. Consume it
-            reader.read_line(&mut buf).await?;
+            reader
+                .read_line(&mut buf)
+                .await
+                .context("expected an empty line after the object but before the next header")?;
             buf.clear();
         }
     }

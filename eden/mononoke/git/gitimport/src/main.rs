@@ -12,6 +12,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
@@ -213,13 +214,19 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     };
 
     let gitimport_result: LinkedHashMap<_, _> =
-        import_tools::gitimport(&ctx, path, uploader, &target, &prefs).await?;
+        import_tools::gitimport(&ctx, path, uploader, &target, &prefs)
+            .await
+            .context("gitimport failed")?;
     if args.derive_hg {
-        derive_hg(&ctx, &repo, gitimport_result.iter()).await?;
+        derive_hg(&ctx, &repo, gitimport_result.iter())
+            .await
+            .context("derive_hg failed")?;
     }
 
     if !args.suppress_ref_mapping {
-        let refs = import_tools::read_git_refs(path, &prefs).await?;
+        let refs = import_tools::read_git_refs(path, &prefs)
+            .await
+            .context("read_git_refs failed")?;
         for (name, commit) in refs {
             let bcs_id = gitimport_result.get(&commit);
             info!(

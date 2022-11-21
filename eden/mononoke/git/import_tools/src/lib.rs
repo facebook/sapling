@@ -289,17 +289,24 @@ pub async fn read_git_refs(
         .stdout(Stdio::piped())
         .arg("for-each-ref")
         .arg("--format=%(objectname) %(refname)")
-        .spawn()?;
+        .spawn()
+        .with_context(|| format!("failed to run git with {:?}", prefs.git_command_path))?;
     let stdout = BufReader::new(command.stdout.take().context("stdout not set up")?);
     let mut lines = stdout.lines();
 
     let mut refs = BTreeMap::new();
 
-    while let Some(line) = lines.next_line().await? {
+    while let Some(line) = lines
+        .next_line()
+        .await
+        .context("git command didn't output anything")?
+    {
         if let Some((oid_str, ref_name)) = line.split_once(' ') {
             let mut oid: ObjectId = oid_str.parse().context("reading refs")?;
             loop {
-                let object = reader.get_object(&oid).await?;
+                let object = reader.get_object(&oid).await.with_context(|| {
+                    format!("unable to read git object: {oid} for ref: {ref_name}")
+                })?;
                 match object {
                     Object::Tree(_) => {
                         // This happens in the Linux kernel repo, because Linus was being clever - a commit and a tree
