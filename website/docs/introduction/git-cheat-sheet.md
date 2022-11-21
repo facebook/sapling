@@ -84,7 +84,7 @@ See `sl help revset` for more ways of referencing commits.
 | Interactive commit    | `git add -p`                         | `sl commit -i / sl amend -i`       |
 | Cherry-pick           | `git cherry-pick COMMIT`             | `sl graft COMMIT`                  |
 | Stash changes         | `git stash`                          | `sl shelve`                        |
-| Unstach changes       | `git stash pop`                      | `sl unshelve`                      |
+| Unstash changes       | `git stash pop`                      | `sl unshelve`                      |
 
 ### Undo, redo, and reverting
 
