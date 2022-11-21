@@ -7,7 +7,7 @@ curve25519-dalek = { git = "https://github.com/hariria/curve25519-dalek", rev = 
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
 deltae = { git = "https://github.com/markbt/deltae", rev = "1c6e9c7c9184751bd17795d78896d522e77a2ce4" }
 graphql-parser = { git = "https://github.com/vmagro/graphql-parser", rev = "c778917f57f6b2c26d9291819b9bb341a2f5948a" }
-libc = { git = "https://github.com/fbsource/libc", rev = "e133052d9d977c42eb2669e755e3abd134c293e6" }
+libc = { git = "https://github.com/fbsource/libc", rev = "52f1a1c7f6282681dfb22d91e7c3acbddbc75ba4" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
