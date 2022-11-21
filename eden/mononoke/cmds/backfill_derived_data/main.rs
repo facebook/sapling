@@ -594,7 +594,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 true, // enable shard (repo) level healing
             )?;
             helpers::block_execute(
-                executor.block_and_execute(&logger),
+                executor.block_and_execute(&logger, Arc::new(AtomicBool::new(false))),
                 fb,
                 &std::env::var("TW_JOB_NAME")
                     .unwrap_or_else(|_| "backfill_derived_data".to_string()),

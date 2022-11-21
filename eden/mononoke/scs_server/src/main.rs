@@ -297,7 +297,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         // on its own dedicated task spawned off the common tokio runtime.
         runtime.spawn({
             let logger = logger.clone();
-            async move { executor.block_and_execute(&logger).await }
+            {
+                cloned!(will_exit);
+                async move { executor.block_and_execute(&logger, will_exit).await }
+            }
         });
     }
 

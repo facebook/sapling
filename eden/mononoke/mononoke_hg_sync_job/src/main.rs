@@ -1400,7 +1400,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 true, // enable shard (repo) level healing
             )?;
             block_execute(
-                executor.block_and_execute(&logger),
+                executor.block_and_execute(&logger, Arc::new(AtomicBool::new(false))),
                 fb,
                 &std::env::var("TW_JOB_NAME").unwrap_or_else(|_| "hg_sync_job".to_string()),
                 matches.logger(),

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -30,7 +31,11 @@ impl ShardedProcessExecutor {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 
-    pub async fn block_and_execute(&mut self, _logger: &Logger) -> Result<()> {
+    pub async fn block_and_execute(
+        &mut self,
+        _logger: &Logger,
+        _terminate_process: Arc<AtomicBool>,
+    ) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 

@@ -210,7 +210,9 @@ pub async fn run_sharded(
         Arc::new(validate_process),
         true, // enable shard (repo) level healing
     )?;
-    executor.block_and_execute(&logger).await
+    executor
+        .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
+        .await
 }
 
 pub async fn run_unsharded(
