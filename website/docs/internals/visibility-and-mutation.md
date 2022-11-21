@@ -1,10 +1,10 @@
 import {SLCommand} from '@site/elements'
 
-# Visibility and Mutation
+# Visibility and mutation
 
 The way Sapling tracks which commits are visible to an individual developer, and how it tracks the ways in which commits have been mutated, differs from other source control systems.  Designing a system to allow mutations of the otherwise immutable commit graph brings its own scaling challenges.  This document describes the way these have been addressed in Sapling.
 
-## Commit Visibility
+## Commit visibility
 
 A Sapling repository can contain more commits than the commits you're currently working on.  For example, when you amend a commit, the old version of the commit remains in the repository.  You can still access it directly using its hash, but otherwise the commit is *hidden*.
 
@@ -19,7 +19,7 @@ While most visibility operations are automatic, you can also manually hide and u
 
 In order to scale to thousands of developers contributing to the same repository, commit visibility is entirely local.  Which commits are visible to you are not shared with other developers, so if you hide a commit, it is only hidden for you.
 
-## Commit Mutation
+## Commit mutation
 
 Sapling tracks whenever commits are modified using commands like rebase or amend.  The records of these changes are called *mutations*.
 

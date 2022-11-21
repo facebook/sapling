@@ -31,7 +31,7 @@ simplify everyday workflows and provide an extremely clear picture of your local
 which is often all that's needed.
 
 
-### Working with Commits and Stacks
+### Working with commits and stacks
 The main commit tree in ISL has an indicator that says **You are here**, showing
 which commit you are currently on.
 You can go to different commits by hovering on them and clicking `Goto` to run <Command name="goto" linkText="sl goto" />.
@@ -54,7 +54,7 @@ Commit any uncommitted changes first to work around this.
 Drag-and-drop performs a <Command name="rebase" linkText="sl rebase" />, including all commits stacked on top of the commit being dragged. If you want to re-arrange commits within your stack, consider using [`sl histedit`](../commands/histedit.md).
 
 
-### Running Commands
+### Running commands
 Buttons in ISL run Sapling commands for you.
 For example, there is a <Command name="pull" linkText="Pull" /> button at the top left to pull the latest changes from upstream.
 
@@ -70,7 +70,7 @@ Commands will automatically queue up to be run as you interact with the UI. ISL 
 while previous commands are running or queued up. This is kind of like chaining together commands on the CLI: `sl pull && sl rebase main && sl goto main`.
 Similar to `&&` on the CLI, if any command along the way fails or hits merge conflicts, all further queued commands will be cancelled.
 
-### Making Commits and Amending
+### Making commits and amending
 
 Changes to files in your working copy appear automatically in ISL,
 just like if you had run <SLCommand name="status" />.
@@ -91,7 +91,7 @@ let you create or amend your commit using your message.
 <ThemedImage alt="Commit Form" light="/img/isl/commit_as_light.png" dark="/img/isl/commit_as_dark.png" />
 
 
-### Interacting with Code Review
+### Interacting with code review
 
 :::tip
 
@@ -100,7 +100,7 @@ In order to interact with GitHub for code review in ISL, be sure to install the 
 :::
 
 
-ISL considers Code Review an integral part of the source control workflow. When making commits, you usually want to submit it for review.
+ISL considers code review an integral part of the source control workflow. When making commits, you usually want to submit it for review.
 In the commit form on the right, ISL has a button to _Commit and Submit_, as well as _Amend and Submit_.
 
 These will run a submit command on your stack of commits to submit them for code review on GitHub.
@@ -122,7 +122,7 @@ This badge also shows the CI build status and how many comments there are.
 
 
 
-### Resolving Merge Conflicts
+### Resolving merge conflicts
 Running some commands like <SLCommand name="rebase" /> can sometimes lead to merge conflicts. When merge conflicts are detected, ISL will
 change the list of uncommitted changes into a list of unresolved conflicts.
 
@@ -137,7 +137,7 @@ It is possible to hit merge conflicts multiple times, for example, when rebasing
 <ThemedImage alt="Resolved Merge Conflicts" light="/img/isl/conflicts_resolved_light.png" dark="/img/isl/conflicts_resolved_dark.png" />
 
 
-### Comparing Changes
+### Comparing changes
 ISL includes a comparison view to quickly see all your changes, similar to  <SLCommand name="diff" />
 One common use case is to look over all your uncommitted local changes before you submit them for code review.
 
@@ -162,7 +162,7 @@ If Watchman is installed on your path, it will automatically be used.
 Note that your repository must also have a [`.watchmanconfig`](https://facebook.github.io/watchman/docs/config.html) in the root directory to make use of this feature.
 
 
-## Connecting to ISL Running on Another Machine
+## Connecting to ISL running on another machine
 
 If you are using Sapling on a remote machine, but want to use ISL, you have two options:
 
