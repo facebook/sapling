@@ -120,7 +120,10 @@ def debug_pr_marker(ui, repo, **opts):
 
 @templatekeyword("github_repo")
 def github_repo(repo, ctx, templ, **args) -> bool:
-    return github_repo_util.check_github_repo(repo) is not None
+    try:
+        return github_repo_util.check_github_repo(repo) is not None
+    except Exception:
+        return False
 
 
 def _get_pull_request_field(field_name: str, repo, ctx, **args):
