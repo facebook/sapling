@@ -113,10 +113,21 @@ struct GitimportArgs {
 
 #[derive(Subcommand)]
 enum GitimportSubcommand {
+    /// Import all of the commits in this repo
     FullRepo,
-    GitRange { git_from: String, git_to: String },
-    MissingForCommit { git_commit: String },
-    ImportTreeAsSingleBonsaiChangeset { git_commit: String },
+    /// Import all commits between <GIT_FROM> and <GIT_TO>
+    GitRange {
+        git_from: String,
+        git_to: String,
+    },
+    /// Import <GIT_COMMIT> and all its history that's not yet been imported.
+    /// Makes a pass over the repo on construction to find missing history
+    MissingForCommit {
+        git_commit: String,
+    },
+    ImportTreeAsSingleBonsaiChangeset {
+        git_commit: String,
+    },
 }
 
 #[fbinit::main]
