@@ -15,7 +15,7 @@ This section will walk you through cloning your first repo, making commits, and 
 Once you have `sl` [installed](./installation.md) on the command line, you should start out by configuring the identity you wish to use when authoring commits:
 
 ```
-$ sl config --user ui.username 'Alyssa P. Hacker <alyssa@example.com>'
+sl config --user ui.username 'Alyssa P. Hacker <alyssa@example.com>'
 ```
 
 If you do not already have a global Sapling config file, the command above will create it for you. The location of the file varies by platform, though you can run `sl configfile --user` to find it.
@@ -183,5 +183,5 @@ On ReviewStack, the diff and the timeline for a pull request are displayed side-
 By default, pull requests in the Smartlog displayed by `sl` are linked to the corresponding page on `github.com`, but you can run the following to configure the Smartlog to link to `reviewstack.dev` instead:
 
 ```
-$ sl config --user github.pull_request_domain reviewstack.dev
+sl config --user github.pull_request_domain reviewstack.dev
 ```
