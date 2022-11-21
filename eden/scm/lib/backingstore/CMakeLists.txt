@@ -21,7 +21,7 @@ set_target_properties(
   backingstore
   PROPERTIES
   PUBLIC_HEADER
-  "c_api/HgNativeBackingStore.h;c_api/RustBackingStore.h"
+  "c_api/SaplingNativeBackingStore.h;c_api/BackingStoreBindings.h"
 )
 target_include_directories(backingstore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
