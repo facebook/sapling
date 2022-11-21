@@ -17,12 +17,5 @@ fi
 shift 1
 fbsource=$(hg root)
 
-
-
-if [ -n "$USEBUCK1" ]; then
-    set -x
-    "$fbsource/fbcode/buck-out/gen/eden/mononoke/tests/integration/integration_runner_real.par" "$fbsource/fbcode/buck-out/gen/eden/mononoke/tests/integration$SUBDIR/$NAME-manifest/$NAME-manifest.json" "$@"
-else
-    set -x
-    "$fbsource/buck-out/v2/gen/fbcode/eden/mononoke/tests/integration/integration_runner_real.par" "$fbsource/buck-out/v2/gen/fbcode/eden/mononoke/tests/integration$SUBDIR/out/$NAME-manifest.json" "$@"
-fi
+set -x
+"$fbsource/buck-out/v2/gen/fbcode/eden/mononoke/tests/integration/integration_runner_real.par" "$fbsource/buck-out/v2/gen/fbcode/eden/mononoke/tests/integration$SUBDIR/$NAME-manifest.json" "$@"
