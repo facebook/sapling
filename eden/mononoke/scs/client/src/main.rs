@@ -26,7 +26,7 @@ use crate::render::OutputTarget;
 mod args;
 mod commands;
 mod connection;
-pub(crate) mod lib;
+pub(crate) mod library;
 mod render;
 pub(crate) mod util;
 

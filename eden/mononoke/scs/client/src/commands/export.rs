@@ -37,8 +37,8 @@ use crate::args::progress::ProgressArgs;
 use crate::args::progress::ProgressOutput;
 use crate::args::repo::RepoArgs;
 use crate::connection::Connection;
-use crate::lib::path_tree::PathItem;
-use crate::lib::path_tree::PathTree;
+use crate::library::path_tree::PathItem;
+use crate::library::path_tree::PathTree;
 use crate::render::Render;
 use crate::ScscApp;
 

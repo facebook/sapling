@@ -19,7 +19,7 @@ use serde::Serialize;
 use source_control::types as thrift;
 
 use crate::args::commit_id::map_commit_ids;
-use crate::lib::commit_id::render_commit_id;
+use crate::library::commit_id::render_commit_id;
 
 #[derive(Serialize)]
 pub(crate) struct BookmarkInfo {

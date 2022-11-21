@@ -19,7 +19,7 @@ use source_control as thrift;
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::repo::RepoArgs;
-use crate::lib::diff::diff_files;
+use crate::library::diff::diff_files;
 use crate::render::Render;
 use crate::ScscApp;
 

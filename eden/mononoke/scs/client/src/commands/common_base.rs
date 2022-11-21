@@ -20,7 +20,7 @@ use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
-use crate::lib::commit_id::render_commit_id;
+use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
 

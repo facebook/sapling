@@ -26,8 +26,8 @@ use crate::args::commit_id::CommitIdArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::path::PathArgs;
 use crate::args::repo::RepoArgs;
-use crate::lib::commit_id::render_commit_id;
-use crate::lib::datetime;
+use crate::library::commit_id::render_commit_id;
+use crate::library::datetime;
 use crate::render::Render;
 use crate::ScscApp;
 

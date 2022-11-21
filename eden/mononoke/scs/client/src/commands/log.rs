@@ -17,9 +17,9 @@ use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
 use crate::args::commit_id::SchemeArgs;
 use crate::args::repo::RepoArgs;
-use crate::lib::commit::render_commit_info;
-use crate::lib::commit::render_commit_summary;
-use crate::lib::commit::CommitInfo as CommitInfoOutput;
+use crate::library::commit::render_commit_info;
+use crate::library::commit::render_commit_summary;
+use crate::library::commit::CommitInfo as CommitInfoOutput;
 use crate::render::Render;
 use crate::ScscApp;
 

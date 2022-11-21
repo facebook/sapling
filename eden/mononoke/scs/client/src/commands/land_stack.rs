@@ -23,7 +23,7 @@ use crate::args::commit_id::SchemeArgs;
 use crate::args::pushvars::PushvarArgs;
 use crate::args::repo::RepoArgs;
 use crate::args::service_id::ServiceIdArgs;
-use crate::lib::commit_id::render_commit_id;
+use crate::library::commit_id::render_commit_id;
 use crate::render::Render;
 use crate::ScscApp;
 
