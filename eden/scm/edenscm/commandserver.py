@@ -307,6 +307,15 @@ class server(object):
         if util.safehasattr(os, "getpgid"):
             hellomsg += "\n"
             hellomsg += "pgid: %d" % os.getpgid(0)
+        try:
+            import resource
+
+            nofile = min(resource.getrlimit(resource.RLIMIT_NOFILE))
+            if nofile > 0:
+                hellomsg += f"\nnofile: {nofile}"
+        except (ImportError, AttributeError, IndexError):
+            pass
+
         # write the hello msg in -one- chunk
         self.cout.write(pycompat.encodeutf8(hellomsg))
 

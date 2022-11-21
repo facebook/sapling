@@ -67,6 +67,7 @@ struct hgclient_tag_ {
   context_t ctx;
   unsigned int capflags;
   unsigned long long versionhash;
+  unsigned long nofile;
   double connectedat;
 };
 
@@ -358,6 +359,8 @@ static void readhello(hgclient_t* hgc) {
       hgc->pid = strtol(t + 2, NULL, 10);
     } else if (strncmp(s, "versionhash:", t - s + 1) == 0) {
       hgc->versionhash = strtoull(t + 2, NULL, 10);
+    } else if (strncmp(s, "nofile:", t - s + 1) == 0) {
+      hgc->nofile = strtoul(t + 2, NULL, 10);
     }
     s = u + 1;
   }
@@ -519,6 +522,11 @@ void hgc_close(hgclient_t* hgc) {
   freecontext(&hgc->ctx);
   close(hgc->sockfd);
   free(hgc);
+}
+
+unsigned long hgc_nofile(const hgclient_t* hgc) {
+  assert(hgc);
+  return hgc->nofile;
 }
 
 pid_t hgc_peerpgid(const hgclient_t* hgc) {

@@ -18,6 +18,7 @@ typedef struct hgclient_tag_ hgclient_t;
 hgclient_t* hgc_open(const char* sockname);
 void hgc_close(hgclient_t* hgc);
 
+unsigned long hgc_nofile(const hgclient_t* hgc);
 pid_t hgc_peerpgid(const hgclient_t* hgc);
 pid_t hgc_peerpid(const hgclient_t* hgc);
 unsigned long long hgc_versionhash(const hgclient_t* hgc);

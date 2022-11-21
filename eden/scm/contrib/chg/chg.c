@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/file.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -370,6 +371,26 @@ int chg_main(
       debugmsg("version matched (%llu)", versionhash);
     }
 #endif
+    // If a client has a higher RLIMIT_NOFILE, do not reuse the existing server.
+    unsigned long nofile = hgc_nofile(hgc);
+    if (nofile > 0) {
+      struct rlimit lim = {0, 0};
+      int r = getrlimit(RLIMIT_NOFILE, &lim);
+      if (r != 0)
+        abortmsgerrno("cannot getrlimit");
+      unsigned long cur = (unsigned long)lim.rlim_cur;
+      if (cur > nofile) {
+        debugmsg(
+            "RLIMIT_NOFILE incompatible (client %lu > server %lu)",
+            cur,
+            nofile);
+        killcmdserver(&opts);
+        needreconnect = 1;
+      } else {
+        debugmsg(
+            "RLIMIT_NOFILE compatible (client %lu <= server %lu)", cur, nofile);
+      }
+    }
     if (!needreconnect) {
       hgc_setenv(hgc, envp);
     }
