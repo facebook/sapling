@@ -10,7 +10,8 @@ This page assumes that you are familiar with Mercurial internals.
 Mercurial treats all commits as visible by default, using obsolescence data to
 mark obsoleted commits as invisible.
 
-Sapling treats all commits as invisible by default, using "visible heads"
+Sapling treats all commits as invisible by default, using ["visible
+heads"](./visibility-and-mutation#commit-visibility)
 and bookmark references to mark commits and their ancestors as visible. This
 is similar to Git.
 
@@ -32,16 +33,21 @@ them using commit hashes, they will be included.
 ## Phase
 
 Mercurial tracks phases (public, draft, secret) explicitly using "phase roots".
+Commits are public by default. Draft and secret roots are explicitly listed.
+The "phase roots" can grow unbounded and slow down the repo over time.
 
-Sapling infers phases from remote bookmarks and visibility. Remote bookmarks
-and their ancestors are considered public. Other visible commits are draft.
-Invisible commits are secret.
+Sapling infers phases from remote bookmarks and visibility. Commits are secret
+(invisible) by default. Main remote bookmarks and their ancestors are marked
+public. Other visible commits are draft.
 
+In Mercurial visibility and phase are separate concepts. A secret commit can be
+visible or invisible. In Sapling "secret" is just an alias to "invisible" -
+there are no "visible secret" commits.
 
 ## Obsolescence
 
 Mercurial uses the "obsstore" to track commit rewrites. Sapling uses
-"mutation". Their differences are:
+["mutation"](./visibility-and-mutation#commit-mutation). Their differences are:
 - Obsstore decides visibility. Mutation does not decide visibility.
 - Obsstore supports "prune" operation to remove a commit without a successor
   commit. Mutation requires at least one successor commit so it cannot track
@@ -58,7 +64,7 @@ Sapling requires `O(N)` loading of the entire mutation data.
 ## Storage format
 
 Mercurial uses [Revlog](https://www.mercurial-scm.org/wiki/Revlog) as its main
-file format. Sapling uses IndexedLog instead.
+file format. Sapling uses [IndexedLog](./indexedlog) instead.
 
 For working copy state, Mercurial uses [Dirstate](https://www.mercurial-scm.org/wiki/DirState).
 Sapling switched to TreeState in 2017. Mercurial 5.9 released in 2021
@@ -66,7 +72,7 @@ introduced [Dirstate v2](https://www.mercurial-scm.org/repo/hg/file/tip/mercuria
 that improves performance in a similar way.
 
 For repo references such as bookmarks and remote bookmarks, Mercurial tracks
-them in individual files like `.hg/bookmarks`. Sapling uses MetaLog
+them in individual files like `.hg/bookmarks`. Sapling uses [MetaLog](./metalog)
 to track them so changes are across state files are atomic.
 
 

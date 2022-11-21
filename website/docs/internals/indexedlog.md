@@ -121,7 +121,7 @@ small writes. The lagging portion of index will be built on demand in memory.
 
 When an IndexedLog (or a standalone Index) gets loaded from disk, it is like
 taking a snapshot. Changes on disk afterwards won't affect the already loaded
-IndexedLog (as long as all writes to the files go through indexedlog APIs).
+IndexedLog (as long as all writes to the files go through IndexedLog APIs).
 
 Writes are buffered in memory, lock-free. They are invisible to other processes
 or other already loaded IndexedLogs.

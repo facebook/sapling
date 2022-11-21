@@ -3,14 +3,14 @@ import TabItem from '@theme/TabItem';
 
 # LineLog
 
-LineLog is an implementation of [interleaved deltas](https://en.wikipedia.org/wiki/Interleaved_deltas)..
+LineLog is an implementation of [interleaved deltas](https://en.wikipedia.org/wiki/Interleaved_deltas).
 It provides conflict-free stack editing ability. It is used by the `absorb`
 command.
 
 ## Bytecode
 
 LineLog uses a bytecode format that is interpreted to produce content.
-There are 4 instructions:
+There are 5 instructions:
 
 | Name | Operand 1 | Operand 2 | Meaning                                   |
 |------|-----------|-----------|-------------------------------------------|
@@ -21,7 +21,8 @@ There are 4 instructions:
 | END  | -         | -         | Stop execution                            |
 
 Instructions are fixed-sized. The opcode takes 2 bits. `J` and `JGE` share the
-same opcode. Operand 1 takes 30 bits. Operand 2 takes 32 bits.
+same opcode (`J Addr` is just `JGE 0 Addr`). Operand 1 takes 30 bits. Operand 2
+takes 32 bits.
 
 ## Interpretation
 
