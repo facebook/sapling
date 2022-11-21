@@ -101,7 +101,7 @@ You can also use the <Command name="next" /> and <Command name="prev" /> command
 
 ## Manipulating your stack
 
-See [Basic Commands](../overview/basic-commands.md) to learn more about maniuplating your stack from the command line.
+See [Basic Commands](../overview/basic-commands.md) to learn more about manipulating your stack from the command line.
 
 You may also want to try Sapling's built-in GUI that runs in the browser . Run <SLCommand name="web" /> to launch it from the command line:
 
