@@ -23,8 +23,16 @@ Node = bytes
 
 
 def cleanup_landed_pr(repo, dry_run=False):
-    """cleanup landed GitHub PRs"""
-    github_repo = check_github_repo(repo)
+    """cleanup landed GitHub PRs
+
+    If the repo is not a valid GitHub repo, just return.
+    """
+    try:
+        github_repo = check_github_repo(repo)
+    except Exception:
+        # not a valid GitHubRepo, just return
+        return
+
     ui = repo.ui
     pr_to_draft = _get_draft_commits(repo)
 
