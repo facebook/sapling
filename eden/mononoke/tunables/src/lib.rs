@@ -424,6 +424,13 @@ fn wait_and_update_iteration(new_tunables: Arc<TunablesStruct>, logger: &Logger)
     );
     if let Err(e) = update_tunables(new_tunables) {
         warn!(logger, "Failed to refresh tunables: {}", e);
+        // Set the refresh failure count counter so that the oncall can be alerted
+        // based on this metric
+        STATS::refresh_failure_count.add_value(1);
+    } else {
+        // Add a value of 0 so that the counter won't get dead even if there
+        // are no errors
+        STATS::refresh_failure_count.add_value(0);
     }
 }
 
