@@ -38,6 +38,8 @@ class SaplingShell(ghstack.shell.Shell):
         remote_name = self.conf.remote_name
         if match_args(["remote", "get-url", remote_name], args):
             return self._get_origin()
+        elif match_args(["checkout"], args):
+            args[0] = "goto"
         elif match_args(["fetch", "--prune"], args):
             raise ValueError(f"unexpected use of `git fetch` in SaplingShell: {' '.join(args)}")
         elif match_args(["merge-base", WILDCARD_ARG, "HEAD"], args):
