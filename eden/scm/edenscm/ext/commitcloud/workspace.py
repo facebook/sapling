@@ -4,12 +4,13 @@
 # GNU General Public License version 2.
 
 import socket
+from typing import List, Optional, Tuple
 
 from edenscm import config, error, pycompat, util
 from edenscm.i18n import _
 
 
-workspaceopts = [
+workspaceopts: List[Tuple[str, ...]] = [
     (
         "u",
         "user",
@@ -77,7 +78,7 @@ def parseworkspace(ui, opts):
     return prefix + workspace
 
 
-def defaultworkspace(ui, user=None):
+def defaultworkspace(ui, user: Optional[str] = None) -> str:
     """Returns the default workspace for the given or current user"""
     if user is None:
         domains = ui.configlist("commitcloud", "email_domains")
@@ -85,7 +86,7 @@ def defaultworkspace(ui, user=None):
     return "user/%s/default" % user
 
 
-def userworkspaceprefix(ui, user=None):
+def userworkspaceprefix(ui, user: Optional[str] = None) -> str:
     """Returns the workspace prefix for the given user or current user"""
     if user is None:
         domains = ui.configlist("commitcloud", "email_domains")
@@ -93,7 +94,7 @@ def userworkspaceprefix(ui, user=None):
     return "user/%s/" % user
 
 
-def hostnameworkspace(ui, user=None):
+def hostnameworkspace(ui, user: Optional[str] = None) -> str:
     """Returns the host workspace for the given or current user for the current host"""
     if user is None:
         domains = ui.configlist("commitcloud", "email_domains")
@@ -165,7 +166,7 @@ def disconnected(repo):
     return util.parsebool(disconnected)
 
 
-def setworkspace(repo, workspace):
+def setworkspace(repo, workspace) -> None:
     """Sets the currently connected workspace."""
     with repo.wlock(), repo.lock(), repo.svfs.open(
         filename, "wb", atomictemp=True
@@ -177,7 +178,7 @@ def setworkspace(repo, workspace):
         )
 
 
-def clearworkspace(repo):
+def clearworkspace(repo) -> None:
     """Clears the currently connected workspace."""
     with repo.wlock(), repo.lock(), repo.svfs.open(
         filename, "wb", atomictemp=True
