@@ -86,11 +86,11 @@ Note the following tools must be installed to leverage Sapling's full feature se
 
 Note that the name of the Sapling CLI `sl.exe` conflicts with the `sl` shell built-in in PowerShell (`sl` is an alias for `Set-Location`, which is equivalent to `cd`). If you want to use `sl` to run `sl.exe` in PowerShell, you must reassign the alias. Again, you must run the following as Administrator:
 
-```
-PS> Set-Alias -Name sl -Value 'C:\Program Files\Sapling\sl.exe' -Force -Option Constant,ReadOnly,AllScope
-PS> sl --version
-Sapling 20221108.091155.887dee39
-```
+<CodeBlock>
+PS> Set-Alias -Name sl -Value 'C:\Program Files\Sapling\sl.exe' -Force -Option Constant,ReadOnly,AllScope{'\n'}
+PS> sl --version{'\n'}
+Sapling {latestReleaseVersion}
+</CodeBlock>
 
 ### Linux
 
