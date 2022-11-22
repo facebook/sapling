@@ -14,6 +14,11 @@ TOKEN_KEY = "token"
 INDEX_KEY = "index"
 
 
+def checkcapable(repo):
+    """Check that edenapi endpoint can be reached"""
+    repo.edenapi.capabilities()
+
+
 def _filtercommits(repo, nodes):
     """Returns list of missing commits"""
     try:

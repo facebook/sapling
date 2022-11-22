@@ -33,6 +33,8 @@ def upload(repo, revs, force=False):
         ui.status(_("nothing to upload\n"), component="commitcloud")
         return [], []
 
+    edenapi_upload.checkcapable(repo)
+
     # Check what heads have been already uploaded and what heads are missing
     missingheads = heads if force else edenapi_upload._filtercommits(repo, heads)
 
