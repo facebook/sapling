@@ -30,7 +30,7 @@ def main():
         default=default_outfile,
     )
     args = parser.parse_args()
-    assets_json = subprocess.check_output(
+    release_json = subprocess.check_output(
         [
             "gh",
             "release",
@@ -38,10 +38,10 @@ def main():
             "--repo",
             args.repo,
             "--json",
-            "assets",
+            "assets,name",
         ]
     )
-    assets = json.loads(assets_json)
+    assets = json.loads(release_json)
     ts_contents = f"""\
 /\x2a\x2a
  * Copyright (c) Meta Platforms, Inc. and affiliates.
