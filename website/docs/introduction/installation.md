@@ -6,23 +6,45 @@ import {gitHubRepo, gitHubRepoName, latestReleasePage} from '@site/constants'
 
 import {Command, SLCommand} from '@site/elements'
 
-import {macArmAsset, macIntelAsset, windowsAsset} from '@site/src/releaseData';
+import {latestReleaseVersion, macArmAsset, macIntelAsset, ubuntu20, ubuntu22, windowsAsset} from '@site/src/releaseData';
 
 import CodeBlock from '@theme/CodeBlock';
 
 # Installation
 
+<p>The <a href={latestReleasePage}>latest release</a> is <code>{latestReleaseVersion}</code>.</p>
+
 ## Prebuilt binaries
 
 ### Linux
 
-#### Ubuntu
+#### Ubuntu 22.04
 
-<p>Head over to the <a href={latestReleasePage}>latest release</a> and download the file ending in <code>Ubuntu20.04.deb</code> or <code>Ubuntu22.04.deb</code>, as appropriate, for your platform. You can use <code>apt</code> to install it, as follows:</p>
+Download using `curl`:
 
-```
-sudo apt install -y ~/Downloads/path-to-the-Ubuntu.deb
-```
+<CodeBlock>
+curl -L -O {ubuntu22.url}
+</CodeBlock>
+
+Then install:
+
+<CodeBlock>
+sudo apt install -y ./{ubuntu22.name}
+</CodeBlock>
+
+#### Ubuntu 20.04
+
+Download using `curl`:
+
+<CodeBlock>
+curl -L -O {ubuntu20.url}
+</CodeBlock>
+
+Then install:
+
+<CodeBlock>
+sudo apt install -y ./{ubuntu20.name}
+</CodeBlock>
 
 ### macOS
 
