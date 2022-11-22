@@ -26,6 +26,7 @@ module.exports = {
     new MiniCssExtractPlugin(),
     new CircularDependencyPlugin({
       failOnError: false,
+      exclude: /.*node_modules.*/,
     }),
   ],
   module: {
