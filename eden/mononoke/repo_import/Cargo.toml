@@ -29,7 +29,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
-git-hash = "0.9"
+git-hash = "0.10"
 import_direct = { version = "0.1.0", path = "../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
 itertools = "0.10.3"

@@ -61,29 +61,14 @@
 # Add an empty tag
   $ cd "$GIT_REPO"
   $ git tag -a empty_tag -m ""
-# Observe that gitimport is failing (without much context) before displaying the refs
+# Check its ref can be parsed
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
-  * Execution error:* (glob)
-  * (glob)
-  Caused by:
-  *  0: unable to read git object: * for ref: refs/tags/empty_tag (glob)
-  *  1: Failed to parse: (glob)
-  *     ``` (glob)
-  *     object * (glob)
-  *     type commit (glob)
-  *     tag empty_tag (glob)
-  *     tagger mononoke <mononoke@mononoke> * +0000 (glob)
-         
-         
-  *     ``` (glob)
-  *     into object of kind Tag (glob)
-  
-  Error: Execution failed
-  [1]
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
