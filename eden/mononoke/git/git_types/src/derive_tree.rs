@@ -233,7 +233,7 @@ mod test {
 
         let tmp_dir = TempDir::new("git_types_test")?;
         let root_path = tmp_dir.path();
-        let git = Repository::init(&root_path)?;
+        let git = Repository::init(root_path)?;
         let mut index = git.index()?;
 
         for (mpath, blob_handle) in leaves.into_iter() {
@@ -246,7 +246,7 @@ mod test {
 
             let path = &mpath.to_string();
             let path = Path::new(&path);
-            File::create(&root_path.join(&path))?.write_all(&blob)?;
+            File::create(&root_path.join(path))?.write_all(&blob)?;
 
             index.add_path(path)?;
         }

@@ -29,7 +29,7 @@ pub struct RepoHandler {
 }
 
 pub fn repo_handler(mononoke: Arc<Mononoke>, repo_name: &str) -> anyhow::Result<RepoHandler> {
-    let source_repo = mononoke.raw_repo(&repo_name).ok_or_else(|| {
+    let source_repo = mononoke.raw_repo(repo_name).ok_or_else(|| {
         anyhow!(
             "Requested repo {} is not being served by this server",
             &repo_name

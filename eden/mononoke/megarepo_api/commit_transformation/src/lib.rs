@@ -689,7 +689,7 @@ mod test {
         fn to_file_change(o: Option<()>) -> FileChange {
             match o {
                 Some(_) => FileChange::tracked(
-                    ContentId::from_bytes(&[1; 32]).unwrap(),
+                    ContentId::from_bytes([1; 32]).unwrap(),
                     FileType::Regular,
                     0,
                     None,

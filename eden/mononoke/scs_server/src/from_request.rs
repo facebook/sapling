@@ -134,7 +134,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
     fn from_request(commit: &thrift::CommitId) -> Result<Self, thrift::RequestError> {
         match commit {
             thrift::CommitId::bonsai(id) => {
-                let cs_id = ChangesetId::from_bytes(&id).map_err(|e| {
+                let cs_id = ChangesetId::from_bytes(id).map_err(|e| {
                     errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
@@ -162,7 +162,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                 Ok(ChangesetSpecifier::Globalrev(rev))
             }
             thrift::CommitId::git(git_sha1) => {
-                let git_sha1 = GitSha1::from_bytes(&git_sha1).map_err(|e| {
+                let git_sha1 = GitSha1::from_bytes(git_sha1).map_err(|e| {
                     errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),

@@ -919,7 +919,7 @@ fn init_tunables<'a>(
     }
 
     if let Some(tunables_local_path) = matches.value_of(TUNABLES_LOCAL_PATH) {
-        let value = std::fs::read_to_string(&tunables_local_path)
+        let value = std::fs::read_to_string(tunables_local_path)
             .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
         let config_handle = ConfigHandle::from_json(&value)
             .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;

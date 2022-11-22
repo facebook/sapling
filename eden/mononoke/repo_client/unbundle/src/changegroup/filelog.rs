@@ -298,13 +298,13 @@ impl Arbitrary for Filelog {
             append(&mut result, f);
         }
 
-        if self.p1 != None {
+        if self.p1.is_some() {
             let mut f = self.clone();
             f.p1 = None;
             append(&mut result, f);
         }
 
-        if self.p2 != None {
+        if self.p2.is_some() {
             let mut f = self.clone();
             f.p2 = None;
             append(&mut result, f);

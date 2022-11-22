@@ -86,7 +86,7 @@ impl FileContents {
 
     pub fn content_id_for_bytes(bytes: &Bytes) -> ContentId {
         let mut context = ContentIdContext::new();
-        context.update(&bytes);
+        context.update(bytes);
         context.finish()
     }
 }

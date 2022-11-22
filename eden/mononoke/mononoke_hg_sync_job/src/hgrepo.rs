@@ -117,7 +117,7 @@ where
     .into_iter()
     .map(|item| item.into())
     .chain(args.into_iter().map(|item| item.as_ref().to_os_string()));
-    let mut child = Command::new(&"hg");
+    let mut child = Command::new("hg");
     child.args(full_args);
     child
 }

@@ -14,7 +14,7 @@ use sha1::Sha1;
 use sha2::Sha256;
 
 pub fn hash_bytes<H>(mut hasher: impl Hasher<H>, bytes: &Bytes) -> H {
-    hasher.update(&bytes);
+    hasher.update(bytes);
     hasher.finish()
 }
 

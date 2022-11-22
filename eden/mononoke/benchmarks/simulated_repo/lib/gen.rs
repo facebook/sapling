@@ -210,6 +210,6 @@ fn gen_ascii(len: usize, rng: &mut impl Rng) -> String {
 }
 
 fn gen_filename(rng: &mut impl Rng) -> MPathElement {
-    let len = rng.sample(&Binomial::new(20, 0.3).expect("Binomial::new failed")) as usize;
+    let len = rng.sample(Binomial::new(20, 0.3).expect("Binomial::new failed")) as usize;
     MPathElement::new(gen_ascii(len + 3, rng).into()).expect("failed to create mpath element")
 }

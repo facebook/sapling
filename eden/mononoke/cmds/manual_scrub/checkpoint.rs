@@ -39,8 +39,7 @@ impl FileCheckpoint {
 
     pub fn update(&self, logger: &Logger, key: &str) -> Result<(), Error> {
         let tempfile = NamedTempFile::new_in(
-            &self
-                .file_name
+            self.file_name
                 .parent()
                 .context("no parent dir for checkpoint file")?,
         )?;

@@ -275,7 +275,7 @@ async fn get_resume_state(
                 .compat()
                 .map(|data| {
                     data.and_then(|data| {
-                        serde_json::from_slice::<StateSerde>(&*data.into_raw_bytes()).ok()
+                        serde_json::from_slice::<StateSerde>(&data.into_raw_bytes()).ok()
                     })
                     .map(State::from)
                 })

@@ -194,7 +194,7 @@ impl Revlog {
                     Datafile::map(&path)
                         .with_context(|| format!("Can't open data file {:?}", path))?
                 }
-                Some(path) => Datafile::map(&path)
+                Some(path) => Datafile::map(path)
                     .with_context(|| format!("Can't open data file {:?}", path))?,
             };
             Arc::get_mut(&mut revlog.inner).unwrap().data = Some(datafile);

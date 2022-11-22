@@ -694,12 +694,12 @@ impl MPath {
             if num_el > 1 {
                 for e in &self.elements[..num_el - 1] {
                     context.update(e.as_ref());
-                    context.update(&[b'/'])
+                    context.update([b'/'])
                 }
             }
             context.update(self.elements[num_el - 1].as_ref());
         } else {
-            context.update(&[])
+            context.update([])
         }
         context.finish()
     }

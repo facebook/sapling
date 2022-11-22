@@ -132,7 +132,7 @@ mod test {
     use super::*;
 
     fn check_path(path: &str) -> bool {
-        match check_path_for_bad_elements(&MPath::new(&path).unwrap()).unwrap() {
+        match check_path_for_bad_elements(&MPath::new(path).unwrap()).unwrap() {
             HookExecution::Accepted => true,
             HookExecution::Rejected(_) => false,
         }

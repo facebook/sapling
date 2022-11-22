@@ -27,7 +27,7 @@ impl PathHashBytes {
     pub fn new(path_bytes: &[u8]) -> Self {
         let hash = {
             let mut hash_content = hash::Context::new("path".as_bytes());
-            hash_content.update(&path_bytes);
+            hash_content.update(path_bytes);
             hash_content.finish()
         };
 

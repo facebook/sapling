@@ -275,7 +275,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                 return Ok(Async::Ready(false));
             }
 
-            if self.current_exclude_generation == None {
+            if self.current_exclude_generation.is_none() {
                 // Recompute the current exclude generation
                 self.current_exclude_generation = curr_exclude_ancestors.max_gen();
             }

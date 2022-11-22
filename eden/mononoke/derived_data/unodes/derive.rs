@@ -718,7 +718,7 @@ mod tests {
                     .find_entries(
                         ctx.clone(),
                         repo.repo_blobstore.clone(),
-                        vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
+                        vec![Some(MPath::new(merged_files)?), Some(MPath::new("dir")?)],
                         // Some(MPath::new(&merged_files)?),
                     )
                     .try_collect()
@@ -733,7 +733,7 @@ mod tests {
                     .find_entries(
                         ctx.clone(),
                         repo.repo_blobstore.clone(),
-                        vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
+                        vec![Some(MPath::new(merged_files)?), Some(MPath::new("dir")?)],
                     )
                     .try_collect()
                     .await?;

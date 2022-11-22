@@ -300,8 +300,8 @@ mod tests {
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
         let blobstore = Arc::new(repo.repo_blobstore.clone());
-        let path_1 = MPath::new(&"1").unwrap();
-        let path_files = MPath::new(&"files").unwrap();
+        let path_1 = MPath::new("1").unwrap();
+        let path_files = MPath::new("files").unwrap();
         let entries: Vec<_> = root_unode_mf_id
             .find_entries(ctx.clone(), blobstore.clone(), vec![path_1, path_files])
             .try_collect()

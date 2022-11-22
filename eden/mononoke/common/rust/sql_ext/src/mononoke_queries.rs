@@ -485,7 +485,12 @@ mod tests {
         }
     }
 
-    #[allow(dead_code, unreachable_code, unused_variables)]
+    #[allow(
+        dead_code,
+        unreachable_code,
+        unused_variables,
+        clippy::diverging_sub_expression
+    )]
     async fn should_compile() -> anyhow::Result<()> {
         use sql_query_config::SqlQueryConfig;
 

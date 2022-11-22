@@ -229,7 +229,7 @@ impl File {
     fn parse_mandatory_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<(String, Sha256, u64)> {
         let version = contents
             .get(VERSION)
-            .and_then(|s| str::from_utf8(*s).ok())
+            .and_then(|s| str::from_utf8(s).ok())
             .map(|s| s.to_string())
             .ok_or_else(|| {
                 ErrorKind::IncorrectLfsFileContent(
@@ -239,7 +239,7 @@ impl File {
 
         let oid = contents
             .get(OID)
-            .and_then(|s| str::from_utf8(*s).ok())
+            .and_then(|s| str::from_utf8(s).ok())
             .and_then(|s| {
                 let prefix_len = SHA256_PREFIX.len();
 
@@ -258,7 +258,7 @@ impl File {
             })?;
         let size = contents
             .get(SIZE)
-            .and_then(|s| str::from_utf8(*s).ok())
+            .and_then(|s| str::from_utf8(s).ok())
             .and_then(|s| s.parse::<u64>().ok())
             .ok_or_else(|| {
                 ErrorKind::IncorrectLfsFileContent(

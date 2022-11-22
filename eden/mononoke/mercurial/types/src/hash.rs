@@ -172,7 +172,7 @@ impl Arbitrary for Sha1 {
                 *b = u8::arbitrary(g);
             }
         }
-        Sha1::from_bytes(&bytes).unwrap()
+        Sha1::from_bytes(bytes).unwrap()
     }
 
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {

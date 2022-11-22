@@ -1186,7 +1186,7 @@ async fn subcommand_tail(
     cancellation_requested: Arc<AtomicBool>,
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
-    if backfill && batch_size == None {
+    if backfill && batch_size.is_none() {
         return Err(anyhow!("tail --backfill requires --batched"));
     }
 

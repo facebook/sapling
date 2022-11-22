@@ -69,7 +69,7 @@ impl FileNodeIdPointer {
         // (e.g. SqlBlob).
         let mut ctx = mononoke_types::hash::Context::new("hgfilenode".as_bytes());
 
-        ctx.update(&content_id);
+        ctx.update(content_id);
         ctx.update(b".");
         ctx.update(&p1);
         ctx.update(b".");

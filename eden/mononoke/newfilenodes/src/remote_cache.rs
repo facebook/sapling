@@ -161,7 +161,7 @@ impl MemcacheCache {
             backing_store_name, backing_store_params,
         );
 
-        let mc_sitever = match std::env::var(&SITEVER_OVERRIDE_VAR) {
+        let mc_sitever = match std::env::var(SITEVER_OVERRIDE_VAR) {
             Ok(v) => v.parse().unwrap_or(MC_SITEVER as u32),
             Err(_) => MC_SITEVER as u32,
         };

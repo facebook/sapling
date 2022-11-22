@@ -690,7 +690,7 @@ mod test {
                     "ad02b5a5f778d9ad6afd42fcc8e0b889254b5215 tree dir2\0",
                 );
                 let mut digest = sha1::Sha1::new();
-                digest.update(&text);
+                digest.update(text);
                 let bytes = digest.finalize().into();
                 Sha1::from_byte_array(bytes)
             };
@@ -702,7 +702,7 @@ mod test {
                     "583c3d388efb78eb9dec46626662d6657bb53706c1ee10770c0fb3e859bd36e1 tree dir2\0",
                 );
                 let mut digest = sha2::Sha256::new();
-                digest.update(&text);
+                digest.update(text);
                 let bytes = digest.finalize().into();
                 Sha256::from_byte_array(bytes)
             };

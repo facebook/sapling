@@ -43,7 +43,7 @@ pub async fn abort_request(
         if let Some((request_id, _entry, params, maybe_result)) =
             queue.get_request_by_id(&ctx, &RowId(row_id)).await?
         {
-            if maybe_result == None {
+            if maybe_result.is_none() {
                 let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
                 let result: MegarepoAsynchronousRequestResult  = match params.thrift() {
                     ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {

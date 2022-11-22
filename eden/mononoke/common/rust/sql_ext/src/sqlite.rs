@@ -22,7 +22,7 @@ fn sqlite_setup_connection(con: &SqliteConnection) {
 
     // By default, the `LIKE` operator is case-insensitive.  This doesn't
     // match MySQL, so change it to case-sensitive.
-    let _ = con.pragma_update(None, "case_sensitive_like", &true);
+    let _ = con.pragma_update(None, "case_sensitive_like", true);
 }
 
 // Open a single sqlite connection to a new in memory database
@@ -45,7 +45,7 @@ pub fn open_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<Sqlit
         }
         let flags = SqliteOpenFlags::SQLITE_OPEN_READ_WRITE | SqliteOpenFlags::SQLITE_OPEN_CREATE;
 
-        SqliteConnection::open_with_flags(&path, flags)?
+        SqliteConnection::open_with_flags(path, flags)?
     };
 
     let con = if readonly {
