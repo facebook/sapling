@@ -2,6 +2,8 @@ import DrawDagExample from "@site/src/components/DrawDagExample";
 
 # DrawDag
 
+DrawDag provides an intuitive way to create commit graph for tests.
+
 ## Background
 
 When creating tests, we often need to create a repo with a particular layout.
@@ -14,7 +16,7 @@ $ sl commit -m B
 $ sl commit -m C
 ```
 
-If the graph is nonlinear, extra commnds such as merge and goto are needed:
+If the graph is nonlinear, extra commands such as merge and goto are needed:
 
 ```
 $ sl commit -m A
@@ -75,11 +77,11 @@ For example, the code below uses `C` in two locations to create criss-cross
 merges.
 
 <DrawDagExample initValue={String.raw`
-A-C
- \
-B-D
- \
-  C
+  A-C
+   \
+  B-D
+   \
+    C
 `} />
 
 ### Range generation

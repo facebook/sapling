@@ -22,7 +22,7 @@ Today, ReviewStack is focused on motivating the conversation about how an ideal 
 
 :::
 
-## Keyboard Shortcuts
+## Keyboard shortcuts
 
 ReviewStack supports the following keyboard shortcuts:
 

@@ -22,7 +22,7 @@ data to answer questions like how and when bookmarks changed, etc.
 ### Structure
 
 MetaLog maintains 2 structures:
-- A blob store backed by [ZStore](zstdelta#zstore). Blobs are keyed by their
+- A blob store backed by [ZStore](./zstdelta#zstore). Blobs are keyed by their
   content SHA1s. There are 2 kinds of blobs: root, and content.
 - A log of keys of roots. It provides a way to get the latest root, and also
   historical roots.
@@ -37,8 +37,8 @@ itself. That is part of the reason for the naming.
 
 ### Concurrent writes
 
-Similar to [IndexedLog](indexedlog#concurrent-writes), changes are buffered in
-memory until an explicit flush to disk.
+Similar to [IndexedLog](./indexedlog#concurrent-writes), changes are buffered
+in memory until an explicit flush to disk.
 
 Unlike IndexedLog, if MetaLog notices that the latest root is changed on disk,
 it will attempt to perform a merge defined using a merge function specified by
@@ -99,7 +99,7 @@ heavywight storage won't visibly affect the user experience. For example,
   they are invisible because they are not referred to by visible heads or
   bookmarks. The orphaned commits are transparent to common commands.
 - Mutation Records: If there are unused mutation records, since the successors
-  are invisible, the records are simply ignored. However, it will turn a commit
+  are invisible, the records are simply ignored. It will not turn a commit
   from `o` to `x` in `log -G` output.
 
 This means that Sapling can just flush these kinds of data without going
