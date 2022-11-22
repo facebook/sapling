@@ -347,6 +347,7 @@ Test extension help:
        phrevset      provides support for Phabricator revsets
        preventpremegarepoupdateshook
                      (no help text available)
+       prmarker      mark pull requests as "Landed" on pull
        pullcreatemarkers
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
