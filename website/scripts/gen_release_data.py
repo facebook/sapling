@@ -6,23 +6,28 @@
 
 import argparse
 import json
+import os
 import subprocess
 
 
 def main():
+    default_outfile = os.path.join(
+        os.path.dirname(__file__), "../src/rawReleaseData.ts"
+    )
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--repo",
         metavar="[HOST/]OWNER/REPO",
         help="GitHub repository",
         type=str,
-        required=True,
+        default="facebook/sapling",
     )
     parser.add_argument(
         "--out",
         type=str,
         help="where to write the generated .ts file",
-        required=True,
+        default=default_outfile,
     )
     args = parser.parse_args()
     assets_json = subprocess.check_output(
