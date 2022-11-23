@@ -49,8 +49,12 @@ struct FrameInfo {
 
   void assign(PyFrameObject* frame, frameid_t backfid) {
     back = backfid;
+#if PY_VERSION_HEX < 0x03090000
     code = frame->f_code;
     Py_XINCREF(code);
+#else
+    code = PyFrame_GetCode(frame);
+#endif
   }
 
   lineno_t line() {
@@ -138,9 +142,19 @@ inline static rdtsc_t rdtsc() {
 
 /* fast, but inaccurate hashing of a Python frame */
 inline static uint64_t hashframe(PyFrameObject* frame) {
+#if PY_VERSION_HEX < 0x03090000
+  PyFrameObject* back = frame->f_back;
+  PyCodeObject* code = frame->f_code;
+#else
+  // This is slower due to side effects on refs...
+  PyFrameObject* back = PyFrame_GetBack(frame);
+  PyCodeObject* code = PyFrame_GetCode(frame);
+  // We do not follow the pointers. So decref is safe.
+  Py_XDECREF(back);
+  Py_XDECREF(code);
+#endif
   uint64_t v =
-      ((uint64_t)frame ^ ((uint64_t)(frame->f_back) << 16) ^
-       ((uint64_t)frame->f_code << 32));
+      ((uint64_t)frame ^ ((uint64_t)(back) << 16) ^ ((uint64_t)code << 32));
   /* f_code is usually immutable (lsprof use its address as keys) */
   return v;
 }
@@ -151,7 +165,16 @@ static frameid_t hashandstoreframe(PyFrameObject* frame) {
     return 0;
   frameid_t frameid = (frameid_t)hashframe(frame);
   if (frames.count(frameid) == 0) {
-    frames[frameid].assign(frame, hashandstoreframe(frame->f_back));
+    static frameid_t fid;
+#if PY_VERSION_HEX < 0x03090000
+    PyFrameObject* back = frame->f_back;
+    fid = hashandstoreframe(back);
+#else
+    PyFrameObject* back = PyFrame_GetBack(frame);
+    fid = hashandstoreframe(back);
+    Py_XDECREF(back);
+#endif
+    frames[frameid].assign(frame, fid);
   }
   return frameid;
 }
