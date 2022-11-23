@@ -33,7 +33,7 @@ use crate::context::DerivationContext;
 /// particular derived data type.
 /// It also provides `as_ref()` method for serialization.
 /// and implements FromStr trait for deserialization.
-#[derive(AsRefStr, EnumString, Display, Debug, Clone, PartialEq)]
+#[derive(AsRefStr, EnumString, Display, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DerivableType {
     BlameV1,
     BlameV2,

@@ -89,6 +89,8 @@ use repo_cross_repo::ArcRepoCrossRepo;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::ArcRepoDerivedData;
 use repo_derived_data::RepoDerivedData;
+use repo_derived_data_service::ArcDerivedDataManagerSet;
+use repo_derived_data_service::DerivedDataManagerSet;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_lock::AlwaysUnlockedRepoLock;
@@ -631,6 +633,38 @@ impl TestRepoFactory {
             SqlMutableCountersBuilder::from_sql_connections(self.metadata_db.clone().into())
                 .build(repo_identity.id()),
         ))
+    }
+
+    /// Set of DerivedDataManagers for DDS
+    pub fn derived_data_manager_set(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        changesets: &ArcChangesets,
+        bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        filenodes: &ArcFilenodes,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcDerivedDataManagerSet> {
+        let config = repo_config.derived_data_config.clone();
+        let lease = self.derived_data_lease.as_ref().map_or_else(
+            || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
+            |lease| lease(),
+        );
+        let ctx = CoreContext::test_mock(self.fb);
+        let logger = ctx.logger().clone();
+        anyhow::Ok(Arc::new(DerivedDataManagerSet::new(
+            repo_identity.id(),
+            repo_identity.name().to_string(),
+            changesets.clone(),
+            bonsai_hg_mapping.clone(),
+            filenodes.clone(),
+            repo_blobstore.as_ref().clone(),
+            lease,
+            logger,
+            MononokeScubaSampleBuilder::with_discard(),
+            config,
+            None, // derivation_service_client = None
+        )?))
     }
 
     /// ACL regions

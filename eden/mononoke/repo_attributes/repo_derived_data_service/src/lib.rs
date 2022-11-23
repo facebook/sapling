@@ -24,6 +24,7 @@ use slog::Logger;
 
 #[facet::facet]
 pub struct DerivedDataManagerSet {
+    repo_id: RepositoryId,
     logger: Logger,
     configs: HashMap<String, DerivedDataManager>,
     changesets: Arc<dyn Changesets>,
@@ -41,9 +42,18 @@ impl DerivedDataManagerSet {
     pub fn changesets(&self) -> Arc<dyn Changesets> {
         self.changesets.clone()
     }
+
+    pub fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &DerivedDataManager)> {
+        self.configs.iter().map(|(s, ddm)| (s.as_str(), ddm))
+    }
 }
 
 #[facet::container]
+#[derive(Clone)]
 pub struct DerivedDataServiceRepo {
     #[facet]
     pub manager_set: DerivedDataManagerSet,
@@ -88,6 +98,7 @@ impl DerivedDataManagerSet {
             .collect();
 
         Ok(Self {
+            repo_id,
             logger,
             configs,
             changesets,
