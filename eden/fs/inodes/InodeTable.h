@@ -309,8 +309,9 @@ class InodeTable {
         }
         auto ret = indices.insert({entry.inode, i});
         if (!ret.second) {
-          XLOG(WARNING) << "Duplicate records for the same inode: indices "
-                        << indices[entry.inode] << " and " << i;
+          XLOG_FIRST_N(WARNING, 100)
+              << "Duplicate records for the same inode: indices "
+              << indices[entry.inode] << " and " << i;
           continue;
         }
       }
