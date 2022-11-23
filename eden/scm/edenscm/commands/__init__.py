@@ -3018,7 +3018,8 @@ def heads(ui, repo, *branchrevs, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "@prog@-heads", "heads is deprecated - use `@prog@ log -r 'head()'` instead"
+            _("@prog@-heads"),
+            _("heads is deprecated - use `@prog@ log -r 'head()'` instead"),
         )
 
     start = None
@@ -3188,7 +3189,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "hg-histgrep",
+            _("@prog@-histgrep"),
             "histgrep is deprecated because it does not scale - use diffgrep instead",
         )
     if not pats and not ui.configbool("histgrep", "allowfullrepogrep"):
@@ -3475,7 +3476,8 @@ def identify(
     """
     if not util.istest():
         ui.deprecate(
-            "hg-identify", "identify is deprecated - use `@prog@ whereami` instead"
+            _("@prog@-identify"),
+            _("identify is deprecated - use `@prog@ whereami` instead"),
         )
     if not repo and not source:
         raise error.Abort(_("there is no @Product@ repository here " "(.hg not found)"))
@@ -4352,8 +4354,8 @@ def parents(ui, repo, file_=None, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "@prog@-parents",
-            "parents is deprecated - use `@prog@ log -r 'parents(.)'` instead",
+            _("@prog@-parents"),
+            _("parents is deprecated - use `@prog@ log -r 'parents(.)'` instead"),
         )
 
     ctx = scmutil.revsingle(repo, opts.get("rev"), None)
@@ -5043,7 +5045,8 @@ def record(ui, repo, *pats, **opts):
     This command is not available when committing a merge."""
     if not util.istest():
         ui.deprecate(
-            "@prog@-record", "record is deprecated - use `@prog@ commit -i` instead"
+            _("@prog@-record"),
+            _("record is deprecated - use `@prog@ commit -i` instead"),
         )
 
     if not ui.interactive():
@@ -5852,8 +5855,8 @@ def summary(ui, repo, **opts):
     """
     if not util.istest():
         ui.deprecate(
-            "@prog@-summary",
-            "summary is deprecated - use `@prog@ sl` and `@prog@ status` instead",
+            _("@prog@-summary"),
+            _("summary is deprecated - use `@prog@ sl` and `@prog@ status` instead"),
         )
 
     ui.pager("summary")
