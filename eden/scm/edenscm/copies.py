@@ -710,6 +710,11 @@ def _heuristicscopytracing(repo, c1, c2, base):
     return copies, {}, {}, {}, {}
 
 
+def _wrap_fctx(fctx):
+    """Emulate the old "__eq__" before D41462751."""
+    return (type(fctx), fctx.path(), fctx.filenode())
+
+
 def _related(f1, f2, limit):
     """return True if f1 and f2 filectx have a common ancestor
 
@@ -721,21 +726,24 @@ def _related(f1, f2, limit):
 
     repo = f1.repo()
 
-    if f1 == f2:
+    if _wrap_fctx(f1) == _wrap_fctx(f2):
         return f1  # a match
 
     g1, g2 = f1.ancestors(), f2.ancestors()
     invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
+
     if invalidatelinkrev:
-        seen = {f1, f2}
+        seen = {_wrap_fctx(f1), _wrap_fctx(f2)}
         for f in g1:
-            if f in seen:
+            w = _wrap_fctx(f)
+            if w in seen:
                 return f
-            seen.add(f)
+            seen.add(w)
         for f in g2:
-            if f in seen:
+            w = _wrap_fctx(f)
+            if w in seen:
                 return f
-            seen.add(f)
+            seen.add(w)
         return False
 
     try:

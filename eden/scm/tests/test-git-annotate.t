@@ -39,3 +39,25 @@ Test annotate
   495f16b0d4d4: A
   30f1a476cd24: B
   bfade98091ae: F
+
+Annotate with reverted change
+
+  $ cd
+  $ hg init --git gitrepo2
+  $ cd gitrepo2
+  $ drawdag << 'EOS'
+  > C    # C/A=1
+  > :    # B/A=2
+  > A    # A/A=1
+  > EOS
+
+  $ hg log -Gr: -T '{node|short} {desc}'
+  o  41d55b9f0404 C
+  │
+  o  10241ba6dc94 B
+  │
+  o  9da411510468 A
+
+  $ hg blame -c -r 'desc(C)' A
+  41d55b9f0404: 1
+

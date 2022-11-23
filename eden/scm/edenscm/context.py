@@ -789,11 +789,17 @@ class basefilectx(object):
 
     def __eq__(self, other):
         try:
-            return (
+            # Traditional hg, filenode includes history.
+            eq1 = (
                 type(self) == type(other)
                 and self._path == other._path
                 and self._filenode == other._filenode
             )
+            if not eq1:
+                return False
+            # For Git, also check the commit hash. `.node()` might trigger some
+            # calculations so we only do it when the above eq is not decisive.
+            return self.node() == other.node()
         except AttributeError:
             return False
 
@@ -1283,6 +1289,8 @@ class filectx(basefilectx):
 
     @propertycache
     def _changectx(self):
+        if self._changeid is None:
+            return workingctx(self._repo)
         return changectx(self._repo, self._changeid)
 
     def filectx(self, fileid, changeid=None):
