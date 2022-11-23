@@ -47,8 +47,7 @@ def _encodedir(path):
     )
 
 
-# pyre-fixme[16]: Module `parsers` has no attribute `encodedir`.
-encodedir = getattr(parsers, "encodedir", _encodedir)
+encodedir = _encodedir
 
 
 def decodedir(path):
@@ -235,11 +234,11 @@ def decodefilename(s):
 
 def _buildlowerencodefun():
     xchr = pycompat.bytechr
-    cmap = dict([(inttobyte(x), inttobyte(x)) for x in range(127)])
+    cmap = {x: inttobyte(x) for x in range(127)}
     for x in _reserved():
-        cmap[inttobyte(x)] = encodeutf8("~%02x" % x)
+        cmap[x] = encodeutf8("~%02x" % x)
     for x in range(ord("A"), ord("Z") + 1):
-        cmap[inttobyte(x)] = encodeutf8(xchr(x).lower())
+        cmap[x] = encodeutf8(xchr(x).lower())
 
     def lowerencode(s):
         s = encodeutf8(s)
@@ -248,8 +247,7 @@ def _buildlowerencodefun():
     return lowerencode
 
 
-# pyre-fixme[16]: Module `parsers` has no attribute `lowerencode`.
-lowerencode = getattr(parsers, "lowerencode", None) or _buildlowerencodefun()
+lowerencode = _buildlowerencodefun()
 
 # Windows reserved names: con, prn, aux, nul, com1..com9, lpt1..lpt9
 _winres3 = ("aux", "con", "prn", "nul")  # length 3
@@ -386,10 +384,6 @@ def _pathencode(path: Sized) -> str:
     if len(res) > _maxstorepathlen:
         return _hashencode(de, True)
     return res
-
-
-# pyre-fixme[16]: Module `parsers` has no attribute `pathencode`.
-_pathencode = getattr(parsers, "pathencode", _pathencode)
 
 
 def _plainhybridencode(f):

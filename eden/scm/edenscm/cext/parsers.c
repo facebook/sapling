@@ -775,9 +775,6 @@ bail:
 
 static char parsers_doc[] = "Efficient content parsing.";
 
-PyObject* encodedir(PyObject* self, PyObject* args);
-PyObject* pathencode(PyObject* self, PyObject* args);
-PyObject* lowerencode(PyObject* self, PyObject* args);
 PyObject* parse_index2(PyObject* self, PyObject* args);
 
 static PyMethodDef methods[] = {
@@ -805,9 +802,6 @@ static PyMethodDef methods[] = {
      jsonescapeu8fast,
      METH_VARARGS,
      "escape a UTF-8 byte string to JSON (fast path)\n"},
-    {"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
-    {"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
-    {"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
     {"fm1readmarkers",
      fm1readmarkers,
      METH_VARARGS,

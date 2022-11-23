@@ -1401,7 +1401,6 @@ extmodules = [
             "edenscm/cext/charencode.c",
             "edenscm/cext/manifest.c",
             "edenscm/cext/parsers.c",
-            "edenscm/cext/pathencode.c",
             "edenscm/cext/revlog.c",
         ],
         include_dirs=include_dirs,
