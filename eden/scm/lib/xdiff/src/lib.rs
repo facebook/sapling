@@ -79,7 +79,7 @@ where
                 remove: (a1..(a1 + a2)),
             });
         }
-        return 0;
+        0
     }
 
     let old_text = old_text.as_ref();
@@ -107,7 +107,8 @@ where
     unsafe {
         ffi::xdl_diff_vendored(&mut old_mmfile, &mut new_mmfile, &xpp, &xecfg, &mut ecb);
     }
-    return result;
+
+    result
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -154,6 +155,13 @@ impl<S, F> DiffState<S, F>
 where
     F: Fn(S, &[u8]) -> S,
 {
+    fn new(seed: S, reduce: F) -> Self {
+        Self {
+            seed: Some(seed),
+            reduce,
+        }
+    }
+
     fn emit_line(&mut self, prefix: &[u8], line: &[u8]) {
         self.emit(prefix);
         self.emit(line);
@@ -189,18 +197,16 @@ where
         let mut previous_hunk: Option<&Hunk> = None;
 
         for hunk in included_hunks {
-            let context_start = previous_hunk
-                .map(|h| h.remove.end)
-                .unwrap_or(cluster_bounds.remove.start);
+            let context_start = previous_hunk.map_or(cluster_bounds.remove.start, |h| h.remove.end);
             payload.old_lines[context_start..hunk.remove.start]
                 .iter()
-                .for_each(|line| self.emit_line(b" ", *line));
+                .for_each(|line| self.emit_line(b" ", line));
 
             // Emit the lines from the old file preceded by '-' char.
             payload.old_lines[hunk.remove.clone()]
                 .iter()
                 .for_each(|line| {
-                    self.emit_line(b"-", *line);
+                    self.emit_line(b"-", line);
                 });
             // In case file ends without newline we need to print a warning about it.
             if hunk.remove.end == payload.old_lines.len() {
@@ -210,7 +216,7 @@ where
             }
             // Emit the lines from the new file preceded by '+' char.
             payload.new_lines[hunk.add.clone()].iter().for_each(|line| {
-                self.emit_line(b"+", *line);
+                self.emit_line(b"+", line);
             });
             // In case file ends without newline we need to print a warning about it.
             if hunk.add.end == payload.new_lines.len() {
@@ -225,7 +231,7 @@ where
             payload.old_lines[previous_hunk.remove.end..cluster_bounds.remove.end]
                 .iter()
                 .for_each(|line| {
-                    self.emit_line(b" ", *line);
+                    self.emit_line(b" ", line);
                 });
             // If the last line is the same in both files and it's missing newline we print the marker
             if cluster_bounds.remove.end == payload.old_lines.len()
@@ -308,11 +314,7 @@ where
         new_has_trailing_newline,
     };
 
-    // TODO: Expose a constructor for this so that it cannot be constructed wiht seed: None.
-    let mut state = DiffState {
-        seed: Some(seed),
-        reduce,
-    };
+    let mut state = DiffState::new(seed, reduce);
 
     // Helpers for adding and removing context to the line numbers while keeping them
     // within array bounds.
@@ -383,14 +385,11 @@ where
     T: AsRef<[u8]>,
     F: Fn(S, &[u8]) -> S,
 {
-    let mut state = DiffState {
-        seed: Some(seed),
-        reduce,
-    };
+    let mut state = DiffState::new(seed, reduce);
     let text = text.as_ref();
     let missing_newline = !text.is_empty() && !text.ends_with(b"\n");
     let text_to_split = if missing_newline || text.is_empty() {
-        &text[..]
+        text
     } else {
         &text[0..text.len() - 1]
     };
@@ -503,8 +502,7 @@ where
         Some(file) => file
             .contents
             .as_bytes()
-            .map(|bytes| bytes.contains(&0))
-            .unwrap_or(false),
+            .map_or(false, |bytes| bytes.contains(&0)),
         None => false,
     }
 }
@@ -539,10 +537,7 @@ where
     C: AsRef<[u8]> + PartialEq + Eq,
     F: Fn(S, &[u8]) -> S,
 {
-    let mut state = DiffState {
-        seed: Some(seed),
-        reduce,
-    };
+    let mut state = DiffState::new(seed, reduce);
     fn file_type_to_mode(file_type: FileType) -> &'static [u8] {
         match file_type {
             FileType::Executable => b"100755",
@@ -556,15 +551,15 @@ where
 
     // When the files have no content differences and no metadata differences the output should be empty.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
-        if &old_file.file_type == &new_file.file_type && diff_opts.copy_info == CopyInfo::None {
+        if old_file.file_type == new_file.file_type && diff_opts.copy_info == CopyInfo::None {
             if old_file.contents == new_file.contents {
                 return state.collect();
             }
         }
     }
 
-    let old_name = &(old_file.as_ref()).or((&new_file).as_ref()).unwrap().path;
-    let new_name = &(new_file.as_ref()).or((&old_file).as_ref()).unwrap().path;
+    let old_name = &(old_file.as_ref()).or(new_file.as_ref()).unwrap().path;
+    let new_name = &(new_file.as_ref()).or(old_file.as_ref()).unwrap().path;
     state.emit(b"diff --git a/");
     state.emit(old_name.as_ref());
     state.emit(b" b/");
@@ -593,18 +588,18 @@ where
             match diff_opts.copy_info {
                 CopyInfo::Move => {
                     state.emit(b"rename from ");
-                    state.emit(&old_file.path.as_ref());
+                    state.emit(old_file.path.as_ref());
                     state.emit(b"\n");
                     state.emit(b"rename to ");
-                    state.emit(&new_file.path.as_ref());
+                    state.emit(new_file.path.as_ref());
                     state.emit(b"\n");
                 }
                 CopyInfo::Copy => {
                     state.emit(b"copy from ");
-                    state.emit(&old_file.path.as_ref());
+                    state.emit(old_file.path.as_ref());
                     state.emit(b"\n");
                     state.emit(b"copy to ");
-                    state.emit(&new_file.path.as_ref());
+                    state.emit(new_file.path.as_ref());
                     state.emit(b"\n");
                 }
                 CopyInfo::None => {}
