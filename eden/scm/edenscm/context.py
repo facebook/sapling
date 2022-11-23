@@ -1197,10 +1197,27 @@ def _pathhistorybaseparents(
     def parents(fctx, repo=repo, cache=cache):
         path = fctx.path()
         node = fctx.node()
-        parentnodes = cache[path](node)
-        parents = [repo[n][path] for n in parentnodes]
+        parent_fctxs = []
+        while True:
+            parentnodes = cache[path](node)
+            absent_nodes = []
+            for n in parentnodes:
+                pctx = repo[n]
+                if path in pctx:
+                    pfctx = pctx[path]
+                    parent_fctxs.append(pfctx)
+                else:
+                    absent_nodes.append(n)
+
+            if not parent_fctxs and len(absent_nodes) == 1:
+                # If a file was deleted, then re-added, try following its
+                # history before the deletion.
+                node = absent_nodes[0]
+                continue
+            break
+
         # TODO: Consider following renames.
-        return parents
+        return parent_fctxs
 
     return base, parents
 
