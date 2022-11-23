@@ -90,7 +90,7 @@ std::pair<StringPiece, StringPiece> parseKey(StringPiece fullKey) {
 
 } // namespace
 
-const AbsolutePath kUnspecifiedDefault{detail::kRootStr};
+const AbsolutePath kUnspecifiedDefault{};
 
 std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
   return std::make_unique<EdenConfig>(

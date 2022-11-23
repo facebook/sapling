@@ -368,7 +368,7 @@ int main(int argc, char** argv) {
   FakeEdenServer server;
   server.setCommandLine(originalCommandArguments);
   if (!FLAGS_cleanShutdownFile.empty()) {
-    server.setCleanShutdownFile(AbsolutePath{FLAGS_cleanShutdownFile});
+    server.setCleanShutdownFile(canonicalPath(FLAGS_cleanShutdownFile));
   }
   if (FLAGS_ignoreStop) {
     server.setStopBehavior(StopBehavior::DoNothing);

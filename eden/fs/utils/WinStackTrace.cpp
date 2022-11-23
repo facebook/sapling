@@ -58,7 +58,9 @@ std::optional<AbsolutePath> getBinaryDirectory(HANDLE proc) {
     return std::nullopt;
   }
 
-  auto binary = AbsolutePath{std::wstring_view{buffer, buffer_size}};
+  auto pathStr = wideToMultibyteString<std::string>(
+      std::wstring_view{buffer, buffer_size});
+  auto binary = canonicalPath(pathStr);
   return binary.dirname().copy();
 }
 

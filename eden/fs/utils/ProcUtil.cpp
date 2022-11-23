@@ -84,7 +84,7 @@ optional<MemoryStats> readMemoryStats() {
 #elif _WIN32
   return readMemoryStatsWin();
 #else
-  return readStatmFile("/proc/self/statm"_abspath);
+  return readStatmFile(canonicalPath("/proc/self/statm"));
 #endif
 }
 

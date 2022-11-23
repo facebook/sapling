@@ -45,8 +45,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  AbsolutePath overlayPath(argv[1]);
-  AbsolutePath mountPath(FLAGS_mount_path);
+  auto overlayPath = canonicalPath(argv[1]);
+  auto mountPath = canonicalPath(FLAGS_mount_path);
 
   SqliteInodeCatalog inodeCatalog(overlayPath);
   inodeCatalog.initOverlay(true);

@@ -204,7 +204,8 @@ folly::Try<void> writeFileAtomic(
             FMT_STRING("couldn't create a temporary file for {}"), path))};
   }
 
-  auto tryTmpFileWrite = writeFile(AbsolutePath(tmpFile), data);
+  auto tmpFilePath = canonicalPath(wideToMultibyteString<std::string>(tmpFile));
+  auto tryTmpFileWrite = writeFile(tmpFilePath, data);
   if (tryTmpFileWrite.hasException()) {
     return tryTmpFileWrite;
   }

@@ -237,7 +237,7 @@ TEST_F(CachedParsedFileMonitorTest, updateFileExistToNonExist) {
   writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<CachedParsedFileMonitor<TestFileParser>>(
-      AbsolutePath{path.c_str()}, 0s);
+      canonicalPath(path.c_str()), 0s);
   auto rslt = fcm->getFileContents();
   EXPECT_EQ(rslt.value(), dataOne_);
   EXPECT_EQ(fcm->getUpdateCount(), 1);

@@ -191,7 +191,7 @@ class TestDir {
 
 TestOverlay::TestOverlay()
     : tmpDir_(makeTempDir()),
-      tmpDirPath_(tmpDir_.path().string()),
+      tmpDirPath_(canonicalPath(tmpDir_.path().string())),
       // fsck will write its output in a sibling directory to the overlay,
       // so make sure we put the overlay at least 1 directory deep inside our
       // temporary directory

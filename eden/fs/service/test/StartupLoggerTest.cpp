@@ -86,7 +86,7 @@ bool fileExists(folly::fs::path);
 class StartupLoggerTestBase : public ::testing::Test {
  protected:
   AbsolutePath logPath() {
-    return AbsolutePath(logFile_.path().string());
+    return canonicalPath(logFile_.path().string());
   }
   string readLogContents() {
     return readFile(logPath()).value();

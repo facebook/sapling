@@ -250,7 +250,7 @@ void UserInfo::initHomedir(PasswdEntry* pwd) {
   }
 
   // Fall back to the root directory if all else fails
-  homeDirectory_ = AbsolutePath{"/"};
+  homeDirectory_ = kRootAbsPath.copy();
 }
 
 UserInfo UserInfo::lookup() {

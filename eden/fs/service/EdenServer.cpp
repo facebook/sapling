@@ -265,7 +265,7 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
       kDirSeparator,
       kFusePendingRequestFile);
 
-  auto pending_requests = readFile(AbsolutePathPiece(pending_request_path));
+  auto pending_requests = readFile(canonicalPath(pending_request_path));
   return pending_requests.hasValue()
       ? folly::to<size_t>(pending_requests.value())
       : 0;

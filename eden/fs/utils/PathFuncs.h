@@ -567,7 +567,7 @@ class PathBase :
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
-  explicit PathBase(Stored&& other) noexcept(
+  constexpr explicit PathBase(Stored&& other) noexcept(
       std::is_nothrow_move_constructible_v<Storage>)
       : path_{
             kPathsAreCopiedOnMove ? Storage{other.path_}
@@ -584,7 +584,8 @@ class PathBase :
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
-  explicit PathBase(std::string&& str) : path_(detail::move_or_copy(str)) {
+  constexpr explicit PathBase(std::string&& str)
+      : path_(detail::move_or_copy(str)) {
     SanityChecker()(path_);
   }
 
@@ -599,7 +600,7 @@ class PathBase :
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
           std::is_same<StorageAlias, std::string>::value>::type>
-  explicit PathBase(std::string&& str, SkipPathSanityCheck)
+  constexpr explicit PathBase(std::string&& str, SkipPathSanityCheck)
       : path_(detail::move_or_copy(str)) {}
 
   /**
@@ -1550,9 +1551,21 @@ class AbsolutePathBase : public ComposedPathBase<
   using base_type::base_type;
 
   // Default construct to the root of the VFS
-  AbsolutePathBase() noexcept(
+  constexpr AbsolutePathBase() noexcept(
       noexcept(base_type(kRootStr, SkipPathSanityCheck())))
       : base_type(kRootStr, SkipPathSanityCheck()) {}
+
+  /**
+   * Building an AbsolutePath from a plain string is not supported.
+   *
+   * Using the function canonicalPath should always be used to ensure that the
+   * path has the right format.
+   */
+  explicit AbsolutePathBase(std::string_view) = delete;
+  explicit AbsolutePathBase(std::string&&) = delete;
+#ifdef _WIN32
+  explicit AbsolutePathBase(std::wstring_view) = delete;
+#endif
 
   // For iteration
   using iterator = ComposedPathIterator<AbsolutePathPiece, false>;
@@ -2028,6 +2041,8 @@ RelativePathPiece ComposedPathIterator<Piece, IsReverse>::remainder() const {
 }
 } // namespace detail
 
+constexpr AbsolutePathPiece kRootAbsPath = AbsolutePathPiece{};
+
 /**
  * Get the current working directory, as an AbsolutePath.
  */
@@ -2224,12 +2239,6 @@ inline RelativePathPiece operator"" _relpath(
     const char* str,
     size_t len) noexcept {
   return RelativePathPiece{std::string_view{str, len}};
-}
-
-inline AbsolutePathPiece operator"" _abspath(
-    const char* str,
-    size_t len) noexcept {
-  return AbsolutePathPiece{std::string_view{str, len}};
 }
 } // namespace path_literals
 

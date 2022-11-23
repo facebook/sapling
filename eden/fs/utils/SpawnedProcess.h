@@ -145,6 +145,12 @@ class SpawnedProcess {
     // Set up stdin with a null device
     void nullStdin();
 
+    // Set up stdout with a null device
+    void nullStdout();
+
+    // Set up stderr with a null device
+    void nullStderr();
+
     // open(2) a file for the child process and make it available as targetFd.
     // `targetFd` can portably be STDIN_FILENO, STDOUT_FILENO or STDERR_FILENO.
     // Other arbitrary numbers are possible on POSIX platforms, but not on

@@ -100,7 +100,7 @@ dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
       XLOGF(
           DBG3,
           "Unable to determine reparse point type for {}: {}",
-          AbsolutePath{path},
+          wideToMultibyteString<std::string>(path),
           GetLastError());
       return dtype_t::Unknown;
     }
@@ -120,7 +120,7 @@ dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
       XLOGF(
           DBG3,
           "Unable to read reparse point data for {}: {}",
-          AbsolutePath{path},
+          wideToMultibyteString<std::string>(path),
           GetLastError());
       return dtype_t::Unknown;
     }
@@ -278,8 +278,9 @@ bool directoryIsEmpty(const wchar_t* path) {
   HANDLE h = FindFirstFileExW(
       path, FindExInfoBasic, &findFileData, FindExSearchNameMatch, nullptr, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    throw std::runtime_error(
-        fmt::format("unable to check directory - {}", AbsolutePath{path}));
+    throw std::runtime_error(fmt::format(
+        "unable to check directory - {}",
+        wideToMultibyteString<std::string>(path)));
   }
 
   do {
@@ -293,8 +294,9 @@ bool directoryIsEmpty(const wchar_t* path) {
 
   auto error = GetLastError();
   if (error != ERROR_NO_MORE_FILES) {
-    throw std::runtime_error(
-        fmt::format("unable to check directory - {}", AbsolutePath{path}));
+    throw std::runtime_error(fmt::format(
+        "unable to check directory - {}",
+        wideToMultibyteString<std::string>(path)));
   }
 
   FindClose(h);
@@ -679,7 +681,7 @@ void scanCurrentDir(
   auto overlayEntries = makeEntriesSet(parentOverlayDir);
   // Loop to synchronize overlay state with disk state
   for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
-    auto path = AbsolutePath{entry.path().c_str()};
+    auto path = canonicalPath(entry.path().string());
     auto name = path.basename();
     auto dtype = dtypeFromPath(entry.path());
 
@@ -765,7 +767,7 @@ void scanCurrentDir(
   // Now that this overlay directory is consistent with the on-disk state,
   // proceed to its children.
   for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
-    auto path = AbsolutePath{entry.path().c_str()};
+    auto path = canonicalPath(entry.path().string());
     auto mode = dtypeFromPath(entry.path());
 
     // We can't scan non-directories nor follow symlinks

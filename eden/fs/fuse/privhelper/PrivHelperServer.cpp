@@ -642,8 +642,8 @@ void PrivHelperServer::nfsMount(
   }
 
   mattrFlags |= NFS_MATTR_FS_LOCATIONS;
-  AbsolutePathPiece path{mountPath};
-  auto componentIterator = AbsolutePathPiece{mountPath}.components();
+  auto path = canonicalPath(mountPath);
+  auto componentIterator = path.components();
   std::vector<std::string> components;
   for (const auto component : componentIterator) {
     components.push_back(std::string(component.value()));

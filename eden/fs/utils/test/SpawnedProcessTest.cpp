@@ -21,7 +21,7 @@ TEST(SpawnedProcess, cwd_slash) {
   Options opts;
   opts.nullStdin();
   opts.pipeStdout();
-  opts.chdir("/"_abspath);
+  opts.chdir(kRootAbsPath);
   SpawnedProcess proc({"pwd"}, std::move(opts));
 
   auto outputs = proc.communicate();

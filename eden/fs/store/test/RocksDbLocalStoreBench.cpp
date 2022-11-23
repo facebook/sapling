@@ -18,7 +18,7 @@ void getBlobMetadata(benchmark::State& st) {
   auto tempDir = makeTempDir();
   FaultInjector faultInjector{false};
   auto store = std::make_unique<RocksDbLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()},
+      canonicalPath(tempDir.path().string()),
       std::make_shared<NullStructuredLogger>(),
       &faultInjector);
   store->open();
@@ -44,7 +44,7 @@ void getBlobMetadata(benchmark::State& st) {
   // Reopen the database to exercise the read-from-disk path.
   store.reset();
   store = std::make_unique<RocksDbLocalStore>(
-      AbsolutePathPiece{tempDir.path().string()},
+      canonicalPath(tempDir.path().string()),
       std::make_shared<NullStructuredLogger>(),
       &faultInjector);
   store->open();

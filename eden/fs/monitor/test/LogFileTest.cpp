@@ -39,7 +39,7 @@ namespace facebook::eden {
 
 TEST(TimestampLogRotation, rotation) {
   auto tempdir = makeTempDir();
-  auto dir = AbsolutePath(tempdir.path().native());
+  auto dir = canonicalPath(tempdir.path().native());
   auto logPath = dir + "test.log"_pc;
   XLOG(DBG1) << "log path: " << logPath;
 
@@ -89,7 +89,7 @@ TEST(TimestampLogRotation, rotation) {
 
 TEST(TimestampLogRotation, removeOldLogFiles) {
   auto tempdir = makeTempDir();
-  auto dir = AbsolutePath(tempdir.path().native());
+  auto dir = canonicalPath(tempdir.path().native());
   auto logPath = dir + "test.log"_pc;
   XLOG(DBG1) << "log path: " << logPath;
 

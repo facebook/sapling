@@ -150,7 +150,11 @@ AbsolutePath canonicalPathImpl(
         "{}",
         fmt::join(parts, std::string_view{&kAbsDirSeparator, 1}));
 
-    return AbsolutePath{std::move(value)};
+    // Building an AbsolutePath from a string should be done by calling
+    // canonicalPath. To avoid an infinite recursion, sanity check and build
+    // the AbsolutePath manually.
+    detail::AbsolutePathSanityCheck{}(value);
+    return AbsolutePath{std::move(value), detail::SkipPathSanityCheck{}};
   };
 
   auto canon = canonicalPathData(path);
@@ -365,7 +369,7 @@ AbsolutePath executablePath() {
   std::array<char, pathMax> buf;
   auto result = readlink("/proc/self/exe", buf.data(), buf.size());
   folly::checkUnixError(result, "failed to read /proc/self/exe");
-  return AbsolutePath(
+  return canonicalPath(
       std::string_view(buf.data(), static_cast<size_t>(result)));
 #elif defined(__APPLE__)
   std::vector<char> buf;
@@ -379,7 +383,7 @@ AbsolutePath executablePath() {
   }
   // Note that on success, the size is not updated and we need to look
   // for NUL termination
-  return AbsolutePath(std::string_view(buf.data()));
+  return canonicalPath(std::string_view(buf.data()));
 #elif defined(_WIN32)
   std::vector<WCHAR> buf;
   buf.resize(4096);

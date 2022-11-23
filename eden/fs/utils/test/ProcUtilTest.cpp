@@ -143,7 +143,7 @@ TEST(proc_util, procStatusSomeInvalidInput) {
 }
 
 TEST(proc_util, readMemoryStatsNoThrow) {
-  auto stats = readStatmFile("/DOES_NOT_EXIST"_abspath);
+  auto stats = readStatmFile(canonicalPath("/DOES_NOT_EXIST"));
   EXPECT_FALSE(stats.has_value());
 }
 

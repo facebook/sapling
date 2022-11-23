@@ -1010,7 +1010,7 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
             auto endIterator = boost::filesystem::directory_iterator();
             while (iterator != endIterator) {
               const auto& dirEntry = *iterator;
-              AbsolutePath inodePath(dirEntry.path().string());
+              AbsolutePath inodePath = canonicalPath(dirEntry.path().string());
               auto entryInodeNumber =
                   folly::tryTo<uint64_t>(inodePath.basename().value());
               if (entryInodeNumber.hasValue()) {

@@ -115,7 +115,7 @@ class FuseChannelTest : public ::testing::Test {
   FakeFuse fuse_;
   EdenStats stats_;
   TestDispatcher* dispatcher_;
-  AbsolutePath mountPath_{"/fake/mount/path"};
+  AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
 };
 
 } // namespace

@@ -247,7 +247,7 @@ TEST_F(OverlayTest, getFilePath) {
 TEST(PlainOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
@@ -260,7 +260,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
-        AbsolutePath{testDir.path().string()},
+        canonicalPath(testDir.path().string()),
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         std::make_shared<NullStructuredLogger>(),
@@ -269,7 +269,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
   }
 
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      canonicalPath(testDir.path().string()),
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
@@ -280,11 +280,11 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
 
 TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
   folly::test::TemporaryDirectory testDir;
-  auto localDir = AbsolutePath{testDir.path().string()};
+  auto localDir = canonicalPath(testDir.path().string());
 
   {
     auto overlay = Overlay::create(
-        AbsolutePath{testDir.path().string()},
+        localDir,
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         std::make_shared<NullStructuredLogger>(),
@@ -297,7 +297,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
   }
 
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()},
+      localDir,
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
@@ -368,7 +368,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   AbsolutePath getLocalDir() {
-    return AbsolutePath{testDir_.path().string()};
+    return canonicalPath(testDir_.path().string());
   }
 
   folly::test::TemporaryDirectory testDir_;
@@ -749,7 +749,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
   DebugDumpOverlayInodesTest()
       : testDir_{makeTempDir("eden_DebugDumpOverlayInodesTest")},
         overlay{Overlay::create(
-            AbsolutePathPiece{testDir_.path().string()},
+            canonicalPath(testDir_.path().string()),
             kPathMapDefaultCaseSensitive,
             kInodeCatalogType,
             std::make_shared<NullStructuredLogger>(),

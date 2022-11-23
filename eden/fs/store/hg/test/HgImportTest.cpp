@@ -28,7 +28,7 @@ using folly::test::TemporaryDirectory;
 TEST(HgImporter, ensure_HgImporter_is_linked_even_in_tsan) {
   if (testEnvironmentSupportsHg()) {
     TemporaryDirectory testDir{"eden_hg_import_test"};
-    AbsolutePath testPath{testDir.path().string()};
+    AbsolutePath testPath = canonicalPath(testDir.path().string());
     HgRepo repo{testPath + "repo"_pc};
     repo.hgInit();
     repo.enableTreeManifest(testPath + "cache"_pc);
@@ -48,7 +48,7 @@ class HgImportTest : public ::testing::Test {
 
  protected:
   TemporaryDirectory testDir_{"eden_hg_import_test"};
-  AbsolutePath testPath_{testDir_.path().string()};
+  AbsolutePath testPath_ = canonicalPath(testDir_.path().string());
   HgRepo repo_{testPath_ + "repo"_pc};
   std::shared_ptr<EdenStats> stats_ = std::make_shared<EdenStats>();
 };

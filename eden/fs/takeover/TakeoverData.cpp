@@ -657,7 +657,7 @@ TakeoverData TakeoverData::deserializeThriftMounts(
   for (auto& serializedMount : serializedMounts) {
     std::vector<AbsolutePath> bindMounts;
     for (const auto& path : *serializedMount.bindMountPaths_ref()) {
-      bindMounts.emplace_back(AbsolutePathPiece{path});
+      bindMounts.emplace_back(canonicalPath(path));
     }
     switch (*serializedMount.mountProtocol_ref()) {
       case TakeoverMountProtocol::UNKNOWN:
@@ -674,8 +674,8 @@ TakeoverData TakeoverData::deserializeThriftMounts(
             TakeoverMountProtocol::FUSE,
             *serializedMount.mountPath_ref());
         data.mountPoints.emplace_back(
-            AbsolutePath{*serializedMount.mountPath_ref()},
-            AbsolutePath{*serializedMount.stateDirectory_ref()},
+            canonicalPath(*serializedMount.mountPath_ref()),
+            canonicalPath(*serializedMount.stateDirectory_ref()),
             std::move(bindMounts),
             FuseChannelData{
                 folly::File{},
@@ -689,8 +689,8 @@ TakeoverData TakeoverData::deserializeThriftMounts(
             TakeoverMountProtocol::NFS,
             *serializedMount.mountPath_ref());
         data.mountPoints.emplace_back(
-            AbsolutePath{*serializedMount.mountPath_ref()},
-            AbsolutePath{*serializedMount.stateDirectory_ref()},
+            canonicalPath(*serializedMount.mountPath_ref()),
+            canonicalPath(*serializedMount.stateDirectory_ref()),
             std::move(bindMounts),
             NfsChannelData{folly::File{}},
             std::move(*serializedMount.inodeMap_ref()));

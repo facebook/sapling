@@ -39,14 +39,12 @@ SubprocessScribeLogger::SubprocessScribeLogger(
   if (stdoutFd) {
     options.dup2(std::move(stdoutFd), STDOUT_FILENO);
   } else {
-    OpenFileHandleOptions openOpts;
-    openOpts.writeContents = 1;
-    options.open(STDOUT_FILENO, "/dev/null"_abspath, openOpts);
+    options.nullStdout();
   }
 
   // Forward stderr to the edenfs log.
   // Ensure that no cwd directory handles are held open.
-  options.chdir("/"_abspath);
+  options.chdir(kRootAbsPath);
 
   process_ = SpawnedProcess{argv, std::move(options)};
 

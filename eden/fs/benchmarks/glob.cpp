@@ -31,7 +31,7 @@ AbsolutePath validateArguments() {
     throw std::invalid_argument("A repo must be passed in");
   }
 
-  return AbsolutePath{FLAGS_repo};
+  return canonicalPath(FLAGS_repo);
 }
 
 void eden_glob(benchmark::State& state) {

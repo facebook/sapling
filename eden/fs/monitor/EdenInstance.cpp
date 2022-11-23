@@ -153,7 +153,7 @@ SpawnedEdenInstance::SpawnedEdenInstance(
     : EdenInstance(monitor),
       EventHandler(monitor->getEventBase()),
       AsyncTimeout(monitor->getEventBase()),
-      edenfsExe_(AbsolutePath(FLAGS_edenfs)),
+      edenfsExe_(canonicalPath(FLAGS_edenfs)),
       log_(std::move(log)) {}
 
 SpawnedEdenInstance::~SpawnedEdenInstance() {
@@ -283,7 +283,7 @@ void SpawnedEdenInstance::timeoutExpired() noexcept {
       FileDescriptor(::dup(log_->fd()), "dup", FileDescriptor::FDType::Generic),
       STDERR_FILENO);
   options.dup2(logPipe_.duplicate(), STDIN_FILENO);
-  options.executablePath(AbsolutePathPiece(FLAGS_cat_exe));
+  options.executablePath(canonicalPath(FLAGS_cat_exe));
   std::vector<std::string> argv = {"cat"};
   try {
     SpawnedProcess(argv, std::move(options)).detach();

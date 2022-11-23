@@ -361,6 +361,18 @@ void SpawnedProcess::Options::nullStdin() {
   dup2(FileDescriptor::openNullDevice(opts), STDIN_FILENO);
 }
 
+void SpawnedProcess::Options::nullStdout() {
+  OpenFileHandleOptions opts;
+  opts.writeContents = 1;
+  dup2(FileDescriptor::openNullDevice(opts), STDOUT_FILENO);
+}
+
+void SpawnedProcess::Options::nullStderr() {
+  OpenFileHandleOptions opts;
+  opts.writeContents = 1;
+  dup2(FileDescriptor::openNullDevice(opts), STDERR_FILENO);
+}
+
 #ifdef _WIN32
 void SpawnedProcess::Options::creationFlags(DWORD flags) {
   flags_ = flags;

@@ -37,7 +37,7 @@ constexpr size_t kTreeCacheMinimumEntries = 0;
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_hg_backing_store_test"};
-  AbsolutePath testPath{testDir.path().string()};
+  AbsolutePath testPath = canonicalPath(testDir.path().string());
   HgRepo repo{testPath + "repo"_pc};
   RootId commit1;
   Hash20 manifest1;

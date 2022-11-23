@@ -135,7 +135,7 @@ folly::Try<TakeoverData> runTakeover(
   signal(SIGPIPE, SIG_IGN);
 
   AbsolutePath socketPath =
-      AbsolutePathPiece{tmpDir.path().string()} + "takeover"_pc;
+      canonicalPath(tmpDir.path().string()) + "takeover"_pc;
   EventBase evb;
 
   FaultInjector faultInjector{/*enabled=*/false};
@@ -247,7 +247,7 @@ void simpleTestImpl(
     uint64_t clientCapabilities = kSupportedCapabilities,
     uint64_t serverCapabilites = kSupportedCapabilities) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object to send
   TakeoverData serverData;
@@ -280,7 +280,7 @@ void simpleTestImpl(
   auto mount2FusePath = tmpDirPath + "fuse2"_pc;
   std::vector<AbsolutePath> mount2BindMounts = {
       mount2Path + "test/test2"_relpath,
-      AbsolutePath{"/foo/bar"},
+      canonicalPath("/foo/bar"),
       mount2Path + "a/b/c/d/e/f"_relpath,
   };
   serverData.mountPoints.emplace_back(
@@ -464,7 +464,7 @@ TEST(Takeover, atypicalVersionCapability) {
 
 TEST(Takeover, noMounts) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object with no mount points
   TakeoverData serverData;
@@ -497,7 +497,7 @@ TEST(Takeover, noMounts) {
 
 TEST(Takeover, manyMounts) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object
   TakeoverData serverData;
@@ -656,7 +656,7 @@ TEST(Takeover, errorVersionMismatch) {
 
 TEST(Takeover, nfs) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object to send
   TakeoverData serverData;
@@ -689,7 +689,7 @@ TEST(Takeover, nfs) {
   auto mount2NfsPath = tmpDirPath + "nfs"_pc;
   std::vector<AbsolutePath> mount2BindMounts = {
       mount2Path + "test/test2"_relpath,
-      AbsolutePath{"/foo/bar"},
+      canonicalPath("/foo/bar"),
       mount2Path + "a/b/c/d/e/f"_relpath,
   };
   serverData.mountPoints.emplace_back(
@@ -734,7 +734,7 @@ TEST(Takeover, nfs) {
 
 TEST(Takeover, mixedupFdOrder) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object to send
   TakeoverData serverData;
@@ -792,7 +792,7 @@ TEST(Takeover, mixedupFdOrder) {
 
 TEST(Takeover, missingFdOrder) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object to send
   TakeoverData serverData;
@@ -837,7 +837,7 @@ TEST(Takeover, missingFdOrder) {
 
 TEST(Takeover, nfsNotEnabled) {
   TemporaryDirectory tmpDir("eden_takeover_test");
-  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+  AbsolutePath tmpDirPath = canonicalPath(tmpDir.path().string());
 
   // Build the TakeoverData object to send
   TakeoverData serverData;

@@ -58,11 +58,14 @@ TEST(PathFuncs, Sanity) {
   EXPECT_THROW(RelativePathPiece{"foo/./bar"}, std::domain_error);
   EXPECT_THROW(RelativePathPiece{"../foo/bar"}, std::domain_error);
 
-  EXPECT_THROW(AbsolutePathPiece{"/foo/../bar"}, std::domain_error);
-  EXPECT_THROW(AbsolutePathPiece{"/foo/./bar"}, std::domain_error);
+  EXPECT_THROW(
+      detail::AbsolutePathSanityCheck{}("/foo/../bar"), std::domain_error);
+  EXPECT_THROW(
+      detail::AbsolutePathSanityCheck{}("/foo/./bar"), std::domain_error);
 
   if (folly::kIsWindows) {
-    EXPECT_THROW(AbsolutePathPiece{"/foo\\../bar"}, std::domain_error);
+    EXPECT_THROW(
+        detail::AbsolutePathSanityCheck{}("/foo\\../bar"), std::domain_error);
   }
 }
 
@@ -163,61 +166,61 @@ TEST(PathFuncs, Iterate) {
   EXPECT_EQ(""_relpath, rallEmptyPaths.at(0));
 
   if (folly::kIsWindows) {
-    AbsolutePath absPath("\\\\?\\foo\\bar\\baz");
+    AbsolutePath absPath("\\\\?\\foo\\bar\\baz", detail::SkipPathSanityCheck{});
     std::vector<AbsolutePathPiece> acomps(
         absPath.paths().begin(), absPath.paths().end());
     EXPECT_EQ(4, acomps.size());
-    EXPECT_EQ("\\\\?\\"_abspath, acomps.at(0));
-    EXPECT_EQ("\\\\?\\foo"_abspath, acomps.at(1));
-    EXPECT_EQ("\\\\?\\foo\\bar"_abspath, acomps.at(2));
-    EXPECT_EQ("\\\\?\\foo\\bar\\baz"_abspath, acomps.at(3));
+    EXPECT_EQ("\\\\?\\", acomps.at(0).view());
+    EXPECT_EQ("\\\\?\\foo", acomps.at(1).view());
+    EXPECT_EQ("\\\\?\\foo\\bar", acomps.at(2).view());
+    EXPECT_EQ("\\\\?\\foo\\bar\\baz", acomps.at(3).view());
 
     std::vector<AbsolutePathPiece> racomps(
         absPath.rpaths().begin(), absPath.rpaths().end());
     EXPECT_EQ(4, racomps.size());
-    EXPECT_EQ("\\\\?\\foo\\bar\\baz"_abspath, racomps.at(0));
-    EXPECT_EQ("\\\\?\\foo\\bar"_abspath, racomps.at(1));
-    EXPECT_EQ("\\\\?\\foo"_abspath, racomps.at(2));
-    EXPECT_EQ("\\\\?\\"_abspath, racomps.at(3));
+    EXPECT_EQ("\\\\?\\foo\\bar\\baz", racomps.at(0).view());
+    EXPECT_EQ("\\\\?\\foo\\bar", racomps.at(1).view());
+    EXPECT_EQ("\\\\?\\foo", racomps.at(2).view());
+    EXPECT_EQ("\\\\?\\", racomps.at(3).view());
 
-    AbsolutePath slashAbs("\\\\?\\");
+    AbsolutePath slashAbs("\\\\?\\", detail::SkipPathSanityCheck{});
     std::vector<AbsolutePathPiece> slashPieces(
         slashAbs.paths().begin(), slashAbs.paths().end());
     EXPECT_EQ(1, slashPieces.size());
-    EXPECT_EQ("\\\\?\\"_abspath, slashPieces.at(0));
+    EXPECT_EQ("\\\\?\\", slashPieces.at(0).view());
 
     std::vector<AbsolutePathPiece> rslashPieces(
         slashAbs.rpaths().begin(), slashAbs.rpaths().end());
     EXPECT_EQ(1, rslashPieces.size());
-    EXPECT_EQ("\\\\?\\"_abspath, rslashPieces.at(0));
+    EXPECT_EQ("\\\\?\\", rslashPieces.at(0).view());
   } else {
-    AbsolutePath absPath("/foo/bar/baz");
+    AbsolutePath absPath("/foo/bar/baz", detail::SkipPathSanityCheck{});
     std::vector<AbsolutePathPiece> acomps(
         absPath.paths().begin(), absPath.paths().end());
     EXPECT_EQ(4, acomps.size());
-    EXPECT_EQ("/"_abspath, acomps.at(0));
-    EXPECT_EQ("/foo"_abspath, acomps.at(1));
-    EXPECT_EQ("/foo/bar"_abspath, acomps.at(2));
-    EXPECT_EQ("/foo/bar/baz"_abspath, acomps.at(3));
+    EXPECT_EQ("/", acomps.at(0).view());
+    EXPECT_EQ("/foo", acomps.at(1).view());
+    EXPECT_EQ("/foo/bar", acomps.at(2).view());
+    EXPECT_EQ("/foo/bar/baz", acomps.at(3).view());
 
     std::vector<AbsolutePathPiece> racomps(
         absPath.rpaths().begin(), absPath.rpaths().end());
     EXPECT_EQ(4, racomps.size());
-    EXPECT_EQ("/foo/bar/baz"_abspath, racomps.at(0));
-    EXPECT_EQ("/foo/bar"_abspath, racomps.at(1));
-    EXPECT_EQ("/foo"_abspath, racomps.at(2));
-    EXPECT_EQ("/"_abspath, racomps.at(3));
+    EXPECT_EQ("/foo/bar/baz", racomps.at(0).view());
+    EXPECT_EQ("/foo/bar", racomps.at(1).view());
+    EXPECT_EQ("/foo", racomps.at(2).view());
+    EXPECT_EQ("/", racomps.at(3).view());
 
-    AbsolutePath slashAbs("/");
+    AbsolutePath slashAbs("/", detail::SkipPathSanityCheck{});
     std::vector<AbsolutePathPiece> slashPieces(
         slashAbs.paths().begin(), slashAbs.paths().end());
     EXPECT_EQ(1, slashPieces.size());
-    EXPECT_EQ("/"_abspath, slashPieces.at(0));
+    EXPECT_EQ("/", slashPieces.at(0).view());
 
     std::vector<AbsolutePathPiece> rslashPieces(
         slashAbs.rpaths().begin(), slashAbs.rpaths().end());
     EXPECT_EQ(1, rslashPieces.size());
-    EXPECT_EQ("/"_abspath, rslashPieces.at(0));
+    EXPECT_EQ("/", rslashPieces.at(0).view());
   }
 }
 
@@ -265,7 +268,7 @@ TEST(PathFuncs, IteratorDecrement) {
   }
 
   if (folly::kIsWindows) {
-    AbsolutePath abs("\\\\?\\foo\\bar\\baz");
+    AbsolutePath abs("\\\\?\\foo\\bar\\baz", detail::SkipPathSanityCheck{});
     expected = vector<string>{
         "\\\\?\\foo\\bar\\baz", "\\\\?\\foo\\bar", "\\\\?\\foo", "\\\\?\\"};
     checkDecrement(abs, "paths", abs.paths(), expected);
@@ -274,7 +277,7 @@ TEST(PathFuncs, IteratorDecrement) {
         "\\\\?\\", "\\\\?\\foo", "\\\\?\\foo\\bar", "\\\\?\\foo\\bar\\baz"};
     checkDecrement(abs, "rpaths", abs.rpaths(), expected);
   } else {
-    AbsolutePath abs("/foo/bar/baz");
+    AbsolutePath abs("/foo/bar/baz", detail::SkipPathSanityCheck{});
     expected = vector<string>{"/foo/bar/baz", "/foo/bar", "/foo", "/"};
     checkDecrement(abs, "paths", abs.paths(), expected);
 
@@ -304,7 +307,9 @@ TEST(PathFuncs, IterateComponents) {
     EXPECT_THAT(winRelRParts, ElementsAre("baz"_pc, "bar"_pc, "foo"_pc));
   }
 
-  AbsolutePath abs{folly::kIsWindows ? "\\\\?\\foo\\bar\\baz" : "/foo/bar/baz"};
+  AbsolutePath abs{
+      folly::kIsWindows ? "\\\\?\\foo\\bar\\baz" : "/foo/bar/baz",
+      detail::SkipPathSanityCheck{}};
   std::vector<PathComponentPiece> absParts(
       abs.components().begin(), abs.components().end());
   EXPECT_THAT(absParts, ElementsAre("foo"_pc, "bar"_pc, "baz"_pc));
@@ -333,7 +338,9 @@ TEST(PathFuncs, IterateComponents) {
     EXPECT_THAT(winRel2RParts, ElementsAre("u"_pc, "t"_pc, "s"_pc, "r"_pc));
   }
 
-  AbsolutePath abs2{folly::kIsWindows ? "\\\\?\\a\\b\\c\\d" : "/a/b/c/d"};
+  AbsolutePath abs2{
+      folly::kIsWindows ? "\\\\?\\a\\b\\c\\d" : "/a/b/c/d",
+      detail::SkipPathSanityCheck{}};
   std::vector<PathComponentPiece> abs2Parts(
       abs2.components().begin(), abs2.components().end());
   EXPECT_THAT(abs2Parts, ElementsAre("a"_pc, "b"_pc, "c"_pc, "d"_pc));
@@ -381,7 +388,7 @@ TEST(PathFuncs, IterateSuffixes) {
   }
 
   if (folly::kIsWindows) {
-    AbsolutePath abs{"\\\\?\\foo\\bar\\baz"};
+    AbsolutePath abs{"\\\\?\\foo\\bar\\baz", detail::SkipPathSanityCheck{}};
     std::vector<RelativePathPiece> absParts(
         abs.suffixes().begin(), abs.suffixes().end());
     EXPECT_THAT(
@@ -396,7 +403,7 @@ TEST(PathFuncs, IterateSuffixes) {
         ElementsAre(
             "baz"_relpath, "bar\\baz"_relpath, "foo\\bar\\baz"_relpath));
   } else {
-    AbsolutePath abs{"/foo/bar/baz"};
+    AbsolutePath abs{"/foo/bar/baz", detail::SkipPathSanityCheck{}};
     std::vector<RelativePathPiece> absParts(
         abs.suffixes().begin(), abs.suffixes().end());
     EXPECT_THAT(
@@ -449,7 +456,7 @@ TEST(PathFuncs, IterateSuffixes) {
   }
 
   if (folly::kIsWindows) {
-    AbsolutePath abs2("\\\\?\\a\\b\\c\\d");
+    AbsolutePath abs2("\\\\?\\a\\b\\c\\d", detail::SkipPathSanityCheck{});
     std::vector<RelativePathPiece> abs2Parts(
         abs2.suffixes().begin(), abs2.suffixes().end());
     EXPECT_THAT(
@@ -470,7 +477,7 @@ TEST(PathFuncs, IterateSuffixes) {
             "b\\c\\d"_relpath,
             "a\\b\\c\\d"_relpath));
   } else {
-    AbsolutePath abs2("/a/b/c/d");
+    AbsolutePath abs2("/a/b/c/d", detail::SkipPathSanityCheck{});
     std::vector<RelativePathPiece> abs2Parts(
         abs2.suffixes().begin(), abs2.suffixes().end());
     EXPECT_THAT(
@@ -619,22 +626,27 @@ TEST(PathFuncs, RelativePath) {
 
 TEST(PathFuncs, AbsolutePath) {
   EXPECT_THROW_RE(
-      AbsolutePath("invalid"), std::domain_error, "non-absolute string");
-  EXPECT_THROW_RE(AbsolutePath(""), std::domain_error, "non-absolute string");
+      detail::AbsolutePathSanityCheck{}("invalid"),
+      std::domain_error,
+      "non-absolute string");
+  EXPECT_THROW_RE(
+      detail::AbsolutePathSanityCheck{}(""),
+      std::domain_error,
+      "non-absolute string");
   if (folly::kIsWindows) {
     EXPECT_THROW_RE(
-        AbsolutePath("\\\\?\\trailing\\slash/"),
+        detail::AbsolutePathSanityCheck{}("\\\\?\\trailing\\slash/"),
         std::domain_error,
         "must not end with a slash");
   } else {
     EXPECT_THROW_RE(
-        AbsolutePath("/trailing/slash/"),
+        detail::AbsolutePathSanityCheck{}("/trailing/slash/"),
         std::domain_error,
         "must not end with a slash");
   }
 
   if (folly::kIsWindows) {
-    AbsolutePath abs("\\\\?\\some\\dir");
+    AbsolutePath abs("\\\\?\\some\\dir", detail::SkipPathSanityCheck{});
     EXPECT_EQ("dir", abs.basename().view());
     EXPECT_EQ("\\\\?\\some", abs.dirname().view());
 
@@ -651,18 +663,20 @@ TEST(PathFuncs, AbsolutePath) {
     EXPECT_EQ("\\\\?\\some\\dir\\comp", comp3.view());
 
     EXPECT_EQ("\\\\?\\", AbsolutePathPiece().view());
-    EXPECT_EQ("\\\\?\\", "\\\\?\\"_abspath.view());
+    EXPECT_EQ(
+        "\\\\?\\",
+        AbsolutePathPiece("\\\\?\\", detail::SkipPathSanityCheck{}).view());
     auto comp4 = AbsolutePathPiece() + "foo"_relpath;
     EXPECT_EQ("\\\\?\\foo", comp4.view());
 
-    AbsolutePath root("\\\\?\\");
+    AbsolutePath root{};
     EXPECT_EQ(RelativePathPiece(), root.relativize(root));
     EXPECT_EQ(RelativePathPiece(), abs.relativize(abs));
 
     EXPECT_EQ("foo"_relpath, abs.relativize(abs + "foo"_relpath));
     EXPECT_EQ("foo\\bar"_relpath, abs.relativize(abs + "foo/bar"_relpath));
   } else {
-    AbsolutePath abs("/some/dir");
+    AbsolutePath abs("/some/dir", detail::SkipPathSanityCheck{});
     EXPECT_EQ("dir", abs.basename().view());
     EXPECT_EQ("/some", abs.dirname().view());
 
@@ -679,11 +693,12 @@ TEST(PathFuncs, AbsolutePath) {
     EXPECT_EQ("/some/dir/comp", comp3.view());
 
     EXPECT_EQ("/", AbsolutePathPiece().view());
-    EXPECT_EQ("/", "/"_abspath.view());
+    EXPECT_EQ(
+        "/", AbsolutePathPiece("/", detail::SkipPathSanityCheck{}).view());
     auto comp4 = AbsolutePathPiece() + "foo"_relpath;
     EXPECT_EQ("/foo", comp4.view());
 
-    AbsolutePath root("/");
+    AbsolutePath root{};
     EXPECT_EQ(RelativePathPiece(), root.relativize(root));
     EXPECT_EQ(RelativePathPiece(), abs.relativize(abs));
 
@@ -697,7 +712,8 @@ TEST(PathFuncs, AbsolutePath) {
 TEST(PathFuncs, relativize_memory_safety) {
   if (folly::kIsWindows) {
     AbsolutePath abs{
-        "\\\\?\\some\\dir\\this\\has\\to\\be\\long\\enough\\to\\exceed\\sso"};
+        "\\\\?\\some\\dir\\this\\has\\to\\be\\long\\enough\\to\\exceed\\sso",
+        detail::SkipPathSanityCheck{}};
 
     // This test validates that the result is accessible as long as the
     // argument's memory is alive.
@@ -705,7 +721,9 @@ TEST(PathFuncs, relativize_memory_safety) {
     auto piece = abs.relativize(child);
     EXPECT_EQ("foo"_relpath, piece);
   } else {
-    AbsolutePath abs{"/some/dir/this/has/to/be/long/enough/to/exceed/sso"};
+    AbsolutePath abs{
+        "/some/dir/this/has/to/be/long/enough/to/exceed/sso",
+        detail::SkipPathSanityCheck{}};
 
     // This test validates that the result is accessible as long as the
     // argument's memory is alive.
@@ -786,16 +804,18 @@ TEST(PathFuncs, fmt) {
   EXPECT_EQ("x(bar)", fmt::format("x({})", compPiece));
 
   if (folly::kIsWindows) {
-    AbsolutePath abs("\\\\?\\home\\johndoe");
+    AbsolutePath abs("\\\\?\\home\\johndoe", detail::SkipPathSanityCheck{});
     EXPECT_EQ("x(\\\\?\\home\\johndoe)", fmt::format("x({})", abs));
 
-    AbsolutePathPiece absPiece("\\\\?\\var\\log\\clowntown");
+    AbsolutePathPiece absPiece(
+        "\\\\?\\var\\log\\clowntown", detail::SkipPathSanityCheck{});
     EXPECT_EQ("x(\\\\?\\var\\log\\clowntown)", fmt::format("x({})", absPiece));
   } else {
-    AbsolutePath abs("/home/johndoe");
+    AbsolutePath abs("/home/johndoe", detail::SkipPathSanityCheck{});
     EXPECT_EQ("x(/home/johndoe)", fmt::format("x({})", abs));
 
-    AbsolutePathPiece absPiece("/var/log/clowntown");
+    AbsolutePathPiece absPiece(
+        "/var/log/clowntown", detail::SkipPathSanityCheck{});
     EXPECT_EQ("x(/var/log/clowntown)", fmt::format("x({})", absPiece));
   }
 
@@ -817,9 +837,15 @@ TEST(PathFuncs, fmt_const_ref) {
   EXPECT_EQ("foo", fmt_to_string(PathComponentPiece{"foo"}));
   EXPECT_EQ("foo", fmt_to_string(RelativePathPiece{"foo"}));
   if (folly::kIsWindows) {
-    EXPECT_EQ("\\\\?\\foo", fmt_to_string(AbsolutePathPiece{"\\\\?\\foo"}));
+    EXPECT_EQ(
+        "\\\\?\\foo",
+        fmt_to_string(
+            AbsolutePathPiece{"\\\\?\\foo", detail::SkipPathSanityCheck{}}));
   } else {
-    EXPECT_EQ("/foo", fmt_to_string(AbsolutePathPiece{"/foo"}));
+    EXPECT_EQ(
+        "/foo",
+        fmt_to_string(
+            AbsolutePathPiece{"/foo", detail::SkipPathSanityCheck{}}));
   }
 }
 
@@ -856,7 +882,7 @@ class TmpWorkingDir {
   AbsolutePath oldDir{getcwd()};
   folly::test::TemporaryDirectory dir = makeTempDir();
   std::string pathStr{dir.path().string()};
-  AbsolutePathPiece path{pathStr};
+  AbsolutePathPiece path{canonicalPath(pathStr)};
 };
 } // namespace
 
@@ -884,7 +910,8 @@ TEST(PathFuncs, canonicalPath) {
       canonicalPath("//foo").value());
 
   auto base = AbsolutePath{
-      folly::kIsWindows ? "\\\\?\\base\\dir\\path" : "/base/dir/path"};
+      folly::kIsWindows ? "\\\\?\\base\\dir\\path" : "/base/dir/path",
+      detail::SkipPathSanityCheck{}};
   auto baseDirPath =
       folly::kIsWindows ? "\\\\?\\base\\dir\\path" : "/base/dir/path";
   EXPECT_EQ(baseDirPath, canonicalPath("", base).value());
@@ -1044,61 +1071,75 @@ TEST(PathFuncs, realpath) {
 
 TEST(PathFuncs, expandUser) {
   if (folly::kIsWindows) {
-    EXPECT_EQ("\\\\?\\foo\\bar"_abspath, expandUser("\\\\?\\foo\\bar"));
+    EXPECT_EQ(
+        AbsolutePathPiece("\\\\?\\foo\\bar", detail::SkipPathSanityCheck{}),
+        expandUser("\\\\?\\foo\\bar"));
   } else {
-    EXPECT_EQ("/foo/bar"_abspath, expandUser("/foo/bar"));
+    EXPECT_EQ(
+        AbsolutePathPiece("/foo/bar", detail::SkipPathSanityCheck{}),
+        expandUser("/foo/bar"));
   }
   EXPECT_THROW(expandUser("~user/foo/bar"), std::runtime_error);
   EXPECT_THROW(expandUser("~user/foo/bar", ""), std::runtime_error);
   folly::StringPiece homeBob =
       folly::kIsWindows ? "\\\\?\\home\\bob" : "/home/bob";
   EXPECT_EQ(
-      folly::kIsWindows ? "\\\\?\\home\\bob\\foo\\bar"_abspath
-                        : "/home/bob/foo/bar"_abspath,
+      AbsolutePathPiece(
+          folly::kIsWindows ? "\\\\?\\home\\bob\\foo\\bar"
+                            : "/home/bob/foo/bar",
+          detail::SkipPathSanityCheck{}),
       expandUser("~/foo/bar", homeBob));
-  EXPECT_EQ(AbsolutePath{homeBob}, expandUser("~", homeBob));
+  EXPECT_EQ(
+      AbsolutePath(homeBob, detail::SkipPathSanityCheck{}),
+      expandUser("~", homeBob));
   if (folly::kIsWindows) {
     EXPECT_EQ(
-        "\\\\?\\home\\bob\\foo"_abspath,
+        AbsolutePathPiece(
+            "\\\\?\\home\\bob\\foo", detail::SkipPathSanityCheck{}),
         expandUser("~//foo/./bar/../", "\\\\?\\home/./bob/"));
   } else {
     EXPECT_EQ(
-        "/home/bob/foo"_abspath,
+        AbsolutePathPiece("/home/bob/foo", detail::SkipPathSanityCheck{}),
         expandUser("~//foo/./bar/../", "/home/./bob/"));
   }
 }
 
 template <typename StoredType, typename PieceType>
 void compareHelper(StringPiece str1, StringPiece str2) {
-  EXPECT_TRUE(StoredType{str1} < StoredType{str2});
-  EXPECT_TRUE(PieceType{str1} < PieceType{str2});
-  EXPECT_TRUE(StoredType{str1} < PieceType{str2});
-  EXPECT_TRUE(PieceType{str1} < StoredType{str2});
+  auto stored1 = StoredType{str1, detail::SkipPathSanityCheck{}};
+  auto stored2 = StoredType{str2, detail::SkipPathSanityCheck{}};
+  auto piece1 = PieceType{str1, detail::SkipPathSanityCheck{}};
+  auto piece2 = PieceType{str2, detail::SkipPathSanityCheck{}};
 
-  EXPECT_TRUE(StoredType{str1} <= StoredType{str2});
-  EXPECT_TRUE(PieceType{str1} <= PieceType{str2});
-  EXPECT_TRUE(StoredType{str1} <= PieceType{str2});
-  EXPECT_TRUE(PieceType{str1} <= StoredType{str2});
+  EXPECT_TRUE(stored1 < stored2);
+  EXPECT_TRUE(piece1 < piece2);
+  EXPECT_TRUE(stored1 < piece2);
+  EXPECT_TRUE(piece1 < stored2);
 
-  EXPECT_FALSE(StoredType{str1} > StoredType{str2});
-  EXPECT_FALSE(PieceType{str1} > PieceType{str2});
-  EXPECT_FALSE(StoredType{str1} > PieceType{str2});
-  EXPECT_FALSE(PieceType{str1} > StoredType{str2});
+  EXPECT_TRUE(stored1 <= stored2);
+  EXPECT_TRUE(piece1 <= piece2);
+  EXPECT_TRUE(stored1 <= piece2);
+  EXPECT_TRUE(piece1 <= stored2);
 
-  EXPECT_FALSE(StoredType{str1} >= StoredType{str2});
-  EXPECT_FALSE(PieceType{str1} >= PieceType{str2});
-  EXPECT_FALSE(StoredType{str1} >= PieceType{str2});
-  EXPECT_FALSE(PieceType{str1} >= StoredType{str2});
+  EXPECT_FALSE(stored1 > stored2);
+  EXPECT_FALSE(piece1 > piece2);
+  EXPECT_FALSE(stored1 > piece2);
+  EXPECT_FALSE(piece1 > stored2);
 
-  EXPECT_FALSE(StoredType{str1} == StoredType{str2});
-  EXPECT_FALSE(PieceType{str1} == PieceType{str2});
-  EXPECT_FALSE(StoredType{str1} == PieceType{str2});
-  EXPECT_FALSE(PieceType{str1} == StoredType{str2});
+  EXPECT_FALSE(stored1 >= stored2);
+  EXPECT_FALSE(piece1 >= piece2);
+  EXPECT_FALSE(stored1 >= piece2);
+  EXPECT_FALSE(piece1 >= stored2);
 
-  EXPECT_TRUE(StoredType{str1} != StoredType{str2});
-  EXPECT_TRUE(PieceType{str1} != PieceType{str2});
-  EXPECT_TRUE(StoredType{str1} != PieceType{str2});
-  EXPECT_TRUE(PieceType{str1} != StoredType{str2});
+  EXPECT_FALSE(stored1 == stored2);
+  EXPECT_FALSE(piece1 == piece2);
+  EXPECT_FALSE(stored1 == piece2);
+  EXPECT_FALSE(piece1 == stored2);
+
+  EXPECT_TRUE(stored1 != stored2);
+  EXPECT_TRUE(piece1 != piece2);
+  EXPECT_TRUE(stored1 != piece2);
+  EXPECT_TRUE(piece1 != stored2);
 }
 
 TEST(PathFuncs, comparison) {
@@ -1274,13 +1315,6 @@ TEST(PathFuncs, RelativePathWide) {
   EXPECT_EQ("foo", relPathBack.dirname());
   EXPECT_EQ("bar", relPathBack.basename());
 }
-
-TEST(PathFuncs, AbsolutePathWide) {
-  AbsolutePath abs(L"\\\\?\\some\\dir");
-  EXPECT_EQ(L"\\\\?\\some\\dir", abs.wide());
-  EXPECT_EQ("\\\\?\\some", abs.dirname());
-  EXPECT_EQ("dir", abs.basename());
-}
 #endif
 
 TEST(PathFuncs, HashEquality) {
@@ -1296,9 +1330,11 @@ TEST(PathFuncs, HashEquality) {
   }
 
   AbsolutePathPiece abs1{
-      folly::kIsWindows ? "\\\\?\\foo\\bar\\baz" : "/foo/bar/baz"};
+      folly::kIsWindows ? "\\\\?\\foo\\bar\\baz" : "/foo/bar/baz",
+      detail::SkipPathSanityCheck{}};
   AbsolutePathPiece abs2{
-      folly::kIsWindows ? "\\\\?\\foo\\bar\\baz" : "/foo/bar/baz"};
+      folly::kIsWindows ? "\\\\?\\foo\\bar\\baz" : "/foo/bar/baz",
+      detail::SkipPathSanityCheck{}};
 
   std::hash<AbsolutePathPiece> absHasher{};
   EXPECT_EQ(absHasher(abs1), absHasher(abs2));
