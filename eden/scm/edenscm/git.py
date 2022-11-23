@@ -497,16 +497,17 @@ def push(repo, dest, pushnode, to, force=False):
     refname = RefName(name=to)
     refspec = "%s:%s" % (fromspec, refname)
     ret = rungit(repo, ["push", url, refspec])
-    # udpate remotenames
-    name = refname.withremote(remote).remotename
-    with repo.lock(), repo.transaction("push"):
-        metalog = repo.metalog()
-        namenodes = bookmod.decoderemotenames(metalog["remotenames"])
-        if pushnode is None:
-            namenodes.pop(name, None)
-        else:
-            namenodes[name] = pushnode
-        metalog["remotenames"] = bookmod.encoderemotenames(namenodes)
+    # update remotenames
+    if ret == 0:
+        name = refname.withremote(remote).remotename
+        with repo.lock(), repo.transaction("push"):
+            metalog = repo.metalog()
+            namenodes = bookmod.decoderemotenames(metalog["remotenames"])
+            if pushnode is None:
+                namenodes.pop(name, None)
+            else:
+                namenodes[name] = pushnode
+            metalog["remotenames"] = bookmod.encoderemotenames(namenodes)
     return ret
 
 
