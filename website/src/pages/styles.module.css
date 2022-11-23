@@ -33,6 +33,7 @@
 
 .getStarted {
   --ifm-button-background-color: #fff;
+  --ifm-font-color-base: #000;
 }
 
 .features {
