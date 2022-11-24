@@ -100,6 +100,14 @@ mononoke_queries! {
         bubble_id = {id} AND label IN {labels}"
     }
 
+    write DeleteBubbleLabelsById(
+        id: BubbleId,
+    ) {
+        none,
+        "DELETE FROM ephemeral_bubble_labels WHERE
+        bubble_id = {id}"
+    }
+
     cacheable read SelectBubbleById(
         id: BubbleId,
     ) -> (Timestamp, ExpiryStatus, Option<String>) {
@@ -254,7 +262,6 @@ impl RepoEphemeralStoreInner {
     }
 
     /// Add labels to an existing bubble
-    #[allow(dead_code)]
     async fn add_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
         // Open the bubble to validate if the bubble exists and has not expired.
         self.open_bubble(bubble_id).await?;
@@ -269,7 +276,6 @@ impl RepoEphemeralStoreInner {
     }
 
     /// Remove labels associated with an existing bubble
-    #[allow(dead_code)]
     async fn remove_bubble_labels(&self, bubble_id: BubbleId, labels: Vec<String>) -> Result<()> {
         // Open the bubble to validate if the bubble exists and has not expired.
         let bubble = self.open_bubble(bubble_id).await?;
@@ -278,12 +284,20 @@ impl RepoEphemeralStoreInner {
             .map(|label| label.as_str())
             .collect::<Vec<_>>();
         // The bubble exists, remove labels from it.
-        DeleteBubbleLabels::query(
-            &self.connections.write_connection,
-            &bubble.bubble_id(),
-            labels.as_slice(),
-        )
-        .await?;
+        if labels.is_empty() {
+            // No input labels were provided. In this case remove_labels should remove all
+            // labels associated with the bubble.
+            DeleteBubbleLabelsById::query(&self.connections.write_connection, &bubble.bubble_id())
+                .await?;
+        } else {
+            // Specific labels were provided as input. Only remove those labels.
+            DeleteBubbleLabels::query(
+                &self.connections.write_connection,
+                &bubble.bubble_id(),
+                labels.as_slice(),
+            )
+            .await?;
+        }
         Ok(())
     }
 
@@ -970,6 +984,44 @@ mod test {
             bubble_read.labels().await?,
             vec!["debug_version".to_string()]
         );
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn remove_all_bubble_labels_without_input_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with labels associated to it.
+        let labels = vec!["workspace".to_string(), "debug_version".to_string()];
+        let bubble = eph.create_bubble(None, labels.clone()).await?;
+        // Remove bubble labels without specifying the exact labels to remove.
+        eph.remove_bubble_labels(bubble.bubble_id(), Vec::new())
+            .await?;
+        // Reopen the bubble and validate that all the labels have been removed.
+        // Calling remove_bubble_labels without any input labels should remove
+        // all the associated labels.
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().await?, Vec::<String>::new());
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn remove_all_bubble_labels_with_empty_bubble_test(fb: FacebookInit) -> Result<()> {
+        let initial = Duration::from_secs(30 * 24 * 60 * 60);
+        let grace = Duration::from_secs(6 * 60 * 60);
+        let (_, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
+        // Create a bubble with no labels associated to it.
+        let bubble = eph.create_bubble(None, Vec::new()).await?;
+        // Remove bubble labels without specifying the exact labels to remove.
+        // Even though no labels are associated with the bubble, operation of
+        // removing all labels still succeeds as a no-op.
+        eph.remove_bubble_labels(bubble.bubble_id(), Vec::new())
+            .await?;
+        // Reopen the bubble and validate that the state of labels is the
+        // same as before
+        let bubble_read = eph.open_bubble(bubble.bubble_id()).await?;
+        assert_eq!(bubble_read.labels().await?, Vec::<String>::new());
         Ok(())
     }
 
