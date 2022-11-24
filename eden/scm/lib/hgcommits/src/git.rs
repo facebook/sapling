@@ -394,8 +394,16 @@ fn to_hex(oid: git2::Oid) -> String {
     unsafe { String::from_utf8_unchecked(v) }
 }
 
+// For "Wed, 23 Nov 2022 17:47:30 -0800",
+//
+// git commit message: "1669254450 -0800"
+// hg commit message:  "1669254450 28800"
+// libgit2 Time::offset_minutes: -480
+
 fn to_hg_date_text(time: &git2::Time) -> String {
-    format!("{} {}", time.seconds(), time.offset_minutes())
+    // See above. Convert -480 to 28800.
+    let hg_date_offset_seconds = -time.offset_minutes() * 60;
+    format!("{} {}", time.seconds(), hg_date_offset_seconds)
 }
 
 /// Convert a git commit to hg commit text.
