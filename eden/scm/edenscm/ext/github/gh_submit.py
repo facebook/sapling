@@ -95,11 +95,16 @@ query ($owner: String!, $name: String!) {
     data = result.ok["data"]
     repo = data["repository"]
     parent = repo["parent"]
-    upstream = (
-        _parse_repository_from_dict(parent, hostname=hostname) if parent else None
-    )
-    repository = _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
-    return Result(ok=repository)
+
+    if parent:
+        result = _parse_repository_from_dict(parent, hostname=hostname)
+        if result.is_error():
+            return result
+        else:
+            upstream = result.ok
+    else:
+        upstream = None
+    return _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
 
 
 @dataclass
@@ -148,15 +153,24 @@ query ($owner: String!, $name: String!, $number: Int!) {
     )
 
 
-def _parse_repository_from_dict(repo_obj, hostname: str, upstream=None) -> Repository:
-    return Repository(
-        id=repo_obj["id"],
-        hostname=hostname,
-        owner=repo_obj["owner"]["login"],
-        name=repo_obj["name"],
-        default_branch=repo_obj["defaultBranchRef"]["name"],
-        is_fork=repo_obj["isFork"],
-        upstream=upstream,
+def _parse_repository_from_dict(
+    repo_obj, hostname: str, upstream=None
+) -> Result[Repository]:
+    owner = repo_obj["owner"]["login"]
+    name = repo_obj["name"]
+    default_branch = repo_obj["defaultBranchRef"]["name"]
+    if default_branch is None:
+        return Result(error=f"repository {owner}/{name} does not have a default branch")
+    return Result(
+        ok=Repository(
+            id=repo_obj["id"],
+            hostname=hostname,
+            owner=owner,
+            name=name,
+            default_branch=default_branch,
+            is_fork=repo_obj["isFork"],
+            upstream=upstream,
+        )
     )
 
 
