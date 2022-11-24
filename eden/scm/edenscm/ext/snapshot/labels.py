@@ -40,15 +40,21 @@ def remove_labels(ui, repo, csid=None, **opts):
     if csid is None:
         raise error.CommandError("snapshot remove-labels", _("missing snapshot id"))
     labels = parselabels(opts)
-    if not labels or len(labels) == 0:
+    if opts["all"] and labels and len(labels) > 0:
         raise error.CommandError(
-            "snapshot remove-labels", _("missing labels to remove from snapshot")
+            "snapshot remove-labels",
+            _("cannot use 'labels' and 'all' arguments together"),
+        )
+    if not opts["all"] and (not labels or len(labels) == 0):
+        raise error.CommandError(
+            "snapshot remove-labels",
+            _("need to provide atleast one of 'labels' or 'all' arguments"),
         )
     try:
         response = repo.edenapi.altersnapshot(
             {
                 "cs_id": bytes.fromhex(csid),
-                "labels_to_remove": labels,
+                "labels_to_remove": labels if labels else [],
                 "labels_to_add": [],
             },
         )

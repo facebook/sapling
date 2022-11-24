@@ -528,21 +528,21 @@ impl EdenApiHandler for AlterSnapshotHandler {
             !request.labels_to_remove.is_empty(),
         );
         if label_addition && label_removal {
+            // Input has both labels to add and labels to remove, which is not allowed.
             Err(anyhow!(
                 "Alter snapshot request cannot have labels_to_add and labels_to_remove both as non-empty"
             ))?
         } else if label_addition {
+            // Input has labels to add, so let's add the input labels.
             repo.ephemeral_store()
                 .add_bubble_labels(id, request.labels_to_add.clone())
                 .await?;
-        } else if label_removal {
+        } else {
+            // Input has labels to remove, or no labels as input at all. In either case,
+            // we need to remove specific or all labels corresponding to the bubble.
             repo.ephemeral_store()
                 .remove_bubble_labels(id, request.labels_to_remove.clone())
                 .await?;
-        } else {
-            Err(anyhow!(
-                "Alter snapshot request cannot have labels_to_add and labels_to_remove both as empty"
-            ))?
         }
         let current_labels = repo.ephemeral_store().labels_from_bubble(&id).await?;
         let response = AlterSnapshotResponse { current_labels };

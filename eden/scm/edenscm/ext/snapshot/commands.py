@@ -178,7 +178,17 @@ def add_labels(*args, **kwargs):
             "",
             "labels",
             "",
-            _("comma-separated list of named labels to be removed from the snapshot"),
+            _(
+                "comma-separated list of named labels to be removed from the snapshot. Cannot be used with --all"
+            ),
+        ),
+        (
+            "",
+            "all",
+            False,
+            _(
+                "flag representing if all the labels associated with the snapshot need to be removed. Cannot be used with --labels"
+            ),
         ),
     ],
     _("ID"),
