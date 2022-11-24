@@ -149,12 +149,13 @@ query ($owner: String!, $name: String!, $number: Int!) {
 
 
 def _parse_repository_from_dict(repo_obj, hostname: str, upstream=None) -> Repository:
+    default_branch = "main" if "defaultBranchRef" not in repo_obj else repo_obj["defaultBranchRef"]["name"]
     return Repository(
         id=repo_obj["id"],
         hostname=hostname,
         owner=repo_obj["owner"]["login"],
         name=repo_obj["name"],
-        default_branch=repo_obj["defaultBranchRef"]["name"],
+        default_branch=default_branch,
         is_fork=repo_obj["isFork"],
         upstream=upstream,
     )
