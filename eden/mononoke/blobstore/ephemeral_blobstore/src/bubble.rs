@@ -426,10 +426,6 @@ impl Bubble {
             repo_config,
         }
     }
-
-    pub async fn extend_lifespan(&self) -> Result<()> {
-        unimplemented!()
-    }
 }
 
 // These blobstore methods are not to be used directly as they bypass redaction.

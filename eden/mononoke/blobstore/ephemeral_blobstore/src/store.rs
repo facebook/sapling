@@ -47,8 +47,7 @@ struct RepoEphemeralStoreInner {
     pub(crate) connections: SqlConnections,
 
     /// Initial value of the lifespan for bubbles in this store, i.e. the
-    /// amount of time they last from either the call to create or the last
-    /// call to extend_lifespan.
+    /// amount of time they last from the call to create.
     pub(crate) initial_bubble_lifespan: ChronoDuration,
 
     /// Grace period after bubbles expire during which requests which have
