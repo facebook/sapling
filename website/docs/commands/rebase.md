@@ -4,7 +4,7 @@ sidebar_position: 30
 
 ## rebase
 <!--
-  @generated SignedSource<<ddd9dd98682a891d2805940ed5213cbb>>
+  @generated SignedSource<<ff1197d75ec90e60bab3409eeb0c4442>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -136,7 +136,7 @@ It will also print a configurable warning:
 experimental.inmemorywarning = Using experimental in-memory rebase
 ```
 
-Returns 0 on success, 1 if nothing to rebase or if there are
+Returns 0 on success (also when nothing to rebase), 1 if there are
 unresolved conflicts.
 
 ## arguments
