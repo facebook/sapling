@@ -20,7 +20,7 @@ Additionally, as we developed Sapling we ended up with internal abstractions tha
 
 The easiest way to understand the basic usage of Sapling is to see it in action. Below we clone a repo, make some commits/amends, undo some changes, and push the work.
 
-```bash
+```sl-shell-example
 # Clones the repository into the sapling directory.
 # For git support, it uses git under the hood for clone/push/pull.
 $ sl clone --git https://github.com/facebookexperimental/sapling

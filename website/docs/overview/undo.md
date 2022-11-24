@@ -6,7 +6,7 @@ sidebar_position: 90
 
 Since Sapling keeps a full record of the mutation history of commits, most Sapling commands that modify commits can be easily undone.  The `sl undo` command will revert the commit graph to its state prior to the last run command.
 
-```bash
+```sl-shell-example
 $ sl
   @  e75394bbb  16 minutes ago  mary
   │  Commit Two
@@ -53,7 +53,7 @@ o  774057207  Today at 10:48  remote/stable
 Running the command again will undo the command run before the last undone command. Use the `sl redo` command to reverse the undo command.
 
 
-```bash
+```sl-shell-example
 # Undo change #1.
 $ sl undo
 $ sl
@@ -96,7 +96,7 @@ view and recover the commit.
 The undo command is limited to undoing changes to the commit graph. To undo changes related to the working copy, like a commit or amend, use `sl uncommit` and `sl unamend`.
 
 
-```bash
+```sl-shell-example
 $ sl
   @  1a22ba0e9  83 seconds ago  mary
 ╭─╯  my feature

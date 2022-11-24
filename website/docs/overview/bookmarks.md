@@ -36,7 +36,7 @@ bookmarks are shown in `smartlog` output. In this example,
 a local bookmark.
 
 
-```bash
+```sl-shell-example
 $ sl
 o  b84224608  13 minutes ago  remote/main
 ╷
