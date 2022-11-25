@@ -105,7 +105,10 @@ This test also checks file content deduplication. We upload 1 file content and 1
   $ hgedenapi commit -m "New files Dir1"
 
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
-  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not uploaded
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
+ 
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
 
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
@@ -130,8 +133,12 @@ This test also checks file content deduplication. We upload 1 file content and 1
    INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
 
-  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
-  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 uploaded
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9   # no remote check
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
+ 
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote  # remote check
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
 
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
@@ -146,7 +153,7 @@ The files of the second commit are identical to the files of the first commit, s
   $ hgedenapi commit -m "New files Dir2"
 
   $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 not uploaded
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
 
   $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --config commitcloud.usehttpupload=False
   65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
@@ -168,12 +175,15 @@ The files of the second commit are identical to the files of the first commit, s
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
   commitcloud: nothing to upload
 
-Expect remote lookup, edenapi based version of the `hg cloud check` command doesn't check the local cache yet.
+The eden api version performs a remote lookup with the `--remote` option only
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
+ 
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --remote
    INFO edenapi::client: Requesting lookup for 1 item(s)
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 uploaded
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 
-The legacy version performs remote lookup with the `--remote` option only
+The legacy version performs a remote lookup with the `--remote` option only
   $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --config commitcloud.usehttpupload=False --debug
   65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 

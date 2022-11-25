@@ -1363,23 +1363,20 @@ def cloudcheck(ui, repo, **opts):
     If no revision are specified then it checks working copy parent.
     """
 
-    if ui.configbool("commitcloud", "usehttpupload"):
+    remote = opts.get("remote")
+    revs = opts.get("rev")
+    if not revs:
+        revs = ["."]
+
+    if ui.configbool("commitcloud", "usehttpupload") and remote:
         # eden api based lookup
-        revs = opts.get("rev")
-        if not revs:
-            revs = ["."]
         nodestocheck = [repo[r].node() for r in scmutil.revrange(repo, revs)]
         missingnodes = set(edenapi_upload._filtercommits(repo, nodestocheck))
         for n in nodestocheck:
             ui.write(nodemod.hex(n), " ")
-            ui.write(_("uploaded") if not (n in missingnodes) else _("not uploaded"))
+            ui.write(_("backed up") if not (n in missingnodes) else _("not backed up"))
             ui.write(_("\n"))
             return
-
-    revs = opts.get("rev")
-    remote = opts.get("remote")
-    if not revs:
-        revs = ["."]
 
     unfi = repo
     revs = scmutil.revrange(repo, revs)
