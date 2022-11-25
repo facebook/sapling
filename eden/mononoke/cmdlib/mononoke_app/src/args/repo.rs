@@ -55,6 +55,7 @@ fn augment_args<'a>(
     )
 }
 
+#[macro_export]
 macro_rules! repo_args {
     ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
         #[derive(Debug)]
@@ -91,7 +92,6 @@ macro_rules! repo_args {
                     }
                 }
             }
-
             fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
                 *self = Self::from_arg_matches(matches)?;
                 Ok(())
@@ -100,6 +100,58 @@ macro_rules! repo_args {
 
         impl AsRepoArg for $ident {
             fn as_repo_arg(&self) -> &RepoArg {
+                &self.0
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! repo_args_optional {
+    ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
+        #[derive(Debug)]
+        pub struct $ident(Option<RepoArg>);
+
+        impl Args for $ident {
+            fn augment_args(cmd: Command) -> Command {
+                augment_args(
+                    cmd,
+                    stringify!($ident),
+                    false,
+                    $name_arg,
+                    $maybe_short_name_arg,
+                    $name_help,
+                    $id_arg,
+                    $id_help,
+                )
+            }
+
+            fn augment_args_for_update(cmd: Command) -> Command {
+                Self::augment_args(cmd)
+            }
+        }
+
+        impl FromArgMatches for $ident {
+            fn from_arg_matches(matches: &ArgMatches) -> Result<Self, Error> {
+                let repo_id = matches.get_one($id_arg);
+                let repo_name: Option<&String> = matches.get_one($name_arg);
+                match (repo_id, repo_name) {
+                    (Some(repo_id), None) => {
+                        Ok(Self(Some(RepoArg::Id(RepositoryId::new(*repo_id)))))
+                    }
+                    (None, Some(repo_name)) => Ok(Self(Some(RepoArg::Name(repo_name.clone())))),
+                    (Some(_), Some(_)) => unreachable!(),
+                    (None, None) => Ok(Self(None)),
+                }
+            }
+            fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
+                *self = Self::from_arg_matches(matches)?;
+                Ok(())
+            }
+        }
+
+        impl $ident {
+            pub fn as_repo_arg(&self) -> &Option<RepoArg> {
                 &self.0
             }
         }
@@ -191,4 +243,10 @@ pub enum RepoArg {
 
 pub trait AsRepoArg {
     fn as_repo_arg(&self) -> &RepoArg;
+}
+
+impl AsRepoArg for RepoArg {
+    fn as_repo_arg(&self) -> &RepoArg {
+        self
+    }
 }

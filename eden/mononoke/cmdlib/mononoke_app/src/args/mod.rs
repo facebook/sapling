@@ -45,6 +45,8 @@ pub use tls::TLSArgs;
 
 pub use self::tunables::TunablesArgs;
 pub use crate::fb303::Fb303Args;
+pub use crate::repo_args;
+pub use crate::repo_args_optional;
 
 /// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
 /// Pass raw path instead.
