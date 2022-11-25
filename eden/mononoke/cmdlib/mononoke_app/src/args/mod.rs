@@ -35,7 +35,6 @@ pub use readonly::ReadonlyArgs;
 pub use repo::MultiRepoArgs;
 pub use repo::RepoArg;
 pub use repo::RepoArgs;
-pub use repo::SourceAndTargetRepoArg;
 pub use repo::SourceAndTargetRepoArgs;
 pub use repo_blobstore::RepoBlobstoreArgs;
 pub use repo_filter::RepoFilterAppExtension;

@@ -153,80 +153,34 @@ impl MultiRepoArgs {
     }
 }
 
+repo_args!(
+    SourceRepoArgs,
+    "source-repo-name",
+    None,
+    "Source repository name",
+    "source-repo-id",
+    "Numeric source repository ID"
+);
+
+repo_args!(
+    TargetRepoArgs,
+    "target-repo-name",
+    None,
+    "Target repository name",
+    "target-repo-id",
+    "Numeric target repository ID"
+);
+
 /// Command line arguments for specifying only a source  and a target repos,
 /// Necessary for cross-repo operations
 /// Only visible if the app was built with a call to `MononokeAppBuilder::with_source_and_target_repos`
 #[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("source-repo")
-        .required(true)
-        .args(&["source-repo-id", "source-repo-name"]),
-))]
-#[clap(group(
-            ArgGroup::new("target-repo")
-        .required(true)
-        .args(&["target-repo-id", "target-repo-name"]),
-))]
 pub struct SourceAndTargetRepoArgs {
-    /// Numeric ID of source repository (used only for commands that operate on more than one repo)
-    #[clap(long)]
-    source_repo_id: Option<i32>,
+    #[clap(flatten)]
+    pub source_repo: SourceRepoArgs,
 
-    /// Name of source repository (used only for commands that operate on more than one repo)
-    #[clap(long)]
-    source_repo_name: Option<String>,
-
-    /// Numeric ID of target repository (used only for commands that operate on more than one repo)
-    #[clap(long)]
-    target_repo_id: Option<i32>,
-
-    /// Name of target repository (used only for commands that operate on more than one repo)
-    #[clap(long)]
-    target_repo_name: Option<String>,
-}
-
-impl SourceAndTargetRepoArgs {
-    pub fn source_and_target_id_or_name(&self) -> Result<SourceAndTargetRepoArg> {
-        let source_repo = match self {
-            Self {
-                source_repo_id: Some(source_repo_id),
-                source_repo_name: None,
-                ..
-            } => Ok(RepoArg::Id(RepositoryId::new(*source_repo_id))),
-            Self {
-                source_repo_name: Some(source_repo_name),
-                source_repo_id: None,
-                ..
-            } => Ok(RepoArg::Name(source_repo_name.clone())),
-            _ => Err(anyhow::anyhow!(
-                "exactly one of source-repo-id and source-repo-name must be specified"
-            )),
-        }?;
-        let target_repo = match self {
-            Self {
-                target_repo_id: Some(target_repo_id),
-                target_repo_name: None,
-                ..
-            } => Ok(RepoArg::Id(RepositoryId::new(*target_repo_id))),
-            Self {
-                target_repo_name: Some(target_repo_name),
-                target_repo_id: None,
-                ..
-            } => Ok(RepoArg::Name(target_repo_name.clone())),
-            _ => Err(anyhow::anyhow!(
-                "exactly one of target-repo-id and target-repo-name must be specified"
-            )),
-        }?;
-        Ok(SourceAndTargetRepoArg {
-            source_repo,
-            target_repo,
-        })
-    }
-}
-
-pub struct SourceAndTargetRepoArg {
-    pub source_repo: RepoArg,
-    pub target_repo: RepoArg,
+    #[clap(flatten)]
+    pub target_repo: TargetRepoArgs,
 }
 
 #[derive(Debug)]

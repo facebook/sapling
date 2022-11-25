@@ -104,8 +104,8 @@ async fn get_things_from_app(
     let fb = app.fb;
 
     let config_store = app.config_store();
-    let ((_, source_repo_config), (_, target_repo_config)) =
-        app.source_and_target_repo_config(repo_args.source_and_target_id_or_name()?)?;
+    let (_, source_repo_config) = app.repo_config(repo_args.source_repo.id_or_name())?;
+    let (_, target_repo_config) = app.repo_config(repo_args.target_repo.id_or_name())?;
 
     if source_repo_config.storage_config.metadata != target_repo_config.storage_config.metadata {
         return Err(Error::msg(
