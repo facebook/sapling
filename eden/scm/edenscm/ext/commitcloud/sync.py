@@ -157,10 +157,7 @@ def _sync(
     # External services may know the workspacename to trigger the sync
     if cloudworkspace and workspacename != cloudworkspace:
         ui.status(_("current workspace is different than the workspace to sync\n"))
-        return (1, None)
-
-    # Connect to the commit cloud service.
-    serv = service.get(ui)
+        return 1, None
 
     ui.status(
         _("synchronizing '%s' with '%s'\n") % (reponame, workspacename),
@@ -182,11 +179,10 @@ def _sync(
         ui.status(
             _("this version has been already synchronized\n"), component="commitcloud"
         )
-        # It's possible that we have two cloud syncs for the same repo - one for edenfs backing repo
-        # another is for edenfs checkout. If edenfs backing repo sync runs first then it will sync
-        # all the commits and bookmarks but it won't move working copy of the checkout.
-        # The line below makes sure that working copy is updated.
-        return _maybeupdateworkingcopy(repo, startnode), None
+        return 0, None
+
+    # Connect to the commit cloud service.
+    serv = service.get(ui)
 
     origrepostate = _hashrepostate(repo)
 
