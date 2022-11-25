@@ -18,63 +18,106 @@ use mononoke_types::RepositoryId;
 
 /// Command line arguments for specifying a single repo.
 
-#[derive(Debug)]
-pub struct RepoArgs(RepoArg);
-
-impl Args for RepoArgs {
-    fn augment_args(cmd: Command) -> Command {
-        cmd.arg(
-            Arg::new("repo-id")
-                .long("repo-id")
-                .value_parser(value_parser!(i32))
-                .value_name("REPO_ID")
-                .help("Numeric repository ID"),
-        )
-        .arg(
-            Arg::new("repo-name")
-                .short('R')
-                .long("repo-name")
-                .value_name("REPO_NAME")
-                .help("Repository name"),
-        )
-        .group(
-            ArgGroup::new("repo")
-                .required(true)
-                .args(&["repo-id", "repo-name"]),
-        )
-    }
-    fn augment_args_for_update(cmd: Command) -> Command {
-        RepoArgs::augment_args(cmd)
-    }
+// For convenience first we define macro for generating appropiate RepoArgs
+// structure that can be used with clap derive structs. Each struct adds args
+// for providing repo using id or name.
+fn augment_args<'a>(
+    cmd: Command<'a>,
+    ident: &'static str,
+    required: bool,
+    name_arg: &'static str,
+    name_arg_short: Option<char>,
+    name_help: &'static str,
+    id_arg: &'static str,
+    id_help: &'static str,
+) -> Command<'a> {
+    cmd.arg(
+        Arg::new(id_arg)
+            .long(id_arg)
+            .value_parser(value_parser!(i32))
+            .value_name("REPO_ID")
+            .help(id_help),
+    )
+    .arg({
+        let mut arg = Arg::new(name_arg)
+            .long(name_arg)
+            .value_name("REPO_NAME")
+            .help(name_help);
+        if let Some(short) = name_arg_short {
+            arg = arg.short(short);
+        }
+        arg
+    })
+    .group(
+        ArgGroup::new(ident)
+            .required(required)
+            .args(&[id_arg, name_arg]),
+    )
 }
 
-impl FromArgMatches for RepoArgs {
-    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, Error> {
-        let repo_id = matches.get_one("repo-id");
-        let repo_name: Option<&String> = matches.get_one("repo-name");
-        match (repo_id, repo_name) {
-            (Some(repo_id), None) => Ok(Self(RepoArg::Id(RepositoryId::new(*repo_id)))),
-            (None, Some(repo_name)) => Ok(Self(RepoArg::Name(repo_name.clone()))),
-            // This case should never happen - arg grouping in clap will error first.
-            _ => {
-                unreachable!("exactly one of repo-id and repo-name must be specified");
+macro_rules! repo_args {
+    ($ident:ident, $name_arg:literal, $maybe_short_name_arg:expr, $name_help:literal, $id_arg:literal, $id_help:literal) => {
+        #[derive(Debug)]
+        pub struct $ident(RepoArg);
+
+        impl Args for $ident {
+            fn augment_args(cmd: Command) -> Command {
+                augment_args(
+                    cmd,
+                    stringify!($ident),
+                    true,
+                    $name_arg,
+                    $maybe_short_name_arg,
+                    $name_help,
+                    $id_arg,
+                    $id_help,
+                )
+            }
+            fn augment_args_for_update(cmd: Command) -> Command {
+                Self::augment_args(cmd)
             }
         }
-    }
 
-    fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
-        *self = Self::from_arg_matches(matches)?;
-        Ok(())
-    }
+        impl FromArgMatches for $ident {
+            fn from_arg_matches(matches: &ArgMatches) -> Result<Self, Error> {
+                let repo_id = matches.get_one($id_arg);
+                let repo_name: Option<&String> = matches.get_one($name_arg);
+                match (repo_id, repo_name) {
+                    (Some(repo_id), None) => Ok(Self(RepoArg::Id(RepositoryId::new(*repo_id)))),
+                    (None, Some(repo_name)) => Ok(Self(RepoArg::Name(repo_name.clone()))),
+                    // This case should never happen - arg grouping in clap will error first.
+                    _ => {
+                        unreachable!("exactly one of repo-id and repo-name must be specified");
+                    }
+                }
+            }
+
+            fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
+                *self = Self::from_arg_matches(matches)?;
+                Ok(())
+            }
+        }
+
+        impl $ident {
+            pub fn id_or_name(&self) -> &RepoArg {
+                &self.0
+            }
+        }
+    };
 }
+
+repo_args!(
+    RepoArgs,
+    "repo-name",
+    Some('R'),
+    "Repository name",
+    "repo-id",
+    "Numeric repository ID"
+);
 
 impl RepoArgs {
     pub fn from_repo_id(repo_id: i32) -> Self {
         Self(RepoArg::Id(RepositoryId::new(repo_id)))
-    }
-
-    pub fn id_or_name(&self) -> &RepoArg {
-        &self.0
     }
 }
 
