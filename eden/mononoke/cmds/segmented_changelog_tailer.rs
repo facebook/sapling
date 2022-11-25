@@ -102,7 +102,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let mut tasks = Vec::new();
     for (index, blobrepo) in blobrepos.into_iter().enumerate() {
         let repo_id = blobrepo.get_repoid();
-        let (repo_name, config) = app.repo_config(RepoArg::Id(repo_id))?;
+        let (repo_name, config) = app.repo_config(&RepoArg::Id(repo_id))?;
         info!(
             ctx.logger(),
             "repo name '{}' translates to id {}", repo_name, repo_id

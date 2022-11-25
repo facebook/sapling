@@ -17,14 +17,9 @@ use clap::FromArgMatches;
 use mononoke_types::RepositoryId;
 
 /// Command line arguments for specifying a single repo.
-#[derive(Debug)]
-pub struct RepoArgs {
-    /// Numeric repository ID
-    repo_id: Option<i32>,
 
-    /// Repository name
-    repo_name: Option<String>,
-}
+#[derive(Debug)]
+pub struct RepoArgs(RepoArg);
 
 impl Args for RepoArgs {
     fn augment_args(cmd: Command) -> Command {
@@ -55,41 +50,31 @@ impl Args for RepoArgs {
 
 impl FromArgMatches for RepoArgs {
     fn from_arg_matches(matches: &ArgMatches) -> Result<Self, Error> {
-        Ok(Self {
-            repo_id: matches.get_one("repo-id").cloned(),
-            repo_name: matches.get_one("repo-name").cloned(),
-        })
+        let repo_id = matches.get_one("repo-id");
+        let repo_name: Option<&String> = matches.get_one("repo-name");
+        match (repo_id, repo_name) {
+            (Some(repo_id), None) => Ok(Self(RepoArg::Id(RepositoryId::new(*repo_id)))),
+            (None, Some(repo_name)) => Ok(Self(RepoArg::Name(repo_name.clone()))),
+            // This case should never happen - arg grouping in clap will error first.
+            _ => {
+                unreachable!("exactly one of repo-id and repo-name must be specified");
+            }
+        }
     }
 
     fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
-        self.repo_id = matches.get_one("repo-id").cloned();
-        self.repo_name = matches.get_one("repo-name").cloned();
+        *self = Self::from_arg_matches(matches)?;
         Ok(())
     }
 }
 
 impl RepoArgs {
     pub fn from_repo_id(repo_id: i32) -> Self {
-        RepoArgs {
-            repo_id: Some(repo_id),
-            repo_name: None,
-        }
+        Self(RepoArg::Id(RepositoryId::new(repo_id)))
     }
 
-    pub fn id_or_name(&self) -> Result<RepoArg> {
-        match self {
-            RepoArgs {
-                repo_id: Some(repo_id),
-                repo_name: None,
-            } => Ok(RepoArg::Id(RepositoryId::new(*repo_id))),
-            RepoArgs {
-                repo_name: Some(repo_name),
-                repo_id: None,
-            } => Ok(RepoArg::Name(repo_name)),
-            _ => Err(anyhow::anyhow!(
-                "exactly one of repo-id and repo-name must be specified"
-            )),
-        }
+    pub fn id_or_name(&self) -> &RepoArg {
+        &self.0
     }
 }
 
@@ -118,7 +103,7 @@ impl MultiRepoArgs {
             l.push(RepoArg::Id(RepositoryId::new(*id)));
         }
         for name in &self.repo_name {
-            l.push(RepoArg::Name(name));
+            l.push(RepoArg::Name(name.to_owned()));
         }
 
         Ok(l)
@@ -169,7 +154,7 @@ impl SourceAndTargetRepoArgs {
                 source_repo_name: Some(source_repo_name),
                 source_repo_id: None,
                 ..
-            } => Ok(RepoArg::Name(source_repo_name)),
+            } => Ok(RepoArg::Name(source_repo_name.clone())),
             _ => Err(anyhow::anyhow!(
                 "exactly one of source-repo-id and source-repo-name must be specified"
             )),
@@ -184,7 +169,7 @@ impl SourceAndTargetRepoArgs {
                 target_repo_name: Some(target_repo_name),
                 target_repo_id: None,
                 ..
-            } => Ok(RepoArg::Name(target_repo_name)),
+            } => Ok(RepoArg::Name(target_repo_name.clone())),
             _ => Err(anyhow::anyhow!(
                 "exactly one of target-repo-id and target-repo-name must be specified"
             )),
@@ -196,12 +181,13 @@ impl SourceAndTargetRepoArgs {
     }
 }
 
-pub struct SourceAndTargetRepoArg<'name> {
-    pub source_repo: RepoArg<'name>,
-    pub target_repo: RepoArg<'name>,
+pub struct SourceAndTargetRepoArg {
+    pub source_repo: RepoArg,
+    pub target_repo: RepoArg,
 }
 
-pub enum RepoArg<'name> {
+#[derive(Debug)]
+pub enum RepoArg {
     Id(RepositoryId),
-    Name(&'name str),
+    Name(String),
 }

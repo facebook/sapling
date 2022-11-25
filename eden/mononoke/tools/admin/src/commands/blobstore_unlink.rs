@@ -102,7 +102,7 @@ async fn get_blobstore(
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
 
-    let repo_arg = args.repo_args.id_or_name()?;
+    let repo_arg = args.repo_args.id_or_name();
     let (_repo_name, repo_config) = app.repo_config(repo_arg)?;
     let blobstore = get_blobstore(
         app.fb,

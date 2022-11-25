@@ -111,7 +111,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = &env.readonly_storage;
     let blobstore_options = &env.blobstore_options;
 
-    let repo_arg = args.repo_args.id_or_name()?;
+    let repo_arg = args.repo_args.id_or_name();
     let (_repo_name, repo_config) = app.repo_config(repo_arg)?;
     let blobconfig = repo_config.storage_config.blobstore;
     let repo_prefix = repo_config.repoid.prefix();
