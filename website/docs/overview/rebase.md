@@ -41,6 +41,8 @@ o  d78f66e01  106 seconds ago  remote/main
 ╭─╯  Commit A
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 #### -b / --base
@@ -79,6 +81,8 @@ $ sl rebase -b . -d main
 o  d78f66e01  15 minutes ago  remote/main
 ╷
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 #### -s / --source
@@ -112,6 +116,8 @@ o  d78f66e01  11 minutes ago  remote/main
 ╭─╯  Commit A
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 #### -r / --revisions
@@ -151,6 +157,8 @@ o  d78f66e01  4 minutes ago  remote/main
 ╭─╯  Commit A
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 Note how `6f782187a` is identified with an `x` in the commit graph to denote that it
@@ -183,6 +191,8 @@ o  d78f66e01  27 minutes ago
 ╭─╯  Commit One
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 
 # Rebase all my commits onto new main.
 $ sl rebase -r 'draft()' -d main
@@ -206,4 +216,6 @@ $ sl
 o  b5d600552  3 minutes ago  remote/main
 ╷
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```

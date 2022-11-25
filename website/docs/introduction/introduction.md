@@ -173,6 +173,7 @@ o  c448e50fe  Today at 11:06  remote/main
 o  a555d064c  Today at 09:06
 │
 ~
+
 $ sl status
 M build.sh
 $ sl revert --all

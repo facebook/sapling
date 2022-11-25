@@ -45,6 +45,7 @@ $ sl
 o  a555d064c  Wednesday at 09:06
 │
 ~
+
 # Note, a555d064c was not unhidden. Smartlog just chose to show it
 # so you can see how 15de72785 relates to the main bookmark.
 

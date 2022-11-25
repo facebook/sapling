@@ -120,6 +120,7 @@ Sapling supports multiple workflows for interacting with GitHub pull requests. T
 ```sl-shell-example
 $ sl pr
 ...
+
 $ sl
   @  4d9180fd8  6 minutes ago  alyssa  #178
   │  adding baz
@@ -133,6 +134,7 @@ $ sl
 o  f22585511  Oct 06 at 17:40  remote/main
 │
 ~
+
 $ sl pr
 #178 is up-to-date
 #177 is up-to-date
