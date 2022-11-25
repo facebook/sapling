@@ -21,7 +21,7 @@ def backupwithlockheld(repo, revs, connect_opts=None, force=False):
     getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
     with repo.lock():
         # Load the backup state under the repo lock to ensure a consistent view.
-        state = backupstate.BackupState(repo, remotepath, resetlocalstate=force)
+        state = backupstate.BackupState(repo, resetlocalstate=force)
     return _backup(
         repo,
         state,

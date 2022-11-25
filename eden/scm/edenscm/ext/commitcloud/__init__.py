@@ -283,7 +283,7 @@ def backedup(repo, subset, x):
     path = ccutil.getnullableremotepath(repo.ui)
     if not path:
         return smartset.baseset(repo=repo)
-    heads = backupstate.BackupState(repo, path).heads
+    heads = backupstate.BackupState(repo).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         backedup = repo.dageval(lambda: draft() & ancestors(heads))
@@ -301,7 +301,7 @@ def notbackedup(repo, subset, x):
         # remote, and no way to do backup, returning an empty set avoids
         # upsetting users with "not backed up" warnings.
         return smartset.baseset(repo=repo)
-    heads = backupstate.BackupState(repo, path).heads
+    heads = backupstate.BackupState(repo).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         notbackedup = repo.dageval(lambda: draft() - ancestors(heads))

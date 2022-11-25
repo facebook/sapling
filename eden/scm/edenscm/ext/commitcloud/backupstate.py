@@ -5,53 +5,44 @@
 
 from __future__ import absolute_import
 
-import hashlib
 import os
 
 from edenscm import error, node as nodemod, util
 from edenscm.pycompat import encodeutf8
 
-from . import dependencies
+from . import dependencies, util as ccutil
 
-FORMAT_VERSION = "v1"
+FORMAT_VERSION = "v2"
 
 
 class BackupState(object):
-    """Stores what commits have been successfully backed up to the cloud.
+    """Stores what commits have been successfully backed up to the Commit Cloud.
 
-    BackupState is not the source of truth, it is a local cache of what has been backed up at the given path.
+    BackupState is not the source of truth, it is a local cache of what has been backed up on the server.
     """
 
-    prefix = "backedupheads."
+    name = "backedupheads.remote"
     directory = "commitcloud"
 
-    def __init__(self, repo, remotepath, resetlocalstate=False, usehttp=False):
+    def __init__(self, repo, resetlocalstate=False, usehttp=False):
         self.repo = repo
-        self.remotepath = remotepath
         self.usehttp = usehttp
         repo.sharedvfs.makedirs(self.directory)
         self.filename = os.path.join(
             self.directory,
-            self.prefix + hashlib.sha256(encodeutf8(remotepath)).hexdigest()[0:8],
+            self.name,
         )
         self.heads = set()
         if repo.sharedvfs.exists(self.filename) and not resetlocalstate:
             lines = repo.sharedvfs.readutf8(self.filename).splitlines()
-            if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
+            if len(lines) < 1 or lines[0].strip() != FORMAT_VERSION:
                 version = lines[0].strip() if len(lines) > 0 else "<empty>"
                 repo.ui.debug(
                     "unrecognised backedupheads version '%s', ignoring\n" % version
                 )
                 self.initfromserver()
                 return
-            if lines[1].strip() != remotepath:
-                repo.ui.debug(
-                    "backupheads file is for a different remote ('%s' instead of '%s'), reinitializing\n"
-                    % (lines[1].strip(), remotepath)
-                )
-                self.initfromserver()
-                return
-            heads = [nodemod.bin(head.strip()) for head in lines[2:]]
+            heads = [nodemod.bin(head.strip()) for head in lines[1:]]
             heads = repo.changelog.filternodes(heads, local=True)
             self.heads = set(heads)
         else:
@@ -61,7 +52,6 @@ class BackupState(object):
         # Check with the server about all visible commits that we don't already
         # know are backed up.
         repo = self.repo
-        remotepath = self.remotepath
         unfi = repo
         unknown = [
             nodemod.hex(n)
@@ -84,7 +74,9 @@ class BackupState(object):
         else:
 
             def getconnection():
-                return repo.connectionpool.get(remotepath)
+                return repo.connectionpool.get(
+                    ccutil.getremotepath(repo.ui), reason="restore backup state"
+                )
 
             nodes = {}
             try:
@@ -110,7 +102,6 @@ class BackupState(object):
 
     def _write(self, f):
         f.write(encodeutf8("%s\n" % FORMAT_VERSION))
-        f.write(encodeutf8("%s\n" % self.remotepath))
         for h in self.heads:
             f.write(encodeutf8("%s\n" % nodemod.hex(h)))
 

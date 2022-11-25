@@ -1647,7 +1647,7 @@ def cloudupload(ui, repo, **opts):
         revs = None
 
     with repo.lock():
-        state = backupstate.BackupState(repo, ccutil.getremotepath(ui), usehttp=True)
+        state = backupstate.BackupState(repo, usehttp=True)
 
     uploaded, failed = upload.upload(
         repo, revs, force=opts.get("force"), localbackupstate=state
