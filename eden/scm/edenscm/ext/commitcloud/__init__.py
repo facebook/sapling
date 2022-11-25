@@ -77,6 +77,9 @@ Configs::
     # By default only local bookmarks that belong to draft commits or their public roots are returned.
     sl_showallbookmarks = False
 
+    # Use EdenApi Uploads for uploading commit cloud commits during sync
+    usehttpupload = True
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -101,9 +104,6 @@ Configs::
     # Enable reporting of background backup status as a summary at the end
     # of smartlog.
     enablestatus = False
-
-    # Use EdenApi Uploads for uploading commit cloud commits during sync
-    usehttpupload = True
 """
 
 from __future__ import absolute_import
