@@ -10,7 +10,7 @@
   $ enable amend commitcloud infinitepush rebase remotenames share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
-  $ setconfig commitcloud.hostname=testhost commitcloud.max_sync_age=14
+  $ setconfig commitcloud.hostname=testhost commitcloud.max_sync_age=14 commitcloud.pullsizelimit=1
 
   $ setconfig remotefilelog.reponame=server
 
@@ -139,7 +139,6 @@ Sync these to commit cloud - they all get pushed even though they are old
   │ o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
   ├─╯
   o  df4f53cec30a public 'base' mytag
-  
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 2
@@ -190,7 +189,6 @@ Connect to commit cloud
   │ o  1c1b7955142c draft 'midstack-feb7' midbook
   ├─╯
   @  df4f53cec30a public 'base'
-  
 
 Create a new commit
   $ hg up 'desc(base)'
@@ -234,7 +232,6 @@ Sync these commits to the first client - it has everything
   │ o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
   ├─╯
   o  df4f53cec30a public 'base' mytag
-  
 
 Second client can still sync
   $ cd ../client2
@@ -254,7 +251,6 @@ Second client can still sync
   │ o  1c1b7955142c draft 'midstack-feb7' midbook
   ├─╯
   o  df4f53cec30a public 'base'
-  
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 3
@@ -326,7 +322,6 @@ Second client syncs that in, but still leaves the old commits missing
   │ o  1c1b7955142c draft 'midstack-feb7' midbook
   ├─╯
   o  df4f53cec30a public 'base'
-  
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 4
@@ -404,7 +399,6 @@ Second client syncs the old stack in, and now has the bookmark
   │ o  1c1b7955142c draft 'midstack-feb7' midbook
   ├─╯
   o  df4f53cec30a public 'base'
-  
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 5
   bookmarks:
@@ -430,11 +424,13 @@ Connect to commit cloud
   commitcloud: synchronizing 'server' with 'user/test/default'
   omitting 1 head that is older than 14 days:
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-  pulling ff52de2f760c 46f8775ee5d4 from ssh://user@dummy/server
+  pulling ff52de2f760c from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  pulling 46f8775ee5d4 from ssh://user@dummy/server
+  searching for changes
   adding changesets
   adding manifests
   adding file changes
@@ -496,16 +492,15 @@ Do a sync in the new client - the bookmark is left where it was
   │
   o  1f9ebd6d1390 draft 'oldstack-feb1'
   │
-  │ o  ff52de2f760c draft 'client2-feb28'
-  ├─╯
   │ o  46f8775ee5d4 draft 'newstack-feb28'
   │ │
   │ o  7f958333fe84 draft 'newstack-feb15'
   │ │
   │ o  56a352317b67 draft 'newstack-feb13' newbook
   ├─╯
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
   @  df4f53cec30a public 'base'
-  
 Move the bookmark locally - this still gets synced ok.
 
   $ hg book -f -r 46f8775ee5d479eed945b5186929bd046f116176 oldbook
@@ -516,16 +511,15 @@ Move the bookmark locally - this still gets synced ok.
   │
   o  1f9ebd6d1390 draft 'oldstack-feb1'
   │
-  │ o  ff52de2f760c draft 'client2-feb28'
-  ├─╯
   │ o  46f8775ee5d4 draft 'newstack-feb28' oldbook
   │ │
   │ o  7f958333fe84 draft 'newstack-feb15'
   │ │
   │ o  56a352317b67 draft 'newstack-feb13' newbook
   ├─╯
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
   @  df4f53cec30a public 'base'
-  
   $ hgfakedate 1990-03-05T12:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
@@ -556,7 +550,6 @@ Move the bookmark locally - this still gets synced ok.
   o │  1f9ebd6d1390 draft 'oldstack-feb1'
   ├─╯
   o  df4f53cec30a public 'base' mytag
-  
 
 A full sync pulls the old commits in
   $ cd ../client3
@@ -581,16 +574,15 @@ A full sync pulls the old commits in
   │ │
   │ o  1f9ebd6d1390 draft 'oldstack-feb1'
   ├─╯
-  │ o  ff52de2f760c draft 'client2-feb28'
-  ├─╯
   │ o  46f8775ee5d4 draft 'newstack-feb28' oldbook
   │ │
   │ o  7f958333fe84 draft 'newstack-feb15'
   │ │
   │ o  56a352317b67 draft 'newstack-feb13' newbook
   ├─╯
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
   @  df4f53cec30a public 'base' mytag
-  
 Create a new client that isn't connected yet
   $ cd ..
   $ hg clone ssh://user@dummy/server client4 -q
@@ -613,7 +605,6 @@ A part sync omitting everything
   finished in * (glob)
   $ tglogp
   @  df4f53cec30a public 'base'
-  
 Remove some of the bookmarks
   $ cd ../client1
   $ hg book --delete newbook
@@ -657,7 +648,6 @@ Pull in some of the commits by setting max age manually
   o  1f9ebd6d1390 draft 'oldstack-feb1'
   │
   @  df4f53cec30a public 'base'
-  
 
 Create a bookmark with the same name as an omitted bookmark
   $ hg book -r tip midbook
@@ -688,16 +678,15 @@ other bookmark is treated like a move.
   │ │
   │ o  1f9ebd6d1390 draft 'oldstack-feb1'
   ├─╯
-  │ o  ff52de2f760c draft 'client2-feb28'
-  ├─╯
   │ o  46f8775ee5d4 draft 'newstack-feb28'
   │ │
   │ o  7f958333fe84 draft 'newstack-feb15'
   │ │
   │ o  56a352317b67 draft 'newstack-feb13'
   ├─╯
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
   @  df4f53cec30a public 'base' mytag
-  
 
 In client1 (which hasn't synced yet), make the midbook commit obsolete.
   $ cd ../client1
@@ -728,7 +717,6 @@ Attempt to sync.  The midbook bookmark should make it visible again.
   o │  1f9ebd6d1390 'oldstack-feb1'
   ├─╯
   o  df4f53cec30a 'base' mytag
-  
 Sync in client2.  It should match.
   $ cd ../client2
   $ hg cloud sync -q
@@ -754,7 +742,6 @@ Sync in client2.  It should match.
   │ o  1c1b7955142c 'midstack-feb7'
   ├─╯
   o  df4f53cec30a 'base'
-  
 Hide some uninteresting commits and sync everywhere
   $ hg hide -r 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8:: -r 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97:: -r ff52de2f760c67fa6f89273ca7f770396a3c81c4::
   hiding commit 1c1b7955142c "midstack-feb7"
@@ -802,7 +789,6 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   o  1f9ebd6d1390 draft 'oldstack-feb1'
   │
   @  df4f53cec30a public 'base'
-  
   $ cd ../client1
   $ hg cloud sync -q
   $ tglogp
@@ -815,7 +801,6 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   │ o  1f9ebd6d1390 draft 'oldstack-feb1'
   ├─╯
   o  df4f53cec30a public 'base' mytag
-  
 Sync in client 4.  Some of the omitted heads in this client have been removed
 from the cloud workspace, but the sync should still work.
 

@@ -481,9 +481,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     if remotebookmarknewnodes or newheads:
         # Partition the heads into groups we can pull together.
-        headgroups = _partitionheads(
-            repo.ui, list(remotebookmarknewnodes) + newheads, cloudrefs.headdates
-        )
+        headgroups = _partitionheads(repo.ui, list(remotebookmarknewnodes) + newheads)
         _pullheadgroups(repo, remotepath, headgroups)
 
     omittedbookmarks.extend(
@@ -557,67 +555,10 @@ def _pullheadgroups(repo, remotepath, headgroups):
             repo.connectionpool.close()
 
 
-def _partitionheads(ui, heads, headdates=None):
-    if ui.configbool("infinitepush", "wantsunhydratedcommits"):
-        # partition commits to larger groups because unhydratedcommits is faster and easier to pull
-        # split by 6 month timespans with some reasonably high (configurable) sizelimit
-        return _partitionheadsgroups(
-            heads,
-            headdates,
-            sizelimit=ui.config("commitcloud", "unhydratedpullsizelimit"),
-            spanlimit=86400 * 30 * 6,
-        )
-    else:
-        return _partitionheadsgroups(heads, headdates)
-
-
-def _partitionheadsgroups(heads, headdates=None, sizelimit=4, spanlimit=86400):
-    """partition a list of heads into groups limited by size and timespan
-
-    Partitions the list of heads into a list of head groups.  Each head group
-    contains at most sizelimit heads, and all the heads have a date within
-    spanlimit of each other in the headdates map.
-
-    The head ordering is preserved, as we want to pull commits in the same order
-    so that order-dependent views like smartlog match as closely as possible on
-    different synced machines.  This may mean potential groups get split up if a
-    head with a different date is in the middle.
-
-    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 1, 2: 2, 3: 3, 4: 4}, sizelimit=2, spanlimit=10)
-    [[1, 2], [3, 4]]
-    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=10)
-    [[1, 2], [3, 4]]
-    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=30)
-    [[1, 2, 3, 4]]
-    >>> _partitionheadsgroups([1, 2, 3, 4], {1: 10, 2: 20, 3: 30, 4: 40}, sizelimit=4, spanlimit=5)
-    [[1], [2], [3], [4]]
-    >>> _partitionheadsgroups([1, 2, 3, 9, 4], {1: 10, 2: 20, 3: 30, 4: 40, 9: 90}, sizelimit=8, spanlimit=30)
-    [[1, 2, 3], [9], [4]]
-    """
-    headdates = headdates or {}
-    headgroups = []
-    headsbydate = [(headdates.get(head, 0), head) for head in heads]
-    headgroup = None
-    groupstartdate = None
-    groupenddate = None
-    for date, head in headsbydate:
-        if (
-            headgroup is None
-            or len(headgroup) >= sizelimit
-            or date < groupstartdate
-            or date > groupenddate
-        ):
-            if headgroup:
-                headgroups.append(headgroup)
-            headgroup = []
-            groupstartdate = date - spanlimit
-            groupenddate = date + spanlimit
-        headgroup.append(head)
-        groupstartdate = max(groupstartdate, date - spanlimit)
-        groupenddate = min(groupenddate, date + spanlimit)
-    if headgroup:
-        headgroups.append(headgroup)
-    return headgroups
+def _partitionheads(ui, heads):
+    sizelimit = int(ui.config("commitcloud", "pullsizelimit"))
+    it = iter(heads)
+    return list(iter(lambda: tuple(itertools.islice(it, sizelimit)), ()))
 
 
 def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
