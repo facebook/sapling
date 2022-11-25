@@ -23,6 +23,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Syncers;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
+use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -104,8 +105,8 @@ async fn get_things_from_app(
     let fb = app.fb;
 
     let config_store = app.config_store();
-    let (_, source_repo_config) = app.repo_config(repo_args.source_repo.id_or_name())?;
-    let (_, target_repo_config) = app.repo_config(repo_args.target_repo.id_or_name())?;
+    let (_, source_repo_config) = app.repo_config(repo_args.source_repo.as_repo_arg())?;
+    let (_, target_repo_config) = app.repo_config(repo_args.target_repo.as_repo_arg())?;
 
     if source_repo_config.storage_config.metadata != target_repo_config.storage_config.metadata {
         return Err(Error::msg(

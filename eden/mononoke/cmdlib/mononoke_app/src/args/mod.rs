@@ -32,6 +32,7 @@ pub use mcrouter::McrouterAppExtension;
 pub use mcrouter::McrouterArgs;
 pub use mysql::MysqlArgs;
 pub use readonly::ReadonlyArgs;
+pub use repo::AsRepoArg;
 pub use repo::MultiRepoArgs;
 pub use repo::RepoArg;
 pub use repo::RepoArgs;

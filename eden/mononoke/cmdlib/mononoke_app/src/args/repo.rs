@@ -98,8 +98,8 @@ macro_rules! repo_args {
             }
         }
 
-        impl $ident {
-            pub fn id_or_name(&self) -> &RepoArg {
+        impl AsRepoArg for $ident {
+            fn as_repo_arg(&self) -> &RepoArg {
                 &self.0
             }
         }
@@ -187,4 +187,8 @@ pub struct SourceAndTargetRepoArgs {
 pub enum RepoArg {
     Id(RepositoryId),
     Name(String),
+}
+
+pub trait AsRepoArg {
+    fn as_repo_arg(&self) -> &RepoArg;
 }

@@ -63,11 +63,11 @@ use stats::prelude::*;
 use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
 
+use crate::args::AsRepoArg;
 use crate::args::ConfigArgs;
 use crate::args::ConfigMode;
 use crate::args::MultiRepoArgs;
 use crate::args::RepoArg;
-use crate::args::RepoArgs;
 use crate::args::RepoBlobstoreArgs;
 use crate::args::SourceAndTargetRepoArgs;
 use crate::extension::AppExtension;
@@ -421,11 +421,11 @@ impl MononokeApp {
     }
 
     /// Open a repository based on user-provided arguments.
-    pub async fn open_repo<Repo>(&self, repo_args: &RepoArgs) -> Result<Repo>
+    pub async fn open_repo<Repo>(&self, repo_args: &impl AsRepoArg) -> Result<Repo>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
-        let repo_arg = repo_args.id_or_name();
+        let repo_arg = repo_args.as_repo_arg();
         let (repo_name, repo_config) = self.repo_config(repo_arg)?;
         let common_config = self.repo_configs().common.clone();
         let repo = self
@@ -553,9 +553,9 @@ impl MononokeApp {
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
         let (source_repo_name, source_repo_config) =
-            self.repo_config(repo_args.source_repo.id_or_name())?;
+            self.repo_config(repo_args.source_repo.as_repo_arg())?;
         let (target_repo_name, target_repo_config) =
-            self.repo_config(repo_args.target_repo.id_or_name())?;
+            self.repo_config(repo_args.target_repo.as_repo_arg())?;
         let common_config = self.repo_configs().common.clone();
         let source_repo_fut =
             self.repo_factory
