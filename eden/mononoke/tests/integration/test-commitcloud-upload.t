@@ -416,3 +416,14 @@ Remove the local cache, check that the upload operation will restore the cache a
   $ ls .hg/commitcloud/backedupheads*
   .hg/commitcloud/backedupheads* (glob)
 
+
+Check that `hg cloud sync` command can self recover from corrupted local backed up state
+  $ echo "trash" > .hg/commitcloud/backedupheads*
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud sync --debug
+  commitcloud: synchronizing 'repo' with 'user/test/default'
+  unrecognised backedupheads version 'trash', ignoring
+   INFO edenapi::client: Requesting lookup for 4 item(s)
+  commitcloud: nothing to upload
+  commitcloud local service: get_references for current version 5
+  commitcloud: commits synchronized
+  finished in * (glob)
