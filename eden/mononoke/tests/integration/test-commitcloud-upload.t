@@ -113,6 +113,21 @@ This test also checks file content deduplication. We upload 1 file content and 1
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
 
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False --remote
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --json
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
+ 
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote --json
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False --json
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False --remote --json
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
+
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
    INFO edenapi::client: Requesting capabilities for repo repo
    INFO edenapi::client: Requesting lookup for 1 item(s)
@@ -135,13 +150,28 @@ This test also checks file content deduplication. We upload 1 file content and 1
 
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9   # no remote check
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
- 
+
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --json  # no remote check (json)
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
+
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote  # remote check
    INFO edenapi::client: Requesting lookup for 1 item(s)
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
 
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote --json 2>/dev/null # remote check (json)
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
+
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False --json # legacy code (json)
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
+ 
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False --remote # legacy code remote check
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
+ 
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False --remote --json # legacy remote check (json)
+  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
 
 
 Make another commit in the first client and upload it

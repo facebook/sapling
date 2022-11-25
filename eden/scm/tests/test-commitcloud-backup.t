@@ -255,6 +255,8 @@ Create logs directory and set correct permissions
   112478962961147124edd43549aedd1a335e44bf backed up
   b18e25de2cf5fc4699a029ed635882849e53ef73 backed up
   26805aba1e600a82e93661149f2313866a221a7b backed up
+  $ hg cloud check -r ':' --json
+  {"112478962961147124edd43549aedd1a335e44bf": true, "26805aba1e600a82e93661149f2313866a221a7b": true, "426bada5c67598ca65036d57d9e4b64b0c1ce7a0": true, "7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455": true, "b18e25de2cf5fc4699a029ed635882849e53ef73": true} (no-eol)
   $ hg rebase -s B -d D --config infinitepushbackup.autobackup=True --config infinitepushbackup.logdir=$TESTTMP/logs
   rebasing 112478962961 "B" (B)
   rebasing 26805aba1e60 "C" (C)
@@ -277,6 +279,8 @@ Create logs directory and set correct permissions
   $ hg cloud check -r 'ffeec75ec + 1ef11233b7'
   ffeec75ec60331057b875fc5356c57c3ff204500 backed up
   1ef11233b74dfa8b57e8285fd6f546096af8f4c2 backed up
+  $ hg cloud check -r 'ffeec75ec + 1ef11233b7' --json
+  {"1ef11233b74dfa8b57e8285fd6f546096af8f4c2": true, "ffeec75ec60331057b875fc5356c57c3ff204500": true} (no-eol)
 
 Throw in an empty transaction - this should not trigger a backup.
   $ hg debugshell --command "l = repo.lock(); repo.transaction('backup-test')" --config infinitepushbackup.autobackup=True --config infinitepushbackup.logdir=$TESTTMP/logs
@@ -325,6 +329,8 @@ Fail to push a backup by setting the server maxbundlesize very low
   [2]
   $ hg cloud check -r .
   73e861ba66d5dc1998052f3ae2cf8cf7924ed863 not backed up
+  $ hg cloud check -r . --json
+  {"73e861ba66d5dc1998052f3ae2cf8cf7924ed863": false} (no-eol)
   $ scratchnodes | grep 73e861ba66d5dc1998052f3ae2cf8cf7924ed863
   [1]
 
@@ -339,6 +345,8 @@ Set the limit back high, and try again
   remote:     73e861ba66d5  toobig
   $ hg cloud check -r .
   73e861ba66d5dc1998052f3ae2cf8cf7924ed863 backed up
+  $ hg cloud check -r . --json
+  {"73e861ba66d5dc1998052f3ae2cf8cf7924ed863": true} (no-eol)
   $ scratchnodes | grep 73e861ba66d5dc1998052f3ae2cf8cf7924ed863
   73e861ba66d5dc1998052f3ae2cf8cf7924ed863 1b5db94fc7daec8da5284b7b989fff125cb6f35b
 

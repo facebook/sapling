@@ -21,7 +21,6 @@ from edenscm import (
     pycompat,
     registrar,
     scmutil,
-    templatefilters,
     util,
     visibility,
 )
@@ -1355,6 +1354,7 @@ def cloudrecover(ui, repo, **opts):
     [
         ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
         ("", "remote", None, _("check on the remote server")),
+        ("", "json", None, _("output in json format instead of human-readable")),
     ],
 )
 def cloudcheck(ui, repo, **opts):
@@ -1364,45 +1364,55 @@ def cloudcheck(ui, repo, **opts):
     """
 
     remote = opts.get("remote")
+    jsondisplayer = opts.get("json")
     revs = opts.get("rev")
+
     if not revs:
         revs = ["."]
 
-    if ui.configbool("commitcloud", "usehttpupload") and remote:
-        # eden api based lookup
-        nodestocheck = [repo[r].node() for r in scmutil.revrange(repo, revs)]
-        missingnodes = set(edenapi_upload._filtercommits(repo, nodestocheck))
-        for n in nodestocheck:
-            ui.write(nodemod.hex(n), " ")
-            ui.write(_("backed up") if not (n in missingnodes) else _("not backed up"))
-            ui.write(_("\n"))
-            return
-
     unfi = repo
     revs = scmutil.revrange(repo, revs)
-    nodestocheck = [repo[r].hex() for r in revs]
+    helperkey = "results"
 
-    if remote:
-        # wireproto based lookup
-        remotepath = ccutil.getremotepath(ui)
-        getconnection = lambda: repo.connectionpool.get(remotepath, opts)
-        isbackedup = {
-            nodestocheck[i]: res
-            for i, res in enumerate(
-                dependencies.infinitepush.isbackedupnodes(getconnection, nodestocheck)
-            )
+    if ui.configbool("commitcloud", "usehttpupload") and remote:
+        # eden api based lookup
+        nodestocheck = [repo[r].node() for r in revs]
+        missingnodes = set(edenapi_upload._filtercommits(repo, nodestocheck))
+        results = {
+            helperkey: {nodemod.hex(n): n not in missingnodes for n in nodestocheck}
         }
     else:
-        # local backup state based lookup
-        backeduprevs = unfi.revs("backedup()")
-        isbackedup = {
-            node: (unfi[node].rev() in backeduprevs) or not unfi[node].mutable()
-            for node in nodestocheck
-        }
+        nodestocheck = [repo[r].hex() for r in revs]
+        if remote:
+            # wireproto based lookup
+            remotepath = ccutil.getremotepath(ui)
+            getconnection = lambda: repo.connectionpool.get(remotepath, opts)
+            isbackedup = {
+                nodestocheck[i]: res
+                for i, res in enumerate(
+                    dependencies.infinitepush.isbackedupnodes(
+                        getconnection, nodestocheck
+                    )
+                )
+            }
+        else:
+            # local backup state based lookup
+            backeduprevs = unfi.revs("backedup()")
+            isbackedup = {
+                node: (unfi[node].rev() in backeduprevs) or not unfi[node].mutable()
+                for node in nodestocheck
+            }
 
-    for n in nodestocheck:
+        results = {helperkey: isbackedup}
+
+    if jsondisplayer:
+        text = cmdutil.rendertemplate(ui, "{%s|json}" % helperkey, results)
+        ui.write(text)
+        return
+
+    for n, result in results[helperkey].items():
         ui.write(n, " ")
-        ui.write(_("backed up") if isbackedup[n] else _("not backed up"))
+        ui.write(_("backed up") if result else _("not backed up"))
         ui.write(_("\n"))
 
 
@@ -1604,6 +1614,7 @@ def pushbackup(ui, repo, *revs, **opts):
     [
         ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
         ("", "remote", None, _("check on the remote server")),
+        ("", "json", None, _("output in json format instead of human-readable")),
     ],
 )
 def isbackedup(ui, repo, **opts):
