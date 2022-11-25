@@ -1646,12 +1646,12 @@ def cloudupload(ui, repo, **opts):
     else:
         revs = None
 
-    uploaded, failed = upload.upload(repo, revs, force=opts.get("force"))
-    if uploaded:
-        with repo.lock():
-            backupstate.BackupState(
-                repo, ccutil.getremotepath(ui), usehttp=True
-            ).update(uploaded)
+    with repo.lock():
+        state = backupstate.BackupState(repo, ccutil.getremotepath(ui), usehttp=True)
+
+    uploaded, failed = upload.upload(
+        repo, revs, force=opts.get("force"), localbackupstate=state
+    )
 
     if failed:
         if len(failed) < 10:

@@ -9,11 +9,13 @@ from edenscm import edenapi_upload, node as nodemod
 from edenscm.i18n import _, _n
 
 
-def upload(repo, revs, force=False):
+def upload(repo, revs, force=False, localbackupstate=None):
     """Upload draft commits using EdenApi Uploads
 
     Commits that have already been uploaded will be skipped.
     If no revision is specified, uploads all visible commits.
+
+    If localbackupstate is provided, it will be updated during the upload.
 
     Returns list of uploaded heads (as nodes) and list of failed commits (as nodes).
     """
@@ -33,13 +35,29 @@ def upload(repo, revs, force=False):
         ui.status(_("nothing to upload\n"), component="commitcloud")
         return [], []
 
+    maybemissingheads = heads
+
+    if localbackupstate and not force:
+        # Filter heads that are known to be backed (check local backup cache)
+        maybemissingheads = localbackupstate.filterheads(heads)
+
+    if not maybemissingheads:
+        ui.status(_("nothing to upload\n"), component="commitcloud")
+        return heads, []
+
     edenapi_upload.checkcapable(repo)
 
-    # Check what heads have been already uploaded and what heads are missing
-    missingheads = heads if force else edenapi_upload._filtercommits(repo, heads)
+    # Check with the server what heads have been already uploaded and what heads are missing
+    missingheads = (
+        maybemissingheads
+        if force
+        else edenapi_upload._filtercommits(repo, maybemissingheads)
+    )
 
     if not missingheads:
         ui.status(_("nothing to upload\n"), component="commitcloud")
+        if localbackupstate:
+            localbackupstate.update(heads)
         return heads, []
 
     # Print the heads missing on the server
@@ -84,5 +102,8 @@ def upload(repo, revs, force=False):
     uploadedheads = list(
         repo.nodes("heads(%ld) + %ln - heads(%ln)", newuploaded, heads, failednodes)
     )
+
+    if localbackupstate:
+        localbackupstate.update(uploadedheads)
 
     return uploadedheads, failednodes

@@ -116,9 +116,10 @@ class BackupState(object):
 
     def update(self, newnodes, tr=None):
         unfi = self.repo
+
         # The new backed up heads are the heads of all commits we already knew
-        # were backed up plus the newly backed up commits.
-        self.heads = list(
+        # were backed up plus the newly backed up commits. The heads are stored as a set.
+        self.heads = set(
             unfi.nodes(
                 "heads((not public() & ::%ln) + (not public() & ::%ln))",
                 self.heads,
@@ -138,3 +139,7 @@ class BackupState(object):
                 self._write(f)
 
         util.clearcachedproperty(self, "backedup")
+
+    def filterheads(self, heads):
+        # Returns list of missing heads
+        return [head for head in heads if head not in self.heads]

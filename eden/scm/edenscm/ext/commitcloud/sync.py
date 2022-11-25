@@ -196,20 +196,19 @@ def _sync(
         remotepath, connect_opts, reason="cloudsync"
     )
 
+    # Load the backup state under the repo lock to ensure a consistent view.
+    usehttp = ui.configbool("commitcloud", "usehttpupload")
+    with repo.lock():
+        state = backupstate.BackupState(repo, remotepath, usehttp=usehttp)
+
     with repo.ui.timesection("commitcloud_sync_push"):
         if ui.configbool("commitcloud", "usehttpupload"):
-            uploaded, failed = upload.upload(repo, None)
-            with repo.lock():
-                state = backupstate.BackupState(repo, remotepath, usehttp=True)
-                state.update(uploaded)
+            uploaded, failed = upload.upload(repo, None, localbackupstate=state)
             # Upload returns a list of all newly uploaded heads and failed nodes (not just heads).
             # Backup returns a revset for failed. Create a revset for compatibility.
             failed = repo.revs("%ln", failed)
         else:
             # Back up all local commits that are not already backed up.
-            # Load the backup state under the repo lock to ensure a consistent view.
-            with repo.lock():
-                state = backupstate.BackupState(repo, remotepath)
             backedup, failed = backup._backup(repo, state, remotepath, getconnection)
 
     # Now that commits are backed up, check that visibleheads are enabled
