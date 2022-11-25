@@ -6,25 +6,66 @@
  */
 
 use anyhow::Result;
+use clap::value_parser;
+use clap::Arg;
 use clap::ArgGroup;
+use clap::ArgMatches;
 use clap::Args;
+use clap::Command;
+use clap::Error;
+use clap::FromArgMatches;
 use mononoke_types::RepositoryId;
 
 /// Command line arguments for specifying a single repo.
-#[derive(Args, Debug)]
-#[clap(group(
-    ArgGroup::new("repo")
-        .required(true)
-        .args(&["repo-id", "repo-name"]),
-))]
+#[derive(Debug)]
 pub struct RepoArgs {
     /// Numeric repository ID
-    #[clap(long)]
     repo_id: Option<i32>,
 
     /// Repository name
-    #[clap(short = 'R', long)]
     repo_name: Option<String>,
+}
+
+impl Args for RepoArgs {
+    fn augment_args(cmd: Command) -> Command {
+        cmd.arg(
+            Arg::new("repo-id")
+                .long("repo-id")
+                .value_parser(value_parser!(i32))
+                .value_name("REPO_ID")
+                .help("Numeric repository ID"),
+        )
+        .arg(
+            Arg::new("repo-name")
+                .short('R')
+                .long("repo-name")
+                .value_name("REPO_NAME")
+                .help("Repository name"),
+        )
+        .group(
+            ArgGroup::new("repo")
+                .required(true)
+                .args(&["repo-id", "repo-name"]),
+        )
+    }
+    fn augment_args_for_update(cmd: Command) -> Command {
+        RepoArgs::augment_args(cmd)
+    }
+}
+
+impl FromArgMatches for RepoArgs {
+    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, Error> {
+        Ok(Self {
+            repo_id: matches.get_one("repo-id").cloned(),
+            repo_name: matches.get_one("repo-name").cloned(),
+        })
+    }
+
+    fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
+        self.repo_id = matches.get_one("repo-id").cloned();
+        self.repo_name = matches.get_one("repo-name").cloned();
+        Ok(())
+    }
 }
 
 impl RepoArgs {
