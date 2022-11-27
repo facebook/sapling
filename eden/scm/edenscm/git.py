@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import textwrap
 import weakref
+import tempfile
 from dataclasses import dataclass
 
 import bindings
@@ -111,11 +112,18 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         destpath = os.path.realpath(basename)
 
     destpath = ui.expandpath(destpath)
-    if os.path.lexists(destpath):
-        raise error.Abort(_("destination '%s' already exists") % destpath)
+    if os.path.lexists(destpath + "/.sl"):
+        raise error.Abort(_("destination '%s' is already a repository") % destpath)
+    
+    exists = os.path.lexists(destpath) 
 
     try:
-        repo = createrepo(ui, url, destpath)
+        if exists:
+            temppath = tempfile.mkdtemp()
+            repo = createrepo(ui, url, temppath )
+        else: 
+            repo = createrepo(ui, url, destpath)
+            
         ret = initgitbare(ui, repo.svfs.join("git"))
         if ret != 0:
             raise error.Abort(_("git clone was not successful"))
@@ -128,6 +136,10 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
         raise
+    
+    if exists: 
+        shutil.move(temppath +"/.sl",destpath)
+        shutil.rmtree(temppath, ignore_errors=True)
     if update is not False:
         if update is True:
             node = repo.changelog.tip()
