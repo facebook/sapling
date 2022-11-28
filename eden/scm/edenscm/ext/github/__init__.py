@@ -158,6 +158,16 @@ def github_pull_request_body(repo, ctx, templ, **args) -> Optional[str]:
     return _get_pull_request_field("body", repo, ctx, **args)
 
 
+@templatekeyword("github_pull_request_status_check_rollup")
+def github_pull_request_status_check_rollup(repo, ctx, templ, **args) -> Optional[str]:
+    pull_request = templates.get_pull_request_data_for_rev(repo, ctx, **args)
+    try:
+        commit = pull_request["commits"]["nodes"][0]["commit"]
+        return commit["statusCheckRollup"]["state"]
+    except Exception:
+        return None
+
+
 @templatekeyword("github_pull_request_url")
 def github_pull_request_url(repo, ctx, templ, **args) -> Optional[str]:
     """If the commit is associated with a GitHub pull request, returns the URL
