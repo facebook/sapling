@@ -7,27 +7,16 @@
 
 #![feature(auto_traits)]
 
+//! Mononoke Cross Repo validator job
+//!
+//! This is a special job used to validate that cross-repo sync,
+//! produced correct results
+
 use std::collections::HashSet;
 
-/// Mononoke Cross Repo validator job
-///
-/// This is a special job used to validate that cross-repo sync,
-/// produced correct results
 use anyhow::format_err;
-/// Mononoke Cross Repo validator job
-///
-/// This is a special job used to validate that cross-repo sync,
-/// produced correct results
 use anyhow::Context;
-/// Mononoke Cross Repo validator job
-///
-/// This is a special job used to validate that cross-repo sync,
-/// produced correct results
 use anyhow::Error;
-/// Mononoke Cross Repo validator job
-///
-/// This is a special job used to validate that cross-repo sync,
-/// produced correct results
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
