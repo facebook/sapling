@@ -353,7 +353,8 @@ class HgRepository(repobase.Repository):
                 continue
             flag = entry[0]
             path = entry[2:]
-            status[path] = flag
+            if path != "default.profraw":
+                status[path] = flag
 
         return status
 
