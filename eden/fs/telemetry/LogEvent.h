@@ -300,4 +300,16 @@ struct TooManyNfsClients {
   void populate(DynamicEvent& /*event*/) const {}
 };
 
+struct MetadataSizeMismatch {
+  static constexpr const char* type = "metadata_size_mismatch";
+
+  std::string mount_protocol;
+  std::string method;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("mount_protocol", mount_protocol);
+    event.addString("method", method);
+  }
+};
+
 } // namespace facebook::eden
