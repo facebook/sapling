@@ -153,9 +153,13 @@ impl SpecifierExt for thrift::FileSpecifier {
     fn scuba_path(&self) -> Option<String> {
         match self {
             thrift::FileSpecifier::by_commit_path(commit_path) => commit_path.scuba_path(),
-            thrift::FileSpecifier::by_id(_file_id) => None,
-            thrift::FileSpecifier::by_sha1_content_hash(_hash) => None,
-            thrift::FileSpecifier::by_sha256_content_hash(_hash) => None,
+            thrift::FileSpecifier::by_id(file_id) => Some(hex_string(&file_id.id)),
+            thrift::FileSpecifier::by_sha1_content_hash(hash) => {
+                Some(hex_string(&hash.content_hash))
+            }
+            thrift::FileSpecifier::by_sha256_content_hash(hash) => {
+                Some(hex_string(&hash.content_hash))
+            }
             thrift::FileSpecifier::UnknownField(_) => None,
         }
     }
