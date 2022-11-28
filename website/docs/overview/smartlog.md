@@ -61,6 +61,26 @@ o  <span class="sl-public">a75ab860a</span>  Jul 15 at 07:59<br />
 ~<br />
 </pre>
 
+### Super Smartlog
+
+Sapling can also fetch information about the repository from external sources, such as checking GitHub to know if a pull request has passed automated tests and been reviewed. Since this extra information requires waiting a few seconds for network requests, we have a separate `ssl` alias for this:
+
+```sl-shell-example
+$ sl ssl
+  @  c7ed677ea  Today at 11:17  jane  #269 Unreviewed ✗
+  │  [docs] make examples consistent
+  │
+  o  9f15ade1c  Today at 10:09  jane  #267 Unreviewed ✓
+  │  [docs] syntax-highlighting for smartlogs
+  │
+  o  44df3afe6  Yesterday at 14:07  jane  #264 Approved ✓
+╭─╯  [docs] add sl-shell-example syntax-highlighting language
+│
+o  bc3bbba5d  Yesterday at 12:23  remote/main
+│
+~
+```
+
 ### Interactive GUI smartlog
 
 An interactive smartlog GUI is available by running `sl web`. This shows similar information to `sl smartlog` while also refreshing automatically, and allows you to run commands or drag and drop commits to rebase them.
