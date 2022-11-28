@@ -5,64 +5,31 @@
  * GNU General Public License version 2.
  */
 
+//! Backsyncer
+//!
+//! Library to sync commits from source repo to target repo by following bookmark update log
+//! and doing commit rewrites. The main motivation for backsyncer is to keep "small repo" up to
+//! date with "large repo" in a setup where all writes to small repo are redirected to large repo
+//! in a push redirector.
+//! More details can be found here - <https://fb.quip.com/tZ4yAaA3S4Mc>
+//!
+//! Target repo tails source repo's bookmark update log and backsync bookmark updates one by one.
+//! The latest backsynced log id is stored in mutable_counters table. Backsync consists of the
+//! following phases:
+//!
+//! 1) Given an entry from bookmark update log of a target repo,
+//!    find commits to backsync from source repo into a target repo.
+//! 2) Rewrite these commits and create rewritten commits in target repo
+//! 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
+//!    log id.
+
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Instant;
 
-/// Backsyncer
-///
-/// Library to sync commits from source repo to target repo by following bookmark update log
-/// and doing commit rewrites. The main motivation for backsyncer is to keep "small repo" up to
-/// date with "large repo" in a setup where all writes to small repo are redirected to large repo
-/// in a push redirector.
-/// More details can be found here - <https://fb.quip.com/tZ4yAaA3S4Mc>
-///
-/// Target repo tails source repo's bookmark update log and backsync bookmark updates one by one.
-/// The latest backsynced log id is stored in mutable_counters table. Backsync consists of the
-/// following phases:
-///
-/// 1) Given an entry from bookmark update log of a target repo,
-///    find commits to backsync from source repo into a target repo.
-/// 2) Rewrite these commits and create rewritten commits in target repo
-/// 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
-///    log id.
 use anyhow::bail;
-/// Backsyncer
-///
-/// Library to sync commits from source repo to target repo by following bookmark update log
-/// and doing commit rewrites. The main motivation for backsyncer is to keep "small repo" up to
-/// date with "large repo" in a setup where all writes to small repo are redirected to large repo
-/// in a push redirector.
-/// More details can be found here - <https://fb.quip.com/tZ4yAaA3S4Mc>
-///
-/// Target repo tails source repo's bookmark update log and backsync bookmark updates one by one.
-/// The latest backsynced log id is stored in mutable_counters table. Backsync consists of the
-/// following phases:
-///
-/// 1) Given an entry from bookmark update log of a target repo,
-///    find commits to backsync from source repo into a target repo.
-/// 2) Rewrite these commits and create rewritten commits in target repo
-/// 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
-///    log id.
 use anyhow::format_err;
-/// Backsyncer
-///
-/// Library to sync commits from source repo to target repo by following bookmark update log
-/// and doing commit rewrites. The main motivation for backsyncer is to keep "small repo" up to
-/// date with "large repo" in a setup where all writes to small repo are redirected to large repo
-/// in a push redirector.
-/// More details can be found here - <https://fb.quip.com/tZ4yAaA3S4Mc>
-///
-/// Target repo tails source repo's bookmark update log and backsync bookmark updates one by one.
-/// The latest backsynced log id is stored in mutable_counters table. Backsync consists of the
-/// following phases:
-///
-/// 1) Given an entry from bookmark update log of a target repo,
-///    find commits to backsync from source repo into a target repo.
-/// 2) Rewrite these commits and create rewritten commits in target repo
-/// 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
-///    log id.
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore_factory::make_metadata_sql_factory;
