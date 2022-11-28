@@ -95,8 +95,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests xz
     - name: Fetch folly
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests folly
-    - name: Fetch edencommon
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests edencommon
     - name: Fetch fizz
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fizz
     - name: Fetch wangle
@@ -107,6 +105,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fb303
     - name: Fetch rust-shed
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
+    - name: Fetch sapling
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests sapling
+    - name: Fetch edencommon
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests edencommon
     - name: Build ninja
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests ninja
     - name: Build cmake
@@ -177,8 +179,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests xz
     - name: Build folly
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests folly
-    - name: Build edencommon
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests edencommon
     - name: Build fizz
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fizz
     - name: Build wangle
@@ -189,10 +189,12 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fb303
     - name: Build rust-shed
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests rust-shed
-    - name: Build eden_scm
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. --no-tests eden_scm
+    - name: Build sapling
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests sapling
+    - name: Build edencommon
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests edencommon
     - name: Build eden
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-deps --src-dir=. eden  --project-install-prefix eden:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. eden  --project-install-prefix eden:/usr/local
     - name: Copy artifacts
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. eden _artifacts/linux  --project-install-prefix eden:/usr/local --final-install-prefix /usr/local
     - uses: actions/upload-artifact@v2
