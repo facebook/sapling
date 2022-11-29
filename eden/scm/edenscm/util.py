@@ -31,7 +31,6 @@ import errno
 import functools
 import gc
 import hashlib
-import imp
 import itertools
 import mmap
 import os
@@ -1155,11 +1154,9 @@ def mainfrozen():
     The code supports py2exe (most common, Windows only) and tools/freeze
     (portable, not much used).
     """
-    return (
-        safehasattr(sys, "frozen")
-        or safehasattr(sys, "importers")  # new py2exe
-        or imp.is_frozen("__main__")  # old py2exe
-    )  # tools/freeze
+    return safehasattr(sys, "frozen") or safehasattr(
+        sys, "importers"
+    )  # new py2exe  # tools/freeze
 
 
 # the location of data files matching the source code
