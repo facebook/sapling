@@ -10,6 +10,7 @@ import type {ValidatedRepoInfo} from 'isl/src/types';
 
 import {extractRepoInfoFromUrl, Repository} from '../Repository';
 import * as execa from 'execa';
+import os from 'os';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
 
@@ -152,6 +153,31 @@ describe('Repository', () => {
       },
       pullRequestDomain: undefined,
     });
+  });
+
+  it('handles missing executables on windows', async () => {
+    const osSpy = jest.spyOn(os, 'platform').mockImplementation(() => 'win32');
+    jest.spyOn(execa, 'default').mockImplementation(((_cmd: string, args: Array<string>) => {
+      const argStr = args?.join(' ');
+      if (argStr.startsWith('root')) {
+        const err = new Error(
+          `'sl' is not recognized as an internal or external command, operable program or batch file.`,
+        ) as Error & {exitCode: number};
+        err.exitCode = 1;
+        throw err;
+      }
+      return {stdout: ''};
+    }) as unknown as typeof execa.default);
+    const info = (await Repository.getRepoInfo(
+      'sl',
+      mockLogger,
+      '/path/to/cwd',
+    )) as ValidatedRepoInfo;
+    expect(info).toEqual({
+      type: 'invalidCommand',
+      command: 'sl',
+    });
+    osSpy.mockRestore();
   });
 
   describe('merge conflicts', () => {
