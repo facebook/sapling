@@ -8,6 +8,7 @@
 use anyhow::Result;
 use clap::Args;
 use context::CoreContext;
+use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLockRef;
 use repo_lock::RepoLockState;
 
@@ -38,5 +39,20 @@ pub async fn repo_unlock(_ctx: &CoreContext, repo: &Repo, args: RepoUnlockArgs) 
         .set_repo_lock(RepoLockState::Unlocked)
         .await?;
     println!("Repo unlocked :)");
+    Ok(())
+}
+
+#[derive(Args)]
+pub struct RepoShowLockArgs {}
+
+pub async fn repo_show_lock(_ctx: &CoreContext, repo: &Repo, args: RepoShowLockArgs) -> Result<()> {
+    let RepoShowLockArgs {} = args;
+    let state = repo.repo_lock().check_repo_lock().await?;
+    let state = match state {
+        RepoLockState::Unlocked => "unlocked".to_string(),
+        RepoLockState::Locked(reason) => format!("locked with reason: {}", reason),
+    };
+    println!("{} is {}", repo.repo_identity().name(), state);
+    println!("Consider using `newadmin repos show-locks` to see locks on all repos");
     Ok(())
 }

@@ -47,6 +47,8 @@ pub enum RepoSubcommand {
     Lock(lock::RepoLockArgs),
     /// Unlock a repository
     Unlock(lock::RepoUnlockArgs),
+    /// Show current lock status of a repository
+    ShowLock(lock::RepoShowLockArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -58,6 +60,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         Info(args) => info::repo_info(&ctx, &repo, args).await?,
         Lock(args) => lock::repo_lock(&ctx, &repo, args).await?,
         Unlock(args) => lock::repo_unlock(&ctx, &repo, args).await?,
+        ShowLock(args) => lock::repo_show_lock(&ctx, &repo, args).await?,
     }
     Ok(())
 }
