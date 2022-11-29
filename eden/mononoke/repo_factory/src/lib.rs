@@ -1303,9 +1303,10 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcRepoLock> {
         match repo_config.readonly {
-            RepoReadOnly::ReadOnly(ref reason) => {
-                Ok(Arc::new(AlwaysLockedRepoLock::new(reason.clone())))
-            }
+            RepoReadOnly::ReadOnly(ref reason) => Ok(Arc::new(AlwaysLockedRepoLock::new(
+                repo_identity.id(),
+                reason.clone(),
+            ))),
             RepoReadOnly::ReadWrite => {
                 let sql = SqlRepoLock::with_metadata_database_config(
                     self.env.fb,

@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
+use maplit::hashmap;
 use mononoke_types::RepositoryId;
 use sql::Connection;
 use sql::Transaction;
@@ -30,6 +33,7 @@ pub enum RepoLockState {
 pub trait RepoLock: Send + Sync {
     /// Check whether a repo is locked, which will prevent new commits being pushed.
     async fn check_repo_lock(&self) -> Result<RepoLockState, Error>;
+    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error>;
     /// Lock a repo to prevent pushes. This method returns Ok(true) if the repo wasn't previously
     /// locked, Ok(false) if it was and Err(_) if there is an error modifying the lock status.
     async fn set_repo_lock(&self, lock_state: RepoLockState) -> Result<bool, Error>;
@@ -49,6 +53,10 @@ mononoke_queries! {
     read GetRepoLockStatus(repo_id: RepositoryId) -> (u8, Option<String>) {
         "SELECT state, reason FROM repo_lock
         WHERE repo_id = {repo_id}"
+    }
+
+    read AllReposLockStatus() -> (RepositoryId, u8, Option<String>) {
+        "SELECT repo_id, state, reason FROM repo_lock"
     }
 }
 
@@ -73,16 +81,13 @@ impl SqlConstruct for SqlRepoLock {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlRepoLock {}
 
-fn convert_sql_state(row: Option<&(u8, Option<String>)>) -> Result<RepoLockState, Error> {
-    match row {
-        Some((state, reason)) => match state {
-            0 => Ok(RepoLockState::Unlocked),
-            1 => Ok(RepoLockState::Locked(
-                reason.clone().unwrap_or_else(|| DEFAULT_DB_MSG.to_string()),
-            )),
-            _ => Err(anyhow!("Invalid repo lock state: {}", state)),
-        },
-        None => Ok(RepoLockState::Unlocked),
+fn convert_sql_state((state, reason): &(u8, Option<String>)) -> Result<RepoLockState, Error> {
+    match state {
+        0 => Ok(RepoLockState::Unlocked),
+        1 => Ok(RepoLockState::Locked(
+            reason.clone().unwrap_or_else(|| DEFAULT_DB_MSG.to_string()),
+        )),
+        _ => Err(anyhow!("Invalid repo lock state: {}", state)),
     }
 }
 
@@ -104,7 +109,9 @@ impl TransactionRepoLock {
             .await
             .context("Failed to query repo lock status")?;
 
-        let state = convert_sql_state(row.first())?;
+        let state = row
+            .first()
+            .map_or(Ok(RepoLockState::Unlocked), convert_sql_state)?;
 
         Ok((txn, state))
     }
@@ -132,7 +139,18 @@ impl RepoLock for MutableRepoLock {
             .await
             .context("Failed to query repo lock status")?;
 
-        convert_sql_state(row.first())
+        row.first()
+            .map_or(Ok(RepoLockState::Unlocked), convert_sql_state)
+    }
+
+    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
+        let rows = AllReposLockStatus::query(&self.sql_repo_lock.read_connection)
+            .await
+            .context("Failed to query repo lock status")?;
+
+        rows.into_iter()
+            .map(|(repo_id, state, reason)| Ok((repo_id, convert_sql_state(&(state, reason))?)))
+            .collect()
     }
 
     async fn set_repo_lock(&self, lock_state: RepoLockState) -> Result<bool, Error> {
@@ -154,12 +172,13 @@ impl RepoLock for MutableRepoLock {
 
 #[derive(Debug, Clone)]
 pub struct AlwaysLockedRepoLock {
+    repo_id: RepositoryId,
     reason: String,
 }
 
 impl AlwaysLockedRepoLock {
-    pub fn new(reason: String) -> Self {
-        Self { reason }
+    pub fn new(repo_id: RepositoryId, reason: String) -> Self {
+        Self { repo_id, reason }
     }
 }
 
@@ -169,18 +188,34 @@ impl RepoLock for AlwaysLockedRepoLock {
         Ok(RepoLockState::Locked(self.reason.clone()))
     }
 
+    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
+        Ok(hashmap! { self.repo_id => RepoLockState::Locked(self.reason.clone()) })
+    }
+
     async fn set_repo_lock(&self, _: RepoLockState) -> Result<bool, Error> {
         Err(anyhow!("Repo is locked in config and can't be updated"))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct AlwaysUnlockedRepoLock;
+pub struct AlwaysUnlockedRepoLock {
+    repo_id: RepositoryId,
+}
+
+impl AlwaysUnlockedRepoLock {
+    pub fn new(repo_id: RepositoryId) -> Self {
+        Self { repo_id }
+    }
+}
 
 #[async_trait]
 impl RepoLock for AlwaysUnlockedRepoLock {
     async fn check_repo_lock(&self) -> Result<RepoLockState, Error> {
         Ok(RepoLockState::Unlocked)
+    }
+
+    async fn all_repos_lock(&self) -> Result<HashMap<RepositoryId, RepoLockState>, Error> {
+        Ok(hashmap! { self.repo_id => RepoLockState::Unlocked })
     }
 
     async fn set_repo_lock(&self, _: RepoLockState) -> Result<bool, Error> {

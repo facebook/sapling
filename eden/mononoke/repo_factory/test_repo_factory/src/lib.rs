@@ -709,8 +709,8 @@ impl TestRepoFactory {
     }
 
     /// Construct unlocked repo lock.
-    pub fn repo_lock(&self) -> Result<ArcRepoLock> {
-        let repo_lock = AlwaysUnlockedRepoLock {};
+    pub fn repo_lock(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcRepoLock> {
+        let repo_lock = AlwaysUnlockedRepoLock::new(repo_identity.id());
         Ok(Arc::new(repo_lock))
     }
 
