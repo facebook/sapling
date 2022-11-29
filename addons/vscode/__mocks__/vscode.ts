@@ -13,6 +13,7 @@ export const Uri = vscodeUri.URI;
 
 export const workspace = proxyMissingFieldsWithJestFn({
   workspaceFolders: undefined,
+  getConfiguration: () => ({get: jest.fn()}),
 });
 export const scm = proxyMissingFieldsWithJestFn({
   createSourceControl: jest.fn(

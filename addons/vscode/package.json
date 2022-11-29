@@ -34,6 +34,16 @@
     "url": "https://github.com/facebook/sapling"
   },
   "contributes": {
+    "configuration": {
+      "title": "Sapling",
+      "properties": {
+        "sapling.commandPath": {
+          "type": "string",
+          "default": "",
+          "description": "%settings.commandPath.description%"
+        }
+      }
+    },
     "commands": [
       {
         "command": "sapling.open-isl",

@@ -12,17 +12,12 @@ import type {Comparison} from 'shared/Comparison';
 import type {Writable} from 'shared/typeUtils';
 
 import {encodeSaplingDiffUri} from './DiffContentProvider';
+import {getCLICommand} from './config';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {ComparisonType} from 'shared/Comparison';
 import * as vscode from 'vscode';
-
-// TODO: this might make more sense as a vscode config setting
-// prettier-ignore
-const SL_COMMAND =
-  // @fb-only
-  'sl';
 
 /**
  * Construct Repositories and VSCodeRepos for every workspace folder.
@@ -40,7 +35,7 @@ export function watchAndCreateRepositoriesForWorkspaceFolders(logger: Logger): v
       if (knownRepos.has(path)) {
         throw new Error(`Attempted to add workspace folder path twice: ${path}`);
       }
-      const repoReference = repositoryCache.getOrCreate(SL_COMMAND, logger, path);
+      const repoReference = repositoryCache.getOrCreate(getCLICommand(), logger, path);
       knownRepos.set(path, repoReference);
       repoReference.promise.then(repo => {
         if (repo instanceof Repository) {

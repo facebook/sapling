@@ -7,6 +7,7 @@
 
 import type {Logger} from 'isl-server/src/logger';
 
+import {getCLICommand} from './config';
 import {locale, t} from './i18n';
 import {VSCodePlatform} from './vscodePlatform';
 import {onClientConnection} from 'isl-server/src';
@@ -104,10 +105,7 @@ function populateAndSetISLWebview(
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(), // TODO
     platform: VSCodePlatform,
     logger,
-    // prettier-ignore
-    command:
-      // @fb-only
-      'sl',
+    command: getCLICommand(),
   });
 
   panel.onDidDispose(() => {
