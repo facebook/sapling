@@ -32,7 +32,14 @@ pub struct HgSyncLastProcessedArgs {
 
     /// When skipping over blobimport entries, don't update the last processed
     /// entry, just print what would happen
-    #[clap(long, short = 'n', requires = "skip-blobimport")]
+    #[clap(
+        long,
+        short = 'n',
+        requires = "skip-blobimport",
+        conflicts_with = "set"
+    )] // You would think this "conflicts_with" wouldn't be required, but it is, due
+    // to a weird interaction with the `conflicts_with` on `skip_blobimport`.
+    // See upstream issue: https://github.com/clap-rs/clap/issues/4520
     dry_run: bool,
 }
 
