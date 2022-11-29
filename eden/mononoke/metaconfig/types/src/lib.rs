@@ -650,10 +650,6 @@ pub enum Address {
 pub enum PushrebaseRemoteMode {
     /// Do pushrebase in the same process
     Local,
-    /// Call SCS and do pushrebase remotely, forwarding errors
-    RemoteScs(Address),
-    /// Call SCS and do pushrebase remotely, retrying errors locally
-    RemoteScsWithLocalFallback(Address),
     /// Call LandService and do pushrebase remotely, forwarding errors
     RemoteLandService(Address),
     /// Call LandService and do pushrebase remotely, retrying errors locally

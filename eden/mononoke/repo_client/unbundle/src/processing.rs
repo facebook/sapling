@@ -33,8 +33,6 @@ use pushrebase::PushrebaseError;
 use pushrebase_client::LandServicePushrebaseClient;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
-#[cfg(fbcode_build)]
-use pushrebase_client::ScsPushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
@@ -460,38 +458,11 @@ pub fn maybe_client_from_address<'a>(
     repo: &'a impl Repo,
 ) -> Option<Box<dyn PushrebaseClient + 'a>> {
     match remote_mode {
-        PushrebaseRemoteMode::RemoteScs(address)
-        | PushrebaseRemoteMode::RemoteScsWithLocalFallback(address) => {
-            address_from_scs(address, ctx, repo)
-        }
         PushrebaseRemoteMode::RemoteLandService(address)
         | PushrebaseRemoteMode::RemoteLandServiceWithLocalFallback(address) => {
             address_from_land_service(address, ctx, repo)
         }
         PushrebaseRemoteMode::Local => None,
-    }
-}
-
-fn address_from_scs<'a>(
-    address: &'a Address,
-    ctx: &'a CoreContext,
-    repo: &'a impl Repo,
-) -> Option<Box<dyn PushrebaseClient + 'a>> {
-    #[cfg(fbcode_build)]
-    {
-        match address {
-            metaconfig_types::Address::Tier(tier) => Some(Box::new(
-                ScsPushrebaseClient::from_tier(ctx, tier.clone(), repo).ok()?,
-            )),
-            metaconfig_types::Address::HostPort(host_port) => Some(Box::new(
-                ScsPushrebaseClient::from_host_port(ctx, host_port.clone(), repo).ok()?,
-            )),
-        }
-    }
-    #[cfg(not(fbcode_build))]
-    {
-        let _ = (address, ctx, repo);
-        unreachable!()
     }
 }
 
@@ -554,11 +525,7 @@ async fn normal_pushrebase<'a>(
                     return Ok((outcome.head, outcome.rebased_changesets));
                 }
                 // No fallback, propagate error
-                (
-                    Err(err),
-                    metaconfig_types::PushrebaseRemoteMode::RemoteScs(..)
-                    | metaconfig_types::PushrebaseRemoteMode::RemoteLandService(..),
-                ) => {
+                (Err(err), metaconfig_types::PushrebaseRemoteMode::RemoteLandService(..)) => {
                     return Err(convert_bookmark_movement_err(err, hook_rejection_remapper).await?);
                 }
                 (Err(err), _) => {

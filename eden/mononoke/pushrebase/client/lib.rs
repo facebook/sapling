@@ -20,10 +20,6 @@ use bytes::Bytes;
 pub use facebook::land_service::override_certificate_paths as land_service_override_certificate_paths;
 #[cfg(fbcode_build)]
 pub use facebook::land_service::LandServicePushrebaseClient;
-#[cfg(fbcode_build)]
-pub use facebook::scs::override_certificate_paths as scs_override_certificate_paths;
-#[cfg(fbcode_build)]
-pub use facebook::scs::ScsPushrebaseClient;
 use hooks::CrossRepoPushSource;
 pub use local::LocalPushrebaseClient;
 use mononoke_types::BonsaiChangeset;

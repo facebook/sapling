@@ -26,5 +26,4 @@ pushrebase = { version = "0.1.0", path = ".." }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-source_control = { version = "0.1.0", path = "../../scs/if" }
 tunables = { version = "0.1.0", path = "../../tunables" }

@@ -839,7 +839,7 @@ mod test {
             allow_change_xrepo_mapping_extra = true
 
             [pushrebase.remote_mode]
-            remote_scs = { tier = "my-tier" }
+            remote_land_service = { tier = "my-tier" }
 
             [lfs]
             threshold = 1000
@@ -1149,7 +1149,7 @@ mod test {
                     globalrevs_publishing_bookmark: None,
                     populate_git_mapping: false,
                     allow_change_xrepo_mapping_extra: true,
-                    remote_mode: PushrebaseRemoteMode::RemoteScs(Address::Tier(
+                    remote_mode: PushrebaseRemoteMode::RemoteLandService(Address::Tier(
                         "my-tier".to_string(),
                     )),
                 },
