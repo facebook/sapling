@@ -28,7 +28,6 @@ import ctypes.util
 import errno
 import glob
 import hashlib
-import imp
 import re
 import shutil
 import socket
@@ -789,10 +788,6 @@ class hgbuildscripts(build_scripts):
 
 
 class buildembedded(Command):
-    extsuffixes = [s[0] for s in imp.get_suffixes() if s[2] == imp.C_EXTENSION]
-    srcsuffixes = [s[0] for s in imp.get_suffixes() if s[2] == imp.PY_SOURCE]
-    # there should be at least one compiled python suffix, and we don't care about more
-    compsuffix = [s[0] for s in imp.get_suffixes() if s[2] == imp.PY_COMPILED][0]
     description = (
         "Build the embedded version of Mercurial. Intended to be used on Windows."
     )
