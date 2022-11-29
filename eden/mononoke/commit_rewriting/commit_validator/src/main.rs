@@ -37,6 +37,7 @@ use futures::stream::TryStreamExt;
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::info;
 
 mod cli;
 mod reporting;
@@ -104,6 +105,10 @@ async fn run_in_tailing_mode(
     start_id: u64,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<(), Error> {
+    info!(
+        ctx.logger(),
+        "Starting to tail commits from id {}", start_id
+    );
     let counter_name = format_counter();
     let stream_of_entries = tail_entries(
         ctx.clone(),

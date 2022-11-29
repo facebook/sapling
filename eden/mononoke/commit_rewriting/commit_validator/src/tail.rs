@@ -115,14 +115,17 @@ pub(crate) fn tail_entries(
 
             match entries.last().map(|last_item_ref| last_item_ref.id) {
                 Some(last_entry_id) => {
-                    debug!(
-                        ctx.logger(),
-                        "tail_entries generating, iteration {}", iteration
-                    );
-                    let entries = entries
+                    let entries: Vec<_> = entries
                         .into_iter()
                         .filter(|entry| skip_bookmarks.contains(&entry.bookmark_name))
                         .collect();
+                    debug!(
+                        ctx.logger(),
+                        "tail_entries generating {} new entries, queue size {}, iteration {}",
+                        entries.len(),
+                        (queue_size as usize) - entries.len(),
+                        iteration
+                    );
 
                     let entries_with_queue_size: std::iter::Map<_, _> =
                         add_queue_sizes(entries, queue_size as usize).map(Ok);
