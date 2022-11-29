@@ -66,7 +66,7 @@ def submit_cmd(ui, repo, *args, **opts):
     _("[-r REV] PULL_REQUEST"),
 )
 def link_cmd(ui, repo, *args, **opts):
-    """indentify a commit as the head of a GitHub pull request
+    """identify a commit as the head of a GitHub pull request
 
     A PULL_REQUEST can be specified in a number of formats:
 
