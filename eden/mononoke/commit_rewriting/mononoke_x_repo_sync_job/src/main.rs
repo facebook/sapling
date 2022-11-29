@@ -7,111 +7,46 @@
 
 #![feature(auto_traits)]
 
+//! Mononoke Cross Repo sync job
+//!
+//! This is a special job used to tail "small" Mononoke repo into "large" Mononoke repo when
+//! small repo is a source of truth (i.e. "hg push" go directly to small repo).
+//! At the moment there two main limitations:
+//! 1) Syncing of some merge commits is not supported
+//! 2) Root commits and their descendants that are not merged into a main line
+//! aren't going to be synced. For example,
+//
+//! ```text
+//!   O <- main bookmark
+//!   |
+//!   O
+//!   |   A <- new_bookmark, that added a new root commit
+//!   O   |
+//!    ...
+//!
+//!   Commit A, its ancestors and new_bookmark aren't going to be synced to the large repo.
+//!   However if commit A gets merged into a mainline e.g.
+//!   O <- main bookmark
+//!   | \
+//!   O  \
+//!   |   A <- new_bookmark, that added a new root commit
+//!   O   |
+//!    ...
+//!
+//!   Then commit A and all of its ancestors WILL be synced to the large repo, however
+//!   new_bookmark still WILL NOT be synced to the large repo.
+//!
+//! This job does tailing by following bookmark update log of the small repo and replaying
+//! each commit into the large repo. Note that some bookmarks called "common_pushrebase_bookmarks"
+//! are treated specially, see comments in the code for more details
+//! ```
+
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Mononoke Cross Repo sync job
-///
-/// This is a special job used to tail "small" Mononoke repo into "large" Mononoke repo when
-/// small repo is a source of truth (i.e. "hg push" go directly to small repo).
-/// At the moment there two main limitations:
-/// 1) Syncing of some merge commits is not supported
-/// 2) Root commits and their descendants that are not merged into a main line
-/// aren't going to be synced. For example,
-///
-/// ```text
-///   O <- main bookmark
-///   |
-///   O
-///   |   A <- new_bookmark, that added a new root commit
-///   O   |
-///    ...
-///
-///   Commit A, its ancestors and new_bookmark aren't going to be synced to the large repo.
-///   However if commit A gets merged into a mainline e.g.
-///   O <- main bookmark
-///   | \
-///   O  \
-///   |   A <- new_bookmark, that added a new root commit
-///   O   |
-///    ...
-///
-///   Then commit A and all of its ancestors WILL be synced to the large repo, however
-///   new_bookmark still WILL NOT be synced to the large repo.
-///
-/// This job does tailing by following bookmark update log of the small repo and replaying
-/// each commit into the large repo. Note that some bookmarks called "common_pushrebase_bookmarks"
-/// are treated specially, see comments in the code for more details
-/// ```
 use anyhow::format_err;
-/// Mononoke Cross Repo sync job
-///
-/// This is a special job used to tail "small" Mononoke repo into "large" Mononoke repo when
-/// small repo is a source of truth (i.e. "hg push" go directly to small repo).
-/// At the moment there two main limitations:
-/// 1) Syncing of some merge commits is not supported
-/// 2) Root commits and their descendants that are not merged into a main line
-/// aren't going to be synced. For example,
-///
-/// ```text
-///   O <- main bookmark
-///   |
-///   O
-///   |   A <- new_bookmark, that added a new root commit
-///   O   |
-///    ...
-///
-///   Commit A, its ancestors and new_bookmark aren't going to be synced to the large repo.
-///   However if commit A gets merged into a mainline e.g.
-///   O <- main bookmark
-///   | \
-///   O  \
-///   |   A <- new_bookmark, that added a new root commit
-///   O   |
-///    ...
-///
-///   Then commit A and all of its ancestors WILL be synced to the large repo, however
-///   new_bookmark still WILL NOT be synced to the large repo.
-///
-/// This job does tailing by following bookmark update log of the small repo and replaying
-/// each commit into the large repo. Note that some bookmarks called "common_pushrebase_bookmarks"
-/// are treated specially, see comments in the code for more details
-/// ```
 use anyhow::Error;
-/// Mononoke Cross Repo sync job
-///
-/// This is a special job used to tail "small" Mononoke repo into "large" Mononoke repo when
-/// small repo is a source of truth (i.e. "hg push" go directly to small repo).
-/// At the moment there two main limitations:
-/// 1) Syncing of some merge commits is not supported
-/// 2) Root commits and their descendants that are not merged into a main line
-/// aren't going to be synced. For example,
-///
-/// ```text
-///   O <- main bookmark
-///   |
-///   O
-///   |   A <- new_bookmark, that added a new root commit
-///   O   |
-///    ...
-///
-///   Commit A, its ancestors and new_bookmark aren't going to be synced to the large repo.
-///   However if commit A gets merged into a mainline e.g.
-///   O <- main bookmark
-///   | \
-///   O  \
-///   |   A <- new_bookmark, that added a new root commit
-///   O   |
-///    ...
-///
-///   Then commit A and all of its ancestors WILL be synced to the large repo, however
-///   new_bookmark still WILL NOT be synced to the large repo.
-///
-/// This job does tailing by following bookmark update log of the small repo and replaying
-/// each commit into the large repo. Note that some bookmarks called "common_pushrebase_bookmarks"
-/// are treated specially, see comments in the code for more details
-/// ```
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
