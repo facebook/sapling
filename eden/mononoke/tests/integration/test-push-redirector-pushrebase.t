@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
@@ -27,8 +29,15 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
-  updating bookmark master_bookmark
+  $ REPONAME=small-mon quiet hgmn push -r . --to master_bookmark
+-- Check scribe category
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq '.repo_name, .changeset_id'
+  "large-mon"
+  "b83fcdec86997308b73b957a3037979c1d1d670929d02b663a183789dfd5a3fa"
+  $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq '.repo_name, .bookmark_name, .new_bookmark_value'
+  "large-mon"
+  "master_bookmark"
+  "b83fcdec86997308b73b957a3037979c1d1d670929d02b663a183789dfd5a3fa"
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
