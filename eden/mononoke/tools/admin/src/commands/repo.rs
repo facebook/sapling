@@ -6,6 +6,7 @@
  */
 
 mod info;
+mod lock;
 
 use anyhow::Result;
 use bookmarks::Bookmarks;
@@ -14,6 +15,7 @@ use clap::Subcommand;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentity;
+use repo_lock::RepoLock;
 
 /// Operations over a whole repo
 #[derive(Parser)]
@@ -32,12 +34,19 @@ pub struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
+
+    #[facet]
+    lock: dyn RepoLock,
 }
 
 #[derive(Subcommand)]
 pub enum RepoSubcommand {
     /// Show information about a repository
     Info(info::RepoInfoArgs),
+    /// Lock a repository
+    Lock(lock::RepoLockArgs),
+    /// Unlock a repository
+    Unlock(lock::RepoUnlockArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -47,6 +56,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     use RepoSubcommand::*;
     match args.subcommand {
         Info(args) => info::repo_info(&ctx, &repo, args).await?,
+        Lock(args) => lock::repo_lock(&ctx, &repo, args).await?,
+        Unlock(args) => lock::repo_unlock(&ctx, &repo, args).await?,
     }
     Ok(())
 }
