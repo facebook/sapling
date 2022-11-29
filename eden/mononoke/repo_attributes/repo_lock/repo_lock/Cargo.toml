@@ -14,6 +14,7 @@ path = "../src/lib.rs"
 anyhow = "1.0.65"
 async-trait = "0.1.58"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }

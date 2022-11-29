@@ -58,9 +58,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     use RepoSubcommand::*;
     match args.subcommand {
         Info(args) => info::repo_info(&ctx, &repo, args).await?,
-        Lock(args) => lock::repo_lock(&ctx, &repo, args).await?,
-        Unlock(args) => lock::repo_unlock(&ctx, &repo, args).await?,
-        ShowLock(args) => lock::repo_show_lock(&ctx, &repo, args).await?,
+        Lock(args) => lock::repo_lock(&app, &repo, args).await?,
+        Unlock(args) => lock::repo_unlock(&app, &repo, args).await?,
+        ShowLock(args) => lock::repo_show_lock(&app, &repo, args).await?,
     }
     Ok(())
 }
