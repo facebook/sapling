@@ -323,6 +323,7 @@ where
                     target_repo_dbs.clone(),
                     BacksyncLimit::NoLimit,
                     Arc::clone(&cancellation_requested),
+                    CommitSyncContext::Backsyncer,
                 )
                 .await?
             }
@@ -514,6 +515,7 @@ async fn run(
                 target_repo_dbs,
                 BacksyncLimit::NoLimit,
                 cancellation_requested,
+                CommitSyncContext::Backsyncer,
             )
             .boxed()
             .await?;

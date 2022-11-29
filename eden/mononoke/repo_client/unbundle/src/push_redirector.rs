@@ -488,6 +488,7 @@ impl<R: Repo> PushRedirector<R> {
             self.target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::PushRedirector,
         )
         .await?;
         Ok(())
@@ -573,14 +574,7 @@ impl<R: Repo> PushRedirector<R> {
         // `bookmark_push_part_id`, which does not need to be converted
         // We do, however, need to wait until the backsyncer catches up with
         // with the `bookmarks_update_log` tailing
-        backsync_latest(
-            ctx.clone(),
-            self.large_to_small_commit_syncer.clone(),
-            self.target_repo_dbs.clone(),
-            BacksyncLimit::NoLimit,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .await?;
+        self.backsync_latest(ctx).await?;
 
         Ok(orig)
     }
@@ -596,14 +590,7 @@ impl<R: Repo> PushRedirector<R> {
         // `changegroup_id` and `bookmark_ids`, which do not need to be converted
         // We do, however, need to wait until the backsyncer catches up with
         // with the `bookmarks_update_log` tailing
-        backsync_latest(
-            ctx.clone(),
-            self.large_to_small_commit_syncer.clone(),
-            self.target_repo_dbs.clone(),
-            BacksyncLimit::NoLimit,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .await?;
+        self.backsync_latest(ctx).await?;
 
         Ok(orig)
     }

@@ -170,6 +170,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             target_repo_dbs.clone(),
             BacksyncLimit::Limit(2),
             Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::Backsyncer,
         )
         .map_err(Error::from)
         .await?;
@@ -191,6 +192,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             next_log_entries.clone(),
             0,
             Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::Backsyncer,
         )
         .await?;
 
@@ -389,6 +391,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
             target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::Backsyncer,
         )
         .map_err(Error::from)
         .await?;
@@ -619,6 +622,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         target_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
     )
     .await?;
 
@@ -647,6 +651,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         target_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
     )
     .await?;
     let maybe_outcome = commit_syncer
@@ -787,6 +792,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         target_repo_dbs.clone(),
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
     );
     with_tunables_async(tunables, f.boxed()).await?;
 
@@ -896,6 +902,7 @@ async fn backsync_and_verify_master_wc(
             target_repo_dbs.clone(),
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::Backsyncer,
         ))
         .flatten_err();
         futs.push(f);

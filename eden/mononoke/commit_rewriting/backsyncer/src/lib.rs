@@ -86,6 +86,7 @@ pub async fn backsync_latest<M>(
     target_repo_dbs: Arc<TargetRepoDbs>,
     limit: BacksyncLimit,
     cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -139,6 +140,7 @@ where
             next_entries,
             counter as i64,
             cancellation_requested,
+            sync_context,
         )
         .await
     }
@@ -151,6 +153,7 @@ async fn sync_entries<M>(
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: i64,
     cancellation_requested: Arc<AtomicBool>,
+    sync_context: CommitSyncContext,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -209,12 +212,7 @@ where
             // therefore there can be at most one remapped candidate,
             // so `CandidateSelectionHint::Only` is a safe choice
             commit_syncer
-                .sync_commit(
-                    &ctx,
-                    to_cs_id,
-                    CandidateSelectionHint::Only,
-                    CommitSyncContext::Backsyncer,
-                )
+                .sync_commit(&ctx, to_cs_id, CandidateSelectionHint::Only, sync_context)
                 .await?;
         }
 
