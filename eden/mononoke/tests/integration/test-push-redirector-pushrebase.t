@@ -34,6 +34,9 @@ Normal pushrebase with one commit
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq '.repo_name, .changeset_id'
   "large-mon"
   "b83fcdec86997308b73b957a3037979c1d1d670929d02b663a183789dfd5a3fa"
+  "small-mon"
+  "93637f57d04a2cb4852f044e4bfa7c7f961a7f6813ac4369a05dfbfe86bc531e"
+-- BUG: Bookmark log for small repo is missing
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq '.repo_name, .bookmark_name, .new_bookmark_value'
   "large-mon"
   "master_bookmark"

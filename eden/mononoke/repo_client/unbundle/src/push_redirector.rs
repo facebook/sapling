@@ -16,6 +16,7 @@ use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::BacksyncLimit;
 use blobstore::Loadable;
+use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use cacheblob::LeaseOps;
 use cloned::cloned;
@@ -38,6 +39,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_update_logger::log_new_commits;
+use repo_update_logger::CommitInfo;
 use skiplist::SkiplistIndexArc;
 use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -141,6 +144,7 @@ impl<R: Repo> PushRedirectorArgs<R> {
         debug!(ctx.logger(), "Instantiating a new PushRedirector");
         Ok(PushRedirector {
             repo: target_repo,
+            small_repo: source_repo,
             small_to_large_commit_syncer,
             large_to_small_commit_syncer,
             target_repo_dbs,
@@ -154,6 +158,8 @@ impl<R: Repo> PushRedirectorArgs<R> {
 pub struct PushRedirector<R> {
     // target (large) repo to sync into
     pub repo: Arc<R>,
+    // small repo to sync from
+    pub small_repo: Arc<R>,
     // `CommitSyncer` struct to do push redirecion
     pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
     // `CommitSyncer` struct for the backsyncer
@@ -177,10 +183,22 @@ impl<R: Repo> PushRedirector<R> {
     ) -> Result<UnbundleResponse, BundleResolverError> {
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index_arc();
 
+        let maybe_changesets_to_log: Option<HashMap<ChangesetId, CommitInfo>> = match &action {
+            PostResolveAction::PushRebase(action) => Some(
+                action
+                    .uploaded_bonsais
+                    .iter()
+                    .map(|bcs| (bcs.get_changeset_id(), CommitInfo::new(bcs, None)))
+                    .collect(),
+            ),
+            _ => None,
+        };
+
         let large_repo_action = self
             .convert_post_resolve_action(ctx, action)
             .await
             .map_err(BundleResolverError::from)?;
+
         let large_repo_response = run_post_resolve_action(
             ctx,
             self.repo.as_ref(),
@@ -190,7 +208,7 @@ impl<R: Repo> PushRedirector<R> {
             CrossRepoPushSource::PushRedirected,
         )
         .await?;
-        self.convert_unbundle_response(ctx, large_repo_response)
+        self.convert_unbundle_response(ctx, large_repo_response, maybe_changesets_to_log)
             .await
             .map_err(BundleResolverError::from)
     }
@@ -455,11 +473,12 @@ impl<R: Repo> PushRedirector<R> {
         &self,
         ctx: &CoreContext,
         orig: UnbundleResponse,
+        maybe_changesets_to_log: Option<HashMap<ChangesetId, CommitInfo>>,
     ) -> Result<UnbundleResponse, Error> {
         use UnbundleResponse::*;
         match orig {
             PushRebase(resp) => Ok(PushRebase(
-                self.convert_unbundle_pushrebase_response(ctx, resp)
+                self.convert_unbundle_pushrebase_response(ctx, resp, maybe_changesets_to_log)
                     .await
                     .context("while converting unbundle pushrebase response")?,
             )),
@@ -518,6 +537,7 @@ impl<R: Repo> PushRedirector<R> {
         &self,
         ctx: &CoreContext,
         orig: UnbundlePushRebaseResponse,
+        maybe_changesets_to_log: Option<HashMap<ChangesetId, CommitInfo>>,
     ) -> Result<UnbundlePushRebaseResponse, Error> {
         let UnbundlePushRebaseResponse {
             commonheads,
@@ -545,6 +565,14 @@ impl<R: Repo> PushRedirector<R> {
             },
         )?;
 
+        let mut changesets_to_log = maybe_changesets_to_log.unwrap_or_default();
+        for pair in pushrebased_changesets.iter() {
+            let info = changesets_to_log
+                .get_mut(&pair.id_old)
+                .with_context(|| format!("Missing commit info for {}", pair.id_old))?;
+            info.update_changeset_id(pair.id_old, pair.id_new)?;
+        }
+
         let onto = self
             .large_to_small_commit_syncer
             .rename_bookmark(&onto)
@@ -556,6 +584,15 @@ impl<R: Repo> PushRedirector<R> {
                     self.large_to_small_commit_syncer
                 )
             })?;
+
+        // Also log commits on small repo
+        log_new_commits(
+            ctx,
+            self.small_repo.as_ref(),
+            Some((&onto, BookmarkKind::Publishing)),
+            changesets_to_log.into_values().collect(),
+        )
+        .await;
 
         Ok(UnbundlePushRebaseResponse {
             commonheads,
