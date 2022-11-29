@@ -9,6 +9,9 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+# Note: This is for the open-source Phabricator using Conduit APIs, maintained
+# by phacility.com. It is not for Phabricator used at Meta that speaks GraphQL.
 """simple Phabricator integration
 
 This extension provides a ``phabsend`` command which sends a stack of
@@ -47,24 +50,23 @@ import json
 import operator
 import re
 
-from edenscm.mercurial import (
+from edenscm import (
     cmdutil,
     context,
     encoding,
     error,
     mdiff,
-    obsutil,
+    mutation,
     parser,
     patch,
     registrar,
     scmutil,
     smartset,
-    tags,
     url as urlmod,
     util,
 )
-from edenscm.mercurial.i18n import _
-from edenscm.mercurial.node import bin, nullid
+from edenscm.i18n import _
+from edenscm.node import bin, short
 
 
 cmdtable = {}
@@ -198,41 +200,28 @@ def getoldnodedrevmap(repo, nodelist):
     Examines commit messages like "Differential Revision:" to get the
     association information.
 
-    If such commit message line is not found, examines all precursors and their
-    tags. Tags with format like "D1234" are considered a match and the node
-    with that tag, and the number after "D" (ex. 1234) will be returned.
-
     The ``old node``, if not None, is guaranteed to be the last diff of
     corresponding Differential Revision, and exist in the repo.
     """
     url, token = readurltoken(repo)
-    unfi = repo.unfiltered()
-    nodemap = unfi.changelog.nodemap
+    nodemap = repo.changelog.nodemap
 
     result = {}  # {node: (oldnode?, lastdiff?, drev)}
     toconfirm = {}  # {node: (force, {precnode}, drev)}
     for node in nodelist:
-        ctx = unfi[node]
-        # For tags like "D123", put them into "toconfirm" to verify later
-        precnodes = list(obsutil.allpredecessors(unfi.obsstore, [node]))
-        for n in precnodes:
-            if n in nodemap:
-                for tag in unfi.nodetags(n):
-                    m = _differentialrevisiontagre.match(tag)
-                    if m:
-                        toconfirm[node] = (0, set(precnodes), int(m.group(1)))
-                        continue
+        ctx = repo[node]
 
         # Check commit message
         m = _differentialrevisiondescre.search(ctx.description())
         if m:
+            precnodes = list(mutation.allpredecessors(repo, [node]))
             toconfirm[node] = (1, set(precnodes), int(m.group(1)))
 
-    # Double check if tags are genuine by collecting all old nodes from
+    # Double check by collecting all old nodes from
     # Phabricator, and expect precursors overlap with it.
     if toconfirm:
         drevs = [drev for force, precs, drev in toconfirm.values()]
-        alldiffs = callconduit(unfi, "differential.querydiffs", {"revisionIDs": drevs})
+        alldiffs = callconduit(repo, "differential.querydiffs", {"revisionIDs": drevs})
         getnode = (
             lambda d: bin(encoding.unitolocal(getdiffmeta(d).get(r"node", ""))) or None
         )
@@ -241,28 +230,6 @@ def getoldnodedrevmap(repo, nodelist):
 
             # "precursors" as known by Phabricator
             phprecset = set(getnode(d) for d in diffs)
-
-            # Ignore if precursors (Phabricator and local repo) do not overlap,
-            # and force is not set (when commit message says nothing)
-            if not force and not bool(phprecset & precset):
-                tagname = "D%d" % drev
-                tags.tag(
-                    repo,
-                    tagname,
-                    nullid,
-                    message=None,
-                    user=None,
-                    date=None,
-                    local=True,
-                )
-                unfi.ui.warn(
-                    _(
-                        "D%s: local tag removed - does not match "
-                        "Differential history\n"
-                    )
-                    % drev
-                )
-                continue
 
             # Find the last node using Phabricator metadata, and make sure it
             # exists in the repo
@@ -281,9 +248,7 @@ def getoldnodedrevmap(repo, nodelist):
 def getdiff(ctx, diffopts):
     """plain-text diff without header (user, commit message, etc)"""
     output = util.stringio()
-    for chunk, _label in patch.diffui(
-        ctx.repo(), ctx.p1().node(), ctx.node(), None, opts=diffopts
-    ):
+    for chunk, _label in patch.diffui(ctx.repo(), ctx.p1(), ctx, opts=diffopts):
         output.write(chunk)
     return output.getvalue()
 
@@ -335,7 +300,7 @@ def createdifferentialrevision(
     repo = ctx.repo()
     if oldnode:
         diffopts = mdiff.diffopts(git=True, context=32767)
-        oldctx = repo.unfiltered()[oldnode]
+        oldctx = repo[oldnode]
         neednewdiff = getdiff(ctx, diffopts) != getdiff(oldctx, diffopts)
     else:
         neednewdiff = True
@@ -403,7 +368,6 @@ def userphids(repo, names):
     "phabsend",
     [
         ("r", "rev", [], _("revisions to send"), _("REV")),
-        ("", "amend", True, _("update commit messages")),
         ("", "reviewer", [], _("specify reviewers")),
         ("", "confirm", None, _("ask for confirmation before sending")),
     ],
@@ -416,15 +380,9 @@ def phabsend(ui, repo, *revs, **opts):
     with a linear dependencies relationship using the order specified by the
     revset.
 
-    For the first time uploading changesets, local tags will be created to
-    maintain the association. After the first time, phabsend will check
-    obsstore and tags information so it can figure out whether to update an
-    existing Differential Revision, or create a new one.
-
-    If --amend is set, update commit messages so they have the
-    ``Differential Revision`` URL, remove related tags. This is similar to what
-    arcanist will do, and is more desired in author-push workflows. Otherwise,
-    use local tags to record the ``Differential Revision`` association.
+    Update commit messages so they have the ``Differential Revision`` URL. This
+    is similar to what arcanist will do, and is more desired in author-push
+    workflows.
 
     The --confirm option lets you confirm changesets before sending them. You
     can also add following to your configuration file to make it default
@@ -441,8 +399,7 @@ def phabsend(ui, repo, *revs, **opts):
 
     if not revs:
         raise error.Abort(_("phabsend requires at least one changeset"))
-    if opts.get("amend"):
-        cmdutil.checkunfinished(repo)
+    cmdutil.checkunfinished(repo)
 
     # {newnode: (oldnode, olddiff, olddrev}
     oldmap = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
@@ -462,6 +419,7 @@ def phabsend(ui, repo, *revs, **opts):
 
     drevids = []  # [int]
     diffmap = {}  # {newnode: diff}
+    skippedrevs = set()
 
     # Send patches one by one so we know their Differential Revision IDs and
     # can provide dependency relationship
@@ -472,7 +430,7 @@ def phabsend(ui, repo, *revs, **opts):
 
         # Get Differential Revision ID
         oldnode, olddiff, revid = oldmap.get(ctx.node(), (None, None, None))
-        if oldnode != ctx.node() or opts.get("amend"):
+        if oldnode != ctx.node() or not olddiff:
             # Create or update Differential Revision
             revision, diff = createdifferentialrevision(
                 ctx, revid, lastrevid, oldnode, olddiff, actions
@@ -483,22 +441,8 @@ def phabsend(ui, repo, *revs, **opts):
                 action = "updated"
             else:
                 action = "created"
-
-            # Create a local tag to note the association, if commit message
-            # does not have it already
-            m = _differentialrevisiondescre.search(ctx.description())
-            if not m or int(m.group(1)) != newrevid:
-                tagname = "D%d" % newrevid
-                tags.tag(
-                    repo,
-                    tagname,
-                    ctx.node(),
-                    message=None,
-                    user=None,
-                    date=None,
-                    local=True,
-                )
         else:
+            skippedrevs.add(rev)
             # Nothing changed. But still set "newrevid" so the next revision
             # could depend on this one.
             newrevid = revid
@@ -511,58 +455,49 @@ def phabsend(ui, repo, *revs, **opts):
             "phabricator.action.%s" % action,
         )
         drevdesc = ui.label("D%s" % newrevid, "phabricator.drev")
-        nodedesc = ui.label(bytes(ctx), "phabricator.node")
+        nodedesc = ui.label(short(ctx.node()), "phabricator.node")
         desc = ui.label(ctx.description().split("\n")[0], "phabricator.desc")
         ui.write(_("%s - %s - %s: %s\n") % (drevdesc, actiondesc, nodedesc, desc))
         drevids.append(newrevid)
         lastrevid = newrevid
 
-    # Update commit messages and remove tags
-    if opts.get("amend"):
-        unfi = repo.unfiltered()
-        drevs = callconduit(repo, "differential.query", {"ids": drevids})
-        with repo.wlock(), repo.lock(), repo.transaction("phabsend"):
-            wnode = unfi["."].node()
-            mapping = {}  # {oldnode: [newnode]}
-            for i, rev in enumerate(revs):
-                old = unfi[rev]
-                drevid = drevids[i]
-                drev = [d for d in drevs if int(d[r"id"]) == drevid][0]
-                newdesc = getdescfromdrev(drev)
-                # Make sure commit message contain "Differential Revision"
-                if old.description() != newdesc:
-                    parents = [
-                        mapping.get(old.p1().node(), (old.p1(),))[0],
-                        mapping.get(old.p2().node(), (old.p2(),))[0],
-                    ]
-                    new = context.metadataonlyctx(
-                        repo,
-                        old,
-                        parents=parents,
-                        text=newdesc,
-                        user=old.user(),
-                        date=old.date(),
-                        extra=old.extra(),
-                    )
-                    newnode = new.commit()
-                    mapping[old.node()] = [newnode]
-                    # Update diff property
-                    writediffproperties(unfi[newnode], diffmap[old.node()])
-                # Remove local tags since it's no longer necessary
-                tagname = "D%d" % drevid
-                if tagname in repo.tags():
-                    tags.tag(
-                        repo,
-                        tagname,
-                        nullid,
-                        message=None,
-                        user=None,
-                        date=None,
-                        local=True,
-                    )
-            scmutil.cleanupnodes(repo, mapping, "phabsend")
-            if wnode in mapping:
-                unfi.setparents(mapping[wnode][0])
+    # Update commit messages
+    drevs = callconduit(repo, "differential.query", {"ids": drevids})
+    with repo.wlock(), repo.lock(), repo.transaction("phabsend"):
+        wnode = repo["."].node()
+        mapping = {}  # {oldnode: [newnode]}
+        for i, rev in enumerate(revs):
+            if rev in skippedrevs:
+                continue
+            old = repo[rev]
+            drevid = drevids[i]
+            drev = [d for d in drevs if int(d[r"id"]) == drevid][0]
+            newdesc = getdescfromdrev(drev)
+            # Make sure commit message contain "Differential Revision"
+            if old.description() != newdesc:
+                parents = [
+                    mapping.get(old.p1().node(), (old.p1(),))[0],
+                    mapping.get(old.p2().node(), (old.p2(),))[0],
+                ]
+                preds = [old.node()]
+                mutinfo = mutation.record(repo, {}, preds, "phabsend")
+                new = context.metadataonlyctx(
+                    repo,
+                    old,
+                    parents=parents,
+                    text=newdesc,
+                    user=old.user(),
+                    date=old.date(),
+                    extra=old.extra(),
+                    mutinfo=mutinfo,
+                )
+                newnode = new.commit()
+                mapping[old.node()] = [newnode]
+                # Update diff property
+                writediffproperties(repo[newnode], diffmap[old.node()])
+        scmutil.cleanupnodes(repo, mapping, "phabsend")
+        if wnode in mapping:
+            repo.setparents(mapping[wnode][0])
 
 
 # Map from "hg:meta" keys to header understood by "hg import". The order is
@@ -624,7 +559,7 @@ _elements = {
 
 
 def _tokenize(text):
-    view = memoryview(text)  # zero-copy slice
+    view = text
     special = "():+-& "
     pos = 0
     length = len(text)
@@ -751,7 +686,7 @@ def querydrev(repo, spec):
             for phid in depends:
                 queue.append({"phids": [phid]})
         result.reverse()
-        return smartset.baseset(result)
+        return smartset.baseset(result, repo=repo)
 
     # Initialize prefetch cache
     prefetched = {}  # {id or phid: drev}
@@ -776,12 +711,12 @@ def querydrev(repo, spec):
         if op == "symbol":
             drev = _parsedrev(tree[1])
             if drev:
-                return smartset.baseset([drev])
+                return smartset.baseset([drev], repo=repo)
             elif tree[1] in _knownstatusnames:
                 drevs = [
                     r for r in validids if _getstatusname(prefetched[r]) == tree[1]
                 ]
-                return smartset.baseset(drevs)
+                return smartset.baseset(drevs, repo=repo)
             else:
                 raise error.Abort(_("unknown symbol: %s") % tree[1])
         elif op in {"and_", "add", "sub"}:
