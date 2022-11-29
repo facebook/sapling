@@ -88,7 +88,7 @@ pub enum ErrorKind {
     SomeMissingItem {
         missing_main: Arc<BlobstoresReturnedNone>,
         missing_write_mostly: Arc<BlobstoresReturnedNone>,
-        value: Option<BlobstoreGetData>,
+        value: BlobstoreGetData,
     },
     #[error("Multiple failures on put: {0:?}")]
     MultiplePutFailures(Arc<BlobstoresReturnedError>),
@@ -235,10 +235,9 @@ pub fn scrub_parse_results(
     results: impl Iterator<Item = (bool, GetResult)>,
     all_main: impl Iterator<Item = BlobstoreId>,
 ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
-    let mut all_values = HashMap::new();
     let mut missing_main = HashSet::new();
     let mut missing_write_mostly = HashSet::new();
-    let mut last_get_data = None;
+    let mut get_data = None;
     let mut main_errors = HashMap::new();
     let mut write_mostly_errors = HashMap::new();
 
@@ -255,11 +254,11 @@ pub fn scrub_parse_results(
                 let mut content_hash = XxHash::with_seed(0);
                 content_hash.write(value.as_raw_bytes());
                 let content_hash = content_hash.finish();
+                let (all_values, _) = get_data.get_or_insert_with(|| (HashMap::new(), value));
                 all_values
                     .entry(content_hash)
                     .or_insert_with(HashSet::new)
                     .insert(blobstore_id);
-                last_get_data = Some(value);
             }
             Err(err) => {
                 if is_write_mostly {
@@ -270,8 +269,8 @@ pub fn scrub_parse_results(
             }
         }
     }
-    match all_values.len() {
-        0 => {
+    match get_data {
+        None => {
             if main_errors.is_empty() && write_mostly_errors.is_empty() {
                 Ok(None)
             } else {
@@ -282,19 +281,19 @@ pub fn scrub_parse_results(
                 ))
             }
         }
-        1 => {
+        Some((all_values, value)) if all_values.len() == 1 => {
             if missing_main.is_empty() && missing_write_mostly.is_empty() {
-                Ok(last_get_data)
+                Ok(Some(value))
             } else {
                 // This silently ignores failed blobstores if at least one has a value
                 Err(ErrorKind::SomeMissingItem {
                     missing_main: Arc::new(missing_main),
                     missing_write_mostly: Arc::new(missing_write_mostly),
-                    value: last_get_data,
+                    value,
                 })
             }
         }
-        _ => {
+        Some((all_values, _)) => {
             let answered = all_values.into_iter().map(|(_, stores)| stores).collect();
             let mut all_missing = HashSet::new();
             all_missing.extend(missing_main.into_iter());

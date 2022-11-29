@@ -391,7 +391,7 @@ async fn blobstore_get(
             ErrorKind::SomeMissingItem {
                 missing_main,
                 missing_write_mostly,
-                value: Some(value),
+                value,
             } => {
                 maybe_repair(
                     ctx,

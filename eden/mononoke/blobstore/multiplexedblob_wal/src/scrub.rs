@@ -154,7 +154,7 @@ impl Blobstore for WalScrubBlobstore {
             Err(ErrorKind::SomeMissingItem {
                 missing_main,
                 missing_write_mostly,
-                value: Some(value),
+                value,
             }) => {
                 multiplexedblob::scrub::maybe_repair(
                     ctx,
