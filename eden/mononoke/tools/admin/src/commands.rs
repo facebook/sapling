@@ -18,7 +18,7 @@ mononoke_app::subcommands! {
     mod list_repos;
     mod mutable_renames;
     mod redaction;
-    mod repo_info;
+    mod repo;
     mod skiplist;
     mod ephemeral_store;
     mod dump_changesets;
