@@ -17,6 +17,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::*;
+use itertools::Itertools;
 use maplit::hashmap;
 use maplit::hashset;
 use memcache::KeyGen;
@@ -327,14 +328,6 @@ fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
     false
 }
 
-fn single_element<T>(it: impl IntoIterator<Item = T>) -> Result<T> {
-    iterhelpers::get_only_item(
-        it,
-        || anyhow!("No keys"),
-        |_, _| anyhow!("More than one key"),
-    )
-}
-
 type Key = u128;
 
 pub struct CacheData<'a> {
@@ -383,7 +376,7 @@ where
     }
 
     async fn get_from_db(&self, keys: HashSet<Key>) -> Result<HashMap<Key, V>> {
-        let key = single_element(keys)?;
+        let key = keys.into_iter().exactly_one()?;
         anyhow::ensure!(key == self.key, "Fetched invalid key {}", key);
         let val = (self.fetcher)().await?;
         Ok(hashmap! { key => val })
@@ -457,7 +450,12 @@ where
             cache_config: config,
             fetcher: fetch,
         };
-        Ok(single_element(get_or_fill(store, hashset! {key}).await?)?.1)
+        Ok(get_or_fill(store, hashset! {key})
+            .await?
+            .into_iter()
+            .exactly_one()
+            .map_err(|_| anyhow!("Multiple values for a single key"))?
+            .1)
     } else {
         fetch().await
     }
