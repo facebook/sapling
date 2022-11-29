@@ -87,6 +87,7 @@ pub async fn backsync_latest<M>(
     limit: BacksyncLimit,
     cancellation_requested: Arc<AtomicBool>,
     sync_context: CommitSyncContext,
+    disable_lease: bool,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -141,6 +142,7 @@ where
             counter as i64,
             cancellation_requested,
             sync_context,
+            disable_lease,
         )
         .await
     }
@@ -154,6 +156,7 @@ async fn sync_entries<M>(
     mut counter: i64,
     cancellation_requested: Arc<AtomicBool>,
     sync_context: CommitSyncContext,
+    disable_lease: bool,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -212,7 +215,13 @@ where
             // therefore there can be at most one remapped candidate,
             // so `CandidateSelectionHint::Only` is a safe choice
             commit_syncer
-                .sync_commit(&ctx, to_cs_id, CandidateSelectionHint::Only, sync_context)
+                .sync_commit(
+                    &ctx,
+                    to_cs_id,
+                    CandidateSelectionHint::Only,
+                    sync_context,
+                    disable_lease,
+                )
                 .await?;
         }
 

@@ -171,6 +171,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             BacksyncLimit::Limit(2),
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
+            false,
         )
         .map_err(Error::from)
         .await?;
@@ -193,6 +194,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
             0,
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
+            false,
         )
         .await?;
 
@@ -392,6 +394,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
+            false,
         )
         .map_err(Error::from)
         .await?;
@@ -623,6 +626,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
+        false,
     )
     .await?;
 
@@ -652,6 +656,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
+        false,
     )
     .await?;
     let maybe_outcome = commit_syncer
@@ -793,6 +798,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         BacksyncLimit::NoLimit,
         Arc::new(AtomicBool::new(false)),
         CommitSyncContext::Backsyncer,
+        false,
     );
     with_tunables_async(tunables, f.boxed()).await?;
 
@@ -903,6 +909,7 @@ async fn backsync_and_verify_master_wc(
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::Backsyncer,
+            false,
         ))
         .flatten_err();
         futs.push(f);

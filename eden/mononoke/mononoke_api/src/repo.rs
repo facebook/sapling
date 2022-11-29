@@ -1626,6 +1626,7 @@ impl RepoContext {
                 changeset,
                 candidate_selection_hint,
                 CommitSyncContext::ScsXrepoLookup,
+                false,
             )
             .await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))

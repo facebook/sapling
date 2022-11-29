@@ -489,6 +489,9 @@ impl<R: Repo> PushRedirector<R> {
             BacksyncLimit::NoLimit,
             Arc::new(AtomicBool::new(false)),
             CommitSyncContext::PushRedirector,
+            // Disable leases because this is the push path and we want
+            // it as fast as possible
+            true,
         )
         .await?;
         Ok(())
