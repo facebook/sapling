@@ -11,16 +11,15 @@ use clap::Parser;
 use mononoke_app::MononokeApp;
 use regex::Regex;
 
-/// List configured repositories.
 #[derive(Parser)]
-pub struct CommandArgs {
+pub struct ReposListArgs {
     /// Pattern to match against repo names.
     pattern: Option<String>,
 }
 
-pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
-    let pattern = args
-        .pattern
+pub async fn repos_list(app: MononokeApp, args: ReposListArgs) -> Result<()> {
+    let ReposListArgs { pattern } = args;
+    let pattern = pattern
         .as_deref()
         .map(Regex::new)
         .transpose()
