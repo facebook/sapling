@@ -379,7 +379,7 @@ export class Repository {
     }
 
     let codeReviewSystem: CodeReviewSystem;
-    const isMononoke = pathsDefault.startsWith('mononoke://');
+    const isMononoke = /^(mononoke|fb):\/\/.*/.test(pathsDefault);
     if (isMononoke) {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
