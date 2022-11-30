@@ -48,5 +48,3 @@ BENCHMARK(immediate_future);
 BENCHMARK(immediate_future_exc);
 BENCHMARK(folly_future);
 } // namespace
-
-EDEN_BENCHMARK_MAIN();
