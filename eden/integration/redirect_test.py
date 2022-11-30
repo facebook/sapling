@@ -250,32 +250,63 @@ via-profile = "bind"
         profile_path = scratch_path(
             self.mount, os.path.join("edenfs", "redirections", "via-profile")
         )
+        repo_path = os.path.join("a", "new-one")
 
+        # add a symlink redirection manually
+        output = self.eden.run_cmd(
+            "redirect", "add", "--mount", self.mount, repo_path, "symlink"
+        )
+        self.assertEqual(output, "", msg="we believe we set up a new symlink mount")
+        target_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+        )
+
+        # unmount all redirections to ensure `fixup` must fix them all
+        output = self.eden.run_cmd("redirect", "unmount", "--mount", self.mount)
+        self.assertEqual(output, "", msg="we believe we unmounted all redirections")
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
             [
                 {
+                    "repo_path": repo_path,
+                    "type": "symlink",
+                    "target": target_path,
+                    "source": ".eden/client/config.toml:redirections",
+                    "state": "symlink-missing",
+                },
+                {
                     "repo_path": "via-profile",
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    "state": "ok",
-                }
+                    "state": "not-mounted"
+                    if sys.platform != "win32"
+                    else "symlink-missing",
+                },
             ],
         )
-        self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
+
+        # ensure all redirections were fixed correctly
+        output = self.eden.run_cmd("redirect", "fixup", "--mount", self.mount)
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
             [
+                {
+                    "repo_path": repo_path,
+                    "type": "symlink",
+                    "target": target_path,
+                    "source": ".eden/client/config.toml:redirections",
+                    "state": "ok",
+                },
                 {
                     "repo_path": "via-profile",
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
                     "state": "ok",
-                }
+                },
             ],
         )
 
