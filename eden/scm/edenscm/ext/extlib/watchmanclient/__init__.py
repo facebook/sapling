@@ -99,7 +99,8 @@ class client(object):
         self._timeout = timeout
         self._watchmanclient = None
         self._root = repo.root
-        self._resolved_root = getcanonicalpath(self._root)
+        use_ctypes = repo.ui.configbool("fsmonitor", "canonical-path-ctypes")
+        self._resolved_root = getcanonicalpath(self._root, use_ctypes)
         self._ui = repo.ui
         self._firsttime = True
         try:
@@ -486,7 +487,7 @@ if pycompat.iswindows:
 
         return HANDLE(h)
 
-    def getcanonicalpath(name):
+    def _getcanonicalpath(name):
         gfpnbh = ctypes.windll.kernel32.GetFinalPathNameByHandleW
         closehandler = ctypes.windll.kernel32.CloseHandle
 
@@ -520,7 +521,7 @@ elif pycompat.isdarwin:
     getpathfcntl.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_char_p]
     getpathfcntl.restype = ctypes.c_int
 
-    def getcanonicalpath(name):
+    def _getcanonicalpath(name):
         fd = os.open(name, os.O_RDONLY, 0)
         try:
             numchars = 1024  # MAXPATHLEN
@@ -541,5 +542,20 @@ elif pycompat.isdarwin:
 
 else:
 
-    def getcanonicalpath(name):
+    def _getcanonicalpath(name):
         return os.path.normpath(name)
+
+
+def getcanonicalpath(name, use_ctypes=False):
+    if use_ctypes:
+        return _getcanonicalpath(name)
+
+    import bindings
+
+    canonical = bindings.fs.canonicalize(name)
+
+    # Match the old code behavior, not sure if necessary or correct.
+    if os.name == "nt":
+        canonical = canonical[4:].replace("\\", "/")
+
+    return canonical
