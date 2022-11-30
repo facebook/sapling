@@ -106,6 +106,7 @@ pub enum RedirectCmd {
         force_remount_bind_mounts: bool,
         #[clap(
             long,
+            default_value = "true",
             help = "By default, paths with source of .eden-redirections will be fixed. Setting \
             this flag to true will fix paths from all sources."
         )]
@@ -358,8 +359,7 @@ impl RedirectCmd {
 
         for redir in redirs.values() {
             if redir.state == Some(RedirectionState::MatchesConfiguration)
-                && !force_remount_bind_mounts
-                && redir.redir_type == RedirectionType::Bind
+                && !(force_remount_bind_mounts && redir.redir_type == RedirectionType::Bind)
             {
                 tracing::debug!(
                     ?redir,
