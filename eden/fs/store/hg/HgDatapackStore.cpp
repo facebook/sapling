@@ -134,12 +134,19 @@ void HgDatapackStore::getBlobBatch(
       folly::range(requests),
       false,
       // store_.getBlobBatch is blocking, hence we can take these by reference.
-      [&](size_t index, std::unique_ptr<folly::IOBuf> content) {
+      [&](size_t index,
+          const folly::Try<std::unique_ptr<folly::IOBuf>>& content) {
+        if (content.hasException()) {
+          // TODO: Do something with this error.
+          return;
+        }
+
         XLOGF(DBG9, "Imported node={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
         auto* blobRequest =
             importRequest->getRequest<HgImportRequest::BlobImport>();
-        auto blob = std::make_unique<Blob>(blobRequest->hash, *content);
+        auto blob = std::make_unique<Blob>(
+            blobRequest->hash, std::move(*content.value()));
         importRequest->getPromise<std::unique_ptr<Blob>>()->setValue(
             std::move(blob));
 
@@ -173,14 +180,19 @@ void HgDatapackStore::getTreeBatch(
       folly::range(requests),
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
-      [&](size_t index, std::shared_ptr<sapling::Tree> content) mutable {
+      [&](size_t index,
+          const folly::Try<std::shared_ptr<sapling::Tree>>& content) mutable {
+        if (content.hasException()) {
+          // TODO: Do something with this error.
+          return;
+        }
         XLOGF(DBG4, "Imported tree node={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
         auto* treeRequest =
             importRequest->getRequest<HgImportRequest::TreeImport>();
 
         auto tree = fromRawTree(
-            content.get(),
+            content.value().get(),
             treeRequest->hash,
             treeRequest->proxyHash.path(),
             hgObjectIdFormat);
