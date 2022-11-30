@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Fixed #282: Add config option to set what `sl` command to use
+- More reliably detect command not found on Windows
+
 ## 0.1.3
 
 - Support GitHub enterprise and non-GitHub repos in ISL
