@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+
+- Did not realize a release and pre-release cannot share a version number. Re-publishing the 0.1.4 pre-release with 4c29208c91256f4306aec9f0e9ec626e96ea3cba included as an official release.
+
 ## 0.1.4
 
 - Fixed #282: Add config option to set what `sl` command to use
