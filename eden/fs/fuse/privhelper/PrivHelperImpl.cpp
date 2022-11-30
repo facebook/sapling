@@ -255,7 +255,7 @@ class PrivHelperClientImpl : public PrivHelper,
 
   void processResponse(UnixSocket::Message&& message) {
     Cursor cursor(&message.data);
-    auto xid = cursor.readBE<uint32_t>();
+    auto xid = cursor.read<uint32_t>();
 
     auto iter = pendingRequests_.find(xid);
     if (iter == pendingRequests_.end()) {
