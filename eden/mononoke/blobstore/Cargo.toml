@@ -28,7 +28,7 @@ strum = "0.21"
 strum_macros = "0.21"
 thiserror = "1.0.36"
 trait-set = "0.3.0"
-zstd = "0.11.1+zstd.1.5.2"
+zstd = { version = "0.11.2+zstd.1.5.2", features = ["zstdmt"] }
 
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

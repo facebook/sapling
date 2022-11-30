@@ -37,7 +37,7 @@ types = { version = "0.1.0", path = "../../types", optional = true }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../../util" }
 version = { version = "0.1.0", path = "../../version" }
-zstd = { version = "0.11.1+zstd.1.5.2", optional = true }
+zstd = { version = "0.11.2+zstd.1.5.2", features = ["zstdmt"], optional = true }
 
 [dev-dependencies]
 lazy_static = "1.4"
