@@ -862,12 +862,13 @@ class FixupCmd(Subcmd):
             action="store_true",
         )
         parser.add_argument(
-            "--all-sources",
+            "--only-repo-source",
             help=(
-                "By default, paths with source of .eden-redirections will be fixed. "
-                "Setting this flag to true will fix paths from all sources."
+                "By default, paths from all sources are fixed. Setting this "
+                "flag to true will fix paths only from the .eden-redirections "
+                "source."
             ),
-            default=True,
+            default=False,
             action="store_true",
         )
 
@@ -881,7 +882,7 @@ class FixupCmd(Subcmd):
             ):
                 continue
 
-            if redir.source != REPO_SOURCE and not args.all_sources:
+            if args.only_repo_source and redir.source != REPO_SOURCE:
                 continue
 
             print(f"Fixing {redir.repo_path}", file=sys.stderr)
@@ -895,7 +896,11 @@ class FixupCmd(Subcmd):
         ok = True
         for redir in redirs.values():
             if redir.state != RedirectionState.MATCHES_CONFIGURATION:
-                ok = False
+                # When --only-repo-source is passed, we may fail to fixup some
+                # redirections. This scenario is ok and should not be
+                # considered a failure.
+                if not args.only_repo_source or redir.source == REPO_SOURCE:
+                    ok = False
         return 0 if ok else 1
 
 

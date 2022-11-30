@@ -74,7 +74,7 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_require_checkout.return_value = (instance, checkout, eden_path)
 
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
-        args = argparse.Namespace(mount=eden_path, all_sources=True)
+        args = argparse.Namespace(mount=eden_path, only_repo_source=False)
 
         redir = Redirection(
             repo_path=Path(repo_path),
@@ -110,7 +110,7 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_require_checkout.return_value = (instance, checkout, eden_path)
 
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
-        args = argparse.Namespace(mount=eden_path, all_sources=False)
+        args = argparse.Namespace(mount=eden_path, only_repo_source=True)
 
         redir = Redirection(
             repo_path=Path(repo_path),
@@ -146,7 +146,7 @@ class RedirectTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_require_checkout.return_value = (instance, checkout, eden_path)
 
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
-        args = argparse.Namespace(mount=eden_path, all_sources=False)
+        args = argparse.Namespace(mount=eden_path, only_repo_source=True)
 
         redir = Redirection(
             repo_path=Path(repo_path),
