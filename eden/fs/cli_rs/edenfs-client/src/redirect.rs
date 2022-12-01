@@ -1715,6 +1715,8 @@ mod tests {
 
     use rand::distributions::Alphanumeric;
     use rand::distributions::DistString;
+    use serde_test::assert_ser_tokens;
+    use serde_test::Token;
     use tempfile::tempdir;
 
     use crate::redirect::Redirection;
@@ -1837,5 +1839,71 @@ mod tests {
             );
         }
         // if we failed to make the symlink, skip this test case
+    }
+
+    /// The format of JSON-serialized redirections is relied upon by callers of
+    /// `redirect --json`, so we should try not to break them.
+    #[test]
+    fn test_serialize_redirection() {
+        assert_ser_tokens(
+            &Redirection {
+                repo_path: "/mnt/foo".into(),
+                redir_type: RedirectionType::Bind,
+                source: "test".to_string(),
+                state: None,
+                target: None,
+            },
+            &[
+                Token::Struct {
+                    name: "Redirection",
+                    len: 5,
+                },
+                Token::Str("repo_path"),
+                Token::Str("/mnt/foo"),
+                Token::Str("type"),
+                Token::UnitVariant {
+                    name: "RedirectionType",
+                    variant: "bind",
+                },
+                Token::Str("source"),
+                Token::Str("test"),
+                Token::Str("state"),
+                Token::None,
+                Token::Str("target"),
+                Token::None,
+                Token::StructEnd,
+            ],
+        );
+
+        assert_ser_tokens(
+            &Redirection {
+                repo_path: "/mnt/foo".into(),
+                redir_type: RedirectionType::Bind,
+                source: "test".to_string(),
+                state: None,
+                target: Some("/mnt/target".into()),
+            },
+            &[
+                Token::Struct {
+                    name: "Redirection",
+                    len: 5,
+                },
+                Token::Str("repo_path"),
+                Token::Str("/mnt/foo"),
+                Token::Str("type"),
+                Token::UnitVariant {
+                    name: "RedirectionType",
+                    variant: "bind",
+                },
+                Token::Str("source"),
+                Token::Str("test"),
+                Token::Str("state"),
+                Token::None,
+                Token::Str("target"),
+                Token::Some,
+                Token::Str("/mnt/target"),
+                Token::StructEnd,
+            ],
+        );
     }
 }
