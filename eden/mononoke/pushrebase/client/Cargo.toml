@@ -20,7 +20,6 @@ bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" 
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 hooks = { version = "0.1.0", path = "../../hooks" }
-itertools = "0.10.3"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
