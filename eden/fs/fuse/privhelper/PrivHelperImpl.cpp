@@ -255,16 +255,17 @@ class PrivHelperClientImpl : public PrivHelper,
 
   void processResponse(UnixSocket::Message&& message) {
     Cursor cursor(&message.data);
-    auto xid = cursor.read<uint32_t>();
+    PrivHelperConn::PrivHelperPacket packet =
+        PrivHelperConn::parsePacket(cursor);
 
-    auto iter = pendingRequests_.find(xid);
+    auto iter = pendingRequests_.find(packet.metadata.transaction_id);
     if (iter == pendingRequests_.end()) {
       // This normally shouldn't happen unless there is a bug.
       // We'll throw and our caller will turn this into an EDEN_BUG()
       throw_<std::runtime_error>(
           "received unexpected response from privhelper for unknown "
           "transaction ID ",
-          xid);
+          packet.metadata.transaction_id);
     }
 
     auto promise = std::move(iter->second);
@@ -619,7 +620,7 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
       throw_<std::runtime_error>(
           "Refusing to start because my exePath ",
           exePath,
-          "is owned by uid ",
+          " is owned by uid ",
           selfStat.st_uid,
           " rather than by root.");
     }

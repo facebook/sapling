@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/io/Cursor.h>
 #include <cinttypes>
 #include <stdexcept>
 #include "eden/fs/utils/UnixSocket.h"
@@ -49,13 +50,30 @@ class PrivHelperConn {
     REQ_UNMOUNT_NFS = 12,
   };
 
-  /**
-   * The length of the message header.
-   *
-   * This consists of a 32-bit transaction ID followed by
-   * the 32-bit request type.
-   */
-  static constexpr size_t kHeaderSize = 2 * sizeof(uint32_t);
+  // This structure should never change. If fields need to be added to the
+  // header, they should be added to the PrivHelperPacketMetadata struct
+  struct PrivHelperPacketHeader {
+    uint32_t version;
+    // sizeof(PrivHelperPacketMetadata)
+    uint32_t length;
+  };
+
+  struct PrivHelperPacketMetadata {
+    uint32_t transaction_id;
+    uint32_t msg_type;
+  };
+
+  // Any changes to this structure need to be accompanied by a bump to the
+  // version number defined in PrivHelperConn.cpp
+  struct PrivHelperPacket {
+    PrivHelperPacketHeader header;
+    PrivHelperPacketMetadata metadata;
+  };
+
+  static PrivHelperPacket parsePacket(folly::io::Cursor& cursor);
+  static void serializeResponsePacket(
+      PrivHelperPacket& packet,
+      folly::io::RWPrivateCursor& cursor);
 
   /*
    * Create a pair of connected PrivHelperConn objects to use for privhelper

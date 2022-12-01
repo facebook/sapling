@@ -25,7 +25,9 @@
 #include <folly/portability/Unistd.h>
 #include <sys/types.h>
 
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/SystemError.h"
+#include "eden/fs/utils/Throw.h"
 
 using folly::ByteRange;
 using folly::checkUnixError;
@@ -41,13 +43,25 @@ namespace {
 
 constexpr size_t kDefaultBufferSize = 1024;
 
-UnixSocket::Message serializeHeader(
+// We need to bump this version number any time the protocol is changed. This is
+// so that the EdenFS daemon and privhelper daemon understand which version of
+// the protocol to use when sending/processing requests and responses.
+constexpr uint32_t PRIVHELPER_CURRENT_VERSION = 1;
+
+UnixSocket::Message serializeRequestPacket(
     uint32_t xid,
     PrivHelperConn::MsgType type) {
+  XLOGF(
+      DBG7,
+      "Serializing request packet with v{} protocol. Packet is {} bytes long.",
+      PRIVHELPER_CURRENT_VERSION,
+      sizeof(PrivHelperConn::PrivHelperPacket));
   UnixSocket::Message msg;
   msg.data = IOBuf(IOBuf::CREATE, kDefaultBufferSize);
   Appender appender(&msg.data, kDefaultBufferSize);
 
+  appender.write<uint32_t>(PRIVHELPER_CURRENT_VERSION);
+  appender.write<uint32_t>(sizeof(PrivHelperConn::PrivHelperPacketMetadata));
   appender.write<uint32_t>(xid);
   appender.write<uint32_t>(static_cast<uint32_t>(type));
   return msg;
@@ -125,6 +139,64 @@ void setCloExecIfNoSockCloExec(int fd) {
 
 } // unnamed namespace
 
+PrivHelperConn::PrivHelperPacket PrivHelperConn::parsePacket(Cursor& cursor) {
+  // read the size and version from the header
+  PrivHelperPacket packet{};
+  try {
+    packet.header = cursor.read<PrivHelperConn::PrivHelperPacketHeader>();
+  } catch (const std::out_of_range& e) {
+    throwf<std::runtime_error>(
+        "privhelper packet buffer did not include version/length header: {}",
+        e.what());
+  }
+
+  // read the packet metadata and record how many bytes are read
+  size_t pulledBytes = cursor.pullAtMost(
+      &packet.metadata,
+      std::min<size_t>(
+          packet.header.length,
+          sizeof(PrivHelperConn::PrivHelperPacketMetadata)));
+  XLOGF(
+      DBG7,
+      "We parsed a v{} packet for a total of {} bytes (header {} + metadata {})",
+      packet.header.version,
+      sizeof(PrivHelperPacketHeader) + pulledBytes,
+      sizeof(PrivHelperPacketHeader),
+      pulledBytes);
+
+  // We somehow read more bytes than the header indicated. This
+  // should be impossible and indicates a bug
+  assert(pulledBytes <= packet.header.length);
+
+  if (pulledBytes < packet.header.length) {
+    // We need to advance the cursor since the received packet is larger
+    // than we expected it would be
+    uint32_t sizeDifference = packet.header.length - pulledBytes;
+    XLOGF(
+        DBG7,
+        "Metadata is larger than expected ({} bytes). Pulled {} bytes, advancing the cursor by {} bytes.",
+        packet.header.length,
+        pulledBytes,
+        sizeDifference);
+    cursor.skip(sizeDifference);
+  }
+  return packet;
+}
+
+void PrivHelperConn::serializeResponsePacket(
+    PrivHelperConn::PrivHelperPacket& packet,
+    folly::io::RWPrivateCursor& cursor) {
+  XLOGF(
+      DBG7,
+      "Serializing response packet with v{} protocol. Packet is {} bytes long.",
+      PRIVHELPER_CURRENT_VERSION,
+      sizeof(packet));
+  cursor.write<uint32_t>(PRIVHELPER_CURRENT_VERSION);
+  cursor.write<uint32_t>(sizeof(packet.metadata));
+  cursor.write<uint32_t>(packet.metadata.transaction_id);
+  cursor.write<uint32_t>(packet.metadata.msg_type);
+}
+
 void PrivHelperConn::createConnPair(folly::File& client, folly::File& server) {
   std::array<int, 2> sockpair;
   checkUnixError(
@@ -148,7 +220,7 @@ UnixSocket::Message PrivHelperConn::serializeMountRequest(
     uint32_t xid,
     StringPiece mountPoint,
     bool readOnly) {
-  auto msg = serializeHeader(xid, REQ_MOUNT_FUSE);
+  auto msg = serializeRequestPacket(xid, REQ_MOUNT_FUSE);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
@@ -173,7 +245,7 @@ UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
     bool readOnly,
     uint32_t iosize,
     bool useReaddirplus) {
-  auto msg = serializeHeader(xid, REQ_MOUNT_NFS);
+  auto msg = serializeRequestPacket(xid, REQ_MOUNT_NFS);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
@@ -205,7 +277,7 @@ void PrivHelperConn::parseMountNfsRequest(
 UnixSocket::Message PrivHelperConn::serializeUnmountRequest(
     uint32_t xid,
     StringPiece mountPoint) {
-  auto msg = serializeHeader(xid, REQ_UNMOUNT_FUSE);
+  auto msg = serializeRequestPacket(xid, REQ_UNMOUNT_FUSE);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
@@ -220,7 +292,7 @@ void PrivHelperConn::parseUnmountRequest(Cursor& cursor, string& mountPoint) {
 UnixSocket::Message PrivHelperConn::serializeNfsUnmountRequest(
     uint32_t xid,
     StringPiece mountPoint) {
-  auto msg = serializeHeader(xid, REQ_UNMOUNT_NFS);
+  auto msg = serializeRequestPacket(xid, REQ_UNMOUNT_NFS);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
@@ -237,7 +309,7 @@ void PrivHelperConn::parseNfsUnmountRequest(
 UnixSocket::Message PrivHelperConn::serializeTakeoverShutdownRequest(
     uint32_t xid,
     StringPiece mountPoint) {
-  auto msg = serializeHeader(xid, REQ_TAKEOVER_SHUTDOWN);
+  auto msg = serializeRequestPacket(xid, REQ_TAKEOVER_SHUTDOWN);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
@@ -255,7 +327,7 @@ UnixSocket::Message PrivHelperConn::serializeTakeoverStartupRequest(
     uint32_t xid,
     folly::StringPiece mountPoint,
     const std::vector<std::string>& bindMounts) {
-  auto msg = serializeHeader(xid, REQ_TAKEOVER_STARTUP);
+  auto msg = serializeRequestPacket(xid, REQ_TAKEOVER_STARTUP);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
@@ -282,19 +354,20 @@ void PrivHelperConn::parseEmptyResponse(
     MsgType reqType,
     const UnixSocket::Message& msg) {
   Cursor cursor(&msg.data);
-  auto xid = cursor.read<uint32_t>();
-  auto msgType = static_cast<MsgType>(cursor.read<uint32_t>());
+  PrivHelperPacket packet = parsePacket(cursor);
 
-  if (msgType == RESP_ERROR) {
+  // In the future, we may parse empty repsonses differently depending on the
+  // the version we get back from the parsed packet. For now, we'll parse all
+  // empty responses in the same way.
+  if (packet.metadata.msg_type == RESP_ERROR) {
     rethrowErrorResponse(cursor);
-  } else if (msgType != reqType) {
-    throw std::runtime_error(folly::to<string>(
-        "unexpected response type ",
-        msgType,
-        " for request ",
-        xid,
-        " of type ",
-        reqType));
+  } else if (packet.metadata.msg_type != reqType) {
+    throwf<std::runtime_error>(
+        "unexpected response type {} for request {} of type {} for version v{}",
+        packet.metadata.msg_type,
+        packet.metadata.transaction_id,
+        reqType,
+        packet.header.version);
   }
 }
 
@@ -302,7 +375,7 @@ UnixSocket::Message PrivHelperConn::serializeBindMountRequest(
     uint32_t xid,
     folly::StringPiece clientPath,
     folly::StringPiece mountPath) {
-  auto msg = serializeHeader(xid, REQ_MOUNT_BIND);
+  auto msg = serializeRequestPacket(xid, REQ_MOUNT_BIND);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPath);
@@ -322,7 +395,7 @@ void PrivHelperConn::parseBindMountRequest(
 UnixSocket::Message PrivHelperConn::serializeSetDaemonTimeoutRequest(
     uint32_t xid,
     std::chrono::nanoseconds duration) {
-  auto msg = serializeHeader(xid, REQ_SET_DAEMON_TIMEOUT);
+  auto msg = serializeRequestPacket(xid, REQ_SET_DAEMON_TIMEOUT);
   Appender appender(&msg.data, kDefaultBufferSize);
   uint64_t durationNanoseconds = duration.count();
   appender.write<uint64_t>(durationNanoseconds);
@@ -340,7 +413,7 @@ void PrivHelperConn::parseSetDaemonTimeoutRequest(
 UnixSocket::Message PrivHelperConn::serializeSetUseEdenFsRequest(
     uint32_t xid,
     bool useEdenFs) {
-  auto msg = serializeHeader(xid, REQ_SET_USE_EDENFS);
+  auto msg = serializeRequestPacket(xid, REQ_SET_USE_EDENFS);
   Appender appender(&msg.data, kDefaultBufferSize);
   appender.write<uint64_t>(((useEdenFs) ? 1 : 0));
 
@@ -355,7 +428,7 @@ void PrivHelperConn::parseSetUseEdenFsRequest(Cursor& cursor, bool& useEdenFs) {
 UnixSocket::Message PrivHelperConn::serializeBindUnMountRequest(
     uint32_t xid,
     folly::StringPiece mountPath) {
-  auto msg = serializeHeader(xid, REQ_UNMOUNT_BIND);
+  auto msg = serializeRequestPacket(xid, REQ_UNMOUNT_BIND);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPath);
@@ -372,7 +445,7 @@ void PrivHelperConn::parseBindUnMountRequest(
 UnixSocket::Message PrivHelperConn::serializeSetLogFileRequest(
     uint32_t xid,
     folly::File logFile) {
-  auto msg = serializeHeader(xid, REQ_SET_LOG_FILE);
+  auto msg = serializeRequestPacket(xid, REQ_SET_LOG_FILE);
   msg.files.push_back(std::move(logFile));
   return msg;
 }
