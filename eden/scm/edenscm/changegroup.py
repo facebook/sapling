@@ -29,6 +29,7 @@ from typing import (
     MutableMapping,
     Optional,
     Sequence,
+    Set,
     Tuple,
 )
 
@@ -55,7 +56,7 @@ def readexactly(stream: "BinaryIO", n: int) -> bytes:
     return s
 
 
-def getchunk(stream):
+def getchunk(stream: BinaryIO) -> bytes:
     """return the next chunk from stream as a string"""
     d = readexactly(stream, 4)
     l = struct.unpack(b">l", d)[0]
@@ -66,7 +67,7 @@ def getchunk(stream):
     return readexactly(stream, l - 4)
 
 
-def chunkheader(length):
+def chunkheader(length) -> bytes:
     """return a changegroup chunk header (string)"""
     return struct.pack(b">l", length + 4)
 
@@ -253,6 +254,8 @@ class cg1unpacker(object):
         while parts < 2 + self._grouplistcount:
             noentries = True
             while True:
+                # pyre-fixme[6]: For 1st param expected `BinaryIO` but got
+                #  `cg1unpacker`.
                 chunk = getchunk(self)
                 if not chunk:
                     # The first two empty chunks represent the end of the
@@ -985,7 +988,7 @@ _packermap = {
 }
 
 
-def allsupportedversions(repo):
+def allsupportedversions(repo) -> Set[str]:
     versions = set(_packermap.keys())
     if not (
         repo.ui.configbool("experimental", "changegroup3")
@@ -1111,7 +1114,7 @@ def makestream(
     return bundler.generate(commonrevs, csets, source)
 
 
-def _addchangegroupfiles(repo, source, revmap, trp, needfiles):
+def _addchangegroupfiles(repo, source, revmap, trp, needfiles) -> Tuple[int, int]:
     revisions = 0
     files = 0
     with progress.bar(repo.ui, _("files")) as prog:
