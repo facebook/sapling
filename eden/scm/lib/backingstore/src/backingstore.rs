@@ -52,16 +52,13 @@ impl BackingStore {
         let hg = root.join(ident.dot_dir());
         let store_path = hg.join("store");
 
-        let mut filestore = FileStoreBuilder::new(&config)
-            .local_path(&store_path)
-            .override_edenapi(true);
+        let mut filestore = FileStoreBuilder::new(&config).local_path(&store_path);
 
         if aux_data {
             filestore = filestore.store_aux_data();
         }
 
         let treestore = TreeStoreBuilder::new(&config)
-            .override_edenapi(true)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
