@@ -35,7 +35,7 @@ class FUSEStatsTest(testcase.EdenRepoTest):
 
         self.poll_until_counter_condition(
             lambda counters_after: self.assertGreater(
-                counters_after.get("fuse.read_us.count", 0),
+                counters_after["fuse.read_us.count"],
                 counters_before.get("fuse.read_us.count", 0),
                 f"Reading {path} should increment fuse.read_us.count",
             )
@@ -48,7 +48,7 @@ class FUSEStatsTest(testcase.EdenRepoTest):
 
         self.poll_until_counter_condition(
             lambda counters_after: self.assertGreater(
-                counters_after.get("fuse.write_us.count", 0),
+                counters_after["fuse.write_us.count"],
                 counters_before.get("fuse.write_us.count", 0),
                 f"Writing to {path} should increment fuse.write_us.count",
             )
@@ -129,13 +129,13 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after.get("store.hg.get_blob_us.count", 0),
-            counters_before.get("store.hg.get_blob_us.count", 0) + 1,
+            counters_after["store.hg.fetch_blob_us.count"],
+            counters_before.get("store.hg.fetch_blob_us.count", 0) + 1,
             f"Reading {path} should increment store.hg.get_blob_us.count",
         )
 
         self.assertEqual(
-            counters_after.get("store.hg.import_blob_us.count", 0),
+            counters_after["store.hg.import_blob_us.count"],
             counters_before.get("store.hg.import_blob_us.count", 0) + 1,
             f"Reading {path} should increment store.hg.import_blob_us.count",
         )
@@ -185,7 +185,7 @@ class HgImporterStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after.get("hg_importer.cat_file.count", 0),
+            counters_after["hg_importer.cat_file.count"],
             counters_before.get("hg_importer.cat_file.count", 0) + 1,
             f"Reading {path} should increment hg_importer.cat_file.count",
         )

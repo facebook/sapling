@@ -162,7 +162,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Blob>>();
       if (promise->isFulfilled()) {
-        stats_->addDuration(&HgBackingStoreStats::getBlob, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::fetchBlob, watch.elapsed());
         continue;
       }
 
@@ -179,7 +179,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
                     << "Imported blob from HgImporter for "
                     << request->getRequest<HgImportRequest::BlobImport>()->hash;
                 stats->addDuration(
-                    &HgBackingStoreStats::getBlob, watch.elapsed());
+                    &HgBackingStoreStats::fetchBlob, watch.elapsed());
                 request->getPromise<HgImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
@@ -215,7 +215,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     for (auto& request : requests) {
       auto* promise = request->getPromise<std::unique_ptr<Tree>>();
       if (promise->isFulfilled()) {
-        stats_->addDuration(&HgBackingStoreStats::getTree, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
         continue;
       }
 
@@ -232,7 +232,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
                     << "Imported tree from HgImporter for "
                     << request->getRequest<HgImportRequest::TreeImport>()->hash;
                 stats->addDuration(
-                    &HgBackingStoreStats::getTree, watch.elapsed());
+                    &HgBackingStoreStats::fetchTree, watch.elapsed());
                 request->getPromise<HgImportRequest::TreeImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));

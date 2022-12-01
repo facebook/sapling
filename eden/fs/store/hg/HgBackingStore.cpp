@@ -285,7 +285,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                   watch,
                   treeMetadataFuture = std::move(treeMetadataFuture),
                   config = config_](std::unique_ptr<Tree>&& result) mutable {
-        stats_->addDuration(&HgBackingStoreStats::getTree, watch.elapsed());
+        stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
         return std::move(result);
       });
 }
