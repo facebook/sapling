@@ -94,15 +94,14 @@ void HgDatapackStore::getTreeBatch(
 
   std::vector<sapling::NodeId> requests;
   requests.reserve(count);
-
   for (const auto& importRequest : importRequests) {
     auto& proxyHash =
         importRequest->getRequest<HgImportRequest::TreeImport>()->proxyHash;
     requests.emplace_back(proxyHash.byteHash());
   }
+
   std::vector<RequestMetricsScope> requestsWatches;
   requestsWatches.reserve(count);
-
   for (auto i = 0ul; i < count; i++) {
     requestsWatches.emplace_back(&liveBatchedTreeWatches_);
   }
@@ -134,7 +133,7 @@ void HgDatapackStore::getTreeBatch(
             std::move(tree));
 
         // Make sure that we're stopping this watch.
-        auto watch = std::move(requestsWatches[index]);
+        requestsWatches[index].reset();
       });
 }
 
@@ -183,16 +182,14 @@ void HgDatapackStore::getBlobBatch(
 
   std::vector<sapling::NodeId> requests;
   requests.reserve(count);
-
   for (const auto& importRequest : importRequests) {
-    auto& proxyHash =
-        importRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash;
-    requests.emplace_back(proxyHash.byteHash());
+    requests.emplace_back(
+        importRequest->getRequest<HgImportRequest::BlobImport>()
+            ->proxyHash.byteHash());
   }
 
   std::vector<RequestMetricsScope> requestsWatches;
   requestsWatches.reserve(count);
-
   for (auto i = 0ul; i < count; i++) {
     requestsWatches.emplace_back(&liveBatchedBlobWatches_);
   }
@@ -201,7 +198,8 @@ void HgDatapackStore::getBlobBatch(
       folly::range(requests),
       false,
       // store_.getBlobBatch is blocking, hence we can take these by reference.
-      [&](size_t index, const folly::Try<std::unique_ptr<folly::IOBuf>>& content) {
+      [&](size_t index,
+          const folly::Try<std::unique_ptr<folly::IOBuf>>& content) {
         if (content.hasException()) {
           // TODO: Do something with this error.
           return;
@@ -216,7 +214,7 @@ void HgDatapackStore::getBlobBatch(
             std::move(blob));
 
         // Make sure that we're stopping this watch.
-        auto watch = std::move(requestsWatches[index]);
+        requestsWatches[index].reset();
       });
 }
 
