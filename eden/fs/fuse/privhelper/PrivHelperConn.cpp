@@ -48,43 +48,43 @@ UnixSocket::Message serializeHeader(
   msg.data = IOBuf(IOBuf::CREATE, kDefaultBufferSize);
   Appender appender(&msg.data, kDefaultBufferSize);
 
-  appender.writeBE<uint32_t>(xid);
-  appender.writeBE<uint32_t>(static_cast<uint32_t>(type));
+  appender.write<uint32_t>(xid);
+  appender.write<uint32_t>(static_cast<uint32_t>(type));
   return msg;
 }
 
 void serializeString(Appender& a, StringPiece str) {
-  a.writeBE<uint32_t>(str.size());
+  a.write<uint32_t>(str.size());
   a.push(ByteRange(str));
 }
 
 std::string deserializeString(Cursor& cursor) {
-  const auto length = cursor.readBE<uint32_t>();
+  const auto length = cursor.read<uint32_t>();
   return cursor.readFixedString(length);
 }
 
 void serializeBool(Appender& a, bool b) {
-  a.writeBE<uint8_t>(b);
+  a.write<uint8_t>(b);
 }
 
 bool deserializeBool(Cursor& cursor) {
-  return static_cast<bool>(cursor.readBE<uint8_t>());
+  return static_cast<bool>(cursor.read<uint8_t>());
 }
 
 void serializeUint16(Appender& a, uint16_t val) {
-  a.writeBE<uint16_t>(val);
+  a.write<uint16_t>(val);
 }
 
 uint16_t deserializeUint16(Cursor& cursor) {
-  return cursor.readBE<uint16_t>();
+  return cursor.read<uint16_t>();
 }
 
 void serializeUint32(Appender& a, uint64_t val) {
-  a.writeBE<uint32_t>(val);
+  a.write<uint32_t>(val);
 }
 
 uint64_t deserializeUint32(Cursor& cursor) {
-  return cursor.readBE<uint32_t>();
+  return cursor.read<uint32_t>();
 }
 
 void serializeSocketAddress(Appender& a, const folly::SocketAddress& addr) {
@@ -259,7 +259,7 @@ UnixSocket::Message PrivHelperConn::serializeTakeoverStartupRequest(
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
-  appender.writeBE<uint32_t>(bindMounts.size());
+  appender.write<uint32_t>(bindMounts.size());
   for (const auto& path : bindMounts) {
     serializeString(appender, path);
   }
@@ -271,7 +271,7 @@ void PrivHelperConn::parseTakeoverStartupRequest(
     std::string& mountPoint,
     std::vector<std::string>& bindMounts) {
   mountPoint = deserializeString(cursor);
-  auto n = cursor.readBE<uint32_t>();
+  auto n = cursor.read<uint32_t>();
   while (n-- != 0) {
     bindMounts.push_back(deserializeString(cursor));
   }
@@ -282,8 +282,8 @@ void PrivHelperConn::parseEmptyResponse(
     MsgType reqType,
     const UnixSocket::Message& msg) {
   Cursor cursor(&msg.data);
-  auto xid = cursor.readBE<uint32_t>();
-  auto msgType = static_cast<MsgType>(cursor.readBE<uint32_t>());
+  auto xid = cursor.read<uint32_t>();
+  auto msgType = static_cast<MsgType>(cursor.read<uint32_t>());
 
   if (msgType == RESP_ERROR) {
     rethrowErrorResponse(cursor);
@@ -325,7 +325,7 @@ UnixSocket::Message PrivHelperConn::serializeSetDaemonTimeoutRequest(
   auto msg = serializeHeader(xid, REQ_SET_DAEMON_TIMEOUT);
   Appender appender(&msg.data, kDefaultBufferSize);
   uint64_t durationNanoseconds = duration.count();
-  appender.writeBE<uint64_t>(durationNanoseconds);
+  appender.write<uint64_t>(durationNanoseconds);
 
   return msg;
 }
@@ -333,7 +333,7 @@ UnixSocket::Message PrivHelperConn::serializeSetDaemonTimeoutRequest(
 void PrivHelperConn::parseSetDaemonTimeoutRequest(
     Cursor& cursor,
     std::chrono::nanoseconds& duration) {
-  duration = std::chrono::nanoseconds(cursor.readBE<uint64_t>());
+  duration = std::chrono::nanoseconds(cursor.read<uint64_t>());
   checkAtEnd(cursor, "set daemon timeout request");
 }
 
@@ -342,13 +342,13 @@ UnixSocket::Message PrivHelperConn::serializeSetUseEdenFsRequest(
     bool useEdenFs) {
   auto msg = serializeHeader(xid, REQ_SET_USE_EDENFS);
   Appender appender(&msg.data, kDefaultBufferSize);
-  appender.writeBE<uint64_t>(((useEdenFs) ? 1 : 0));
+  appender.write<uint64_t>(((useEdenFs) ? 1 : 0));
 
   return msg;
 }
 
 void PrivHelperConn::parseSetUseEdenFsRequest(Cursor& cursor, bool& useEdenFs) {
-  useEdenFs = bool(cursor.readBE<uint64_t>());
+  useEdenFs = bool(cursor.read<uint64_t>());
   checkAtEnd(cursor, "set use /dev/edenfs");
 }
 
@@ -401,13 +401,13 @@ void PrivHelperConn::serializeErrorResponse(
     folly::StringPiece message,
     int errnum,
     folly::StringPiece excType) {
-  appender.writeBE<uint32_t>(errnum);
+  appender.write<uint32_t>(errnum);
   serializeString(appender, message);
   serializeString(appender, excType);
 }
 
 [[noreturn]] void PrivHelperConn::rethrowErrorResponse(Cursor& cursor) {
-  const int errnum = cursor.readBE<uint32_t>();
+  const int errnum = cursor.read<uint32_t>();
   const auto errmsg = deserializeString(cursor);
   const auto excType = deserializeString(cursor);
 

@@ -1094,9 +1094,9 @@ void PrivHelperServer::messageReceived(UnixSocket::Message&& message) noexcept {
 
 void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
   Cursor cursor{&message.data};
-  const auto xid = cursor.readBE<uint32_t>();
+  const auto xid = cursor.read<uint32_t>();
   const auto msgType =
-      static_cast<PrivHelperConn::MsgType>(cursor.readBE<uint32_t>());
+      static_cast<PrivHelperConn::MsgType>(cursor.read<uint32_t>());
   auto responseType = msgType;
 
   UnixSocket::Message response;
@@ -1130,8 +1130,8 @@ void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
       PrivHelperConn::kHeaderSize == 2 * sizeof(uint32_t),
       "This code needs to be updated if we ever change the header format");
   RWPrivateCursor respCursor(&response.data);
-  respCursor.writeBE<uint32_t>(xid);
-  respCursor.writeBE<uint32_t>(responseType);
+  respCursor.write<uint32_t>(xid);
+  respCursor.write<uint32_t>(responseType);
 
   conn_->send(std::move(response));
 }
