@@ -25,6 +25,7 @@
 namespace facebook::eden {
 
 namespace {
+
 TreeEntryType fromRawTreeEntryType(sapling::TreeEntryType type) {
   switch (type) {
     case sapling::TreeEntryType::RegularFile:
@@ -84,76 +85,8 @@ std::unique_ptr<Tree> fromRawTree(
   }
   return std::make_unique<Tree>(std::move(entries), edenTreeId);
 }
+
 } // namespace
-
-std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
-    const ObjectId& id,
-    const HgProxyHash& hgInfo) {
-  auto content = store_.getBlob(hgInfo.byteHash(), true);
-  if (content) {
-    return std::make_unique<Blob>(id, std::move(*content));
-  }
-
-  return nullptr;
-}
-
-std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
-    const ObjectId& edenTreeId,
-    const HgProxyHash& proxyHash) {
-  auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
-  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
-  if (tree) {
-    return fromRawTree(
-        tree.get(), edenTreeId, proxyHash.path(), hgObjectIdFormat);
-  }
-
-  return nullptr;
-}
-
-void HgDatapackStore::getBlobBatch(
-    const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
-  size_t count = importRequests.size();
-
-  std::vector<sapling::NodeId> requests;
-  requests.reserve(count);
-
-  for (const auto& importRequest : importRequests) {
-    auto& proxyHash =
-        importRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash;
-    requests.emplace_back(proxyHash.byteHash());
-  }
-
-  std::vector<RequestMetricsScope> requestsWatches;
-  requestsWatches.reserve(count);
-
-  for (auto i = 0ul; i < count; i++) {
-    requestsWatches.emplace_back(&liveBatchedBlobWatches_);
-  }
-
-  store_.getBlobBatch(
-      folly::range(requests),
-      false,
-      // store_.getBlobBatch is blocking, hence we can take these by reference.
-      [&](size_t index,
-          const folly::Try<std::unique_ptr<folly::IOBuf>>& content) {
-        if (content.hasException()) {
-          // TODO: Do something with this error.
-          return;
-        }
-
-        XLOGF(DBG9, "Imported node={}", folly::hexlify(requests[index]));
-        auto& importRequest = importRequests[index];
-        auto* blobRequest =
-            importRequest->getRequest<HgImportRequest::BlobImport>();
-        auto blob = std::make_unique<Blob>(
-            blobRequest->hash, std::move(*content.value()));
-        importRequest->getPromise<std::unique_ptr<Blob>>()->setValue(
-            std::move(blob));
-
-        // Make sure that we're stopping this watch.
-        auto watch = std::move(requestsWatches[index]);
-      });
-}
 
 void HgDatapackStore::getTreeBatch(
     const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
@@ -228,6 +161,73 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
     return fromRawTree(tree.get(), edenTreeId, path, hgObjectIdFormat);
   }
+  return nullptr;
+}
+
+std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
+    const ObjectId& edenTreeId,
+    const HgProxyHash& proxyHash) {
+  auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
+  auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
+  if (tree) {
+    return fromRawTree(
+        tree.get(), edenTreeId, proxyHash.path(), hgObjectIdFormat);
+  }
+
+  return nullptr;
+}
+
+void HgDatapackStore::getBlobBatch(
+    const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
+  size_t count = importRequests.size();
+
+  std::vector<sapling::NodeId> requests;
+  requests.reserve(count);
+
+  for (const auto& importRequest : importRequests) {
+    auto& proxyHash =
+        importRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash;
+    requests.emplace_back(proxyHash.byteHash());
+  }
+
+  std::vector<RequestMetricsScope> requestsWatches;
+  requestsWatches.reserve(count);
+
+  for (auto i = 0ul; i < count; i++) {
+    requestsWatches.emplace_back(&liveBatchedBlobWatches_);
+  }
+
+  store_.getBlobBatch(
+      folly::range(requests),
+      false,
+      // store_.getBlobBatch is blocking, hence we can take these by reference.
+      [&](size_t index, const folly::Try<std::unique_ptr<folly::IOBuf>>& content) {
+        if (content.hasException()) {
+          // TODO: Do something with this error.
+          return;
+        }
+
+        XLOGF(DBG9, "Imported node={}", folly::hexlify(requests[index]));
+        auto& importRequest = importRequests[index];
+        auto* blobRequest =
+            importRequest->getRequest<HgImportRequest::BlobImport>();
+        auto blob = std::make_unique<Blob>(blobRequest->hash, *content.value());
+        importRequest->getPromise<std::unique_ptr<Blob>>()->setValue(
+            std::move(blob));
+
+        // Make sure that we're stopping this watch.
+        auto watch = std::move(requestsWatches[index]);
+      });
+}
+
+std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
+    const ObjectId& id,
+    const HgProxyHash& hgInfo) {
+  auto content = store_.getBlob(hgInfo.byteHash(), true);
+  if (content) {
+    return std::make_unique<Blob>(id, std::move(*content));
+  }
+
   return nullptr;
 }
 
