@@ -1831,7 +1831,6 @@ rustextbinaries = [
         manifest="exec/hgmain/Cargo.toml",
         rename=hgname,
         features=hgmainfeatures,
-        cfgs=["Py_%s" % PY_VERSION],
         env={
             "SAPLING_VERSION": version,
             "SAPLING_VERSION_HASH": versionhash,
