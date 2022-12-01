@@ -270,6 +270,7 @@ mod tests {
 
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
+    use changesets::ChangesetsArc;
     use fbinit::FacebookInit;
     use fixtures::BranchWide;
     use fixtures::TestRepoFixture;
@@ -302,7 +303,7 @@ mod tests {
         step_size: u64,
         blobrepo: &BlobRepo,
     ) -> Result<PublicChangesetBulkFetch, Error> {
-        PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.phases_arc())
+        PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc())
             .with_step(step_size)
     }
 
@@ -406,7 +407,7 @@ mod tests {
         let blobrepo = get_test_repo(&ctx, fb).await?;
 
         let fetcher =
-            PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.phases_arc());
+            PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc());
         // If we give empty known heads, we expect all IDs in the repo
         assert_eq!(
             (1, 8),

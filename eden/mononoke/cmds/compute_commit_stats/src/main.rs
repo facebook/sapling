@@ -12,6 +12,7 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
+use changesets::ChangesetsArc;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use cmdlib::args;
@@ -54,8 +55,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
             )
             .left_stream(),
             (None, true) => {
-                fetcher =
-                    PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.phases_arc());
+                fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
                 fetcher
                     .fetch_ids(&ctx, Direction::OldestFirst, None)
                     .map_ok(|((cs_id, _bound), _fetch_bounds)| cs_id)

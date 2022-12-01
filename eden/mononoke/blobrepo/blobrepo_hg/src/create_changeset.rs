@@ -21,6 +21,7 @@ use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use changesets::ChangesetInsert;
 use changesets::Changesets;
+use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
 use futures::channel::oneshot;
@@ -317,8 +318,8 @@ impl CreateChangeset {
             }
         });
 
-        let complete_changesets = repo.get_changesets_object();
-        let bonsai_hg_mapping = repo.bonsai_hg_mapping_arc().clone();
+        let complete_changesets = repo.changesets_arc();
+        let bonsai_hg_mapping = repo.bonsai_hg_mapping_arc();
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;
 

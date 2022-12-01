@@ -256,10 +256,6 @@ impl BlobRepo {
         &self.inner.reponame
     }
 
-    pub fn get_changesets_object(&self) -> Arc<dyn Changesets> {
-        self.inner.changesets.clone()
-    }
-
     pub fn get_derived_data_config(&self) -> &DerivedDataConfig {
         self.inner.repo_derived_data.config()
     }

@@ -12,6 +12,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use changesets::ChangesetEntry;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use filenodes::FilenodeInfo;
@@ -187,8 +188,7 @@ pub async fn prime_cache(
         .ok_or_else(|| Error::msg("changesets missing"))?;
     let changesets = reheat_changesets(repo.get_repoid(), changesets)?;
 
-    repo.get_changesets_object()
-        .prime_cache(ctx, changesets.as_ref());
+    repo.changesets().prime_cache(ctx, changesets.as_ref());
     info!(
         ctx.logger(),
         "primed changesets cache with {} entries",

@@ -1057,7 +1057,7 @@ impl RepoContext {
             ),
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
-                    .get_changesets_object()
+                    .changesets()
                     .get_many_by_prefix(self.ctx.clone(), prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
@@ -1422,7 +1422,7 @@ impl RepoContext {
             // get the unique parents for all changesets in the queue & skip visited & update visited
             let parents: Vec<_> = self
                 .blob_repo()
-                .get_changesets_object()
+                .changesets()
                 .get_many(self.ctx.clone(), queue.clone())
                 .await?
                 .into_iter()

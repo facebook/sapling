@@ -20,6 +20,7 @@ use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::ChangesetEntry;
+use changesets::ChangesetsArc;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -228,7 +229,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
     ctx: &CoreContext,
     repo: &BlobRepo,
 ) -> Result<ArcChangesetFetcher, Error> {
-    let fetcher = PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.phases_arc());
+    let fetcher = PublicChangesetBulkFetch::new(repo.changesets_arc(), repo.phases_arc());
     let fetched_changesets = fetcher
         .fetch(ctx, Direction::OldestFirst)
         .try_collect::<Vec<_>>()
