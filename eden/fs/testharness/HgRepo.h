@@ -96,6 +96,8 @@ class HgRepo {
   void appendToHgrc(folly::StringPiece data);
   void appendToHgrc(const std::vector<std::string>& lines);
 
+  void appendToRequires(folly::StringPiece data);
+
   RootId commit(folly::StringPiece message);
   Hash20 getManifestForCommit(const RootId& commit);
 

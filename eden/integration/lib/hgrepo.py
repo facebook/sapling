@@ -219,9 +219,14 @@ class HgRepository(repobase.Repository):
         hgrc.setdefault("treemanifest", {})
         hgrc["treemanifest"]["treeonly"] = "true"
         hgrc.setdefault("remotefilelog", {})
+        hgrc["remotefilelog"]["server"] = "false"
         hgrc["remotefilelog"]["reponame"] = "test"
         hgrc["remotefilelog"]["cachepath"] = cachepath
         self.write_hgrc(hgrc)
+
+        requirespath = os.path.join(self.path, ".hg", "requires")
+        with open(requirespath, "a") as f:
+            f.write("remotefilelog\n")
 
     def write_hgrc(self, hgrc: configparser.ConfigParser) -> None:
         hgrc_path = os.path.join(self.path, ".hg", "hgrc")

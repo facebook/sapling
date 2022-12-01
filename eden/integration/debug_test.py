@@ -108,7 +108,6 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
                 DataFetchOrigin.DISK_CACHE,
-                DataFetchOrigin.LOCAL_BACKING_STORE,
             ]:
                 print(origin)
                 print(file.hash)
@@ -129,8 +128,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # now its available locally.
             for fromWhere in [
                 DataFetchOrigin.DISK_CACHE,
-                # DataFetchFromWhere.LOCAL_BACKING_STORE, hgcache does not work
-                # in tests
+                DataFetchOrigin.LOCAL_BACKING_STORE,
                 # TDOD: once its implemented DataFetchFromWhere.MEMORY_CACHE,
             ]:
                 print(fromWhere)
@@ -159,7 +157,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                 elif blob.origin == DataFetchOrigin.DISK_CACHE:
                     self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
                 elif blob.origin == DataFetchOrigin.LOCAL_BACKING_STORE:
-                    blob.blob.get_error()  # hgcache does not work in tests
+                    self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
                 elif blob.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
                     blob.blob.get_error()
                 elif blob.origin == DataFetchOrigin.ANYWHERE:

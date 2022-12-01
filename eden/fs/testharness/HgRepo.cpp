@@ -97,6 +97,8 @@ void HgRepo::hgInit(
   SpawnedProcess p(args, std::move(opts));
   p.waitChecked();
 
+  appendToRequires("remotefilelog\n");
+
   appendToHgrc(fmt::format(
       "[extensions]\n"
       "remotefilelog =\n"
@@ -105,7 +107,7 @@ void HgRepo::hgInit(
       "[treemanifest]\n"
       "treeonly = true\n"
       "[remotefilelog]\n"
-      "server = true\n"
+      "server = false\n"
       "reponame = test\n"
       "cachepath = {}\n"
       "[scmstore]\n"
@@ -142,6 +144,14 @@ void HgRepo::appendToHgrc(folly::StringPiece data) {
 
 void HgRepo::appendToHgrc(const std::vector<std::string>& lines) {
   appendToHgrc(folly::join("\n", lines) + "\n");
+}
+
+void HgRepo::appendToRequires(folly::StringPiece data) {
+  auto hgrcPath = path_ + ".hg"_pc + "requires"_pc;
+  folly::File hgrc{hgrcPath.view(), O_WRONLY | O_APPEND | O_CREAT};
+  if (folly::writeFull(hgrc.fd(), data.data(), data.size()) < 0) {
+    folly::throwSystemError("error writing to ", hgrcPath.view());
+  }
 }
 
 RootId HgRepo::commit(StringPiece message) {

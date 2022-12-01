@@ -80,16 +80,13 @@ TEST_F(HgImportTest, importTest) {
 
   // Test importing objects that do not exist
   Hash20 noSuchHash = makeTestHash20("123");
-  EXPECT_THROW_RE(
-      importer.importFileContents(filePath, noSuchHash),
-      std::exception,
-      "no match found");
+  EXPECT_THROW(
+      importer.importFileContents(filePath, noSuchHash), std::exception);
 
-  EXPECT_THROW_RE(
+  EXPECT_THROW(
       importer.importFileContents(
           RelativePathPiece{"hello"}, Hash20{commit1.value()}),
-      std::exception,
-      "no match found");
+      std::exception);
 }
 
 // TODO(T33797958): Check hg_importer_helper's exit code on Windows (in
