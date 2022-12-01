@@ -46,10 +46,10 @@ use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::stream;
 use futures::stream::Stream;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use itertools::Either;
-use itertools::Itertools;
 use manifest::AsyncManifest;
 use manifest::Entry;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -84,6 +84,7 @@ use slog::warn;
 use slog::Logger;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
+use yield_stream::YieldStreamExt;
 
 use crate::commands::JobWalkParams;
 use crate::detail::graph::AliasKey;
@@ -108,6 +109,9 @@ use crate::detail::validate::CHECK_FAIL;
 use crate::detail::validate::CHECK_TYPE;
 use crate::detail::validate::EDGE_TYPE;
 use crate::detail::validate::ERROR_MSG;
+
+/// How frequently to yield the CPU when processing large manifests.
+const MANIFEST_YIELD_EVERY_ENTRY_COUNT: usize = 10_000;
 
 pub trait StepRoute: Debug {
     /// Where we stepped from, useful for immediate reproductions with --walk-root
@@ -1097,48 +1101,50 @@ async fn hg_manifest_step<V: VisitOne>(
 ) -> Result<StepOutput, StepError> {
     let blobstore = repo.blobstore();
     let hgmanifest = hg_manifest_id.load(ctx, repo.blobstore()).await?;
-    let subentries: Vec<_> = hgmanifest.list(ctx, blobstore).await?.try_collect().await?;
-    let (manifests, filenodes): (Vec<_>, Vec<_>) =
-        subentries.into_iter().partition_map(|(name, entry)| {
-            let path_opt = WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
-            match entry {
-                Entry::Leaf((_, filenode_id)) => Either::Right((path_opt, filenode_id)),
-                Entry::Tree(manifest_id) => Either::Left((path_opt, manifest_id)),
-            }
-        });
+
     let mut edges = vec![];
     let mut filenode_edges = vec![];
-    // Manifests expand as a tree so 1:N
-    for (full_path, hg_child_manifest_id) in manifests {
-        checker.add_edge(
-            &mut filenode_edges,
-            EdgeType::HgManifestToHgManifestFileNode,
-            || {
-                Node::HgManifestFileNode(PathKey::new(
-                    HgFileNodeId::new(hg_child_manifest_id.into_nodehash()),
-                    full_path.clone(),
-                ))
-            },
-        );
-        checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
-            Node::HgManifest(PathKey::new(hg_child_manifest_id, full_path))
-        });
+    let mut envelope_edges = vec![];
+    {
+        let mut subentries = hgmanifest
+            .list(ctx, blobstore)
+            .await?
+            .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
+        while let Some((name, entry)) = subentries.try_next().await? {
+            let full_path = WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
+            match entry {
+                Entry::Leaf((_, hg_child_filenode_id)) => {
+                    checker.add_edge_with_path(
+                        &mut envelope_edges,
+                        EdgeType::HgManifestToHgFileEnvelope,
+                        || Node::HgFileEnvelope(hg_child_filenode_id),
+                        || Some(full_path.clone()),
+                    );
+                    checker.add_edge(
+                        &mut filenode_edges,
+                        EdgeType::HgManifestToHgFileNode,
+                        || Node::HgFileNode(PathKey::new(hg_child_filenode_id, full_path)),
+                    );
+                }
+                Entry::Tree(hg_child_manifest_id) => {
+                    checker.add_edge(
+                        &mut filenode_edges,
+                        EdgeType::HgManifestToHgManifestFileNode,
+                        || {
+                            Node::HgManifestFileNode(PathKey::new(
+                                HgFileNodeId::new(hg_child_manifest_id.into_nodehash()),
+                                full_path.clone(),
+                            ))
+                        },
+                    );
+                    checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
+                        Node::HgManifest(PathKey::new(hg_child_manifest_id, full_path))
+                    });
+                }
+            }
+        }
     }
 
-    let mut envelope_edges = vec![];
-    for (full_path, hg_file_node_id) in filenodes {
-        checker.add_edge_with_path(
-            &mut envelope_edges,
-            EdgeType::HgManifestToHgFileEnvelope,
-            || Node::HgFileEnvelope(hg_file_node_id),
-            || Some(full_path.clone()),
-        );
-        checker.add_edge(
-            &mut filenode_edges,
-            EdgeType::HgManifestToHgFileNode,
-            || Node::HgFileNode(PathKey::new(hg_file_node_id, full_path)),
-        );
-    }
     // File nodes can expand a lot into history via linknodes
     edges.append(&mut filenode_edges);
     // Envelopes expand 1:1 to file content
@@ -1242,33 +1248,37 @@ async fn fsnode_step<V: VisitOne>(
 
     let mut content_edges = vec![];
     let mut dir_edges = vec![];
-    for (child, fsnode_entry) in fsnode.list() {
-        // Fsnode do not have separate "file" entries, so we visit only directories
-        match fsnode_entry {
-            FsnodeEntry::Directory(dir) => {
-                let fsnode_id = dir.id();
-                checker.add_edge_with_path(
-                    &mut dir_edges,
-                    EdgeType::FsnodeToChildFsnode,
-                    || Node::Fsnode(*fsnode_id),
-                    || {
-                        path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
-                        })
-                    },
-                );
-            }
-            FsnodeEntry::File(file) => {
-                checker.add_edge_with_path(
-                    &mut content_edges,
-                    EdgeType::FsnodeToFileContent,
-                    || Node::FileContent(*file.content_id()),
-                    || {
-                        path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
-                        })
-                    },
-                );
+    {
+        let mut children =
+            stream::iter(fsnode.list()).yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
+        while let Some((child, fsnode_entry)) = children.next().await {
+            // Fsnode do not have separate "file" entries, so we visit only directories
+            match fsnode_entry {
+                FsnodeEntry::Directory(dir) => {
+                    let fsnode_id = dir.id();
+                    checker.add_edge_with_path(
+                        &mut dir_edges,
+                        EdgeType::FsnodeToChildFsnode,
+                        || Node::Fsnode(*fsnode_id),
+                        || {
+                            path.map(|p| {
+                                WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                            })
+                        },
+                    );
+                }
+                FsnodeEntry::File(file) => {
+                    checker.add_edge_with_path(
+                        &mut content_edges,
+                        EdgeType::FsnodeToFileContent,
+                        || Node::FileContent(*file.content_id()),
+                        || {
+                            path.map(|p| {
+                                WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                            })
+                        },
+                    );
+                }
             }
         }
     }
@@ -1616,21 +1626,28 @@ async fn skeleton_manifest_step<V: VisitOne>(
     let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
 
-    for (child_path, entry) in manifest.list() {
-        match entry {
-            SkeletonManifestEntry::Directory(subdir) => {
-                checker.add_edge_with_path(
-                    &mut edges,
-                    EdgeType::SkeletonManifestToSkeletonManifestChild,
-                    || Node::SkeletonManifest(*subdir.id()),
-                    || {
-                        path.map(|p| {
-                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child_path)))
-                        })
-                    },
-                );
+    {
+        let mut children =
+            stream::iter(manifest.list()).yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
+        while let Some((child_path, entry)) = children.next().await {
+            match entry {
+                SkeletonManifestEntry::Directory(subdir) => {
+                    checker.add_edge_with_path(
+                        &mut edges,
+                        EdgeType::SkeletonManifestToSkeletonManifestChild,
+                        || Node::SkeletonManifest(*subdir.id()),
+                        || {
+                            path.map(|p| {
+                                WrappedPath::from(MPath::join_element_opt(
+                                    p.as_ref(),
+                                    Some(child_path),
+                                ))
+                            })
+                        },
+                    );
+                }
+                SkeletonManifestEntry::File => {}
             }
-            SkeletonManifestEntry::File => {}
         }
     }
 
@@ -1686,16 +1703,16 @@ async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
 ) -> Result<StepOutput, StepError> {
     let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
-    let children: Vec<_> = manifest
-        .list(ctx, repo.blobstore())
-        .await?
-        .try_collect()
-        .await?;
+    {
+        let mut children = manifest
+            .list(ctx, repo.blobstore())
+            .await?
+            .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
 
-    for (child_path, entry) in children {
-        match entry {
-            manifest::Entry::Tree(subdir) => {
-                checker.add_edge_with_path(
+        while let Some((child_path, entry)) = children.try_next().await? {
+            match entry {
+                manifest::Entry::Tree(subdir) => {
+                    checker.add_edge_with_path(
                     &mut edges,
                     EdgeType::BasenameSuffixSkeletonManifestToBasenameSuffixSkeletonManifestChild,
                     || Node::BasenameSuffixSkeletonManifest(subdir.id),
@@ -1708,8 +1725,9 @@ async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
                         })
                     },
                 );
+                }
+                manifest::Entry::Leaf(()) => {}
             }
-            manifest::Entry::Leaf(()) => {}
         }
     }
 
