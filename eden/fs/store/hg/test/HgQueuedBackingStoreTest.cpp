@@ -34,8 +34,7 @@ struct TestRepo {
   Hash20 manifest1;
 
   TestRepo() {
-    repo.hgInit();
-    repo.enableTreeManifest(testPath + "cache"_pc);
+    repo.hgInit(testPath + "cache"_pc);
 
     repo.mkdir("foo");
     repo.writeFile("foo/bar.txt", "bar\n");

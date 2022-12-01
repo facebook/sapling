@@ -81,7 +81,9 @@ SpawnedProcess HgRepo::invokeHg(
   return SpawnedProcess(args, std::move(options));
 }
 
-void HgRepo::hgInit(std::vector<std::string> extraArgs) {
+void HgRepo::hgInit(
+    AbsolutePathPiece cacheDirectory,
+    std::vector<std::string> extraArgs) {
   XLOG(DBG1) << "creating new hg repository at " << path_;
 
   // Invoke SpawnedProcess directly here rather than using our hg() helper
@@ -94,9 +96,7 @@ void HgRepo::hgInit(std::vector<std::string> extraArgs) {
   opts.executablePath(hgCmd_);
   SpawnedProcess p(args, std::move(opts));
   p.waitChecked();
-}
 
-void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
   appendToHgrc(fmt::format(
       "[extensions]\n"
       "remotefilelog =\n"
@@ -105,10 +105,9 @@ void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
       "[treemanifest]\n"
       "treeonly = true\n"
       "[remotefilelog]\n"
+      "server = true\n"
       "reponame = test\n"
       "cachepath = {}\n"
-      "[edenapi]\n"
-      "url=http://invalid.invalid\n"
       "[scmstore]\n"
       "backingstore = true\n",
       cacheDirectory));
