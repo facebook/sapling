@@ -12,7 +12,7 @@ Sapling provides first-class support for editing and manipulating stacks of comm
 You can edit any commit in your stack by going to that commit (via <Command name="goto" />), making the desired modifications, and then running <Command name="amend" /> to edit the commit. Keep in mind that if you make a mistake, you can always [Undo](undo.md) your changes!
 
 
-```bash
+```sl-shell-example
 $ sl
   o  d9a5aa3c7  3 seconds ago  mary
   │  feature two
@@ -43,7 +43,7 @@ new file mode 100644
 
 If you have a stack of commits, you can fold commits down into a single commit with the <Command name="fold" /> command. You can either specify `--from <commit id>` to specify a range of commits from your current commit to fold together or specify `--exact <list of commit ids>` to specify exact adjacent commits to fold together.
 
-```bash
+```sl-shell-example
 $ sl
   o 5dbd8043f 82 seconds ago mary
   │ commit five
@@ -89,7 +89,7 @@ o ea609e1ef Today at 14:34 remote/main
 Use Sapling’s interactive editor interface to split the changes in one commit into two or more smaller commits.
 
 
-```bash
+```sl-shell-example
 $ sl
   @ b86c5cb40 2 seconds ago mary
 ╭─╯ feature one + two
@@ -128,7 +128,7 @@ o ea609e1ef Today at 14:34 remote/main
 
 If you make changes while working at the top of a stack, the <Command name="absorb" /> command allows you to automatically amend those changes to commits lower in the stack. If there is an unambiguous commit which introduced the edited lines, the absorb command will prompt to apply those changes to that commit.
 
-```bash
+```sl-shell-example
 $ sl
   @ a305c853a 41 seconds ago mary
   │ feature two
@@ -179,7 +179,7 @@ o ea609e1ef Today at 14:34 remote/main
 ### Amend --to
 Sometimes absorb cannot predict an appropriate commit to apply changes to. In this case you can try the command `sl amend --to` to specify exactly which commit to apply pending changes to.
 
-```bash
+```sl-shell-example
 $ sl
   @  f656ac8c6  30 minutes ago  mary
   │  feature two
