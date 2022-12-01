@@ -37,7 +37,7 @@ pub struct BackingStore {
 }
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(root: P, aux_data: bool, allow_retries: bool) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
         let root = root.as_ref();
         let mut config = configparser::hg::load(Some(root), &[], &[])?;
 
@@ -52,11 +52,9 @@ impl BackingStore {
         let hg = root.join(ident.dot_dir());
         let store_path = hg.join("store");
 
-        let mut filestore = FileStoreBuilder::new(&config).local_path(&store_path);
-
-        if aux_data {
-            filestore = filestore.store_aux_data();
-        }
+        let mut filestore = FileStoreBuilder::new(&config)
+            .local_path(&store_path)
+            .store_aux_data();
 
         let treestore = TreeStoreBuilder::new(&config)
             .local_path(&store_path)

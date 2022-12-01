@@ -27,7 +27,6 @@ use crate::raw::Tree;
 
 #[repr(C)]
 pub struct BackingStoreOptions {
-    aux_data: bool,
     allow_retries: bool,
 }
 
@@ -40,7 +39,7 @@ pub extern "C" fn sapling_backingstore_new(
         super::init::backingstore_global_init();
 
         let repo = str::from_utf8(repository.slice())?;
-        BackingStore::new(repo, options.aux_data, options.allow_retries)
+        BackingStore::new(repo, options.allow_retries)
     })
     .into()
 }
