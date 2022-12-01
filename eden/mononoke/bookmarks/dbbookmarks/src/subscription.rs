@@ -204,7 +204,17 @@ mononoke_queries! {
         repo_id: RepositoryId,
         log_id: u64
     ) -> (u64, BookmarkName, Option<BookmarkKind>, Option<ChangesetId>) {
-        "
+        mysql("
+        SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks.hg_kind, bookmarks.changeset_id
+        FROM bookmarks_update_log
+        LEFT JOIN bookmarks
+            FORCE INDEX (repo_id_log_id)
+            ON  bookmarks.repo_id = bookmarks_update_log.repo_id
+            AND bookmarks.log_id  = bookmarks_update_log.id
+        WHERE bookmarks_update_log.repo_id = {repo_id} AND bookmarks_update_log.id > {log_id}
+        ORDER BY bookmarks_update_log.id DESC
+        ")
+        sqlite("
         SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks.hg_kind, bookmarks.changeset_id
         FROM bookmarks_update_log
         LEFT JOIN bookmarks
@@ -212,7 +222,7 @@ mononoke_queries! {
             AND bookmarks.log_id  = bookmarks_update_log.id
         WHERE bookmarks_update_log.repo_id = {repo_id} AND bookmarks_update_log.id > {log_id}
         ORDER BY bookmarks_update_log.id DESC
-        "
+        ")
     }
 }
 
