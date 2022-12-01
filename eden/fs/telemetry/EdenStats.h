@@ -289,8 +289,10 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
  *   import = fall back on hg debugedenimporthelper process
  */
 struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
+  Duration getTree{"store.hg.get_tree_us"};
   Duration fetchTree{"store.hg.fetch_tree_us"};
   Duration importTree{"store.hg.import_tree_us"};
+  Duration getBlob{"store.hg.get_blob_us"};
   Duration fetchBlob{"store.hg.fetch_blob_us"};
   Duration importBlob{"store.hg.import_blob_us"};
   Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};

@@ -357,6 +357,8 @@ std::string HgQueuedBackingStore::staticRenderObjectId(
 folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
+  DurationScope scope{stats_, &HgBackingStoreStats::getTree};
+
   HgProxyHash proxyHash;
   try {
     proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree", *stats_);
@@ -378,7 +380,8 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getTreeImpl(id, proxyHash, context);
+  return getTreeImpl(id, proxyHash, context)
+      .deferEnsure([scope = std::move(scope)] {});
 }
 
 std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
@@ -449,6 +452,8 @@ HgQueuedBackingStore::getTreeImpl(
 folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
+  DurationScope scope{stats_, &HgBackingStoreStats::getBlob};
+
   HgProxyHash proxyHash;
   try {
     proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob", *stats_);
@@ -468,7 +473,8 @@ folly::SemiFuture<BackingStore::GetBlobResult> HgQueuedBackingStore::getBlob(
         std::move(blob), ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getBlobImpl(id, proxyHash, context);
+  return getBlobImpl(id, proxyHash, context)
+      .deferEnsure([scope = std::move(scope)] {});
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult>
