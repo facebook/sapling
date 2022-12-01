@@ -611,6 +611,16 @@ class EdenConfig : private ConfigSettingManager {
       1,
       this};
 
+  /**
+   * Whether fetching trees should fall back on an external hg importer process.
+   */
+  ConfigSetting<bool> hgTreeFetchFallback{"hg:tree-fetch-fallback", true, this};
+
+  /**
+   * Whether fetching blobs should fall back on an external hg importer process.
+   */
+  ConfigSetting<bool> hgBlobFetchFallback{"hg:blob-fetch-fallback", true, this};
+
   // [backingstore]
 
   /**

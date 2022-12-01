@@ -113,24 +113,32 @@ void HgDatapackStore::getTreeBatch(
       false,
       // store_.getTreeBatch is blocking, hence we can take these by reference.
       [&](size_t index,
-          const folly::Try<std::shared_ptr<sapling::Tree>>& content) mutable {
-        if (content.hasException()) {
-          // TODO: Do something with this error.
+          folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
+        if (config_->getEdenConfig()->hgTreeFetchFallback.getValue() &&
+            content.hasException()) {
+          // If we're falling back, the caller will fulfill this Promise with a
+          // tree from HgImporter.
+          // TODO: Remove this.
           return;
         }
         XLOGF(DBG4, "Imported tree node={}", folly::hexlify(requests[index]));
         auto& importRequest = importRequests[index];
         auto* treeRequest =
             importRequest->getRequest<HgImportRequest::TreeImport>();
-
-        auto tree = fromRawTree(
-            content.value().get(),
-            treeRequest->hash,
-            treeRequest->proxyHash.path(),
-            hgObjectIdFormat);
-
-        importRequest->getPromise<std::unique_ptr<Tree>>()->setValue(
-            std::move(tree));
+        // A proposed folly::Try::and_then would make the following much
+        // simpler.
+        importRequest->getPromise<std::unique_ptr<Tree>>()->setWith(
+            [&]() -> folly::Try<std::unique_ptr<Tree>> {
+              if (content.hasException()) {
+                return folly::Try<std::unique_ptr<Tree>>{
+                    std::move(content).exception()};
+              }
+              return folly::Try{fromRawTree(
+                  content.value().get(),
+                  treeRequest->hash,
+                  treeRequest->proxyHash.path(),
+                  hgObjectIdFormat)};
+            });
 
         // Make sure that we're stopping this watch.
         requestsWatches[index].reset();
@@ -198,10 +206,12 @@ void HgDatapackStore::getBlobBatch(
       folly::range(requests),
       false,
       // store_.getBlobBatch is blocking, hence we can take these by reference.
-      [&](size_t index,
-          const folly::Try<std::unique_ptr<folly::IOBuf>>& content) {
-        if (content.hasException()) {
-          // TODO: Do something with this error.
+      [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+        if (config_->getEdenConfig()->hgBlobFetchFallback.getValue() &&
+            content.hasException()) {
+          // If we're falling back, the caller will fulfill this Promise with a
+          // blob from HgImporter.
+          // TODO: Remove this.
           return;
         }
 
@@ -209,9 +219,17 @@ void HgDatapackStore::getBlobBatch(
         auto& importRequest = importRequests[index];
         auto* blobRequest =
             importRequest->getRequest<HgImportRequest::BlobImport>();
-        auto blob = std::make_unique<Blob>(blobRequest->hash, *content.value());
-        importRequest->getPromise<std::unique_ptr<Blob>>()->setValue(
-            std::move(blob));
+        // A proposed folly::Try::and_then would make the following much
+        // simpler.
+        importRequest->getPromise<std::unique_ptr<Blob>>()->setWith(
+            [&]() -> folly::Try<std::unique_ptr<Blob>> {
+              if (content.hasException()) {
+                return folly::Try<std::unique_ptr<Blob>>{
+                    std::move(content).exception()};
+              }
+              return folly::Try{
+                  std::make_unique<Blob>(blobRequest->hash, *content.value())};
+            });
 
         // Make sure that we're stopping this watch.
         requestsWatches[index].reset();
