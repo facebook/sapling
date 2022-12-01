@@ -11,6 +11,14 @@ from typing import Optional
 
 from edenscm import error, git
 from edenscm.i18n import _
+from edenscm.result import Err, Ok, Result
+
+
+class NotGitHubRepoError:
+    # we can add a 'kind' enum attribute to differentiate 'Not Git' and
+    # 'Git but not GitHub' cases later if needed
+    def __init__(self, message: str):
+        self.message = message
 
 
 @dataclass(eq=True, frozen=True)
@@ -28,38 +36,59 @@ class GitHubRepo:
         return f"https://{self.hostname}/{self.owner}/{self.name}"
 
 
+def is_github_repo(repo) -> bool:
+    """Return True if it's a GitHub repo"""
+    return find_github_repo(repo).is_ok()
+
+
 def check_github_repo(repo) -> GitHubRepo:
     """Returns GitHubRepo if the URI for the upstream repo appears to be an
     identifier for a consumer GitHub or GitHub Enterprise repository; otherwise,
     raises error.Abort() with an appropriate message.
     """
+    result = find_github_repo(repo)
+    if result.is_ok():
+        return result.unwrap()
+    else:
+        raise error.Abort(result.unwrap_err().message)
+
+
+def find_github_repo(repo) -> Result[GitHubRepo, NotGitHubRepoError]:
+    """Returns a Rust like Result[GitHubRepo, NotGitHubRepoError].
+
+    Checks if the URI for the upstream repo appears to be an identifier for a consumer
+    GitHub or GitHub Enterprise repository.
+    """
     if not git.isgitpeer(repo):
-        raise error.Abort(_("not a Git repo"))
+        return Err(NotGitHubRepoError(message=_("not a Git repo")))
 
     url = None
     try:
         url = repo.ui.paths.get("default", "default-push").url
     except AttributeError:  # ex. paths.default is not set
-        raise error.Abort(_("could not read paths.default"))
+        return Err(NotGitHubRepoError(message=_("could not read paths.default")))
 
     hostname = url.host
     if hostname == "github.com" or is_github_enterprise_hostname(hostname):
         url_arg = str(url)
         github_repo = parse_github_repo_from_github_url(url_arg)
         if github_repo:
-            return github_repo
+            return Ok(github_repo)
         else:
-            raise error.Abort(_("could not parse GitHub URI: %s") % url_arg)
-    else:
-        raise error.Abort(
-            _(
-                (
-                    "Either %s is not a GitHub Enterprise hostname or you are not logged in.\n"
-                    + "Authenticate using the GitHub CLI: `gh auth login --git-protocol https --hostname %s`"
+            return Err(
+                NotGitHubRepoError(
+                    message=_("could not parse GitHub URI: %s") % url_arg
                 )
-                % (hostname, hostname)
             )
+
+    err_msg = _(
+        (
+            "either %s is not a GitHub (Enterprise) hostname or you are not logged in.\n"
+            + "Authenticate using the GitHub CLI: `gh auth login --git-protocol https --hostname %s`"
         )
+        % (hostname, hostname)
+    )
+    return Err(NotGitHubRepoError(message=err_msg))
 
 
 @lru_cache

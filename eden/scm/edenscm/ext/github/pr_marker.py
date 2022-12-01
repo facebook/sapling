@@ -10,7 +10,7 @@ import typing as t
 from collections import defaultdict
 
 from edenscm import mutation, visibility
-from edenscm.ext.github.github_repo_util import check_github_repo
+from edenscm.ext.github.github_repo_util import find_github_repo
 from edenscm.ext.github.pr_parser import get_pull_request_for_node
 from edenscm.ext.github.pullrequest import get_pr_state, PullRequestId
 from edenscm.ext.github.pullrequeststore import PullRequestStore
@@ -27,10 +27,9 @@ def cleanup_landed_pr(repo, dry_run=False):
 
     If the repo is not a valid GitHub repo, just return.
     """
-    try:
-        github_repo = check_github_repo(repo)
-    except Exception:
-        # not a valid GitHubRepo, just return
+    github_repo = find_github_repo(repo).ok()
+    if github_repo is None:
+        # not a GitHubRepo, just return
         return
 
     ui = repo.ui

@@ -112,10 +112,7 @@ def follow_cmd(ui, repo, *revs, **opts):
 
 @templatekeyword("github_repo")
 def github_repo(repo, ctx, templ, **args) -> bool:
-    try:
-        return github_repo_util.check_github_repo(repo) is not None
-    except Exception:
-        return False
+    return github_repo_util.is_github_repo(repo)
 
 
 def _get_pull_request_field(field_name: str, repo, ctx, **args):
