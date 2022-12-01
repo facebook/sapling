@@ -1,6 +1,8 @@
 Mutation
 ========
 
+Refers to https://sapling-scm.com/docs/internals/visibility-and-mutation
+
 When commits are amended or rebased, Mercurial creates a new commit and hides
 the old one.  Mercurial also tracks this mutation relationship between these
 commits.

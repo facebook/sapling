@@ -16,21 +16,8 @@ Contents:
    process/WritingTests
    process/DebuggingFeatures
    process/DebuggingTests
-   internals/BundleFeature
-   internals/ConvertExtensionImplementation
-   internals/CrossedLinkrevs
-   internals/Design
-   internals/DirState
-   internals/EncodingStrategy
-   internals/FileFormats
-   internals/HandlingLargeFiles
-   internals/Manifest
-   internals/MercurialApi
    internals/Mutation
    internals/RequiresFile
-   internals/RevlogNG
    internals/SegmentedChangelog
    internals/UnlinkingFilesOnWindows
    internals/Visibility
-   internals/WhatGoesWhere
-   internals/WireProtocol
