@@ -37,7 +37,7 @@ class GitHubRepo:
 
 
 def is_github_repo(repo) -> bool:
-    """Return True if it's a GitHub repo"""
+    """Returns True if it's a GitHub repo"""
     return find_github_repo(repo).is_ok()
 
 
