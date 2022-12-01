@@ -1388,6 +1388,326 @@ pub async fn try_add_redirection(
     Ok(0)
 }
 
+pub mod scratch {
+    use std::collections::BTreeSet;
+    use std::collections::VecDeque;
+    use std::fs;
+    use std::path::PathBuf;
+
+    use anyhow::Result;
+    use subprocess::Exec;
+    use subprocess::Redirection as SubprocessRedirection;
+
+    use super::Redirection;
+
+    /// Find all the directories under `redirection_path` that aren't present in
+    /// `existing_redirections`.
+    fn recursively_check_orphaned_mirrored_redirections(
+        redirection_path: PathBuf,
+        existing_redirections: &BTreeSet<PathBuf>,
+    ) -> std::io::Result<Vec<PathBuf>> {
+        let mut to_walk = VecDeque::new();
+        to_walk.push_back(redirection_path);
+
+        let mut orphaned = Vec::new();
+        while let Some(current) = to_walk.pop_front() {
+            // A range is required here to distinguish 3 cases:
+            //  0) Is that path an existing redirection
+            //  1) Is there an existing redirection in a subdirectory?
+            //  2) Is this an orphaned redirection?
+            let num_existing_redirections = existing_redirections
+                // Logarithmically filter all the paths whose prefix is `current`
+                .range(std::ops::RangeFrom {
+                    start: current.clone(),
+                })
+                // And then filter the remaining paths whose prefix do not start with `current`.
+                .take_while(|p| p.starts_with(&current))
+                .count();
+            match num_existing_redirections {
+                0 => orphaned.push(current),
+                1 if existing_redirections.contains(&current) => continue,
+                _ => {
+                    if current.is_dir() {
+                        for current_subdir in fs::read_dir(current)? {
+                            to_walk.push_back(current_subdir?.path());
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(orphaned)
+    }
+
+    fn get_orphaned_redirection_targets_impl(
+        scratch_path: PathBuf,
+        scratch_subdir: PathBuf,
+        existing_redirections: &BTreeSet<PathBuf>,
+    ) -> Result<Vec<PathBuf>> {
+        // Scratch directories can either be flat, ie: a directory like foo/bar will be encoded as
+        // fooZbar, or mirrored, where no encoding is performed. Let's test how mkscratch encoded the
+        // directory and compare it against the EdenFS scratch namespace to test if mkscratch is
+        // configured to be flat or mirrored.
+        let is_scratch_mirrored = scratch_path.ends_with(&scratch_subdir);
+        let (scratch_root, prefix) = if is_scratch_mirrored {
+            (
+                scratch_path
+                    .ancestors()
+                    .nth(scratch_subdir.components().count() + 1)
+                    .unwrap(),
+                scratch_subdir,
+            )
+        } else {
+            (
+                // We want to get the root of the scratch directory, which is 2 level up from the path
+                // mkscratch gave us: first the path in the repository, and second the repository path.
+                scratch_path.parent().unwrap().parent().unwrap(),
+                PathBuf::from(scratch_path.file_name().unwrap().to_os_string()),
+            )
+        };
+
+        let mut orphaned_redirections = Vec::new();
+        if is_scratch_mirrored {
+            for dirent in fs::read_dir(scratch_root)? {
+                let dirent_path = dirent?.path();
+                let redirection_path = dirent_path.join(&prefix);
+                if redirection_path.exists() {
+                    // The directory exist, now we need to check if there is an unknown redirection.
+                    orphaned_redirections.extend(recursively_check_orphaned_mirrored_redirections(
+                        redirection_path,
+                        existing_redirections,
+                    )?);
+                }
+            }
+        } else {
+            for dirent in fs::read_dir(scratch_root)? {
+                let dirent_path = dirent?.path();
+                if !dirent_path.is_dir() {
+                    continue;
+                }
+
+                for subdir in fs::read_dir(dirent_path)? {
+                    let path = subdir?.path();
+                    if !existing_redirections.contains(&path)
+                        && path
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .starts_with(&prefix.to_string_lossy().into_owned())
+                    {
+                        orphaned_redirections.push(path);
+                    }
+                }
+            }
+        }
+
+        Ok(orphaned_redirections)
+    }
+
+    pub fn get_orphaned_redirection_targets(
+        existing_redirections: &BTreeSet<PathBuf>,
+    ) -> Result<Vec<PathBuf>> {
+        let mkscratch = Redirection::mkscratch_bin();
+        let scratch_subdir = Redirection::scratch_subdir();
+        let scratch_subdir_str = scratch_subdir.to_string_lossy();
+        let home_dir = match dirs::home_dir() {
+            Some(dir) => dir,
+            None => return Ok(vec![]),
+        };
+        let home_dir_str = home_dir.to_string_lossy();
+
+        let mkscratch_args = vec![
+            "--no-create",
+            "path",
+            &*home_dir_str,
+            "--subdir",
+            &*scratch_subdir_str,
+        ];
+        let mkscratch_res = Exec::cmd(mkscratch)
+            .args(&mkscratch_args)
+            .stdout(SubprocessRedirection::Pipe)
+            .stderr(SubprocessRedirection::Pipe)
+            .capture();
+
+        let scratch_path = match mkscratch_res {
+            Ok(output) if output.success() => PathBuf::from(output.stdout_str().trim()),
+            _ => return Ok(vec![]),
+        };
+
+        get_orphaned_redirection_targets_impl(scratch_path, scratch_subdir, existing_redirections)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::fs::create_dir;
+        use std::fs::create_dir_all;
+        use std::path::Path;
+
+        use tempfile::TempDir;
+
+        use super::*;
+
+        fn create_and_add(
+            path: impl AsRef<Path>,
+            existing_redirections: &mut BTreeSet<PathBuf>,
+        ) -> Result<()> {
+            create_dir_all(path.as_ref())?;
+            existing_redirections.insert(path.as_ref().to_path_buf());
+            Ok(())
+        }
+
+        #[test]
+        fn test_recursive_check_orphaned_mirrored_redirections() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let path = tempdir.path();
+            let mut existing_redirections = BTreeSet::new();
+
+            // Single known directory
+            create_and_add(path.join("A"), &mut existing_redirections)?;
+
+            // Directory with an orphaned directory inside
+            create_and_add(path.join("B/1"), &mut existing_redirections)?;
+            create_and_add(path.join("B/2"), &mut existing_redirections)?;
+            create_dir(path.join("B/3"))?;
+
+            // Single orphaned directory
+            create_dir(path.join("C"))?;
+
+            // Single orphaned with several subdirectories
+            create_dir_all(path.join("D/1"))?;
+            create_dir_all(path.join("D/2"))?;
+            create_dir_all(path.join("D/3"))?;
+
+            // Orphaned redirection with an existing redirection as a sibling
+            create_dir_all(path.join("E/1/2"))?;
+            create_and_add(path.join("E/1/3"), &mut existing_redirections)?;
+
+            let res = recursively_check_orphaned_mirrored_redirections(
+                path.to_path_buf(),
+                &existing_redirections,
+            )?;
+            assert!(!res.contains(&path.join("A")));
+
+            assert!(!res.contains(&path.join("B")));
+            assert!(!res.contains(&path.join("B/1")));
+            assert!(!res.contains(&path.join("B/2")));
+            assert!(res.contains(&path.join("B/3")));
+
+            assert!(res.contains(&path.join("C")));
+
+            assert!(res.contains(&path.join("D")));
+
+            eprintln!("{:?}", res);
+            assert!(res.contains(&path.join("E/1/2")));
+            Ok(())
+        }
+
+        #[test]
+        fn test_get_orphaned_redirection_targets_mirrored() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let path = tempdir.path();
+            let scratch_subdir = Path::new("foo/bar");
+            let mut existing_redirections = BTreeSet::new();
+
+            let scratch_path = path.join("repository").join(scratch_subdir);
+
+            // Single known directory
+            create_and_add(
+                path.join("repo1").join(scratch_subdir).join("A"),
+                &mut existing_redirections,
+            )?;
+
+            // Directory with an orphaned directory inside
+            create_and_add(
+                path.join("repo2").join(scratch_subdir).join("B/1"),
+                &mut existing_redirections,
+            )?;
+            create_and_add(
+                path.join("repo2").join(scratch_subdir).join("B/2"),
+                &mut existing_redirections,
+            )?;
+            create_dir_all(path.join("repo2").join(scratch_subdir).join("B/3"))?;
+
+            // Single orphaned directory
+            create_dir_all(path.join("repo3").join(scratch_subdir).join("C"))?;
+
+            // Single orphaned with several subdirectories
+            create_dir_all(path.join("repo4").join(scratch_subdir).join("D/1"))?;
+            create_dir_all(path.join("repo4").join(scratch_subdir).join("D/2"))?;
+            create_dir_all(path.join("repo4").join(scratch_subdir).join("D/3"))?;
+
+            let res = get_orphaned_redirection_targets_impl(
+                scratch_path,
+                scratch_subdir.to_path_buf(),
+                &existing_redirections,
+            )?;
+            assert!(!res.contains(&path.join("repo1").join(scratch_subdir).join("A")));
+
+            assert!(!res.contains(&path.join("repo2").join(scratch_subdir).join("B")));
+            assert!(!res.contains(&path.join("repo2").join(scratch_subdir).join("B/1")));
+            assert!(!res.contains(&path.join("repo2").join(scratch_subdir).join("B/2")));
+            assert!(res.contains(&path.join("repo2").join(scratch_subdir).join("B/3")));
+
+            assert!(res.contains(&path.join("repo3").join(scratch_subdir)));
+
+            assert!(res.contains(&path.join("repo4").join(scratch_subdir)));
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_get_orphaned_redirection_targets_flat() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let path = tempdir.path();
+            let scratch_subdir = Path::new("fooZbar");
+            let mut existing_redirections = BTreeSet::new();
+
+            let scratch_path = path.join("repository").join(scratch_subdir);
+
+            // Single known directory
+            let repo1_a_path =
+                path.join("repo1")
+                    .join(format!("{}Z{}", scratch_subdir.display(), "A"));
+            create_and_add(&repo1_a_path, &mut existing_redirections)?;
+
+            // Directory with an orphaned directory inside
+            let repo2_b1_path =
+                path.join("repo2")
+                    .join(format!("{}Z{}Z{}", scratch_subdir.display(), "B", "1"));
+            let repo2_b2_path =
+                path.join("repo2")
+                    .join(format!("{}Z{}Z{}", scratch_subdir.display(), "B", "2"));
+            let repo2_b3_path =
+                path.join("repo2")
+                    .join(format!("{}Z{}Z{}", scratch_subdir.display(), "B", "3"));
+            create_and_add(&repo2_b1_path, &mut existing_redirections)?;
+            create_and_add(&repo2_b2_path, &mut existing_redirections)?;
+            create_dir_all(&repo2_b3_path)?;
+
+            // Single orphaned directory
+            let repo3_c_path =
+                path.join("repo3")
+                    .join(format!("{}Z{}", scratch_subdir.display(), "C"));
+            create_dir_all(&repo3_c_path)?;
+
+            let res = get_orphaned_redirection_targets_impl(
+                scratch_path,
+                Path::new("foo/bar").to_path_buf(),
+                &existing_redirections,
+            )?;
+            assert!(!res.contains(&repo1_a_path));
+
+            assert!(!res.contains(&repo2_b1_path));
+            assert!(!res.contains(&repo2_b2_path));
+            assert!(res.contains(&repo2_b3_path));
+
+            assert!(res.contains(&repo3_c_path));
+
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
