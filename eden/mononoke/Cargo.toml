@@ -272,6 +272,7 @@ members = [
   "common/type_map",
   "common/uniqueheap",
   "common/wait_for_replication",
+  "common/yield_stream",
   "derived_data",
   "derived_data/basename_suffix_skeleton_manifest",
   "derived_data/blame",
