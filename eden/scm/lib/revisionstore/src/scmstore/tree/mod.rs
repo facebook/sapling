@@ -97,7 +97,7 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
-    pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<FetchResults<StoreTree>> {
+    pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> FetchResults<StoreTree> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut common: CommonFetchState<StoreTree> =
@@ -313,7 +313,7 @@ impl TreeStore {
             process_func_errors();
         }
 
-        Ok(FetchResults::new(Box::new(found_rx.into_iter())))
+        FetchResults::new(Box::new(found_rx.into_iter()))
     }
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
@@ -473,7 +473,7 @@ impl HgIdDataStore for TreeStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))
                 .single()?
             {
                 Some(entry) => StoreResult::Found(entry.content.expect("content attribute not found despite being requested and returned as complete").hg_content()?.into_vec()),
@@ -485,7 +485,7 @@ impl HgIdDataStore for TreeStore {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))
                 .single()?
             {
                 // This is currently in a bit of an awkward state, as revisionstore metadata is no longer used for trees
@@ -508,7 +508,7 @@ impl HgIdDataStore for TreeStore {
 impl RemoteDataStore for TreeStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(self
-            .fetch_batch(keys.iter().cloned().filter_map(StoreKey::maybe_into_key))?
+            .fetch_batch(keys.iter().cloned().filter_map(StoreKey::maybe_into_key))
             .missing()?
             .into_iter()
             .map(StoreKey::HgId)
@@ -601,14 +601,14 @@ impl storemodel::TreeStore for TreeStore {
         }
 
         let key = Key::new(path.to_owned(), node);
-        match self.fetch_batch(std::iter::once(key.clone()))?.single()? {
+        match self.fetch_batch(std::iter::once(key.clone())).single()? {
             Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
             None => Err(anyhow!("key {:?} not found in manifest", key)),
         }
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        self.fetch_batch(keys.into_iter())?.consume();
+        self.fetch_batch(keys.into_iter()).consume();
         Ok(())
     }
 

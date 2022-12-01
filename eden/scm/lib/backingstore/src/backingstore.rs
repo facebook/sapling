@@ -217,7 +217,7 @@ impl BackingStore {
         } else {
             self.treestore.as_ref()
         }
-        .fetch_batch(std::iter::once(key))?;
+        .fetch_batch(std::iter::once(key));
 
         if let Some(mut entry) = fetch_results.single()? {
             Ok(Some(entry.manifest_tree_entry()?.try_into()?))
@@ -262,26 +262,6 @@ impl BackingStore {
             self.treestore.as_ref()
         }
         .fetch_batch(indexes.keys().cloned());
-
-        // Handle batch failure
-        let fetch_results = match fetch_results {
-            Ok(res) => res,
-            Err(e) => {
-                let mut indexes = indexes.values();
-                // Pass along the error to the first index
-                if let Some(index) = indexes.next() {
-                    resolve(*index, Err(e))
-                }
-                // Return a generic error for others (errors are not Clone)
-                for index in indexes {
-                    resolve(
-                        *index,
-                        Err(anyhow!("get_tree_batch failed across the entire batch")),
-                    )
-                }
-                return;
-            }
-        };
 
         // Handle pey-key fetch results
         for result in fetch_results {

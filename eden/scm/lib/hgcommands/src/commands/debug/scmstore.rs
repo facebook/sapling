@@ -97,7 +97,7 @@ fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
 
     let mut stdout = io.output();
 
-    let fetch_result = store.fetch_batch(keys.into_iter())?;
+    let fetch_result = store.fetch_batch(keys.into_iter());
 
     let (found, missing, _errors) = fetch_result.consume();
     for complete in found.into_iter() {

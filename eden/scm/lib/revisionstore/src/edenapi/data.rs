@@ -292,7 +292,7 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch_batch(std::iter::once(k.clone()))?
+            .fetch_batch(std::iter::once(k.clone()))
             .single()?
             .expect("key not found");
         assert_eq!(
@@ -319,7 +319,7 @@ mod tests {
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
 
         // Attempt fetch.
-        let fetched = store.fetch_batch(std::iter::once(k.clone()))?;
+        let fetched = store.fetch_batch(std::iter::once(k.clone()));
         let (found, missing, _errors) = fetched.consume();
         assert_eq!(found.len(), 0);
         assert_eq!(missing.into_keys().collect::<Vec<_>>(), vec![k]);
