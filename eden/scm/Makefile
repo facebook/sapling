@@ -54,7 +54,7 @@ help:
 	@echo 'Commonly used make targets:'
 	@echo '  all          - build program'
 	@echo '  install      - install program and man pages to $$PREFIX ($(PREFIX))'
-	@echo '  install-home - install with setup_with_version.py install --home=$$HOME ($(HOME))'
+	@echo '  install-home - install with setup.py install --home=$$HOME ($(HOME))'
 	@echo '  local        - build for inplace usage'
 	@echo '  tests        - run all tests in the automatic test suite'
 	@echo '  test-foo     - run only specified tests (e.g. test-merge1.t)'
@@ -73,7 +73,7 @@ all: build
 
 oss:
 	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py $(PURE) \
+	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
@@ -90,13 +90,13 @@ endif
 
 install-oss: oss
 	SAPLING_OSS_BUILD=true HGNAME=$(SL_NAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py $(PURE) \
+	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  install --root="$(DESTDIR)/" --prefix="$(PREFIX)" \
 	  --install-lib="$(PREFIX)"/lib/python3.$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")/site-packages \
 	  --install-scripts="$(PREFIX)/bin" --force
 
 local:
-	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py $(PURE) \
+	$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
@@ -111,7 +111,7 @@ else
 endif
 
 build:
-	$(PYTHON) setup_with_version.py $(PURE) build $(COMPILERFLAG)
+	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
 deb:
 	./packaging/debian/build_deb.sh
@@ -123,7 +123,7 @@ rpm:
 		-bb packaging/rpm/sapling.spec
 
 wheel:
-	FORCE_SETUPTOOLS=1 $(PYTHON) setup_with_version.py $(PURE) bdist_wheel $(COMPILERFLAG)
+	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
 getdepsbuild:
 	mkdir -p $(GETDEPS_BUILD_DIR)/eden_scm
@@ -131,11 +131,11 @@ getdepsbuild:
 	GETDEPS_BUILD=1 \
 		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup_with_version.py \
+		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py \
 		$(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
-	-$(PYTHON3) setup_with_version.py clean --all # ignore errors from this command
+	-$(PYTHON3) setup.py clean --all # ignore errors from this command
 	find contrib doc i18n edenscm edenscmnative tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in edenscm/ext/__index__.py tests/*.err
@@ -153,15 +153,15 @@ clean: cleanbutpackages
 	rm -rf packages
 
 install: build
-	$(PYTHON) setup_with_version.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
+	$(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
 install-home: build
-	$(PYTHON) setup_with_version.py $(PURE) install --home="$(HOME)" --prefix="" --force
+	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps: getdepsbuild
 	PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 	    GETDEPS_BUILD=1 $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-		setup_with_version.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
+		setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
 
 test-getdeps: install-getdeps
 	# Run one test to check the binary is minimally good as will be used later in Mononoke getdeps tests
