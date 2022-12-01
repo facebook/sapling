@@ -73,7 +73,7 @@ SpawnedProcess HgRepo::invokeHg(vector<string> args) {
 SpawnedProcess HgRepo::invokeHg(
     vector<string> args,
     SpawnedProcess::Options&& options) {
-  args.insert(args.begin(), "hg");
+  args.insert(args.begin(), {"hg", "--traceback"});
 
   XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
   options.environment() = hgEnv_;
