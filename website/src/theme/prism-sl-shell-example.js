@@ -14,6 +14,46 @@
 		/<<-?\s*(["']?)(\w+)\1\s[\s\S]*?[\r\n]\2/.source
 	].join('|');
 
+	var smartlog_commit = {
+		'sl-commit-meta': {
+			pattern: /[@ox]  .*/,
+			inside: {
+				'sl-hash': /  ([0-9a-f]{9}) /,
+				'sl-active-bookmark': /  [a-z_]+\*\n/,
+				'sl-bookmark': / remote\/([a-z0-9_]+)/,
+				'sl-diff': / #[0-9]+/,
+				'sl-review-closed': /Closed/,
+				'sl-review-merged': /Merged/,
+				'sl-review-approved': /Approved/,
+				'sl-review-changes-requested': /Changes Requested/,
+				'sl-review-review-required': /Review Required/,
+				'sl-review-unreviewed': /Unreviewed/,
+				'sl-signal-okay': /✓/,
+				'sl-signal-failed': /✗/,
+				'sl-signal-warning': /‼/,
+				'sl-signal-in-progress': /⋯/,		
+			}
+		},
+		'sl-commit-text': {
+			pattern: /  [^│].*/,
+		}
+	};
+
+	var smartlog_entry = {
+		'sl-commit-current': {
+			pattern: /@  .*\n.*/,
+			inside: smartlog_commit,
+		},
+		'sl-commit-obsolete': {
+			pattern: /x  .*\n.*/,
+			inside: smartlog_commit,
+		},
+		'sl-commit-other': {
+			pattern: /o  .*\n.*/,
+			inside: smartlog_commit,
+		},
+	};
+
 	Prism.languages['sl-shell-example'] = {
 		'command': {
 			pattern: RegExp(
@@ -59,7 +99,19 @@
 				}
 			}
 		},
+		// each entry is two lines, starting with a symbol
+		// to specify the type, and contains the same data
+		// on the inside
+		'sl-commit-public': {
+			pattern: /\n[@ox]  .*\n.*/,
+			inside: smartlog_entry
+		},
+		'sl-commit-draft': {
+			pattern: / [@ox]  .*\n.*/,
+			inside: smartlog_entry
+		},
 		'comment': /#.*/,
 		'output': /.(?:.*(?:[\r\n]|.$))*/,
 	};
 }(Prism));
+
