@@ -321,6 +321,10 @@ replace-with = "vendored-sources"
         if target.env:
             env.update(target.env)
         env["LIB_DIRS"] = os.path.abspath(self.build_temp)
+        # Somehow `HOMEBREW_CCCFG` gets set every time setup.py runs when running on
+        # Homebrew. This affects certain Rust targets, somehow, making them produce
+        # a target of the wrong arch (e.g. cross compiling to arm64 from x86)
+        env.pop("HOMEBREW_CCCFG", None)
 
         if target.cfgs:
             env["RUSTFLAGS"] = (
