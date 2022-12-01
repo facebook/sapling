@@ -1491,7 +1491,7 @@ the following are valid keystrokes:
         pgup/pgdn [K/J] : go to previous/next item of same type
  right/left-arrow [l/h] : go to child item / parent item
  shift-left-arrow   [H] : go to parent header / fold selected header
-                      f : fold / unfold item, hiding/revealing its children
+              tab   [f] : fold / unfold item, hiding/revealing its children
                       F : fold / unfold parent item and all of its ancestors
                  ctrl-l : scroll the selected line to the top of the screen
                       m : edit / resume editing the commit message
@@ -1719,13 +1719,13 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         Return true to exit the main loop.
         """
-        if keypressed in ["k", "KEY_UP", "KEY_A2"]:
+        if keypressed in ["k", "KEY_UP", "KEY_A2", "^P"]:
             self.uparrowevent()
-        elif keypressed in ["K", "KEY_PPAGE", "KEY_A3"]:
+        elif keypressed in ["K", "KEY_PPAGE", "KEY_A3", "M-^Z"]:
             self.uparrowshiftevent()
-        elif keypressed in ["j", "KEY_DOWN", "KEY_C2"]:
+        elif keypressed in ["j", "KEY_DOWN", "KEY_C2", "^N"]:
             self.downarrowevent()
-        elif keypressed in ["J", "KEY_NPAGE", "KEY_C3"]:
+        elif keypressed in ["J", "KEY_NPAGE", "KEY_C3", "^V"]:
             self.downarrowshiftevent()
         elif keypressed in ["l", "KEY_RIGHT", "KEY_B3"]:
             self.rightarrowevent()
@@ -1756,7 +1756,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.toggleall()
         elif keypressed in ["e"]:
             self.toggleedit(test=test)
-        elif keypressed in ["f"]:
+        elif keypressed in ["f", "^I"]:
             self.togglefolded()
         elif keypressed in ["F"]:
             self.togglefolded(foldparent=True)
@@ -1768,7 +1768,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.stdscr.refresh()
         else:
             try:
-                if len(keypressed) == 1 and curses.unctrl(keypressed) in [b"^L"]:
+                if keypressed in ["^L"]:
                     # scroll the current line to the top of the screen
                     self.scrolllines(self.selecteditemstartline)
             except OverflowError:
@@ -1799,6 +1799,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         curses.start_color()
         curses.use_default_colors()
+        curses.raw()
 
         # available colors: black, blue, cyan, green, magenta, white, yellow
         # init_pair(color_id, foreground_color, background_color)
@@ -1835,11 +1836,11 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.updatescreen()
             try:
                 with self.ui.timeblockedsection("crecord"):
-                    keypressed = self.statuswin.getkey()
+                    keypressed = curses.keyname(self.statuswin.getch()).decode("utf-8")
                 if self.errorstr is not None:
                     self.errorstr = None
                     continue
-            except curses.error:
+            except (curses.error, UnicodeError):
                 keypressed = "foobar"
             if self.handlekeypressed(keypressed):
                 break
