@@ -4,7 +4,7 @@ sidebar_position: 26
 
 ## pr
 <!--
-  @generated SignedSource<<e941942593bb89b37ac08dbaca3933c7>>
+  @generated SignedSource<<d1f22fa0d7e25b972436cb7df0e233c5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -22,7 +22,7 @@ create or update GitHub pull requests from local commits
 | `-s`| `--stack`| `false`| also include draft ancestors|
 | `-m`| `--message`| | message describing changes to updated commits|### link
 
-indentify a commit as the head of a GitHub pull request
+identify a commit as the head of a GitHub pull request
 
 A PULL_REQUEST can be specified in a number of formats:
 

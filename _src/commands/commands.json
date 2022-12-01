@@ -1861,7 +1861,7 @@
       {
         "name": "link",
         "aliases": [],
-        "doc": "indentify a commit as the head of a GitHub pull request\n\n    A PULL_REQUEST can be specified in a number of formats:\n\n    - GitHub URL to the PR: https://github.com/facebook/react/pull/42\n\n    - Integer: Number for the PR. Uses 'paths.upstream' as the target repo,\n        if specified; otherwise, falls back to 'paths.default'.\n    ",
+        "doc": "identify a commit as the head of a GitHub pull request\n\n    A PULL_REQUEST can be specified in a number of formats:\n\n    - GitHub URL to the PR: https://github.com/facebook/react/pull/42\n\n    - Integer: Number for the PR. Uses 'paths.upstream' as the target repo,\n        if specified; otherwise, falls back to 'paths.default'.\n    ",
         "args": [
           {
             "shortname": "r",
@@ -2870,6 +2870,12 @@
         "fullname": "force",
         "default": false,
         "description": "kill any running server process, then start a new server"
+      },
+      {
+        "shortname": "",
+        "fullname": "platform",
+        "default": "",
+        "description": "which environment ISL is being embedded in, used to support IDE integrations (ADVANCED)"
       }
     ],
     "subcommands": null
