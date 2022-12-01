@@ -27,7 +27,7 @@ from their mistakes.
 safely hide and recover commits.
 
 
-```bash
+```sl-shell-example
 $ sl
 @  b84224608  Yesterday at 16:04  john  remote/main
 │  Updating submodules

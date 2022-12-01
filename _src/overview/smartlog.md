@@ -1,6 +1,7 @@
 ---
 sidebar_position: 20
 ---
+import {SLCommand} from '@site/elements'
 
 # Smartlog
 
@@ -58,6 +59,28 @@ o  <span class="sl-public">3dfc61ae2</span>  Tuesday at 10:52<br />
 │<br />
 o  <span class="sl-public">a75ab860a</span>  Jul 15 at 07:59<br />
 ╷<br />
+~<br />
+</pre>
+
+### Super Smartlog
+
+Sapling can also fetch information about the repository from external sources, such as checking GitHub to know if a pull request has passed automated tests and been reviewed. Since this extra information requires waiting a few seconds for network requests, we have a separate <SLCommand name="ssl" /> alias for this:
+
+<pre>
+<span class="shell-prompt">&gt;</span> <span class="shell-command">sl ssl</span><br />
+o  <span class="sl-public">bc3bbba5d</span>  Yesterday at 12:23  <span class="sl-bookmark">remote/main</span><br />
+╷<br/>
+╷ @  <span class="sl-draft">c7ed677ea</span>  Today at 11:17  jane  <span class="sl-review-unreviewed">#269 Unreviewed</span> <span class="sl-signal-failed">✗</span><br />
+╷ │  <span class="sl-current">[docs] make examples consistent</span><br />
+╷ │<br />
+╷ o  <span class="sl-draft">9f15ade1c</span>  Today at 10:09  jane  <span class="sl-review-unreviewed">#267 Unreviewed</span> <span class="sl-signal-okay">✓</span><br />
+╷ │  [docs] syntax-highlighting for smartlogs<br />
+╷ │<br />
+╷ o  <span class="sl-draft">44df3afe6</span>  Yesterday at 14:07  jane  <span class="sl-review-approved">#264 Approved</span> <span class="sl-signal-okay">✓</span><br />
+╭─╯  [docs] add sl-shell-example syntax-highlighting language<br />
+│<br />
+o  <span class="sl-public">ecf6ca5e1</span>  Yesterday at 12:23<br />
+│<br />
 ~<br />
 </pre>
 

@@ -9,7 +9,7 @@ Sapling’s emphasis on editing stacks of commits means users move between commi
 
 `sl goto COMMIT` or `sl go COMMIT` is the standard way to checkout a commit in your repository.
 
-```bash
+```sl-shell-example
 # The '@' indicates your currently checked out commit.
 $ sl
 @  b84224608  13 minutes ago  remote/main
@@ -52,7 +52,7 @@ To trigger an auto-pull, you must specify the `remote/` prefix.
 
 When working with a stack of commits, you can use `sl next` and `sl prev` to move up and down your stack with ease.
 
-```
+```sl-shell-example
 # The '@' indicates your currently checked out commit.
 $ sl
 o  5abffb82f  Wednesday at 09:39  remote/main
@@ -86,7 +86,7 @@ Note, if a commit has multiple children or parents, `next` and `prev` may alert 
 
 When in a stack, you can jump directly to the top or bottom using `sl goto top` and `sl goto bottom`.
 
-```
+```sl-shell-example
 # The '@' indicates your currently checked out commit.
 $ sl
 o  5abffb82f  Wednesday at 09:39  remote/main

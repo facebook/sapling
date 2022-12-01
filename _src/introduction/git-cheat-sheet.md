@@ -8,7 +8,7 @@ Below is a quick cheat sheet for translating a number of Git commands into equiv
 
 You can also use the `sl githelp` command, or `sl git` for short, to automatically translate some git commands into their equivalent Sapling command.
 
-```
+```sl-shell-example
 $ sl githelp -- git clone https://github.com/facebook/sapling
 sl clone https://github.com/facebook/sapling
 
