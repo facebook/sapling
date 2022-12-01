@@ -247,48 +247,5 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
         }
     }
 
-    // Try to fetch OAuth token from the local keychain (corp mac).
-    if !hostcaps::is_prod() && cfg!(target_os = "macos") {
-        // security find-generic-password -g -s commitcloud -a commitcloud -w
-        info!("Token Lookup: reading commitcloud OAuth token from keychain...");
-        let output = Command::new("security")
-            .args(vec![
-                "find-generic-password",
-                "-g",
-                "-s",
-                "commitcloud",
-                "-a",
-                "commitcloud",
-                "-w",
-            ])
-            .output();
-        match output {
-            Err(e) => {
-                if let io::ErrorKind::NotFound = e.kind() {
-                    info!("`security` executable is not found");
-                }
-            }
-            Ok(output) => {
-                if !output.status.success() {
-                    error!(
-                        "OAuth token: failed to retrieve from keychain, process exited with: {}",
-                        output.status
-                    );
-                } else {
-                    let token = str::from_utf8(&output.stdout)?.trim().to_string();
-                    if token.is_empty() {
-                        error!("OAuth token is not found in the keychain");
-                    } else {
-                        info!("OAuth token is found in the keychain");
-                        return Ok(Token {
-                            token,
-                            token_type: TokenType::OAuth,
-                        });
-                    }
-                }
-            }
-        }
-    }
-
     Err(ErrorKind::CommitCloudUnexpectedError("Token Lookup: token not found".into()).into())
 }
