@@ -10,7 +10,7 @@ use std::time::Duration;
 use anyhow::Result;
 use blobstore_factory::ScrubAction;
 use blobstore_factory::ScrubOptions;
-use blobstore_factory::ScrubWriteMostly;
+use blobstore_factory::SrubWriteOnly;
 use clap::Args;
 use environment::MononokeEnvironment;
 use mononoke_app::AppExtension;
@@ -42,14 +42,14 @@ pub struct ScrubArgs {
     )]
     pub blobstore_scrub_queue_peek_bound: Option<u64>,
 
-    /// Whether to allow missing values from write-mostly stores when
+    /// Whether to allow missing values from write-only stores when
     /// scrubbing
     #[clap(
         long,
         help_heading = "BLOBSTORE OPTIONS",
         requires = "blobstore-scrub-action"
     )]
-    pub blobstore_scrub_write_mostly_missing: Option<ScrubWriteMostly>,
+    pub blobstore_scrub_write_only_missing: Option<SrubWriteOnly>,
 }
 
 #[derive(Default, Debug)]
@@ -57,7 +57,7 @@ pub struct ScrubAppExtension {
     pub action: Option<ScrubAction>,
     pub grace: Option<Duration>,
     pub queue_peek_bound: Option<Duration>,
-    pub write_mostly_missing: Option<ScrubWriteMostly>,
+    pub write_only_missing: Option<SrubWriteOnly>,
 }
 
 impl ScrubAppExtension {
@@ -86,10 +86,10 @@ impl AppExtension for ScrubAppExtension {
                 queue_peek_bound.as_secs().to_string(),
             ));
         }
-        if let Some(write_mostly_missing) = self.write_mostly_missing {
+        if let Some(write_only_missing) = self.write_only_missing {
             defaults.push((
-                "blobstore-scrub-write-mostly-missing",
-                <&'static str>::from(write_mostly_missing).to_string(),
+                "blobstore-scrub-write-only-missing",
+                <&'static str>::from(write_only_missing).to_string(),
             ));
         }
         defaults
@@ -105,8 +105,8 @@ impl AppExtension for ScrubAppExtension {
             if let Some(scrub_grace) = args.blobstore_scrub_grace {
                 scrub_options.scrub_grace = Some(Duration::from_secs(scrub_grace));
             }
-            if let Some(action_on_missing) = args.blobstore_scrub_write_mostly_missing {
-                scrub_options.scrub_action_on_missing_write_mostly = action_on_missing;
+            if let Some(action_on_missing) = args.blobstore_scrub_write_only_missing {
+                scrub_options.scrub_action_on_missing_write_only = action_on_missing;
             }
             if let Some(queue_peek_bound) = args.blobstore_scrub_queue_peek_bound {
                 scrub_options.queue_peek_bound = Duration::from_secs(queue_peek_bound);

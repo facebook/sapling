@@ -28,7 +28,7 @@ use metaconfig_types::MultiplexId;
 use multiplexedblob::base::ErrorKind;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
-use multiplexedblob::ScrubWriteMostly;
+use multiplexedblob::SrubWriteOnly;
 
 use crate::multiplex;
 use crate::MultiplexTimeout;
@@ -40,7 +40,7 @@ impl WalMultiplexedBlobstore {
         &self,
         ctx: &CoreContext,
         key: &str,
-        write_mostly: ScrubWriteMostly,
+        write_only: SrubWriteOnly,
     ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled();
@@ -59,15 +59,15 @@ impl WalMultiplexedBlobstore {
             || {
                 multiplex::inner_multi_get(
                     ctx,
-                    self.write_mostly_blobstores.clone(),
+                    self.write_only_blobstores.clone(),
                     key,
                     OperationType::ScrubGet,
                     &scuba,
                 )
                 .collect::<Vec<_>>()
             },
-            self.write_mostly_blobstores.iter().map(|b| *b.id()),
-            write_mostly,
+            self.write_only_blobstores.iter().map(|b| *b.id()),
+            write_only,
         )
         .await;
 
@@ -94,7 +94,7 @@ impl WalScrubBlobstore {
         multiplex_id: MultiplexId,
         wal_queue: Arc<dyn BlobstoreWal>,
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_quorum: usize,
         timeout: Option<MultiplexTimeout>,
         scuba: Scuba,
@@ -105,14 +105,14 @@ impl WalScrubBlobstore {
             blobstores
                 .iter()
                 .cloned()
-                .chain(write_mostly_blobstores.iter().cloned())
+                .chain(write_only_blobstores.iter().cloned())
                 .collect(),
         );
         let inner = WalMultiplexedBlobstore::new(
             multiplex_id,
             wal_queue,
             blobstores,
-            write_mostly_blobstores,
+            write_only_blobstores,
             write_quorum,
             timeout,
             scuba,
@@ -133,17 +133,17 @@ impl Blobstore for WalScrubBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let write_mostly = self.scrub_options.scrub_action_on_missing_write_mostly;
-        match self.inner.scrub_get(ctx, key, write_mostly).await {
+        let write_only = self.scrub_options.scrub_action_on_missing_write_only;
+        match self.inner.scrub_get(ctx, key, write_only).await {
             Ok(value) => Ok(value),
             Err(ErrorKind::SomeFailedOthersNone {
                 main_errors,
-                write_mostly_errors,
+                write_only_errors,
             }) => {
                 if self.inner.blobstores.len() - main_errors.len() < self.inner.quorum.read.get() {
                     Err(ErrorKind::SomeFailedOthersNone {
                         main_errors,
-                        write_mostly_errors,
+                        write_only_errors,
                     })
                     .context("Can't tell if blob exists or not due to failing blobstores")
                 } else {
@@ -153,7 +153,7 @@ impl Blobstore for WalScrubBlobstore {
             }
             Err(ErrorKind::SomeMissingItem {
                 missing_main,
-                missing_write_mostly,
+                missing_write_only,
                 value,
             }) => {
                 multiplexedblob::scrub::maybe_repair(
@@ -161,7 +161,7 @@ impl Blobstore for WalScrubBlobstore {
                     key,
                     value,
                     missing_main,
-                    missing_write_mostly,
+                    missing_write_only,
                     self.all_blobstores.as_ref(),
                     self.scrub_handler.as_ref(),
                     &self.scrub_options,

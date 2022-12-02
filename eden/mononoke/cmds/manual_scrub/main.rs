@@ -14,7 +14,7 @@ use async_compression::tokio::write::ZstdEncoder;
 use async_compression::Level;
 use blobstore_factory::make_blobstore;
 use blobstore_factory::ScrubAction;
-use blobstore_factory::ScrubWriteMostly;
+use blobstore_factory::SrubWriteOnly;
 use clap_old::Arg;
 use cmdlib::args;
 use cmdlib::args::ArgType;
@@ -96,7 +96,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .with_all_repos()
         .with_arg_types(vec![ArgType::Scrub])
         .with_scrub_action_default(Some(ScrubAction::Repair))
-        .with_scrub_action_on_missing_write_mostly_default(Some(ScrubWriteMostly::Scrub))
+        .with_scrub_action_on_missing_write_only_default(Some(SrubWriteOnly::Scrub))
         .build()
         .arg(
             Arg::with_name(ARG_STORAGE_CONFIG_NAME)

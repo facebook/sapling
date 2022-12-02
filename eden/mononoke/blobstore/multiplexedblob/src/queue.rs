@@ -54,7 +54,7 @@ impl MultiplexedBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         not_present_read_quorum: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
@@ -70,7 +70,7 @@ impl MultiplexedBlobstore {
             blobstore: Arc::new(MultiplexedBlobstoreBase::new(
                 multiplex_id,
                 blobstores,
-                write_mostly_blobstores,
+                write_only_blobstores,
                 minimum_successful_writes,
                 not_present_read_quorum,
                 put_handler,

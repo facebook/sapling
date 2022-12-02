@@ -71,7 +71,7 @@ pub enum ScrubAction {
     Repair,
 }
 
-// How to treat write mostly stores during the scrub
+// How to treat write only stores during the scrub
 #[derive(
     Debug,
     Clone,
@@ -84,16 +84,16 @@ pub enum ScrubAction {
     EnumVariantNames,
     IntoStaticStr
 )]
-pub enum ScrubWriteMostly {
-    /// don't take action on scrub missing keys from write mostly stores
+pub enum SrubWriteOnly {
+    /// don't take action on scrub missing keys from write only stores
     SkipMissing,
-    /// take the normal scrub action for write mostly stores
+    /// take the normal scrub action for write only stores
     Scrub,
     /// Mode for populating empty stores.  Assumes its already missing. Don't attempt to read. Write with IfAbsent so won't overwrite if run incorrectluy.
     /// More efficient than the above if thes store is totally empty.
     PopulateIfAbsent,
-    /// Mode for rescrubbing write-mostly stores before enabling them. Assumes that the data in them is correct,
-    /// and won't read from the main stores unless the write-mostly stores have missing data or read failures
+    /// Mode for rescrubbing write-only stores before enabling them. Assumes that the data in them is correct,
+    /// and won't read from the main stores unless the write-only stores have missing data or read failures
     /// This ensures that load on the main stores is kept to a minimum
     ScrubIfAbsent,
 }
@@ -102,7 +102,7 @@ pub enum ScrubWriteMostly {
 pub struct ScrubOptions {
     pub scrub_action: ScrubAction,
     pub scrub_grace: Option<Duration>,
-    pub scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+    pub scrub_action_on_missing_write_only: SrubWriteOnly,
     pub queue_peek_bound: Duration,
 }
 
@@ -111,7 +111,7 @@ impl Default for ScrubOptions {
         Self {
             scrub_action: ScrubAction::ReportOnly,
             scrub_grace: None,
-            scrub_action_on_missing_write_mostly: ScrubWriteMostly::Scrub,
+            scrub_action_on_missing_write_only: SrubWriteOnly::Scrub,
             queue_peek_bound: *HEAL_MAX_BACKLOG,
         }
     }
@@ -189,7 +189,7 @@ impl ScrubBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         not_present_read_quorum: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
@@ -203,7 +203,7 @@ impl ScrubBlobstore {
         let inner = MultiplexedBlobstore::new(
             multiplex_id,
             blobstores.clone(),
-            write_mostly_blobstores.clone(),
+            write_only_blobstores.clone(),
             minimum_successful_writes,
             not_present_read_quorum,
             queue.clone(),
@@ -218,7 +218,7 @@ impl ScrubBlobstore {
             scrub_stores: Arc::new(
                 blobstores
                     .into_iter()
-                    .chain(write_mostly_blobstores.into_iter())
+                    .chain(write_only_blobstores.into_iter())
                     .collect(),
             ),
             queue,
@@ -267,7 +267,7 @@ pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
     key: &str,
     value: BlobstoreGetData,
     missing_main: Arc<HashSet<BlobstoreId>>,
-    missing_write_mostly: Arc<HashSet<BlobstoreId>>,
+    missing_write_only: Arc<HashSet<BlobstoreId>>,
     scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
     scrub_handler: &dyn ScrubHandler,
     scrub_options: &ScrubOptions,
@@ -290,9 +290,9 @@ pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
     let mut needs_repair: HashMap<BlobstoreId, (PutBehaviour, &dyn BlobstorePutOps)> =
         HashMap::new();
 
-    // For write mostly stores we can chose not to do the scrub action
+    // For write only stores we can chose not to do the scrub action
     // e.g. if store is still being populated, a checking scrub wouldn't want to raise alarm on the store
-    if scrub_options.scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing
+    if scrub_options.scrub_action_on_missing_write_only != SrubWriteOnly::SkipMissing
         || !missing_main.is_empty()
     {
         // Only peek the queue if needed
@@ -313,12 +313,12 @@ pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
                     needs_repair.insert(*k, (PutBehaviour::Overwrite, s.as_ref()));
                 }
             }
-            for k in missing_write_mostly.iter() {
+            for k in missing_write_only.iter() {
                 if let Some(s) = scrub_stores.get(k) {
-                    let put_behaviour = match scrub_options.scrub_action_on_missing_write_mostly {
-                        ScrubWriteMostly::SkipMissing => None,
-                        ScrubWriteMostly::Scrub => Some(PutBehaviour::Overwrite),
-                        ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
+                    let put_behaviour = match scrub_options.scrub_action_on_missing_write_only {
+                        SrubWriteOnly::SkipMissing => None,
+                        SrubWriteOnly::Scrub => Some(PutBehaviour::Overwrite),
+                        SrubWriteOnly::PopulateIfAbsent | SrubWriteOnly::ScrubIfAbsent => {
                             Some(PutBehaviour::IfAbsent)
                         }
                     };
@@ -371,7 +371,7 @@ async fn blobstore_get(
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>> {
     match inner_blobstore
-        .scrub_get(ctx, key, scrub_options.scrub_action_on_missing_write_mostly)
+        .scrub_get(ctx, key, scrub_options.scrub_action_on_missing_write_only)
         .await
     {
         Ok(value) => Ok(value),
@@ -390,7 +390,7 @@ async fn blobstore_get(
             }
             ErrorKind::SomeMissingItem {
                 missing_main,
-                missing_write_mostly,
+                missing_write_only,
                 value,
             } => {
                 maybe_repair(
@@ -398,7 +398,7 @@ async fn blobstore_get(
                     key,
                     value,
                     missing_main,
-                    missing_write_mostly,
+                    missing_write_only,
                     scrub_stores,
                     scrub_handler,
                     scrub_options,

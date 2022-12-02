@@ -1742,7 +1742,7 @@ mod test {
         components = [
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo1" } } },
             { blobstore_id = 2, store_type = { normal = {}}, blobstore = { blob_files = { path = "/tmp/foo2" } } },
-            { blobstore_id = 3, store_type = { write_mostly = {}}, blobstore = { blob_files = { path = "/tmp/foo3" } } },
+            { blobstore_id = 3, store_type = { write_only = {}}, blobstore = { blob_files = { path = "/tmp/foo3" } } },
         ]
         queue_db = { remote = { db_address = "queue_db_address" } }
         "#;
@@ -1799,7 +1799,7 @@ mod test {
                 ),
                 (
                     BlobstoreId::new(3),
-                    MultiplexedStoreType::WriteMostly,
+                    MultiplexedStoreType::WriteOnly,
                     BlobConfig::Files {
                         path: "/tmp/foo3".into(),
                     },

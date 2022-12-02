@@ -28,7 +28,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::fb303::ReadyFlagService;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use multiplexedblob::ScrubWriteMostly;
+use multiplexedblob::SrubWriteOnly;
 
 #[derive(Parser)]
 #[clap(group(
@@ -74,7 +74,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let scrub_extension = ScrubAppExtension {
-        write_mostly_missing: Some(ScrubWriteMostly::SkipMissing),
+        write_only_missing: Some(SrubWriteOnly::SkipMissing),
         ..Default::default()
     };
 

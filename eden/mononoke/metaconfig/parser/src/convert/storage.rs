@@ -46,7 +46,10 @@ use repos::RawDbShardedRemote;
 use repos::RawEphemeralBlobstoreConfig;
 use repos::RawFilestoreParams;
 use repos::RawMetadataConfig;
+use repos::RawMultiplexedStoreNormal;
 use repos::RawMultiplexedStoreType;
+use repos::RawMultiplexedStoreWriteMostly;
+use repos::RawMultiplexedStoreWriteOnly;
 use repos::RawShardedDbConfig;
 use repos::RawStorageConfig;
 
@@ -406,8 +409,15 @@ impl Convert for RawMultiplexedStoreType {
 
     fn convert(self) -> Result<Self::Output> {
         match self {
-            RawMultiplexedStoreType::normal(_) => Ok(MultiplexedStoreType::Normal),
-            RawMultiplexedStoreType::write_mostly(_) => Ok(MultiplexedStoreType::WriteMostly),
+            RawMultiplexedStoreType::normal(RawMultiplexedStoreNormal {}) => {
+                Ok(MultiplexedStoreType::Normal)
+            }
+            RawMultiplexedStoreType::write_only(RawMultiplexedStoreWriteOnly {}) => {
+                Ok(MultiplexedStoreType::WriteOnly)
+            }
+            RawMultiplexedStoreType::write_mostly(RawMultiplexedStoreWriteMostly {}) => {
+                Ok(MultiplexedStoreType::WriteOnly)
+            }
             RawMultiplexedStoreType::UnknownField(field) => {
                 Err(anyhow!("unknown store type {}", field))
             }

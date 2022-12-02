@@ -62,7 +62,7 @@ use crate::scrub::ScrubAction;
 use crate::scrub::ScrubBlobstore;
 use crate::scrub::ScrubHandler;
 use crate::scrub::ScrubOptions;
-use crate::scrub::ScrubWriteMostly;
+use crate::scrub::SrubWriteOnly;
 
 #[async_trait]
 impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
@@ -166,7 +166,7 @@ impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
 
 async fn scrub_none(
     fb: FacebookInit,
-    scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+    scrub_action_on_missing_write_only: SrubWriteOnly,
 ) -> Result<()> {
     let bid0 = BlobstoreId::new(0);
     let bs0 = Arc::new(Tickable::new());
@@ -190,7 +190,7 @@ async fn scrub_none(
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         ScrubOptions {
-            scrub_action_on_missing_write_mostly,
+            scrub_action_on_missing_write_only,
             ..ScrubOptions::default()
         },
         Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
@@ -224,9 +224,9 @@ async fn scrub_none(
 
 #[fbinit::test]
 async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
-    scrub_none(fb, ScrubWriteMostly::Scrub).await?;
-    scrub_none(fb, ScrubWriteMostly::SkipMissing).await?;
-    scrub_none(fb, ScrubWriteMostly::PopulateIfAbsent).await
+    scrub_none(fb, SrubWriteOnly::Scrub).await?;
+    scrub_none(fb, SrubWriteOnly::SkipMissing).await?;
+    scrub_none(fb, SrubWriteOnly::PopulateIfAbsent).await
 }
 
 #[fbinit::test]
@@ -860,7 +860,7 @@ async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly: ScrubWriteMostly) {
+async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_only: SrubWriteOnly) {
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
@@ -883,7 +883,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
-            scrub_action_on_missing_write_mostly,
+            scrub_action_on_missing_write_only,
             ..ScrubOptions::default()
         },
         scrub_handler.clone(),
@@ -905,7 +905,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         assert_eq!(get_fut.await.unwrap(), None, "SomeNone + Err expected None");
     }
 
-    // non-existing key when one write mostly blobstore failing
+    // non-existing key when one write only blobstore failing
     {
         let k0 = "k0";
 
@@ -985,7 +985,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         nonzero!(1u64),
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
-            scrub_action_on_missing_write_mostly,
+            scrub_action_on_missing_write_only,
             ..ScrubOptions::default()
         },
         scrub_handler.clone(),
@@ -1034,7 +1034,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             nonzero!(1u64),
             ScrubOptions {
                 scrub_action: ScrubAction::Repair,
-                scrub_action_on_missing_write_mostly,
+                scrub_action_on_missing_write_only,
                 queue_peek_bound: Duration::from_secs(7200),
                 ..ScrubOptions::default()
             },
@@ -1059,7 +1059,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
-        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+        if scrub_action_on_missing_write_only != SrubWriteOnly::PopulateIfAbsent {
             // this read doesn't happen in this mode
             bs2.tick(None);
         }
@@ -1101,7 +1101,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
-        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+        if scrub_action_on_missing_write_only != SrubWriteOnly::PopulateIfAbsent {
             // this read doesn't happen in this mode
             bs2.tick(None);
         }
@@ -1115,13 +1115,13 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         // Now all populated.
         assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
         assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
-        match scrub_action_on_missing_write_mostly {
-            ScrubWriteMostly::Scrub
-            | ScrubWriteMostly::PopulateIfAbsent
-            | ScrubWriteMostly::ScrubIfAbsent => {
+        match scrub_action_on_missing_write_only {
+            SrubWriteOnly::Scrub
+            | SrubWriteOnly::PopulateIfAbsent
+            | SrubWriteOnly::ScrubIfAbsent => {
                 assert_eq!(bs2.get_bytes(k1), Some(v1.clone()))
             }
-            ScrubWriteMostly::SkipMissing => {
+            SrubWriteOnly::SkipMissing => {
                 assert_eq!(bs2.get_bytes(k1), None)
             }
         }
@@ -1130,9 +1130,9 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
 
 #[fbinit::test]
 async fn scrubbed(fb: FacebookInit) {
-    scrub_scenarios(fb, ScrubWriteMostly::Scrub).await;
-    scrub_scenarios(fb, ScrubWriteMostly::SkipMissing).await;
-    scrub_scenarios(fb, ScrubWriteMostly::PopulateIfAbsent).await;
+    scrub_scenarios(fb, SrubWriteOnly::Scrub).await;
+    scrub_scenarios(fb, SrubWriteOnly::SkipMissing).await;
+    scrub_scenarios(fb, SrubWriteOnly::PopulateIfAbsent).await;
 }
 
 #[fbinit::test]
@@ -1237,19 +1237,19 @@ async fn queue_waits(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-async fn write_mostly_get(fb: FacebookInit) {
+async fn write_only_get(fb: FacebookInit) {
     let both_key = "both";
     let value = make_value("value");
-    let write_mostly_key = "write_mostly";
+    let write_only_key = "write_only";
     let main_only_key = "main_only";
     let main_bs = Arc::new(Tickable::new());
-    let write_mostly_bs = Arc::new(Tickable::new());
+    let write_only_bs = Arc::new(Tickable::new());
 
     let log = Arc::new(LogHandler::new());
     let bs = MultiplexedBlobstoreBase::new(
         MultiplexId::new(1),
         vec![(BlobstoreId::new(0), main_bs.clone())],
-        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        vec![(BlobstoreId::new(1), write_only_bs.clone())],
         nonzero!(1usize),
         nonzero!(2usize),
         log.clone(),
@@ -1263,19 +1263,19 @@ async fn write_mostly_get(fb: FacebookInit) {
     // Put one blob into both blobstores
     main_bs.add_bytes(both_key.to_owned(), value.clone());
     main_bs.add_bytes(main_only_key.to_owned(), value.clone());
-    write_mostly_bs.add_bytes(both_key.to_owned(), value.clone());
-    // Put a blob only into the write mostly blobstore
-    write_mostly_bs.add_bytes(write_mostly_key.to_owned(), value.clone());
+    write_only_bs.add_bytes(both_key.to_owned(), value.clone());
+    // Put a blob only into the write only blobstore
+    write_only_bs.add_bytes(write_only_key.to_owned(), value.clone());
 
-    // Fetch the blob that's in both blobstores, see that the write mostly blobstore isn't being
+    // Fetch the blob that's in both blobstores, see that the write only blobstore isn't being
     // read from by ticking it
     {
         let mut fut = bs.get(ctx, both_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
-        // Ticking the write_mostly store does nothing.
+        // Ticking the write_only store does nothing.
         for _ in 0..3usize {
-            write_mostly_bs.tick(None);
+            write_only_bs.tick(None);
             assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
         }
 
@@ -1285,9 +1285,9 @@ async fn write_mostly_get(fb: FacebookInit) {
         log.clear();
     }
 
-    // Fetch the blob that's only in the write mostly blobstore, see it fetch correctly
+    // Fetch the blob that's only in the write only blobstore, see it fetch correctly
     {
-        let mut fut = bs.get(ctx, write_mostly_key);
+        let mut fut = bs.get(ctx, write_only_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
         // Ticking the main store does nothing, as it lacks the blob
@@ -1296,71 +1296,71 @@ async fn write_mostly_get(fb: FacebookInit) {
             assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
         }
 
-        // Tick the write_mostly store, and we're finished
-        write_mostly_bs.tick(None);
+        // Tick the write_only store, and we're finished
+        write_only_bs.tick(None);
         assert_eq!(fut.await.unwrap(), Some(value.clone().into()));
         log.clear();
     }
 
-    // Fetch the blob that's in both blobstores, see that the write mostly blobstore
+    // Fetch the blob that's in both blobstores, see that the write only blobstore
     // is used when the main blobstore fails
     {
         let mut fut = bs.get(ctx, both_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
-        // Ticking the write_mostly store does nothing.
+        // Ticking the write_only store does nothing.
         for _ in 0..3usize {
-            write_mostly_bs.tick(None);
+            write_only_bs.tick(None);
             assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
         }
 
         // Tick the main store, and we're still stuck
-        main_bs.tick(Some("Main blobstore failed - fallback to write_mostly"));
+        main_bs.tick(Some("Main blobstore failed - fallback to write_only"));
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
-        // Finally, the write_mostly store returns our value
-        write_mostly_bs.tick(None);
+        // Finally, the write_only store returns our value
+        write_only_bs.tick(None);
         assert_eq!(fut.await.unwrap(), Some(value.clone().into()));
         log.clear();
     }
 
-    // Fetch the blob that's in main blobstores, see that the write mostly blobstore
+    // Fetch the blob that's in main blobstores, see that the write only blobstore
     // None value is not used when the main blobstore fails
     {
         let mut fut = bs.get(ctx, main_only_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
-        // Ticking the write_mostly store does nothing.
+        // Ticking the write_only store does nothing.
         for _ in 0..3usize {
-            write_mostly_bs.tick(None);
+            write_only_bs.tick(None);
             assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
         }
 
         // Tick the main store, and we're still stuck
-        main_bs.tick(Some("Main blobstore failed - fallback to write_mostly"));
+        main_bs.tick(Some("Main blobstore failed - fallback to write_only"));
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
-        // Finally, should get an error as None from a write mostly is indeterminate
+        // Finally, should get an error as None from a write only is indeterminate
         // as it might not have been fully populated yet
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         assert_eq!(
             fut.await.err().unwrap().to_string().as_str(),
-            "All blobstores failed: {BlobstoreId(0): Main blobstore failed - fallback to write_mostly}"
+            "All blobstores failed: {BlobstoreId(0): Main blobstore failed - fallback to write_only}"
         );
         log.clear();
     }
 }
 
 #[fbinit::test]
-async fn write_mostly_put(fb: FacebookInit) {
+async fn write_only_put(fb: FacebookInit) {
     let main_bs = Arc::new(Tickable::new());
-    let write_mostly_bs = Arc::new(Tickable::new());
+    let write_only_bs = Arc::new(Tickable::new());
 
     let log = Arc::new(LogHandler::new());
     let bs = MultiplexedBlobstoreBase::new(
         MultiplexId::new(1),
         vec![(BlobstoreId::new(0), main_bs.clone())],
-        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        vec![(BlobstoreId::new(1), write_only_bs.clone())],
         nonzero!(1usize),
         nonzero!(2usize),
         log.clone(),
@@ -1371,7 +1371,7 @@ async fn write_mostly_put(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
 
-    // succeed as soon as main succeeds. Fail write_mostly to confirm that we can still read.
+    // succeed as soon as main succeeds. Fail write_only to confirm that we can still read.
     {
         let v0 = make_value("v0");
         let k0 = "k0";
@@ -1384,8 +1384,8 @@ async fn write_mostly_put(fb: FacebookInit) {
         main_bs.tick(None);
         put_fut.await.unwrap();
         assert_eq!(main_bs.get_bytes(k0), Some(v0.clone()));
-        assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
-        write_mostly_bs.tick(Some("write_mostly_bs failed"));
+        assert!(write_only_bs.storage.with(|s| s.is_empty()));
+        write_only_bs.tick(Some("write_only_bs failed"));
         assert!(
             log.log
                 .with(|log| log == &vec![(BlobstoreId::new(0), k0.to_owned())])
@@ -1395,16 +1395,16 @@ async fn write_mostly_put(fb: FacebookInit) {
         let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         main_bs.tick(None);
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
-        assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
+        assert!(write_only_bs.storage.with(|s| s.is_empty()));
 
         main_bs.storage.with(|s| s.clear());
-        write_mostly_bs.storage.with(|s| s.clear());
+        write_only_bs.storage.with(|s| s.clear());
         log.clear();
     }
 
-    // succeed as soon as write_mostly succeeds. Fail main to confirm we can still read
+    // succeed as soon as write_only succeeds. Fail main to confirm we can still read
     {
         let v0 = make_value("v0");
         let k0 = "k0";
@@ -1414,9 +1414,9 @@ async fn write_mostly_put(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(write_mostly_bs.get_bytes(k0), Some(v0.clone()));
+        assert_eq!(write_only_bs.get_bytes(k0), Some(v0.clone()));
         assert!(main_bs.storage.with(|s| s.is_empty()));
         main_bs.tick(Some("main_bs failed"));
         assert!(
@@ -1424,21 +1424,21 @@ async fn write_mostly_put(fb: FacebookInit) {
                 .with(|log| log == &vec![(BlobstoreId::new(1), k0.to_owned())])
         );
 
-        // should succeed as it is stored in write_mostly_bs, but main won't read
+        // should succeed as it is stored in write_only_bs, but main won't read
         let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         main_bs.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
         assert!(main_bs.storage.with(|s| s.is_empty()));
 
         main_bs.storage.with(|s| s.clear());
-        write_mostly_bs.storage.with(|s| s.clear());
+        write_only_bs.storage.with(|s| s.clear());
         log.clear();
     }
 
-    // succeed if write_mostly succeeds and main fails
+    // succeed if write_only succeeds and main fails
     {
         let v1 = make_value("v1");
         let k1 = "k1";
@@ -1450,10 +1450,10 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         main_bs.tick(Some("case 2: main_bs failed"));
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         put_fut.await.unwrap();
         assert!(main_bs.storage.with(|s| s.get(k1).is_none()));
-        assert_eq!(write_mostly_bs.get_bytes(k1), Some(v1.clone()));
+        assert_eq!(write_only_bs.get_bytes(k1), Some(v1.clone()));
         assert!(
             log.log
                 .with(|log| log == &vec![(BlobstoreId::new(1), k1.to_owned())])
@@ -1463,12 +1463,12 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         main_bs.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
         assert!(main_bs.storage.with(|s| s.get(k1).is_none()));
 
         main_bs.storage.with(|s| s.clear());
-        write_mostly_bs.storage.with(|s| s.clear());
+        write_only_bs.storage.with(|s| s.clear());
         log.clear();
     }
 
@@ -1484,7 +1484,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         main_bs.tick(Some("case 3: main_bs failed"));
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        write_mostly_bs.tick(Some("case 3: write_mostly_bs failed"));
+        write_only_bs.tick(Some("case 3: write_only_bs failed"));
         assert!(put_fut.await.is_err());
     }
 
@@ -1493,7 +1493,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         let v4 = make_value("v4");
         let k4 = "k4";
         main_bs.storage.with(|s| s.clear());
-        write_mostly_bs.storage.with(|s| s.clear());
+        write_only_bs.storage.with(|s| s.clear());
         log.clear();
 
         let mut put_fut = bs
@@ -1504,11 +1504,11 @@ async fn write_mostly_put(fb: FacebookInit) {
         main_bs.tick(None);
         put_fut.await.unwrap();
         assert_eq!(main_bs.get_bytes(k4), Some(v4.clone()));
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         while log.log.with(|log| log.len() != 2) {
             tokio::task::yield_now().await;
         }
-        assert_eq!(write_mostly_bs.get_bytes(k4), Some(v4.clone()));
+        assert_eq!(write_only_bs.get_bytes(k4), Some(v4.clone()));
     }
 }
 
@@ -1516,7 +1516,7 @@ async fn write_mostly_put(fb: FacebookInit) {
 async fn needed_writes(fb: FacebookInit) {
     let main_bs0 = Arc::new(Tickable::new());
     let main_bs2 = Arc::new(Tickable::new());
-    let write_mostly_bs = Arc::new(Tickable::new());
+    let write_only_bs = Arc::new(Tickable::new());
 
     let log = Arc::new(LogHandler::new());
     let bs = MultiplexedBlobstoreBase::new(
@@ -1525,7 +1525,7 @@ async fn needed_writes(fb: FacebookInit) {
             (BlobstoreId::new(0), main_bs0.clone()),
             (BlobstoreId::new(2), main_bs2.clone()),
         ],
-        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        vec![(BlobstoreId::new(1), write_only_bs.clone())],
         nonzero!(2usize),
         nonzero!(2usize),
         log.clone(),
@@ -1577,12 +1577,12 @@ async fn needed_writes(fb: FacebookInit) {
 
         assert_eq!(main_bs0.get_bytes(k0), Some(v0.clone()));
         assert_eq!(main_bs2.get_bytes(k0), Some(v0.clone()));
-        assert_eq!(write_mostly_bs.get_bytes(k0), None);
-        write_mostly_bs.tick(Some("Error"));
+        assert_eq!(write_only_bs.get_bytes(k0), None);
+        write_only_bs.tick(Some("Error"));
         log.clear();
     }
 
-    // A write-mostly counts as a success.
+    // A write-only counts as a success.
     {
         let v1 = make_value("v1");
         let k1 = "k1";
@@ -1604,7 +1604,7 @@ async fn needed_writes(fb: FacebookInit) {
             )
         });
 
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
         assert!(
             put_fut.await.is_ok(),
             "Put failed with two succcessful writes"
@@ -1622,7 +1622,7 @@ async fn needed_writes(fb: FacebookInit) {
         });
 
         assert_eq!(main_bs0.get_bytes(k1), Some(v1.clone()));
-        assert_eq!(write_mostly_bs.get_bytes(k1), Some(v1.clone()));
+        assert_eq!(write_only_bs.get_bytes(k1), Some(v1.clone()));
         assert_eq!(main_bs2.get_bytes(k1), None);
         main_bs2.tick(Some("Error"));
         log.clear();
@@ -1633,7 +1633,7 @@ async fn needed_writes(fb: FacebookInit) {
 async fn needed_writes_bad_config(fb: FacebookInit) {
     let main_bs0 = Arc::new(Tickable::new());
     let main_bs2 = Arc::new(Tickable::new());
-    let write_mostly_bs = Arc::new(Tickable::new());
+    let write_only_bs = Arc::new(Tickable::new());
 
     let log = Arc::new(LogHandler::new());
     let bs = MultiplexedBlobstoreBase::new(
@@ -1642,7 +1642,7 @@ async fn needed_writes_bad_config(fb: FacebookInit) {
             (BlobstoreId::new(0), main_bs0.clone()),
             (BlobstoreId::new(2), main_bs2.clone()),
         ],
-        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        vec![(BlobstoreId::new(1), write_only_bs.clone())],
         nonzero!(5usize),
         nonzero!(5usize),
         log.clone(),
@@ -1663,7 +1663,7 @@ async fn needed_writes_bad_config(fb: FacebookInit) {
 
         main_bs0.tick(None);
         main_bs2.tick(None);
-        write_mostly_bs.tick(None);
+        write_only_bs.tick(None);
 
         assert!(
             put_fut.await.is_err(),

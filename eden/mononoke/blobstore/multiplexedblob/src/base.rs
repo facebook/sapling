@@ -57,7 +57,7 @@ use tokio::time::timeout;
 use tunables::tunables;
 use twox_hash::XxHash;
 
-use crate::scrub::ScrubWriteMostly;
+use crate::scrub::SrubWriteOnly;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 const DEFAULT_IS_PRESENT_TIMEOUT_MS: i64 = 10000;
@@ -71,12 +71,12 @@ pub enum ErrorKind {
     #[error("Some blobstores failed, and other returned None: {main_errors:?}")]
     SomeFailedOthersNone {
         main_errors: Arc<BlobstoresReturnedError>,
-        write_mostly_errors: Arc<BlobstoresReturnedError>,
+        write_only_errors: Arc<BlobstoresReturnedError>,
     },
     #[error("All blobstores failed: {main_errors:?}")]
     AllFailed {
         main_errors: Arc<BlobstoresReturnedError>,
-        write_mostly_errors: Arc<BlobstoresReturnedError>,
+        write_only_errors: Arc<BlobstoresReturnedError>,
     },
     // Errors below this point are from ScrubBlobstore only. If they include an
     // Option<BlobstoreBytes>, this implies that this error is recoverable
@@ -87,7 +87,7 @@ pub enum ErrorKind {
     #[error("Some blobstores missing this item: {missing_main:?}")]
     SomeMissingItem {
         missing_main: Arc<BlobstoresReturnedNone>,
-        missing_write_mostly: Arc<BlobstoresReturnedNone>,
+        missing_write_only: Arc<BlobstoresReturnedNone>,
         value: BlobstoreGetData,
     },
     #[error("Multiple failures on put: {0:?}")]
@@ -120,13 +120,13 @@ pub struct MultiplexedBlobstoreBase {
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
     ///
-    /// There are two circumstances in which a write-mostly blobstore will be read from on `get`:
+    /// There are two circumstances in which a write-only blobstore will be read from on `get`:
     /// 1. The normal blobstores (above) all return Ok(None) or Err for a blob.
     ///    In this case, we read as it's our only chance of returning data that we previously accepted
     ///    during a `put` operation.
     /// 2. When we're recording blobstore stats to Scuba on a `get` - in this case, the read executes
     ///    solely to gather statistics, and the result is discarded
-    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    write_only_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     /// `put` is considered successful if either this many `put` and `on_put` pairs succeeded or all puts were
     /// successful (regardless of whether `on_put`s were successful).
     /// This is meant to ensure that `put` fails if the data could end up lost (e.g. if a buggy experimental
@@ -148,15 +148,15 @@ impl std::fmt::Display for MultiplexedBlobstoreBase {
             .iter()
             .map(|(id, store)| (*id, store.to_string()))
             .collect();
-        let write_mostly_blobstores: Vec<_> = self
-            .write_mostly_blobstores
+        let write_only_blobstores: Vec<_> = self
+            .write_only_blobstores
             .iter()
             .map(|(id, store)| (*id, store.to_string()))
             .collect();
         write!(
             f,
-            "Normal {:?}, write mostly {:?}",
-            blobstores, write_mostly_blobstores
+            "Normal {:?}, write only {:?}",
+            blobstores, write_only_blobstores
         )
     }
 }
@@ -164,42 +164,42 @@ impl std::fmt::Display for MultiplexedBlobstoreBase {
 fn blobstores_failed_error(
     main_blobstore_ids: impl Iterator<Item = BlobstoreId>,
     main_errors: HashMap<BlobstoreId, Error>,
-    write_mostly_errors: HashMap<BlobstoreId, Error>,
+    write_only_errors: HashMap<BlobstoreId, Error>,
 ) -> ErrorKind {
     let main_errored_ids: HashSet<BlobstoreId> = main_errors.keys().copied().collect();
     let all_main_ids: HashSet<BlobstoreId> = main_blobstore_ids.collect();
     if main_errored_ids == all_main_ids {
-        // The write mostly stores that returned None might not have been fully populated
+        // The write only stores that returned None might not have been fully populated
         ErrorKind::AllFailed {
             main_errors: Arc::new(main_errors),
-            write_mostly_errors: Arc::new(write_mostly_errors),
+            write_only_errors: Arc::new(write_only_errors),
         }
     } else {
         ErrorKind::SomeFailedOthersNone {
             main_errors: Arc::new(main_errors),
-            write_mostly_errors: Arc::new(write_mostly_errors),
+            write_only_errors: Arc::new(write_only_errors),
         }
     }
 }
 
 type GetResult = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>);
 
-/// Get normal and write mostly results based on ScrubWriteMostly
+/// Get normal and write only results based on SrubWriteOnly
 /// mode of getting results, which might optimise for less access
-/// to main blobstores or less access to write mostly blobstores
+/// to main blobstores or less access to write only blobstores
 pub async fn scrub_get_results<MF, WF>(
     get_main_results: impl FnOnce() -> MF,
-    mut get_write_mostly_results: impl FnMut() -> WF,
-    write_mostly_blobstores: impl Iterator<Item = BlobstoreId>,
-    write_mostly: ScrubWriteMostly,
+    mut get_write_only_results: impl FnMut() -> WF,
+    write_only_blobstores: impl Iterator<Item = BlobstoreId>,
+    write_only: SrubWriteOnly,
 ) -> impl Iterator<Item = (bool, GetResult)>
 where
     MF: Future<Output = Vec<GetResult>>,
     WF: Future<Output = Vec<GetResult>>,
 {
     // Exit early if all mostly-write are ok, and don't check main blobstores
-    if write_mostly == ScrubWriteMostly::ScrubIfAbsent {
-        let mut results = get_write_mostly_results().await.into_iter();
+    if write_only == SrubWriteOnly::ScrubIfAbsent {
+        let mut results = get_write_only_results().await.into_iter();
         if let Some((bs_id, Ok(Some(data)))) = results.next() {
             if results.all(|(_, r)| match r {
                 Ok(Some(other_data)) => other_data == data,
@@ -210,24 +210,22 @@ where
         }
     }
 
-    let write_mostly_results = async {
-        match write_mostly {
-            ScrubWriteMostly::Scrub | ScrubWriteMostly::SkipMissing => {
-                get_write_mostly_results().await
-            }
-            ScrubWriteMostly::PopulateIfAbsent | ScrubWriteMostly::ScrubIfAbsent => {
-                write_mostly_blobstores.map(|id| (id, Ok(None))).collect()
+    let write_only_results = async {
+        match write_only {
+            SrubWriteOnly::Scrub | SrubWriteOnly::SkipMissing => get_write_only_results().await,
+            SrubWriteOnly::PopulateIfAbsent | SrubWriteOnly::ScrubIfAbsent => {
+                write_only_blobstores.map(|id| (id, Ok(None))).collect()
             }
         }
     };
-    let (normal_results, write_mostly_results) =
-        future::join(get_main_results(), write_mostly_results).await;
+    let (normal_results, write_only_results) =
+        future::join(get_main_results(), write_only_results).await;
 
     Either::Right(
         normal_results
             .into_iter()
             .map(|r| (false, r))
-            .chain(write_mostly_results.into_iter().map(|r| (true, r))),
+            .chain(write_only_results.into_iter().map(|r| (true, r))),
     )
 }
 
@@ -236,16 +234,16 @@ pub fn scrub_parse_results(
     all_main: impl Iterator<Item = BlobstoreId>,
 ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
     let mut missing_main = HashSet::new();
-    let mut missing_write_mostly = HashSet::new();
+    let mut missing_write_only = HashSet::new();
     let mut get_data = None;
     let mut main_errors = HashMap::new();
-    let mut write_mostly_errors = HashMap::new();
+    let mut write_only_errors = HashMap::new();
 
-    for (is_write_mostly, (blobstore_id, result)) in results {
+    for (is_write_only, (blobstore_id, result)) in results {
         match result {
             Ok(None) => {
-                if is_write_mostly {
-                    missing_write_mostly.insert(blobstore_id);
+                if is_write_only {
+                    missing_write_only.insert(blobstore_id);
                 } else {
                     missing_main.insert(blobstore_id);
                 }
@@ -261,8 +259,8 @@ pub fn scrub_parse_results(
                     .insert(blobstore_id);
             }
             Err(err) => {
-                if is_write_mostly {
-                    write_mostly_errors.insert(blobstore_id, err);
+                if is_write_only {
+                    write_only_errors.insert(blobstore_id, err);
                 } else {
                     main_errors.insert(blobstore_id, err);
                 }
@@ -271,24 +269,24 @@ pub fn scrub_parse_results(
     }
     match get_data {
         None => {
-            if main_errors.is_empty() && write_mostly_errors.is_empty() {
+            if main_errors.is_empty() && write_only_errors.is_empty() {
                 Ok(None)
             } else {
                 Err(blobstores_failed_error(
                     all_main,
                     main_errors,
-                    write_mostly_errors,
+                    write_only_errors,
                 ))
             }
         }
         Some((all_values, value)) if all_values.len() == 1 => {
-            if missing_main.is_empty() && missing_write_mostly.is_empty() {
+            if missing_main.is_empty() && missing_write_only.is_empty() {
                 Ok(Some(value))
             } else {
                 // This silently ignores failed blobstores if at least one has a value
                 Err(ErrorKind::SomeMissingItem {
                     missing_main: Arc::new(missing_main),
-                    missing_write_mostly: Arc::new(missing_write_mostly),
+                    missing_write_only: Arc::new(missing_write_only),
                     value,
                 })
             }
@@ -297,7 +295,7 @@ pub fn scrub_parse_results(
             let answered = all_values.into_iter().map(|(_, stores)| stores).collect();
             let mut all_missing = HashSet::new();
             all_missing.extend(missing_main.into_iter());
-            all_missing.extend(missing_write_mostly.into_iter());
+            all_missing.extend(missing_write_only.into_iter());
             Err(ErrorKind::ValueMismatch(
                 Arc::new(answered),
                 Arc::new(all_missing),
@@ -310,7 +308,7 @@ impl MultiplexedBlobstoreBase {
     pub fn new(
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         not_present_read_quorum: NonZeroUsize,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
@@ -322,7 +320,7 @@ impl MultiplexedBlobstoreBase {
         Self {
             multiplex_id,
             blobstores: blobstores.into(),
-            write_mostly_blobstores: write_mostly_blobstores.into(),
+            write_only_blobstores: write_only_blobstores.into(),
             minimum_successful_writes,
             not_present_read_quorum,
             handler,
@@ -339,7 +337,7 @@ impl MultiplexedBlobstoreBase {
         &self,
         ctx: &CoreContext,
         key: &str,
-        write_mostly: ScrubWriteMostly,
+        write_only: SrubWriteOnly,
     ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
@@ -357,14 +355,14 @@ impl MultiplexedBlobstoreBase {
             || {
                 join_all(multiplexed_get(
                     ctx,
-                    self.write_mostly_blobstores.as_ref(),
+                    self.write_only_blobstores.as_ref(),
                     key,
                     OperationType::ScrubGet,
                     scuba.clone(),
                 ))
             },
-            self.write_mostly_blobstores.iter().map(|(id, _)| *id),
-            write_mostly,
+            self.write_only_blobstores.iter().map(|(id, _)| *id),
+            write_only,
         )
         .await;
 
@@ -423,13 +421,13 @@ pub async fn inner_put(
 async fn blobstore_get<'a>(
     ctx: &'a CoreContext,
     blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
-    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    write_only_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     not_present_read_quorum: NonZeroUsize,
     key: &'a str,
     scuba: MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     let is_logged = scuba.sampling().is_logged();
-    let blobstores_count = blobstores.len() + write_mostly_blobstores.len();
+    let blobstores_count = blobstores.len() + write_only_blobstores.len();
     let mut needed_not_present: usize = not_present_read_quorum.get();
 
     if needed_not_present > blobstores_count {
@@ -443,7 +441,7 @@ async fn blobstore_get<'a>(
     let (stats, result) = {
         async move {
             let mut main_errors = HashMap::new();
-            let mut write_mostly_errors = HashMap::new();
+            let mut write_only_errors = HashMap::new();
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::BlobGets);
 
@@ -455,9 +453,9 @@ async fn blobstore_get<'a>(
                 scuba.clone(),
             )
             .collect();
-            let write_mostly_requests: FuturesUnordered<_> = multiplexed_get(
+            let write_only_requests: FuturesUnordered<_> = multiplexed_get(
                 ctx.clone(),
-                write_mostly_blobstores.as_ref(),
+                write_only_blobstores.as_ref(),
                 key.to_owned(),
                 OperationType::Get,
                 scuba,
@@ -465,16 +463,16 @@ async fn blobstore_get<'a>(
             .collect();
 
             // `chain` here guarantees that `main_requests` is empty before it starts
-            // polling anything in `write_mostly_requests`
+            // polling anything in `write_only_requests`
             let mut requests = main_requests
                 .map(|r| (false, r))
-                .chain(write_mostly_requests.map(|r| (true, r)));
-            while let Some((is_write_mostly, result)) = requests.next().await {
+                .chain(write_only_requests.map(|r| (true, r)));
+            while let Some((is_write_only, result)) = requests.next().await {
                 match result {
                     (_, Ok(Some(mut value))) => {
                         if is_logged {
                             // Allow the other requests to complete so that we can record some
-                            // metrics for the blobstore. This will also log metrics for write-mostly
+                            // metrics for the blobstore. This will also log metrics for write-only
                             // blobstores, which helps us decide whether they're good
                             spawn_stream_completion(requests);
                         }
@@ -483,8 +481,8 @@ async fn blobstore_get<'a>(
                         return Ok(Some(value));
                     }
                     (blobstore_id, Err(error)) => {
-                        if is_write_mostly {
-                            write_mostly_errors.insert(blobstore_id, error);
+                        if is_write_only {
+                            write_only_errors.insert(blobstore_id, error);
                         } else {
                             main_errors.insert(blobstore_id, error);
                         }
@@ -501,20 +499,20 @@ async fn blobstore_get<'a>(
                 }
             }
 
-            let error_count = main_errors.len() + write_mostly_errors.len();
+            let error_count = main_errors.len() + write_only_errors.len();
             if error_count == 0 {
                 // All blobstores must have returned None, as Some would have triggered a return,
                 Ok(None)
             } else if error_count == blobstores_count {
                 Err(ErrorKind::AllFailed {
                     main_errors: Arc::new(main_errors),
-                    write_mostly_errors: Arc::new(write_mostly_errors),
+                    write_only_errors: Arc::new(write_only_errors),
                 })
             } else {
                 Err(blobstores_failed_error(
                     blobstores.iter().map(|(id, _)| *id),
                     main_errors,
-                    write_mostly_errors,
+                    write_only_errors,
                 ))
             }
         }
@@ -618,14 +616,14 @@ impl Blobstore for MultiplexedBlobstoreBase {
     ) -> Result<Option<BlobstoreGetData>> {
         let mut scuba = self.scuba.clone();
         let blobstores = self.blobstores.clone();
-        let write_mostly_blobstores = self.write_mostly_blobstores.clone();
+        let write_only_blobstores = self.write_only_blobstores.clone();
         let not_present_read_quorum = self.not_present_read_quorum;
         scuba.sampled(self.scuba_sample_rate);
 
         blobstore_get(
             ctx,
             blobstores,
-            write_mostly_blobstores,
+            write_only_blobstores,
             not_present_read_quorum,
             key,
             scuba,
@@ -641,7 +639,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
         let is_logged = scuba.sampling().is_logged();
-        let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
+        let blobstores_count = self.blobstores.len() + self.write_only_blobstores.len();
         let mut needed_not_present: usize = self.not_present_read_quorum.get();
         let comprehensive_lookup = matches!(
             ctx.session().session_class(),
@@ -656,9 +654,9 @@ impl Blobstore for MultiplexedBlobstoreBase {
         )
         .collect();
 
-        let write_mostly_requests: FuturesUnordered<_> = multiplexed_is_present(
+        let write_only_requests: FuturesUnordered<_> = multiplexed_is_present(
             ctx.clone(),
-            &self.write_mostly_blobstores.clone(),
+            &self.write_only_blobstores.clone(),
             key.to_owned(),
             scuba,
         )
@@ -668,28 +666,28 @@ impl Blobstore for MultiplexedBlobstoreBase {
         // "comprehensive" and "regular"
         //
         // Comprehensive lookup requires presence in all the blobstores.
-        // Regular lookup requires presence in at least one main or write mostly blobstore.
+        // Regular lookup requires presence in at least one main or write only blobstore.
 
         // `chain` here guarantees that `main_requests` is empty before it starts
-        // polling anything in `write_mostly_requests`
+        // polling anything in `write_only_requests`
         let mut requests = main_requests
             .map(|r| (false, r))
-            .chain(write_mostly_requests.map(|r| (true, r)));
+            .chain(write_only_requests.map(|r| (true, r)));
         let (stats, result) = {
             let blobstores = &self.blobstores;
             async move {
                 let mut main_errors = HashMap::new();
-                let mut write_mostly_errors = HashMap::new();
+                let mut write_only_errors = HashMap::new();
                 let mut present_counter = 0;
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPresenceChecks);
-                while let Some((is_write_mostly, result)) = requests.next().await {
+                while let Some((is_write_only, result)) = requests.next().await {
                     match result {
                         (_, Ok(BlobstoreIsPresent::Present)) => {
                             if !comprehensive_lookup {
                                 if is_logged {
                                     // Allow the other requests to complete so that we can record some
-                                    // metrics for the blobstore. This will also log metrics for write-mostly
+                                    // metrics for the blobstore. This will also log metrics for write-only
                                     // blobstores, which helps us decide whether they're good
                                     spawn_stream_completion(requests);
                                 }
@@ -708,8 +706,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         }
                         // is_present failed for the underlying blobstore
                         (blobstore_id, Err(error)) => {
-                            if is_write_mostly {
-                                write_mostly_errors.insert(blobstore_id, error);
+                            if is_write_only {
+                                write_only_errors.insert(blobstore_id, error);
                             } else {
                                 main_errors.insert(blobstore_id, error);
                             }
@@ -719,8 +717,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 "Received 'ProbablyNotPresent' from the underlying blobstore"
                                     .to_string(),
                             );
-                            if is_write_mostly {
-                                write_mostly_errors.insert(blobstore_id, err);
+                            if is_write_only {
+                                write_only_errors.insert(blobstore_id, err);
                             } else {
                                 main_errors.insert(blobstore_id, err);
                             }
@@ -730,14 +728,14 @@ impl Blobstore for MultiplexedBlobstoreBase {
 
                 if comprehensive_lookup {
                     // all blobstores reported the blob is present
-                    if main_errors.is_empty() && write_mostly_errors.is_empty() {
+                    if main_errors.is_empty() && write_only_errors.is_empty() {
                         Ok(BlobstoreIsPresent::Present)
                     }
                     // some blobstores reported the blob is present, others failed
                     else if present_counter > 0 {
                         let err = Error::from(ErrorKind::SomeFailedOthersNone {
                             main_errors: Arc::new(main_errors),
-                            write_mostly_errors: Arc::new(write_mostly_errors),
+                            write_only_errors: Arc::new(write_only_errors),
                         });
                         Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
                     }
@@ -745,33 +743,33 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     else {
                         Err(ErrorKind::AllFailed {
                             main_errors: Arc::new(main_errors),
-                            write_mostly_errors: Arc::new(write_mostly_errors),
+                            write_only_errors: Arc::new(write_only_errors),
                         })
                     }
                 } else {
                     // all blobstores reported the blob is missing
-                    if main_errors.is_empty() && write_mostly_errors.is_empty() {
+                    if main_errors.is_empty() && write_only_errors.is_empty() {
                         Ok(BlobstoreIsPresent::Absent)
                     }
                     // all blobstores failed
-                    else if main_errors.len() + write_mostly_errors.len() == blobstores_count {
+                    else if main_errors.len() + write_only_errors.len() == blobstores_count {
                         Err(ErrorKind::AllFailed {
                             main_errors: Arc::new(main_errors),
-                            write_mostly_errors: Arc::new(write_mostly_errors),
+                            write_only_errors: Arc::new(write_only_errors),
                         })
                     }
                     // some blobstores reported the blob is missing, others failed
                     else {
-                        let write_mostly_err = blobstores_failed_error(
+                        let write_only_err = blobstores_failed_error(
                             blobstores.iter().map(|(id, _)| *id),
                             main_errors,
-                            write_mostly_errors,
+                            write_only_errors,
                         );
-                        if matches!(write_mostly_err, ErrorKind::SomeFailedOthersNone { .. }) {
-                            let err = Error::from(write_mostly_err);
+                        if matches!(write_only_err, ErrorKind::SomeFailedOthersNone { .. }) {
+                            let err = Error::from(write_only_err);
                             Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
                         } else {
-                            Err(write_mostly_err)
+                            Err(write_only_err)
                         }
                     }
                 }
@@ -820,7 +818,7 @@ impl MultiplexedBlobstoreBase {
         let mut puts: FuturesUnordered<_> = self
             .blobstores
             .iter()
-            .chain(self.write_mostly_blobstores.iter())
+            .chain(self.write_only_blobstores.iter())
             .cloned()
             .map({
                 |(blobstore_id, blobstore)| {

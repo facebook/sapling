@@ -13,7 +13,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::PutBehaviour;
 use blobstore_factory::ScrubAction;
-use blobstore_factory::ScrubWriteMostly;
+use blobstore_factory::SrubWriteOnly;
 use blobstore_factory::DEFAULT_PUT_BEHAVIOUR;
 use clap_old::App;
 use clap_old::Arg;
@@ -75,7 +75,7 @@ pub const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 pub const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
 pub const BLOBSTORE_SCRUB_GRACE_ARG: &str = "blobstore-scrub-grace";
-pub const BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG: &str = "blobstore-scrub-write-mostly-missing";
+pub const BLOBSTORE_SCRUB_WRITE_ONLY_MISSING_ARG: &str = "blobstore-scrub-write-only-missing";
 pub const BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG: &str = "blobstore-scrub-queue-peek";
 pub const PUT_MEAN_DELAY_SECS_ARG: &str = "blobstore-put-mean-delay-secs";
 pub const PUT_STDDEV_DELAY_SECS_ARG: &str = "blobstore-put-stddev-delay-secs";
@@ -218,8 +218,8 @@ pub struct MononokeAppBuilder {
     // Whether to allow a grace period before reporting a key missing in a store for recent keys
     scrub_grace_secs_default: Option<u64>,
 
-    // Whether to report missing keys in write mostly blobstores as a scrub action when scrubbing
-    scrub_action_on_missing_write_mostly_default: Option<ScrubWriteMostly>,
+    // Whether to report missing keys in write only blobstores as a scrub action when scrubbing
+    scrub_action_on_missing_write_only_default: Option<SrubWriteOnly>,
 
     // Whether to set a default for how long to peek back at the multiplex queue when scrubbing
     scrub_queue_peek_bound_secs_default: Option<u64>,
@@ -319,7 +319,7 @@ impl MononokeAppBuilder {
             default_scuba_dataset: None,
             scrub_action_default: None,
             scrub_grace_secs_default: None,
-            scrub_action_on_missing_write_mostly_default: None,
+            scrub_action_on_missing_write_only_default: None,
             scrub_queue_peek_bound_secs_default: None,
             slog_filter_fn: None,
             dynamic_repos: false,
@@ -475,12 +475,12 @@ impl MononokeAppBuilder {
         self
     }
 
-    /// This command has a special handling of write mostly stores when scrubbing
-    pub fn with_scrub_action_on_missing_write_mostly_default(
+    /// This command has a special handling of write only stores when scrubbing
+    pub fn with_scrub_action_on_missing_write_only_default(
         mut self,
-        d: Option<ScrubWriteMostly>,
+        d: Option<SrubWriteOnly>,
     ) -> Self {
-        self.scrub_action_on_missing_write_mostly_default = d;
+        self.scrub_action_on_missing_write_only_default = d;
         self
     }
 
@@ -869,22 +869,20 @@ impl MononokeAppBuilder {
                 scrub_queue_peek_bound_arg = scrub_queue_peek_bound_arg
                     .default_value(FORMATTED.get_or_init(|| format!("{}", default)));
             };
-            let mut scrub_action_on_missing_write_mostly_arg =
-                Arg::with_name(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
-                    .long(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
+            let mut scrub_action_on_missing_write_only_arg =
+                Arg::with_name(BLOBSTORE_SCRUB_WRITE_ONLY_MISSING_ARG)
+                    .long(BLOBSTORE_SCRUB_WRITE_ONLY_MISSING_ARG)
                     .takes_value(true)
                     .required(false)
-                    .possible_values(ScrubWriteMostly::VARIANTS)
-                    .help(
-                        "Whether to allow missing values from write mostly stores when scrubbing",
-                    );
-            if let Some(default) = self.scrub_action_on_missing_write_mostly_default {
-                scrub_action_on_missing_write_mostly_arg =
-                    scrub_action_on_missing_write_mostly_arg.default_value(default.into());
+                    .possible_values(SrubWriteOnly::VARIANTS)
+                    .help("Whether to allow missing values from write only stores when scrubbing");
+            if let Some(default) = self.scrub_action_on_missing_write_only_default {
+                scrub_action_on_missing_write_only_arg =
+                    scrub_action_on_missing_write_only_arg.default_value(default.into());
             }
             app.arg(scrub_action_arg)
                 .arg(scrub_grace_arg)
-                .arg(scrub_action_on_missing_write_mostly_arg)
+                .arg(scrub_action_on_missing_write_only_arg)
                 .arg(scrub_queue_peek_bound_arg)
         } else {
             app
