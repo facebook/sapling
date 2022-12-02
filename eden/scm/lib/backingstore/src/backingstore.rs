@@ -91,15 +91,13 @@ impl BackingStore {
 
     #[instrument(level = "debug", skip(self))]
     fn get_blob_by_key(&self, key: Key, local_only: bool) -> Result<Option<Vec<u8>>> {
-        let local = self.filestore.local();
-        let fetch_result = if local_only {
+        if local_only {
             event!(Level::TRACE, "attempting to fetch blob locally");
-            &local
-        } else {
-            self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key), FileAttributes::CONTENT)
-        .single();
+        let fetch_result = self
+            .filestore
+            .fetch(std::iter::once(key), FileAttributes::CONTENT, local_only)
+            .single();
 
         Ok(if let Some(mut file) = fetch_result? {
             Some(file.file_content()?.into_vec())
@@ -136,14 +134,13 @@ impl BackingStore {
         }
 
         // Handle local-only fetching
-        let local = self.filestore.local();
-        let fetch_results = if local_only {
+        if local_only {
             event!(Level::TRACE, "attempting to fetch file aux data locally");
-            &local
-        } else {
-            self.filestore.as_ref()
         }
-        .fetch(indexes.keys().cloned(), attrs);
+
+        let fetch_results = self
+            .filestore
+            .fetch(indexes.keys().cloned(), attrs, local_only);
 
         for result in fetch_results {
             match result {
@@ -298,14 +295,12 @@ impl BackingStore {
         let hgid = HgId::from_slice(node)?;
         let key = Key::new(RepoPathBuf::new(), hgid);
 
-        let local = self.filestore.local();
-        let fetch_results = if local_only {
+        if local_only {
             event!(Level::TRACE, "attempting to fetch file aux data locally");
-            &local
-        } else {
-            self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key), FileAttributes::AUX);
+        let fetch_results =
+            self.filestore
+                .fetch(std::iter::once(key), FileAttributes::AUX, local_only);
 
         if let Some(entry) = fetch_results.single()? {
             Ok(Some(entry.aux_data()?.try_into()?))

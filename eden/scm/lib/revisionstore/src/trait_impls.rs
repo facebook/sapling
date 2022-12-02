@@ -126,7 +126,7 @@ fn stream_data_from_scmstore(
             let store = store.clone();
             Handle::current().spawn_blocking(move || {
                 let mut data = vec![];
-                for result in store.fetch(chunk.iter().cloned(), FileAttributes::CONTENT) {
+                for result in store.fetch(chunk.iter().cloned(), FileAttributes::CONTENT, false) {
                     let result = match result {
                         Err(err) => Err(err.into()),
                         Ok((key, mut file)) => file.file_content().map(|content| (content, key)),

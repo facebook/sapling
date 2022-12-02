@@ -328,7 +328,7 @@ mod tests {
 
         // Attempt fetch.
         let fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .fetch(std::iter::once(k.clone()), FileAttributes::AUX, false)
             .single()?
             .expect("key not found");
         assert_eq!(entry, fetched.aux_data().expect("no aux data found").into());
@@ -378,7 +378,7 @@ mod tests {
 
         // Attempt fetch.
         let fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .fetch(std::iter::once(k.clone()), FileAttributes::AUX, false)
             .single()?
             .expect("key not found");
         assert_eq!(

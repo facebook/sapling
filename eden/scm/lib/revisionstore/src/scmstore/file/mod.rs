@@ -131,6 +131,7 @@ impl FileStore {
         &self,
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
+        local_only: bool,
     ) -> FetchResults<StoreFile> {
         let (found_tx, found_rx) = unbounded();
         let mut state = FetchState::new(keys, attrs, &self, found_tx);
@@ -188,7 +189,7 @@ impl FileStore {
                 state.fetch_lfs(lfs_local, StoreType::Local);
             }
 
-            if use_memcache(creation_time) {
+            if !local_only && use_memcache(creation_time) {
                 if let Some(ref memcache) = memcache {
                     state.fetch_memcache(memcache, indexedlog_cache.as_ref().map(|s| s.as_ref()));
                 }
@@ -201,26 +202,36 @@ impl FileStore {
                 );
             }
 
-            if let Some(ref edenapi) = edenapi {
-                state.fetch_edenapi(
-                    edenapi,
-                    indexedlog_cache.clone(),
-                    lfs_cache.clone(),
-                    aux_cache.clone(),
-                    if cache_to_memcache && use_memcache(creation_time) {
-                        memcache.clone()
-                    } else {
-                        None
-                    },
-                );
+            if !local_only {
+                if let Some(ref edenapi) = edenapi {
+                    state.fetch_edenapi(
+                        edenapi,
+                        indexedlog_cache.clone(),
+                        lfs_cache.clone(),
+                        aux_cache.clone(),
+                        if cache_to_memcache && use_memcache(creation_time) {
+                            memcache.clone()
+                        } else {
+                            None
+                        },
+                    );
+                }
             }
 
-            if let Some(ref lfs_remote) = lfs_remote {
-                state.fetch_lfs_remote(&lfs_remote.remote, lfs_local.clone(), lfs_cache.clone());
+            if !local_only {
+                if let Some(ref lfs_remote) = lfs_remote {
+                    state.fetch_lfs_remote(
+                        &lfs_remote.remote,
+                        lfs_local.clone(),
+                        lfs_cache.clone(),
+                    );
+                }
             }
 
-            if let Some(ref contentstore) = contentstore {
-                state.fetch_contentstore(contentstore);
+            if !local_only {
+                if let Some(ref contentstore) = contentstore {
+                    state.fetch_contentstore(contentstore);
+                }
             }
 
             state.derive_computable(
@@ -325,44 +336,6 @@ impl FileStore {
         }
         self.metrics.write().write += metrics;
         Ok(())
-    }
-
-    pub fn local(&self) -> Self {
-        FileStore {
-            extstored_policy: self.extstored_policy.clone(),
-            lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
-            edenapi_retries: self.edenapi_retries.clone(),
-            allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
-            prefer_computing_aux_data: self.prefer_computing_aux_data,
-
-            indexedlog_local: self.indexedlog_local.clone(),
-            lfs_local: self.lfs_local.clone(),
-
-            indexedlog_cache: self.indexedlog_cache.clone(),
-            lfs_cache: self.lfs_cache.clone(),
-            cache_to_local_cache: self.cache_to_local_cache.clone(),
-
-            memcache: None,
-            cache_to_memcache: self.cache_to_memcache.clone(),
-
-            edenapi: None,
-            lfs_remote: None,
-
-            contentstore: None,
-            fetch_logger: self.fetch_logger.clone(),
-            metrics: self.metrics.clone(),
-            activity_logger: self.activity_logger.clone(),
-
-            aux_local: self.aux_local.clone(),
-            aux_cache: self.aux_cache.clone(),
-
-            creation_time: self.creation_time,
-
-            lfs_progress: self.lfs_progress.clone(),
-
-            // Don't flush the local-only subset of stores on drop, rely on the parent instead
-            flush_on_drop: false,
-        }
     }
 
     #[allow(unused_must_use)]
@@ -513,7 +486,7 @@ impl LegacyStore for FileStore {
 
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
         self.metrics.write().api.hg_getfilecontent.call(0);
-        self.fetch(std::iter::once(key.clone()), FileAttributes::CONTENT)
+        self.fetch(std::iter::once(key.clone()), FileAttributes::CONTENT, false)
             .single()?
             .map(|entry| entry.content.unwrap().file_content())
             .transpose()
@@ -565,6 +538,7 @@ impl HgIdDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
+                    false,
                 )
                 .single()?
             {
@@ -581,6 +555,7 @@ impl HgIdDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
+                    false,
                 )
                 .single()?
             {
@@ -602,6 +577,7 @@ impl RemoteDataStore for FileStore {
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
+                false,
             )
             .missing()?
             .into_iter()
@@ -635,10 +611,10 @@ impl LocalStore for FileStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.metrics.write().api.hg_getmissing.call(keys.len());
         Ok(self
-            .local()
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
+                true,
             )
             .missing()?
             .into_iter()
@@ -676,10 +652,10 @@ impl ContentDataStore for FileStore {
         self.metrics.write().api.contentdatastore_blob.call(0);
         Ok(
             match self
-                .local()
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
+                    true,
                 )
                 .single()?
             {
@@ -693,10 +669,10 @@ impl ContentDataStore for FileStore {
         self.metrics.write().api.contentdatastore_metadata.call(0);
         Ok(
             match self
-                .local()
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
+                    true,
                 )
                 .single()?
             {

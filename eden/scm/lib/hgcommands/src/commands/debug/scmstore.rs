@@ -77,6 +77,7 @@ fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
             content: true,
             aux_data: true,
         },
+        false,
     );
 
     let (found, missing, _errors) = fetch_result.consume();

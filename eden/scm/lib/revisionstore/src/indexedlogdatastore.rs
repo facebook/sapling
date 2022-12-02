@@ -760,7 +760,7 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT)
+            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT, false)
             .single()?
             .expect("key not found");
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
@@ -797,7 +797,7 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT)
+            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT, false)
             .single()?
             .expect("key not found");
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
@@ -846,6 +846,7 @@ mod tests {
         let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
             FileAttributes::CONTENT,
+            false,
         );
 
         let (mut found, missing, _errors) = fetched.consume();
@@ -905,6 +906,7 @@ mod tests {
         let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
             FileAttributes::CONTENT,
+            false,
         );
 
         let (mut found, missing, _errors) = fetched.consume();
