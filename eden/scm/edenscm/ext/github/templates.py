@@ -8,7 +8,7 @@
 
 from typing import Optional
 
-from .pr_parser import get_pull_request_for_node
+from .pr_parser import get_pull_request_for_context
 from .pr_status import get_pull_request_data
 from .pullrequest import GraphQLPullRequest, PullRequestId
 from .pullrequeststore import PullRequestStore
@@ -69,7 +69,7 @@ def get_pull_request_url_for_rev(repo, ctx, **args) -> Optional[PullRequestId]:
         return pull_request_url
 
     store = get_pull_request_store(repo, args["cache"])
-    pull_request_url = get_pull_request_for_node(ctx.node(), store, ctx)
+    pull_request_url = get_pull_request_for_context(store, ctx)
 
     revcache[_GITHUB_PULL_REQUEST_URL_REVCACHE_KEY] = (
         pull_request_url if pull_request_url is not None else _NO_ENTRY

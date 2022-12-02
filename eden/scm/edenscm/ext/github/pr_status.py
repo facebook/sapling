@@ -9,7 +9,7 @@ from edenscm import smartset, util
 
 from . import graphql
 from .github_repo_util import is_github_repo
-from .pr_parser import get_pull_request_for_node
+from .pr_parser import get_pull_request_for_context
 from .pullrequest import GraphQLPullRequest, PullRequestId
 from .pullrequeststore import PullRequestStore
 
@@ -42,9 +42,8 @@ def _prefetch(repo, ctx_iter):
     pr_store = PullRequestStore(repo)
     for batch in util.eachslice(ctx_iter, peek_ahead):
         cached = getattr(repo, _PR_STATUS_CACHE, {})
-        pr_list = {
-            get_pull_request_for_node(ctx.node(), pr_store, ctx) for ctx in batch
-        }
+        pr_list = {get_pull_request_for_context(pr_store, ctx) for ctx in batch}
+
         pr_list = [pr for pr in pr_list if pr and pr not in cached]
         if pr_list:
             if ui.debugflag:

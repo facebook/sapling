@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from edenscm import mutation, visibility
 from edenscm.ext.github.github_repo_util import find_github_repo
-from edenscm.ext.github.pr_parser import get_pull_request_for_node
+from edenscm.ext.github.pr_parser import get_pull_request_for_context
 from edenscm.ext.github.pullrequest import get_pr_state, PullRequestId
 from edenscm.ext.github.pullrequeststore import PullRequestStore
 from edenscm.i18n import _, _n
@@ -67,16 +67,15 @@ def cleanup_landed_pr(repo, dry_run=False):
 def _get_draft_commits(repo) -> t.Dict[PullRequestId, t.Set[Node]]:
     pr_to_draft = defaultdict(set)
     for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
-        node = ctx.node()
-        pr = _get_pr_for_node(repo, ctx, node)
+        pr = _get_pr_for_context(repo, ctx)
         if pr:
-            pr_to_draft[pr].add(node)
+            pr_to_draft[pr].add(ctx.node())
     return pr_to_draft
 
 
-def _get_pr_for_node(repo, ctx, node) -> t.Optional[PullRequestId]:
+def _get_pr_for_context(repo, ctx) -> t.Optional[PullRequestId]:
     store = PullRequestStore(repo)
-    return get_pull_request_for_node(node, store, ctx)
+    return get_pull_request_for_context(store, ctx)
 
 
 def _get_landed_commits(

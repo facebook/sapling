@@ -16,7 +16,7 @@ from edenscm.node import hex, nullid
 from . import gh_submit, github_repo_util
 from .gh_submit import PullRequestDetails, Repository
 from .github_repo_util import check_github_repo, GitHubRepo
-from .pr_parser import get_pull_request_for_node
+from .pr_parser import get_pull_request_for_context
 
 from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
@@ -377,7 +377,7 @@ async def get_repo(hostname: str, owner: str, name: str) -> Repository:
 
 async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
     ctx = repo[node]
-    pr_id = get_pull_request_for_node(node, store, ctx)
+    pr_id = get_pull_request_for_context(store, ctx)
     pr = await get_pull_request_details_or_throw(pr_id) if pr_id else None
     msg = None
     if pr:
