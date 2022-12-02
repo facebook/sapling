@@ -19,7 +19,6 @@ use bookmarks_movement::BookmarkKindRestrictions::AnyKind;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
-use hooks::CrossRepoPushSource::NativeToThisRepo;
 use hooks::PushAuthoredBy::User;
 use maplit::hashset;
 use mononoke_types::ChangesetId;
@@ -67,7 +66,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             changesets["G"],
             changesets["C"],
             None,
-            NativeToThisRepo,
             AnyKind,
             User,
         )
@@ -88,7 +86,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             changesets["E"],
             changesets["A"],
             None,
-            NativeToThisRepo,
             AnyKind,
             User,
         )
@@ -116,7 +113,6 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             changesets["F"],
             changesets["B"],
             None,
-            NativeToThisRepo,
             AnyKind,
             User,
         )

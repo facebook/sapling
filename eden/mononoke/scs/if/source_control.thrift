@@ -913,10 +913,7 @@ struct RepoLandStackParams {
   /// Service identity to use for the bookmark move.
   6: optional string service_identity;
 
-  // TODO: Move to its own land service
-  /// INTERNAL USE ONLY: Override push source.  Leave as the default
-  /// if this is not an internal source control service.
-  101: CrossRepoPushSource __internal_only_push_source = CrossRepoPushSource.NATIVE_TO_THIS_REPO;
+  // 101: deleted
 
   /// What kind of bookmark can be pushed
   9: BookmarkKindRestrictions bookmark_restrictions = BookmarkKindRestrictions.ANY_KIND;
