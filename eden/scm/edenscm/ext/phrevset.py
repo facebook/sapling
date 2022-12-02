@@ -27,9 +27,12 @@ Example for www::
 """
 
 import re
+from typing import Optional, Pattern
 
 from edenscm import autopull, error, hg, json, namespaces, pycompat, registrar, util
+from edenscm.autopull import pullattempt
 from edenscm.i18n import _
+from edenscm.namespaces import namespace
 from edenscm.node import bin, hex, nullhex
 
 from .extlib.phabricator import graphql
@@ -45,12 +48,12 @@ configitem("phrevset", "graphqlonly", default=True)
 namespacepredicate = registrar.namespacepredicate()
 autopullpredicate = registrar.autopullpredicate()
 
-DIFFERENTIAL_REGEX = re.compile(
+DIFFERENTIAL_REGEX: Pattern[str] = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
     "D(?P<id>[0-9]+)"  # Differential ID, just numeric part
 )
 
-DESCRIPTION_REGEX = re.compile(
+DESCRIPTION_REGEX: Pattern[str] = re.compile(
     "Commit r"  # Prefix
     "(?P<callsign>[A-Z]{1,})"  # Callsign
     "(?P<id>[a-f0-9]+)"  # rev
@@ -352,14 +355,16 @@ def _lookupname(repo, name):
 
 
 @namespacepredicate("phrevset", priority=70)
-def _getnamespace(_repo):
+def _getnamespace(_repo) -> namespace:
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_lookupname, nodemap=lambda repo, node: []
     )
 
 
 @autopullpredicate("phrevset", priority=70, rewritepullrev=True)
-def _autopullphabdiff(repo, name, rewritepullrev=False):
+def _autopullphabdiff(
+    repo, name, rewritepullrev: bool = False
+) -> Optional[pullattempt]:
     # Automation should use explicit commit hashes and do not depend on the
     # Dxxx autopull behavior.
     if repo.ui.plain():
