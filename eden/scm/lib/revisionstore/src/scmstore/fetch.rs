@@ -19,6 +19,14 @@ use types::Key;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
 
+#[derive(Debug)]
+pub enum FetchMode {
+    /// The fetch may hit memcache or other servers.
+    AllowRemote,
+    /// The fetch is limited to RAM and disk.
+    LocalOnly,
+}
+
 pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.
     pub pending: HashSet<Key>,

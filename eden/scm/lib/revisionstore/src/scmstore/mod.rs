@@ -7,6 +7,7 @@
 
 pub use self::builder::FileStoreBuilder;
 pub use self::builder::TreeStoreBuilder;
+pub use self::fetch::FetchMode;
 pub use self::fetch::KeyFetchError;
 pub use self::file::FileAttributes;
 pub use self::file::FileAuxData;

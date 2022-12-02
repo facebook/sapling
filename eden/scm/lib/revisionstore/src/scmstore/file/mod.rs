@@ -50,6 +50,7 @@ use crate::lfs::LfsStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
+use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::fetch::FetchResults;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
@@ -131,7 +132,7 @@ impl FileStore {
         &self,
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
-        local_only: bool,
+        fetch_mode: FetchMode,
     ) -> FetchResults<StoreFile> {
         let (found_tx, found_rx) = unbounded();
         let mut state = FetchState::new(keys, attrs, &self, found_tx);
@@ -189,9 +190,14 @@ impl FileStore {
                 state.fetch_lfs(lfs_local, StoreType::Local);
             }
 
-            if !local_only && use_memcache(creation_time) {
-                if let Some(ref memcache) = memcache {
-                    state.fetch_memcache(memcache, indexedlog_cache.as_ref().map(|s| s.as_ref()));
+            if let FetchMode::AllowRemote = fetch_mode {
+                if use_memcache(creation_time) {
+                    if let Some(ref memcache) = memcache {
+                        state.fetch_memcache(
+                            memcache,
+                            indexedlog_cache.as_ref().map(|s| s.as_ref()),
+                        );
+                    }
                 }
             }
 
@@ -202,7 +208,7 @@ impl FileStore {
                 );
             }
 
-            if !local_only {
+            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref edenapi) = edenapi {
                     state.fetch_edenapi(
                         edenapi,
@@ -218,7 +224,7 @@ impl FileStore {
                 }
             }
 
-            if !local_only {
+            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref lfs_remote) = lfs_remote {
                     state.fetch_lfs_remote(
                         &lfs_remote.remote,
@@ -228,7 +234,7 @@ impl FileStore {
                 }
             }
 
-            if !local_only {
+            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref contentstore) = contentstore {
                     state.fetch_contentstore(contentstore);
                 }
@@ -486,10 +492,14 @@ impl LegacyStore for FileStore {
 
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
         self.metrics.write().api.hg_getfilecontent.call(0);
-        self.fetch(std::iter::once(key.clone()), FileAttributes::CONTENT, false)
-            .single()?
-            .map(|entry| entry.content.unwrap().file_content())
-            .transpose()
+        self.fetch(
+            std::iter::once(key.clone()),
+            FileAttributes::CONTENT,
+            FetchMode::AllowRemote,
+        )
+        .single()?
+        .map(|entry| entry.content.unwrap().file_content())
+        .transpose()
     }
 
     // If ContentStore is available, these call into ContentStore. Otherwise, implement these
@@ -538,7 +548,7 @@ impl HgIdDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
-                    false,
+                    FetchMode::AllowRemote,
                 )
                 .single()?
             {
@@ -555,7 +565,7 @@ impl HgIdDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
-                    false,
+                    FetchMode::AllowRemote,
                 )
                 .single()?
             {
@@ -577,7 +587,7 @@ impl RemoteDataStore for FileStore {
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
-                false,
+                FetchMode::AllowRemote,
             )
             .missing()?
             .into_iter()
@@ -614,7 +624,7 @@ impl LocalStore for FileStore {
             .fetch(
                 keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
                 FileAttributes::CONTENT,
-                true,
+                FetchMode::LocalOnly,
             )
             .missing()?
             .into_iter()
@@ -655,7 +665,7 @@ impl ContentDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
-                    true,
+                    FetchMode::LocalOnly,
                 )
                 .single()?
             {
@@ -672,7 +682,7 @@ impl ContentDataStore for FileStore {
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
-                    true,
+                    FetchMode::LocalOnly,
                 )
                 .single()?
             {

@@ -13,6 +13,7 @@ use anyhow::Error;
 use anyhow::Result;
 use libc::c_void;
 use manifest::List;
+use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 use types::Key;
 
@@ -24,6 +25,14 @@ use crate::raw::FileAuxData;
 use crate::raw::Request;
 use crate::raw::Slice;
 use crate::raw::Tree;
+
+fn fetch_mode_from_local(local: bool) -> FetchMode {
+    if local {
+        FetchMode::LocalOnly
+    } else {
+        FetchMode::AllowRemote
+    }
+}
 
 #[repr(C)]
 pub struct BackingStoreOptions {
@@ -59,7 +68,7 @@ pub extern "C" fn sapling_backingstore_get_tree(
 ) -> CFallibleBase {
     CFallible::<Tree>::make_with(|| {
         store
-            .get_tree(node.slice(), local)
+            .get_tree(node.slice(), fetch_mode_from_local(local))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
             .and_then(|list| list.try_into())
     })
@@ -76,7 +85,7 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
 ) {
     let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
 
-    store.get_tree_batch(keys, local, |idx, result| {
+    store.get_tree_batch(keys, fetch_mode_from_local(local), |idx, result| {
         let result: Result<List> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let result: Result<Tree> = result.and_then(|list| list.try_into());
@@ -93,7 +102,7 @@ pub extern "C" fn sapling_backingstore_get_blob(
 ) -> CFallibleBase {
     CFallible::make_with(|| {
         store
-            .get_blob(node.slice(), local)
+            .get_blob(node.slice(), fetch_mode_from_local(local))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
             .map(CBytes::from_vec)
     })
@@ -109,7 +118,7 @@ pub extern "C" fn sapling_backingstore_get_blob_batch(
     resolve: unsafe extern "C" fn(*mut c_void, usize, CFallibleBase),
 ) {
     let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
-    store.get_blob_batch(keys, local, |idx, result| {
+    store.get_blob_batch(keys, fetch_mode_from_local(local), |idx, result| {
         let result: CFallible<CBytes> = result
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
             .map(CBytes::from_vec)
@@ -126,7 +135,7 @@ pub extern "C" fn sapling_backingstore_get_file_aux(
 ) -> CFallibleBase {
     CFallible::<FileAuxData>::make_with(|| {
         store
-            .get_file_aux(node.slice(), local)
+            .get_file_aux(node.slice(), fetch_mode_from_local(local))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))
             .map(|aux| aux.into())
     })
@@ -143,7 +152,7 @@ pub extern "C" fn sapling_backingstore_get_file_aux_batch(
 ) {
     let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
 
-    store.get_file_aux_batch(keys, local, |idx, result| {
+    store.get_file_aux_batch(keys, fetch_mode_from_local(local), |idx, result| {
         let result: Result<ScmStoreFileAuxData> =
             result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
         let result: CFallible<FileAuxData> = result.map(|aux| aux.into()).into();

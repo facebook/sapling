@@ -25,6 +25,7 @@ use crate::datastore::Metadata;
 use crate::datastore::RemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::localstore::LocalStore;
+use crate::scmstore::FetchMode;
 use crate::types::StoreKey;
 use crate::util;
 
@@ -250,7 +251,11 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::CONTENT, false)
+            .fetch(
+                std::iter::once(k.clone()),
+                FileAttributes::CONTENT,
+                FetchMode::AllowRemote,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(fetched.file_content()?.to_vec(), d.data.as_ref().to_vec());
@@ -292,7 +297,7 @@ mod tests {
 
         // Attempt fetch.
         let mut fetched = store
-            .fetch_batch(std::iter::once(k.clone()), false)
+            .fetch_batch(std::iter::once(k.clone()), FetchMode::AllowRemote)
             .single()?
             .expect("key not found");
         assert_eq!(
@@ -319,7 +324,7 @@ mod tests {
         let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
 
         // Attempt fetch.
-        let fetched = store.fetch_batch(std::iter::once(k.clone()), false);
+        let fetched = store.fetch_batch(std::iter::once(k.clone()), FetchMode::AllowRemote);
         let (found, missing, _errors) = fetched.consume();
         assert_eq!(found.len(), 0);
         assert_eq!(missing.into_keys().collect::<Vec<_>>(), vec![k]);
@@ -376,7 +381,11 @@ mod tests {
 
         // Test that we can read aux data from EdenApi
         let fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::AUX, false)
+            .fetch(
+                std::iter::once(k.clone()),
+                FileAttributes::AUX,
+                FetchMode::AllowRemote,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
@@ -385,7 +394,11 @@ mod tests {
         store.edenapi = None;
         store.indexedlog_cache = None;
         let fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::AUX, false)
+            .fetch(
+                std::iter::once(k.clone()),
+                FileAttributes::AUX,
+                FetchMode::AllowRemote,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);

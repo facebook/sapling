@@ -31,6 +31,7 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::FileStore;
@@ -100,7 +101,7 @@ impl TreeStore {
     pub fn fetch_batch(
         &self,
         reqs: impl Iterator<Item = Key>,
-        local_only: bool,
+        fetch_mode: FetchMode,
     ) -> FetchResults<StoreTree> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
@@ -150,31 +151,35 @@ impl TreeStore {
                 }
             }
 
-            if !local_only && use_memcache(creation_time) {
-                if let Some(ref memcache) = memcache {
-                    let pending: Vec<_> = common
-                        .pending(TreeAttributes::CONTENT, false)
-                        .map(|(key, _attrs)| key.clone())
-                        .collect();
+            if let FetchMode::AllowRemote = fetch_mode {
+                if use_memcache(creation_time) {
+                    if let Some(ref memcache) = memcache {
+                        let pending: Vec<_> = common
+                            .pending(TreeAttributes::CONTENT, false)
+                            .map(|(key, _attrs)| key.clone())
+                            .collect();
 
-                    if !pending.is_empty() {
-                        for entry in memcache.get_data_iter(&pending)? {
-                            let entry = entry?;
-                            let key = entry.key.clone();
-                            let entry = LazyTree::Memcache(entry);
-                            if indexedlog_cache.is_some() && cache_to_local_cache {
-                                if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
-                                    indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
+                        if !pending.is_empty() {
+                            for entry in memcache.get_data_iter(&pending)? {
+                                let entry = entry?;
+                                let key = entry.key.clone();
+                                let entry = LazyTree::Memcache(entry);
+                                if indexedlog_cache.is_some() && cache_to_local_cache {
+                                    if let Some(entry) =
+                                        entry.indexedlog_cache_entry(key.clone())?
+                                    {
+                                        indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
+                                    }
                                 }
+                                tracing::trace!("{:?} found in memcache", &key);
+                                common.found(key, entry.into());
                             }
-                            tracing::trace!("{:?} found in memcache", &key);
-                            common.found(key, entry.into());
                         }
                     }
                 }
             }
 
-            if !local_only {
+            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref edenapi) = edenapi {
                     let pending: Vec<_> = common
                         .pending(TreeAttributes::CONTENT, false)
@@ -275,7 +280,7 @@ impl TreeStore {
                 }
             }
 
-            if !local_only {
+            if let FetchMode::AllowRemote = fetch_mode {
                 if let Some(ref contentstore) = contentstore {
                     let pending: Vec<_> = common
                         .pending(TreeAttributes::CONTENT, false)
@@ -477,7 +482,7 @@ impl HgIdDataStore for TreeStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), false)
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), FetchMode::AllowRemote)
                 .single()?
             {
                 Some(entry) => StoreResult::Found(entry.content.expect("content attribute not found despite being requested and returned as complete").hg_content()?.into_vec()),
@@ -491,7 +496,7 @@ impl HgIdDataStore for TreeStore {
             match self
                 .fetch_batch(
                     std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key),
-                    false,
+                    FetchMode::AllowRemote,
                 )
                 .single()?
             {
@@ -517,7 +522,7 @@ impl RemoteDataStore for TreeStore {
         Ok(self
             .fetch_batch(
                 keys.iter().cloned().filter_map(StoreKey::maybe_into_key),
-                false,
+                FetchMode::AllowRemote,
             )
             .missing()?
             .into_iter()
@@ -612,7 +617,7 @@ impl storemodel::TreeStore for TreeStore {
 
         let key = Key::new(path.to_owned(), node);
         match self
-            .fetch_batch(std::iter::once(key.clone()), false)
+            .fetch_batch(std::iter::once(key.clone()), FetchMode::AllowRemote)
             .single()?
         {
             Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
@@ -621,7 +626,8 @@ impl storemodel::TreeStore for TreeStore {
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        self.fetch_batch(keys.into_iter(), false).consume();
+        self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote)
+            .consume();
         Ok(())
     }
 

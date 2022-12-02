@@ -13,6 +13,7 @@ use clidispatch::errors;
 use clidispatch::ReqCtx;
 use configparser::config::ConfigSet;
 use revisionstore::scmstore::file_to_async_key_stream;
+use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
@@ -36,7 +37,7 @@ define_flags! {
     }
 }
 
-enum FetchMode {
+enum FetchType {
     File,
     Tree,
 }
@@ -47,8 +48,8 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     }
 
     let mode = match ctx.opts.mode.as_ref() {
-        "file" => FetchMode::File,
-        "tree" => FetchMode::Tree,
+        "file" => FetchType::File,
+        "tree" => FetchType::Tree,
         _ => return Err(errors::Abort("'mode' must be one of 'file' or 'tree'".into()).into()),
     };
 
@@ -58,8 +59,8 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     let config = repo.config();
 
     match mode {
-        FetchMode::File => fetch_files(&ctx.core.io, config, keys)?,
-        FetchMode::Tree => fetch_trees(&ctx.core.io, config, keys)?,
+        FetchType::File => fetch_files(&ctx.core.io, config, keys)?,
+        FetchType::Tree => fetch_trees(&ctx.core.io, config, keys)?,
     }
 
     Ok(0)
@@ -77,7 +78,7 @@ fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
             content: true,
             aux_data: true,
         },
-        false,
+        FetchMode::AllowRemote,
     );
 
     let (found, missing, _errors) = fetch_result.consume();
@@ -98,7 +99,7 @@ fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
 
     let mut stdout = io.output();
 
-    let fetch_result = store.fetch_batch(keys.into_iter(), false);
+    let fetch_result = store.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
 
     let (found, missing, _errors) = fetch_result.consume();
     for complete in found.into_iter() {
