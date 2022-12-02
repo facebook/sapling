@@ -53,3 +53,26 @@ See the dedicated [ghstack](./ghstack.md) page for more information.
 
 - Can only be used if you have _write_ access to the repository.
 - You will NOT be able to merge these pull requests using the normal GitHub UI.
+
+## Troubleshooting
+
+### `could not read Username` error when trying to `git push`
+
+If you see an error like the following:
+
+```
+stderr: fatal: could not read Username for 'https://github.com': No such device or address
+```
+
+Then you likely need to run [`gh auth setup-git [--hostname HOST]`](https://cli.github.com/manual/gh_auth_setup-git) to configure `gh` as a Git credential helper. This will add the following to your `.gitconfig` (though the host will be different if you used `--hostname` to specify your GitHub Enterprise hostname):
+
+```
+[credential "https://github.com"]
+    helper =
+    helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+    helper =
+    helper = !/usr/bin/gh auth git-credential
+```
+
+See [gh issue #3796](https://github.com/cli/cli/issues/3796) for details
