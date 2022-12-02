@@ -396,6 +396,7 @@ def simpledate(context, mapping, args):
     """
     ctx = mapping["ctx"]
     repo = ctx.repo()
+    date_now = util.parsedate("now")
     date = templater.evalfuncarg(context, mapping, args[0])
     tz = None
     if len(args) == 2:
@@ -412,7 +413,7 @@ def simpledate(context, mapping, args):
                 msg = "Unknown time zone: %s\n" % tzname
                 repo.ui.warn(msg)
     then = datetime.datetime.fromtimestamp(date[0], tz)
-    now = datetime.datetime.now(tz)
+    now = datetime.datetime.fromtimestamp(date_now[0], tz)
     td = now.date() - then.date()
     if then > now:
         # Time is in the future, render it in full
