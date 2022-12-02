@@ -20,7 +20,7 @@ of the GNU General Public License, incorporated herein by reference.
 from __future__ import absolute_import, print_function
 
 
-def label(code):
+def label(code: str) -> str:
     if isinstance(code, str):
         return "~" + code  # built-in functions ('~' sorts at the end)
     else:
