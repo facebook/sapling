@@ -210,14 +210,10 @@ impl BackingStore {
         let hgid = HgId::from_slice(node)?;
         let key = Key::new(RepoPathBuf::new(), hgid);
 
-        let local = self.treestore.local();
-        let fetch_results = if local_only {
+        if local_only {
             event!(Level::TRACE, "attempting to fetch trees locally");
-            &local
-        } else {
-            self.treestore.as_ref()
         }
-        .fetch_batch(std::iter::once(key));
+        let fetch_results = self.treestore.fetch_batch(std::iter::once(key), local_only);
 
         if let Some(mut entry) = fetch_results.single()? {
             Ok(Some(entry.manifest_tree_entry()?.try_into()?))
@@ -254,14 +250,12 @@ impl BackingStore {
         }
 
         // Handle local-only fetching
-        let local = self.treestore.local();
-        let fetch_results = if local_only {
+        if local_only {
             event!(Level::TRACE, "attempting to fetch trees locally");
-            &local
-        } else {
-            self.treestore.as_ref()
         }
-        .fetch_batch(indexes.keys().cloned());
+        let fetch_results = self
+            .treestore
+            .fetch_batch(indexes.keys().cloned(), local_only);
 
         // Handle pey-key fetch results
         for result in fetch_results {

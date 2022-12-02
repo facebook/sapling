@@ -1555,7 +1555,7 @@ py_class!(pub class treescmstore |py| {
 
     def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
         let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch_batch(keys.into_iter());
+        let fetch_result = self.store(py).fetch_batch(keys.into_iter(), false);
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
