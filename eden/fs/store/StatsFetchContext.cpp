@@ -47,6 +47,21 @@ StatsFetchContext::StatsFetchContext(StatsFetchContext&& other) noexcept
   }
 }
 
+StatsFetchContext& StatsFetchContext::operator=(
+    StatsFetchContext&& other) noexcept {
+  clientPid_ = std::move(other.clientPid_);
+  cause_ = std::move(other.cause_);
+  causeDetail_ = std::move(other.causeDetail_);
+  requestInfo_ = std::move(other.requestInfo_);
+  for (size_t y = 0; y < ObjectFetchContext::kObjectTypeEnumMax; ++y) {
+    for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
+      // This could almost certainly use a more relaxed memory ordering.
+      counts_[y][x] = other.counts_[y][x].load();
+    }
+  }
+  return *this;
+}
+
 void StatsFetchContext::didFetch(
     ObjectType type,
     const ObjectId&,

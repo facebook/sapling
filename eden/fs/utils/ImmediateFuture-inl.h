@@ -30,8 +30,7 @@ void ImmediateFuture<T>::destroy() {
 }
 
 template <typename T>
-ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept(
-    std::is_nothrow_move_constructible_v<folly::Try<T>>) {
+ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept {
   if (detail::kImmediateFutureAlwaysDefer) {
     kind_ = Kind::SemiFuture;
     new (&semi_) folly::SemiFuture<T>{std::move(value)};
@@ -63,8 +62,7 @@ ImmediateFuture<T>::~ImmediateFuture() {
 }
 
 template <typename T>
-ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept(
-    std::is_nothrow_move_constructible_v<folly::Try<T>>)
+ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept
     : kind_(other.kind_) {
   switch (kind_) {
     case Kind::Immediate:
@@ -81,9 +79,8 @@ ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept(
 }
 
 template <typename T>
-ImmediateFuture<T>&
-ImmediateFuture<T>::operator=(ImmediateFuture<T>&& other) noexcept(
-    std::is_nothrow_move_constructible_v<folly::Try<T>>) {
+ImmediateFuture<T>& ImmediateFuture<T>::operator=(
+    ImmediateFuture<T>&& other) noexcept {
   if (this == &other) {
     return *this;
   }

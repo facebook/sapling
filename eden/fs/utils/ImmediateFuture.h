@@ -35,9 +35,22 @@ namespace facebook::eden {
  */
 template <typename T>
 class ImmediateFuture {
+  static_assert(
+      std::is_nothrow_move_constructible_v<T> &&
+          std::is_nothrow_move_assignable_v<T>,
+      "ImmediateFuture requires T be noexcept-move. "
+      "Box with std::unique_ptr if necessary.");
+
+  // Internal implementation requirements:
+
   // SemiFuture is a pointer-sized, move-only type, and we rely on it
   // being nothrow.
   static_assert(std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
+
+  // If T is noexcept-move, Try<T> must also be noexcept-move.
+  static_assert(
+      std::is_nothrow_move_constructible_v<folly::Try<T>> &&
+      std::is_nothrow_move_assignable_v<folly::Try<T>>);
 
  public:
   /**
@@ -55,8 +68,7 @@ class ImmediateFuture {
    * Construct an ImmediateFuture with an already constructed value. No
    * folly::SemiFuture will be allocated.
    */
-  /* implicit */ ImmediateFuture(folly::Try<T>&& value) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>);
+  /* implicit */ ImmediateFuture(folly::Try<T>&& value) noexcept;
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No
@@ -89,10 +101,8 @@ class ImmediateFuture {
   ImmediateFuture(const ImmediateFuture&) = delete;
   ImmediateFuture& operator=(const ImmediateFuture&) = delete;
 
-  ImmediateFuture(ImmediateFuture&&) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>);
-  ImmediateFuture& operator=(ImmediateFuture&&) noexcept(
-      std::is_nothrow_move_constructible_v<folly::Try<T>>);
+  ImmediateFuture(ImmediateFuture&&) noexcept;
+  ImmediateFuture& operator=(ImmediateFuture&&) noexcept;
 
   /**
    * Call the func continuation once this future is ready.
