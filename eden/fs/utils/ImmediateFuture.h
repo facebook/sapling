@@ -64,11 +64,11 @@ class ImmediateFuture {
    */
   template <
       typename U = T,
-      typename = std::enable_if_t<std::is_constructible_v<folly::Try<T>, U>>>
-  /* implicit */ ImmediateFuture(U value) noexcept(
-      std::is_nothrow_constructible_v<folly::Try<T>, U>&&
+      typename = std::enable_if_t<std::is_constructible_v<folly::Try<T>, U&&>>>
+  /* implicit */ ImmediateFuture(U&& value) noexcept(
+      std::is_nothrow_constructible_v<folly::Try<T>, U&&>&&
           std::is_nothrow_move_constructible_v<folly::Try<T>>)
-      : ImmediateFuture{folly::Try<T>{std::move(value)}} {}
+      : ImmediateFuture{folly::Try<T>{std::forward<U>(value)}} {}
 
   /**
    * Construct an ImmediateFuture with a SemiFuture.
@@ -86,12 +86,12 @@ class ImmediateFuture {
 
   ~ImmediateFuture();
 
-  ImmediateFuture(const ImmediateFuture<T>&) = delete;
-  ImmediateFuture<T>& operator=(const ImmediateFuture<T>&) = delete;
+  ImmediateFuture(const ImmediateFuture&) = delete;
+  ImmediateFuture& operator=(const ImmediateFuture&) = delete;
 
-  ImmediateFuture(ImmediateFuture<T>&&) noexcept(
+  ImmediateFuture(ImmediateFuture&&) noexcept(
       std::is_nothrow_move_constructible_v<folly::Try<T>>);
-  ImmediateFuture<T>& operator=(ImmediateFuture<T>&&) noexcept(
+  ImmediateFuture& operator=(ImmediateFuture&&) noexcept(
       std::is_nothrow_move_constructible_v<folly::Try<T>>);
 
   /**
@@ -230,6 +230,16 @@ class ImmediateFuture {
    * A folly::FutureTimeout will be thrown if the timeout is reached.
    */
   folly::Try<T> getTry(folly::HighResDuration timeout) &&;
+
+  /**
+   * Returns true if this ImmediateFuture contains an immediate result.
+   *
+   * This function is intended for tests -- use isReady() to know whether
+   * a value is available now.
+   */
+  bool debugIsImmediate() const noexcept {
+    return kind_ == Kind::Immediate;
+  }
 
  private:
   /**

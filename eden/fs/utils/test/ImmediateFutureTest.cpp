@@ -290,6 +290,7 @@ TEST(ImmediateFuture, collectAllImmediate) {
   vec.push_back(ImmediateFuture<int>{43});
 
   auto fut = collectAll(std::move(vec));
+  EXPECT_NE(fut.debugIsImmediate(), detail::kImmediateFutureAlwaysDefer);
   EXPECT_NE(fut.isReady(), detail::kImmediateFutureAlwaysDefer);
   auto res = std::move(fut).get();
   EXPECT_EQ(*res[0], 42);
@@ -378,6 +379,7 @@ TEST(ImmediateFuture, collectAllTuple) {
   auto f2 = ImmediateFuture<float>{42.f};
 
   auto future = collectAll(std::move(f1), std::move(f2));
+  EXPECT_NE(future.debugIsImmediate(), detail::kImmediateFutureAlwaysDefer);
   EXPECT_NE(future.isReady(), detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get();
@@ -410,6 +412,7 @@ TEST(ImmediateFuture, collectAllTupleSemiReady) {
   promise2.setValue(43);
 
   auto future = collectAll(std::move(f1), std::move(f2));
+  EXPECT_NE(future.debugIsImmediate(), detail::kImmediateFutureAlwaysDefer);
   EXPECT_NE(future.isReady(), detail::kImmediateFutureAlwaysDefer);
 
   auto res = std::move(future).get(1ms);
@@ -423,6 +426,7 @@ TEST(ImmediateFuture, collectAllSafeTuple) {
       folly::Try<float>{std::logic_error("Test exception")}};
 
   auto future = collectAllSafe(std::move(f1), std::move(f2));
+  EXPECT_NE(future.debugIsImmediate(), detail::kImmediateFutureAlwaysDefer);
   EXPECT_NE(future.isReady(), detail::kImmediateFutureAlwaysDefer);
 
   EXPECT_THROW_RE(std::move(future).get(), std::logic_error, "Test exception");
