@@ -13,6 +13,7 @@ the API calls directly so we can (1) avoid spawning so many processes, and
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
+from edenscm.i18n import _
 from ghstack.github_gh_cli import make_request, Result
 
 from .pullrequest import PullRequestId
@@ -95,11 +96,16 @@ query ($owner: String!, $name: String!) {
     data = result.ok["data"]
     repo = data["repository"]
     parent = repo["parent"]
-    upstream = (
-        _parse_repository_from_dict(parent, hostname=hostname) if parent else None
-    )
-    repository = _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
-    return Result(ok=repository)
+
+    if parent:
+        result = _parse_repository_from_dict(parent, hostname=hostname)
+        if result.is_error():
+            return result
+        else:
+            upstream = result.ok
+    else:
+        upstream = None
+    return _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
 
 
 @dataclass
@@ -148,15 +154,35 @@ query ($owner: String!, $name: String!, $number: Int!) {
     )
 
 
-def _parse_repository_from_dict(repo_obj, hostname: str, upstream=None) -> Repository:
-    return Repository(
-        id=repo_obj["id"],
-        hostname=hostname,
-        owner=repo_obj["owner"]["login"],
-        name=repo_obj["name"],
-        default_branch=repo_obj["defaultBranchRef"]["name"],
-        is_fork=repo_obj["isFork"],
-        upstream=upstream,
+def _parse_repository_from_dict(
+    repo_obj, hostname: str, upstream=None
+) -> Result[Repository]:
+    owner = repo_obj["owner"]["login"]
+    name = repo_obj["name"]
+    branch_ref = repo_obj["defaultBranchRef"]
+    if branch_ref is None:
+        error_message = (
+            _(
+                """\
+This repository has no default branch. This is likely because it is empty.
+
+Consider using %s to initialize your
+repository.
+"""
+            )
+            % f"https://{hostname}/{owner}/{name}/new/main"
+        )
+        return Result(error=error_message)
+    return Result(
+        ok=Repository(
+            id=repo_obj["id"],
+            hostname=hostname,
+            owner=owner,
+            name=name,
+            default_branch=branch_ref["name"],
+            is_fork=repo_obj["isFork"],
+            upstream=upstream,
+        )
     )
 
 
