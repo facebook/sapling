@@ -35,7 +35,6 @@ use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
 use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_derived_data::DeriveHgChangeset;
-use mononoke_api::Mononoke;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -246,7 +245,8 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         if args.generate_bookmarks {
             let authz = AuthorizationContext::new_bypass_access_control();
-            let repo_context = Mononoke::new(Arc::new(app))
+            let repo_context = app
+                .open_mononoke()
                 .await
                 .context("failed to create mononoke app")?
                 .repo_by_id(ctx.clone(), repo.get_repoid())

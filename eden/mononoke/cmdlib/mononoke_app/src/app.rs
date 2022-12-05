@@ -41,6 +41,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
+use mononoke_api::Mononoke;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
@@ -82,6 +83,7 @@ define_stats! {
         (reponame: String);
         Average, Sum, Count
     ),
+    completion_duration_secs: timeseries(Average, Sum, Count),
 }
 
 /// Struct responsible for receiving updated configurations from MononokeConfigs
@@ -281,6 +283,62 @@ impl MononokeApp {
         Args: FromArgMatches,
     {
         Args::from_arg_matches(&self.args)
+    }
+
+    /// Instantiates Mononoke API with all configured repos
+    ///
+    /// Respects the repo_filter_from MononokeEnvironment
+    pub async fn open_mononoke(&self) -> Result<Mononoke, Error> {
+        let repo_filter = self.environment().filter_repos.clone();
+        let repo_names =
+            self.repo_configs()
+                .repos
+                .clone()
+                .into_iter()
+                .filter_map(|(name, config)| {
+                    let is_matching_filter =
+                        repo_filter.as_ref().map_or(true, |filter| filter(&name));
+                    // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
+                    // at service startup)
+                    if config.enabled && !config.deep_sharded && is_matching_filter {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                });
+        self.open_mononoke_with_repo_names(repo_names).await
+    }
+
+    /// Instantiates Mononoke API with specified repos
+    ///
+    /// (the specified repos must be configured in the config)
+    pub async fn open_mononoke_with_repo_names<Names>(
+        &self,
+        repo_names: Names,
+    ) -> Result<Mononoke, Error>
+    where
+        Names: IntoIterator<Item = String>,
+    {
+        let configs = (*self.repo_configs()).clone();
+        let logger = self.logger().clone();
+        let start = Instant::now();
+        let repo_names_in_tier =
+            Vec::from_iter(configs.repos.iter().filter_map(|(name, config)| {
+                if config.enabled {
+                    Some(name.to_string())
+                } else {
+                    None
+                }
+            }));
+        let repos = self.open_mononoke_repos(repo_names.into_iter()).await?;
+        info!(
+            &logger,
+            "All repos initialized. It took: {} seconds",
+            start.elapsed().as_secs()
+        );
+        STATS::completion_duration_secs
+            .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
+        Mononoke::new(repos, repo_names_in_tier)
     }
 
     /// Returns a handle to this app's runtime.

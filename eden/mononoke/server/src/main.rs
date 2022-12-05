@@ -29,9 +29,7 @@ use futures::channel::oneshot;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_watchdog::WatchdogExt;
 use mononoke_api::CoreContext;
-use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
@@ -285,7 +283,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         let app = Arc::clone(&app);
         async move {
             let common = configs.common.clone();
-            let mononoke = Arc::new(Mononoke::new(Arc::clone(&app)).watched(&root_log).await?);
+            let mononoke = Arc::new(app.open_mononoke().await?);
             info!(&root_log, "Built Mononoke");
 
             info!(&root_log, "Warming up cache");
