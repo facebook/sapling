@@ -13,6 +13,7 @@ use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use mononoke_types::ChangesetId;
+use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use prettytable::cell;
 use prettytable::format;
@@ -43,7 +44,10 @@ pub async fn list_requests(
         "Status",
         "Target bookmark",
         "Source name (sync_changeset)",
-        "Source Changeset (sync_changeset)"
+        "Source Changeset (sync_changeset)",
+        "Created at",
+        "Ready at",
+        "Duration",
     ]);
     for (repo_ids, queue) in repos_and_queues {
         let res = queue
@@ -71,13 +75,26 @@ pub async fn list_requests(
                 }
                 _ => ("".to_string(), "".to_string()),
             };
+            let created_at: DateTime = entry.created_at.into();
+            let ready_at: Option<DateTime> = entry.ready_at.map(|t| t.into());
+            let ready_at_str =
+                ready_at.map_or_else(|| "Not finished".to_string(), |t| t.to_string());
+            let duration = if let Some(ready_at) = ready_at {
+                let duration = ready_at.into_chrono() - created_at.into_chrono();
+                duration.to_string()
+            } else {
+                "Not finished".to_string()
+            };
             table.add_row(row![
                 req_id.0,
                 req_id.1,
                 entry.status,
                 params.target()?.bookmark,
                 &source_name,
-                &changeset_id
+                &changeset_id,
+                &created_at,
+                &ready_at_str,
+                duration,
             ]);
         }
     }
