@@ -190,7 +190,7 @@ pub mod test_impl {
     use cloned::cloned;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use metaconfig_types::CommitSyncConfig;
-    use synced_commit_mapping::SyncedCommitMapping;
+    use synced_commit_mapping::ArcSyncedCommitMapping;
 
     use super::*;
 
@@ -230,7 +230,7 @@ pub mod test_impl {
             small_repo: (String, BlobRepo),
             large_repo: (String, BlobRepo),
             _commit_sync_config: CommitSyncConfig,
-            mapping: Arc<dyn SyncedCommitMapping>,
+            mapping: ArcSyncedCommitMapping,
             lv_cfg: Arc<dyn LiveCommitSyncConfig>,
         ) -> Result<Self, Error> {
             use futures::stream::FuturesOrdered;

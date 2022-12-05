@@ -38,7 +38,7 @@ use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::MPath;
 use slog::info;
-use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::ArcSyncedCommitMapping;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
@@ -1320,7 +1320,7 @@ async fn init_x_repo(
     let (syncers, commit_sync_config, lv_cfg, lv_cfg_src) = init_small_large_repo(ctx).await?;
 
     let small_to_large = syncers.small_to_large;
-    let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(small_to_large.get_mapping().clone());
+    let mapping: ArcSyncedCommitMapping = Arc::new(small_to_large.get_mapping().clone());
     let mononoke = Mononoke::new_test_xrepo(
         ctx.clone(),
         (

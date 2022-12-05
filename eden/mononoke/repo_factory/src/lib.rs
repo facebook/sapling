@@ -154,6 +154,7 @@ use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
+use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use thiserror::Error;
 use tunables::tunables;
@@ -1160,16 +1161,23 @@ impl RepoFactory {
         )?))
     }
 
+    /// The commit mapping bettween repos for synced commits.
+    pub async fn synced_commit_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcSyncedCommitMapping> {
+        Ok(Arc::new(
+            self.open::<SqlSyncedCommitMapping>(&repo_config.storage_config.metadata)
+                .await?,
+        ))
+    }
+
+    /// Cross-repo sync manager for this repo
     pub async fn repo_cross_repo(
         &self,
         repo_identity: &ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
+        synced_commit_mapping: &ArcSyncedCommitMapping,
     ) -> Result<ArcRepoCrossRepo> {
-        let synced_commit_mapping = Arc::new(
-            self.open::<SqlSyncedCommitMapping>(&repo_config.storage_config.metadata)
-                .await
-                .context(RepoFactoryError::RepoCrossRepo)?,
-        );
         let sync_lease = create_commit_syncer_lease(self.env.fb, self.env.caching)?;
         let logger = self
             .env
@@ -1181,7 +1189,7 @@ impl RepoFactory {
         )?);
 
         Ok(Arc::new(RepoCrossRepo::new(
-            synced_commit_mapping,
+            synced_commit_mapping.clone(),
             live_commit_sync_config,
             sync_lease,
         )))

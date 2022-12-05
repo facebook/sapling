@@ -119,6 +119,7 @@ use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
+use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use unodes::RootUnodeManifestId;
 use wireproto_handler::ArcRepoHandlerBase;
@@ -568,15 +569,22 @@ impl TestRepoFactory {
         )))
     }
 
-    /// Cross-repo sync manager for this repo
-    pub fn repo_cross_repo(&self) -> Result<ArcRepoCrossRepo> {
-        let synced_commit_mapping = Arc::new(SqlSyncedCommitMapping::from_sql_connections(
+    /// The commit mapping bettween repos for synced commits.
+    pub fn synced_commit_mapping(&self) -> Result<ArcSyncedCommitMapping> {
+        Ok(Arc::new(SqlSyncedCommitMapping::from_sql_connections(
             self.metadata_db.clone().into(),
-        ));
+        )))
+    }
+
+    /// Cross-repo sync manager for this repo
+    pub fn repo_cross_repo(
+        &self,
+        synced_commit_mapping: &ArcSyncedCommitMapping,
+    ) -> Result<ArcRepoCrossRepo> {
         let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
         let sync_lease = Arc::new(InProcessLease::new());
         Ok(Arc::new(RepoCrossRepo::new(
-            synced_commit_mapping,
+            synced_commit_mapping.clone(),
             live_commit_sync_config,
             sync_lease,
         )))

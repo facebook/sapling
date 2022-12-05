@@ -16,6 +16,7 @@ anyhow = "1.0.65"
 async-trait = "0.1.58"
 auto_impl = "0.4"
 context = { version = "0.1.0", path = "../../server/context" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
