@@ -1,10 +1,10 @@
 ---
-sidebar_position: 41
+sidebar_position: 43
 ---
 
 ## uncommit | unc
 <!--
-  @generated SignedSource<<4215389d366e2c25c319a24cf77cd034>>
+  @generated SignedSource<<8d5a8b56541b9a6060455facea60ea63>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
