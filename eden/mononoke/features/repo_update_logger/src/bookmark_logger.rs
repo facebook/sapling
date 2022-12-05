@@ -7,6 +7,7 @@
 
 use std::fmt;
 
+#[cfg(fbcode_build)]
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkUpdateReason;

@@ -324,7 +324,7 @@ fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
 }
 
 #[cfg(not(fbcode_build))]
-fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
+fn should_retry_mysql_query(_err: &anyhow::Error) -> bool {
     false
 }
 
