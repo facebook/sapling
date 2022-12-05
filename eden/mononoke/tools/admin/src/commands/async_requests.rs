@@ -55,7 +55,7 @@ pub enum AsyncRequestsSubcommand {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app = Arc::new(app);
     let mononoke = Arc::new(
-        app.open_mononoke()
+        app.open_mononoke_with_repo_arg(&args.repo)
             .await
             .context("Failed to initialize Mononoke API")?,
     );

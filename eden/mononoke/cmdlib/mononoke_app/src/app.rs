@@ -309,6 +309,12 @@ impl MononokeApp {
         self.open_mononoke_with_repo_names(repo_names).await
     }
 
+    /// Open a repository based on user-provided arguments.
+    pub async fn open_mononoke_with_repo_arg(&self, repo_arg: &impl AsRepoArg) -> Result<Mononoke> {
+        let (repo_name, _) = self.repo_config(repo_arg.as_repo_arg())?;
+        self.open_mononoke_with_repo_names(vec![repo_name]).await
+    }
+
     /// Instantiates Mononoke API with specified repos
     ///
     /// (the specified repos must be configured in the config)
