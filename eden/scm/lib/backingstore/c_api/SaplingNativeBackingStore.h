@@ -50,7 +50,7 @@ using NodeIdRange = folly::Range<const NodeId*>;
  * - If the object is not found, the error is logged and nullptr is returned.
  * - Batch methods take a callback function which is evaluated once per
  *   returned result. Compared to returning a vector, this minimizes the
- *   amount of time that heavyweight are in RAM.
+ *   amount of time that heavyweight objects are in RAM.
  */
 class SaplingNativeBackingStore {
  public:
