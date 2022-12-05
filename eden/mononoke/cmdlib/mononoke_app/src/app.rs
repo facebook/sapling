@@ -8,11 +8,14 @@
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs;
 use std::future::Future;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -499,6 +502,46 @@ impl MononokeApp {
         Ok(repo)
     }
 
+    /// Open an existing repo object
+    /// Make sure that the opened repo has redaction DISABLED
+    pub async fn open_repo_unredacted<Repo>(&self, repo_args: &impl AsRepoArg) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_arg = repo_args.as_repo_arg();
+        let (repo_name, mut repo_config) = self.repo_config(repo_arg)?;
+        let common_config = self.repo_configs().common.clone();
+        repo_config.redaction = Redaction::Disabled;
+        let repo = self
+            .repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
+    /// Create a new repo object -- for local instances, expect its contents to be empty.
+    /// Makes sure that the opened repo has redaction DISABLED
+    pub async fn create_repo_unredacted<Repo>(&self, repo_arg: &impl AsRepoArg) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let (repo_name, mut repo_config) = self.repo_config(repo_arg.as_repo_arg())?;
+        let common_config = self.repo_configs().common.clone();
+
+        match &repo_config.storage_config.blobstore {
+            BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
+                setup_repo_dir(path, CreateStorage::ExistingOrCreate)?;
+            }
+            _ => {}
+        }
+        repo_config.redaction = Redaction::Disabled;
+        let repo = self
+            .repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
     async fn populate_repos<Repo, Names>(
         &self,
         mononoke_repos: &MononokeRepos<Repo>,
@@ -774,4 +817,37 @@ impl MononokeApp {
 
         Ok(builder)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CreateStorage {
+    ExistingOnly,
+    ExistingOrCreate,
+}
+
+pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Result<()> {
+    let data_dir = data_dir.as_ref();
+
+    if !data_dir.is_dir() {
+        bail!("{:?} does not exist or is not a directory", data_dir);
+    }
+
+    // Validate directory layout
+    #[allow(clippy::single_element_loop)]
+    for subdir in &["blobs"] {
+        let subdir = data_dir.join(subdir);
+
+        if subdir.exists() && !subdir.is_dir() {
+            bail!("{:?} already exists and is not a directory", subdir);
+        }
+
+        if !subdir.exists() {
+            if CreateStorage::ExistingOnly == create {
+                bail!("{:?} not found in ExistingOnly mode", subdir,);
+            }
+            fs::create_dir(&subdir)
+                .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
+        }
+    }
+    Ok(())
 }
