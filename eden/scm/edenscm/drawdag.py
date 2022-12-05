@@ -77,17 +77,121 @@ Some special comments could have side effects:
       # drawdag.defaultfiles=false
     - Create bookmarks
       # bookmark BOOK_A = A
+
+Code after "python:" are evaluated as real Python code that can update
+commit properties using Python code:
+
+    commit(name="A", text="commit message", user="alice", date="3m ago")
+
+By using a script, default files and bookmarks are disabled.
 """
-from __future__ import absolute_import, print_function
 
 import collections
 import re
+from dataclasses import dataclass, field
+
+from typing import Dict, List, Optional, Union
 
 import bindings
 
-from . import bookmarks, context, error, mutation, pycompat, scmutil, visibility
+from . import bookmarks, context, error, hg, mutation, pycompat, scmutil, visibility
 from .i18n import _
 from .node import hex, nullid, short
+
+
+@dataclass
+class Commit:
+    """Description of what a commit contains"""
+
+    name: str = ""
+    text: str = ""
+    user: str = ""
+    date: str = ""
+    files: Dict[str, str] = field(default_factory=dict)
+    bookmark: Union[str, List[str]] = field(default_factory=list)
+    remotename: Union[str, List[str]] = field(default_factory=list)
+
+    # predecessors: ex. 'B' or ['B', 'C']
+    pred: Optional[Union[str, List[str]]] = None
+    op: Optional[str] = None
+
+    @property
+    def bookmarks(self) -> List[str]:
+        return _listify(self.bookmark)
+
+    @property
+    def remotenames(self) -> List[str]:
+        return _listify(self.remotename)
+
+    @property
+    def predecessors(self) -> List[str]:
+        return _listify(self.pred)
+
+    @property
+    def mutation_operation(self) -> Optional[str]:
+        if self.pred:
+            return self.op or "amend"
+
+
+@dataclass
+class ScriptOutput:
+    """Output of the user drawdag Python script"""
+
+    default_commit: Commit
+    name_to_commit: Dict[str, Commit] = field(default_factory=dict)
+    goto: Optional[str] = None
+
+    def get_commit_ctx(self, name: str, repo, parentctxs):
+        commit = self.name_to_commit.get(name)
+        if not commit:
+            commit = Commit(name)
+        return simplecommitctx(
+            repo,
+            name=name,
+            parentctxs=parentctxs,
+            filemap=commit.files,
+            mutationspec=None,
+            date=commit.date or self.default_commit.date,
+            text=commit.text or self.default_commit.text,
+            user=commit.user or self.default_commit.user,
+        )
+
+    def commit(self, *args, **kwargs):
+        c = Commit(*args, **kwargs)
+        if c.name:
+            self.name_to_commit[c.name] = c
+        else:
+            self.default_commit = c
+        return c
+
+    def set_goto(self, name):
+        self.goto = name
+
+
+def _listify(value):
+    if value is None:
+        return []
+    elif isinstance(value, list):
+        return value
+    else:
+        return [value]
+
+
+def preapre_script_env_and_output():
+    """Prepare the environments to run Python logic in drawdag.
+    Return (globals, output).
+    globals define functions usable by drawdag Python code (user input).
+    output provides output for the drawdag operation itself  (this file).
+    """
+    output = ScriptOutput(default_commit=Commit("x", user="test", date="0 0"))
+
+    global_env = {
+        "commit": output.commit,
+        "goto": output.set_goto,
+        "now": bindings.hgtime.setnowfortesting,
+    }
+
+    return global_env, output
 
 
 def _parseasciigraph(text: str):
@@ -154,10 +258,12 @@ class simplefilectx(object):
 
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, filemap, mutationspec, date):
+    def __init__(
+        self, repo, name, parentctxs, filemap, mutationspec, date, text=None, user=None
+    ):
         added = []
         removed = []
-        for path, data in filemap.items():
+        for path, data in (filemap or {}).items():
             assert isinstance(data, str)
             # check "(renamed from)". mark the source as removed
             m = re.search(r"\(renamed from (.+)\)\s*\Z", data, re.S)
@@ -173,11 +279,9 @@ class simplecommitctx(context.committablectx):
         extra = {"branch": "default"}
         mutinfo = None
         if mutationspec is not None:
-            predctxs, cmd, split = mutationspec
+            prednodes, cmd, split = mutationspec
             mutinfo = {
-                "mutpred": ",".join(
-                    [mutation.identfromnode(p.node()) for p in predctxs]
-                ),
+                "mutpred": ",".join([mutation.identfromnode(p) for p in prednodes]),
                 "mutdate": date,
                 "mutuser": repo.ui.config("mutation", "user") or repo.ui.username(),
                 "mutop": cmd,
@@ -193,8 +297,9 @@ class simplecommitctx(context.committablectx):
             "date": date,
             "extra": extra,
             "mutinfo": mutinfo,
+            "user": user,
         }
-        super(simplecommitctx, self).__init__(self, name, **opts)
+        super(simplecommitctx, self).__init__(self, text or name, **opts)
         self._repo = repo
         self._filemap = filemap
         self._parents = parentctxs
@@ -266,6 +371,10 @@ def _getcomments(text):
         yield line.split(" # ", 1)[1].split(" # ")[0].strip()
 
 
+def _split_script(text):
+    return (text.rsplit("\npython:\n", 1) + [""])[:2]
+
+
 def drawdag(repo, text: str, **opts) -> None:
     r"""given an ASCII graph as text, create changesets in repo.
 
@@ -287,6 +396,8 @@ def drawdag(repo, text: str, **opts) -> None:
 
 
 def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
+    text, script = _split_script(text)
+
     # parse the graph and make sure len(parents) <= 2 for each node
     edges = _parseasciigraph(text)
     for k, v in edges.items():
@@ -309,7 +420,9 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
         dates[name] = date
 
     # do not create default files? (ex. commit A has file "A")
-    defaultfiles = not any("drawdag.defaultfiles=false" in c for c in comments)
+    defaultfiles = (
+        not any("drawdag.defaultfiles=false" in c for c in comments) and not script
+    )
 
     committed = {None: nullid}  # {name: node}
     existed = {None}
@@ -393,6 +506,11 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
                 n = n.strip()
                 tohide -= {n}
 
+    # run user script for more flexible overrides
+    global_env, output = preapre_script_env_and_output()
+    if script:
+        exec(script, global_env)
+
     # Only record mutations if mutation is enabled.
     mutationedges = {}
     mutationpreds = set()
@@ -416,34 +534,39 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
             continue
         pctxs = [repo[committed[n]] for n in parents]
         pctxs.sort(key=lambda c: c.node())
-        added = {}
-        if len(parents) > 1:
-            # If it's a merge, take the files and contents from the parents
-            for f in pctxs[1].manifest():
-                if f not in pctxs[0].manifest():
-                    added[f] = pycompat.decodeutf8(pctxs[1][f].data())
-        else:
-            # If it's not a merge, add a single file, if defaultfiles is set
-            if defaultfiles:
-                added[name] = name
-        # add extra file contents in comments
-        for path, content in files.get(name, {}).items():
-            added[path] = content
-        commitmutations = None
-        if name in mutations:
-            preds, cmd, split = mutations[name]
-            if split is not None:
-                split = [repo[committed[s]] for s in split]
-            commitmutations = ([repo[committed[p]] for p in preds], cmd, split)
 
-        date = dates.get(name, "0 0")
-        ctx = simplecommitctx(repo, name, pctxs, added, commitmutations, date)
+        if script:
+            ctx = output.get_commit_ctx(name, repo, pctxs)
+        else:
+            added = {}
+            if len(parents) > 1:
+                # If it's a merge, take the files and contents from the parents
+                for f in pctxs[1].manifest():
+                    if f not in pctxs[0].manifest():
+                        added[f] = pycompat.decodeutf8(pctxs[1][f].data())
+            else:
+                # If it's not a merge, add a single file, if defaultfiles is set
+                if defaultfiles:
+                    added[name] = name
+            # add extra file contents in comments
+            for path, content in files.get(name, {}).items():
+                added[path] = content
+            commitmutations = None
+            if name in mutations:
+                preds, cmd, split = mutations[name]
+                if split is not None:
+                    split = [repo[committed[s]] for s in split]
+                commitmutations = ([committed[p] for p in preds], cmd, split)
+
+            date = dates.get(name, "0 0")
+            ctx = simplecommitctx(repo, name, pctxs, added, commitmutations, date)
+
         n = ctx.commit()
         committed[name] = n
-        if name not in mutationpreds and opts.get("bookmarks"):
+        if name not in mutationpreds and opts.get("bookmarks") and not script:
             bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
 
-    # parse commits like "bookmark book_A=A" to specify bookmarks
+    # parse comments like "bookmark book_A=A" to specify bookmarks
     dates = {}
     bookmarkre = re.compile(r"^bookmark (\S+)\s*=\s*(\w+)$", re.M)
     for book, name in bookmarkre.findall(commenttext):
@@ -451,9 +574,39 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
         if node:
             bookmarks.addbookmarks(repo, tr, [book], hex(node), True, True)
 
+    # handle user script for bookmark, remotename, mutation changes
+    remotenames = {}
+    mutation_entries = []
+    for name, commit in output.name_to_commit.items():
+        node = committed.get(name)
+        if node:
+            for book in commit.bookmarks:
+                bookmarks.addbookmarks(repo, tr, [book], hex(node), True, True)
+            for remotename in commit.remotenames:
+                remotenames[remotename] = node
+            op = commit.mutation_operation
+            if op:
+                pred_names = commit.predecessors
+                pred_nodes = [committed.get(n) for n in pred_names if n in committed]
+                if pred_nodes:
+                    mutation_entries.append(
+                        mutation.createsyntheticentry(repo, pred_nodes, node, op)
+                    )
+
+    if remotenames:
+        repo.svfs.write("remotenames", bookmarks.encoderemotenames(remotenames))
+    if mutation_entries:
+        mutation.recordentries(repo, mutation_entries)
+
     # update visibility (hide commits)
     hidenodes = [committed[n] for n in tohide]
     visibility.remove(repo, hidenodes)
+
+    # handle user script goto request
+    if output.goto:
+        node = committed.get(output.goto)
+        if node:
+            hg.updaterepo(repo, node, True)
 
     del committed[None]
     if opts.get("print"):
