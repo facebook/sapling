@@ -18,7 +18,6 @@ fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rus
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 observability = { version = "0.1.0", path = "../../observability" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
-regex = "1.6.0"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

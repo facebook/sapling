@@ -115,7 +115,7 @@ impl Mononoke {
                 }
             }));
         let repo_names = configs.repos.into_iter().filter_map(|(name, config)| {
-            let is_matching_filter = repo_filter.as_ref().map_or(true, |re| re.is_match(&name));
+            let is_matching_filter = repo_filter.as_ref().map_or(true, |filter| filter(&name));
             // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
             // at service startup)
             if config.enabled && !config.deep_sharded && is_matching_filter {
