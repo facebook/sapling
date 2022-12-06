@@ -424,6 +424,24 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
       .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }
 
+ImmediateFuture<bool> ObjectStore::areBlobsEqual(
+    const ObjectId& one,
+    const ObjectId& two,
+    const ObjectFetchContextPtr& context) const {
+  if (areObjectsKnownIdentical(one, two)) {
+    return true;
+  }
+
+  // If Mercurial eventually switches to using blob IDs that are solely
+  // based on the file contents (as opposed to file contents + history)
+  // then we could drop this extra load of the blob SHA-1, and rely only
+  // on the blob ID comparison instead.
+  return collectAllSafe(getBlobSha1(one, context), getBlobSha1(two, context))
+      .thenValue([](const std::tuple<Hash20, Hash20>& sha1s) {
+        return std::get<0>(sha1s) == std::get<1>(sha1s);
+      });
+}
+
 ObjectComparison ObjectStore::compareObjectsById(
     const ObjectId& one,
     const ObjectId& two) const {

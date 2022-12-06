@@ -210,26 +210,19 @@ void processBothPresent(
       if (scmEntry.second.getType() != wdEntry.second.getType()) {
         context->callback->modifiedPath(entryPath, wdEntry.second.getDtype());
       } else {
-        // If Mercurial eventually switches to using blob IDs that are solely
-        // based on the file contents (as opposed to file contents + history)
-        // then we could drop this extra load of the blob SHA-1, and rely only
-        // on the blob ID comparison instead.
-        auto compareEntryContents = makeImmediateFutureWith([&] {
-          auto scmFuture = context->store->getBlobSha1(
-              scmEntry.second.getHash(), context->getFetchContext());
-          auto wdFuture = context->store->getBlobSha1(
-              wdEntry.second.getHash(), context->getFetchContext());
-          return collectAllSafe(scmFuture, wdFuture)
-              .thenValue([entryPath = entryPath.copy(),
-                          context,
-                          dtype = scmEntry.second.getDtype()](
-                             const std::tuple<Hash20, Hash20>& info) {
-                const auto& [scmHash, wdHash] = info;
-                if (scmHash != wdHash) {
-                  context->callback->modifiedPath(entryPath, dtype);
-                }
-              });
-        });
+        auto compareEntryContents =
+            context->store
+                ->areBlobsEqual(
+                    scmEntry.second.getHash(),
+                    wdEntry.second.getHash(),
+                    context->getFetchContext())
+                .thenValue([entryPath = entryPath.copy(),
+                            context,
+                            dtype = scmEntry.second.getDtype()](bool equal) {
+                  if (!equal) {
+                    context->callback->modifiedPath(entryPath, dtype);
+                  }
+                });
         childFutures.add(std::move(entryPath), std::move(compareEntryContents));
       }
     }

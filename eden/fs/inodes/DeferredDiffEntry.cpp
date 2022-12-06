@@ -225,14 +225,11 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         currentDType_{currentDType} {}
 
   ImmediateFuture<folly::Unit> run() override {
-    auto f1 = context_->store->getBlobSha1(
-        scmEntry_.getHash(), context_->getFetchContext());
-    auto f2 = context_->store->getBlobSha1(
-        currentBlobHash_, context_->getFetchContext());
-    return collectAllSafe(f1, f2).thenValue(
-        [this](const std::tuple<Hash20, Hash20>& info) {
-          const auto& [info1, info2] = info;
-          if (info1 != info2) {
+    return context_->store
+        ->areBlobsEqual(
+            scmEntry_.getHash(), currentBlobHash_, context_->getFetchContext())
+        .thenValue([this](bool equal) {
+          if (!equal) {
             XLOG(DBG5) << "modified file: " << getPath();
             context_->callback->modifiedPath(getPath(), currentDType_);
           }

@@ -263,3 +263,68 @@ TEST_F(ObjectStoreTest, test_process_access_counts) {
   EXPECT_EQ(2, objectStore->getPidFetches().rlock()->at(pid0));
   EXPECT_EQ(1, objectStore->getPidFetches().rlock()->at(pid1));
 }
+
+class FetchContext final : public ObjectFetchContext {
+ public:
+  FetchContext() = default;
+
+  Cause getCause() const override {
+    return Cause::Unknown;
+  }
+
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+  getRequestInfo() const override {
+    return nullptr;
+  }
+
+  void didFetch(ObjectType, const ObjectId&, Origin) override {
+    ++fetchCount_;
+  }
+
+  uint64_t getFetchCount() const {
+    return fetchCount_;
+  }
+
+ private:
+  std::atomic<uint64_t> fetchCount_{0};
+};
+
+TEST_F(ObjectStoreTest, blobs_with_same_objectid_are_equal) {
+  auto context = makeRefPtr<FetchContext>();
+
+  auto objectId = putReadyBlob("foo");
+
+  auto fut = objectStore->areBlobsEqual(
+      objectId, objectId, context.as<ObjectFetchContext>());
+  EXPECT_TRUE(std::move(fut).get(0ms));
+  EXPECT_EQ(context->getFetchCount(), 0);
+}
+
+TEST_F(ObjectStoreTest, different_blobs_arent_equal) {
+  auto context = makeRefPtr<FetchContext>();
+
+  auto one = putReadyBlob("foo");
+  auto two = putReadyBlob("bar");
+
+  auto fut =
+      objectStore->areBlobsEqual(one, two, context.as<ObjectFetchContext>());
+  EXPECT_FALSE(std::move(fut).get(0ms));
+  EXPECT_EQ(context->getFetchCount(), 2);
+}
+
+TEST_F(
+    ObjectStoreTest,
+    blobs_with_different_objectid_but_same_content_are_equal) {
+  auto context = makeRefPtr<FetchContext>();
+
+  auto one = putReadyBlob("foo");
+  auto storedBlob =
+      fakeBackingStore->putBlob(ObjectId{"not_a_content_hash"}, "foo");
+  storedBlob->setReady();
+  auto two = storedBlob->get().getHash();
+
+  auto fut =
+      objectStore->areBlobsEqual(one, two, context.as<ObjectFetchContext>());
+  EXPECT_TRUE(std::move(fut).get(0ms));
+  EXPECT_EQ(context->getFetchCount(), 2);
+}

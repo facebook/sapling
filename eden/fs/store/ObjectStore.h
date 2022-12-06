@@ -215,6 +215,17 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
+   * Compares the objects.
+   *
+   * Returns true when the objects either refer to the same object
+   * (areObjectsKnownIdentical), or if their content are the same.
+   */
+  ImmediateFuture<bool> areBlobsEqual(
+      const ObjectId& one,
+      const ObjectId& two,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
    * Get the LocalStore used by this ObjectStore
    */
   const std::shared_ptr<LocalStore>& getLocalStore() const {
