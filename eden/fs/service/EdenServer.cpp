@@ -707,6 +707,12 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
+
+  if (config.enableGc.getValue()) {
+    gcTask_.updateInterval(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            config.gcPeriod.getValue()));
+  }
 }
 
 void EdenServer::scheduleCallbackOnMainEventBase(
@@ -2174,6 +2180,45 @@ void EdenServer::manageOverlay() {
     const auto& mount = info.edenMount;
 
     mount->getOverlay()->maintenance();
+  }
+}
+
+void EdenServer::workingCopyGC() {
+  auto config = serverState_->getReloadableConfig()->getEdenConfig();
+  auto cutoffConfig =
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          config->gcCutoff.getValue());
+
+  auto cutoff = std::chrono::system_clock::time_point::max();
+  if (cutoffConfig != std::chrono::system_clock::duration::zero()) {
+    cutoff = std::chrono::system_clock::now() - cutoffConfig;
+  }
+
+  const auto mountPoints = mountPoints_->rlock();
+  for (const auto& [mountPath, info] : *mountPoints) {
+    const auto& mount = info.edenMount;
+
+    auto rootInode = mount->getRootInode();
+
+    auto lease = mount->tryStartWorkingCopyGC(rootInode);
+    if (!lease) {
+      XLOG(DBG6) << "Not running GC for: " << mountPath
+                 << ", another GC is already in progress";
+      continue;
+    }
+
+    // This code is running on the EventBase, let's make sure we don't block it
+    // by moving ourself to another executor.
+    folly::via(
+        getServerState()->getThreadPool().get(),
+        [rootInode, cutoff, lease = std::move(lease)] {
+          static auto context =
+              ObjectFetchContext::getNullContextWithCauseDetail(
+                  "EdenServer::garbageCollect");
+          return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
+              .semi();
+        })
+        .ensure([rootInode] { rootInode->unloadChildrenUnreferencedByFs(); });
   }
 }
 
