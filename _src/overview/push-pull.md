@@ -24,6 +24,8 @@ $ sl
 ╭─╯  Commit One
 │
 o  b5d600552  65 minutes ago  remote/main
+╷
+~
 
 # Fetch new commits from main
 $ sl pull
@@ -39,6 +41,8 @@ o  08a7511cc  33 seconds ago  remote/main
 ╭─╯  Commit One
 │
 o  b5d600552  66 minutes ago
+╷
+~
 
 $ sl pull --rebase
 $ sl
@@ -49,6 +53,8 @@ $ sl
 ╭─╯  Commit One
 │
 o  59125794a  20 seconds ago  remote/main
+╷
+~
 ```
 
 ### Push

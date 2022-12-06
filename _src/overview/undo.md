@@ -17,6 +17,8 @@ $ sl
 o  59125794a  16 minutes ago  remote/main
 ╷
 o  774057207  Today at 10:48  remote/stable
+╷
+~
 
 # Change #1 to rename the commit.
 $ sl metaedit -m "Commit Two Renamed"
@@ -34,6 +36,8 @@ o  59125794a  24 minutes ago  remote/main
 ╭─╯  Commit One
 │
 o  774057207  Today at 10:48  remote/stable
+╷
+~
 
 # Undo change #2.
 $ sl undo
@@ -47,7 +51,8 @@ $ sl
 o  59125794a  25 minutes ago  remote/main
 ╷
 o  774057207  Today at 10:48  remote/stable
-
+╷
+~
 ```
 
 Running the command again will undo the command run before the last undone command. Use the `sl redo` command to reverse the undo command.
@@ -65,6 +70,7 @@ $ sl
 │
 o  59125794a  27 minutes ago  remote/master
 ╷
+~
 
 # Oops! I didn't mean to undo that rename.
 $ sl redo
@@ -76,6 +82,8 @@ $ @  f5c155dd8  5 minutes ago  mary
 ╭─╯  Commit One
 │
 o  59125794a  28 minutes ago  remote/main
+╷
+~
 ```
 
 #### Undo --interactive
@@ -102,6 +110,8 @@ $ sl
 ╭─╯  my feature
 │
 o  59125794a  36 minutes ago  remote/main
+╷
+~
 
 $ echo "edit myproject.cpp" >> myproject.cpp
 $ sl commit -m "new commit"
@@ -114,6 +124,8 @@ $ sl
 ╭─╯  my feature
 │
 o  59125794a  38 minutes ago  remote/main
+╷
+~
 
 # Oops! I meant to amend my changes instead.
 $ sl uncommit
@@ -121,10 +133,12 @@ $ sl uncommit
 ╭─╯  my feature
 │
 o  59125794a  39 minutes ago  remote/main
+╷
+~
+
 # Now we're back to the state prior to the commit.
 $ sl st
 M myproject.cpp
-
 
 $ sl amend
 $ sl
@@ -132,6 +146,8 @@ $ sl
 ╭─╯  my feature
 │
 o  59125794a  41 minutes ago  remote/main
+╷
+~
 
 # Now let's say we change our mind and decide to make a new
 # commit after all. Let's undo the amend.

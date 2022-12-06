@@ -78,7 +78,7 @@ In many version control systems, running commands like `log` and `blame` on a fi
 
 For files, Sapling makes these operations O(changes to that file) by tracking the exact history of each individual file, in addition to the history of the entire commit graph.  This allows log and blame to be fast, regardless of the size of the repository.
 
-For directories, Sapling also tracks the history of a directory, but using this information to answer history queries is not yet implemented. Instead, Sapling can query the Sapling server for a directory’s history, which allows using the servers superior indexes to answer the query quickly.
+For directories, Sapling also tracks the history of a directory, but using this information to answer history queries is not yet implemented. Instead, Sapling can query the Sapling server for a directory’s history, which allows using the server's superior indexes to answer the query quickly.
 
 Additionally, in the case where the server isn't available, Sapling can bisect over the Segmented Changelog structure to look for the commits that changed the given file or directory. This allows figuring out an approximate history in O(log n) time, though it may miss cases where a file or directory is changed, then reverted back to a previous version.
 
