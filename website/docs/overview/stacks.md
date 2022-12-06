@@ -45,22 +45,24 @@ If you have a stack of commits, you can fold commits down into a single commit w
 
 ```sl-shell-example
 $ sl
-  o 5dbd8043f 82 seconds ago mary
-  │ commit five
+  o  5dbd8043f  82 seconds ago  mary
+  │  commit five
   │
-  @ bd057eb7f 93 seconds ago mary
-  │ commit four
+  @  bd057eb7f  93 seconds ago  mary
+  │  commit four
   │
-  o b65a4efb1 113 seconds ago mary
-  │ commit three
+  o  b65a4efb1  113 seconds ago  mary
+  │  commit three
   │
-  o ef7915cd2 2 minutes ago mary
-  │ commit two
+  o  ef7915cd2  2 minutes ago mary
+  │  commit two
   │
-  o 398748c95 2 minutes ago mary
-╭─╯ commit one
+  o  398748c95  2 minutes ago  mary
+╭─╯  commit one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 
 $ sl fold --from ef7915cd2
 # (equivalent to sl fold --exact ef7915cd2 b65a4efb1 bd057eb7f)
@@ -71,16 +73,18 @@ $ sl fold --from ef7915cd2
  5dbd8043fd7e -> debf0c562f6e "commit five"
 
 $ sl
-  o debf0c562 9 minutes ago mary
-  │ commit five
+  o  debf0c562  9 minutes ago  mary
+  │  commit five
   │
-  @ 3cf9adf66 2 minutes ago mary
-  │ commit two+three+four
+  @  3cf9adf66  2 minutes ago  mary
+  │  commit two+three+four
   │
-  o 398748c95 10 minutes ago mary
-╭─╯ commit one
+  o  398748c95  10 minutes ago  mary
+╭─╯  commit one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 ```
 
 
@@ -91,10 +95,12 @@ Use Sapling’s interactive editor interface to split the changes in one commit 
 
 ```sl-shell-example
 $ sl
-  @ b86c5cb40 2 seconds ago mary
-╭─╯ feature one + two
+  @  b86c5cb40  2 seconds ago  mary
+╭─╯  feature one + two
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 
 # we want to split apart feature one and feature two
 $ sl split
@@ -115,13 +121,15 @@ Done splitting? [yN] y
 # <enter new commit message for second commit>
 
 $ sl
-  @ a305c853a 41 seconds ago mary
-  │ feature two
+  @  a305c853a  41 seconds ago  mary
+  │  feature two
   │
-  o 619efe410 2 minutes ago mary
-╭─╯ feature one
+  o  619efe410  2 minutes ago  mary
+╭─╯  feature one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 ```
 
 ### Absorb
@@ -130,13 +138,15 @@ If you make changes while working at the top of a stack, the <Command name="abso
 
 ```sl-shell-example
 $ sl
-  @ a305c853a 41 seconds ago mary
-  │ feature two
+  @  a305c853a  41 seconds ago  mary
+  │  feature two
   │
-  o 619efe410 2 minutes ago mary
-╭─╯ feature one
+  o  619efe410  2 minutes ago  mary
+╭─╯  feature one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 
 # Edit part of "feature one", while we are on top of "feature two".
 $ vim myproject.cpp
@@ -167,13 +177,15 @@ a305c853a7b5 -> f656ac8c60c8 "feature two"
 
 # Feature one commit now contains the modifications.
 $ sl
-  @ f656ac8c60c8 11 seconds ago mary
-  │ feature two
+  @  f656ac8c8  11 seconds ago  mary
+  │  feature two
   │
-  o cbf60a27cae4 11 seconds ago mary
-╭─╯ feature one
+  o  cbf60a274  11 seconds ago  mary
+╭─╯  feature one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 ```
 
 ### Amend --to
@@ -188,6 +200,8 @@ $ sl
 ╭─╯  feature one
 │
 o  ea609e1ef  Yesterday at 14:34  remote/main
+╷
+~
 
 # Add new file for feature one.
 $ vim myproject2.cpp
