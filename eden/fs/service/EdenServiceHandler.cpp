@@ -3479,20 +3479,31 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
   auto edenMount = server_->getMount(mountPath);
   auto& fetchContext = helper->getFetchContext();
 
-  if (!(params->age()->seconds() == 0 && params->age()->nanoSeconds() == 0)) {
-    throw newEdenError(
-        EINVAL, EdenErrorType::ARGUMENT_ERROR, "Non-zero age is not supported");
-  }
-
   TreeInodePtr inode =
       inodeFromUserPath(*edenMount, *params->path(), fetchContext).asTreePtr();
+
+  if (!folly::kIsWindows) {
+    if (!(params->age()->seconds() == 0 && params->age()->nanoSeconds() == 0)) {
+      throw newEdenError(
+          EINVAL,
+          EdenErrorType::ARGUMENT_ERROR,
+          "Non-zero age is not supported on non-Windows platforms");
+    }
+  }
+
+  auto cutoff = std::chrono::system_clock::time_point::max();
+  if (*params->age()->seconds() != 0) {
+    cutoff = std::chrono::system_clock::now() -
+        std::chrono::seconds(*params->age()->seconds());
+  }
 
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingNotifications(*edenMount, *params->sync())
-                 .thenValue([inode = std::move(inode),
-                             &fetchContext](auto&&) mutable {
-                   return inode->invalidateChildrenNotMaterialized(fetchContext)
+                 .thenValue([inode = std::move(inode), cutoff, &fetchContext](
+                                auto&&) mutable {
+                   return inode
+                       ->invalidateChildrenNotMaterialized(cutoff, fetchContext)
                        .ensure([inode]() {
                          inode->unloadChildrenUnreferencedByFs();
                        })

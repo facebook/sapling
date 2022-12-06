@@ -446,11 +446,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #endif
 
   /**
-   * Invalidate all non-materialized childrens recursively.
+   * Invalidate old non-materialized childrens recursively.
+   *
+   * File inodes touched before the passed in cutoff will be invalidated. Tree
+   * inodes will also be invalidated if all of their childrens have been
+   * invalidated.
    *
    * Returns the number of inodes invalidated.
    */
   ImmediateFuture<uint64_t> invalidateChildrenNotMaterialized(
+      std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context);
 
   /*
