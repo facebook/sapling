@@ -29,9 +29,7 @@ use futures::channel::oneshot;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use futures_watchdog::WatchdogExt;
 use mononoke_api::CoreContext;
-use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::McrouterAppExtension;
@@ -76,12 +74,6 @@ struct MononokeServerArgs {
     /// Path to a file with CA certificate
     #[clap(long)]
     ca_pem: String,
-    /// Path to a file with SCS client certificate
-    #[clap(long)]
-    scs_client_cert: Option<String>,
-    /// Path to a file with SCS client private key
-    #[clap(long, requires = "scs-client-cert")]
-    scs_client_private_key: Option<String>,
     /// Path to a file with encryption keys for SSL tickets
     #[clap(long)]
     ssl_ticket_seeds: Option<String>,
@@ -237,17 +229,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     info!(root_log, "Starting up");
 
     #[cfg(fbcode_build)]
-    if let (Some(scs_cert_path), Some(scs_key_path)) =
-        (&args.scs_client_cert, &args.scs_client_private_key)
-    {
-        pushrebase_client::scs_override_certificate_paths(
-            scs_cert_path,
-            scs_key_path,
-            &args.ca_pem,
-        );
-    }
-
-    #[cfg(fbcode_build)]
     if let (Some(land_service_cert_path), Some(land_service_key_path)) = (
         &args.land_service_client_cert,
         &args.land_service_client_private_key,
@@ -302,7 +283,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         let app = Arc::clone(&app);
         async move {
             let common = configs.common.clone();
-            let mononoke = Arc::new(Mononoke::new(Arc::clone(&app)).watched(&root_log).await?);
+            let mononoke = Arc::new(app.open_mononoke().await?);
             info!(&root_log, "Built Mononoke");
 
             info!(&root_log, "Warming up cache");

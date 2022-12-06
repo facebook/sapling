@@ -35,13 +35,13 @@ class HgDatapackStore {
       std::shared_ptr<ReloadableConfig> config)
       : store_{repository.view(), options}, config_{std::move(config)} {}
 
-  /**
-   * Imports the blob identified by the given hash from the local store.
-   * Returns nullptr if not found.
-   */
-  std::unique_ptr<Blob> getBlobLocal(
-      const ObjectId& id,
-      const HgProxyHash& hgInfo);
+  void getTreeBatch(
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
+
+  std::unique_ptr<Tree> getTree(
+      const RelativePath& path,
+      const Hash20& manifestId,
+      const ObjectId& edenTreeId);
 
   /**
    * Imports the tree identified by the given hash from the local store.
@@ -59,13 +59,13 @@ class HgDatapackStore {
   void getBlobBatch(
       const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
-  void getTreeBatch(
-      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
-
-  std::unique_ptr<Tree> getTree(
-      const RelativePath& path,
-      const Hash20& manifestId,
-      const ObjectId& edenTreeId);
+  /**
+   * Imports the blob identified by the given hash from the local store.
+   * Returns nullptr if not found.
+   */
+  std::unique_ptr<Blob> getBlobLocal(
+      const ObjectId& id,
+      const HgProxyHash& hgInfo);
 
   /**
    * Reads blob metadata from hg cache.

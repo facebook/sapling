@@ -15,5 +15,5 @@ futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://gi
 metadata = { version = "0.1.0", path = "../server/metadata" }
 netstring = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio-util = { version = "0.6", features = ["full"] }
-zstd = "0.11.1+zstd.1.5.2"
+zstd = { version = "0.11.2+zstd.1.5.2", features = ["zstdmt"] }
 zstd-safe = { version = "5.0.1+zstd.1.5.2", features = ["std"] }

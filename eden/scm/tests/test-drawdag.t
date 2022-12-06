@@ -382,3 +382,74 @@ Horizontal graph with ranges:
   │
   o  A
   
+Customized script for complex commit properties, intended for creating examples
+for documentation:
+
+  $ newrepo
+  $ hg debugdrawdag << 'EOS'
+  > P1..P9
+  > P3-A1-A2
+  > P5-B1..B3
+  > P7-C1-C2-C3
+  >        \
+  >         C4
+  > python:
+  > now('2000-7-28 12:00 UTC')  # set the "now" time
+  > commit(user='mary')         # set default author
+  > commit('A1', '[sl] windows: update Python', date='2000-7-15 14:25')
+  > commit('A2', 'debug', date='2000-7-15 14:35')
+  > commit('B1', '[eden] Thread EdenConfig down to Windows fsck', date='3d ago')
+  > commit('B2', '[eden] Remove n^2 path comparisons from Windows fsck', date='3d ago')
+  > commit('B3', '[edenfs] Recover Overlay from disk/scm for Windows fsck', date='3d ago')
+  > commit('C1', '[eden] Use PathMap for WindowsFsck', date='2d ago')
+  > commit('C2', '[eden] Close Windows file handle during Windows Fsck', date='2d ago')
+  > commit('C3', 'temp', date='2d ago')
+  > commit('C4', '[eden] Support long paths in Windows FSCK', date='12m ago')
+  > commit('P9', remotename='remote/master')
+  > commit('P7', remotename='remote/stable')
+  > commit('P6', pred='A1', op='land')
+  > goto('B3')
+  > EOS
+
+  $ enable smartlog
+  $ cat >> "$HGRCPATH" <<EOF
+  > [templatealias]
+  > mutation_descs = "{join(mutations % '({operation} to {join(successors % \'{node|short}\', \', \')})', ' ')}"
+  > EOF
+  $ hg sl -T '{node|shortest} {ifeq(phase,"public","{remotenames}","{mutation_descs} {author} {date|simpledate}\n{desc|firstline}\n ")}'
+  o  1313 remote/master
+  ╷
+  ╷ o  03d3  mary Today at 11:48
+  ╷ │  [eden] Support long paths in Windows FSCK
+  ╷ │
+  ╷ │ o  839a  mary Wednesday at 12:00
+  ╷ ├─╯  temp
+  ╷ │
+  ╷ o  8c37  mary Wednesday at 12:00
+  ╷ │  [eden] Close Windows file handle during Windows Fsck
+  ╷ │
+  ╷ o  e105  mary Wednesday at 12:00
+  ╭─╯  [eden] Use PathMap for WindowsFsck
+  │
+  o  e406 remote/stable
+  ╷
+  ╷ @  67e2  mary Tuesday at 12:00
+  ╷ │  [edenfs] Recover Overlay from disk/scm for Windows fsck
+  ╷ │
+  ╷ o  ee32  mary Tuesday at 12:00
+  ╷ │  [eden] Remove n^2 path comparisons from Windows fsck
+  ╷ │
+  ╷ o  4284  mary Tuesday at 12:00
+  ╭─╯  [eden] Thread EdenConfig down to Windows fsck
+  │
+  o  eb5e
+  ╷
+  ╷ o  3c0a  mary Jul 15 at 14:35
+  ╷ │  debug
+  ╷ │
+  ╷ x  f8f9 (land to 29ac1765dd19) mary Jul 15 at 14:25
+  ╭─╯  [sl] windows: update Python
+  │
+  o  19cd
+  │
+  ~

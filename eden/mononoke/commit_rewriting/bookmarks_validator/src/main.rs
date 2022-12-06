@@ -645,6 +645,7 @@ mod tests {
                 last.unwrap(),
                 CandidateSelectionHint::Only,
                 CommitSyncContext::Tests,
+                false,
             )
             .await?;
 
@@ -805,6 +806,7 @@ mod tests {
                 new_master,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::Tests,
+                false,
             )
             .await?;
 

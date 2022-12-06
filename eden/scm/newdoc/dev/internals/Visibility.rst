@@ -1,6 +1,8 @@
 Visibility
 ==========
 
+Refer to https://sapling-scm.com/docs/internals/visibility-and-mutation
+
 .. note:: 
 
    This document describes new-style visibility and narrow-heads.
@@ -35,6 +37,3 @@ ancestor of:
 
 * The current working copy.  Checking out a hidden commit temporarily makes it
   and its ancestors visible.
-
-The ``directaccess`` extension also temporarily unhides any commit specified by
-hash for the duration of the command.

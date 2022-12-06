@@ -56,7 +56,6 @@ mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api_types = { version = "0.1.0", path = "types" }
-mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }

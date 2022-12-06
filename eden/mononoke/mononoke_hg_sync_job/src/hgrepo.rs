@@ -52,7 +52,10 @@ const SEND_UNBUNDLE_REPLAY_EXTENSION: &str = include_str!("sendunbundlereplay.py
 pub async fn list_hg_server_bookmarks(
     hg_repo_path: String,
 ) -> Result<HashMap<BookmarkName, HgChangesetId>, Error> {
-    let extension_file = NamedTempFile::new()?;
+    let extension_file = tempfile::Builder::new()
+        .suffix(".py")
+        .tempfile()
+        .context("Error in creating extension file")?;
     let file_path = extension_file
         .path()
         .to_str()
@@ -229,7 +232,10 @@ impl HgPeer {
             .to_str()
             .ok_or_else(|| Error::msg("Temp file path contains non-unicode chars"))?;
 
-        let extension_file = NamedTempFile::new().context("Error in creating extension file")?;
+        let extension_file = tempfile::Builder::new()
+            .suffix(".py")
+            .tempfile()
+            .context("Error in creating extension file")?;
         // Persisting the file so it does not get deleted before its contents are read.
         let (extension_file, extension_path) = extension_file.keep()?;
         let path_string = extension_path.clone();

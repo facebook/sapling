@@ -79,12 +79,9 @@ class HgRepo {
   /**
    * Call "hg init" to create the repository.
    */
-  void hgInit(std::vector<std::string> extraArgs = {});
-
-  /**
-   * Configure the repository's hgrc to enable treemanifest.
-   */
-  void enableTreeManifest(AbsolutePathPiece cacheDirectory);
+  void hgInit(
+      AbsolutePathPiece cacheDirectory,
+      std::vector<std::string> extraArgs = {});
 
   /**
    * Call "hg clone" to create the repository.
@@ -98,6 +95,8 @@ class HgRepo {
    */
   void appendToHgrc(folly::StringPiece data);
   void appendToHgrc(const std::vector<std::string>& lines);
+
+  void appendToRequires(folly::StringPiece data);
 
   RootId commit(folly::StringPiece message);
   Hash20 getManifestForCommit(const RootId& commit);

@@ -109,8 +109,6 @@ impl RepoContext {
         head: ChangesetId,
         base: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
-        // TODO: Remove
-        push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
         push_authored_by: PushAuthoredBy,
     ) -> Result<PushrebaseOutcome, MononokeError> {
@@ -216,7 +214,7 @@ impl RepoContext {
                 &bookmark,
                 changesets,
                 pushvars,
-                push_source,
+                CrossRepoPushSource::NativeToThisRepo,
                 bookmark_restrictions,
             )
             .await?

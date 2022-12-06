@@ -30,7 +30,6 @@ use fbinit::FacebookInit;
 use megarepo_api::MegarepoApi;
 use mononoke_api::repo::Repo;
 use mononoke_api::CoreContext;
-use mononoke_api::Mononoke;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
@@ -203,7 +202,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let scuba_builder = env.scuba_sample_builder.clone();
 
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
+    let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(app.clone(), mononoke.clone()))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));

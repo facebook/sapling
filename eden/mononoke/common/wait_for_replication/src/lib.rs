@@ -16,8 +16,10 @@ use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures::try_join;
 use metaconfig_types::BlobConfig;
+#[cfg(fbcode_build)]
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::DatabaseConfig;
+#[cfg(fbcode_build)]
 use metaconfig_types::MultiplexedStoreType;
 #[cfg(fbcode_build)]
 use metaconfig_types::ShardableRemoteDatabaseConfig;

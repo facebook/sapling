@@ -29,9 +29,9 @@ Tests for hg cloud sl
   > }
   > EOF
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -98,6 +98,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -268,7 +269,6 @@ Tests for hg cloud sl
   │
   o  7e1ae2 (public)  2018-05-23 16:51 +0000
      some commit
-  
 
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
@@ -395,6 +395,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -742,7 +743,6 @@ Tests for hg cloud sl
   │
   o  ae84d5 (public)  2018-06-25 17:51 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -841,6 +841,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1107,7 +1108,6 @@ Tests for hg cloud sl
   │
   o  346d06 (public)  2018-03-29 16:49 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -1188,6 +1188,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1400,7 +1401,6 @@ Tests for hg cloud sl
   │
   o  dbc73d (public)  2017-04-13 22:53 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -1420,6 +1420,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1449,7 +1450,6 @@ Tests for hg cloud sl
   │
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -1498,6 +1498,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1614,4 +1615,45 @@ Tests for hg cloud sl
   │
   o  073f98 (public)  2018-01-02 10:00 +0000
      some commit
+
+  $ cat > $TESTTMP/usersmartlogdata << EOF
+  > {
+  >   "smartlog": {
+  >     "nodes": [
+  >       { "node": "0067e44d36d919bec1bff6ac65d277e8e0dc2250", "phase": "draft", "author": "Test User", "date": 1527626185, "message": "some commit", "parents": ["4b1141993451c32f5e1c285ddc88468255cdccf2"], "bookmarks": [] },
+  >       { "node": "30443c40415321c0157d3798f14c51068edb428d", "phase": "public", "author": "Test User", "date": 1529511690, "message": "some commit", "parents": ["5526fe82a2b98fb5f3a340f21712a3437ddeb300"], "bookmarks": [] },
+  >       { "node": "4b1141993451c32f5e1c285ddc88468255cdccf2", "phase": "public", "author": "Test User", "date": 1527625388, "message": "some commit", "parents": ["42a2e3678e5e79c482a5eb4af808429fc044ae88"], "bookmarks": [] },
+  >       { "node": "685a62272258b3bd4d71ac0b331486276b3c2599", "phase": "draft", "author": "Test User", "date": 1531408804, "message": "some commit", "parents": ["aa84f0443f949a6accca6d67b2790d2f37927451"], "bookmarks": [] },
+  >       { "node": "717dccd1a732f794c51df27f7ba143c5c743d770", "phase": "draft", "author": "Test User", "date": 1529528566, "message": "some commit", "parents": ["30443c40415321c0157d3798f14c51068edb428d"], "bookmarks": [] },
+  >       { "node": "773bd8234d94c44079b4409525028517fcbd98ba", "phase": "draft", "author": "Test User", "date": 1532525470, "message": "some commit", "parents": ["c609e6238e05accd090222c74a0699238f394ba4"], "bookmarks": ["somebookmark"] },
+  >       { "node": "99d5fb5998e4f0a77a6b867ddeee93e7666e76c6", "phase": "public", "author": "Test User", "date": 1531229959, "message": "some commit", "parents": ["0c9fb09820a8fecb7ca9f5c46a776b72ffe41f24"], "bookmarks": [] },
+  >       { "node": "aa84f0443f949a6accca6d67b2790d2f37927451", "phase": "draft", "author": "Test User", "date": 1531249011, "message": "some commit", "parents": ["99d5fb5998e4f0a77a6b867ddeee93e7666e76c6"], "bookmarks": [] },
+  >       { "node": "c609e6238e05accd090222c74a0699238f394ba4", "phase": "public", "author": "Test User", "date": 1532342212, "message": "some commit", "parents": ["8cf8e2da24fdedf8f90276663bf8bb8acf60af2d"], "bookmarks": [] }]
+  >   }
+  > }
+  > EOF
+ 
+  $ hg cloud sl -T {"node"}
+  the repository is not connected to any workspace, assuming the 'default' workspace
+  commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
+  Smartlog:
   
+    o  773bd8234d94c44079b4409525028517fcbd98ba
+  ╭─╯
+  o  c609e6238e05accd090222c74a0699238f394ba4
+  ╷
+  ╷ o  685a62272258b3bd4d71ac0b331486276b3c2599
+  ╷ │
+  ╷ o  aa84f0443f949a6accca6d67b2790d2f37927451
+  ╭─╯
+  o  99d5fb5998e4f0a77a6b867ddeee93e7666e76c6
+  ╷
+  ╷ o  717dccd1a732f794c51df27f7ba143c5c743d770
+  ╭─╯
+  o  30443c40415321c0157d3798f14c51068edb428d
+  ╷
+  ╷ o  0067e44d36d919bec1bff6ac65d277e8e0dc2250
+  ╭─╯
+  o  4b1141993451c32f5e1c285ddc88468255cdccf2
+
+

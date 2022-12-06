@@ -12,6 +12,7 @@ anyhow = "1.0.65"
 async-recursion = "0.3.2"
 atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
 byteorder = "1.3"
+dirs = "2.0"
 edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
@@ -35,6 +36,7 @@ uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }
 
 [dev-dependencies]
 rand = { version = "0.8", features = ["small_rng"] }
+serde_test = "1.0"
 tempfile = "3.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]

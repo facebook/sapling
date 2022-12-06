@@ -15,7 +15,7 @@ you specify `--rebase`.
 Note, this is different from `git pull` which generally pulls all branches and
 automatically tries to merge/rebase your changes with the new branches.
 
-```bash
+```sl-shell-example
 $ sl
   @  9f73762dd  62 minutes ago  mary
   │  Commit Two
@@ -24,6 +24,8 @@ $ sl
 ╭─╯  Commit One
 │
 o  b5d600552  65 minutes ago  remote/main
+╷
+~
 
 # Fetch new commits from main
 $ sl pull
@@ -39,6 +41,8 @@ o  08a7511cc  33 seconds ago  remote/main
 ╭─╯  Commit One
 │
 o  b5d600552  66 minutes ago
+╷
+~
 
 $ sl pull --rebase
 $ sl
@@ -49,13 +53,15 @@ $ sl
 ╭─╯  Commit One
 │
 o  59125794a  20 seconds ago  remote/main
+╷
+~
 ```
 
 ### Push
 
 Use the push command to push local commits to remote. Specify the `--to` to specify the remote branch/bookmark to push commits to. Specify `-r` to specify local commit you want pushed. If `-r` is ommitted, the currently checked out commit is pushed.
 
-```bash
+```sl-shell-example
 # Push current commit stack to the remote main bookmark.
 $ sl push -r . --to main
 ```

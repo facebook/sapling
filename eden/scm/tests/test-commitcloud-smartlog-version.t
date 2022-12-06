@@ -29,10 +29,10 @@ Tests for hg cloud sl --date "2019-06-23 19:34:39"
   > }
   > EOF
   $ hg cloud sl --date "2019-06-23 19:34:39"
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog version 42 
   synced at 2019-07-09 16:46:27
-  
   $ cat > $TESTTMP/usersmartlogbyversiondata << EOF
   > {
   >   "smartlog": {
@@ -51,6 +51,7 @@ Tests for hg cloud sl --date "2019-06-23 19:34:39"
   > EOF
 
   $ hg cloud sl --date "2019-06-23 19:34:39"
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog version 42 
   synced at 2019-07-09 16:46:27
@@ -81,8 +82,8 @@ Tests for hg cloud sl --date "2019-06-23 19:34:39"
   │
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
-  
   $ hg cloud sl --date "2019-06-23 19:34:"
+  the repository is not connected to any workspace, assuming the 'default' workspace
   hg: parse error: invalid date: '2019-06-23 19:34:'
   [255]
 Tests for hg cloud sl --workspace-version
@@ -94,10 +95,10 @@ Tests for hg cloud sl --workspace-version
   > }
   > EOF
   $ hg cloud sl --workspace-version 42
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog version 42 
   synced at 2019-07-09 16:46:27
-  
 
   $ cat > $TESTTMP/usersmartlogbyversiondata << EOF
   > {
@@ -117,6 +118,7 @@ Tests for hg cloud sl --workspace-version
   > EOF
 
   $ hg cloud sl --workspace-version 42
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog version 42 
   synced at 2019-07-09 16:46:27
@@ -147,6 +149,5 @@ Tests for hg cloud sl --workspace-version
   │
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
-  
 
 

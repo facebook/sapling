@@ -5,6 +5,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from edenscm import error, perftrace, util
 from edenscm.edenapi_upload import filetypefromfile, uploadhgchangesets
@@ -16,10 +17,12 @@ from .metalog import fetchlatestbubble, storelatest
 
 
 @util.timefunction("snapshot_backup_parents", 0, "ui")
-def _backupparents(repo, wctx):
+def _backupparents(repo, wctx) -> None:
     """make sure this commit's ancestors are backed up in commitcloud"""
     parents = (wctx.p1().node(), wctx.p2().node())
     draftrevs = repo.changelog.torevset(
+        # pyre-fixme[10]: Name `ancestors` is used but not defined.
+        # pyre-fixme[10]: Name `draft` is used but not defined.
         repo.dageval(lambda: ancestors(parents) & draft())
     )
 
@@ -46,7 +49,7 @@ def parselabels(opts):
         return None
 
 
-def parsemaxuntracked(opts):
+def parsemaxuntracked(opts) -> Optional[int]:
     if opts["max_untracked_size"] != "":
         return int(opts["max_untracked_size"]) * 1000 * 1000
     else:
@@ -162,7 +165,7 @@ def uploadsnapshot(
     )
 
 
-def createremote(ui, repo, **opts):
+def createremote(ui, repo, **opts) -> None:
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
     maxfilecount = parsemaxfilecount(opts)

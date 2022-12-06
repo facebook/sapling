@@ -616,25 +616,26 @@ where
         .await
     }
 
-    // This is the function that safely syncs a commit and all of its unsynced ancestors from a
-    // source repo to target repo. If commit is already synced then it just does a lookup.
-    // But safety comes with flexibility cost - not all of the syncs are allowed. For example,
-    // syncing a *public* commit from a small repo to a large repo is not allowed:
-    // 1) If small repo is the source of truth, then there should be only a single job that
-    //    does this sync. Since this function can be used from many places and we have no
-    //    way of ensuring only a single job does the sync, this sync is forbidden completely.
-    // 2) If large repo is a source of truth, then there should never be a case with public
-    //    commit in a small repo not having an equivalent in the large repo.
+    /// This is the function that safely syncs a commit and all of its unsynced ancestors from a
+    /// source repo to target repo. If commit is already synced then it just does a lookup.
+    /// But safety comes with flexibility cost - not all of the syncs are allowed. For example,
+    /// syncing a *public* commit from a small repo to a large repo is not allowed:
+    /// 1) If small repo is the source of truth, then there should be only a single job that
+    ///    does this sync. Since this function can be used from many places and we have no
+    ///    way of ensuring only a single job does the sync, this sync is forbidden completely.
+    /// 2) If large repo is a source of truth, then there should never be a case with public
+    ///    commit in a small repo not having an equivalent in the large repo.
     pub async fn sync_commit(
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
         ancestor_selection_hint: CandidateSelectionHint,
         commit_sync_context: CommitSyncContext,
+        disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
-            .sync_commit_impl(ctx, source_cs_id, ancestor_selection_hint)
+            .sync_commit_impl(ctx, source_cs_id, ancestor_selection_hint, disable_lease)
             .await;
         let elapsed = before.elapsed();
         log_rewrite(
@@ -654,6 +655,7 @@ where
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
         ancestor_selection_hint: CandidateSelectionHint,
+        disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
         let (unsynced_ancestors, synced_ancestors_versions) =
             find_toposorted_unsynced_ancestors(ctx, self, source_cs_id).await?;
@@ -731,7 +733,7 @@ where
                 Ok(())
             };
 
-            if tunables().get_xrepo_disable_commit_sync_lease() {
+            if tunables().get_xrepo_disable_commit_sync_lease() || disable_lease {
                 sync().await?;
             } else {
                 run_with_lease(ctx, &self.x_repo_sync_lease, lease_key, checker, sync).await?;

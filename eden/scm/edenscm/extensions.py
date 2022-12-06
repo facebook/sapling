@@ -12,8 +12,9 @@
 
 from __future__ import absolute_import
 
+import errno
 import functools
-import imp
+import importlib
 import inspect
 import os
 import sys
@@ -169,19 +170,23 @@ def loadpath(path, module_name):
 
             source = base64.b64decode(content)
             return loadsource(source, module_name)
-    if os.path.isdir(path):
-        # module/__init__.py style
-        d, f = os.path.split(path)
-        fd, fpath, desc = imp.find_module(f, [d])
 
-        return imp.load_module(module_name, fd, fpath, desc)
-    else:
-        try:
-            return imp.load_source(module_name, path)
-        except IOError as exc:
-            if not exc.filename:
-                exc.filename = path  # python does not fill this
-            raise
+    try:
+        if os.path.isdir(path):
+            path = os.path.join(path, "__init__.py")
+
+        if not os.path.exists(path):
+            raise IOError(errno.ENOENT, "No such file or directory", path)
+
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+    except IOError as exc:
+        if not exc.filename:
+            exc.filename = path  # python does not fill this
+        raise
 
 
 def loadsource(source, name):

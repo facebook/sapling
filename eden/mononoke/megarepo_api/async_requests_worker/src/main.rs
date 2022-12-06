@@ -24,7 +24,6 @@ use environment::WarmBookmarksCacheDerivedData;
 use fbinit::FacebookInit;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
-use mononoke_api::Mononoke;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
@@ -66,7 +65,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let session = SessionContainer::new_with_defaults(env.fb);
     let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
+    let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
     let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(app.clone(), mononoke))?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");

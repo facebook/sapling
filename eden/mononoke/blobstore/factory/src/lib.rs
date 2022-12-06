@@ -28,7 +28,7 @@ pub use facebook::ManifoldArgs;
 pub use facebook::ManifoldOptions;
 pub use multiplexedblob::scrub::default_scrub_handler;
 pub use multiplexedblob::scrub::ScrubOptions;
-pub use multiplexedblob::scrub::ScrubWriteMostly;
+pub use multiplexedblob::scrub::SrubWriteOnly;
 pub use multiplexedblob::ScrubAction;
 pub use multiplexedblob::ScrubHandler;
 pub use packblob::PackOptions;

@@ -10,7 +10,7 @@ When creating tests, we often need to create a repo with a particular layout.
 For example, to create a linear graph with three commits, we could use the
 following sequence of commands:
 
-```
+```sl-shell-example
 $ sl commit -m A
 $ sl commit -m B
 $ sl commit -m C
@@ -18,7 +18,7 @@ $ sl commit -m C
 
 If the graph is nonlinear, extra commands such as merge and goto are needed:
 
-```
+```sl-shell-example
 $ sl commit -m A
 $ sl commit -m B
 $ sl goto -q '.^'
@@ -129,7 +129,7 @@ Try editing the DrawDag code above. We draw the output live in the browser.
 You can use the `drawdag` shell function in `.t` tests to create commits and
 change the repo.
 
-```
+```sl-shell-example
 $ drawdag << 'EOS'
 >  C
 >  |

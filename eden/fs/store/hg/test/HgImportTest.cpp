@@ -30,8 +30,7 @@ TEST(HgImporter, ensure_HgImporter_is_linked_even_in_tsan) {
     TemporaryDirectory testDir{"eden_hg_import_test"};
     AbsolutePath testPath = canonicalPath(testDir.path().string());
     HgRepo repo{testPath + "repo"_pc};
-    repo.hgInit();
-    repo.enableTreeManifest(testPath + "cache"_pc);
+    repo.hgInit(testPath + "cache"_pc);
     HgImporter importer(repo.path(), std::make_shared<EdenStats>());
   }
 }
@@ -42,8 +41,7 @@ class HgImportTest : public ::testing::Test {
  public:
   HgImportTest() {
     // Create the test repository
-    repo_.hgInit();
-    repo_.enableTreeManifest(testPath_ + "cache"_pc);
+    repo_.hgInit(testPath_ + "cache"_pc);
   }
 
  protected:
@@ -82,16 +80,13 @@ TEST_F(HgImportTest, importTest) {
 
   // Test importing objects that do not exist
   Hash20 noSuchHash = makeTestHash20("123");
-  EXPECT_THROW_RE(
-      importer.importFileContents(filePath, noSuchHash),
-      std::exception,
-      "no match found");
+  EXPECT_THROW(
+      importer.importFileContents(filePath, noSuchHash), std::exception);
 
-  EXPECT_THROW_RE(
+  EXPECT_THROW(
       importer.importFileContents(
           RelativePathPiece{"hello"}, Hash20{commit1.value()}),
-      std::exception,
-      "no match found");
+      std::exception);
 }
 
 // TODO(T33797958): Check hg_importer_helper's exit code on Windows (in

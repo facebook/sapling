@@ -41,6 +41,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
+use repo_authorization::AuthorizationContext;
 use slog::info;
 
 use crate::mem_writes_changesets::MemWritesChangesets;
@@ -98,6 +99,12 @@ struct GitimportArgs {
     /// This is used to suppress the printing of the potentially really long git Reference -> BonzaiID mapping.
     #[clap(long)]
     suppress_ref_mapping: bool,
+    /// **Dangerous** Generate bookmarks for all git refs (tags and branches)
+    /// Make sure not to use this on a mononoke repo in production or you will overwhelm any
+    /// service doing backfilling on public changesets!
+    /// Use at your own risk!
+    #[clap(long)]
+    generate_bookmarks: bool,
     /// Set the path to the git binary - preset to git.real
     #[clap(long)]
     git_command_path: Option<String>,
@@ -223,20 +230,51 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .context("derive_hg failed")?;
     }
 
-    if !args.suppress_ref_mapping {
+    if !args.suppress_ref_mapping || args.generate_bookmarks {
         let refs = import_tools::read_git_refs(path, &prefs)
             .await
             .context("read_git_refs failed")?;
-        for (name, commit) in refs {
-            let bcs_id = gitimport_result.get(&commit);
-            info!(
-                ctx.logger(),
-                "Ref: {:?}: {:?}",
-                String::from_utf8_lossy(&name),
-                bcs_id
-            );
+        let mapping = refs
+            .iter()
+            .map(|(name, commit)| (String::from_utf8_lossy(name), gitimport_result.get(commit)))
+            .collect::<Vec<_>>();
+        if !args.suppress_ref_mapping {
+            for (name, changeset) in &mapping {
+                info!(ctx.logger(), "Ref: {:?}: {:?}", name, changeset);
+            }
+        }
+        if args.generate_bookmarks {
+            let authz = AuthorizationContext::new_bypass_access_control();
+            let repo_context = app
+                .open_mononoke()
+                .await
+                .context("failed to create mononoke app")?
+                .repo_by_id(ctx.clone(), repo.get_repoid())
+                .await
+                .with_context(|| format!("failed to access repo: {}", repo.get_repoid()))?
+                .expect("repo exists")
+                .with_authorization_context(authz)
+                .build()
+                .await
+                .context("failed to build RepoContext")?;
+            for (name, changeset) in mapping
+                .iter()
+                .filter_map(|(name, changeset)| changeset.map(|cs| (name, cs)))
+            {
+                let name = name
+                    .strip_prefix("refs/")
+                    .context("Ref does not start with refs/")?;
+                repo_context
+                    .create_bookmark(&name, *changeset, None)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed to create bookmark: {} for changeset: {:?}",
+                            name, changeset
+                        )
+                    })?;
+            }
         }
     }
-
     Ok(())
 }

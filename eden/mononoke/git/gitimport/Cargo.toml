@@ -28,4 +28,5 @@ lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

@@ -54,7 +54,7 @@ From inside a repo, running `sl` with no arguments shows you your commit graph. 
 
 Sapling provides familiar `add` and `commit`/`ci` commands to create a commit:
 
-```
+```sl-shell-example
 $ touch hello.txt
 $ sl add .
 $ echo 'Hello, World!' > hello.txt
@@ -76,7 +76,7 @@ Another important difference from Git is that _there is no index where changes m
 
 For illustration purposes, we'll go ahead and create a few more commits:
 
-```
+```sl-shell-example
 $ echo foo > foo.txt ; sl add foo.txt ; sl ci -m 'adding foo'
 $ echo bar > bar.txt ; sl add bar.txt ; sl ci -m 'adding bar'
 $ echo baz > baz.txt ; sl add baz.txt ; sl ci -m 'adding baz'
@@ -105,7 +105,7 @@ See [Basic Commands](../overview/basic-commands.md) to learn more about manipula
 
 You may also want to try Sapling's built-in GUI that runs in the browser . Run <SLCommand name="web" /> to launch it from the command line:
 
-```
+```sl-shell-example
 $ sl web
 Listening on http://localhost:3011/?token=929fa2b3d75aa4330e0b7b0a10822ee0&cwd=%2FUsers%2Falyssa%2Fsrc%2Fsapling
 Server logs will be written to /var/folders/5c/f3nk25tn7gd7nds59hy_nj7r0000gn/T/isl-server-logKktwaj/isl-server.log
@@ -117,7 +117,7 @@ Sapling will open the URL automatically in your browser. See the docs on [Intera
 
 Sapling supports multiple workflows for interacting with GitHub pull requests. The simplest solution is the <SLCommand name="pr" /> command:
 
-```
+```sl-shell-example
 $ sl pr
 ...
 $ sl
@@ -150,7 +150,7 @@ The "overlapping pull requests" approach may not be an appropriate solution for 
 
 If you have used Sapling to create pull requests for your commits, then you can use `sl ssl` to include the pull request status in your Smartlog. Note that `sl ssl` is not a subcommand, but a built-in alias for `sl smartlog -T {ssl}`:
 
-```
+```sl-shell-example
 $ sl ssl
   @  4d9180fd8  6 minutes ago  alyssa  #178 Unreviewed
   │  adding baz

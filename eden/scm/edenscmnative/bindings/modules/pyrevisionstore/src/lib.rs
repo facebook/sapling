@@ -35,6 +35,7 @@ use parking_lot::RwLock;
 use pyconfigparser::config;
 use revisionstore::repack;
 use revisionstore::scmstore::file_to_async_key_stream;
+use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::FileStoreBuilder;
@@ -1293,7 +1294,7 @@ py_class!(pub class filescmstore |py| {
 
     def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
         let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: true, aux_data: true } );
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: true, aux_data: true }, FetchMode::AllowRemote );
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
@@ -1316,7 +1317,7 @@ py_class!(pub class filescmstore |py| {
             .map(|tuple| from_tuple_to_key(py, &tuple))
             .collect::<PyResult<Vec<Key>>>()?;
         let results = PyList::new(py, &[]);
-        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: false, aux_data: true} );
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: false, aux_data: true}, FetchMode::AllowRemote );
 
         let (found, missing, _errors) = fetch_result.consume();
         // TODO(meyer): FileStoreFetch should have utility methods to various consumer cases like this (get complete, get missing, transform to Result<EntireBatch>, transform to iterator of Result<IndividualFetch>, etc)
@@ -1555,7 +1556,7 @@ py_class!(pub class treescmstore |py| {
 
     def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
         let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch_batch(keys.into_iter()).map_pyerr(py)?;
+        let fetch_result = self.store(py).fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();

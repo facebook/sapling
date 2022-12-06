@@ -73,7 +73,7 @@ SpawnedProcess HgRepo::invokeHg(vector<string> args) {
 SpawnedProcess HgRepo::invokeHg(
     vector<string> args,
     SpawnedProcess::Options&& options) {
-  args.insert(args.begin(), "hg");
+  args.insert(args.begin(), {"hg", "--traceback"});
 
   XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
   options.environment() = hgEnv_;
@@ -81,7 +81,9 @@ SpawnedProcess HgRepo::invokeHg(
   return SpawnedProcess(args, std::move(options));
 }
 
-void HgRepo::hgInit(std::vector<std::string> extraArgs) {
+void HgRepo::hgInit(
+    AbsolutePathPiece cacheDirectory,
+    std::vector<std::string> extraArgs) {
   XLOG(DBG1) << "creating new hg repository at " << path_;
 
   // Invoke SpawnedProcess directly here rather than using our hg() helper
@@ -94,9 +96,9 @@ void HgRepo::hgInit(std::vector<std::string> extraArgs) {
   opts.executablePath(hgCmd_);
   SpawnedProcess p(args, std::move(opts));
   p.waitChecked();
-}
 
-void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
+  appendToRequires("remotefilelog\n");
+
   appendToHgrc(fmt::format(
       "[extensions]\n"
       "remotefilelog =\n"
@@ -105,10 +107,9 @@ void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
       "[treemanifest]\n"
       "treeonly = true\n"
       "[remotefilelog]\n"
+      "server = false\n"
       "reponame = test\n"
       "cachepath = {}\n"
-      "[edenapi]\n"
-      "url=http://invalid.invalid\n"
       "[scmstore]\n"
       "backingstore = true\n",
       cacheDirectory));
@@ -143,6 +144,14 @@ void HgRepo::appendToHgrc(folly::StringPiece data) {
 
 void HgRepo::appendToHgrc(const std::vector<std::string>& lines) {
   appendToHgrc(folly::join("\n", lines) + "\n");
+}
+
+void HgRepo::appendToRequires(folly::StringPiece data) {
+  auto hgrcPath = path_ + ".hg"_pc + "requires"_pc;
+  folly::File hgrc{hgrcPath.view(), O_WRONLY | O_APPEND | O_CREAT};
+  if (folly::writeFull(hgrc.fd(), data.data(), data.size()) < 0) {
+    folly::throwSystemError("error writing to ", hgrcPath.view());
+  }
 }
 
 RootId HgRepo::commit(StringPiece message) {

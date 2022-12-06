@@ -33,7 +33,7 @@ class _InstanceOfValidator(object):
         return "<instance_of validator for type {type!r}>".format(type=self.type)
 
 
-def instance_of(type):
+def instance_of(type) -> _InstanceOfValidator:
     """
     A validator that raises a :exc:`TypeError` if the initializer is called
     with a wrong type for this particular attribute (checks are perfomed using
@@ -46,6 +46,7 @@ def instance_of(type):
         (of type :class:`attr.Attribute`), the expected type, and the value it
         got.
     """
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return _InstanceOfValidator(type)
 
 
@@ -74,7 +75,7 @@ class _ProvidesValidator(object):
         )
 
 
-def provides(interface):
+def provides(interface) -> _ProvidesValidator:
     """
     A validator that raises a :exc:`TypeError` if the initializer is called
     with an object that does not provide the requested *interface* (checks are
@@ -87,6 +88,7 @@ def provides(interface):
         (of type :class:`attr.Attribute`), the expected interface, and the
         value it got.
     """
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return _ProvidesValidator(interface)
 
 
@@ -106,7 +108,7 @@ class _OptionalValidator(object):
         )
 
 
-def optional(validator):
+def optional(validator) -> _OptionalValidator:
     """
     A validator that makes an attribute optional.  An optional attribute is one
     which can be set to ``None`` in addition to satisfying the requirements of
@@ -120,7 +122,9 @@ def optional(validator):
     .. versionchanged:: 17.1.0 *validator* can be a list of validators.
     """
     if isinstance(validator, list):
+        # pyre-fixme[19]: Expected 0 positional arguments.
         return _OptionalValidator(_AndValidator(validator))
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return _OptionalValidator(validator)
 
 
@@ -140,7 +144,7 @@ class _InValidator(object):
         return "<in_ validator with options {options!r}>".format(options=self.options)
 
 
-def in_(options):
+def in_(options) -> _InValidator:
     """
     A validator that raises a :exc:`ValueError` if the initializer is called
     with a value that does not belong in the options provided.  The check is
@@ -155,4 +159,5 @@ def in_(options):
 
     .. versionadded:: 17.1.0
     """
+    # pyre-fixme[19]: Expected 0 positional arguments.
     return _InValidator(options)

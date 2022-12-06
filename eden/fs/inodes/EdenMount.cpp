@@ -2476,6 +2476,18 @@ std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
   }
 }
 
+std::optional<EdenMount::WorkingCopyGCLease> EdenMount::tryStartWorkingCopyGC(
+    TreeInodePtr inode) {
+  bool expectedInProgress = false;
+  if (!workingCopyGCInProgress_.compare_exchange_strong(
+          expectedInProgress, true, std::memory_order_acq_rel)) {
+    return std::nullopt;
+  }
+
+  return EdenMount::WorkingCopyGCLease{
+      &workingCopyGCInProgress_, std::move(inode)};
+}
+
 void EdenMount::treePrefetchFinished() noexcept {
   auto oldValue =
       numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);

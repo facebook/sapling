@@ -15,6 +15,7 @@ use anyhow::Result;
 use log::warn;
 use manifest::List;
 use revisionstore::scmstore::file::FileAuxData;
+use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::FileStoreBuilder;
@@ -37,7 +38,7 @@ pub struct BackingStore {
 }
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(root: P, aux_data: bool, allow_retries: bool) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
         let root = root.as_ref();
         let mut config = configparser::hg::load(Some(root), &[], &[])?;
 
@@ -54,14 +55,9 @@ impl BackingStore {
 
         let mut filestore = FileStoreBuilder::new(&config)
             .local_path(&store_path)
-            .override_edenapi(true);
-
-        if aux_data {
-            filestore = filestore.store_aux_data();
-        }
+            .store_aux_data();
 
         let treestore = TreeStoreBuilder::new(&config)
-            .override_edenapi(true)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
@@ -86,25 +82,21 @@ impl BackingStore {
         })
     }
 
-    /// Reads file from blobstores. When `local_only` is true, this function will only read blobs
-    /// from on disk stores.
-    pub fn get_blob(&self, node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
+    pub fn get_blob(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
         let hgid = HgId::from_slice(node)?;
         let key = Key::new(RepoPathBuf::new(), hgid);
-        self.get_blob_by_key(key, local_only)
+        self.get_blob_by_key(key, fetch_mode)
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn get_blob_by_key(&self, key: Key, local_only: bool) -> Result<Option<Vec<u8>>> {
-        let local = self.filestore.local();
-        let fetch_result = if local_only {
+    fn get_blob_by_key(&self, key: Key, fetch_mode: FetchMode) -> Result<Option<Vec<u8>>> {
+        if let FetchMode::LocalOnly = fetch_mode {
             event!(Level::TRACE, "attempting to fetch blob locally");
-            &local
-        } else {
-            self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key), FileAttributes::CONTENT)
-        .single();
+        let fetch_result = self
+            .filestore
+            .fetch(std::iter::once(key), FileAttributes::CONTENT, fetch_mode)
+            .single();
 
         Ok(if let Some(mut file) = fetch_result? {
             Some(file.file_content()?.into_vec())
@@ -116,7 +108,7 @@ impl BackingStore {
     fn get_file_attrs_batch<F>(
         &self,
         keys: Vec<Key>,
-        local_only: bool,
+        fetch_mode: FetchMode,
         resolve: F,
         attrs: FileAttributes,
     ) where
@@ -141,14 +133,13 @@ impl BackingStore {
         }
 
         // Handle local-only fetching
-        let local = self.filestore.local();
-        let fetch_results = if local_only {
+        if let FetchMode::LocalOnly = fetch_mode {
             event!(Level::TRACE, "attempting to fetch file aux data locally");
-            &local
-        } else {
-            self.filestore.as_ref()
         }
-        .fetch(indexes.keys().cloned(), attrs);
+
+        let fetch_results = self
+            .filestore
+            .fetch(indexes.keys().cloned(), attrs, fetch_mode);
 
         for result in fetch_results {
             match result {
@@ -184,16 +175,15 @@ impl BackingStore {
 
     /// Fetch file contents in batch. Whenever a blob is fetched, the supplied `resolve` function is
     /// called with the file content or an error message, and the index of the blob in the request
-    /// array. When `local_only` is enabled, this function will only check local disk for the file
-    /// content.
+    /// array.
     #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_blob_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
+    pub fn get_blob_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
         F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
     {
         self.get_file_attrs_batch(
             keys,
-            local_only,
+            fetch_mode,
             move |idx, res| {
                 resolve(
                     idx,
@@ -211,18 +201,14 @@ impl BackingStore {
     }
 
     #[instrument(level = "debug", skip(self))]
-    pub fn get_tree(&self, node: &[u8], local_only: bool) -> Result<Option<List>> {
+    pub fn get_tree(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<List>> {
         let hgid = HgId::from_slice(node)?;
         let key = Key::new(RepoPathBuf::new(), hgid);
 
-        let local = self.treestore.local();
-        let fetch_results = if local_only {
+        if let FetchMode::LocalOnly = fetch_mode {
             event!(Level::TRACE, "attempting to fetch trees locally");
-            &local
-        } else {
-            self.treestore.as_ref()
         }
-        .fetch_batch(std::iter::once(key))?;
+        let fetch_results = self.treestore.fetch_batch(std::iter::once(key), fetch_mode);
 
         if let Some(mut entry) = fetch_results.single()? {
             Ok(Some(entry.manifest_tree_entry()?.try_into()?))
@@ -233,10 +219,9 @@ impl BackingStore {
 
     /// Fetch tree contents in batch. Whenever a tree is fetched, the supplied `resolve` function is
     /// called with the tree content or an error message, and the index of the tree in the request
-    /// array. When `local_only` is enabled, this function will only check local disk for the file
-    /// content.
+    /// array.
     #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_tree_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
+    pub fn get_tree_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
         F: Fn(usize, Result<Option<List>>) -> (),
     {
@@ -259,34 +244,12 @@ impl BackingStore {
         }
 
         // Handle local-only fetching
-        let local = self.treestore.local();
-        let fetch_results = if local_only {
+        if let FetchMode::LocalOnly = fetch_mode {
             event!(Level::TRACE, "attempting to fetch trees locally");
-            &local
-        } else {
-            self.treestore.as_ref()
         }
-        .fetch_batch(indexes.keys().cloned());
-
-        // Handle batch failure
-        let fetch_results = match fetch_results {
-            Ok(res) => res,
-            Err(e) => {
-                let mut indexes = indexes.values();
-                // Pass along the error to the first index
-                if let Some(index) = indexes.next() {
-                    resolve(*index, Err(e))
-                }
-                // Return a generic error for others (errors are not Clone)
-                for index in indexes {
-                    resolve(
-                        *index,
-                        Err(anyhow!("get_tree_batch failed across the entire batch")),
-                    )
-                }
-                return;
-            }
-        };
+        let fetch_results = self
+            .treestore
+            .fetch_batch(indexes.keys().cloned(), fetch_mode);
 
         // Handle pey-key fetch results
         for result in fetch_results {
@@ -325,18 +288,16 @@ impl BackingStore {
         }
     }
 
-    pub fn get_file_aux(&self, node: &[u8], local_only: bool) -> Result<Option<FileAuxData>> {
+    pub fn get_file_aux(&self, node: &[u8], fetch_mode: FetchMode) -> Result<Option<FileAuxData>> {
         let hgid = HgId::from_slice(node)?;
         let key = Key::new(RepoPathBuf::new(), hgid);
 
-        let local = self.filestore.local();
-        let fetch_results = if local_only {
+        if let FetchMode::LocalOnly = fetch_mode {
             event!(Level::TRACE, "attempting to fetch file aux data locally");
-            &local
-        } else {
-            self.filestore.as_ref()
         }
-        .fetch(std::iter::once(key), FileAttributes::AUX);
+        let fetch_results =
+            self.filestore
+                .fetch(std::iter::once(key), FileAttributes::AUX, fetch_mode);
 
         if let Some(entry) = fetch_results.single()? {
             Ok(Some(entry.aux_data()?.try_into()?))
@@ -345,13 +306,13 @@ impl BackingStore {
         }
     }
 
-    pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, local_only: bool, resolve: F)
+    pub fn get_file_aux_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
         F: Fn(usize, Result<Option<FileAuxData>>) -> (),
     {
         self.get_file_attrs_batch(
             keys,
-            local_only,
+            fetch_mode,
             move |idx, res| {
                 resolve(
                     idx,

@@ -95,6 +95,9 @@ class FakeCtx(object):
     def date(self):
         return (self._nodeinfo.date, 0)
 
+    def files(self):
+        return []
+
     def extra(self):
         return {}
 
@@ -344,6 +347,35 @@ class BaseService(pycompat.ABC):
             for node in dag.all():
                 ctx = createctx(repo, node)
                 parents = [parentwithstyle(node, p) for p in dag.parentnames(node)]
+                yield (node, CHANGESET, ctx, parents)
+
+        firstbranch = public[0:1]
+        return firstbranch, dagwalker()
+
+    @staticmethod
+    def makedagwalkerwithparents(smartloginfo, repo):
+        """cset DAG generator yielding (id, CHANGESET, ctx, [parent ctxs]) tuples
+
+        This generator function walks the given fake nodes.
+
+        Return firstbranch, dagwalker tuple.
+        """
+
+        public = smartloginfo.public
+        dag = smartloginfo.dag.beautify(public)
+
+        def createctx(repo, node, rev=None):
+            return FakeCtx(repo, smartloginfo.nodeinfos[node], rev)
+
+        def dagwalker():
+            for node in dag.all():
+                ctx = createctx(repo, node, node)
+                parents = [createctx(repo, p) for p in dag.parentnames(node)]
+
+                def gen_parents():
+                    return parents
+
+                ctx.parents = gen_parents
                 yield (node, CHANGESET, ctx, parents)
 
         firstbranch = public[0:1]

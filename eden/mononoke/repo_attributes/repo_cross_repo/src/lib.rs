@@ -13,13 +13,13 @@ use std::sync::Arc;
 
 use cacheblob::LeaseOps;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::ArcSyncedCommitMapping;
 
 /// Repository identity information.
 #[facet::facet]
 pub struct RepoCrossRepo {
     /// The mapping of synced commits.
-    synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+    synced_commit_mapping: ArcSyncedCommitMapping,
 
     /// The commit sync config that is currently live.
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
@@ -32,7 +32,7 @@ pub struct RepoCrossRepo {
 impl RepoCrossRepo {
     /// Construct a new RepoCrossRepo.
     pub fn new(
-        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+        synced_commit_mapping: ArcSyncedCommitMapping,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         sync_lease: Arc<dyn LeaseOps>,
     ) -> RepoCrossRepo {
@@ -43,7 +43,7 @@ impl RepoCrossRepo {
         }
     }
 
-    pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
+    pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
         &self.synced_commit_mapping
     }
 

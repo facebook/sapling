@@ -16,7 +16,7 @@ from edenscm.i18n import _
 from . import service
 
 
-def showhistory(ui, repo, reponame, workspacename, template, **opts) -> None:
+def showhistory(ui, repo, reponame, workspacename, templatealias, **opts) -> None:
     class cloudsl(object):
         def __init__(self, ui, repo, reponame, workspacename, **opts):
             self.ui = ui
@@ -58,9 +58,10 @@ def showhistory(ui, repo, reponame, workspacename, template, **opts) -> None:
                             "You have no recorded history at or after this date"
                         )
 
-            smartlogstyle = ui.config("templatealias", template)
-            if smartlogstyle:
-                self.opts["template"] = "{%s}" % smartlogstyle
+            if not self.opts.get("template"):
+                smartlogstyle = ui.config("templatealias", templatealias)
+                if smartlogstyle:
+                    self.opts["template"] = "{%s}" % smartlogstyle
 
             if initversion:
                 initversion = int(initversion)

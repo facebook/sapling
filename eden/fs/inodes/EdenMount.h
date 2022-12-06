@@ -958,6 +958,45 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       const ObjectFetchContext& context);
 
   /**
+   * Lease to be held for the duration of a background GC.
+   *
+   * Only a single background GC can be running at a given time.
+   */
+  class WorkingCopyGCLease {
+   public:
+    explicit WorkingCopyGCLease(
+        std::atomic<bool>* gcRunning,
+        TreeInodePtr inode)
+        : gcRunning_{gcRunning}, inode_{std::move(inode)} {}
+
+    ~WorkingCopyGCLease() {
+      gcRunning_->store(false, std::memory_order_release);
+    }
+
+    WorkingCopyGCLease(const WorkingCopyGCLease&) = delete;
+    WorkingCopyGCLease& operator=(const WorkingCopyGCLease&) = delete;
+    WorkingCopyGCLease(WorkingCopyGCLease&&) = default;
+    WorkingCopyGCLease& operator=(WorkingCopyGCLease&&) = default;
+
+   private:
+    std::atomic<bool>* gcRunning_;
+    // Store the inode for the duration of the GC, this ensures that the mount
+    // cannot be unmounted and thus that gcRunning_ will live for at least as
+    // long as the lease.
+    TreeInodePtr inode_;
+  };
+
+  /**
+   * Attempt to start a background working copy GC.
+   *
+   * The returned lease must be held for the duration of the GC to ensure that
+   * no other concurrent background GC can be started.
+   *
+   * This returns a std::nullopt if a background GC is already in progress.
+   */
+  std::optional<WorkingCopyGCLease> tryStartWorkingCopyGC(TreeInodePtr inode);
+
+  /**
    * Get a weak_ptr to this EdenMount object. EdenMounts are stored as shared
    * pointers inside of EdenServer's MountList.
    */
@@ -1323,6 +1362,11 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * The number of tree prefetches in progress for this mount point.
    */
   std::atomic<uint64_t> numPrefetchesInProgress_{0};
+
+  /**
+   * Whether a periodic working copy GC is ongoing for this mount.
+   */
+  std::atomic<bool> workingCopyGCInProgress_{false};
 
   /**
    * Fixed sized buffer containing recent inode events that have occured within

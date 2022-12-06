@@ -235,18 +235,18 @@ impl FetchState {
         }
 
         debug!(
-            "Checking store Indexedlog ({cache}) - Count = {count}",
+            "Checking store Indexedlog ({cache}) for {key}{more}",
             cache = match typ {
                 StoreType::Shared => "cache",
                 StoreType::Local => "local",
             },
-            count = pending.len()
+            key = pending[0],
+            more = if pending.len() > 1 {
+                format!(" and {} more", pending.len() - 1)
+            } else {
+                "".into()
+            },
         );
-
-        // Print an example key for the first store checked.
-        if typ == StoreType::Shared {
-            debug!("    Example key: {key}", key = pending[0]);
-        }
 
         let mut found = 0;
         let mut errors = 0;
@@ -276,7 +276,11 @@ impl FetchState {
         }
 
         if found != 0 {
-            debug!("    Found = {found}", found = found);
+            debug!(
+                "    Found {found} {result}",
+                found = found,
+                result = if found == 1 { "result" } else { "results" }
+            );
         }
         if errors != 0 {
             debug!(

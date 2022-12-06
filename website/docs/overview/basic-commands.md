@@ -43,7 +43,7 @@ Many of these examples use the `sl smartlog` output to explain the repo state. S
 
 Clone the repo using the `sl clone` command.
 
-```bash
+```sl-shell-example
 # Clones into a 'sapling' directory.
 $ sl clone https://github.com/facebook/sapling
 remote: Enumerating objects: 640374, done.
@@ -72,7 +72,7 @@ Related topics: [Push/Pull](push-pull.md), Sparse
 
 `sl goto` or `sl go` allows you to checkout a specific commit.  See the [Navigation](navigation.md) document for a variety of other ways to move around your repository.
 
-```bash
+```sl-shell-example
 # You can checkout commits by their long or short hash.
 # '@' in smartlog indicates your current checkout location.
 $ sl goto 71f7ac009
@@ -110,7 +110,7 @@ Related topics: [Navigation](navigation.md), [top/bottom](navigation.md#topbotto
 
 `sl status` or `sl st` shows a list of your current uncommitted files.
 
-```bash
+```sl-shell-example
 $ vim build.sh
 $ sl st
 M build.sh
@@ -139,7 +139,7 @@ Notable options:
 
 `sl diff` shows you the diff output for your current uncommitted changes.
 
-```bash
+```sl-shell-example
 $ sl diff
 diff --git a/build.sh b/build.sh
 --- a/build.sh
@@ -166,7 +166,7 @@ Related topics: [Show](basic-commands.md#show)
 
 `sl add/remove/forget` are used to add new files, remove old files, and undo added files, respectively. Only files marked M/A/R will be committed during `sl commit`.
 
-```bash
+```sl-shell-example
 $ sl st
 ? new_file.txt
 
@@ -194,7 +194,7 @@ R old_file.txt
 
 `sl mv/cp` can be used to rename or copy a file.
 
-```bash
+```sl-shell-example
 $ sl mv old_name.txt new_name.txt
 $ sl st
 A new_name.txt
@@ -215,7 +215,7 @@ Related topics: AutoMove
 
 `sl purge` deletes any untracked files (`?` in status) in your working copy.
 
-```bash
+```sl-shell-example
 $ sl st
 ? temp_file
 
@@ -227,7 +227,7 @@ $ sl st
 
 `sl revert` will revert any pending changes in your working copy.
 
-```bash
+```sl-shell-example
 $ sl st
 M build.sh
 
@@ -247,7 +247,7 @@ Notable options:
 
 `sl commit` commits your pending changes and prompts you for a commit message.  While there is no staging area, the powerful `--interactive` option is used to select specific files or lines you want committed.
 
-```bash
+```sl-shell-example
 $ sl st
 M build.sh
 $ sl commit
@@ -277,7 +277,7 @@ Related: [smartlog](smartlog.md)
 
 `sl show` shows the log message and textual diff for the current or given commit.
 
-```bash
+```sl-shell-example
 $ sl show
 commit:   c178f2e7ff20447532370599051c1f1939f9dcb6   (@)
 parent:   b8422460814900d8f978a8a34a99ae83c6735a70
@@ -309,7 +309,7 @@ $ sl show COMMIT
 
 Unlike in Git and Mercurial, the `log` command in Sapling is rarely used. Instead, `smartlog` is preferred for day-to-day development and understanding your repository.  `sl log` is really only used when inspecting the deeper history of the repository or a file.
 
-```bash
+```sl-shell-example
 $ sl log
 changeset:   c178f2e7ff20447532370599051c1f1939f9dcb6   (@)
 user:        Mary Smith <mary@example.com>

@@ -49,7 +49,11 @@ class StatsFetchContext : public ObjectFetchContext {
       std::string_view causeDetail,
       const std::unordered_map<std::string, std::string>* requestInfo);
   StatsFetchContext(const StatsFetchContext& other);
+
+  // TODO: When ObjectFetchContext is passed by refcounted pointer, make this
+  // non-moveable.
   StatsFetchContext(StatsFetchContext&& other) noexcept;
+  StatsFetchContext& operator=(StatsFetchContext&&) noexcept;
 
   void didFetch(ObjectType type, const ObjectId& id, Origin origin) override;
 

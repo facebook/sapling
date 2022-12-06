@@ -6,6 +6,7 @@
 import asyncio
 import itertools
 import json
+import os
 from dataclasses import dataclass
 from typing import Dict, Generic, List, Optional, TypeVar, Union
 
@@ -43,8 +44,17 @@ async def make_request(
         + endpoint_args
         + list(itertools.chain(*[_format_param(k, v) for (k, v) in params.items()]))
     )
+
+    # https://cli.github.com/manual/gh_help_environment documents support for
+    # CLICOLOR and CLICOLOR_FORCE. Note that a user unknowingly had
+    # CLICOLOR_FORCE=1 set in a zsh script somewhere and got a very confusing
+    # error as reported on https://github.com/facebook/sapling/issues/146
+    # because the output of gh could not be parsed via json.loads(), so we
+    # explicitly disable ANSI colors in our piped output.
+    env = os.environ.copy()
+    env["CLICOLOR_FORCE"] = "0"
     proc = await asyncio.create_subprocess_exec(
-        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
     )
     stdout, stderr = await proc.communicate()
 

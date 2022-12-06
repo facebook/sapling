@@ -12,7 +12,7 @@ Sapling provides first-class support for editing and manipulating stacks of comm
 You can edit any commit in your stack by going to that commit (via <Command name="goto" />), making the desired modifications, and then running <Command name="amend" /> to edit the commit. Keep in mind that if you make a mistake, you can always [Undo](undo.md) your changes!
 
 
-```bash
+```sl-shell-example
 $ sl
   o  d9a5aa3c7  3 seconds ago  mary
   │  feature two
@@ -43,24 +43,26 @@ new file mode 100644
 
 If you have a stack of commits, you can fold commits down into a single commit with the <Command name="fold" /> command. You can either specify `--from <commit id>` to specify a range of commits from your current commit to fold together or specify `--exact <list of commit ids>` to specify exact adjacent commits to fold together.
 
-```bash
+```sl-shell-example
 $ sl
-  o 5dbd8043f 82 seconds ago mary
-  │ commit five
+  o  5dbd8043f  82 seconds ago  mary
+  │  commit five
   │
-  @ bd057eb7f 93 seconds ago mary
-  │ commit four
+  @  bd057eb7f  93 seconds ago  mary
+  │  commit four
   │
-  o b65a4efb1 113 seconds ago mary
-  │ commit three
+  o  b65a4efb1  113 seconds ago  mary
+  │  commit three
   │
-  o ef7915cd2 2 minutes ago mary
-  │ commit two
+  o  ef7915cd2  2 minutes ago mary
+  │  commit two
   │
-  o 398748c95 2 minutes ago mary
-╭─╯ commit one
+  o  398748c95  2 minutes ago  mary
+╭─╯  commit one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 
 $ sl fold --from ef7915cd2
 # (equivalent to sl fold --exact ef7915cd2 b65a4efb1 bd057eb7f)
@@ -71,16 +73,18 @@ $ sl fold --from ef7915cd2
  5dbd8043fd7e -> debf0c562f6e "commit five"
 
 $ sl
-  o debf0c562 9 minutes ago mary
-  │ commit five
+  o  debf0c562  9 minutes ago  mary
+  │  commit five
   │
-  @ 3cf9adf66 2 minutes ago mary
-  │ commit two+three+four
+  @  3cf9adf66  2 minutes ago  mary
+  │  commit two+three+four
   │
-  o 398748c95 10 minutes ago mary
-╭─╯ commit one
+  o  398748c95  10 minutes ago  mary
+╭─╯  commit one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 ```
 
 
@@ -89,12 +93,14 @@ o ea609e1ef Today at 14:34 remote/main
 Use Sapling’s interactive editor interface to split the changes in one commit into two or more smaller commits.
 
 
-```bash
+```sl-shell-example
 $ sl
-  @ b86c5cb40 2 seconds ago mary
-╭─╯ feature one + two
+  @  b86c5cb40  2 seconds ago  mary
+╭─╯  feature one + two
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 
 # we want to split apart feature one and feature two
 $ sl split
@@ -115,28 +121,32 @@ Done splitting? [yN] y
 # <enter new commit message for second commit>
 
 $ sl
-  @ a305c853a 41 seconds ago mary
-  │ feature two
+  @  a305c853a  41 seconds ago  mary
+  │  feature two
   │
-  o 619efe410 2 minutes ago mary
-╭─╯ feature one
+  o  619efe410  2 minutes ago  mary
+╭─╯  feature one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 ```
 
 ### Absorb
 
 If you make changes while working at the top of a stack, the <Command name="absorb" /> command allows you to automatically amend those changes to commits lower in the stack. If there is an unambiguous commit which introduced the edited lines, the absorb command will prompt to apply those changes to that commit.
 
-```bash
+```sl-shell-example
 $ sl
-  @ a305c853a 41 seconds ago mary
-  │ feature two
+  @  a305c853a  41 seconds ago  mary
+  │  feature two
   │
-  o 619efe410 2 minutes ago mary
-╭─╯ feature one
+  o  619efe410  2 minutes ago  mary
+╭─╯  feature one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 
 # Edit part of "feature one", while we are on top of "feature two".
 $ vim myproject.cpp
@@ -167,19 +177,21 @@ a305c853a7b5 -> f656ac8c60c8 "feature two"
 
 # Feature one commit now contains the modifications.
 $ sl
-  @ f656ac8c60c8 11 seconds ago mary
-  │ feature two
+  @  f656ac8c8  11 seconds ago  mary
+  │  feature two
   │
-  o cbf60a27cae4 11 seconds ago mary
-╭─╯ feature one
+  o  cbf60a274  11 seconds ago  mary
+╭─╯  feature one
 │
-o ea609e1ef Today at 14:34 remote/main
+o  ea609e1ef  Today at 14:34  remote/main
+╷
+~
 ```
 
 ### Amend --to
 Sometimes absorb cannot predict an appropriate commit to apply changes to. In this case you can try the command `sl amend --to` to specify exactly which commit to apply pending changes to.
 
-```bash
+```sl-shell-example
 $ sl
   @  f656ac8c6  30 minutes ago  mary
   │  feature two
@@ -188,6 +200,8 @@ $ sl
 ╭─╯  feature one
 │
 o  ea609e1ef  Yesterday at 14:34  remote/main
+╷
+~
 
 # Add new file for feature one.
 $ vim myproject2.cpp

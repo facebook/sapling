@@ -258,10 +258,6 @@ impl Convert for RawPushrebaseRemoteMode {
     fn convert(self) -> Result<Self::Output> {
         match self {
             Self::local(_) => Ok(PushrebaseRemoteMode::Local),
-            Self::remote_scs(addr) => Ok(PushrebaseRemoteMode::RemoteScs(addr.convert()?)),
-            Self::remote_scs_local_fallback(addr) => Ok(
-                PushrebaseRemoteMode::RemoteScsWithLocalFallback(addr.convert()?),
-            ),
             Self::remote_land_service(addr) => {
                 Ok(PushrebaseRemoteMode::RemoteLandService(addr.convert()?))
             }

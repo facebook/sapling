@@ -72,7 +72,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   void processAndSendResponse(UnixSocket::Message&& message);
   UnixSocket::Message processMessage(
-      PrivHelperConn::MsgType msgType,
+      PrivHelperConn::PrivHelperPacket& packet,
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
   UnixSocket::Message makeResponse();

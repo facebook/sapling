@@ -23,7 +23,7 @@ Run a heal
 
 Failure time - this key will not exist
   $ echo fake-key | manual_scrub --storage-config-name blobstore --checkpoint-key-file=checkpoint.txt --error-keys-output errors --missing-keys-output missing --success-keys-output success 2>&1 | strip_glog
-  Scrubbing blobstore: ScrubBlobstore[Normal [(BlobstoreId(0), "Fileblob"), (BlobstoreId(1), "Fileblob"), (BlobstoreId(2), "Fileblob")], write mostly []]
+  Scrubbing blobstore: ScrubBlobstore[Normal [(BlobstoreId(0), "Fileblob"), (BlobstoreId(1), "Fileblob"), (BlobstoreId(2), "Fileblob")], write only []]
   period, rate/s, seconds, success, missing, error, total, skipped, bytes, bytes/s
   run, *, *, 0, 1, 0, 1, 0, * (glob)
   delta, *, *, 0, 1, 0, 1, 0, * (glob)
@@ -59,7 +59,7 @@ Continue from checkpoint
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
   > EOF
-  Scrubbing blobstore: ScrubBlobstore[Normal [(BlobstoreId(0), "Fileblob"), (BlobstoreId(1), "Fileblob"), (BlobstoreId(2), "Fileblob")], write mostly []]
+  Scrubbing blobstore: ScrubBlobstore[Normal [(BlobstoreId(0), "Fileblob"), (BlobstoreId(1), "Fileblob"), (BlobstoreId(2), "Fileblob")], write only []]
   period, rate/s, seconds, success, missing, error, total, skipped, bytes, bytes/s
   run, *, *, 1, 0, 0, 1, 2, * (glob)
   delta, *, *, 1, 0, 0, 1, 2, * (glob)

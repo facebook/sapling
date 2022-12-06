@@ -839,7 +839,7 @@ mod test {
             allow_change_xrepo_mapping_extra = true
 
             [pushrebase.remote_mode]
-            remote_scs = { tier = "my-tier" }
+            remote_land_service = { tier = "my-tier" }
 
             [lfs]
             threshold = 1000
@@ -1149,7 +1149,7 @@ mod test {
                     globalrevs_publishing_bookmark: None,
                     populate_git_mapping: false,
                     allow_change_xrepo_mapping_extra: true,
-                    remote_mode: PushrebaseRemoteMode::RemoteScs(Address::Tier(
+                    remote_mode: PushrebaseRemoteMode::RemoteLandService(Address::Tier(
                         "my-tier".to_string(),
                     )),
                 },
@@ -1742,7 +1742,7 @@ mod test {
         components = [
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo1" } } },
             { blobstore_id = 2, store_type = { normal = {}}, blobstore = { blob_files = { path = "/tmp/foo2" } } },
-            { blobstore_id = 3, store_type = { write_mostly = {}}, blobstore = { blob_files = { path = "/tmp/foo3" } } },
+            { blobstore_id = 3, store_type = { write_only = {}}, blobstore = { blob_files = { path = "/tmp/foo3" } } },
         ]
         queue_db = { remote = { db_address = "queue_db_address" } }
         "#;
@@ -1799,7 +1799,7 @@ mod test {
                 ),
                 (
                     BlobstoreId::new(3),
-                    MultiplexedStoreType::WriteMostly,
+                    MultiplexedStoreType::WriteOnly,
                     BlobConfig::Files {
                         path: "/tmp/foo3".into(),
                     },

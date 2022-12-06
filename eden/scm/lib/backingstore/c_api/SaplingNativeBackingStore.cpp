@@ -68,7 +68,8 @@ std::shared_ptr<Tree> SaplingNativeBackingStore::getTree(
 void SaplingNativeBackingStore::getTreeBatch(
     NodeIdRange requests,
     bool local,
-    folly::FunctionRef<void(size_t, std::shared_ptr<Tree>)> resolve) {
+    folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
+        resolve) {
   size_t count = requests.size();
 
   XLOG(DBG7) << "Import batch of trees with size:" << count;
@@ -81,29 +82,31 @@ void SaplingNativeBackingStore::getTreeBatch(
     });
   }
 
-  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
-    CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
+  using ResolveResult = folly::Try<std::shared_ptr<Tree>>;
 
-    if (result.isError()) {
-      // TODO: It would be nice if we can differentiate not found error with
-      // other errors.
-      auto error = result.getError();
-      XLOGF(
-          DBG6,
-          "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
-          folly::hexlify(requests[index]),
-          index,
-          count,
-          error);
-    } else {
-      XLOGF(
-          DBG6,
-          "Imported node={} from EdenAPI (batch tree: {}/{})",
-          folly::hexlify(requests[index]),
-          index,
-          count);
-      resolve(index, result.unwrap());
-    }
+  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
+    resolve(
+        index, folly::makeTryWith([&] {
+          CFallible<Tree, sapling_tree_free> result{std::move(raw_result)};
+          if (result.isError()) {
+            XLOGF(
+                DBG6,
+                "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
+                folly::hexlify(requests[index]),
+                index,
+                count,
+                result.getError());
+            return ResolveResult{SaplingFetchError{result.getError()}};
+          } else {
+            XLOGF(
+                DBG6,
+                "Imported node={} from EdenAPI (batch tree: {}/{})",
+                folly::hexlify(requests[index]),
+                index,
+                count);
+            return ResolveResult{std::shared_ptr<Tree>{result.unwrap()}};
+          }
+        }));
   };
 
   sapling_backingstore_get_tree_batch(
@@ -136,7 +139,8 @@ std::unique_ptr<folly::IOBuf> SaplingNativeBackingStore::getBlob(
 void SaplingNativeBackingStore::getBlobBatch(
     NodeIdRange requests,
     bool local,
-    folly::FunctionRef<void(size_t, std::unique_ptr<folly::IOBuf>)> resolve) {
+    folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
+        resolve) {
   size_t count = requests.size();
 
   XLOG(DBG7) << "Import blobs with size:" << count;
@@ -149,30 +153,33 @@ void SaplingNativeBackingStore::getBlobBatch(
     });
   }
 
-  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
-    CFallible<CBytes, sapling_cbytes_free> result{std::move(raw_result)};
+  using ResolveResult = folly::Try<std::unique_ptr<folly::IOBuf>>;
 
-    if (result.isError()) {
-      // TODO: It would be nice if we can differentiate not found error with
-      // other errors.
-      auto error = result.getError();
-      XLOGF(
-          DBG6,
-          "Failed to import node={} from EdenAPI (batch {}/{}): {}",
-          folly::hexlify(requests[index]),
-          index,
-          count,
-          error);
-    } else {
-      auto content = bytesToIOBuf(result.unwrap().release());
-      XLOGF(
-          DBG6,
-          "Imported node={} from EdenAPI (batch: {}/{})",
-          folly::hexlify(requests[index]),
-          index,
-          count);
-      resolve(index, std::move(content));
-    }
+  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
+    resolve(
+        index, folly::makeTryWith([&] {
+          CFallible<CBytes, sapling_cbytes_free> result{std::move(raw_result)};
+
+          if (result.isError()) {
+            XLOGF(
+                DBG6,
+                "Failed to import node={} from EdenAPI (batch {}/{}): {}",
+                folly::hexlify(requests[index]),
+                index,
+                count,
+                result.getError());
+            return ResolveResult{SaplingFetchError{result.getError()}};
+          } else {
+            auto content = bytesToIOBuf(result.unwrap().release());
+            XLOGF(
+                DBG6,
+                "Imported node={} from EdenAPI (batch: {}/{})",
+                folly::hexlify(requests[index]),
+                index,
+                count);
+            return ResolveResult{std::move(content)};
+          }
+        }));
   };
 
   sapling_backingstore_get_blob_batch(
@@ -206,7 +213,8 @@ std::shared_ptr<FileAuxData> SaplingNativeBackingStore::getBlobMetadata(
 void SaplingNativeBackingStore::getBlobMetadataBatch(
     NodeIdRange requests,
     bool local,
-    folly::FunctionRef<void(size_t, std::shared_ptr<FileAuxData>)> resolve) {
+    folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
+        resolve) {
   size_t count = requests.size();
 
   XLOG(DBG7) << "Import blob metadatas with size:" << count;
@@ -219,30 +227,33 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
     });
   }
 
-  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
-    CFallible<FileAuxData, sapling_file_aux_free> result{std::move(raw_result)};
+  using ResolveResult = folly::Try<std::shared_ptr<FileAuxData>>;
 
-    if (result.isError()) {
-      // TODO: It would be nice if we can differentiate not found error with
-      // other errors.
-      auto error = result.getError();
-      XLOGF(
-          DBG6,
-          "Failed to import metadata node={} from EdenAPI (batch {}/{}): {}",
-          folly::hexlify(requests[index]),
-          index,
-          count,
-          error);
-    } else {
-      auto metadata = result.unwrap();
-      XLOGF(
-          DBG6,
-          "Imported metadata node={} from EdenAPI (batch: {}/{})",
-          folly::hexlify(requests[index]),
-          index,
-          count);
-      resolve(index, std::move(metadata));
-    }
+  auto inner_resolve = [&](size_t index, CFallibleBase raw_result) {
+    resolve(
+        index, folly::makeTryWith([&] {
+          CFallible<FileAuxData, sapling_file_aux_free> result{
+              std::move(raw_result)};
+
+          if (result.isError()) {
+            XLOGF(
+                DBG6,
+                "Failed to import metadata node={} from EdenAPI (batch {}/{}): {}",
+                folly::hexlify(requests[index]),
+                index,
+                count,
+                result.getError());
+            return ResolveResult{SaplingFetchError{result.getError()}};
+          } else {
+            XLOGF(
+                DBG6,
+                "Imported metadata node={} from EdenAPI (batch: {}/{})",
+                folly::hexlify(requests[index]),
+                index,
+                count);
+            return ResolveResult{std::shared_ptr<FileAuxData>{result.unwrap()}};
+          }
+        }));
   };
 
   sapling_backingstore_get_file_aux_batch(

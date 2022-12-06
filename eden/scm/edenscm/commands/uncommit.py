@@ -23,6 +23,8 @@ added and removed in the working directory.
 
 from __future__ import absolute_import
 
+from typing import Optional
+
 from .. import (
     cmdutil,
     context,
@@ -46,7 +48,7 @@ from .cmdtable import command
     _("[OPTION]... [FILE]..."),
     legacyaliases=["unco", "uncom", "uncomm", "uncommi"],
 )
-def uncommit(ui, repo, *pats, **opts):
+def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
     """uncommit part or all of the current commit
 
     Reverse the effects of an :prog:`commit` operation. When run with no
@@ -161,7 +163,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
     return newid
 
 
-def fixdirstate(repo, oldctx, newctx, status):
+def fixdirstate(repo, oldctx, newctx, status) -> None:
     """fix the dirstate after switching the working directory from oldctx to
     newctx which can be result of either unamend or uncommit.
     """

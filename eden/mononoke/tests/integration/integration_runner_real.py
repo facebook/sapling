@@ -28,7 +28,7 @@ SUITE = "run-tests"
 
 # At this time, all tests support the network void script (except when
 # ephemeral MySQL is used)
-DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
+ALLOW_NETWORK_ACCESS_BY_NAME: Set[str] = {
     # Purposely not disabling network as this tests reverse dns lookups
     "test-metadata-fb-host.t",
     "test-metadata.t",
@@ -42,51 +42,20 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     # that integration tests do not time-out due to failed network call retries.
     # TODO(rajshar): Investigate root cause for network calls from SM Client.
     # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
-    "test-new-walker-checkpoint.t",
-    "test-new-walker-count-objects.t",
-    "test-new-walker-count-public-chunked.t",
     "test-mirror-hg-commits-basic.t",
     "test-backfill-derived-data.t",
     "test-mononoke-hg-sync-job.t",
-    # TOOD(simonfaR) Investigate why this fails, even though it should never talk to SMC
-    "test-remote-gitimport.t",
-    "test-remote-gitimport-hooks.t",
-    "test-remote-gitimport-with-100-commits-merge.t",
-    "test-remote-gitimport-with-1000-commits-merge.t",
     # Tests implicilitly relying on crypto cat library which needs network access to
     # read its configs.
-    "test-scs-blame-v2.t",
-    "test-scs-blame.t",
-    "test-scs-bookmark-info.t",
-    "test-scs-cat.t",
-    "test-scs-common-base.t",
-    "test-scs-diff.t",
-    "test-scs-export.t",
-    "test-scs-find-files.t",
-    "test-scs-find-files-bssm.t",
-    "test-scs-land-stack.t",
-    "test-scs-land-stack-cross-repo.t",
-    "test-scs-list-bookmarks.t",
-    "test-scs-log.t",
-    "test-scs-lookup-pushrebase-history.t",
-    "test-scs-lookup.t",
-    "test-scs-modify-bookmarks.t",
-    "test-scs-path-acls.t",
-    "test-scs-post-move-logging.t",
-    "test-scs-prepare-commits.t",
-    "test-scs-pushrebase-remote-cross-repo.t",
-    "test-scs-pushrebase-remote.t",
-    "test-scs-run-hooks.t",
-    "test-scs-segmented-changelog-ancestry-tests.t",
-    "test-scs-sparse-profiles.t",
-    "test-scs-svnrev-lookup-and-backfill-svnrev-mapping.t",
-    "test-scs-x-repo-mapping-change.t",
-    "test-scs-x-repo.t",
-    "test-scs.t",
-    "test-land-service-pushrebase-remote.t",
-    "test-snapshot.t",
-    "test-snapshot-add-labels.t",
-    "test-snapshot-remove-labels.t",
+}
+
+# Used for allowing access to many tests at once
+ALLOW_NETWORK_ACCESS_BY_PREFIX: Set[str] = {
+    "test-scs",
+    "test-land-service",
+    "test-snapshot",
+    "test-remote-gitimport",
+    "test-new-walker",
 }
 
 
@@ -136,7 +105,11 @@ class TestFlags(NamedTuple):
             r["interactive"] = True
 
         if self.disable_all_network_access:
-            incompatible_tests = set(tests) & set(DISABLE_ALL_NETWORK_ACCESS_SKIPLIST)
+            incompatible_tests = set(tests) & set(ALLOW_NETWORK_ACCESS_BY_NAME)
+            for test in tests:
+                for prefix in ALLOW_NETWORK_ACCESS_BY_PREFIX:
+                    if test.startswith(prefix):
+                        incompatible_tests.add(test)
             if incompatible_tests:
                 logging.warning(
                     "Not enabling network void because incompatible "

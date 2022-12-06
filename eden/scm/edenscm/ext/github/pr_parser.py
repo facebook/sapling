@@ -10,15 +10,15 @@ from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
 
 
-def get_pull_request_for_node(
-    node: bytes,
+def get_pull_request_for_context(
     store: PullRequestStore,
     ctx,
 ) -> Optional[PullRequestId]:
-    """Returns a pull request associated with a commit, if any. Checks the
-    metalog first. If not in the metalog, looks for special patterns in the
+    """Returns a pull request associated with a commit context, if any. Checks
+    the metalog first. If not in the metalog, looks for special patterns in the
     commit message.
     """
+    node = ctx.node()
     pr = store.find_pull_request(node)
     return pr if pr else _parse_github_pull_request_url(ctx.description())
 

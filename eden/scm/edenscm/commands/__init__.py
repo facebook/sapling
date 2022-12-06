@@ -2393,7 +2393,12 @@ def graft(ui, repo, *revs, **opts):
     Use @Product@'s merge logic to copy individual commits from other
     locations without making merge commits. This is sometimes known as
     'backporting' or 'cherry-picking'. By default, graft will also
-    copy user, date, and description from the source commits.
+    copy user and description from the source commits. If you want to
+    keep the date of the source commits, you can add below config to your
+    configuration file::
+
+      [tweakdefaults]
+      graftkeepdate = True
 
     Source commits will be skipped if they are ancestors of the
     current commit, have already been grafted, or are merges.

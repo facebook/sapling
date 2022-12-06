@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<4d66f128d839634b2f11108222a141ae>>
+ * @generated SignedSource<<a30cb7bf224c8eec75ac63538485bcb8>>
  *
  */
 
@@ -76,7 +76,6 @@ struct Slice {
 };
 
 struct BackingStoreOptions {
-  bool aux_data;
   bool allow_retries;
 };
 

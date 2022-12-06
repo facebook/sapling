@@ -6,6 +6,7 @@
  */
 
 use std::env;
+use std::io;
 use std::sync::Arc;
 use std::sync::Once;
 
@@ -31,7 +32,8 @@ pub(crate) fn backingstore_global_init() {
             let env_filter = EnvFilter::from_env("EDENSCM_LOG");
             let env_logger = FmtLayer::new()
                 .with_span_events(FmtSpan::ACTIVE)
-                .with_ansi(false);
+                .with_ansi(false)
+                .with_writer(io::stderr);
             let collector = collector.with(env_filter.and_then(env_logger));
             if let Err(e) = tracing::subscriber::set_global_default(collector) {
                 eprintln!("Failed to set rust tracing subscriber: {:?}", e);

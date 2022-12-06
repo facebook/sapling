@@ -650,10 +650,6 @@ pub enum Address {
 pub enum PushrebaseRemoteMode {
     /// Do pushrebase in the same process
     Local,
-    /// Call SCS and do pushrebase remotely, forwarding errors
-    RemoteScs(Address),
-    /// Call SCS and do pushrebase remotely, retrying errors locally
-    RemoteScsWithLocalFallback(Address),
     /// Call LandService and do pushrebase remotely, forwarding errors
     RemoteLandService(Address),
     /// Call LandService and do pushrebase remotely, retrying errors locally
@@ -784,8 +780,8 @@ pub struct StorageConfig {
 pub enum MultiplexedStoreType {
     /// Normal operation, no special treatment
     Normal,
-    /// Only read if Normal blobstores don't provide the blob. Writes go here as per normal
-    WriteMostly,
+    /// Writes go here as per normal, but it doesn't count towards quota, and is never read from.
+    WriteOnly,
 }
 
 /// What format should data be in either Raw or a compressed form with compression options like level

@@ -35,7 +35,7 @@ class FUSEStatsTest(testcase.EdenRepoTest):
 
         self.poll_until_counter_condition(
             lambda counters_after: self.assertGreater(
-                counters_after.get("fuse.read_us.count", 0),
+                counters_after["fuse.read_us.count"],
                 counters_before.get("fuse.read_us.count", 0),
                 f"Reading {path} should increment fuse.read_us.count",
             )
@@ -48,7 +48,7 @@ class FUSEStatsTest(testcase.EdenRepoTest):
 
         self.poll_until_counter_condition(
             lambda counters_after: self.assertGreater(
-                counters_after.get("fuse.write_us.count", 0),
+                counters_after["fuse.write_us.count"],
                 counters_before.get("fuse.write_us.count", 0),
                 f"Writing to {path} should increment fuse.write_us.count",
             )
@@ -117,7 +117,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         foo.read_bytes()
 
         counters = self.get_counters()
-        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 3)
+        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 1)
 
 
 @testcase.eden_nfs_repo_test
@@ -129,15 +129,9 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after.get("store.hg.get_blob_us.count", 0),
+            counters_after["store.hg.get_blob_us.count"],
             counters_before.get("store.hg.get_blob_us.count", 0) + 1,
             f"Reading {path} should increment store.hg.get_blob_us.count",
-        )
-
-        self.assertEqual(
-            counters_after.get("store.hg.import_blob_us.count", 0),
-            counters_before.get("store.hg.import_blob_us.count", 0) + 1,
-            f"Reading {path} should increment store.hg.import_blob_us.count",
         )
 
     def test_pending_import_counters_available(self) -> None:
@@ -185,9 +179,9 @@ class HgImporterStatsTest(testcase.EdenRepoTest):
         counters_after = self.get_counters()
 
         self.assertEqual(
-            counters_after.get("hg_importer.cat_file.count", 0),
-            counters_before.get("hg_importer.cat_file.count", 0) + 1,
-            f"Reading {path} should increment hg_importer.cat_file.count",
+            counters_after["store.hg.get_blob_us.count"],
+            counters_before.get("store.hg.get_blob_us.count", 0) + 1,
+            f"Reading {path} should increment store.hg.get_blob_us.count",
         )
 
     def create_repo(self, name: str) -> HgRepository:
@@ -253,15 +247,17 @@ class CountersTest(testcase.EdenRepoTest):
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
 
-    # We get rid of the thrift counters since they sporadically appear and can
-    # cause this test to fail (since they can appear between counters and counters2)
+    # We get rid of the thrift and scribe counters since they sporadically
+    # appear and can cause this test to fail (since they can appear between
+    # counters and counters2)
     @staticmethod
     def get_nonthrift_set(s):
         # and memory_vm_rss_bytes is reported sporadically in the background
         return {
             item
             for item in s
-            if not item.startswith("thrift")
+            if not item.startswith("scribe.")
+            and not item.startswith("thrift.")
             and not item.startswith("memory_vm_rss_bytes")
         }
 

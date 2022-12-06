@@ -9,15 +9,11 @@
 #![feature(provide_any)]
 
 use std::sync::Arc;
-use std::time::Instant;
 
 use anyhow::Error;
 pub use bookmarks::BookmarkName;
-use mononoke_app::MononokeApp;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
-use slog::info;
-use stats::prelude::*;
 
 use crate::repo::RepoContextBuilder;
 
@@ -85,11 +81,6 @@ pub use crate::tree::TreeId;
 pub use crate::tree::TreeSummary;
 pub use crate::xrepo::CandidateSelectionHintArgs;
 
-define_stats! {
-    prefix = "mononoke.api";
-    completion_duration_secs: timeseries(Average, Sum, Count),
-}
-
 /// An instance of Mononoke, which may manage multiple repositories.
 pub struct Mononoke {
     // Collection of instantiated repos currently being served.
@@ -100,38 +91,14 @@ pub struct Mononoke {
 }
 
 impl Mononoke {
-    /// Create a Mononoke instance.
-    pub async fn new(app: Arc<MononokeApp>) -> Result<Self, Error> {
-        let configs = (*app.repo_configs()).clone();
-        let logger = app.logger().clone();
-        let start = Instant::now();
-        let repo_filter = app.environment().filter_repos.clone();
-        let repo_names_in_tier =
-            Vec::from_iter(configs.repos.iter().filter_map(|(name, config)| {
-                if config.enabled {
-                    Some(name.to_string())
-                } else {
-                    None
-                }
-            }));
-        let repo_names = configs.repos.into_iter().filter_map(|(name, config)| {
-            let is_matching_filter = repo_filter.as_ref().map_or(true, |re| re.is_match(&name));
-            // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
-            // at service startup)
-            if config.enabled && !config.deep_sharded && is_matching_filter {
-                Some(name)
-            } else {
-                None
-            }
-        });
-        let repos = app.open_mononoke_repos(repo_names.into_iter()).await?;
-        info!(
-            &logger,
-            "All repos initialized. It took: {} seconds",
-            start.elapsed().as_secs()
-        );
-        STATS::completion_duration_secs
-            .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
+    /// Create a MononokeAPI instance for MononokeRepos
+    ///
+    /// Takes extra argument containing list of all aviailable repos
+    /// (used to power APIs listing repos; TODO: change that arg to MonononokeConfigs)
+    pub fn new(
+        repos: Arc<MononokeRepos<Repo>>,
+        repo_names_in_tier: Vec<String>,
+    ) -> Result<Self, Error> {
         Ok(Self {
             repos,
             repo_names_in_tier,
@@ -223,7 +190,7 @@ pub mod test_impl {
     use cloned::cloned;
     use live_commit_sync_config::LiveCommitSyncConfig;
     use metaconfig_types::CommitSyncConfig;
-    use synced_commit_mapping::SyncedCommitMapping;
+    use synced_commit_mapping::ArcSyncedCommitMapping;
 
     use super::*;
 
@@ -263,7 +230,7 @@ pub mod test_impl {
             small_repo: (String, BlobRepo),
             large_repo: (String, BlobRepo),
             _commit_sync_config: CommitSyncConfig,
-            mapping: Arc<dyn SyncedCommitMapping>,
+            mapping: ArcSyncedCommitMapping,
             lv_cfg: Arc<dyn LiveCommitSyncConfig>,
         ) -> Result<Self, Error> {
             use futures::stream::FuturesOrdered;

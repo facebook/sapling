@@ -127,10 +127,8 @@ class InodePtrImpl {
   /**
    * Like newPtrLocked() but consumes the given unique_ptr.
    */
-  static InodePtrImpl takeOwnership(std::unique_ptr<InodeType> value) noexcept {
-    return InodePtrImpl{value.release(), LOCKED_INCREMENT};
-  }
 
+  static InodePtrImpl takeOwnership(std::unique_ptr<InodeType> value) noexcept;
   /**
    * An API for TreeInode to use to construct an InodePtr from itself in order
    * to give to new children inodes that it creates.

@@ -169,6 +169,8 @@ def _gen_sendfile(orgsend):
             for chunk in util.filechunkiter(data):
                 orgsend(self, chunk)
         else:
+            if isinstance(data, str):
+                data = data.encode()
             orgsend(self, data)
 
     return _sendfile
@@ -227,7 +229,7 @@ def _generic_proxytunnel(self):
     # majority of the following code is duplicated from
     # httplib.HTTPConnection as there are no adequate places to
     # override functions to provide the needed functionality
-    res = self.response_class(self.sock, strict=self.strict, method=self._method)
+    res = self.response_class(self.sock, method=self._method)
 
     while True:
         version, status, reason = res._read_status()

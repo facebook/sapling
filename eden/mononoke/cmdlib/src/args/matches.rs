@@ -33,7 +33,7 @@ use blobstore_factory::DelayOptions;
 use blobstore_factory::PackOptions;
 use blobstore_factory::PutBehaviour;
 use blobstore_factory::ScrubAction;
-use blobstore_factory::ScrubWriteMostly;
+use blobstore_factory::SrubWriteOnly;
 use blobstore_factory::ThrottleOptions;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
@@ -86,7 +86,7 @@ use super::app::BLOBSTORE_PUT_BEHAVIOUR_ARG;
 use super::app::BLOBSTORE_SCRUB_ACTION_ARG;
 use super::app::BLOBSTORE_SCRUB_GRACE_ARG;
 use super::app::BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG;
-use super::app::BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG;
+use super::app::BLOBSTORE_SCRUB_WRITE_ONLY_MISSING_ARG;
 use super::app::CACHELIB_ATTEMPT_ZSTD_ARG;
 use super::app::CRYPTO_PATH_REGEX_ARG;
 use super::app::DERIVE_REMOTELY;
@@ -831,15 +831,15 @@ fn parse_blobstore_options(
             .map(u64::from_str)
             .transpose()?;
 
-        let scrub_action_on_missing_write_mostly = matches
-            .value_of(BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG)
-            .map(ScrubWriteMostly::from_str)
+        let scrub_action_on_missing_write_only = matches
+            .value_of(BLOBSTORE_SCRUB_WRITE_ONLY_MISSING_ARG)
+            .map(SrubWriteOnly::from_str)
             .transpose()?;
         let mut blobstore_options = blobstore_options
             .with_scrub_action(scrub_action)
             .with_scrub_grace(scrub_grace);
-        if let Some(v) = scrub_action_on_missing_write_mostly {
-            blobstore_options = blobstore_options.with_scrub_action_on_missing_write_mostly(v)
+        if let Some(v) = scrub_action_on_missing_write_only {
+            blobstore_options = blobstore_options.with_scrub_action_on_missing_write_only(v)
         }
         let scrub_queue_peek_bound = matches
             .value_of(BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG)

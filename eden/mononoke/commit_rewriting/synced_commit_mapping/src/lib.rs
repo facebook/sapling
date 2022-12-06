@@ -173,6 +173,7 @@ pub enum WorkingCopyEquivalence {
 
 #[async_trait]
 #[auto_impl(Arc)]
+#[facet::facet]
 pub trait SyncedCommitMapping: Send + Sync {
     /// Given the full large, small mapping, store it in the DB.
     /// Future resolves to true if the mapping was saved, false otherwise

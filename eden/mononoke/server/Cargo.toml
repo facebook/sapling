@@ -20,7 +20,6 @@ environment = { version = "0.1.0", path = "../cmdlib/environment" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
-futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }

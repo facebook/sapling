@@ -17,7 +17,6 @@ use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::ObservabilityContext;
 use permission_checker::AclProvider;
-use regex::Regex;
 use rendezvous::RendezVousOptions;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -65,5 +64,6 @@ pub struct MononokeEnvironment {
     pub acl_provider: Arc<dyn AclProvider>,
     pub skiplist_enabled: bool,
     pub warm_bookmarks_cache_derived_data: Option<WarmBookmarksCacheDerivedData>,
-    pub filter_repos: Option<Regex>,
+    /// Function determining whether given repo (identified by name) should be loaded
+    pub filter_repos: Option<Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>>,
 }

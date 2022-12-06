@@ -38,7 +38,7 @@ use multiplexedblob::LoggingScrubHandler;
 use multiplexedblob::ScrubAction;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
-use multiplexedblob::ScrubWriteMostly;
+use multiplexedblob::SrubWriteOnly;
 use nonzero_ext::nonzero;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
@@ -59,7 +59,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
 
     // Check the quorum cannot be zero
     {
-        // no main-stores, no write-mostly
+        // no main-stores, no write-only
         assert!(setup_multiplex(0, 0, None).is_err());
     }
 
@@ -73,8 +73,8 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
                 )
             })
             .collect();
-        // write-mostly don't count into the quorum
-        let write_mostly = (2..4)
+        // write-only don't count into the quorum
+        let write_only = (2..4)
             .map(|id| {
                 (
                     BlobstoreId::new(id),
@@ -87,7 +87,7 @@ async fn test_quorum_is_valid(_fb: FacebookInit) -> Result<()> {
             MultiplexId::new(0),
             wal,
             stores,
-            write_mostly,
+            write_only,
             quorum,
             None,
             scuba,
@@ -1012,7 +1012,7 @@ fn assert_is_present_ok(result: Result<BlobstoreIsPresent>, expected: BlobstoreI
 
 async fn scrub_none(
     fb: FacebookInit,
-    scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+    scrub_action_on_missing_write_only: SrubWriteOnly,
 ) -> Result<()> {
     let bid0 = BlobstoreId::new(0);
     let bs0 = Arc::new(Tickable::new());
@@ -1033,7 +1033,7 @@ async fn scrub_none(
         None,
         Scuba::new_from_raw(fb, None, None, nonzero!(1u64))?,
         ScrubOptions {
-            scrub_action_on_missing_write_mostly,
+            scrub_action_on_missing_write_only,
             ..ScrubOptions::default()
         },
         Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
@@ -1055,16 +1055,16 @@ async fn scrub_none(
 
 #[fbinit::test]
 async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
-    scrub_none(fb, ScrubWriteMostly::Scrub).await?;
-    scrub_none(fb, ScrubWriteMostly::SkipMissing).await?;
-    scrub_none(fb, ScrubWriteMostly::PopulateIfAbsent).await
+    scrub_none(fb, SrubWriteOnly::Scrub).await?;
+    scrub_none(fb, SrubWriteOnly::SkipMissing).await?;
+    scrub_none(fb, SrubWriteOnly::PopulateIfAbsent).await
 }
 async fn scrub_scenarios(
     fb: FacebookInit,
-    scrub_action_on_missing_write_mostly: ScrubWriteMostly,
+    scrub_action_on_missing_write_only: SrubWriteOnly,
 ) -> Result<()> {
-    use ScrubWriteMostly::*;
-    println!("{:?}", scrub_action_on_missing_write_mostly);
+    use SrubWriteOnly::*;
+    println!("{:?}", scrub_action_on_missing_write_only);
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
     let (tick_queue, queue) = setup_queue();
@@ -1086,7 +1086,7 @@ async fn scrub_scenarios(
         scuba.clone(),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
-            scrub_action_on_missing_write_mostly,
+            scrub_action_on_missing_write_only,
             ..ScrubOptions::default()
         },
         scrub_handler.clone(),
@@ -1108,7 +1108,7 @@ async fn scrub_scenarios(
         assert!(get_fut.await.is_err(), "SomeNone + Err expected Err");
     }
 
-    // non-existing key when one write mostly blobstore failing
+    // non-existing key when one write only blobstore failing
     {
         let k0 = "k0";
 
@@ -1120,9 +1120,9 @@ async fn scrub_scenarios(
 
         bs1.tick(None);
 
-        match scrub_action_on_missing_write_mostly {
+        match scrub_action_on_missing_write_only {
             PopulateIfAbsent | ScrubIfAbsent => {
-                // bs2 is ignored because it's write_mostly and the result of the normal
+                // bs2 is ignored because it's write_only and the result of the normal
                 // blobstores is failing
                 assert_eq!(get_fut.await.unwrap(), None, "SomeNone + Err expected None");
             }
@@ -1197,7 +1197,7 @@ async fn scrub_scenarios(
         scuba.clone(),
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
-            scrub_action_on_missing_write_mostly,
+            scrub_action_on_missing_write_only,
             ..ScrubOptions::default()
         },
         scrub_handler.clone(),
@@ -1263,7 +1263,7 @@ async fn scrub_scenarios(
         bs0.tick(None);
         assert_pending(&mut get_fut).await;
         bs1.tick(None);
-        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+        if scrub_action_on_missing_write_only != SrubWriteOnly::PopulateIfAbsent {
             // this read doesn't happen in this mode
             bs2.tick(None);
         }
@@ -1277,13 +1277,13 @@ async fn scrub_scenarios(
         // Now all populated.
         assert_eq!(bs0.get_bytes(k1), Some(v1.clone()));
         assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
-        match scrub_action_on_missing_write_mostly {
-            ScrubWriteMostly::Scrub
-            | ScrubWriteMostly::PopulateIfAbsent
-            | ScrubWriteMostly::ScrubIfAbsent => {
+        match scrub_action_on_missing_write_only {
+            SrubWriteOnly::Scrub
+            | SrubWriteOnly::PopulateIfAbsent
+            | SrubWriteOnly::ScrubIfAbsent => {
                 assert_eq!(bs2.get_bytes(k1), Some(v1.clone()))
             }
-            ScrubWriteMostly::SkipMissing => {
+            SrubWriteOnly::SkipMissing => {
                 assert_eq!(bs2.get_bytes(k1), None)
             }
         }
@@ -1305,11 +1305,11 @@ async fn scrub_scenarios(
         // gets
         bs0.tick(None);
         bs1.tick(Some("bs1 get failed"));
-        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::PopulateIfAbsent {
+        if scrub_action_on_missing_write_only != SrubWriteOnly::PopulateIfAbsent {
             // this read doesn't happen in this mode
             bs2.tick(None);
         }
-        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing {
+        if scrub_action_on_missing_write_only != SrubWriteOnly::SkipMissing {
             assert_pending(&mut get_fut).await;
             // repair bs2
             bs2.tick(None);
@@ -1318,7 +1318,7 @@ async fn scrub_scenarios(
         // bs1 still doesn't have the value. This is expected because we don't
         // want a single failing blobstore blocking the scrub.
         assert_eq!(bs1.get_bytes(k2), None);
-        if scrub_action_on_missing_write_mostly != ScrubWriteMostly::SkipMissing {
+        if scrub_action_on_missing_write_only != SrubWriteOnly::SkipMissing {
             // bs2 got repaired successfully
             assert_eq!(bs2.get_bytes(k2), Some(v2.clone()));
         } else {
@@ -1330,11 +1330,11 @@ async fn scrub_scenarios(
 
 #[fbinit::test]
 async fn scrubbed(fb: FacebookInit) {
-    scrub_scenarios(fb, ScrubWriteMostly::Scrub).await.unwrap();
-    scrub_scenarios(fb, ScrubWriteMostly::SkipMissing)
+    scrub_scenarios(fb, SrubWriteOnly::Scrub).await.unwrap();
+    scrub_scenarios(fb, SrubWriteOnly::SkipMissing)
         .await
         .unwrap();
-    scrub_scenarios(fb, ScrubWriteMostly::PopulateIfAbsent)
+    scrub_scenarios(fb, SrubWriteOnly::PopulateIfAbsent)
         .await
         .unwrap();
 }

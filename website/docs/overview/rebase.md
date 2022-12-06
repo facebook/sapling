@@ -18,7 +18,7 @@ Rebasing requires two pieces of information:
 To illustrate the different types of rebases, assume we start with the following
 commit graph. Note that we are currently on Commit C, as indicated by the `@`
 symbol.
-```
+```sl-shell-example
 $ sl
 o  d78f66e01  106 seconds ago  remote/main
 ╷
@@ -41,6 +41,8 @@ o  d78f66e01  106 seconds ago  remote/main
 ╭─╯  Commit A
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 #### -b / --base
@@ -55,7 +57,7 @@ descendants.
 Note that `sl rebase -b . -d XXX` is the same as `sl rebase -d XXX`, as `-b .`
 is the default behavior.
 
-```
+```sl-shell-example
 # Move entire current subtree onto main.
 $ sl rebase -b . -d main
   o  91ecebda8  12 seconds ago  mary
@@ -79,6 +81,8 @@ $ sl rebase -b . -d main
 o  d78f66e01  15 minutes ago  remote/main
 ╷
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 #### -s / --source
@@ -88,7 +92,7 @@ rebase a given commit and all of its descendants.
 Below we use `-s .` to rebase the current commit, `.`, and its descendant
 `Commit D` onto `main`. All other commits are left behind.
 
-```
+```sl-shell-example
 # Move current commit and its descendants onto main.
 $ sl rebase -s . -d main
   o  aa40b4d44  44 seconds ago  mary
@@ -112,6 +116,8 @@ o  d78f66e01  11 minutes ago  remote/main
 ╭─╯  Commit A
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 #### -r / --revisions
@@ -121,7 +127,7 @@ exactly the commits we specified.
 Below we move the commit we're on by specifying `.` as the argument to `-r`.  We
 move it onto `main` by specifying `main` as the argument to `-d`.
 
-```
+```sl-shell-example
 # Move just the current commit to be based on main
 $ sl rebase -r . -d main
 rebasing 6f782187aa42 "Commit C"
@@ -151,6 +157,8 @@ o  d78f66e01  4 minutes ago  remote/main
 ╭─╯  Commit A
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```
 
 Note how `6f782187a` is identified with an `x` in the commit graph to denote that it
@@ -161,7 +169,7 @@ because commit D did not get rebased.
 #### Other
 The rebase command can move multiple stacks and subtrees in a single invocation. The tree structure will be retained across the rebase. For example, one can use the `draft()` revset to rebase all of your local commits onto a newer base commit.
 
-```
+```sl-shell-example
 $ sl
 o  b5d600552  27 seconds ago  remote/main
 ╷
@@ -183,6 +191,8 @@ o  d78f66e01  27 minutes ago
 ╭─╯  Commit One
 │
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 
 # Rebase all my commits onto new main.
 $ sl rebase -r 'draft()' -d main
@@ -206,4 +216,6 @@ $ sl
 o  b5d600552  3 minutes ago  remote/main
 ╷
 o  17af69994  Today at 08:33  remote/stable
+╷
+~
 ```

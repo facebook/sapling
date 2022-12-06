@@ -51,6 +51,10 @@
   color: #0d0;
 }
 
+.sl-active-bookmark {
+  color: #aa0;
+}
+
 .sl-diff {
   color: #fff;
   font-weight: bold;
@@ -61,6 +65,44 @@
 }
 
 .sl-obsolete {
+  color: #888;
+}
+
+.sl-review-unreviewed {
+  color: #888;
+}
+
+.sl-review-approved {
+  color: #0f0;
+}
+
+.sl-signal-okay {
+  color: #0f0;
+}
+
+.sl-signal-failed {
+  color: #f00;
+}
+
+.sl-signal-warning {
+  color: #ff0;
+}
+
+.sl-signal-in-progress {
+  color: #ff0;
+}
+
+.sl-commit-public.sl-hash {
+  color: #dd0;
+}
+.sl-commit-draft.sl-hash {
+  color: #ff0;
+  font-weight: bold;
+}
+.sl-commit-current.sl-commit-text {
+  color: #d6d;
+}
+.sl-commit-obsolete.sl-commit-text {
   color: #888;
 }
 

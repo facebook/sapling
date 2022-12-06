@@ -611,6 +611,9 @@ class EdenServer : private TakeoverHandler {
   // Tree overlay needs periodically run checkpoint to flush its journal file.
   void manageOverlay();
 
+  // Run a garbage collection cycle over the inodes hierarchy.
+  void workingCopyGC();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -775,5 +778,6 @@ class EdenServer : private TakeoverHandler {
       this,
       "backing_store"};
   PeriodicFnTask<&EdenServer::manageOverlay> overlayTask_{this, "overlay"};
+  PeriodicFnTask<&EdenServer::workingCopyGC> gcTask_{this, "working_copy_gc"};
 };
 } // namespace facebook::eden

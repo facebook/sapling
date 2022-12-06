@@ -16,6 +16,12 @@
 
 namespace facebook::eden {
 
+template <typename InodeTypeParam>
+InodePtrImpl<InodeTypeParam> InodePtrImpl<InodeTypeParam>::takeOwnership(
+    std::unique_ptr<InodeType> value) noexcept {
+  return InodePtrImpl{value.release(), LOCKED_INCREMENT};
+}
+
 template <typename SubclassRawPtrType>
 SubclassRawPtrType InodePtr::asSubclass() const {
   if (this->value_ == nullptr) {

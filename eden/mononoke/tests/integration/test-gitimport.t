@@ -8,6 +8,10 @@
   $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
+  $ cat >> repos/repo/server.toml <<EOF
+  > [source_control_service]
+  > permit_writes = true
+  > EOF
 
 # Setup git repsitory
   $ mkdir "$GIT_REPO"
@@ -63,18 +67,15 @@
   $ git tag -a empty_tag -m ""
 # Check its ref can be parsed
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" full-repo
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
   * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
   * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
   * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
-
-# Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Current position of BookmarkName { bookmark: "master" } is None (glob)
+  * Initializing repo: repo (glob)
+  * Initialized repo: repo (glob)
+  * All repos initialized. * (glob)
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server
@@ -88,10 +89,15 @@
   this is file2
 
 # Check that we can see the git hash from extras
-  $ hg log --config extensions.gitrevset= --template 'hg={node}: git={gitnode}\nextras=(\n{extras % "  {extra}\n"})\n' -r master
+  $ hg log --config extensions.gitrevset= --template 'hg={node}: git={gitnode}\nextras=(\n{extras % "  {extra}\n"})\n' -r heads/master
   hg=e7f52161c6127445391295b677f87aded035450a: git=e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   extras=(
     branch=default
     convert_revision=e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
     hg-git-rename-source=git
   )
+
+# Checks all the bookmarks were created
+  $ hg bookmarks --all
+  * heads/master * (glob)
+  * tags/empty_tag * (glob)

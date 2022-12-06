@@ -13,6 +13,7 @@ use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use dashmap::DashMap;
+use once_cell::sync::Lazy;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -26,6 +27,22 @@ pub struct PathAuditor {
     root: PathBuf,
     audited: DashMap<RepoPathBuf, ()>,
 }
+
+#[cfg(not(windows))]
+const SEPARATORS: [char; 1] = ['/'];
+#[cfg(windows)]
+const SEPARATORS: [char; 2] = ['/', '\\'];
+
+static WINDOWS_SHORTNAME_ALIASES: Lazy<Vec<&'static str>> =
+    Lazy::new(|| identity::all().iter().map(|i| i.cli_name()).collect());
+
+static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    let components: [&'static str; 2] = [".", ".."];
+    components
+        .into_iter()
+        .chain(identity::all().iter().map(|i| i.dot_dir()))
+        .collect()
+});
 
 impl PathAuditor {
     pub fn new(root: impl AsRef<Path>) -> Self {
@@ -50,6 +67,8 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
+        audit_invalid_components(path.as_str())?;
+
         let mut needs_recording_index = std::usize::MAX;
         for (i, parent) in path.reverse_parents().enumerate() {
             // First fast check w/ read lock
@@ -84,6 +103,44 @@ impl PathAuditor {
     }
 }
 
+/// Checks that shortnames (e.g. `SL~1`) are not a component on Windows and that files don't end in
+/// a dot (e.g. `sigh....`)
+fn valid_windows_component(component: &str) -> bool {
+    if cfg!(not(windows)) {
+        return true;
+    }
+    if let Some((l, r)) = component.split_once('~') {
+        if r.chars().any(|c| c.is_numeric()) && WINDOWS_SHORTNAME_ALIASES.contains(&l) {
+            return false;
+        }
+    }
+    !component.ends_with('.')
+}
+
+/// Makes sure that the path does not contain any of the following components:
+/// - ``, empty, implies that paths can't start with, end or contain consecutive `SEPARATOR`s
+/// - `.`, dot/period, unix current directory
+/// - `..`, double dot, unix parent directory
+/// - `.sl` or `.hg`,
+/// It also checks that no trailing dots are part of the component and checks that shortnames
+/// on Windows are valid.
+fn audit_invalid_components(path: &str) -> Result<()> {
+    let path = if cfg!(not(windows)) {
+        path.to_owned()
+    } else {
+        path.to_lowercase()
+    };
+    for s in path.split(SEPARATORS) {
+        ensure!(
+            !s.is_empty() && !INVALID_COMPONENTS.contains(&s) && valid_windows_component(s),
+            "Invalid component {} in path {}",
+            s,
+            path.as_str(),
+        );
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::create_dir_all;
@@ -105,6 +162,36 @@ mod tests {
             auditor.audit(repo_path)?,
             root.as_ref().join(repo_path.as_str())
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_audit_invalid_components() -> Result<()> {
+        assert!(audit_invalid_components("a/../b").is_err());
+        assert!(audit_invalid_components("a/./b").is_err());
+        assert!(audit_invalid_components("a/.sl/b").is_err());
+        assert!(audit_invalid_components("a/.hg/b").is_err());
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_audit_windows() -> Result<()> {
+        let root = TempDir::new()?;
+
+        let auditor = PathAuditor::new(&root);
+
+        let repo_path = RepoPath::from_str("..\\foobar")?;
+        assert!(auditor.audit(repo_path).is_err());
+        let repo_path = RepoPath::from_str("x/y/SL~123/z")?;
+        assert!(auditor.audit(repo_path).is_err());
+        let repo_path = RepoPath::from_str("sl~12345/baz")?;
+        assert!(auditor.audit(repo_path).is_err());
+        let repo_path = RepoPath::from_str("a/.sL")?;
+        assert!(auditor.audit(repo_path).is_err());
+        let repo_path = RepoPath::from_str("Sure...")?;
+        assert!(auditor.audit(repo_path).is_err());
 
         Ok(())
     }

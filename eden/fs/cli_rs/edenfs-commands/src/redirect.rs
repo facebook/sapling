@@ -106,10 +106,10 @@ pub enum RedirectCmd {
         force_remount_bind_mounts: bool,
         #[clap(
             long,
-            help = "By default, paths with source of .eden-redirections will be fixed. Setting \
-            this flag to true will fix paths from all sources."
+            help = "By default, paths from all sources are fixed. Setting this flag to true will \
+            fix paths only from the .eden-redirections source."
         )]
-        all_sources: bool,
+        only_repo_source: bool,
     },
     #[clap(about = "Delete stale apfs volumes")]
     CleanupApfs {},
@@ -339,7 +339,7 @@ impl RedirectCmd {
         &self,
         mount: Option<PathBuf>,
         force_remount_bind_mounts: bool,
-        all_sources: bool,
+        only_repo_source: bool,
     ) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let mount = match mount {
@@ -358,8 +358,7 @@ impl RedirectCmd {
 
         for redir in redirs.values() {
             if redir.state == Some(RedirectionState::MatchesConfiguration)
-                && !force_remount_bind_mounts
-                && redir.redir_type == RedirectionType::Bind
+                && !(force_remount_bind_mounts && redir.redir_type == RedirectionType::Bind)
             {
                 tracing::debug!(
                     ?redir,
@@ -368,7 +367,7 @@ impl RedirectCmd {
                 continue;
             }
 
-            if redir.source != REPO_SOURCE && !all_sources {
+            if only_repo_source && redir.source != REPO_SOURCE {
                 tracing::debug!(?redir, "not fixing due to not from repo source");
                 continue;
             }
@@ -405,7 +404,11 @@ impl RedirectCmd {
         for redir in effective_redirs.values() {
             if let Some(state) = &redir.state {
                 if *state != RedirectionState::MatchesConfiguration {
-                    return Ok(1);
+                    // When --only-repo-source is passed, we may fail to fixup some redirections.
+                    // This scenario is ok and should not be considered a failure.
+                    if !only_repo_source || redir.source == REPO_SOURCE {
+                        return Ok(1);
+                    }
                 }
             }
         }
@@ -548,10 +551,14 @@ impl Subcommand for RedirectCmd {
             Self::Fixup {
                 mount,
                 force_remount_bind_mounts,
-                all_sources,
+                only_repo_source,
             } => {
-                self.fixup(mount.to_owned(), *force_remount_bind_mounts, *all_sources)
-                    .await
+                self.fixup(
+                    mount.to_owned(),
+                    *force_remount_bind_mounts,
+                    *only_repo_source,
+                )
+                .await
             }
             Self::CleanupApfs {} => self.cleanup_apfs().await,
         }

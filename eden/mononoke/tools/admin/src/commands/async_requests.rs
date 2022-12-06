@@ -18,7 +18,6 @@ use clap::Parser;
 use clap::Subcommand;
 use context::SessionContainer;
 use megarepo_api::MegarepoApi;
-use mononoke_api::Mononoke;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 
@@ -56,7 +55,7 @@ pub enum AsyncRequestsSubcommand {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let app = Arc::new(app);
     let mononoke = Arc::new(
-        Mononoke::new(Arc::clone(&app))
+        app.open_mononoke_with_repo_arg(&args.repo)
             .await
             .context("Failed to initialize Mononoke API")?,
     );

@@ -15,10 +15,10 @@ mononoke_app::subcommands! {
     mod fetch;
     mod filestore;
     mod hg_sync;
-    mod list_repos;
     mod mutable_renames;
     mod redaction;
-    mod repo_info;
+    mod repo;
+    mod repos;
     mod skiplist;
     mod ephemeral_store;
     mod dump_changesets;

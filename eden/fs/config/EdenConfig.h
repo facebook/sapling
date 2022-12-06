@@ -317,6 +317,28 @@ class EdenConfig : private ConfigSettingManager {
       10,
       this};
 
+  /**
+   * How often will a garbage collection on the working copy will run.
+   *
+   * Default to every hour.
+   */
+  ConfigSetting<std::chrono::nanoseconds> gcPeriod{
+      "mount:garbage-collection-period",
+      std::chrono::hours(1),
+      this};
+
+  /**
+   * Files with an atime older than this will be invalidated during GC.
+   *
+   * Default to a day. A value of 0 will invalidate all non-materialized files.
+   * On Windows, the atime is  updated only once an hour, so values below 1h
+   * may over-invalidate.
+   */
+  ConfigSetting<std::chrono::nanoseconds> gcCutoff{
+      "mount:garbage-collection-cutoff",
+      std::chrono::hours(24),
+      this};
+
   // [store]
 
   /**
@@ -611,6 +633,16 @@ class EdenConfig : private ConfigSettingManager {
       1,
       this};
 
+  /**
+   * Whether fetching trees should fall back on an external hg importer process.
+   */
+  ConfigSetting<bool> hgTreeFetchFallback{"hg:tree-fetch-fallback", true, this};
+
+  /**
+   * Whether fetching blobs should fall back on an external hg importer process.
+   */
+  ConfigSetting<bool> hgBlobFetchFallback{"hg:blob-fetch-fallback", true, this};
+
   // [backingstore]
 
   /**
@@ -765,6 +797,18 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enableNfsServer{
       "experimental:enable-nfs-server",
       folly::kIsApple,
+      this};
+
+  /**
+   * Controls whether EdenFS will periodically garbage collect the working
+   * directory.
+   *
+   * For now, this really only makes sense on Windows, with unknown behavior on
+   * Linux and macOS.
+   */
+  ConfigSetting<bool> enableGc{
+      "experimental:enable-garbage-collection",
+      false,
       this};
 
   // [treecache]

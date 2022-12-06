@@ -24,7 +24,7 @@ def link(ui, repo, *args, **opts):
     if not pull_request:
         raise error.Abort(_("could not resolve pull request: '%%s'") % pr_arg)
 
-    ctx = scmutil.revsingle(repo, opts.get("rev"), None)
+    ctx = scmutil.revsingle(repo, opts.get("rev"))
     pr_store = PullRequestStore(repo)
     pr_store.map_commit_to_pull_request(ctx.node(), pull_request)
 

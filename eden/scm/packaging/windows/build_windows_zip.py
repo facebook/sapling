@@ -53,7 +53,7 @@ def build_sapling(project_root: Path, python_dir: Path):
 
     # TODO(T132168309): generate an appropriate version string
 
-    # By default setup_with_version.py packages up the Python runtime it is invoked
+    # By default setup.py packages up the Python runtime it is invoked
     # with, so use our embedded python.exe.
     pythonexe = str(python_dir / "python.exe")
 
@@ -64,7 +64,7 @@ def build_sapling(project_root: Path, python_dir: Path):
                 "amd64",
                 "&&",
                 pythonexe,
-                "setup_with_version.py",
+                "setup.py",
                 "build_interactive_smartlog",
                 "build_py",
                 "-c",
@@ -80,7 +80,7 @@ def build_sapling(project_root: Path, python_dir: Path):
 
 
 def zip_sapling(project_root: Path, build_dir: Path):
-    # This is where "setup_with_version.py build_embedded" puts stuff.
+    # This is where "setup.py build_embedded" puts stuff.
     embedded_dir = build_dir / "embedded"
 
     artifacts_dir = project_root / "artifacts"

@@ -171,6 +171,9 @@ impl RepoArgs {
     pub fn from_repo_id(repo_id: i32) -> Self {
         Self(RepoArg::Id(RepositoryId::new(repo_id)))
     }
+    pub fn from_repo_name(repo_name: String) -> Self {
+        Self(RepoArg::Name(repo_name))
+    }
 }
 
 /// Command line arguments for specifying multiple repos.

@@ -282,12 +282,19 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
 
 /**
  * @see HgBackingStore
+ *
+ * Terminology:
+ *   get = entire lookup process, including both Sapling disk hits and fetches
+ *   fetch = includes asynchronous retrieval from Mononoke
+ *   import = fall back on hg debugedenimporthelper process
  */
 struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
-  Duration getBlob{"store.hg.get_blob_us"};
-  Duration importBlob{"store.hg.import_blob_us"};
   Duration getTree{"store.hg.get_tree_us"};
+  Duration fetchTree{"store.hg.fetch_tree_us"};
   Duration importTree{"store.hg.import_tree_us"};
+  Duration getBlob{"store.hg.get_blob_us"};
+  Duration fetchBlob{"store.hg.fetch_blob_us"};
+  Duration importBlob{"store.hg.import_blob_us"};
   Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};
   Counter loadProxyHash{"store.hg.load_proxy_hash"};
   Counter auxMetadataMiss{"store.hg.aux_metadata_miss"};

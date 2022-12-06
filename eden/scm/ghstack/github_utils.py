@@ -97,7 +97,7 @@ This repository has no default branch. This is likely because it is empty.
 
 Consider using %s to initialize your
 repository.
-""") % f"https://github.com/{owner}/{name}/new/main")
+""") % f"https://{github_url}/{owner}/{name}/new/main")
 
     return {
         "name_with_owner": name_with_owner,

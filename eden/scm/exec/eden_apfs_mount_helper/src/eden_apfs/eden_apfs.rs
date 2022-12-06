@@ -17,6 +17,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use once_cell::sync::OnceCell;
 use serde::de::DeserializeOwned;
 use serde::*;
 use sha2::Digest;
@@ -207,6 +208,11 @@ impl ApfsUtil<SystemCommandImpl> {
             diskutil: SystemCommandImpl(diskutil_path.as_ref().to_owned()),
             mount: SystemCommandImpl(mount_path.as_ref().to_owned()),
         }
+    }
+
+    pub fn global() -> &'static Self {
+        static INSTANCE: OnceCell<ApfsUtil> = OnceCell::new();
+        INSTANCE.get_or_init(|| Self::new(DISKUTIL_PATH, MOUNT_PATH))
     }
 }
 

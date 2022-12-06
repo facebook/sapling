@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use bulkops::MAX_FETCH_STEP;
+use changesets::ChangesetsArc;
 use clap::Arg;
 use cmdlib::args;
 use context::CoreContext;
@@ -125,10 +126,7 @@ fn main(fb: fbinit::FacebookInit) {
                 let blobrepo = blobrepo.await.expect("blobrepo should open");
                 (
                     blobrepo.name().to_string(),
-                    PublicChangesetBulkFetch::new(
-                        blobrepo.get_changesets_object(),
-                        blobrepo.phases_arc(),
-                    ),
+                    PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc()),
                 )
             })
         }

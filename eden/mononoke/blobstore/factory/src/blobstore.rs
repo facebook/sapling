@@ -49,7 +49,7 @@ use multiplexedblob::ScrubAction;
 use multiplexedblob::ScrubBlobstore;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
-use multiplexedblob::ScrubWriteMostly;
+use multiplexedblob::SrubWriteOnly;
 use multiplexedblob_wal::scrub::WalScrubBlobstore;
 use multiplexedblob_wal::Scuba as WalScuba;
 use multiplexedblob_wal::WalMultiplexedBlobstore;
@@ -140,12 +140,9 @@ impl BlobstoreOptions {
         }
     }
 
-    pub fn with_scrub_action_on_missing_write_mostly(
-        self,
-        scrub_missing: ScrubWriteMostly,
-    ) -> Self {
+    pub fn with_scrub_action_on_missing_write_only(self, scrub_missing: SrubWriteOnly) -> Self {
         if let Some(mut scrub_options) = self.scrub_options {
-            scrub_options.scrub_action_on_missing_write_mostly = scrub_missing;
+            scrub_options.scrub_action_on_missing_write_only = scrub_missing;
             Self {
                 scrub_options: Some(scrub_options),
                 ..self
@@ -724,7 +721,7 @@ async fn make_blobstore_multiplexed<'a>(
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
-    let (normal_components, write_mostly_components) = setup_inner_blobstores(
+    let (normal_components, write_only_components) = setup_inner_blobstores(
         fb,
         inner_config,
         mysql_options,
@@ -747,7 +744,7 @@ async fn make_blobstore_multiplexed<'a>(
         Some(scrub_options) => Arc::new(ScrubBlobstore::new(
             multiplex_id,
             normal_components,
-            write_mostly_components,
+            write_only_components,
             minimum_successful_writes,
             not_present_read_quorum,
             Arc::new(queue),
@@ -765,7 +762,7 @@ async fn make_blobstore_multiplexed<'a>(
         None => Arc::new(MultiplexedBlobstore::new(
             multiplex_id,
             normal_components,
-            write_mostly_components,
+            write_only_components,
             minimum_successful_writes,
             not_present_read_quorum,
             Arc::new(queue),
@@ -800,7 +797,7 @@ async fn make_multiplexed_wal<'a>(
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
-    let (normal_components, write_mostly_components) = setup_inner_blobstores(
+    let (normal_components, write_only_components) = setup_inner_blobstores(
         fb,
         inner_config,
         mysql_options,
@@ -831,7 +828,7 @@ async fn make_multiplexed_wal<'a>(
                 multiplex_id,
                 wal_queue,
                 normal_components,
-                write_mostly_components,
+                write_only_components,
                 write_quorum,
                 None, // use default timeouts
                 scuba,
@@ -843,7 +840,7 @@ async fn make_multiplexed_wal<'a>(
             multiplex_id,
             wal_queue,
             normal_components,
-            write_mostly_components,
+            write_only_components,
             write_quorum,
             None, // use default timeouts
             scuba,
@@ -912,14 +909,12 @@ async fn setup_inner_blobstores<'a>(
 
     // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
     let mut normal_components = vec![];
-    let mut write_mostly_components = vec![];
+    let mut write_only_components = vec![];
     for (blobstore_id, store_type, store) in components.into_iter() {
         match store_type {
             MultiplexedStoreType::Normal => normal_components.push((blobstore_id, store)),
-            MultiplexedStoreType::WriteMostly => {
-                write_mostly_components.push((blobstore_id, store))
-            }
+            MultiplexedStoreType::WriteOnly => write_only_components.push((blobstore_id, store)),
         }
     }
-    Ok((normal_components, write_mostly_components))
+    Ok((normal_components, write_only_components))
 }

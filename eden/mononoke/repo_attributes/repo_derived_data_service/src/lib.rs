@@ -31,7 +31,7 @@ pub struct DerivedDataManagerSet {
 }
 
 impl DerivedDataManagerSet {
-    pub fn get_mananger(&self, config_name: impl Into<String>) -> Option<&DerivedDataManager> {
+    pub fn get_manager(&self, config_name: impl Into<String>) -> Option<&DerivedDataManager> {
         self.configs.get(&config_name.into())
     }
 

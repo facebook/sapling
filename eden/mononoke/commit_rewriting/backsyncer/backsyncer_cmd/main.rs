@@ -323,6 +323,8 @@ where
                     target_repo_dbs.clone(),
                     BacksyncLimit::NoLimit,
                     Arc::clone(&cancellation_requested),
+                    CommitSyncContext::Backsyncer,
+                    false,
                 )
                 .await?
             }
@@ -514,6 +516,8 @@ async fn run(
                 target_repo_dbs,
                 BacksyncLimit::NoLimit,
                 cancellation_requested,
+                CommitSyncContext::Backsyncer,
+                false,
             )
             .boxed()
             .await?;
@@ -606,6 +610,7 @@ async fn run(
                                         bonsai.clone(),
                                         CandidateSelectionHint::Only,
                                         CommitSyncContext::Backsyncer,
+                                        false,
                                     )
                                     .await?;
 

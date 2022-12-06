@@ -22,7 +22,6 @@ use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future;
 use land_service_if::server::*;
-use mononoke_api::Mononoke;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeAppBuilder;
 use slog::info;
@@ -77,7 +76,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let env = app.environment();
 
     let scuba_builder = env.scuba_sample_builder.clone();
-    let mononoke = Arc::new(runtime.block_on(Mononoke::new(Arc::clone(&app)))?);
+    let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

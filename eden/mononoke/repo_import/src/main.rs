@@ -511,6 +511,8 @@ async fn move_bookmark(
                 Arc::new(small_repo_back_sync_vars.target_repo_dbs.clone()),
                 BacksyncLimit::NoLimit,
                 Arc::new(AtomicBool::new(false)),
+                CommitSyncContext::RepoImport,
+                false,
             )
             .await?;
             let small_repo_cs_id = small_repo_back_sync_vars

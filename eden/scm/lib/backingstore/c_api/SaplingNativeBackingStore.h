@@ -9,6 +9,7 @@
 
 #include <folly/Function.h>
 #include <folly/Range.h>
+#include <folly/Try.h>
 #include <memory>
 #include <string_view>
 
@@ -19,6 +20,11 @@ class IOBuf;
 } // namespace folly
 
 namespace sapling {
+
+class SaplingFetchError : public std::runtime_error {
+ public:
+  using std::runtime_error::runtime_error;
+};
 
 /**
  * Reference to a 20-byte hg node ID.
@@ -44,7 +50,7 @@ using NodeIdRange = folly::Range<const NodeId*>;
  * - If the object is not found, the error is logged and nullptr is returned.
  * - Batch methods take a callback function which is evaluated once per
  *   returned result. Compared to returning a vector, this minimizes the
- *   amount of time that heavyweight are in RAM.
+ *   amount of time that heavyweight objects are in RAM.
  */
 class SaplingNativeBackingStore {
  public:
@@ -57,21 +63,24 @@ class SaplingNativeBackingStore {
   void getTreeBatch(
       NodeIdRange requests,
       bool local,
-      folly::FunctionRef<void(size_t, std::shared_ptr<Tree>)> resolve);
+      folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<Tree>>)>
+          resolve);
 
   std::unique_ptr<folly::IOBuf> getBlob(NodeId node, bool local);
 
   void getBlobBatch(
       NodeIdRange requests,
       bool local,
-      folly::FunctionRef<void(size_t, std::unique_ptr<folly::IOBuf>)> resolve);
+      folly::FunctionRef<
+          void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)> resolve);
 
   std::shared_ptr<FileAuxData> getBlobMetadata(NodeId node, bool local);
 
   void getBlobMetadataBatch(
       NodeIdRange requests,
       bool local,
-      folly::FunctionRef<void(size_t, std::shared_ptr<FileAuxData>)> resolve);
+      folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
+          resolve);
 
   void flush();
 

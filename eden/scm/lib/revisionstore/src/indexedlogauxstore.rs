@@ -32,6 +32,7 @@ use vlqencoding::VLQEncode;
 use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
+use crate::scmstore::FetchMode;
 
 /// See edenapi_types::FileAuxData and mononoke_types::ContentMetadata
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
@@ -328,7 +329,11 @@ mod tests {
 
         // Attempt fetch.
         let fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .fetch(
+                std::iter::once(k.clone()),
+                FileAttributes::AUX,
+                FetchMode::AllowRemote,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(entry, fetched.aux_data().expect("no aux data found").into());
@@ -378,7 +383,11 @@ mod tests {
 
         // Attempt fetch.
         let fetched = store
-            .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
+            .fetch(
+                std::iter::once(k.clone()),
+                FileAttributes::AUX,
+                FetchMode::AllowRemote,
+            )
             .single()?
             .expect("key not found");
         assert_eq!(

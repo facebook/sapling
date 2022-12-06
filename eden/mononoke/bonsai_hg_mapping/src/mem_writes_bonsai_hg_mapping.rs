@@ -112,15 +112,13 @@ impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
             ));
         }
 
-        let this = self.clone();
-
         let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry;
 
-        let entry = this.get_hg_from_bonsai(ctx, bcs_id).await?;
+        let entry = self.get_hg_from_bonsai(ctx, bcs_id).await?;
         if entry.is_some() && !self.save_noop_writes.load(Ordering::Relaxed) {
             Ok(false)
         } else {
-            this.cache.with(|cache| {
+            self.cache.with(|cache| {
                 cache.0.insert(bcs_id, hg_cs_id);
                 cache.1.insert(hg_cs_id, bcs_id);
             });

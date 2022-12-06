@@ -183,8 +183,6 @@ function mononoke {
     --private-key "$TEST_CERTDIR/localhost.key" \
     --cert "$TEST_CERTDIR/localhost.crt" \
     --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    --scs-client-cert="$TEST_CERTDIR/proxy.crt" \
-    --scs-client-private-key="$TEST_CERTDIR/proxy.key" \
     --land-service-client-cert="$TEST_CERTDIR/proxy.crt" \
     --land-service-client-private-key="$TEST_CERTDIR/proxy.key" \
     --debug \

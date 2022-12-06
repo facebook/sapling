@@ -34,8 +34,7 @@ struct TestRepo {
   Hash20 manifest1;
 
   TestRepo() {
-    repo.hgInit();
-    repo.enableTreeManifest(testPath + "cache"_pc);
+    repo.hgInit(testPath + "cache"_pc);
 
     repo.mkdir("foo");
     repo.writeFile("foo/bar.txt", "bar\n");
@@ -99,20 +98,21 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
       queuedStore->getRootTree(commit1, ObjectFetchContext::getNullContext())
           .get(kTestTimeout);
 
-  for (auto& entry : *tree) {
-    if (entry.first == "foo.txt") {
+  for (auto& [name, entry] : *tree) {
+    if (entry.isTree()) {
+      continue;
+    }
+    if (name == "foo.txt") {
       auto [blob, origin] =
           queuedStore
-              ->getBlob(
-                  entry.second.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "foo\n");
-    } else if (entry.first == "bar.txt") {
+    } else if (name == "bar.txt") {
       auto [blob, origin] =
           queuedStore
-              ->getBlob(
-                  entry.second.getHash(), ObjectFetchContext::getNullContext())
+              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
               .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");

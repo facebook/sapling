@@ -24,6 +24,7 @@ use tokio::runtime::Handle;
 use types::Key;
 
 use crate::datastore::strip_metadata;
+use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileStore;
 use crate::RemoteDataStore;
@@ -126,7 +127,11 @@ fn stream_data_from_scmstore(
             let store = store.clone();
             Handle::current().spawn_blocking(move || {
                 let mut data = vec![];
-                for result in store.fetch(chunk.iter().cloned(), FileAttributes::CONTENT) {
+                for result in store.fetch(
+                    chunk.iter().cloned(),
+                    FileAttributes::CONTENT,
+                    FetchMode::AllowRemote,
+                ) {
                     let result = match result {
                         Err(err) => Err(err.into()),
                         Ok((key, mut file)) => file.file_content().map(|content| (content, key)),

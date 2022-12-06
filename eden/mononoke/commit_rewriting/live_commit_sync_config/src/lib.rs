@@ -29,8 +29,15 @@ use slog::error;
 use slog::Logger;
 use thiserror::Error;
 
+mod current;
+
+pub use current::CfgrCurrentCommitSyncConfig;
+pub use current::RepoGroup;
+
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
 pub const CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS: &str = "scm/mononoke/repos/commitsyncmaps/all";
+pub const CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIG: &str =
+    "scm/mononoke/repos/commitsyncmaps/current";
 
 #[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {

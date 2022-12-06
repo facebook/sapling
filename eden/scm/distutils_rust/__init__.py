@@ -61,15 +61,21 @@ class RustExtension(object):
     root package.
 
     'manifest' is the path to the Cargo.toml file for the Rust project.
+
+    'env' is an optional dict overriding environment variables when calling
+    'cargo'.
     """
 
-    def __init__(self, name, package=None, manifest=None, features=None, cfgs=None):
+    def __init__(
+        self, name, package=None, manifest=None, features=None, cfgs=None, env=None
+    ):
         self.name = name
         self.package = package
         self.manifest = manifest or "Cargo.toml"
         self.type = "library"
         self.features = features
         self.cfgs = cfgs
+        self.env = env
 
     @property
     def dstnametmp(self):
@@ -103,7 +109,14 @@ class RustBinary(object):
     """
 
     def __init__(
-        self, name, package=None, manifest=None, rename=None, features=None, cfgs=None
+        self,
+        name,
+        package=None,
+        manifest=None,
+        rename=None,
+        features=None,
+        cfgs=None,
+        env=None,
     ):
         self.name = name
         self.manifest = manifest or "Cargo.toml"
@@ -111,6 +124,7 @@ class RustBinary(object):
         self.final_name = rename or name
         self.features = features
         self.cfgs = cfgs
+        self.env = env
 
     @property
     def dstnametmp(self):
@@ -304,7 +318,13 @@ replace-with = "vendored-sources"
             cmd.append(target.features)
 
         env = os.environ.copy()
+        if target.env:
+            env.update(target.env)
         env["LIB_DIRS"] = os.path.abspath(self.build_temp)
+        # Somehow `HOMEBREW_CCCFG` gets set every time setup.py runs when running on
+        # Homebrew. This affects certain Rust targets, somehow, making them produce
+        # a target of the wrong arch (e.g. cross compiling to arm64 from x86)
+        env.pop("HOMEBREW_CCCFG", None)
 
         if target.cfgs:
             env["RUSTFLAGS"] = (

@@ -28,7 +28,6 @@ import ctypes.util
 import errno
 import glob
 import hashlib
-import imp
 import re
 import shutil
 import socket
@@ -40,8 +39,6 @@ import tempfile
 import time
 import zipfile
 
-from setup_utils import *
-
 if sys.version_info.major == 2:
     raise RuntimeError("This setup.py is Python 3 only!")
 
@@ -51,12 +48,6 @@ if PY_VERSION is None:
         PY_VERSION = "39"
     else:
         PY_VERSION = "38"
-
-SAPLING_VERSION = os.environ.get("SAPLING_VERSION")
-SAPLING_VERSION_HASH = os.environ.get("SAPLING_VERSION_HASH")
-
-if not SAPLING_VERSION or not SAPLING_VERSION_HASH:
-    raise RuntimeError("setup.py must be called via setup_with_version.py")
 
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
 
@@ -279,7 +270,136 @@ def hasheader(cc, headername):
     return cancompile(cc, code)
 
 
+def runcmd(cmd, env):
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    out, err = p.communicate()
+    return p.returncode, out, err
+
+
+class hgcommand(object):
+    def __init__(self, cmd, env):
+        self.cmd = cmd
+        self.env = env
+
+    def run(self, args):
+        cmd = self.cmd + args
+        returncode, out, err = runcmd(cmd, self.env)
+        err = filterhgerr(err)
+        if err or returncode != 0:
+            print("stderr from '%s':" % (" ".join(cmd)), file=sys.stderr)
+            print(err, file=sys.stderr)
+            return b""
+        return out
+
+
+def filterhgerr(err):
+    # If root is executing setup.py, but the repository is owned by
+    # another user (as in "sudo python setup.py install") we will get
+    # trust warnings since the .hg/hgrc file is untrusted. That is
+    # fine, we don't want to load it anyway.  Python may warn about
+    # a missing __init__.py in mercurial/locale, we also ignore that.
+    err = [
+        e
+        for e in err.splitlines()
+        if (
+            not e.startswith(b"not trusting file")
+            and not e.startswith(b"warning: Not importing")
+            and not e.startswith(b"obsolete feature not enabled")
+            and not e.startswith(b"devel-warn:")
+        )
+    ]
+    return b"\n".join(b"  " + e for e in err)
+
+
+def findhg():
+    """Try to figure out how we should invoke hg for examining the local
+    repository contents.
+
+    Returns an hgcommand object, or None if a working hg command cannot be
+    found.
+    """
+    # By default, prefer the "hg" command in the user's path.  This was
+    # presumably the hg command that the user used to create this repository.
+    #
+    # This repository may require extensions or other settings that would not
+    # be enabled by running the hg script directly from this local repository.
+    hgenv = os.environ.copy()
+    # Use HGPLAIN to disable hgrc settings that would change output formatting,
+    # and disable localization for the same reasons.
+    hgenv["HGPLAIN"] = "1"
+    hgenv["LANGUAGE"] = "C"
+    hgcmd = ["hg"]
+    # Run a simple "hg log" command just to see if using hg from the user's
+    # path works and can successfully interact with this repository.
+    check_cmd = ["log", "-r.", "-Ttest"]
+    try:
+        retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
+    except EnvironmentError:
+        retcode = -1
+    if retcode == 0 and not filterhgerr(err):
+        return hgcommand(hgcmd, hgenv)
+
+    # Fall back to trying the local hg installation.
+    hgenv = localhgenv()
+    hgcmd = [sys.executable, "hg"]
+    try:
+        retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
+    except EnvironmentError:
+        retcode = -1
+    if retcode == 0 and not filterhgerr(err):
+        return hgcommand(hgcmd, hgenv)
+
+    # Neither local or system hg can be used.
+    return None
+
+
+def localhgenv():
+    """Get an environment dictionary to use for invoking or importing
+    mercurial from the local repository."""
+    # Execute hg out of this directory with a custom environment which takes
+    # care to not use any hgrc files and do no localization.
+    env = {
+        "HGMODULEPOLICY": "py",
+        "HGRCPATH": "",
+        "LANGUAGE": "C",
+        "PATH": "",
+    }  # make pypi modules that use os.environ['PATH'] happy
+    if "LD_LIBRARY_PATH" in os.environ:
+        env["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"]
+    if "SystemRoot" in os.environ:
+        # SystemRoot is required by Windows to load various DLLs.  See:
+        # https://bugs.python.org/issue13524#msg148850
+        env["SystemRoot"] = os.environ["SystemRoot"]
+    return env
+
+
 hg = None if ossbuild else findhg()
+
+
+def hgtemplate(template, cast=None):
+    if not hg:
+        return None
+    result = hg.run(["log", "-r.", "-T", template]).decode("utf-8")
+    if result and cast:
+        result = cast(result)
+    return result
+
+
+def pickversion():
+    # Respect SAPLING_VERSION set by GitHub workflows.
+    env_version = os.environ.get("SAPLING_VERSION")
+    if env_version:
+        return env_version
+    # New version system: YYMMDD_HHmmSS_hash
+    # This is duplicated a bit from build_rpm.py:auto_release_str()
+    template = r'{sub("([:+-]|\d\d\d\d$)", "",date|isodatesec)} {node|short}'
+    # if hg is not found, fallback to a fixed version
+    out = hgtemplate(template) or ""
+    # Some tools parse this number to figure out if they support this version of
+    # Mercurial, so prepend with 4.4.2.
+    # ex. 4.4.2_20180105_214829_58fda95a0202
+    return "_".join(["4.4.2"] + out.split())
+
 
 if not os.path.isdir(builddir):
     # Create the "build" directory
@@ -304,21 +424,31 @@ if not os.path.isdir(builddir):
         ensureexists(builddir)
 
 
-versionb = SAPLING_VERSION.encode("ascii")
-versionhash = SAPLING_VERSION_HASH.encode("ascii")
+sapling_version = pickversion()
+sapling_versionb = sapling_version
+if not isinstance(sapling_versionb, bytes):
+    sapling_versionb = sapling_versionb.encode("ascii")
+
+# calculate a versionhash, which is used by chg to make sure the client
+# connects to a compatible server.
+sapling_versionhash = str(
+    struct.unpack(">Q", hashlib.sha1(sapling_versionb).digest()[:8])[0]
+)
+sapling_versionhashb = sapling_versionhash.encode("ascii")
 
 chgcflags = ["-std=c99", "-D_GNU_SOURCE", "-DHAVE_VERSIONHASH", "-I%s" % builddir]
 versionhashpath = pjoin(builddir, "versionhash.h")
-
-write_if_changed(versionhashpath, b"#define HGVERSIONHASH %sULL\n" % versionhash)
+write_if_changed(
+    versionhashpath, b"#define HGVERSIONHASH %sULL\n" % sapling_versionhashb
+)
 
 write_if_changed(
     "edenscm/__version__.py",
     b"".join(
         [
             b"# this file is autogenerated by setup.py\n"
-            b'version = "%s"\n' % versionb,
-            b"versionhash = %s\n" % versionhash,
+            b'version = "%s"\n' % sapling_versionb,
+            b"versionhash = %s\n" % sapling_versionhashb,
         ]
     ),
 )
@@ -395,14 +525,6 @@ needbuildinfo = bool(
 
 if needbuildinfo:
     buildinfocpath = writebuildinfoc()
-
-
-try:
-    from edenscm import __version__
-
-    version = __version__.version
-except ImportError:
-    version = "unknown"
 
 
 class asset(object):
@@ -789,10 +911,6 @@ class hgbuildscripts(build_scripts):
 
 
 class buildembedded(Command):
-    extsuffixes = [s[0] for s in imp.get_suffixes() if s[2] == imp.C_EXTENSION]
-    srcsuffixes = [s[0] for s in imp.get_suffixes() if s[2] == imp.PY_SOURCE]
-    # there should be at least one compiled python suffix, and we don't care about more
-    compsuffix = [s[0] for s in imp.get_suffixes() if s[2] == imp.PY_COMPILED][0]
     description = (
         "Build the embedded version of Mercurial. Intended to be used on Windows."
     )
@@ -1587,22 +1705,22 @@ def ordinarypath(p):
 # unicode on Python 2 still works because it won't contain any
 # non-ascii bytes and will be implicitly converted back to bytes
 # when operated on.
-setupversion = version
+setupversion = sapling_version
 
 if os.name == "nt":
     # Windows binary file versions for exe/dll files must have the
     # form W.X.Y.Z, where W,X,Y,Z are numbers in the range 0..65535
-    setupversion = version.split("+", 1)[0]
+    setupversion = sapling_version.split("+", 1)[0]
 
 if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
-    version = runcmd(["/usr/bin/xcodebuild", "-version"], {})[1].splitlines()
-    if version:
-        version = version[0]
-        version = version.decode("utf-8")
-        xcode4 = version.startswith("Xcode") and StrictVersion(
-            version.split()[1]
+    xcode_version = runcmd(["/usr/bin/xcodebuild", "-version"], {})[1].splitlines()
+    if xcode_version:
+        xcode_version = xcode_version[0]
+        xcode_version = xcode_version.decode("utf-8")
+        xcode4 = xcode_version.startswith("Xcode") and StrictVersion(
+            xcode_version.split()[1]
         ) >= StrictVersion("4.0")
-        xcode51 = re.match(r"^Xcode\s+5\.1", version) is not None
+        xcode51 = re.match(r"^Xcode\s+5\.1", xcode_version) is not None
     else:
         # xcodebuild returns empty on OS X Lion with XCode 4.3 not
         # installed, but instead with only command-line tools. Assume
@@ -1709,7 +1827,10 @@ rustextbinaries = [
         manifest="exec/hgmain/Cargo.toml",
         rename=hgname,
         features=hgmainfeatures,
-        cfgs=["Py_%s" % PY_VERSION],
+        env={
+            "SAPLING_VERSION": sapling_version,
+            "SAPLING_VERSION_HASH": sapling_versionhash,
+        },
     ),
 ]
 

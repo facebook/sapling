@@ -343,6 +343,7 @@ Test extension help:
        myparent
        ownercheck    prevent operations on repos not owned by the current user
        phabdiff      (no help text available)
+       phabricator   simple Phabricator integration
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
        preventpremegarepoupdateshook

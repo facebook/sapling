@@ -146,7 +146,7 @@ pub struct WalMultiplexedBlobstore {
     pub(crate) blobstores: Arc<[TimedStore]>,
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
-    pub(crate) write_mostly_blobstores: Arc<[TimedStore]>,
+    pub(crate) write_only_blobstores: Arc<[TimedStore]>,
 
     /// Scuba table to log status of the underlying single blobstore queries.
     pub(crate) scuba: Scuba,
@@ -156,8 +156,8 @@ impl std::fmt::Display for WalMultiplexedBlobstore {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "WAL MultiplexedBlobstore[normal {:?}, write mostly {:?}]",
-            self.blobstores, self.write_mostly_blobstores
+            "WAL MultiplexedBlobstore[normal {:?}, write only {:?}]",
+            self.blobstores, self.write_only_blobstores
         )
     }
 }
@@ -180,7 +180,7 @@ impl WalMultiplexedBlobstore {
         multiplex_id: MultiplexId,
         wal_queue: Arc<dyn BlobstoreWal>,
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_quorum: usize,
         timeout: Option<MultiplexTimeout>,
         scuba: Scuba,
@@ -189,13 +189,13 @@ impl WalMultiplexedBlobstore {
 
         let to = timeout.unwrap_or_default();
         let blobstores = with_timed_stores(blobstores, to.clone()).into();
-        let write_mostly_blobstores = with_timed_stores(write_mostly_blobstores, to).into();
+        let write_only_blobstores = with_timed_stores(write_only_blobstores, to).into();
 
         Ok(Self {
             multiplex_id,
             wal_queue,
             blobstores,
-            write_mostly_blobstores,
+            write_only_blobstores,
             quorum,
             scuba,
         })
@@ -260,25 +260,24 @@ impl WalMultiplexedBlobstore {
                             let main_puts =
                                 spawn_stream_completion(put_futs.map_err(|(_id, err)| err));
 
-                            // Spawn the write-mostly blobstore writes, we don't want to wait for them
-                            let write_mostly_puts = inner_multi_put(
+                            // Spawn the write-only blobstore writes, we don't want to wait for them
+                            let write_only_puts = inner_multi_put(
                                 ctx,
-                                self.write_mostly_blobstores.clone(),
+                                self.write_only_blobstores.clone(),
                                 &key,
                                 &value,
                                 put_behaviour,
                                 scuba,
                             );
-                            let write_mostly_puts = spawn_stream_completion(
-                                write_mostly_puts.map_err(|(_id, err)| err),
-                            );
+                            let write_only_puts =
+                                spawn_stream_completion(write_only_puts.map_err(|(_id, err)| err));
 
                             cloned!(ctx, self.wal_queue);
                             if put_errors.is_empty() {
                                 // Optimisation: It put fully succeeded on all blobstores, we can remove
                                 // it from queue and healer doesn't need to deal with it.
                                 tokio::spawn(async move {
-                                    let (r1, r2) = futures::join!(main_puts, write_mostly_puts);
+                                    let (r1, r2) = futures::join!(main_puts, write_only_puts);
                                     r1??;
                                     r2??;
                                     // TODO(yancouto): Batch deletes together.

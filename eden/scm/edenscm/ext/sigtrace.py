@@ -43,12 +43,12 @@ configitem("sigtrace", "memsignal", default="USR2")
 configitem("sigtrace", "interval", default=0)
 
 
-def printstacks(sig, currentframe):
+def printstacks(sig, currentframe) -> None:
     path = pathformat % {"time": time.time(), "pid": os.getpid()}
     writesigtrace(path, writestderr=True)
 
 
-def writesigtrace(path, writestderr=False):
+def writesigtrace(path, writestderr: bool = False) -> None:
     content = ""
     for tid, frame in pycompat.iteritems(sys._current_frames()):
         content += "Thread %s:\n%s\n" % (
@@ -80,7 +80,7 @@ def writesigtrace(path, writestderr=False):
 memorytracker = []
 
 
-def printmemory(sig, currentframe):
+def printmemory(sig, currentframe) -> None:
     try:
         # pyre-fixme[21]: Could not find `pympler`.
         from pympler import muppy, summary
@@ -96,7 +96,7 @@ def printmemory(sig, currentframe):
         f.write("\n".join(summary.format_(sum1, limit=50, sort="#")))
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     global pathformat, mempathformat
     pathformat = ui.config("sigtrace", "pathformat")
     mempathformat = ui.config("sigtrace", "mempathformat")
@@ -111,7 +111,7 @@ def uisetup(ui):
         util.signal(sig2, printmemory)
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     # Do not track known long-running commands.
     if not repo.local():
         return

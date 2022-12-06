@@ -7,6 +7,7 @@
 
 #include <benchmark/benchmark.h>
 #include <re2/re2.h>
+#include <string.h>
 
 #include "eden/fs/model/git/GlobMatcher.h"
 #include "watchman/thirdparty/wildmatch/wildmatch.h"
@@ -54,13 +55,13 @@ class RE2Impl {
     options.set_dot_nl(true);
     options.set_never_capture(true);
     options.set_case_sensitive(caseSensitive == CaseSensitivity::Sensitive);
-    auto re2str = re2::StringPiece(regex.begin(), regex.size());
+    auto re2str = re2::StringPiece(regex.data(), regex.size());
     regex_.reset(new re2::RE2(re2str, options));
   }
 
   bool match(std::string_view input) {
     return re2::RE2::FullMatchN(
-        re2::StringPiece(input.begin(), input.size()), *regex_, nullptr, 0);
+        re2::StringPiece(input.data(), input.size()), *regex_, nullptr, 0);
   }
 
  private:
@@ -138,8 +139,9 @@ class EndsWithImpl {
       return false;
     }
     if (memcmp(
-            pattern_.data(), input.end() - pattern_.size(), pattern_.size()) !=
-        0) {
+            pattern_.data(),
+            input.data() + input.size() - pattern_.size(),
+            pattern_.size()) != 0) {
       return false;
     }
     // To behave equivalently to the glob matching code we also have to confirm

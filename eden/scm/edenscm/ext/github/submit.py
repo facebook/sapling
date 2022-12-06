@@ -16,7 +16,7 @@ from edenscm.node import hex, nullid
 from . import gh_submit, github_repo_util
 from .gh_submit import PullRequestDetails, Repository
 from .github_repo_util import check_github_repo, GitHubRepo
-from .pr_parser import get_pull_request_for_node
+from .pr_parser import get_pull_request_for_context
 
 from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
@@ -99,7 +99,10 @@ async def update_commits_in_stack(ui, repo, github_repo: GitHubRepo) -> int:
     next_pull_request_number = None
     repository: Optional[Repository] = None
 
-    for partition in partitions:
+    # Note that `partitions` is ordered from the top of the stack to the bottom,
+    # but we want to create PRs from the bottom to the top so the PR numbers are
+    # created in ascending order.
+    for partition in reversed(partitions):
         top = partition[0]
         pr = top.pr
         if pr:
@@ -224,12 +227,6 @@ async def create_pull_requests(
     Each CommitData in `commits` will be updated such that its `.pr` field is
     set appropriately.
     """
-    # Note that `commits` is ordered from the top of the stack to the bottom,
-    # but we want to create PRs from the bottom to the top so the PR numbers are
-    # created in ascending order. We shadow the original `commmits` argument
-    # with a reversed copy to operate bottom-to-top within this function.
-    commits = list(reversed(commits))
-
     head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
     owner, name = repository.get_upstream_owner_and_name()
     # Because these will be "overlapping" pull requests, all share the same
@@ -380,7 +377,7 @@ async def get_repo(hostname: str, owner: str, name: str) -> Repository:
 
 async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
     ctx = repo[node]
-    pr_id = get_pull_request_for_node(node, store, ctx)
+    pr_id = get_pull_request_for_context(store, ctx)
     pr = await get_pull_request_details_or_throw(pr_id) if pr_id else None
     msg = None
     if pr:

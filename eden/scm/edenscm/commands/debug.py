@@ -3666,18 +3666,11 @@ def debugwireargs(ui, repopath, *vals, **opts) -> None:
 def debugdrawdag(ui, repo, **opts) -> None:
     r"""read an ASCII graph from stdin and create changesets
 
-    The ASCII graph is like what :prog:`log -G` outputs, with each `o` replaced
-    to the name of the node. The command will create dummy changesets and local
-    tags with those names to make the dummy changesets easier to be referred
-    to.
+    Create commits to match the graph described using the drawdag language.
+    Check ``test-drawdag.t`` for examples.
 
-    If the name of a node is a single character 'o', It will be replaced by the
-    word to the right. This makes it easier to reuse
-    :prog:`log -G -T '{desc}'` outputs.
-
-    For root (no parents) nodes, revset can be used to query existing repo.
-    Note that the revset cannot have confusing characters which can be seen as
-    the part of the graph edges, like `|/+-\`.
+    This command can execute Python logic from input. Therefore, never feed
+    it with untrusted input!
     """
     text = decodeutf8(ui.fin.read())
     return drawdag.drawdag(repo, text, **opts)

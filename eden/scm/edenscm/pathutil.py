@@ -86,7 +86,7 @@ class pathauditor(object):
         for p in parts:
             if "~" in p:
                 first, last = p.split("~", 1)
-                if last.isdigit() and first.upper() in ["HG", "HG8B6C"]:
+                if last.isdigit() and first.upper() in ["HG", "HG8B6C", "SL", "SL8B6C"]:
                     raise error.Abort(_("path contains illegal component: %s") % path)
         if self.dotdir in _lowerclean(path):
             lparts = [_lowerclean(p.lower()) for p in parts]

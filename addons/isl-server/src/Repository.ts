@@ -40,6 +40,7 @@ import {isGithubEnterprise} from './github/queryGraphQL';
 import {serializeAsyncCall} from './utils';
 import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
+import os from 'os';
 import path from 'path';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
@@ -378,7 +379,7 @@ export class Repository {
     }
 
     let codeReviewSystem: CodeReviewSystem;
-    const isMononoke = pathsDefault.startsWith('mononoke://');
+    const isMononoke = /^(mononoke|fb):\/\/.*/.test(pathsDefault);
     if (isMononoke) {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
@@ -646,12 +647,18 @@ async function findRoot(
   try {
     return (await runCommand(command, ['root'], logger, cwd)).stdout;
   } catch (error) {
-    if (['ENOENT', 'EACCES'].includes((error as {code: string}).code)) {
+    if (
+      ['ENOENT', 'EACCES'].includes((error as {code: string}).code) ||
+      // On Windows, we won't necessarily get an actual ENOENT error code in the error,
+      // because execa does not attempt to detect this.
+      // Other spawning libraries like node-cross-spawn do, which is the approach we can take.
+      // We can do this because we know how `root` uses exit codes.
+      // https://github.com/sindresorhus/execa/issues/469#issuecomment-859924543
+      (os.platform() === 'win32' && (error as {exitCode: number}).exitCode === 1)
+    ) {
       logger.error(`command ${command} not found`, error);
       throw error;
     }
-    logger.error(`Failed to find repository in ${cwd}`, error);
-    return undefined;
   }
 }
 

@@ -42,6 +42,14 @@ DEFAULT_PORT = 3011
             False,
             _("kill any running server process, then start a new server"),
         ),
+        (
+            "",
+            "platform",
+            "",
+            _(
+                "which environment ISL is being embedded in, used to support IDE integrations (ADVANCED)"
+            ),
+        ),
     ],
 )
 def isl_cmd(ui, repo, *args, **opts):
@@ -85,6 +93,7 @@ def isl_cmd(ui, repo, *args, **opts):
     foreground = opts.get("foreground")
     kill = opts.get("kill")
     force = opts.get("force")
+    platform = opts.get("platform")
     return launch_server(
         ui,
         cwd=repo.root,
@@ -94,6 +103,7 @@ def isl_cmd(ui, repo, *args, **opts):
         foreground=foreground,
         force=force,
         kill=kill,
+        platform=platform,
     )
 
 
@@ -107,6 +117,7 @@ def launch_server(
     foreground=False,
     kill=False,
     force=False,
+    platform=None,
 ):
     isl_args = get_isl_args()
     if isl_args[0] == "dotslash":
@@ -128,6 +139,9 @@ def launch_server(
         args.append("--force")
     if kill:
         args.append("--kill")
+    if platform:
+        args.append("--platform")
+        args.append(str(platform))
     subprocess.call(isl_args + args, cwd=cwd)
 
 

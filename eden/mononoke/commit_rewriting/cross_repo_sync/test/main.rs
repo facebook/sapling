@@ -1356,6 +1356,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
             new_mapping_cs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
     assert!(synced.is_some());
@@ -1403,6 +1404,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
             old_mapping_cs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
     assert!(synced.is_some());
@@ -1462,6 +1464,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             does_not_rewrite_large_cs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
     let parent_synced = large_to_small_syncer
@@ -1470,6 +1473,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             new_mapping_large_cs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
     // does_not_rewrite_large_cs_id commit was rewritten out, so sync_commit
@@ -1492,6 +1496,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             new_mapping_cs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
     assert!(synced.is_some());
@@ -1546,6 +1551,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
             old_mapping_cs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
     assert!(synced.is_some());
@@ -1607,6 +1613,7 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
                     new_mapping_cs_id,
                     CandidateSelectionHint::Only,
                     CommitSyncContext::Tests,
+                    false,
                 )
                 .await
         }
@@ -2052,7 +2059,8 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
                 &ctx,
                 merge_bcs_id,
                 CandidateSelectionHint::Only,
-                CommitSyncContext::Tests
+                CommitSyncContext::Tests,
+                false
             )
             .await?
     );
@@ -2083,6 +2091,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
             merge_bcs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?
         .unwrap();
@@ -2118,6 +2127,7 @@ async fn test_sync_merge_fails_when_parents_have_different_versions(
             merge_bcs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await
         .expect_err("syncing a merge with differently-remapped parents must fail");
@@ -2350,6 +2360,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
             first_bcs_id,
             CandidateSelectionHint::Only,
             CommitSyncContext::Tests,
+            false,
         )
         .await?;
 

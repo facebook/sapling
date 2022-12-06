@@ -8,6 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fcntl.h>
@@ -1094,44 +1095,41 @@ void PrivHelperServer::messageReceived(UnixSocket::Message&& message) noexcept {
 
 void PrivHelperServer::processAndSendResponse(UnixSocket::Message&& message) {
   Cursor cursor{&message.data};
-  const auto xid = cursor.readBE<uint32_t>();
-  const auto msgType =
-      static_cast<PrivHelperConn::MsgType>(cursor.readBE<uint32_t>());
-  auto responseType = msgType;
+  PrivHelperConn::PrivHelperPacket packet = PrivHelperConn::parsePacket(cursor);
 
   UnixSocket::Message response;
   try {
-    response = processMessage(msgType, cursor, message);
+    response = processMessage(packet, cursor, message);
   } catch (const std::exception& ex) {
     XLOG(ERR) << "error processing privhelper request: "
               << folly::exceptionStr(ex);
-    responseType = PrivHelperConn::RESP_ERROR;
+    packet.metadata.msg_type = PrivHelperConn::RESP_ERROR;
     response = makeResponse();
     Appender appender(&response.data, 1024);
     PrivHelperConn::serializeErrorResponse(appender, ex);
   }
 
-  // Put the transaction ID and message type in the response.
-  // The makeResponse() APIs ensure there is enough headroom for the header.
-  if (response.data.headroom() >= PrivHelperConn::kHeaderSize) {
-    response.data.prepend(PrivHelperConn::kHeaderSize);
+  // Put the version, transaction ID, and message type in the response.
+  // The makeResponse() APIs ensure there is enough headroom for the packet.
+  // Version info is important, since we may fall back to an older version
+  // in order to process a request.
+  size_t packetSize = sizeof(packet);
+  if (response.data.headroom() >= packetSize) {
+    response.data.prepend(packetSize);
   } else {
     // This is unexpected, but go ahead and allocate more room just in case this
     // ever does occur.
-    XLOG(WARN) << "insufficient headroom for privhelper response header: "
+    XLOG(WARN) << "insufficient headroom for privhelper response packet: "
                << "making more space";
     auto body = std::make_unique<IOBuf>(std::move(response.data));
-    response.data = IOBuf(IOBuf::CREATE, PrivHelperConn::kHeaderSize);
-    response.data.append(PrivHelperConn::kHeaderSize);
+    response.data = IOBuf(IOBuf::CREATE, packetSize);
+    response.data.append(packetSize);
     response.data.prependChain(std::move(body));
   }
 
-  static_assert(
-      PrivHelperConn::kHeaderSize == 2 * sizeof(uint32_t),
-      "This code needs to be updated if we ever change the header format");
   RWPrivateCursor respCursor(&response.data);
-  respCursor.writeBE<uint32_t>(xid);
-  respCursor.writeBE<uint32_t>(responseType);
+
+  PrivHelperConn::serializeResponsePacket(packet, respCursor);
 
   conn_->send(std::move(response));
 }
@@ -1144,9 +1142,9 @@ UnixSocket::Message PrivHelperServer::makeResponse() {
   UnixSocket::Message msg;
   msg.data = IOBuf(IOBuf::CREATE, kDefaultBufferSize);
 
-  // Leave enough headroom for the response header that includes the transaction
-  // ID and message type.
-  msg.data.advance(PrivHelperConn::kHeaderSize);
+  // Leave enough headroom for the response packet that includes the transaction
+  // ID and message type (and any additional metadata).
+  msg.data.advance(sizeof(PrivHelperConn::PrivHelperPacket));
   return msg;
 }
 
@@ -1157,9 +1155,18 @@ UnixSocket::Message PrivHelperServer::makeResponse(folly::File&& file) {
 }
 
 UnixSocket::Message PrivHelperServer::processMessage(
-    PrivHelperConn::MsgType msgType,
+    PrivHelperConn::PrivHelperPacket& packet,
     Cursor& cursor,
     UnixSocket::Message& request) {
+  // In the future, we can use packet.header.version to decide how to handle
+  // each request. Each request handler can implement different handler logic
+  // for each known version (if needed).
+  PrivHelperConn::MsgType msgType{packet.metadata.msg_type};
+  XLOGF(
+      DBG7,
+      "Processing message of type {} for protocol version v{}",
+      msgType,
+      packet.header.version);
   switch (msgType) {
     case PrivHelperConn::REQ_MOUNT_FUSE:
       return processMountMsg(cursor);

@@ -8,11 +8,14 @@
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fs;
 use std::future::Future;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -41,6 +44,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
+use mononoke_api::Mononoke;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
@@ -82,6 +86,7 @@ define_stats! {
         (reponame: String);
         Average, Sum, Count
     ),
+    completion_duration_secs: timeseries(Average, Sum, Count),
 }
 
 /// Struct responsible for receiving updated configurations from MononokeConfigs
@@ -283,6 +288,68 @@ impl MononokeApp {
         Args::from_arg_matches(&self.args)
     }
 
+    /// Instantiates Mononoke API with all configured repos
+    ///
+    /// Respects the repo_filter_from MononokeEnvironment
+    pub async fn open_mononoke(&self) -> Result<Mononoke, Error> {
+        let repo_filter = self.environment().filter_repos.clone();
+        let repo_names =
+            self.repo_configs()
+                .repos
+                .clone()
+                .into_iter()
+                .filter_map(|(name, config)| {
+                    let is_matching_filter =
+                        repo_filter.as_ref().map_or(true, |filter| filter(&name));
+                    // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
+                    // at service startup)
+                    if config.enabled && !config.deep_sharded && is_matching_filter {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                });
+        self.open_mononoke_with_repo_names(repo_names).await
+    }
+
+    /// Open a repository based on user-provided arguments.
+    pub async fn open_mononoke_with_repo_arg(&self, repo_arg: &impl AsRepoArg) -> Result<Mononoke> {
+        let (repo_name, _) = self.repo_config(repo_arg.as_repo_arg())?;
+        self.open_mononoke_with_repo_names(vec![repo_name]).await
+    }
+
+    /// Instantiates Mononoke API with specified repos
+    ///
+    /// (the specified repos must be configured in the config)
+    pub async fn open_mononoke_with_repo_names<Names>(
+        &self,
+        repo_names: Names,
+    ) -> Result<Mononoke, Error>
+    where
+        Names: IntoIterator<Item = String>,
+    {
+        let configs = (*self.repo_configs()).clone();
+        let logger = self.logger().clone();
+        let start = Instant::now();
+        let repo_names_in_tier =
+            Vec::from_iter(configs.repos.iter().filter_map(|(name, config)| {
+                if config.enabled {
+                    Some(name.to_string())
+                } else {
+                    None
+                }
+            }));
+        let repos = self.open_mononoke_repos(repo_names.into_iter()).await?;
+        info!(
+            &logger,
+            "All repos initialized. It took: {} seconds",
+            start.elapsed().as_secs()
+        );
+        STATS::completion_duration_secs
+            .add_value(start.elapsed().as_secs().try_into().unwrap_or(i64::MAX));
+        Mononoke::new(repos, repo_names_in_tier)
+    }
+
     /// Returns a handle to this app's runtime.
     pub fn runtime(&self) -> &Handle {
         self.env.runtime.handle()
@@ -428,6 +495,46 @@ impl MononokeApp {
         let repo_arg = repo_args.as_repo_arg();
         let (repo_name, repo_config) = self.repo_config(repo_arg)?;
         let common_config = self.repo_configs().common.clone();
+        let repo = self
+            .repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
+    /// Open an existing repo object
+    /// Make sure that the opened repo has redaction DISABLED
+    pub async fn open_repo_unredacted<Repo>(&self, repo_args: &impl AsRepoArg) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let repo_arg = repo_args.as_repo_arg();
+        let (repo_name, mut repo_config) = self.repo_config(repo_arg)?;
+        let common_config = self.repo_configs().common.clone();
+        repo_config.redaction = Redaction::Disabled;
+        let repo = self
+            .repo_factory
+            .build(repo_name, repo_config, common_config)
+            .await?;
+        Ok(repo)
+    }
+
+    /// Create a new repo object -- for local instances, expect its contents to be empty.
+    /// Makes sure that the opened repo has redaction DISABLED
+    pub async fn create_repo_unredacted<Repo>(&self, repo_arg: &impl AsRepoArg) -> Result<Repo>
+    where
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+    {
+        let (repo_name, mut repo_config) = self.repo_config(repo_arg.as_repo_arg())?;
+        let common_config = self.repo_configs().common.clone();
+
+        match &repo_config.storage_config.blobstore {
+            BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
+                setup_repo_dir(path, CreateStorage::ExistingOrCreate)?;
+            }
+            _ => {}
+        }
+        repo_config.redaction = Redaction::Disabled;
         let repo = self
             .repo_factory
             .build(repo_name, repo_config, common_config)
@@ -710,4 +817,37 @@ impl MononokeApp {
 
         Ok(builder)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum CreateStorage {
+    ExistingOnly,
+    ExistingOrCreate,
+}
+
+pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Result<()> {
+    let data_dir = data_dir.as_ref();
+
+    if !data_dir.is_dir() {
+        bail!("{:?} does not exist or is not a directory", data_dir);
+    }
+
+    // Validate directory layout
+    #[allow(clippy::single_element_loop)]
+    for subdir in &["blobs"] {
+        let subdir = data_dir.join(subdir);
+
+        if subdir.exists() && !subdir.is_dir() {
+            bail!("{:?} already exists and is not a directory", subdir);
+        }
+
+        if !subdir.exists() {
+            if CreateStorage::ExistingOnly == create {
+                bail!("{:?} not found in ExistingOnly mode", subdir,);
+            }
+            fs::create_dir(&subdir)
+                .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
+        }
+    }
+    Ok(())
 }

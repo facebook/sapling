@@ -22,6 +22,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushredirect_enable = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.36"
+vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 context = { version = "0.1.0", path = "../../server/context" }

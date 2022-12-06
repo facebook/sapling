@@ -346,11 +346,11 @@ mod test {
     use anyhow::Error;
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
+    use mononoke_api::Mononoke;
     use requests_table::RequestType;
     use source_control as thrift;
 
     use super::*;
-    use crate::Mononoke;
 
     #[fbinit::test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {

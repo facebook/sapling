@@ -19,6 +19,7 @@ use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use bulkops::MAX_FETCH_STEP;
+use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -261,7 +262,7 @@ where
             .as_ref()
             .map(|chunking| {
                 let heads_fetcher = PublicChangesetBulkFetch::new(
-                    repo_params.repo.get_changesets_object(),
+                    repo_params.repo.changesets_arc(),
                     repo_params.repo.phases_arc(),
                 )
                 .with_read_from_master(false)

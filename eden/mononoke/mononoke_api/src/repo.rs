@@ -135,8 +135,8 @@ use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneBuilder;
+use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use synced_commit_mapping::SyncedCommitMapping;
 use test_repo_factory::TestRepoFactory;
 use tunables::tunables;
 use unbundle::PushRedirector;
@@ -409,7 +409,7 @@ impl Repo {
         ctx: CoreContext,
         blob_repo: BlobRepo,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+        synced_commit_mapping: ArcSyncedCommitMapping,
     ) -> Result<Self, Error> {
         Self::new_test_common(
             ctx,
@@ -426,7 +426,7 @@ impl Repo {
         ctx: CoreContext,
         blob_repo: BlobRepo,
         live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
-        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
+        synced_commit_mapping: ArcSyncedCommitMapping,
         lfs: LfsParams,
     ) -> Result<Self, Error> {
         // TODO: Migrate more of this code to use the TestRepoFactory so that we can eventually
@@ -544,7 +544,7 @@ impl Repo {
     }
 
     /// The commit sync mapping for the referenced repository.
-    pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
+    pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
         self.inner.repo_cross_repo.synced_commit_mapping()
     }
 
@@ -872,7 +872,7 @@ impl RepoContext {
     }
 
     /// The commit sync mapping for the referenced repository
-    pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
+    pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
         self.repo.synced_commit_mapping()
     }
 
@@ -1057,7 +1057,7 @@ impl RepoContext {
             ),
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
-                    .get_changesets_object()
+                    .changesets()
                     .get_many_by_prefix(self.ctx.clone(), prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
@@ -1422,7 +1422,7 @@ impl RepoContext {
             // get the unique parents for all changesets in the queue & skip visited & update visited
             let parents: Vec<_> = self
                 .blob_repo()
-                .get_changesets_object()
+                .changesets()
                 .get_many(self.ctx.clone(), queue.clone())
                 .await?
                 .into_iter()
@@ -1626,6 +1626,7 @@ impl RepoContext {
                 changeset,
                 candidate_selection_hint,
                 CommitSyncContext::ScsXrepoLookup,
+                false,
             )
             .await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))

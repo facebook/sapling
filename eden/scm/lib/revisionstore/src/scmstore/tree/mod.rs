@@ -31,6 +31,7 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::FileStore;
@@ -97,7 +98,11 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
-    pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<FetchResults<StoreTree>> {
+    pub fn fetch_batch(
+        &self,
+        reqs: impl Iterator<Item = Key>,
+        fetch_mode: FetchMode,
+    ) -> FetchResults<StoreTree> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut common: CommonFetchState<StoreTree> =
@@ -146,151 +151,172 @@ impl TreeStore {
                 }
             }
 
-            if use_memcache(creation_time) {
-                if let Some(ref memcache) = memcache {
+            if let FetchMode::AllowRemote = fetch_mode {
+                if use_memcache(creation_time) {
+                    if let Some(ref memcache) = memcache {
+                        let pending: Vec<_> = common
+                            .pending(TreeAttributes::CONTENT, false)
+                            .map(|(key, _attrs)| key.clone())
+                            .collect();
+
+                        if !pending.is_empty() {
+                            for entry in memcache.get_data_iter(&pending)? {
+                                let entry = entry?;
+                                let key = entry.key.clone();
+                                let entry = LazyTree::Memcache(entry);
+                                if indexedlog_cache.is_some() && cache_to_local_cache {
+                                    if let Some(entry) =
+                                        entry.indexedlog_cache_entry(key.clone())?
+                                    {
+                                        indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
+                                    }
+                                }
+                                tracing::trace!("{:?} found in memcache", &key);
+                                common.found(key, entry.into());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let FetchMode::AllowRemote = fetch_mode {
+                if let Some(ref edenapi) = edenapi {
                     let pending: Vec<_> = common
                         .pending(TreeAttributes::CONTENT, false)
                         .map(|(key, _attrs)| key.clone())
                         .collect();
-
                     if !pending.is_empty() {
-                        for entry in memcache.get_data_iter(&pending)? {
+                        let span = tracing::info_span!(
+                            "fetch_edenapi",
+                            downloaded = field::Empty,
+                            uploaded = field::Empty,
+                            requests = field::Empty,
+                            time = field::Empty,
+                            latency = field::Empty,
+                            download_speed = field::Empty,
+                        );
+                        let _enter = span.enter();
+                        tracing::debug!(
+                            "attempt to fetch {} keys from edenapi ({:?})",
+                            pending.len(),
+                            edenapi.url()
+                        );
+                        let attributes = if aux_local.is_some() {
+                            Some(edenapi_types::TreeAttributes {
+                                child_metadata: true,
+                                ..edenapi_types::TreeAttributes::default()
+                            })
+                        } else {
+                            None
+                        };
+                        let response = edenapi
+                            .trees_blocking(pending, attributes)
+                            .map_err(|e| e.tag_network())?;
+                        for entry in response.entries {
                             let entry = entry?;
                             let key = entry.key.clone();
-                            let entry = LazyTree::Memcache(entry);
+                            if let Some(ref aux_local) = aux_local {
+                                if let Some(ref children) = entry.children {
+                                    for file_entry in children {
+                                        let file_entry = match file_entry {
+                                            Ok(file_entry) => file_entry,
+                                            Err(err) => {
+                                                // not failing tree fetching for aux related problems
+                                                tracing::warn!(
+                                                    "Error fetching child entry: {:?}",
+                                                    err
+                                                );
+                                                continue;
+                                            }
+                                        };
+                                        if let TreeChildEntry::File(file_entry) = file_entry {
+                                            if let Some(metadata) = file_entry.file_metadata {
+                                                let aux_entry = crate::indexedlogauxstore::Entry {
+                                                    total_size: metadata.size.unwrap(),
+                                                    content_id: metadata.content_id.unwrap(),
+                                                    content_sha1: metadata.content_sha1.unwrap(),
+                                                    content_sha256: metadata
+                                                        .content_sha256
+                                                        .unwrap(),
+                                                };
+                                                if let Some(ref aux_cache) = aux_cache {
+                                                    aux_cache
+                                                        .put(file_entry.key.hgid, &aux_entry)?;
+                                                } else {
+                                                    aux_local
+                                                        .put(file_entry.key.hgid, &aux_entry)?;
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // this is odd, need to log
+                                    tracing::warn!(
+                                        "No children returned when requested tree {}",
+                                        entry.key.hgid
+                                    );
+                                }
+                            }
+                            let entry = LazyTree::EdenApi(entry);
                             if indexedlog_cache.is_some() && cache_to_local_cache {
                                 if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
                                     indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
                                 }
                             }
-                            tracing::trace!("{:?} found in memcache", &key);
+                            if memcache.is_some()
+                                && cache_to_memcache
+                                && use_memcache(creation_time)
+                            {
+                                if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
+                                    memcache.as_ref().unwrap().add_mcdata(entry.try_into()?);
+                                }
+                            }
                             common.found(key, entry.into());
                         }
+                        util::record_edenapi_stats(&span, &response.stats);
                     }
+                } else {
+                    tracing::debug!("no EdenApi associated with TreeStore");
                 }
             }
 
-            if let Some(ref edenapi) = edenapi {
-                let pending: Vec<_> = common
-                    .pending(TreeAttributes::CONTENT, false)
-                    .map(|(key, _attrs)| key.clone())
-                    .collect();
-                if !pending.is_empty() {
-                    let span = tracing::info_span!(
-                        "fetch_edenapi",
-                        downloaded = field::Empty,
-                        uploaded = field::Empty,
-                        requests = field::Empty,
-                        time = field::Empty,
-                        latency = field::Empty,
-                        download_speed = field::Empty,
-                    );
-                    let _enter = span.enter();
-                    tracing::debug!(
-                        "attempt to fetch {} keys from edenapi ({:?})",
-                        pending.len(),
-                        edenapi.url()
-                    );
-                    let attributes = if aux_local.is_some() {
-                        Some(edenapi_types::TreeAttributes {
-                            child_metadata: true,
-                            ..edenapi_types::TreeAttributes::default()
-                        })
-                    } else {
-                        None
-                    };
-                    let response = edenapi
-                        .trees_blocking(pending, attributes)
-                        .map_err(|e| e.tag_network())?;
-                    for entry in response.entries {
-                        let entry = entry?;
-                        let key = entry.key.clone();
-                        if let Some(ref aux_local) = aux_local {
-                            if let Some(ref children) = entry.children {
-                                for file_entry in children {
-                                    let file_entry = match file_entry {
-                                        Ok(file_entry) => file_entry,
-                                        Err(err) => {
-                                            // not failing tree fetching for aux related problems
-                                            tracing::warn!("Error fetching child entry: {:?}", err);
-                                            continue;
-                                        }
-                                    };
-                                    if let TreeChildEntry::File(file_entry) = file_entry {
-                                        if let Some(metadata) = file_entry.file_metadata {
-                                            let aux_entry = crate::indexedlogauxstore::Entry {
-                                                total_size: metadata.size.unwrap(),
-                                                content_id: metadata.content_id.unwrap(),
-                                                content_sha1: metadata.content_sha1.unwrap(),
-                                                content_sha256: metadata.content_sha256.unwrap(),
-                                            };
-                                            if let Some(ref aux_cache) = aux_cache {
-                                                aux_cache.put(file_entry.key.hgid, &aux_entry)?;
-                                            } else {
-                                                aux_local.put(file_entry.key.hgid, &aux_entry)?;
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                // this is odd, need to log
-                                tracing::warn!(
-                                    "No children returned when requested tree {}",
-                                    entry.key.hgid
-                                );
+            if let FetchMode::AllowRemote = fetch_mode {
+                if let Some(ref contentstore) = contentstore {
+                    let pending: Vec<_> = common
+                        .pending(TreeAttributes::CONTENT, false)
+                        .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
+                        .collect();
+                    if !pending.is_empty() {
+                        tracing::debug!(
+                            "attempt to fetch {} keys from contentstore",
+                            pending.len()
+                        );
+                        contentstore.prefetch(&pending)?;
+
+                        let pending = pending.into_iter().map(|key| match key {
+                            StoreKey::HgId(key) => key,
+                            // Safe because we constructed pending with only StoreKey::HgId above
+                            // we're just re-using the already allocated paths in the keys
+                            _ => unreachable!("unexpected non-HgId StoreKey"),
+                        });
+
+                        for key in pending {
+                            let store_key = StoreKey::HgId(key.clone());
+                            let blob = match contentstore.get(store_key.clone())? {
+                                StoreResult::Found(v) => Some(v),
+                                StoreResult::NotFound(_k) => None,
+                            };
+                            let meta = match contentstore.get_meta(store_key)? {
+                                StoreResult::Found(v) => Some(v),
+                                StoreResult::NotFound(_k) => None,
+                            };
+
+                            if let (Some(blob), Some(meta)) = (blob, meta) {
+                                // We don't write to local indexedlog or memcache for contentstore fallbacks because
+                                // contentstore handles that internally.
+                                tracing::trace!("{:?} found in contentstore", &key);
+                                common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
                             }
-                        }
-                        let entry = LazyTree::EdenApi(entry);
-                        if indexedlog_cache.is_some() && cache_to_local_cache {
-                            if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
-                                indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
-                            }
-                        }
-                        if memcache.is_some() && cache_to_memcache && use_memcache(creation_time) {
-                            if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
-                                memcache.as_ref().unwrap().add_mcdata(entry.try_into()?);
-                            }
-                        }
-                        common.found(key, entry.into());
-                    }
-                    util::record_edenapi_stats(&span, &response.stats);
-                }
-            } else {
-                tracing::debug!("no EdenApi associated with TreeStore");
-            }
-
-            if let Some(ref contentstore) = contentstore {
-                let pending: Vec<_> = common
-                    .pending(TreeAttributes::CONTENT, false)
-                    .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
-                    .collect();
-                if !pending.is_empty() {
-                    tracing::debug!("attempt to fetch {} keys from contentstore", pending.len());
-                    contentstore.prefetch(&pending)?;
-
-                    let pending = pending.into_iter().map(|key| match key {
-                        StoreKey::HgId(key) => key,
-                        // Safe because we constructed pending with only StoreKey::HgId above
-                        // we're just re-using the already allocated paths in the keys
-                        _ => unreachable!("unexpected non-HgId StoreKey"),
-                    });
-
-                    for key in pending {
-                        let store_key = StoreKey::HgId(key.clone());
-                        let blob = match contentstore.get(store_key.clone())? {
-                            StoreResult::Found(v) => Some(v),
-                            StoreResult::NotFound(_k) => None,
-                        };
-                        let meta = match contentstore.get_meta(store_key)? {
-                            StoreResult::Found(v) => Some(v),
-                            StoreResult::NotFound(_k) => None,
-                        };
-
-                        if let (Some(blob), Some(meta)) = (blob, meta) {
-                            // We don't write to local indexedlog or memcache for contentstore fallbacks because
-                            // contentstore handles that internally.
-                            tracing::trace!("{:?} found in contentstore", &key);
-                            common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
                         }
                     }
                 }
@@ -313,7 +339,7 @@ impl TreeStore {
             process_func_errors();
         }
 
-        Ok(FetchResults::new(Box::new(found_rx.into_iter())))
+        FetchResults::new(Box::new(found_rx.into_iter()))
     }
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
@@ -323,23 +349,6 @@ impl TreeStore {
             }
         }
         Ok(())
-    }
-
-    /// Returns a TreeStore with only the local subset of backends
-    pub fn local(&self) -> TreeStore {
-        TreeStore {
-            indexedlog_local: self.indexedlog_local.clone(),
-            indexedlog_cache: self.indexedlog_cache.clone(),
-            cache_to_local_cache: false,
-            memcache: None,
-            cache_to_memcache: false,
-            edenapi: None,
-            contentstore: None,
-            creation_time: Instant::now(),
-            // TODO(meyer): Do we actually need the outer FileStore / TreeStore to be Arc'd?
-            filestore: self.filestore.as_ref().map(|store| Arc::new(store.local())),
-            flush_on_drop: false,
-        }
     }
 
     pub fn empty() -> Self {
@@ -473,7 +482,7 @@ impl HgIdDataStore for TreeStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
+                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key), FetchMode::AllowRemote)
                 .single()?
             {
                 Some(entry) => StoreResult::Found(entry.content.expect("content attribute not found despite being requested and returned as complete").hg_content()?.into_vec()),
@@ -485,7 +494,10 @@ impl HgIdDataStore for TreeStore {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         Ok(
             match self
-                .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
+                .fetch_batch(
+                    std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key),
+                    FetchMode::AllowRemote,
+                )
                 .single()?
             {
                 // This is currently in a bit of an awkward state, as revisionstore metadata is no longer used for trees
@@ -508,7 +520,10 @@ impl HgIdDataStore for TreeStore {
 impl RemoteDataStore for TreeStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(self
-            .fetch_batch(keys.iter().cloned().filter_map(StoreKey::maybe_into_key))?
+            .fetch_batch(
+                keys.iter().cloned().filter_map(StoreKey::maybe_into_key),
+                FetchMode::AllowRemote,
+            )
             .missing()?
             .into_iter()
             .map(StoreKey::HgId)
@@ -601,14 +616,18 @@ impl storemodel::TreeStore for TreeStore {
         }
 
         let key = Key::new(path.to_owned(), node);
-        match self.fetch_batch(std::iter::once(key.clone()))?.single()? {
+        match self
+            .fetch_batch(std::iter::once(key.clone()), FetchMode::AllowRemote)
+            .single()?
+        {
             Some(entry) => Ok(entry.content.expect("no tree content").hg_content()?),
             None => Err(anyhow!("key {:?} not found in manifest", key)),
         }
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        self.fetch_batch(keys.into_iter())?.consume();
+        self.fetch_batch(keys.into_iter(), FetchMode::AllowRemote)
+            .consume();
         Ok(())
     }
 

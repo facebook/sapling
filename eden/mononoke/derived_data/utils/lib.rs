@@ -19,6 +19,7 @@ use std::sync::Mutex;
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::BlameRoot;
@@ -35,6 +36,8 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BatchDeriveOptions;
 pub use derived_data_manager::BatchDeriveStats;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use derived_data_manager::DerivableType;
+use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
 use derived_data_manager::Rederivation;
 use fastlog::RootFastlog;
@@ -966,6 +969,77 @@ pub fn find_underived_many(
         }
     })
     .try_filter_map(future::ok)
+}
+
+pub async fn check_derived(
+    ctx: &CoreContext,
+    ddm: &DerivedDataManager,
+    derived_data_type: &DerivableType,
+    head_cs_id: ChangesetId,
+) -> Result<bool, DerivationError> {
+    match derived_data_type {
+        DerivableType::Unodes => {
+            ddm.fetch_derived::<RootUnodeManifestId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::BlameV1 => {
+            ddm.fetch_derived::<BlameRoot>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::BlameV2 => {
+            ddm.fetch_derived::<RootBlameV2>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::FileNodes => {
+            ddm.fetch_derived::<FilenodesOnlyPublic>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::HgChangesets => {
+            ddm.fetch_derived::<MappedHgChangesetId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::Fsnodes => {
+            ddm.fetch_derived::<RootFsnodeId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::Fastlog => {
+            ddm.fetch_derived::<RootFastlog>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        // deleted manifest share the same name
+        DerivableType::DeletedManifests => {
+            ddm.fetch_derived::<RootDeletedManifestV2Id>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::SkeletonManifests => {
+            ddm.fetch_derived::<RootSkeletonManifestId>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::ChangesetInfo => {
+            ddm.fetch_derived::<ChangesetInfo>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::GitTree => {
+            ddm.fetch_derived::<TreeHandle>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+        DerivableType::Bssm => {
+            ddm.fetch_derived::<RootBasenameSuffixSkeletonManifest>(ctx, head_cs_id, None)
+                .map_ok(|res| res.is_some())
+                .await
+        }
+    }
 }
 
 #[cfg(test)]

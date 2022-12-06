@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use clidispatch::ReqCtx;
 use revisionstore::scmstore::activitylogger;
+use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileStoreBuilder;
 
 use super::define_flags;
@@ -41,7 +42,7 @@ pub fn run(ctx: ReqCtx<DebugScmStoreReplayOpts>, repo: &mut Repo) -> Result<u8> 
             activitylogger::ActivityType::FileFetch => {
                 key_count += log.keys.len();
                 fetch_count += 1;
-                let result = store.fetch(log.keys.into_iter(), log.attrs);
+                let result = store.fetch(log.keys.into_iter(), log.attrs, FetchMode::AllowRemote);
                 match result.missing() {
                     Ok(failed) => {
                         if failed.len() > 0 {

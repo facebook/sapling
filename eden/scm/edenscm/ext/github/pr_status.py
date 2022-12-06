@@ -8,7 +8,8 @@ from typing import List, Optional
 from edenscm import smartset, util
 
 from . import graphql
-from .pr_parser import get_pull_request_for_node
+from .github_repo_util import is_github_repo
+from .pr_parser import get_pull_request_for_context
 from .pullrequest import GraphQLPullRequest, PullRequestId
 from .pullrequeststore import PullRequestStore
 
@@ -31,14 +32,18 @@ def get_pull_request_data(repo, pr: PullRequestId) -> Optional[GraphQLPullReques
 
 
 def _prefetch(repo, ctx_iter):
+    if not is_github_repo(repo):
+        for ctx in ctx_iter:
+            yield ctx
+        return
+
     ui = repo.ui
     peek_ahead = ui.configint("githubprstatus", "peekahead", _PR_STATUS_PEEK_AHEAD)
     pr_store = PullRequestStore(repo)
     for batch in util.eachslice(ctx_iter, peek_ahead):
         cached = getattr(repo, _PR_STATUS_CACHE, {})
-        pr_list = {
-            get_pull_request_for_node(ctx.node(), pr_store, ctx) for ctx in batch
-        }
+        pr_list = {get_pull_request_for_context(pr_store, ctx) for ctx in batch}
+
         pr_list = [pr for pr in pr_list if pr and pr not in cached]
         if pr_list:
             if ui.debugflag:

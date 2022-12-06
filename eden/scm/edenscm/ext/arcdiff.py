@@ -31,7 +31,7 @@ hint = registrar.hint()
 revsetpredicate = registrar.revsetpredicate()
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     entry = extensions.wrapcommand(commands.table, "diff", _diff)
     options = entry[1]
     options.append(
@@ -67,7 +67,7 @@ def _differentialhash(ui, repo, phabrev):
         raise error.Abort(str(e))
 
 
-def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
+def _diff2o(ui, repo, rev1, rev2, *pats, **opts) -> None:
     # Phabricator revs are often filtered (hidden)
     # First reconstruct textual diffs for rev1 and rev2 independently.
     def changediff(node):
@@ -131,7 +131,7 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
         ui.write(_("Added/removed: %s\n") % f)
 
 
-def _maybepull(repo, hexrev):
+def _maybepull(repo, hexrev) -> None:
     autopull.trypull(repo, [hexrev])
 
 

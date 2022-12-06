@@ -24,7 +24,7 @@ use blobstore::LoadableError;
 use bookmarks::Freshness;
 use bytes::Bytes;
 use changesets::ChangesetInsert;
-use changesets::Changesets;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use context::SessionClass;
 use edenapi_types::AnyId;
@@ -457,7 +457,7 @@ impl HgRepoContext {
         match save_bonsai_changeset_object(self.ctx(), blobstore, bonsai_cs).await {
             Ok(_) => {
                 self.blob_repo()
-                    .get_changesets_object()
+                    .changesets()
                     .add(self.ctx().clone(), insert)
                     .await
             }

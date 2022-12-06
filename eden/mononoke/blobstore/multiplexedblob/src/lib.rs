@@ -16,7 +16,7 @@ pub use crate::scrub::ScrubAction;
 pub use crate::scrub::ScrubBlobstore;
 pub use crate::scrub::ScrubHandler;
 pub use crate::scrub::ScrubOptions;
-pub use crate::scrub::ScrubWriteMostly;
+pub use crate::scrub::SrubWriteOnly;
 
 #[cfg(test)]
 mod test;
