@@ -11,7 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
-use slog::info;
+use slog::trace;
 use stats::prelude::*;
 use tunables::tunables;
 
@@ -79,7 +79,7 @@ impl IdMapMemWrites {
     }
 
     pub async fn flush_writes(&self, ctx: &CoreContext) -> anyhow::Result<()> {
-        info!(
+        trace!(
             ctx.logger(),
             "flushing {} in-memory IdMap entries to SQL",
             self.mem.len(),
@@ -119,7 +119,7 @@ impl IdMap for IdMapMemWrites {
                 sampling_rate as usize
             };
             if new_size / sampling_rate != old_size / sampling_rate {
-                info!(
+                trace!(
                     ctx.logger(),
                     "{} entries inserted into in-memory IdMap, new size: {}",
                     mappings_size,

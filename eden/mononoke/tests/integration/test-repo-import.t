@@ -156,7 +156,6 @@
   * starting the actual update (glob)
   * Adding hints for idmap_version 1 (glob)
   * idmap_version 1 has a full set of hints * (glob)
-  * flushing 2 in-memory IdMap entries to SQL (glob)
   * IdMap updated, IdDag updated (glob)
   * segmented changelog version saved, idmap_version: 1, iddag_version: * (glob)
   * successful incremental update to segmented changelog (glob)
