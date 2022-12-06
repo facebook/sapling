@@ -12,7 +12,6 @@ import hashlib
 import os
 import shutil
 import subprocess
-import tempfile
 import textwrap
 import weakref
 from dataclasses import dataclass
@@ -112,18 +111,12 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         destpath = os.path.realpath(basename)
 
     destpath = ui.expandpath(destpath)
+
     if os.path.lexists(destpath) and os.listdir(destpath):
         raise error.Abort(_("destination '%s' is not empty") % destpath)
     
-    exists = os.path.lexists(destpath) 
-
     try:
-        if exists:
-            temppath = tempfile.mkdtemp()
-            repo = createrepo(ui, url, temppath )
-        else: 
-            repo = createrepo(ui, url, destpath)
-            
+        repo = createrepo(ui, url, destpath)
         ret = initgitbare(ui, repo.svfs.join("git"))
         if ret != 0:
             raise error.Abort(_("git clone was not successful"))
@@ -137,9 +130,6 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         shutil.rmtree(destpath, ignore_errors=True)
         raise
     
-    if exists: 
-        shutil.move(temppath +"/.sl",destpath)
-        shutil.rmtree(temppath, ignore_errors=True)
     if update is not False:
         if update is True:
             node = repo.changelog.tip()
