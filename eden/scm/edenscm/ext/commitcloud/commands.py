@@ -544,9 +544,13 @@ def cloudlog(ui, repo, **opts):
 
 @subcmd(
     "smartlog|sl",
-    cloudsmartlogopts + workspace.workspaceopts,
+    [
+        ("T", "template", "", _("display with template"), _("TEMPLATE")),
+    ]
+    + cloudsmartlogopts
+    + workspace.workspaceopts,
 )
-def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
+def cloudsmartlog(ui, repo, templatealias="sl_cloud", **opts):
     """get smartlog view for the workspace specified
 
     If the requested template is not defined in the config
@@ -558,7 +562,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
 
     if opts.get("history"):
         interactivehistory.showhistory(
-            ui, repo, reponame, workspacename, template, **opts
+            ui, repo, reponame, workspacename, templatealias, **opts
         )
         return
 
@@ -609,15 +613,16 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     # set up pager
     ui.pager("smartlog")
 
-    smartlogstyle = ui.config("templatealias", template)
-    # if style is defined in templatealias section of config apply that style
-    if smartlogstyle:
-        opts["template"] = "{%s}" % smartlogstyle
-    else:
-        ui.debug(
-            _("style %s is not defined, skipping") % smartlogstyle,
-            component="commitcloud",
-        )
+    if not opts.get("template"):
+        smartlogstyle = ui.config("templatealias", templatealias)
+        # if style is defined in templatealias section of config apply that style
+        if smartlogstyle:
+            opts["template"] = "{%s}" % smartlogstyle
+        else:
+            ui.debug(
+                _("style %s is not defined, skipping") % smartlogstyle,
+                component="commitcloud",
+            )
 
     # show all the nodes
     firstpublic, revdag = serv.makedagwalker(slinfo, repo)
