@@ -105,6 +105,26 @@ def hostnameworkspace(ui, user: Optional[str] = None) -> str:
     )
 
 
+def parseworkspaceordefault(ui, repo, opts):
+    """Parse command line options to get a workspace name
+
+    If not provided, use the current workspace name.
+
+    If the repo is not connected to any workspace, assume the workspace 'default'.
+    """
+    workspacename = parseworkspace(ui, opts)
+    if workspacename is None:
+        workspacename = currentworkspace(repo)
+    if workspacename is None:
+        ui.warn(
+            _(
+                "the repository is not connected to any workspace, assuming the 'default' workspace\n"
+            )
+        )
+        workspacename = defaultworkspace(ui)
+    return workspacename
+
+
 filename = "commitcloudrc"
 
 

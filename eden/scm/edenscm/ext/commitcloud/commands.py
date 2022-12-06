@@ -121,6 +121,7 @@ subcmd = cloud.subcommand(
             ["delete", "undelete", "list", "rename", "reclaim"],
         ),
         ("View the smartlog for a cloud workspace", ["sl", "ssl"]),
+        ("View commits for a cloud workspace", ["log"]),
         (
             "Back up commits",
             ["backup", "check"],
@@ -500,22 +501,60 @@ cloudsmartlogopts = [
 
 
 @subcmd(
+    "log",
+    [
+        ("T", "template", "", _("display with template"), _("TEMPLATE")),
+        ("l", "limit", "", _("limit number of changes displayed"), _("NUM")),
+    ]
+    + workspace.workspaceopts,
+)
+def cloudlog(ui, repo, **opts):
+    """Print the content of a given Commit Cloud workspace.
+
+    By default, '@prog@ cloud log' prints the commit's hash, non-trivial parents, user,
+    date, time, and the single-line summary for all draft commits from the given workspace.
+    When the "-v/--verbose" option is used, the full commit message is shown.
+
+    The style can be customised via a template.
+
+    """
+    reponame = ccutil.getreponame(repo)
+    workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
+
+    with progress.spinner(ui, _("fetching")):
+        serv = service.get(ui)
+        slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
+
+    # show all draft nodes using the provided or default template
+    ui.pager("log")
+    firstpublic, revdag = serv.makedagwalkerwithparents(slinfo, repo)
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+    limit = cmdutil.loglimit(opts)
+
+    for (rev, _type, ctx, parents) in revdag:
+        if ctx.mutable():
+            if limit is not None:
+                if limit == 0:
+                    break
+                limit = limit - 1
+            displayer.show(ctx)
+            displayer.flush(ctx)
+    displayer.close()
+
+
+@subcmd(
     "smartlog|sl",
     cloudsmartlogopts + workspace.workspaceopts,
 )
 def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
-    """get smartlog view for the default workspace of the given user
+    """get smartlog view for the workspace specified
 
     If the requested template is not defined in the config
     the command provides a simple view as a list of draft commits.
     """
 
     reponame = ccutil.getreponame(repo)
-    workspacename = workspace.parseworkspace(ui, opts)
-    if workspacename is None:
-        workspacename = workspace.currentworkspace(repo)
-    if workspacename is None:
-        workspacename = workspace.defaultworkspace(ui)
+    workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
 
     if opts.get("history"):
         interactivehistory.showhistory(
@@ -772,11 +811,7 @@ def cloudhide(ui, repo, *revs, **opts):
 
     repo.ignoreautobackup = True
 
-    workspacename = workspace.parseworkspace(ui, opts)
-    if workspacename is None:
-        workspacename = workspace.currentworkspace(repo)
-    if workspacename is None:
-        workspacename = workspace.defaultworkspace(ui)
+    workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
 
     revs = list(revs) + opts.get("rev", [])
     bookmarks = opts.get("bookmark", [])

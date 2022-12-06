@@ -29,9 +29,9 @@ Tests for hg cloud sl
   > }
   > EOF
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -98,6 +98,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -268,7 +269,6 @@ Tests for hg cloud sl
   │
   o  7e1ae2 (public)  2018-05-23 16:51 +0000
      some commit
-  
 
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
@@ -395,6 +395,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -742,7 +743,6 @@ Tests for hg cloud sl
   │
   o  ae84d5 (public)  2018-06-25 17:51 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -841,6 +841,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1107,7 +1108,6 @@ Tests for hg cloud sl
   │
   o  346d06 (public)  2018-03-29 16:49 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -1188,6 +1188,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1400,7 +1401,6 @@ Tests for hg cloud sl
   │
   o  dbc73d (public)  2017-04-13 22:53 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -1420,6 +1420,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1449,7 +1450,6 @@ Tests for hg cloud sl
   │
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
-  
 
   $ cat > $TESTTMP/usersmartlogdata << EOF
   > {
@@ -1498,6 +1498,7 @@ Tests for hg cloud sl
   > EOF
 
   $ hg cloud sl
+  the repository is not connected to any workspace, assuming the 'default' workspace
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
@@ -1614,4 +1615,3 @@ Tests for hg cloud sl
   │
   o  073f98 (public)  2018-01-02 10:00 +0000
      some commit
-  
