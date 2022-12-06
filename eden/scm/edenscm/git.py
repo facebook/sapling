@@ -12,9 +12,9 @@ import hashlib
 import os
 import shutil
 import subprocess
+import tempfile
 import textwrap
 import weakref
-import tempfile
 from dataclasses import dataclass
 
 import bindings
@@ -112,8 +112,8 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         destpath = os.path.realpath(basename)
 
     destpath = ui.expandpath(destpath)
-    if os.path.lexists(destpath + "/.sl"):
-        raise error.Abort(_("destination '%s' is already a repository") % destpath)
+    if os.path.lexists(destpath) and os.listdir(destpath):
+        raise error.Abort(_("destination '%s' is not empty") % destpath)
     
     exists = os.path.lexists(destpath) 
 
