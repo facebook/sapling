@@ -243,9 +243,9 @@ attention to more than just the last commit (successful validation of many commi
 
 -- run the validator, check that commits are eqiuvalent
   $ REPOIDLARGE=0 validate_commit_sync 8 |& grep "Validated entry"
-  * Validated entry: Entry *(0/3) (glob)
-  * Validated entry: Entry *(1/3) (glob)
-  * Validated entry: Entry *(2/3) (glob)
+  * Validated entry: Entry 8 (1/3) (glob)
+  * Validated entry: Entry 8 (2/3) (glob)
+  * Validated entry: Entry 8 (3/3) (glob)
 
 Check that for bookmarks_update_log entries, which touch >1 commit in master, we pay
 attention to more than just the last commit (failed validation of inner commit)
@@ -292,8 +292,8 @@ attention to more than just the last commit (failed validation of inner commit)
 
 -- run the validator, check that commits are eqiuvalent
   $ REPOIDLARGE=0 validate_commit_sync 9 |& grep -E "(Preparing entry|Different contents)"
-  * Preparing entry Entry *(0/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * Preparing entry Entry *(1/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
+  * Preparing entry Entry 9 (1/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
+  * Preparing entry Entry 9 (2/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
   * Different contents for path MPath("arvr/tripple_2"): meg-mon: ContentId(Blake2(*)) fbs-mon: ContentId(Blake2(*)) (glob)
 
 Check that we validate the topological order

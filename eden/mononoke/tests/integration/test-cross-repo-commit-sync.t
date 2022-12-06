@@ -121,16 +121,16 @@
 
 -- Validate the synced entries
   $ REPOIDLARGE=0 validate_commit_sync 10 |& grep "Validated entry"
-  * Validated entry: Entry 10(0/1) (glob)
+  * Validated entry: Entry 10 (1/1) (glob)
 
   $ REPOIDLARGE=0 validate_commit_sync 11 |& grep "Validated entry"
-  * Validated entry: Entry 11(0/1) (glob)
+  * Validated entry: Entry 11 (1/1) (glob)
 
   $ REPOIDLARGE=0 validate_commit_sync 12 |& grep "Validated entry"
-  * Validated entry: Entry 12(0/1) (glob)
+  * Validated entry: Entry 12 (1/1) (glob)
 
   $ REPOIDLARGE=0 validate_commit_sync 13 |& grep "Validated entry"
-  * Validated entry: Entry 13(0/1) (glob)
+  * Validated entry: Entry 13 (1/1) (glob)
 
 Query synced commit mapping, check that automatically inserted mappings have version_name
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << EOQ

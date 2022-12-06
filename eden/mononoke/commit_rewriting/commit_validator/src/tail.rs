@@ -117,7 +117,7 @@ pub(crate) fn tail_entries(
                 Some(last_entry_id) => {
                     let entries: Vec<_> = entries
                         .into_iter()
-                        .filter(|entry| skip_bookmarks.contains(&entry.bookmark_name))
+                        .filter(|entry| !skip_bookmarks.contains(&entry.bookmark_name))
                         .collect();
                     debug!(
                         ctx.logger(),

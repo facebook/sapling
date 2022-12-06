@@ -58,6 +58,7 @@ use movers::Mover;
 use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use revset::RangeNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
@@ -100,8 +101,11 @@ impl Debug for EntryCommitId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Entry {}({}/{})",
-            self.bookmarks_update_log_entry_id, self.commit_in_entry, self.total_commits_in_entry
+            "Entry {} ({}/{})",
+            self.bookmarks_update_log_entry_id,
+            // 1-indexing to be clear to humans
+            self.commit_in_entry + 1,
+            self.total_commits_in_entry
         )
     }
 }
@@ -719,13 +723,23 @@ pub async fn unfold_bookmarks_update_log_entry(
         .get_large_repo_master(ctx.clone())
         .await?;
 
-    let node_stream = match (
+    info!(
+        ctx.logger(),
+        "BookmarkUpdateLogEntry {} will be expanded into commits", bookmarks_update_log_entry_id,
+    );
+
+    // Normally a single entry would resolve to just a few commits.
+    // Even if we imagine a case, where a single entry will produce
+    // a stream of a million commits (merge of a new repo or smth like this)
+    // we are talking about <200bytes * 1M ~= 200Mb, which it not that big
+    // of a deal
+    let mut collected = match (
         entry.from_changeset_id.clone(),
         entry.to_changeset_id.clone(),
     ) {
         (_, None) => {
             // Entry deletes a bookmark. Nothing to validate
-            stream::empty().boxed()
+            vec![]
         }
         (None, Some(to_cs_id)) => {
             // Entry creates a bookmark (or it is a blobimport entry,
@@ -742,8 +756,16 @@ pub async fn unfold_bookmarks_update_log_entry(
                 // the revset from below, it would've excluded `to_cs_id`
                 // as it is likely to be an ancestor of master.
                 STATS::bizzare_boookmark_move.add_value(1);
-                stream::once(async move { Ok(to_cs_id) }).boxed()
+                vec![Ok(to_cs_id)]
             } else {
+                info!(
+                    ctx.logger(),
+                    "[{}] Creation of a new bookmark at {}, slow path.",
+                    bookmarks_update_log_entry_id,
+                    to_cs_id
+                );
+                // This might be slow. If too many bookmakrs are being created, it can be optimised
+                // or we could just check to_cs_id as a best effort.
                 DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                     ctx.clone(),
                     &changeset_fetcher,
@@ -752,42 +774,49 @@ pub async fn unfold_bookmarks_update_log_entry(
                     vec![master_cs_id],
                 )
                 .compat()
-                .boxed()
+                .collect()
+                .await
             }
         }
         (Some(from_cs_id), Some(to_cs_id)) => {
-            let heads_to_exclude = if is_master_entry {
-                vec![from_cs_id]
+            if !lca_hint
+                .is_ancestor(ctx, &changeset_fetcher, from_cs_id, to_cs_id)
+                .await?
+            {
+                info!(
+                    ctx.logger(),
+                    "[{}] {} -> {} not a forward move, slow path.",
+                    bookmarks_update_log_entry_id,
+                    from_cs_id,
+                    to_cs_id
+                );
+                // This might be slow. If too many bookmakrs are being non-FF moved, it can be optimised
+                // or we could just check to_cs_id as a best effort.
+                DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                    ctx.clone(),
+                    &changeset_fetcher,
+                    lca_hint,
+                    vec![to_cs_id],
+                    vec![from_cs_id],
+                )
+                .compat()
+                .collect()
+                .await
             } else {
-                // When we have a non-master bookmark move, it possible
-                // that `to_cs_id % from_cs_id` revset returns tons of
-                // changesets, which are verified as part of master verification
-                // anyway. So, as a speed-up, we can exclude all ancestors
-                // of master from this revset as well.
-                vec![master_cs_id, from_cs_id]
-            };
-            DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
-                ctx.clone(),
-                &changeset_fetcher,
-                lca_hint,
-                vec![to_cs_id],
-                heads_to_exclude,
-            )
-            .compat()
-            .boxed()
+                let mut v: Vec<_> =
+                    RangeNodeStream::new(ctx.clone(), changeset_fetcher, from_cs_id, to_cs_id)
+                        .compat()
+                        .collect()
+                        .await;
+                // Drop from_cs
+                v.pop();
+                v
+            }
         }
     };
+    // Changesets are listed top to bottom, let's reverse
+    collected.reverse();
 
-    // Normally a single entry would resolve to just a few commits.
-    // Even if we imagine a case, where a single entry will produce
-    // a stream of a million commits (merge of a new repo or smth like this)
-    // we are talking about <200bytes * 1M ~= 200Mb, which it not that big
-    // of a deal
-    let collected: Vec<_> = {
-        let mut collected: Vec<_> = node_stream.collect().await;
-        collected.reverse();
-        collected
-    };
     let total_commits_in_entry = collected.len();
     info!(
         ctx.logger(),
