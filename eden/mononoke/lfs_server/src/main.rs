@@ -98,6 +98,9 @@ pub struct Repo {
     name: String,
 
     #[facet]
+    repo_config: RepoConfig,
+
+    #[facet]
     filestore_config: FilestoreConfig,
 
     #[facet]
@@ -157,12 +160,11 @@ struct LfsServerArgs {
 
 #[derive(Clone)]
 pub struct LfsRepos {
-    pub(crate) app: Arc<MononokeApp>,
     pub(crate) repos: Arc<MononokeRepos<Repo>>,
 }
 
 impl LfsRepos {
-    pub(crate) async fn new(app: Arc<MononokeApp>) -> Result<Self> {
+    pub(crate) async fn new(app: &MononokeApp) -> Result<Self> {
         let repo_names = app
             .repo_configs()
             .repos
@@ -178,13 +180,11 @@ impl LfsRepos {
             })
             .collect::<Vec<_>>();
         let repos = app.open_mononoke_repos(repo_names).await?;
-        Ok(Self { app, repos })
+        Ok(Self { repos })
     }
 
-    pub(crate) fn get(&self, repo_name: &str) -> Option<(Arc<Repo>, RepoConfig)> {
-        let repo = self.repos.get_by_name(repo_name);
-        let config = self.app.repo_config_by_name(repo_name).ok();
-        repo.and_then(|repo| config.map(|config| (repo, config)))
+    pub(crate) fn get(&self, repo_name: &str) -> Option<Arc<Repo>> {
+        self.repos.get_by_name(repo_name)
     }
 }
 
@@ -195,18 +195,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ..Default::default()
     };
 
-    let app = Arc::new(
-        MononokeAppBuilder::new(fb)
-            .with_app_extension(Fb303AppExtension {})
-            .with_app_extension(RepoFilterAppExtension {})
-            .with_default_cachelib_settings(cachelib_settings)
-            .build::<LfsServerArgs>()?,
-    );
+    let app = MononokeAppBuilder::new(fb)
+        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(RepoFilterAppExtension {})
+        .with_default_cachelib_settings(cachelib_settings)
+        .build::<LfsServerArgs>()?;
 
     let args: LfsServerArgs = app.args()?;
 
     let logger = app.logger().clone();
-    let runtime = app.runtime();
+    // We must ensure the runtime (contained within the environment) outlives
+    // the app, so keep a local clone of the environment.
+    let env = app.environment().clone();
     let config_store = app.config_store();
     let acl_provider = app.environment().acl_provider.clone();
 
@@ -262,12 +262,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         LogMiddleware::slog(logger.clone())
     };
 
+    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
+    fb303_args.start_fb303_server(fb, SERVICE_NAME, &logger, AliveService)?;
+
     let common = &app.repo_configs().common;
     let internal_identity = common.internal_identity.clone();
     let server = {
-        cloned!(acl_provider, common, logger, will_exit, app);
+        cloned!(acl_provider, common, logger, will_exit);
         async move {
-            let repos = LfsRepos::new(app)
+            let repos = LfsRepos::new(&app)
                 .await
                 .context(Error::msg("Error opening repos"))?;
 
@@ -372,12 +375,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
     };
 
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(fb, SERVICE_NAME, &logger, AliveService)?;
-
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     serve_forever(
-        runtime,
+        env.runtime.handle(),
         select(
             server.boxed(),
             shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),

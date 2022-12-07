@@ -40,6 +40,7 @@ use hyper_openssl::HttpsConnector;
 use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ContentId;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
@@ -110,26 +111,17 @@ impl LfsServerContext {
         host: String,
         method: LfsMethod,
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
-        let (
-            repo,
-            client,
-            server,
-            always_wait_for_upstream,
-            max_upload_size,
-            config,
-            enforce_acl_check,
-        ) = {
+        let (repo, client, server, always_wait_for_upstream, max_upload_size, config) = {
             let inner = self.inner.lock().expect("poisoned lock");
 
             match inner.repositories.get(&repository) {
-                Some((repo, repo_config)) => (
+                Some(repo) => (
                     repo,
                     inner.client.clone(),
                     inner.server.clone(),
                     inner.always_wait_for_upstream,
                     inner.max_upload_size,
                     inner.config_handle.get(),
-                    repo_config.enforce_lfs_acl_check,
                 ),
                 None => {
                     return Err(LfsServerContextErrorKind::RepositoryDoesNotExist(
@@ -139,7 +131,8 @@ impl LfsServerContext {
             }
         };
 
-        let enforce_acl_check = enforce_acl_check && config.enforce_acl_check();
+        let enforce_acl_check =
+            repo.repo_config().enforce_lfs_acl_check && config.enforce_acl_check();
 
         acl_check(&ctx, &repo, enforce_acl_check, method).await?;
 
