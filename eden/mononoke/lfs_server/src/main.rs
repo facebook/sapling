@@ -249,9 +249,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         LogMiddleware::slog(logger.clone())
     };
 
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(fb, SERVICE_NAME, &logger, AliveService)?;
-
+    app.start_monitoring(SERVICE_NAME, AliveService)?;
     let common = &app.repo_configs().common;
     let internal_identity = common.internal_identity.clone();
     let server = {

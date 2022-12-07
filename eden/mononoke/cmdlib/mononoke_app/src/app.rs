@@ -16,7 +16,6 @@ use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use base_app::BaseApp;
@@ -141,11 +140,34 @@ impl MononokeApp {
         ))
     }
 
+    /// Start the FB303 monitoring server for the provided service.
+    pub fn start_monitoring<Service>(&self, app_name: &str, service: Service) -> Result<()>
+    where
+        Service: Fb303Service + Sync + Send + 'static,
+    {
+        let fb303_args = self.extension_args::<Fb303AppExtension>()?;
+        fb303_args.start_fb303_server(self.fb, app_name, self.logger(), service)?;
+        Ok(())
+    }
+
+    /// Start the background stats aggregation thread.
+    pub fn start_stats_aggregation(&self) -> Result<()> {
+        #[cfg(not(test))]
+        {
+            self.env.runtime.block_on(async move {
+                let stats_aggregation = schedule_stats_aggregation_preview()
+                    .map_err(|_| anyhow!("Failed to create stats aggregation worker"))?;
+                tokio::task::spawn(stats_aggregation);
+                anyhow::Ok(())
+            })?;
+        }
+        Ok(())
+    }
+
     /// Execute a future on this app's runtime.
     ///
-    /// This command doesn't provide anything mnore than executiing the provided future
-    /// it won't handle things like fb303 data collection, it's not a drop-in replacement
-    /// for cmdlib::block_execute (run_with_fb303_monitoring will do better here).
+    /// If you are looking for a replacement for `cmdlib::helpers::block_execute`, prefer
+    /// `run_with_monitoring_and_logging`.
     pub fn run_basic<F, Fut>(self, main: F) -> Result<()>
     where
         F: Fn(MononokeApp) -> Fut,
@@ -156,41 +178,36 @@ impl MononokeApp {
             .block_on(async move { tokio::spawn(main(self)).await? })
     }
 
-    /// Execute a future on this app's runtime and start fb303 monitoring
-    /// service for the app.
-    pub fn run_with_fb303_monitoring<F, Fut, S: Fb303Service + Sync + Send + 'static>(
+    /// Execute a future on this app's runtime.
+    ///
+    /// This future will run with monitoring enabled, and errors will be logged to glog.
+    pub fn run_with_monitoring_and_logging<F, Fut, Service>(
         self,
         main: F,
         app_name: &str,
-        service: S,
+        service: Service,
     ) -> Result<()>
     where
         F: Fn(MononokeApp) -> Fut,
         Fut: Future<Output = Result<()>>,
+        Service: Fb303Service + Sync + Send + 'static,
     {
+        self.start_monitoring(app_name, service)?;
+        self.start_stats_aggregation()?;
+
         let env = self.env.clone();
         let logger = self.logger().clone();
-        let fb303_args = self.extension_args::<Fb303AppExtension>()?;
-        fb303_args.start_fb303_server(self.fb, app_name, self.logger(), service)?;
-        let result = env.runtime.block_on(async move {
-            #[cfg(not(test))]
-            {
-                let stats_agg = schedule_stats_aggregation_preview()
-                    .map_err(|_| anyhow!("Failed to create stats aggregation worker"))?;
-                // Note: this returns a JoinHandle, which we drop, thus detaching the task
-                // It thus does not count towards shutdown_on_idle below
-                tokio::task::spawn(stats_agg);
-            }
+        let result = env.runtime.block_on(main(self));
 
-            main(self).await
-        });
-
-        // Log error in glog format (main will log, but not with glog)
-        result.map_err(move |e| {
+        if let Err(e) = result {
+            // Log error in glog format
             error!(&logger, "Execution error: {:?}", e);
-            // Shorten the error that main will print, given that already printed in glog form
-            format_err!("Execution failed")
-        })
+
+            // Replace the error with a simple error so it isn't logged twice.
+            return Err(anyhow!("Execution failed"));
+        }
+
+        Ok(())
     }
 
     /// Returns the selected subcommand of the app (if this app

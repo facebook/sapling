@@ -212,5 +212,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         })
         .build::<MononokeMicrowaveArgs>()?;
 
-    app.run_with_fb303_monitoring(async_main, "microwave", AliveService)
+    app.run_with_monitoring_and_logging(async_main, "microwave", AliveService)
 }

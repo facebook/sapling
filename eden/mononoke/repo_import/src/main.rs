@@ -1500,7 +1500,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ),
     };
 
-    app.run_with_fb303_monitoring(async_main, "repo_import", AliveService)
+    app.run_with_monitoring_and_logging(async_main, "repo_import", AliveService)
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {

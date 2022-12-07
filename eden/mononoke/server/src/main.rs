@@ -276,9 +276,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
-    // Thread with a thrift service is now detached
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(fb, "mononoke_server", &root_log, service.clone())?;
+    app.start_monitoring("mononoke_server", service.clone())?;
 
     let repo_listeners = {
         cloned!(root_log, will_exit, env, runtime);

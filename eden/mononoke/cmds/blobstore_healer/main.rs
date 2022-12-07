@@ -418,7 +418,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_app_extension(Fb303AppExtension {})
         .build::<MononokeBlobstoreHealerArgs>()?;
 
-    app.run_with_fb303_monitoring(async_main, "blobstore_healer", AliveService)
+    app.run_with_monitoring_and_logging(async_main, "blobstore_healer", AliveService)
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {

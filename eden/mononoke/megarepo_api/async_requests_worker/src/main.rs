@@ -87,9 +87,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let will_exit = Arc::new(AtomicBool::new(false));
     let worker = worker::AsyncMethodRequestWorker::new(megarepo, name);
 
-    // Thread with a thrift service is now detached
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(fb, SERVICE_NAME, logger, AliveService)?;
+    app.start_monitoring(SERVICE_NAME, AliveService)?;
 
     serve_forever(
         runtime,

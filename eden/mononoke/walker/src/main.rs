@@ -92,7 +92,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // TODO: we may want to set_ready after the repo setup is done
     service.set_ready();
 
-    app.run_with_fb303_monitoring(async_main, "walker", service)
+    app.run_with_monitoring_and_logging(async_main, "walker", service)
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {

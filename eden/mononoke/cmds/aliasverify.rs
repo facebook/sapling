@@ -324,5 +324,5 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_app_extension(Fb303AppExtension {})
         .build::<AliasVerifyArgs>()?;
 
-    app.run_with_fb303_monitoring(async_main, "aliasverify", AliveService)
+    app.run_with_monitoring_and_logging(async_main, "aliasverify", AliveService)
 }

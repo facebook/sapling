@@ -144,7 +144,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_app_extension(Fb303AppExtension {})
         .build::<GitimportArgs>()?;
 
-    app.run_with_fb303_monitoring(async_main, "gitimport", AliveService)
+    app.run_with_monitoring_and_logging(async_main, "gitimport", AliveService)
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
