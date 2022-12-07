@@ -48,6 +48,7 @@ from facebook.eden.ttypes import (
     MountId,
     NoValueForKeyError,
     ScmBlobOrError,
+    ScmBlobWithOrigin,
     SyncBehavior,
     TimeSpec,
     TreeInodeDebugInfo,
@@ -367,11 +368,73 @@ class BlobCmd(Subcmd):
             default=False,
             help="Only fetch the data from the servers. ",
         )
+        group.add_argument(
+            "-a",
+            "--all",
+            action="store_true",
+            default=False,
+            help="Fetch the blob from all storage locations and display their contents. ",
+        )
         parser.add_argument(
             "mount",
             help="The EdenFS mount point path.",
         )
         parser.add_argument("id", help="The blob ID")
+
+    def origin_to_text(self, origin: DataFetchOrigin) -> str:
+        if origin == DataFetchOrigin.MEMORY_CACHE:
+            return "object cache"
+        elif origin == DataFetchOrigin.DISK_CACHE:
+            return "local store"
+        elif origin == DataFetchOrigin.LOCAL_BACKING_STORE:
+            return "hgcache"
+        elif origin == DataFetchOrigin.REMOTE_BACKING_STORE:
+            return "servers"
+        elif origin == DataFetchOrigin.ANYWHERE:
+            return "EdenFS production data fetching process"
+        return "<unknown>"
+
+    def print_blob_or_error(self, blobOrError: ScmBlobOrError) -> None:
+        if blobOrError.getType() == ScmBlobOrError.BLOB:
+            sys.stdout.buffer.write(blobOrError.get_blob())
+        else:
+            error = blobOrError.get_error()
+            sys.stdout.buffer.write(f"ERROR fetching data: {error}\n".encode())
+
+    def print_all_blobs(self, blobs: List[ScmBlobWithOrigin]) -> None:
+        non_error_blobs = []
+        for blob in blobs:
+            blob_found = blob.blob.getType() == ScmBlobOrError.BLOB
+            pretty_origin = self.origin_to_text(blob.origin)
+            pretty_blob_found = "hit" if blob_found else "miss"
+            print(f"{pretty_origin}: {pretty_blob_found}")
+            if blob_found:
+                non_error_blobs.append(blob)
+
+        if len(non_error_blobs) == 0:
+            return
+        if len(non_error_blobs) == 1:
+            print("\n")
+            sys.stdout.buffer.write(non_error_blobs[0].blob.get_blob())
+            return
+
+        blobs_match = True
+        for blob in non_error_blobs[1::]:
+            if blob.blob.get_blob() != non_error_blobs[0].blob.get_blob():
+                blobs_match = False
+                break
+
+        if blobs_match:
+            print("\nAll blobs match :) \n")
+            sys.stdout.buffer.write(non_error_blobs[0].blob.get_blob())
+        else:
+            print("\n!!!!! Blob mismatch !!!!! \n")
+            for blob in non_error_blobs:
+                prety_fromwhere = self.origin_to_text(blob.origin)
+                print(f"Blob from {prety_fromwhere}\n")
+                print("-----------------------------\n")
+                sys.stdout.buffer.write(blob.blob.get_blob())
+                print("\n-----------------------------\n\n")
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
@@ -386,6 +449,14 @@ class BlobCmd(Subcmd):
             origin_flags = DataFetchOrigin.LOCAL_BACKING_STORE
         elif args.remote_only:
             origin_flags = DataFetchOrigin.REMOTE_BACKING_STORE
+        elif args.all:
+            origin_flags = (
+                DataFetchOrigin.MEMORY_CACHE
+                | DataFetchOrigin.DISK_CACHE
+                | DataFetchOrigin.LOCAL_BACKING_STORE
+                | DataFetchOrigin.REMOTE_BACKING_STORE
+                | DataFetchOrigin.ANYWHERE
+            )
 
         with instance.get_thrift_client_legacy() as client:
             data = client.debugGetBlob(
@@ -395,11 +466,11 @@ class BlobCmd(Subcmd):
                     origin_flags,
                 )
             )
-        blobOrError = data.blobs[0].blob
-        if blobOrError.getType() == ScmBlobOrError.BLOB:
-            sys.stdout.buffer.write(blobOrError.get_blob())
-        else:
-            raise blobOrError.get_error()
+            if args.all:
+                self.print_all_blobs(data.blobs)
+            else:
+                self.print_blob_or_error(data.blobs[0].blob)
+
         return 0
 
 
