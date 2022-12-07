@@ -10,7 +10,6 @@ use std::future::Future;
 use std::io;
 use std::path::Path;
 use std::str::FromStr;
-use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::format_err;
@@ -22,7 +21,6 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
-use cmdlib_running::run_until_terminated;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream;
@@ -37,9 +35,7 @@ use services::Fb303Service;
 use slog::error;
 use slog::info;
 use slog::Logger;
-use stats::schedule_stats_aggregation_preview;
 use tokio::io::AsyncBufReadExt;
-use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
 
 use crate::args::MononokeMatches;
@@ -176,39 +172,6 @@ pub fn create_runtime(
     builder.build()
 }
 
-/// Same as "serve_forever_async", but blocks using the provided runtime,
-/// for compatibility with existing sync code using it.
-pub fn serve_forever<Server, QuiesceFn, ShutdownFut>(
-    handle: &Handle,
-    server: Server,
-    logger: &Logger,
-    quiesce: QuiesceFn,
-    shutdown_grace_period: Duration,
-    shutdown: ShutdownFut,
-    shutdown_timeout: Duration,
-) -> Result<(), Error>
-where
-    Server: Future<Output = Result<(), Error>> + Send + 'static,
-    QuiesceFn: FnOnce(),
-    ShutdownFut: Future<Output = ()>,
-{
-    handle.block_on(async move {
-        let stats_agg = schedule_stats_aggregation_preview()
-            .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-        tokio::task::spawn(stats_agg);
-
-        run_until_terminated(
-            server,
-            logger,
-            quiesce,
-            shutdown_grace_period,
-            shutdown,
-            shutdown_timeout,
-        )
-        .await
-    })
-}
-
 /// Executes the future and waits for it to finish.
 pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
     future: F,
@@ -239,14 +202,9 @@ where
     monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
 
     let result = matches.runtime().block_on(async {
-        #[cfg(not(test))]
-        {
-            let stats_agg = schedule_stats_aggregation_preview()
-                .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-            // Note: this returns a JoinHandle, which we drop, thus detaching the task
-            // It thus does not count towards shutdown_on_idle below
-            tokio::task::spawn(stats_agg);
-        }
+        let stats_agg = stats::schedule_stats_aggregation_preview()
+            .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+        tokio::task::spawn(stats_agg);
 
         future.await
     });
