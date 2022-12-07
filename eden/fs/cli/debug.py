@@ -331,32 +331,68 @@ class ProcessFetchCmd(Subcmd):
         return 0
 
 
-@debug_cmd("blob", "Show EdenFS's data for a source control blob")
+@debug_cmd(
+    "blob",
+    "Show EdenFS's data for a source control blob. Fetches from ObjectStore "
+    "by default: use options to inspect different origins.",
+)
 class BlobCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "-L",
-            "--load",
-            action=BooleanOptionalAction,
-            default=True,
-            help="Load data from the backing store if necessary",
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
+            "-o",
+            "--object-cache-only",
+            action="store_true",
+            default=False,
+            help="Only check the in memory object cache for the blob",
         )
-        parser.add_argument("mount", help="The EdenFS mount point path.")
+        group.add_argument(
+            "-l",
+            "--local-store-only",
+            action="store_true",
+            default=False,
+            help="Only check the EdenFS LocalStore for blob. ",
+        )
+        group.add_argument(
+            "-d",  # d for "disk cache"
+            "--hgcache-only",
+            action="store_true",
+            default=False,
+            help="Only check the hgcache for the blob",
+        )
+        group.add_argument(
+            "-r",
+            "--remote-only",
+            action="store_true",
+            default=False,
+            help="Only fetch the data from the servers. ",
+        )
+        parser.add_argument(
+            "mount",
+            help="The EdenFS mount point path.",
+        )
         parser.add_argument("id", help="The blob ID")
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         blob_id = parse_object_id(args.id)
 
-        local_only = not args.load
+        origin_flags = DataFetchOrigin.ANYWHERE
+        if args.object_cache_only:
+            origin_flags = DataFetchOrigin.MEMORY_CACHE
+        elif args.local_store_only:
+            origin_flags = DataFetchOrigin.DISK_CACHE
+        elif args.hgcache_only:
+            origin_flags = DataFetchOrigin.LOCAL_BACKING_STORE
+        elif args.remote_only:
+            origin_flags = DataFetchOrigin.REMOTE_BACKING_STORE
+
         with instance.get_thrift_client_legacy() as client:
             data = client.debugGetBlob(
                 DebugGetScmBlobRequest(
                     MountId(bytes(checkout.path)),
                     blob_id,
-                    DataFetchOrigin.DISK_CACHE
-                    if local_only
-                    else DataFetchOrigin.ANYWHERE,
+                    origin_flags,
                 )
             )
         blobOrError = data.blobs[0].blob
