@@ -210,20 +210,18 @@ impl RepoShardedProcessExecutor for MononokeApiProcessExecutor {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = Arc::new(
-        MononokeAppBuilder::new(fb)
-            .with_default_scuba_dataset("mononoke_test_perf")
-            .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::HgOnly)
-            .with_app_extension(McrouterAppExtension {})
-            .with_app_extension(Fb303AppExtension {})
-            .with_app_extension(HooksAppExtension {})
-            .with_app_extension(RepoFilterAppExtension {})
-            .build::<MononokeServerArgs>()?,
-    );
+    let app = MononokeAppBuilder::new(fb)
+        .with_default_scuba_dataset("mononoke_test_perf")
+        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::HgOnly)
+        .with_app_extension(McrouterAppExtension {})
+        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(HooksAppExtension {})
+        .with_app_extension(RepoFilterAppExtension {})
+        .build::<MononokeServerArgs>()?;
     let args: MononokeServerArgs = app.args()?;
 
-    let root_log = app.logger();
-    let runtime = app.runtime();
+    let root_log = app.logger().clone();
+    let runtime = app.runtime().clone();
 
     let cslb_config = args.cslb_config.clone();
     info!(root_log, "Starting up");
@@ -272,17 +270,23 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let bound_addr_file = args.bound_address_file;
 
-    let env = app.environment();
+    // We must ensure the runtime (contained within the environment) outlives
+    // the app, so keep a local clone.
+    let env = app.environment().clone();
 
     let scuba = env.scuba_sample_builder.clone();
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
+    // Thread with a thrift service is now detached
+    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
+    fb303_args.start_fb303_server(fb, "mononoke_server", &root_log, service.clone())?;
+
     let repo_listeners = {
-        cloned!(root_log, service, will_exit, env, runtime);
-        let app = Arc::clone(&app);
+        cloned!(root_log, will_exit, env, runtime);
         async move {
             let common = configs.common.clone();
+            let app = Arc::new(app);
             let mononoke = Arc::new(app.open_mononoke().await?);
             info!(&root_log, "Built Mononoke");
 
@@ -349,14 +353,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    // Thread with a thrift service is now detached
-    let fb303_args = app.extension_args::<Fb303AppExtension>()?;
-    fb303_args.start_fb303_server(fb, "mononoke_server", root_log, service)?;
-
     cmdlib::helpers::serve_forever(
-        runtime,
+        env.runtime.handle(),
         repo_listeners,
-        root_log,
+        &root_log,
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
@@ -364,7 +364,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 Err(err) => error!(root_log, "could not send termination signal: {:?}", err),
                 _ => {}
             }
-            repo_listener::wait_for_connections_closed(root_log).await;
+            repo_listener::wait_for_connections_closed(&root_log).await;
         },
         args.shutdown_timeout_args.shutdown_timeout,
     )
