@@ -18,6 +18,7 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 clap-old = { package = "clap", version = "2.33" }
 cmdlib_caching = { version = "0.1.0", path = "caching" }
 cmdlib_logging = { version = "0.1.0", path = "log" }
+cmdlib_running = { version = "0.1.0", path = "running" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data_remote = { version = "0.1.0", path = "../derived_data/remote" }
 environment = { version = "0.1.0", path = "environment" }
@@ -25,7 +26,6 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-libc = "0.2.137"
 maybe-owned = "0.3.4"
 megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }

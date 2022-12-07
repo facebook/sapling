@@ -230,6 +230,7 @@ members = [
   "cmdlib/extensions",
   "cmdlib/log",
   "cmdlib/mononoke_app",
+  "cmdlib/running",
   "cmdlib/scrubbing",
   "cmdlib/sharding",
   "cmdlib/x_repo",
