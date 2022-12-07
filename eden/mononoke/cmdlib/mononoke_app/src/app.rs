@@ -12,6 +12,7 @@ use std::fs;
 use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::anyhow;
@@ -26,6 +27,7 @@ use cached_config::ConfigStore;
 use clap::ArgMatches;
 use clap::Error as ClapError;
 use clap::FromArgMatches;
+use cmdlib_running::run_until_terminated;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
@@ -208,6 +210,55 @@ impl MononokeApp {
         }
 
         Ok(())
+    }
+
+    /// Run a server future, and wait until a termination signal is received.
+    ///
+    /// When the termination signal is received, the `quiesce` callback is
+    /// called.  This should perform any steps required to quiesce the server,
+    /// for example by removing this instance from routing configuration, or
+    /// asking the load balancer to stop sending requests to this instance.
+    /// Requests that do arrive should still be accepted.
+    ///
+    /// After the `shutdown_grace_period`, the `shutdown` future is awaited.
+    /// This should do any additional work to stop accepting connections and wait
+    /// until all outstanding requests have been handled. The `server` future
+    /// continues to run while `shutdown` is being awaited.
+    ///
+    /// Once both `shutdown` and `server` have completed, the process
+    /// exits. If `shutdown_timeout` is exceeded, the server future is canceled
+    /// and an error is returned.
+    pub fn run_until_terminated<ServerFn, ServerFut, QuiesceFn, ShutdownFut>(
+        self,
+        server: ServerFn,
+        quiesce: QuiesceFn,
+        shutdown_grace_period: Duration,
+        shutdown: ShutdownFut,
+        shutdown_timeout: Duration,
+    ) -> Result<()>
+    where
+        ServerFn: FnOnce(MononokeApp) -> ServerFut + Send + 'static,
+        ServerFut: Future<Output = Result<()>> + Send + 'static,
+        QuiesceFn: FnOnce(),
+        ShutdownFut: Future<Output = ()>,
+    {
+        let logger = self.logger().clone();
+        // We must ensure the runtime (in the environment) outlives the
+        // execution of the server future on the runtime.  If we drop the
+        // runtime from within a future that is executing on the runtime, then
+        // the runtime will panic. Keep a copy of the environment in this
+        // function to ensure the runtime is kept alive.
+        // TODO(mbthomas): decouple runtime from environment so this isn't necessary
+        let env = self.env.clone();
+        let server = async move { server(self).await };
+        env.runtime.block_on(run_until_terminated(
+            server,
+            &logger,
+            quiesce,
+            shutdown_grace_period,
+            shutdown,
+            shutdown_timeout,
+        ))
     }
 
     /// Returns the selected subcommand of the app (if this app
