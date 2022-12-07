@@ -21,7 +21,6 @@ use cached_config::ConfigStore;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
-use cmdlib::monitoring;
 use cmdlib_x_repo::create_commit_syncers_from_matches;
 use context::CoreContext;
 use context::SessionContainer;
@@ -265,7 +264,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 APP_NAME,
                 &logger,
                 &matches,
-                monitoring::AliveService,
+                cmdlib::monitoring::AliveService,
             )
         }
     }

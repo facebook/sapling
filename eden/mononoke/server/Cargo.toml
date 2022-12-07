@@ -14,7 +14,6 @@ async-trait = "0.1.58"
 cache_warmup = { version = "0.1.0", path = "../cache_warmup" }
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib = { version = "0.1.0", path = "../cmdlib" }
 cmdlib_logging = { version = "0.1.0", path = "../cmdlib/log" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }

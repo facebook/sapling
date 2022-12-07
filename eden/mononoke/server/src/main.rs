@@ -38,6 +38,7 @@ use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::fb303::ReadyFlagService;
+use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use openssl::ssl::AlpnError;
@@ -260,27 +261,23 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     info!(root_log, "Creating repo listeners");
 
-    let service = ReadyFlagService::new();
-    let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
-
     let scribe = args.scribe_logging_args.get_scribe(fb)?;
     let host_port = args.listening_host_port;
-
     let bound_addr_file = args.bound_address_file;
 
-    // We must ensure the runtime (contained within the environment) outlives
-    // the app, so keep a local clone.
-    let env = app.environment().clone();
-
-    let scuba = env.scuba_sample_builder.clone();
-
+    let service = ReadyFlagService::new();
+    let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
     let will_exit = Arc::new(AtomicBool::new(false));
 
+    let env = app.environment();
+    let scuba = env.scuba_sample_builder.clone();
+
     app.start_monitoring("mononoke_server", service.clone())?;
+    app.start_stats_aggregation()?;
 
     let repo_listeners = {
         cloned!(root_log, will_exit, env, runtime);
-        async move {
+        move |app: MononokeApp| async move {
             let common = configs.common.clone();
             let repos_mgr = app.open_managed_repos().await?;
             let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
@@ -349,16 +346,13 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    cmdlib::helpers::serve_forever(
-        env.runtime.handle(),
+    app.run_until_terminated(
         repo_listeners,
-        &root_log,
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
-            match terminate_sender.send(()) {
-                Err(err) => error!(root_log, "could not send termination signal: {:?}", err),
-                _ => {}
+            if let Err(err) = terminate_sender.send(()) {
+                error!(root_log, "could not send termination signal: {:?}", err);
             }
             repo_listener::wait_for_connections_closed(&root_log).await;
         },

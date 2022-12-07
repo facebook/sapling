@@ -16,8 +16,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use clap::Parser;
-use cmdlib::helpers::serve_forever;
-use cmdlib::monitoring::AliveService;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
 use environment::WarmBookmarksCacheDerivedData;
@@ -27,6 +25,7 @@ use megarepo_api::MegarepoApi;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeAppBuilder;
 
@@ -88,18 +87,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let worker = worker::AsyncMethodRequestWorker::new(megarepo, name);
 
     app.start_monitoring(SERVICE_NAME, AliveService)?;
+    app.start_stats_aggregation()?;
 
-    serve_forever(
-        runtime,
-        {
-            let will_exit = will_exit.clone();
-            async move || {
-                Ok(worker
-                    .run(&ctx, will_exit.clone(), request_limit, jobs_limit)
-                    .await?)
-            }
-        }(),
-        logger,
+    let run_worker = {
+        let will_exit = will_exit.clone();
+        move |_app| async move {
+            Ok(worker
+                .run(&ctx, will_exit, request_limit, jobs_limit)
+                .await?)
+        }
+    };
+
+    app.run_until_terminated(
+        run_worker,
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
         async {

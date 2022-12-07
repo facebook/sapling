@@ -13,7 +13,6 @@ async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../async_requests" }
 clap = { version = "3.2.17", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../server/context" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
