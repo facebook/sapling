@@ -2880,14 +2880,12 @@ EdenServiceHandler::semifuture_debugGetBlob(
   std::vector<ImmediateFuture<ScmBlobWithOrigin>> blobFutures;
 
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
-    // TODO(kmancini): implement
     blobFutures.emplace_back(
         ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
             edenMount,
             id,
-            folly::Try<std::unique_ptr<Blob>>(newEdenError(
-                EdenErrorType::GENERIC_ERROR,
-                "direct fetching from object cache not yet supported.")),
+            folly::Try<std::shared_ptr<const Blob>>{
+                edenMount->getBlobCache()->get(id).object},
             DataFetchOrigin::MEMORY_CACHE)});
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {

@@ -6,6 +6,8 @@
 
 import binascii
 import os
+import sys
+from pathlib import Path
 
 from eden.thrift.legacy import EdenClient
 
@@ -74,17 +76,19 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         origin: DataFetchOrigin,
         data: bytes,
     ) -> None:
+        response = client.debugGetBlob(
+            DebugGetScmBlobRequest(
+                MountId(self.mount.encode()),
+                blob_id,
+                origin,
+            )
+        )
+        print(response)
         self.assertEqual(
             DebugGetScmBlobResponse(
                 [ScmBlobWithOrigin(blob=ScmBlobOrError(blob=data), origin=origin)]
             ),
-            client.debugGetBlob(
-                DebugGetScmBlobRequest(
-                    MountId(self.mount.encode()),
-                    blob_id,
-                    origin,
-                )
-            ),
+            response,
         )
 
     def test_debug_blob_locations(self) -> None:
@@ -129,7 +133,8 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             for fromWhere in [
                 DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
-                # TDOD: once its implemented DataFetchFromWhere.MEMORY_CACHE,
+                # reading a blob is actually insuffient to put it in
+                # DataFetchFromWhere.MEMORY_CACHE,
             ]:
                 print(fromWhere)
                 self.assert_blob_available(
@@ -162,3 +167,16 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                     blob.blob.get_error()
                 elif blob.origin == DataFetchOrigin.ANYWHERE:
                     self.assertEqual(b"\xff\xfe\xfd\xfc", blob.blob.get_blob())
+
+            if sys.platform != "win32":
+                # on non windows platforms materializing an inode does cache it's
+                # original blob contents, so now it should be in the local store.
+                with open(Path(self.mount) / "binary", "a") as binary_file:
+                    binary_file.buffer.write(b"\xfc")
+
+                self.assert_blob_available(
+                    client,
+                    file.hash,
+                    DataFetchOrigin.MEMORY_CACHE,
+                    b"\xff\xfe\xfd\xfc",
+                )
