@@ -76,6 +76,23 @@
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
+# Importing a second time should still work
+  $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * GitRepo:*repo-git commit 1 of 2 - Oid:* => Bid:* (glob)
+  * GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
+  * Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
+  * Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
+  * Initializing repo: repo (glob)
+  * Initialized repo: repo (glob)
+  * All repos initialized. * (glob)
+  * Execution error: failed to create bookmark: heads/master for changeset: ChangesetId(Blake2(*)) (glob)
+  
+  Caused by:
+      invalid request: Bookmark transaction failed
+  Error: Execution failed
+  [1]
+
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server
