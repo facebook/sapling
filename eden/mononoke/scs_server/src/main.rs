@@ -86,12 +86,13 @@ struct ScsServerArgs {
     sharded_executor_args: ShardedExecutorArgs,
 }
 
-/// Struct representing the Source Control Service process.
-pub struct SCSProcess {
+/// Struct representing the Source Control Service process when sharding by
+/// repo.
+pub struct ScsServerProcess {
     repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
-impl SCSProcess {
+impl ScsServerProcess {
     fn new(repos_mgr: MononokeReposManager<Repo>) -> Self {
         let repos_mgr = Arc::new(repos_mgr);
         Self { repos_mgr }
@@ -99,7 +100,7 @@ impl SCSProcess {
 }
 
 #[async_trait]
-impl RepoShardedProcess for SCSProcess {
+impl RepoShardedProcess for ScsServerProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in SCS service", repo_name);
@@ -117,22 +118,22 @@ impl RepoShardedProcess for SCSProcess {
                 "Repo {} is already setup in SCS service", repo_name
             );
         }
-        Ok(Arc::new(SCSProcessExecutor {
+        Ok(Arc::new(ScsServerProcessExecutor {
             repo_name: repo_name.to_string(),
             repos_mgr: self.repos_mgr.clone(),
         }))
     }
 }
 
-/// Struct representing the execution of SCS service
-/// over the context of a provided repo.
-pub struct SCSProcessExecutor {
+/// Struct representing the execution of the source control service for a
+/// particular repo when sharding by repo.
+pub struct ScsServerProcessExecutor {
     repo_name: String,
     repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
 #[async_trait]
-impl RepoShardedProcessExecutor for SCSProcessExecutor {
+impl RepoShardedProcessExecutor for ScsServerProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
             self.repos_mgr.logger(),
@@ -278,7 +279,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         fb,
         runtime.clone(),
         app.logger(),
-        || Arc::new(SCSProcess::new(repos_mgr)),
+        || Arc::new(ScsServerProcess::new(repos_mgr)),
         false, // disable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {

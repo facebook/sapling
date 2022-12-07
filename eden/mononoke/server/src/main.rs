@@ -92,13 +92,13 @@ struct MononokeServerArgs {
     land_service_client_private_key: Option<String>,
 }
 
-/// Struct representing the Mononoke API process.
-pub struct MononokeApiProcess {
+/// Struct representing the Mononoke server process when sharding by repo.
+pub struct MononokeServerProcess {
     fb: FacebookInit,
     repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
-impl MononokeApiProcess {
+impl MononokeServerProcess {
     fn new(fb: FacebookInit, repos_mgr: MononokeReposManager<Repo>) -> Self {
         let repos_mgr = Arc::new(repos_mgr);
         Self { fb, repos_mgr }
@@ -138,7 +138,7 @@ impl MononokeApiProcess {
 }
 
 #[async_trait]
-impl RepoShardedProcess for MononokeApiProcess {
+impl RepoShardedProcess for MononokeServerProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
@@ -148,21 +148,21 @@ impl RepoShardedProcess for MononokeApiProcess {
                 repo_name
             )
         })?;
-        Ok(Arc::new(MononokeApiProcessExecutor {
+        Ok(Arc::new(MononokeServerProcessExecutor {
             repo_name: repo_name.to_string(),
             repos_mgr: self.repos_mgr.clone(),
         }))
     }
 }
 
-/// Struct representing the execution of Mononoke service
-/// over the context of a provided repo.
-pub struct MononokeApiProcessExecutor {
+/// Struct representing the execution of the Mononoke server for a particular
+/// repo when sharding by repo.
+pub struct MononokeServerProcessExecutor {
     repo_name: String,
     repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
-impl MononokeApiProcessExecutor {
+impl MononokeServerProcessExecutor {
     fn remove_repo(&self, repo_name: &str) -> Result<()> {
         let config = self.repos_mgr.repo_config(repo_name).with_context(|| {
             format!(
@@ -192,7 +192,7 @@ impl MononokeApiProcessExecutor {
 }
 
 #[async_trait]
-impl RepoShardedProcessExecutor for MononokeApiProcessExecutor {
+impl RepoShardedProcessExecutor for MononokeServerProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
             self.repos_mgr.logger(),
@@ -310,7 +310,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 app.fb,
                 runtime.clone(),
                 app.logger(),
-                || Arc::new(MononokeApiProcess::new(app.fb, repos_mgr)),
+                || Arc::new(MononokeServerProcess::new(app.fb, repos_mgr)),
                 false, // disable shard (repo) level healing
                 SM_CLEANUP_TIMEOUT_SECS,
             )? {
