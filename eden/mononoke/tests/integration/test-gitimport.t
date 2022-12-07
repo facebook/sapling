@@ -86,12 +86,6 @@
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
-  * Execution error: failed to create bookmark: heads/master for changeset: ChangesetId(Blake2(*)) (glob)
-  
-  Caused by:
-      invalid request: Bookmark transaction failed
-  Error: Execution failed
-  [1]
 
 
 # Start Mononoke

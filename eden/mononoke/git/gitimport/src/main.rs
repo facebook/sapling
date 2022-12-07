@@ -35,6 +35,7 @@ use import_tools::GitimportTarget;
 use linked_hash_map::LinkedHashMap;
 use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_derived_data::DeriveHgChangeset;
+use mononoke_api::BookmarkFreshness;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -265,15 +266,31 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 let name = name
                     .strip_prefix("refs/")
                     .context("Ref does not start with refs/")?;
-                repo_context
-                    .create_bookmark(&name, *changeset, None)
+                let pushvars = None;
+                if repo_context
+                    .create_bookmark(&name, *changeset, pushvars)
                     .await
-                    .with_context(|| {
-                        format!(
-                            "failed to create bookmark: {} for changeset: {:?}",
-                            name, changeset
+                    .is_err()
+                {
+                    let old_changeset = repo_context
+                        .resolve_bookmark(&name, BookmarkFreshness::MostRecent)
+                        .await
+                        .with_context(|| format!("failed to resolve bookmark {name}"))?
+                        .map(|context| context.id());
+                    if old_changeset != Some(*changeset) {
+                        let allow_non_fast_forward = true;
+                        repo_context
+                        .move_bookmark(
+                            &name,
+                            *changeset,
+                            old_changeset,
+                            allow_non_fast_forward,
+                            pushvars,
                         )
-                    })?;
+                        .await
+                        .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {changeset:?}"))?;
+                    }
+                }
             }
         }
     }
