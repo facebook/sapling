@@ -18,7 +18,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
 use cloned::cloned;
-use cmdlib::helpers::serve_forever;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
 use environment::WarmBookmarksCacheDerivedData;
@@ -47,7 +46,6 @@ use srserver::service_framework::ServiceFramework;
 use srserver::service_framework::ThriftStatsModule;
 use srserver::ThriftServer;
 use srserver::ThriftServerBuilder;
-use tokio::sync::oneshot;
 use tokio::task;
 
 mod commit_id;
@@ -178,17 +176,15 @@ impl RepoShardedProcessExecutor for SCSProcessExecutor {
 fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
-    let app = Arc::new(
-        MononokeAppBuilder::new(fb)
-            .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::AllKinds)
-            .with_app_extension(HooksAppExtension {})
-            .with_app_extension(RepoFilterAppExtension {})
-            .build::<ScsServerArgs>()?,
-    );
+    let app = MononokeAppBuilder::new(fb)
+        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::AllKinds)
+        .with_app_extension(HooksAppExtension {})
+        .with_app_extension(RepoFilterAppExtension {})
+        .build::<ScsServerArgs>()?;
 
     let args: ScsServerArgs = app.args()?;
 
-    let logger = app.logger();
+    let logger = app.logger().clone();
     let runtime = app.runtime();
 
     let exec = runtime.clone();
@@ -297,20 +293,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         });
     }
 
-    // The service is running in the background on the folly executor, so
-    // there is no real service to serve, however we use `serve_forever` for
-    // its shutdown handling, which requires a dummy `server` future that will
-    // exit cleanly when shutdown is signalled.
-    let (exit_tx, exit_rx) = oneshot::channel();
-    let server = async move {
-        exit_rx.await?;
-        Ok(())
-    };
+    // Monitoring is provided by the `Fb303Module`, but we must still start
+    // stats aggregation.
+    app.start_stats_aggregation()?;
 
-    serve_forever(
-        runtime,
-        server,
-        logger,
+    app.wait_until_terminated(
         move || will_exit.store(true, Ordering::Relaxed),
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
@@ -320,7 +307,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 service_framework.stop();
             })
             .await;
-            let _ = exit_tx.send(());
         },
         args.shutdown_timeout_args.shutdown_timeout,
     )?;

@@ -61,6 +61,7 @@ use stats::prelude::*;
 #[cfg(not(test))]
 use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
+use tokio::sync::oneshot;
 
 use crate::args::AsRepoArg;
 use crate::args::ConfigArgs;
@@ -261,11 +262,49 @@ impl MononokeApp {
         ))
     }
 
+    /// Wait until a termination signal is received.
+    ///
+    /// This method does not have a server future, and so is useful when all
+    /// serving listeners are running on another executor (e.g. a C++
+    /// executor for a thrift service).
+    ///
+    /// When the termination signal is received, the same quiesce-shutdown
+    /// procedure as for `run_until_terminated` is followed.
+    pub fn wait_until_terminated<QuiesceFn, ShutdownFut>(
+        self,
+        quiesce: QuiesceFn,
+        shutdown_grace_period: Duration,
+        shutdown: ShutdownFut,
+        shutdown_timeout: Duration,
+    ) -> Result<()>
+    where
+        QuiesceFn: FnOnce(),
+        ShutdownFut: Future<Output = ()>,
+    {
+        let (exit_tx, exit_rx) = oneshot::channel();
+        let server = move |_app| async move {
+            exit_rx.await?;
+            Ok(())
+        };
+
+        self.run_until_terminated(
+            server,
+            || {
+                let _ = exit_tx.send(());
+                quiesce();
+            },
+            shutdown_grace_period,
+            shutdown,
+            shutdown_timeout,
+        )
+    }
+
     /// Returns the selected subcommand of the app (if this app
     /// has subcommands).
     pub fn matches(&self) -> &ArgMatches {
         &self.args
     }
+
     /// Returns a parsed args struct based on the arguments provided
     /// on the command line.
     pub fn args<Args>(&self) -> Result<Args, ClapError>
