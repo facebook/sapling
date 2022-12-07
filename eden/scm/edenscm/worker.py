@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# worker.py - master-slave parallelism support
+# worker.py - leader-follower parallelism support
 #
 # Copyright Olivia Mackall <olivia@selenic.com> and others
 #
