@@ -75,6 +75,7 @@ ssl.signal_warning=yellow
 ssl.signal_failed=red
 sb.active=green
 doctor.treatment=yellow
+use-rust=false
 
 [connectionpool]
 lifetime=300
