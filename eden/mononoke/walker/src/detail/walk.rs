@@ -2032,14 +2032,13 @@ where
             move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
                 cloned!(repo_params.sql_shard_info);
                 let shard_key = walk_item.target.sql_shard(&sql_shard_info);
-                let ctx = if let Some(ctx) =
-                    visitor.start_step(ctx.clone(), via.as_ref(), &walk_item)
-                {
-                    ctx
-                } else {
-                    info!(ctx.logger(), #log::SUPPRESS, "Suppressing edge {:?}", walk_item);
-                    return future::ready((walk_item.target, shard_key, Ok(None))).left_future();
-                };
+                let ctx =
+                    if let Some(ctx) = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item) {
+                        ctx
+                    } else {
+                        info!(ctx.logger(), #log::SUPPRESS, "Suppressing edge {:?}", walk_item);
+                        return future::ready((walk_item.target, shard_key, Ok(None))).boxed();
+                    };
 
                 cloned!(
                     job_params.error_as_data_node_types,
@@ -2073,7 +2072,7 @@ where
                     handle.await?
                 }
                 .map(move |v| (target, shard_key, v))
-                .right_future()
+                .boxed()
             },
             move |(_route, edge)| {
                 (

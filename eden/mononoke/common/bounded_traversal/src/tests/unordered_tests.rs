@@ -530,10 +530,12 @@ async fn test_limited_by_key_shardable_ticks() -> Result<(), Error> {
                 cloned!(tick, log);
                 move |Tree { id, children }| {
                     cloned!(log);
-                    tick.sleep(1).map(move |now| {
-                        log.unfold(id, now);
-                        (id, None::<()>, Ok::<_, Error>(Some((id, children))))
-                    })
+                    tick.sleep(1)
+                        .map(move |now| {
+                            log.unfold(id, now);
+                            (id, None::<()>, Ok::<_, Error>(Some((id, children))))
+                        })
+                        .boxed()
                 }
             },
             |item| (&item.id, None),
@@ -552,10 +554,12 @@ async fn test_limited_by_key_shardable_duplicate_ticks() -> Result<(), Error> {
                 cloned!(tick, log);
                 move |Tree { id, children }| {
                     cloned!(log);
-                    tick.sleep(1).map(move |now| {
-                        log.unfold(id, now);
-                        (id, None::<()>, Ok::<_, Error>(Some((id, children))))
-                    })
+                    tick.sleep(1)
+                        .map(move |now| {
+                            log.unfold(id, now);
+                            (id, None::<()>, Ok::<_, Error>(Some((id, children))))
+                        })
+                        .boxed()
                 }
             },
             |item| (&item.id, None),
@@ -574,10 +578,12 @@ async fn test_limited_by_key_shardable_duplicate_ticks_sharded() -> Result<(), E
                 cloned!(tick, log);
                 move |Tree { id, children }| {
                     cloned!(log);
-                    tick.sleep(1).map(move |now| {
-                        log.unfold(id, now);
-                        (id, Some(()), Ok::<_, Error>(Some((id, children))))
-                    })
+                    tick.sleep(1)
+                        .map(move |now| {
+                            log.unfold(id, now);
+                            (id, Some(()), Ok::<_, Error>(Some((id, children))))
+                        })
+                        .boxed()
                 }
             },
             // But max 2 active keys per shard means it matches same log as test_limited_by_key_shardable_duplicate_ticks
@@ -597,14 +603,19 @@ async fn test_limited_by_key_shardable_parents() -> Result<(), Error> {
                 cloned!(tick, log);
                 move |(Tree { id, children }, parent)| {
                     cloned!(log);
-                    tick.sleep(1).map(move |_now| {
-                        log.unfold(id, parent);
-                        (
-                            id,
-                            None::<()>,
-                            Ok::<_, Error>(Some((id, children.into_iter().map(move |i| (i, id))))),
-                        )
-                    })
+                    tick.sleep(1)
+                        .map(move |_now| {
+                            log.unfold(id, parent);
+                            (
+                                id,
+                                None::<()>,
+                                Ok::<_, Error>(Some((
+                                    id,
+                                    children.into_iter().map(move |i| (i, id)),
+                                ))),
+                            )
+                        })
+                        .boxed()
                 }
             },
             |(item, _parent)| (&item.id, None),

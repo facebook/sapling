@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::future::Future;
 use std::hash::Hash;
 use std::task::Poll;
 
@@ -80,15 +79,18 @@ where
 ///   - prevents items with duplicate keys executing concurrently
 ///   - allows an item to have no stream output by returning None
 ///   - optionally allows to restrict the number of keys executing concurrently by a ShardKey
-pub fn limited_by_key_shardable<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, KeyFn, ShardKey>(
+pub fn limited_by_key_shardable<In, InsInit, Ins, Out, Unfold, UErr, Key, KeyFn, ShardKey>(
     scheduled_max: usize,
     init: InsInit,
     mut unfold: Unfold,
     key_fn: KeyFn,
 ) -> impl Stream<Item = Result<Out, UErr>>
 where
-    Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = (Key, Option<ShardKey>, Result<Option<(Out, Ins)>, UErr>)>,
+    // As above, we use BoxFuture here because the `Unfold` future can be very
+    // large.  As a result, it's more efficient to keep it in one place (the
+    // heap) than to move it around on the stack all the time.
+    Unfold:
+        FnMut(In) -> BoxFuture<'static, (Key, Option<ShardKey>, Result<Option<(Out, Ins)>, UErr>)>,
     InsInit: IntoIterator<Item = In>,
     Ins: IntoIterator<Item = In>,
     Key: Clone + Eq + Hash,
