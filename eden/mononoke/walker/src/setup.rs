@@ -329,7 +329,9 @@ fn setup_repo_factory<'a>(
     logger: &'a Logger,
     quiet: bool,
 ) -> RepoFactory {
-    let mut repo_factory = app.repo_factory();
+    // We want to customize the repo factory, so take a deep clone
+    // of the factory on the App.
+    let mut repo_factory = RepoFactory::clone(app.repo_factory());
     if let Some(blobstore_sampler) = blobstore_sampler.clone() {
         repo_factory.with_blobstore_override({
             cloned!(logger);

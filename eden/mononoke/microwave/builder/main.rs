@@ -90,7 +90,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let logger = app.logger();
     let args: MononokeMicrowaveArgs = app.args()?;
 
-    let repo_factory = Arc::new(app.repo_factory());
+    let repo_factory = Arc::clone(app.repo_factory());
     let scuba = env.scuba_sample_builder.clone();
 
     let repos = app.repo_configs().repos.clone();

@@ -93,7 +93,7 @@ define_stats! {
 /// and refreshing repos (and related entities) based on the update.
 pub struct MononokeConfigUpdateReceiver<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
-    repo_factory: RepoFactory,
+    repo_factory: Arc<RepoFactory>,
     logger: Logger,
 }
 
@@ -101,7 +101,7 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     fn new(repos: Arc<MononokeRepos<Repo>>, app: &MononokeApp) -> Self {
         Self {
             repos,
-            repo_factory: app.repo_factory(),
+            repo_factory: app.repo_factory().clone(),
             logger: app.logger().clone(),
         }
     }
@@ -167,7 +167,7 @@ pub struct MononokeApp {
     env: Arc<MononokeEnvironment>,
     extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     configs: MononokeConfigs,
-    repo_factory: RepoFactory,
+    repo_factory: Arc<RepoFactory>,
 }
 
 impl BaseApp for MononokeApp {
@@ -194,7 +194,7 @@ impl MononokeApp {
             env.logger.clone(),
         )?;
 
-        let repo_factory = RepoFactory::new(env.clone());
+        let repo_factory = Arc::new(RepoFactory::new(env.clone()));
 
         Ok(MononokeApp {
             fb,
@@ -404,8 +404,8 @@ impl MononokeApp {
     }
 
     /// Return repo factory used by app.
-    pub fn repo_factory(&self) -> RepoFactory {
-        self.repo_factory.clone()
+    pub fn repo_factory(&self) -> &Arc<RepoFactory> {
+        &self.repo_factory
     }
 
     /// Mononoke environment for this app.
