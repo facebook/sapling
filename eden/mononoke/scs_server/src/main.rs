@@ -203,7 +203,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let scuba_builder = env.scuba_sample_builder.clone();
 
     let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
-    let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(app.clone(), mononoke.clone()))?);
+    let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke.clone()))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

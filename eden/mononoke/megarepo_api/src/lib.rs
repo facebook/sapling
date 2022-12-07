@@ -46,6 +46,7 @@ use parking_lot::Mutex;
 use remerge_source::RemergeSource;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityArc;
@@ -115,14 +116,11 @@ pub struct MegarepoApi {
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     megarepo_mapping_cache: Cache<ArcRepoIdentity, Arc<MegarepoMapping>>,
     mononoke: Arc<Mononoke>,
-    app: Arc<MononokeApp>,
+    repo_factory: Arc<RepoFactory>,
 }
 
 impl MegarepoApi {
-    pub async fn new(
-        app: Arc<MononokeApp>,
-        mononoke: Arc<Mononoke>,
-    ) -> Result<Self, MegarepoError> {
+    pub async fn new(app: &MononokeApp, mononoke: Arc<Mononoke>) -> Result<Self, MegarepoError> {
         let env = app.environment();
         let fb = env.fb;
         let logger = env.logger.new(o!("megarepo" => ""));
@@ -148,12 +146,14 @@ impl MegarepoApi {
             }
         };
 
+        let repo_factory = app.repo_factory().clone();
+
         Ok(Self {
             megarepo_configs,
             queue_cache: Cache::new(),
             megarepo_mapping_cache: Cache::new(),
             mononoke,
-            app,
+            repo_factory,
         })
     }
 
@@ -265,8 +265,7 @@ impl MegarepoApi {
             repo_identity.name()
         );
         let table = self
-            .app
-            .repo_factory()
+            .repo_factory
             .long_running_requests_queue(repo_config)
             .await?;
         info!(
@@ -341,8 +340,7 @@ impl MegarepoApi {
             .megarepo_mapping_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
                 let megarepo_mapping = self
-                    .app
-                    .repo_factory()
+                    .repo_factory
                     .sql_factory(&repo_config.storage_config.metadata)
                     .await?
                     .open::<MegarepoMapping>()?;

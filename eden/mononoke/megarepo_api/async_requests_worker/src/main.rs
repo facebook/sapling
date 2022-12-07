@@ -49,14 +49,12 @@ struct AsyncRequestsWorkerArgs {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = Arc::new(
-        MononokeAppBuilder::new(fb)
-            .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::None)
-            .with_app_extension(HooksAppExtension {})
-            .with_app_extension(Fb303AppExtension {})
-            .with_app_extension(RepoFilterAppExtension {})
-            .build::<AsyncRequestsWorkerArgs>()?,
-    );
+    let app = MononokeAppBuilder::new(fb)
+        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::None)
+        .with_app_extension(HooksAppExtension {})
+        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(RepoFilterAppExtension {})
+        .build::<AsyncRequestsWorkerArgs>()?;
     let args: AsyncRequestsWorkerArgs = app.args()?;
     let request_limit = args.request_limit;
     let jobs_limit = args.jobs;
@@ -66,7 +64,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
 
     let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
-    let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(app.clone(), mononoke))?);
+    let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke))?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
     let tw_job_name = std::env::var("TW_JOB_NAME");
