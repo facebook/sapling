@@ -285,12 +285,30 @@ Test clone using scp-like path:
   default = ssh://localhost/gitrepo2
 #endif
 
-Test clone when repo already exists:
+Test clone when destination is a file:
 
   $ touch "$TESTTMP/already_exists"
   $ hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/already_exists"
   abort: destination '$TESTTMP/already_exists' already exists
   [255]
+
+Test clone when folder is not empty:
+
+  $ mkdir "$TESTTMP/not_quite_empty"
+  $ touch "$TESTTMP/not_quite_empty/some_file"
+  $ hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/not_quite_empty"
+  abort: destination '$TESTTMP/not_quite_empty' is not empty
+  [255]
+
+Test clone into the current folder, if empty:
+
+  $ mkdir "$TESTTMP/empty_folder"
+  $ cd "$TESTTMP/empty_folder"
+  $ hg clone -q --git "$TESTTMP/gitrepo" .
+  $ ls -A1
+  alpha
+  beta
+  .hg
 
 Make sure we clean up if repo init fails:
 
