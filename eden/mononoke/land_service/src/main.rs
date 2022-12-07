@@ -65,7 +65,7 @@ struct LandServiceServerArgs {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = Arc::new(MononokeAppBuilder::new(fb).build::<LandServiceServerArgs>()?);
+    let app = MononokeAppBuilder::new(fb).build::<LandServiceServerArgs>()?;
 
     // Process commandline flags
     let args: LandServiceServerArgs = app.args()?;
