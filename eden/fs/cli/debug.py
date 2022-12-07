@@ -37,8 +37,10 @@ from typing import (
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 import thrift.util.inspect
+from eden.fs.cli.cmd_util import get_eden_instance
+from eden.thrift.legacy import EdenClient
 from facebook.eden import EdenService
-from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
+from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
     DataFetchOrigin,
     DebugGetRawJournalParams,
@@ -55,7 +57,16 @@ from facebook.eden.ttypes import (
 )
 from fb303_core import BaseService
 from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
+from thrift.Thrift import TApplicationException
 from thrift.util import Serializer
+
+try:
+    from tqdm import tqdm
+except ModuleNotFoundError:
+
+    def tqmd(x):
+        return x
+
 
 from . import (
     cmd_util,
@@ -501,6 +512,113 @@ class BlobMetaCmd(Subcmd):
         print("Size:    {}".format(info.size))
         print("SHA1:    {}".format(hash_str(info.contentsSha1)))
         return 0
+
+
+class MismatchedBlobSize:
+    actual_blobsize: int
+    cached_blobsize: int
+
+    def __init__(self, actual_blobsize: int, cached_blobsize: int) -> None:
+        self.actual_blobsize = actual_blobsize
+        self.cached_blobsize = cached_blobsize
+
+
+def check_blob_and_size_match(
+    client: EdenClient, checkout: Path, identifying_hash: bytes
+) -> Optional[MismatchedBlobSize]:
+    try:
+        response = client.debugGetBlob(
+            DebugGetScmBlobRequest(
+                mountId=MountId(bytes(checkout)),
+                id=identifying_hash,
+                origins=DataFetchOrigin.LOCAL_BACKING_STORE,  # We don't want to cause any network fetches.
+            )
+        )
+        blob = None
+        for blobFromACertainPlace in response.blobs:
+            try:
+                blob = blobFromACertainPlace.blob.get_blob()
+            except AssertionError:
+                # only care to check blobs that exist
+                pass
+
+        blobmeta = client.debugGetScmBlobMetadata(
+            mountPoint=bytes(checkout),
+            id=identifying_hash,
+            localStoreOnly=True,  # We don't want to cause any network fetches.
+        )
+        if blob is not None and blobmeta.size != len(blob):
+            return MismatchedBlobSize(
+                actual_blobsize=len(blob), cached_blobsize=blobmeta.size
+            )
+    except EdenError:
+        # we don't care if debugGetScmBlobV2 returns an EdenError because
+        # we only care about data that has been read by the user and thus is
+        # present locally being incorrect.
+        # We don't care if debugGetScmBlobMetadata returns an EdenError because
+        # we only care about cached data being incorrect.
+        return None
+    except TApplicationException as ex:
+        # we don't care about older versions of eden being incompatible, we will
+        # just run the check when we can.
+        if ex.type == TApplicationException.UNKNOWN_METHOD:
+            return None
+
+
+def check_size_corruption(
+    client: EdenClient,
+    instance: EdenInstance,
+    checkout: Path,
+    loaded_tree_inodes: List[TreeInodeDebugInfo],
+) -> int:
+    # list of files whose size is wrongly cached in the local store
+    local_store_corruption: List[Tuple[bytes, MismatchedBlobSize]] = []
+
+    for loaded_dir in tqdm(loaded_tree_inodes):
+        for dirent in loaded_dir.entries:
+            if not stat.S_ISREG(dirent.mode) or dirent.materialized:
+                continue
+            result = check_blob_and_size_match(client, checkout, dirent.hash)
+            if result is not None:
+                local_store_corruption.append((dirent.name, result))
+
+    if local_store_corruption:
+        print(f"{len(local_store_corruption)} corrupted sizes in the local store")
+        for (filename, mismatch) in local_store_corruption[:10]:
+            print(
+                f"{filename} --"
+                f"actual size: {mismatch.actual_blobsize} -- "
+                f"local store blob size: {mismatch.cached_blobsize}"
+            )
+        if len(local_store_corruption) > 10:
+            print("...")
+        return 1
+    return 0
+
+
+@debug_cmd(
+    "sizecorruption", "Check if the metadata blob size match the actual blob size"
+)
+class SizeCorruptionCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        checkouts = instance.get_mounts()
+
+        number_effected_mounts = 0
+        with instance.get_thrift_client_legacy() as client:
+            for path in sorted(checkouts.keys()):
+                print(f"Checking {path}")
+                inodes = client.debugInodeStatus(
+                    bytes(path),
+                    b"",
+                    flags=DIS_REQUIRE_LOADED,
+                    sync=SyncBehavior(),
+                )
+
+                number_effected_mounts += check_size_corruption(
+                    client, instance, path, inodes
+                )
+        return number_effected_mounts
 
 
 _FILE_TYPE_FLAGS: Dict[int, str] = {
