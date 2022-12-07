@@ -38,9 +38,8 @@ use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::fb303::ReadyFlagService;
-use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_repos::MononokeRepos;
+use mononoke_app::MononokeReposManager;
 use openssl::ssl::AlpnError;
 use slog::error;
 use slog::info;
@@ -94,27 +93,28 @@ struct MononokeServerArgs {
 
 /// Struct representing the Mononoke API process.
 pub struct MononokeApiProcess {
-    app: Arc<MononokeApp>,
-    repos: Arc<MononokeRepos<Repo>>,
+    fb: FacebookInit,
+    repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
 impl MononokeApiProcess {
-    fn new(app: Arc<MononokeApp>, repos: Arc<MononokeRepos<Repo>>) -> Self {
-        Self { app, repos }
+    fn new(fb: FacebookInit, repos_mgr: MononokeReposManager<Repo>) -> Self {
+        let repos_mgr = Arc::new(repos_mgr);
+        Self { fb, repos_mgr }
     }
 
     async fn add_repo(&self, repo_name: &str, logger: &Logger) -> Result<()> {
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
-        if self.repos.get_by_name(repo_name).is_none() {
+        if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
-            self.app.add_repo(&self.repos, repo_name).await?;
-            match self.repos.get_by_name(repo_name) {
+            self.repos_mgr.add_repo(repo_name).await?;
+            match self.repos_mgr.repos().get_by_name(repo_name) {
                 None => bail!("Added repo {} does not exist in MononokeRepos", repo_name),
                 Some(repo) => {
                     let blob_repo = repo.blob_repo().clone();
                     let cache_warmup_params = repo.config().cache_warmup.clone();
-                    let ctx = CoreContext::new_with_logger(self.app.fb, logger.clone());
+                    let ctx = CoreContext::new_with_logger(self.fb, logger.clone());
                     cache_warmup(&ctx, &blob_repo, cache_warmup_params)
                         .await
                         .with_context(|| {
@@ -139,7 +139,7 @@ impl MononokeApiProcess {
 #[async_trait]
 impl RepoShardedProcess for MononokeApiProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.repo_logger(repo_name);
+        let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
         self.add_repo(repo_name, &logger).await.with_context(|| {
             format!(
@@ -149,8 +149,7 @@ impl RepoShardedProcess for MononokeApiProcess {
         })?;
         Ok(Arc::new(MononokeApiProcessExecutor {
             repo_name: repo_name.to_string(),
-            repos: Arc::clone(&self.repos),
-            app: Arc::clone(&self.app),
+            repos_mgr: self.repos_mgr.clone(),
         }))
     }
 }
@@ -159,13 +158,12 @@ impl RepoShardedProcess for MononokeApiProcess {
 /// over the context of a provided repo.
 pub struct MononokeApiProcessExecutor {
     repo_name: String,
-    app: Arc<MononokeApp>,
-    repos: Arc<MononokeRepos<Repo>>,
+    repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
 impl MononokeApiProcessExecutor {
     fn remove_repo(&self, repo_name: &str) -> Result<()> {
-        let config = self.app.repo_config_by_name(repo_name).with_context(|| {
+        let config = self.repos_mgr.repo_config(repo_name).with_context(|| {
             format!(
                 "Failure in remove repo {}. The config for repo doesn't exist",
                 repo_name
@@ -176,14 +174,14 @@ impl MononokeApiProcessExecutor {
         // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
         // sharded repos need to be present on each host.
         if config.deep_sharded {
-            self.repos.remove(repo_name);
+            self.repos_mgr.remove_repo(repo_name);
             info!(
-                self.app.logger(),
+                self.repos_mgr.logger(),
                 "No longer serving repo {} in Mononoke service.", repo_name,
             );
         } else {
             info!(
-                self.app.logger(),
+                self.repos_mgr.logger(),
                 "Continuing serving repo {} in Mononoke service because it's shallow-sharded.",
                 repo_name,
             );
@@ -196,7 +194,7 @@ impl MononokeApiProcessExecutor {
 impl RepoShardedProcessExecutor for MononokeApiProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.app.logger(),
+            self.repos_mgr.logger(),
             "Serving repo {} in Mononoke service", &self.repo_name,
         );
         Ok(())
@@ -286,8 +284,8 @@ fn main(fb: FacebookInit) -> Result<()> {
         cloned!(root_log, will_exit, env, runtime);
         async move {
             let common = configs.common.clone();
-            let app = Arc::new(app);
-            let mononoke = Arc::new(app.open_mononoke().await?);
+            let repos_mgr = app.open_managed_repos().await?;
+            let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
             info!(&root_log, "Built Mononoke");
 
             info!(&root_log, "Warming up cache");
@@ -317,7 +315,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 app.fb,
                 runtime.clone(),
                 app.logger(),
-                || Arc::new(MononokeApiProcess::new(app.clone(), mononoke.repos.clone())),
+                || Arc::new(MononokeApiProcess::new(app.fb, repos_mgr)),
                 false, // disable shard (repo) level healing
                 SM_CLEANUP_TIMEOUT_SECS,
             )? {

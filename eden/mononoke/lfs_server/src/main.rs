@@ -165,21 +165,8 @@ pub struct LfsRepos {
 
 impl LfsRepos {
     pub(crate) async fn new(app: &MononokeApp) -> Result<Self> {
-        let repo_names = app
-            .repo_configs()
-            .repos
-            .iter()
-            .filter_map(|(name, config)| {
-                // Initialize repos that are enabled and not deep sharded
-                // (i.e. need to exist at service start-up)
-                if config.enabled && !config.deep_sharded {
-                    Some(name.to_string())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        let repos = app.open_mononoke_repos(repo_names).await?;
+        let repos_mgr = app.open_managed_repos().await?;
+        let repos = repos_mgr.repos().clone();
         Ok(Self { repos })
     }
 

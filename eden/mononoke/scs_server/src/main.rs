@@ -33,9 +33,8 @@ use mononoke_api::CoreContext;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
-use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_repos::MononokeRepos;
+use mononoke_app::MononokeReposManager;
 use panichandler::Fate;
 use permission_checker::DefaultAclProvider;
 use slog::info;
@@ -91,31 +90,28 @@ struct ScsServerArgs {
 
 /// Struct representing the Source Control Service process.
 pub struct SCSProcess {
-    app: Arc<MononokeApp>,
-    repos: Arc<MononokeRepos<Repo>>,
+    repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
 impl SCSProcess {
-    fn new(app: Arc<MononokeApp>, repos: Arc<MononokeRepos<Repo>>) -> Self {
-        Self { app, repos }
+    fn new(repos_mgr: MononokeReposManager<Repo>) -> Self {
+        let repos_mgr = Arc::new(repos_mgr);
+        Self { repos_mgr }
     }
 }
 
 #[async_trait]
 impl RepoShardedProcess for SCSProcess {
     async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.repo_logger(repo_name);
+        let logger = self.repos_mgr.repo_logger(repo_name);
         info!(&logger, "Setting up repo {} in SCS service", repo_name);
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
-        if self.repos.get_by_name(repo_name).is_none() {
+        if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
-            self.app
-                .add_repo(&self.repos, repo_name)
-                .await
-                .with_context(|| {
-                    format!("Failure in setting up repo {} in SCS service", repo_name)
-                })?;
+            self.repos_mgr.add_repo(repo_name).await.with_context(|| {
+                format!("Failure in setting up repo {} in SCS service", repo_name)
+            })?;
             info!(&logger, "Completed repo {} setup in SCS service", repo_name);
         } else {
             info!(
@@ -125,8 +121,7 @@ impl RepoShardedProcess for SCSProcess {
         }
         Ok(Arc::new(SCSProcessExecutor {
             repo_name: repo_name.to_string(),
-            repos: Arc::clone(&self.repos),
-            app: Arc::clone(&self.app),
+            repos_mgr: self.repos_mgr.clone(),
         }))
     }
 }
@@ -135,15 +130,14 @@ impl RepoShardedProcess for SCSProcess {
 /// over the context of a provided repo.
 pub struct SCSProcessExecutor {
     repo_name: String,
-    app: Arc<MononokeApp>,
-    repos: Arc<MononokeRepos<Repo>>,
+    repos_mgr: Arc<MononokeReposManager<Repo>>,
 }
 
 #[async_trait]
 impl RepoShardedProcessExecutor for SCSProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.app.logger(),
+            self.repos_mgr.logger(),
             "Serving repo {} in SCS service", &self.repo_name,
         );
         Ok(())
@@ -151,8 +145,8 @@ impl RepoShardedProcessExecutor for SCSProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         let config = self
-            .app
-            .repo_config_by_name(&self.repo_name)
+            .repos_mgr
+            .repo_config(&self.repo_name)
             .with_context(|| {
                 format!(
                     "Failure in stopping repo {}. The config for repo doesn't exist",
@@ -164,14 +158,14 @@ impl RepoShardedProcessExecutor for SCSProcessExecutor {
         // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
         // sharded repos need to be present on each host.
         if config.deep_sharded {
-            self.repos.remove(&self.repo_name);
+            self.repos_mgr.remove_repo(&self.repo_name);
             info!(
-                self.app.logger(),
+                self.repos_mgr.logger(),
                 "No longer serving repo {} in SCS service.", &self.repo_name,
             );
         } else {
             info!(
-                self.app.logger(),
+                self.repos_mgr.logger(),
                 "Continuing serving repo {} in SCS service because it's shallow-sharded.",
                 &self.repo_name,
             );
@@ -202,7 +196,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let scuba_builder = env.scuba_sample_builder.clone();
 
-    let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
+    let repos_mgr = runtime.block_on(app.open_managed_repos())?;
+    let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke.clone()))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
@@ -239,7 +234,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
         }
     };
-    let mononoke_repos = mononoke.repos.clone();
     let monitoring_forever = {
         let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
         monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
@@ -288,7 +282,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         fb,
         runtime.clone(),
         app.logger(),
-        || Arc::new(SCSProcess::new(app.clone(), mononoke_repos)),
+        || Arc::new(SCSProcess::new(repos_mgr)),
         false, // disable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {

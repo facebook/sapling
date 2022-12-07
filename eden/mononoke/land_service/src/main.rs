@@ -76,7 +76,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let env = app.environment();
 
     let scuba_builder = env.scuba_sample_builder.clone();
-    let mononoke = Arc::new(runtime.block_on(app.open_mononoke())?);
+    let mononoke = Arc::new(
+        runtime
+            .block_on(app.open_managed_repos())?
+            .make_mononoke_api()?,
+    );
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

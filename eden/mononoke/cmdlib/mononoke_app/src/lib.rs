@@ -10,10 +10,12 @@ pub mod args;
 mod builder;
 mod extension;
 pub mod fb303;
+mod repos_manager;
 
 pub use app::MononokeApp;
 pub use builder::MononokeAppBuilder;
 pub use extension::AppExtension;
+pub use repos_manager::MononokeReposManager;
 
 #[doc(hidden)]
 pub mod macro_export {
