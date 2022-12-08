@@ -10,6 +10,7 @@ For .t test specific commands such as "hg", look at t/runtime.py
 instead.
 """
 
+import tarfile
 from functools import wraps
 from io import BytesIO
 from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
@@ -661,6 +662,59 @@ def ls(args: List[str], fs: ShellFS):
     entries = sorted(entries)
     lines = [f"{path}\n" for path in entries]
     return "".join(lines)
+
+
+@command
+def tar(args: List[str], fs: ShellFS):
+    supportedopts = ["C", "f", "x"]
+    expargs = []
+    for arg in args:
+        if arg.startswith("-"):
+            for subarg in arg[1:]:
+                expargs.append(f"-{subarg}")
+        else:
+            expargs.append(arg)
+
+    def parseargs(args: List[str]) -> Dict[str, Optional[str]]:
+        argsdict: Dict[str, Optional[str]] = {}
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg.startswith("-"):
+                val = None
+                if i + 1 < len(args) and not args[i + 1].startswith("-"):
+                    i += 1
+                    val = args[i]
+                argsdict[arg[1:]] = val
+            i += 1
+        return argsdict
+
+    def extracttar(filename: str, target: Optional[str]):
+        if target is None:
+            target = "./"
+        with tarfile.open(filename) as tar:
+            tar.extractall(target)
+
+    opts = parseargs(expargs)
+    for opt in opts.keys():
+        if opt not in supportedopts:
+            raise NotImplementedError(f"tar with option {opt}")
+
+    if expargs[0] in {"-c", "-r", "-t", "-u"}:
+        raise NotImplementedError(f"tar with option {expargs[0]}")
+    elif expargs[0] == "-x":
+        opts.pop("x")
+        filename = opts.pop("f", "")
+        if not filename:
+            raise RuntimeError(f"-f option must be specified for tar -x")
+        target = None
+        if "C" in opts:
+            target = opts.pop("C")
+        if len(opts) > 0:
+            raise RuntimeError(f"unsupported options for tar -x: {args}")
+        extracttar(filename, target)
+    else:
+        raise RuntimeError("first option for tar must be one of [-c, -r, -t, -u, -x]")
 
 
 @command
