@@ -185,10 +185,10 @@ export default class ServerToClientAPI {
    * Handle messages which require a repository to have been successfully set up to run
    */
   private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
-    const logger = repo.logger;
+    const {logger} = repo;
     switch (data.type) {
       case 'subscribeUncommittedChanges': {
-        if (this.hasSubscribedToUncommittedChanges || repo == null) {
+        if (this.hasSubscribedToUncommittedChanges) {
           break;
         }
         this.hasSubscribedToUncommittedChanges = true;
