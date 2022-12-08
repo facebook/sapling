@@ -13,6 +13,7 @@
 
 import io
 import os
+import subprocess
 import sys
 from functools import partial
 from typing import BinaryIO
@@ -206,7 +207,11 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
     try:
         with shellenv(
             env, stdin=stdin, stdout=stdout, stderr=stderr
-        ), extensions.wrappedfunction(util, "rawsystem", rawsystem):
+        ), extensions.wrappedfunction(
+            util, "rawsystem", rawsystem
+        ), extensions.wrappedfunction(
+            subprocess, "run", _patchedsubprun
+        ):
             bindings.identity.resetdefault()
 
             encoding.setfromenviron()
@@ -253,6 +258,16 @@ def _rawsystem(
     if res.out:
         env.stdout.write(res.out.encode())
     return res.exitcode
+
+
+def _patchedsubprun(orig, args, **kwargs):
+    if os.name == "nt" and args:
+        # append ".bat" to args[0]
+        arg0bat = f"{args[0]}.bat"
+        paths = os.getenv("PATH", "").split(os.pathsep)
+        if any(os.path.exists(os.path.join(p, arg0bat)) for p in paths):
+            args[0] = arg0bat
+    return orig(args, **kwargs)
 
 
 def _execpython(path):
