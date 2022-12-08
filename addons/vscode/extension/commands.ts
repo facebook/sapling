@@ -52,14 +52,15 @@ export function registerCommands(): Array<vscode.Disposable> {
 }
 
 function openDiffView(uri: vscode.Uri, comparison: Comparison): void {
-  const repo = repositoryCache.cachedRepositoryForPath(uri.path);
+  const {fsPath} = uri;
+  const repo = repositoryCache.cachedRepositoryForPath(fsPath);
   if (repo == null) {
-    vscode.window.showErrorMessage(t(`No repository found for file ${uri.path}`));
+    vscode.window.showErrorMessage(t(`No repository found for file ${fsPath}`));
     return;
   }
   const left = encodeSaplingDiffUri(uri, comparison);
   const right = uri;
-  const title = `${path.basename(uri.path)} (${t(labelForComparison(comparison))})`;
+  const title = `${path.basename(fsPath)} (${t(labelForComparison(comparison))})`;
 
   vscode.commands.executeCommand('vscode.diff', left, right, title);
 }
