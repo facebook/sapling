@@ -58,9 +58,9 @@ export class SaplingDiffContentProvider implements vscode.TextDocumentContentPro
         const fixed = [];
         for (const encoded of unownedComparisons.values()) {
           const encodedUri = vscode.Uri.parse(encoded);
-          const path = decodeSaplingDiffUri(encodedUri).originalUri.path;
+          const {fsPath} = decodeSaplingDiffUri(encodedUri).originalUri;
           for (const root of knownRoots) {
-            if (path === root || path.startsWith(ensureTrailingPathSep(root))) {
+            if (fsPath === root || fsPath.startsWith(ensureTrailingPathSep(root))) {
               fixed.push(encodedUri);
               break;
             }
@@ -133,9 +133,9 @@ export class SaplingDiffContentProvider implements vscode.TextDocumentContentPro
   ): Promise<string | null> {
     const encodedUriString = encodedUri.toString();
     const data = decodeSaplingDiffUri(encodedUri);
-    const path = data.originalUri.path;
+    const {fsPath} = data.originalUri;
 
-    const repo = repositoryCache.cachedRepositoryForPath(path);
+    const repo = repositoryCache.cachedRepositoryForPath(fsPath);
 
     // remember that this URI was requested.
     const activeUrisSet = this.activeUrisByRepo.get(repo ?? 'unknown') ?? new Set();
@@ -157,7 +157,7 @@ export class SaplingDiffContentProvider implements vscode.TextDocumentContentPro
 
     // fall back to fetching from the repo
     const fetchedFileContent = await repo
-      .cat(path, revset)
+      .cat(fsPath, revset)
       // An error during `cat` usually means the right side of the comparison was added since the left,
       // so `cat` claims `no such file` at that revset.
       // TODO: it would be more accurate to check that the error is due to this, and return null if not.

@@ -31,12 +31,12 @@ export function watchAndCreateRepositoriesForWorkspaceFolders(logger: Logger): v
     removed: ReadonlyArray<vscode.WorkspaceFolder>,
   ) {
     for (const add of added) {
-      const path = add.uri.path;
-      if (knownRepos.has(path)) {
-        throw new Error(`Attempted to add workspace folder path twice: ${path}`);
+      const {fsPath} = add.uri;
+      if (knownRepos.has(fsPath)) {
+        throw new Error(`Attempted to add workspace folder path twice: ${fsPath}`);
       }
-      const repoReference = repositoryCache.getOrCreate(getCLICommand(), logger, path);
-      knownRepos.set(path, repoReference);
+      const repoReference = repositoryCache.getOrCreate(getCLICommand(), logger, fsPath);
+      knownRepos.set(fsPath, repoReference);
       repoReference.promise.then(repo => {
         if (repo instanceof Repository) {
           const root = repo?.info.repoRoot;
@@ -54,10 +54,10 @@ export function watchAndCreateRepositoriesForWorkspaceFolders(logger: Logger): v
       });
     }
     for (const remove of removed) {
-      const path = remove.uri.path;
-      const repo = knownRepos.get(path);
+      const {fsPath} = remove.uri;
+      const repo = knownRepos.get(fsPath);
       repo?.unref();
-      knownRepos.delete(path);
+      knownRepos.delete(fsPath);
     }
   }
   if (vscode.workspace.workspaceFolders) {
