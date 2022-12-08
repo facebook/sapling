@@ -388,7 +388,10 @@ class changelog(object):
         parents = [p for p in (p1, p2) if p != nullid]
         if self._isgit:
             # 'files' is not used by git
-            text = gitcommittext(manifest, parents, desc, user, date, extra)
+            gpgsigningkey = self._gpgsigningkey()
+            text = gitcommittext(
+                manifest, parents, desc, user, date, extra, gpgsigningkey=gpgsigningkey
+            )
             node = git.hashobj(b"commit", text)
         else:
             text = hgcommittext(manifest, files, desc, user, date, extra)
@@ -407,6 +410,17 @@ class changelog(object):
         if nodes is not None:
             nodes.append(node)
         return node
+
+    def _gpgsigningkey(self) -> Optional[str]:
+        """If the user has elected to GPG sign commits and has specified a
+        key, returns the key.
+        """
+        if self._uiconfig.configbool("commit", "gpgsign", False):
+            key = self._uiconfig.config("ui", "signingkey", None)
+            if key:
+                # Ensure key is not the empty string.
+                return key
+        return None
 
     def addgroup(self, deltas, linkmapper, transaction):
         nodes = []

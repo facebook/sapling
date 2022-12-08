@@ -12,6 +12,7 @@
 
 from __future__ import absolute_import
 
+import subprocess
 from typing import Dict, List, Optional
 
 from . import encoding, error, revlog, util
@@ -299,8 +300,16 @@ def gitcommittext(
     user: str,
     date: str,
     extra: Optional[Dict[str, str]],
+    gpgsigningkey: Optional[str] = None,
 ) -> bytes:
     r"""construct raw text (bytes) used by git commit
+
+    If a gpgsigningkey is specified, `gpg` will use it to create a signature for
+    the unsigned commit object. This signature will be included in the commit
+    text exactly as it would in Git.
+
+    Note that while Git supports multiple signature formats (openpgp, x509, ssh),
+    Sapling only supports openpgp today.
 
     >>> import binascii
     >>> tree = binascii.unhexlify('deadbeef')
@@ -367,4 +376,103 @@ committer {gituser(committer)} {gitdatestr(committerdate)}"""
     normalized_desc = stripdesc(desc)
     text = pre_sig_text + f"\n\n{normalized_desc}\n"
     text = encodeutf8(text, errors="surrogateescape")
-    return text
+    if not gpgsigningkey:
+        return text
+
+    # This should match how Git signs commits:
+    # https://github.com/git/git/blob/2e71cbbddd64695d43383c25c7a054ac4ff86882/gpg-interface.c#L956-L960
+    # Long-form arguments for `gpg` are used for clarity.
+    sig_bytes = subprocess.check_output(
+        [
+            # Should the path to gpg be configurable?
+            "gpg",
+            "--status-fd=2",
+            "--detach-sign",
+            "--sign",
+            "--armor",
+            "--local-user",
+            gpgsigningkey,
+        ],
+        stderr=subprocess.DEVNULL,
+        input=text,
+    )
+    return _signedgitcommittext(sig_bytes, pre_sig_text, normalized_desc, gpgsigningkey)
+
+
+def _signedgitcommittext(
+    sig_bytes: bytes, pre_sig_text: str, normalized_desc: str, gpgsigningkey: str
+) -> bytes:
+    r"""produces a signed commit from the intermediate values produced by gitcommittext()
+
+    >>> sig_bytes = (
+    ...     b"-----BEGIN PGP SIGNATURE-----\r\n" +
+    ...     b"\r\n" +
+    ...     b"iQEzBAABCAAdFiEEurYkrcQEDEhXMjb8tXeqdrrlBbEFAmOPpRIACgkQtXeqdrrl\r\n" +
+    ...     b"BbE8hAf/eybgd1jrovZhs8X/SU2UO4rQnekz5D1BpAVjKUIDTfvuVg7sczTyuXvE\r\n" +
+    ...     b"pkuhkeZd2Is0HvSzWa9dD88VECrwQfHjOFe2Ffb7QdVN4811pZ4+lcGcWKKVG9Oq\r\n" +
+    ...     b"uAtXJgXpBf58Vp9x7wgnbqPFlSUTk5vlbZ2TQNyJbT3/YNLiqTECD0MYeLmAlbiI\r\n" +
+    ...     b"tU4hdb6T57ztxy6DL5nk/mfrcO+k4Up+flpGVjm9juWY3jGgszClCLJW0vUH4ToI\r\n" +
+    ...     b"1Cb8ew5c7b0f4oYl9AQgySTN1slO64beedMpakS79Mcv5WFwen0vPBQilX7hEYVC\r\n" +
+    ...     b"DQnndXm8zU6/MhpVjfoLHd9Tzr0YYQ==\r\n" +
+    ...     b"=Equk\r\n" +
+    ...     b"-----END PGP SIGNATURE-----\r\n"
+    ... )
+    >>> pre_sig_text = (
+    ...     'tree deadbeef\n' +
+    ...     'parent deadc0de\n' +
+    ...     'parent baadf00d\n' +
+    ...     'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700'
+    ... )
+    >>> desc = " HI! \n   another line with leading spaces\n\nsecond line\n\n\n"
+    >>> normalized_desc = stripdesc(desc)
+    >>> gpgsigningkey = "B577AA76BAE505B1"
+    >>> signedcommit = _signedgitcommittext(sig_bytes, pre_sig_text, normalized_desc, gpgsigningkey)
+    >>> signedcommit == (
+    ...     b'tree deadbeef\n' +
+    ...     b'parent deadc0de\n' +
+    ...     b'parent baadf00d\n' +
+    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'gpgsig -----BEGIN PGP SIGNATURE-----\n' +
+    ...     b' \n' +
+    ...     b' iQEzBAABCAAdFiEEurYkrcQEDEhXMjb8tXeqdrrlBbEFAmOPpRIACgkQtXeqdrrl\n' +
+    ...     b' BbE8hAf/eybgd1jrovZhs8X/SU2UO4rQnekz5D1BpAVjKUIDTfvuVg7sczTyuXvE\n' +
+    ...     b' pkuhkeZd2Is0HvSzWa9dD88VECrwQfHjOFe2Ffb7QdVN4811pZ4+lcGcWKKVG9Oq\n' +
+    ...     b' uAtXJgXpBf58Vp9x7wgnbqPFlSUTk5vlbZ2TQNyJbT3/YNLiqTECD0MYeLmAlbiI\n' +
+    ...     b' tU4hdb6T57ztxy6DL5nk/mfrcO+k4Up+flpGVjm9juWY3jGgszClCLJW0vUH4ToI\n' +
+    ...     b' 1Cb8ew5c7b0f4oYl9AQgySTN1slO64beedMpakS79Mcv5WFwen0vPBQilX7hEYVC\n' +
+    ...     b' DQnndXm8zU6/MhpVjfoLHd9Tzr0YYQ==\n' +
+    ...     b' =Equk\n' +
+    ...     b' -----END PGP SIGNATURE-----\n'
+    ...     b'\n' +
+    ...     b' HI!\n' +
+    ...     b'   another line with leading spaces\n' +
+    ...     b'\n' +
+    ...     b'second line\n'
+    ... )
+    True
+    """
+    sig = sig_bytes.decode("ascii")
+    if not sig.endswith("\n"):
+        raise error.Abort(
+            _("expected signature to end with a newline but was %s") % sig_bytes
+        )
+
+    # Remove any carriage returns in case `gpg` was used on Windows:
+    # https://github.com/git/git/blob/2e71cbbddd64695d43383c25c7a054ac4ff86882/gpg-interface.c#L985
+    sig = sig.replace("\r\n", "\n")
+
+    # The signature returned by `gpg` contains '\n\n' after '-----BEGIN PGP SIGNATURE-----',
+    # which is a problem because '\n\n' is used to delimit the start of the commit message
+    # in a Git commit object. As a workaround, Git inserts a space after every '\n'
+    # (except the last one) as shown here:
+    # https://github.com/git/git/blob/2e71cbbddd64695d43383c25c7a054ac4ff86882/commit.c#L1059-L1072
+    sig = sig[:-1].replace("\n", "\n ") + "\n"
+
+    signed_text = f"""\
+{pre_sig_text}
+gpgsig {sig}
+{normalized_desc}
+"""
+    return encodeutf8(signed_text, errors="surrogateescape")
