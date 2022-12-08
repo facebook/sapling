@@ -332,7 +332,7 @@ class TestTmp:
                 [
                     "@echo off",
                     f"set PATH={self._origpathenv}",
-                    f"{fullpath} %*",
+                    f'"{fullpath}" %*',
                     "exit /B %errorlevel%",
                 ]
             )
