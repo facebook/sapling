@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from . import encoding, error, revlog, util
 from .i18n import _
@@ -262,7 +262,7 @@ def hgcommittext(manifest, files, desc, user, date, extra):
     return text
 
 
-def gitdatestr(datestr):
+def gitdatestr(datestr: str) -> str:
     """convert datestr to git date str used in commits
 
     >>> util.parsedate('2000-01-01T00:00:00 +0700')
@@ -284,7 +284,7 @@ def gitdatestr(datestr):
     return "%d %s%02d%02d" % (utc, offsetsign, offsethour, offsetminute)
 
 
-def gituser(userstr):
+def gituser(userstr: str) -> str:
     """ensure the userstr contains '<>' for email, required by git"""
     if userstr.endswith(">") and " <" in userstr:
         return userstr
@@ -292,8 +292,63 @@ def gituser(userstr):
         return "%s <>" % userstr
 
 
-def gitcommittext(tree, parents, desc, user, date, extra):
-    """construct raw text (bytes) used by git commit"""
+def gitcommittext(
+    tree: bytes,
+    parents: List[bytes],
+    desc: str,
+    user: str,
+    date: str,
+    extra: Optional[Dict[str, str]],
+) -> bytes:
+    r"""construct raw text (bytes) used by git commit
+
+    >>> import binascii
+    >>> tree = binascii.unhexlify('deadbeef')
+    >>> desc = " HI! \n   another line with leading spaces\n\nsecond line\n\n\n"
+    >>> user = "Alyssa P. Hacker <alyssa@example.com>"
+    >>> date = "2000-01-01T00:00:00 +0700"
+    >>> no_parents = gitcommittext(tree, [], desc, user, date, None)
+    >>> no_parents == (
+    ...     b'tree deadbeef\n' +
+    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'\n' +
+    ...     b' HI!\n' +
+    ...     b'   another line with leading spaces\n' +
+    ...     b'\n' +
+    ...     b'second line\n'
+    ... )
+    True
+    >>> p1 = binascii.unhexlify('deadc0de')
+    >>> one_parent = gitcommittext(tree, [p1], desc, user, date, None)
+    >>> one_parent == (
+    ...     b'tree deadbeef\n' +
+    ...     b'parent deadc0de\n' +
+    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'\n' +
+    ...     b' HI!\n' +
+    ...     b'   another line with leading spaces\n' +
+    ...     b'\n' +
+    ...     b'second line\n'
+    ... )
+    True
+    >>> p2 = binascii.unhexlify('baadf00d')
+    >>> two_parents = gitcommittext(tree, [p1, p2], desc, user, date, None)
+    >>> two_parents == (
+    ...     b'tree deadbeef\n' +
+    ...     b'parent deadc0de\n' +
+    ...     b'parent baadf00d\n' +
+    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
+    ...     b'\n' +
+    ...     b' HI!\n' +
+    ...     b'   another line with leading spaces\n' +
+    ...     b'\n' +
+    ...     b'second line\n'
+    ... )
+    True
+    """
     # Example:
     # tree 97e8739f1945a4ba78c9bc1c670718c5dc5c08eb
     # parent 402aab067c4f60fa8ed4868e76b54064fa06a245
@@ -301,8 +356,8 @@ def gitcommittext(tree, parents, desc, user, date, extra):
     # committer Facebook GitHub Bot <facebook-github-bot@users.noreply.github.com> 1626293437 -0700
     #
     # Updating submodules
-    committer = extra and extra.get("committer") or user
-    committerdate = extra and extra.get("committer_date") or date
+    committer = (extra.get("committer") if extra else None) or user
+    committerdate = (extra.get("committer_date") if extra else None) or date
     text = "tree %s\n%sauthor %s %s\ncommitter %s %s\n\n%s\n" % (
         hex(tree),
         "".join("parent %s\n" % hex(p) for p in parents),
