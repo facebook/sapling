@@ -14,7 +14,7 @@ class Sapling < Formula
   version "%VERSION%"
   sha256 "%SHA256%"
 
-  depends_on "python@3.8"
+  depends_on "python@3.11"
   depends_on "node"
   depends_on "openssl@1.1"
   depends_on "gh"
@@ -30,9 +30,9 @@ class Sapling < Formula
     # variable. This is necessary since the installed OpenSSL library
     # might not match the architecture of the destination one.
     ENV["OPENSSL_DIR"] = "%TMPDIR%/openssl@1.1/1.1.1s"
-    ENV["PYTHON_SYS_EXECUTABLE"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
-    ENV["PYTHON"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
-    ENV["PYTHON3"] = Formula["python@3.8"].opt_prefix/"bin/python3.8"
+    ENV["PYTHON_SYS_EXECUTABLE"] = Formula["python@3.11"].opt_prefix/"bin/python3.11"
+    ENV["PYTHON"] = Formula["python@3.11"].opt_prefix/"bin/python3.11"
+    ENV["PYTHON3"] = Formula["python@3.11"].opt_prefix/"bin/python3.11"
     ENV["SAPLING_VERSION"] = "%VERSION%"
     ENV["CFLAGS"] = "--target=%TARGET%"
     ENV["RUST_TARGET"] = "%TARGET%"
