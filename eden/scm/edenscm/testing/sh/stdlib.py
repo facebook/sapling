@@ -641,14 +641,19 @@ def ln(args: List[str], fs: ShellFS):
 def ls(args: List[str], fs: ShellFS):
     entries = []
 
-    def listdir(path: str, fs=fs) -> List[str]:
+    def listdir(path: str, listall: bool = False, fs=fs) -> List[str]:
+        if listall:
+            return fs.listdir(path)
         return [f for f in fs.listdir(path) if not f.startswith(".")]
 
+    listall = False
     for arg in args:
-        if arg.startswith("-"):
+        if arg == "-a":
+            listall = True
+        elif arg.startswith("-"):
             raise NotImplementedError(f"ls with flag {arg}")
         elif fs.isdir(arg):
-            entries += listdir(arg)
+            entries += listdir(arg, listall=listall)
         elif fs.exists(arg):
             entries.append(arg)
     if not args:
