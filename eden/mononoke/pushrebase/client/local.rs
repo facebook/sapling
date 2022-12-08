@@ -42,18 +42,22 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
+        log_new_public_commits_to_scribe: bool,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError> {
-        PushrebaseOntoBookmarkOp::new(bookmark, changesets)
+        let mut op = PushrebaseOntoBookmarkOp::new(bookmark, changesets)
             .with_pushvars(pushvars)
             .with_push_source(cross_repo_push_source)
-            .with_bookmark_restrictions(bookmark_restrictions)
-            .run(
-                self.ctx,
-                self.authz,
-                self.repo,
-                self.lca_hint,
-                self.hook_manager,
-            )
-            .await
+            .with_bookmark_restrictions(bookmark_restrictions);
+        if log_new_public_commits_to_scribe {
+            op = op.log_new_public_commits_to_scribe();
+        }
+        op.run(
+            self.ctx,
+            self.authz,
+            self.repo,
+            self.lca_hint,
+            self.hook_manager,
+        )
+        .await
     }
 }

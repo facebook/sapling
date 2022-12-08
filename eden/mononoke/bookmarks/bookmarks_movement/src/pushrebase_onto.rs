@@ -31,8 +31,10 @@ use repo_authorization::RepoWriteOperation;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::log_bookmark_operation;
+use repo_update_logger::log_new_commits;
 use repo_update_logger::BookmarkInfo;
 use repo_update_logger::BookmarkOperation;
+use repo_update_logger::CommitInfo;
 
 use crate::affected_changesets::AdditionalChangesets;
 use crate::affected_changesets::AffectedChangesets;
@@ -50,6 +52,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark_restrictions: BookmarkKindRestrictions,
     cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
+    log_new_public_commits_to_scribe: bool,
     only_log_acl_checks: bool,
 }
 
@@ -64,6 +67,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             bookmark_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
+            log_new_public_commits_to_scribe: false,
             only_log_acl_checks: false,
         }
     }
@@ -93,6 +97,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
     pub fn with_push_source(mut self, cross_repo_push_source: CrossRepoPushSource) -> Self {
         self.cross_repo_push_source = cross_repo_push_source;
+        self
+    }
+
+    pub fn log_new_public_commits_to_scribe(mut self) -> Self {
+        self.log_new_public_commits_to_scribe = true;
         self
     }
 
@@ -221,6 +230,30 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                     .add("bookmark", self.bookmark.to_string())
                     .add("changeset_id", format!("{}", outcome.head))
                     .log_with_msg("Pushrebase finished", None);
+
+                if self.log_new_public_commits_to_scribe {
+                    let mut changesets_to_log: HashMap<_, _> = self
+                        .affected_changesets
+                        .source_changesets()
+                        .iter()
+                        .map(|bcs| (bcs.get_changeset_id(), CommitInfo::new(bcs, None)))
+                        .collect();
+
+                    for pair in outcome.rebased_changesets.iter() {
+                        let info = changesets_to_log
+                            .get_mut(&pair.id_old)
+                            .ok_or_else(|| anyhow!("Missing commit info for {}", pair.id_old))?;
+                        info.update_changeset_id(pair.id_old, pair.id_new)?;
+                    }
+
+                    log_new_commits(
+                        ctx,
+                        repo,
+                        Some((self.bookmark, kind)),
+                        changesets_to_log.into_values().collect(),
+                    )
+                    .await;
+                }
 
                 let info = BookmarkInfo {
                     bookmark_name: self.bookmark.clone(),

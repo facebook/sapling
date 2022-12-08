@@ -239,6 +239,7 @@ async fn process_land_changesets_request(
         Some(&pushvars),
         cross_repo_push_source,
         bookmark_restrictions,
+        false, // Currently mononoke server logs the new commits
     )
     .await?;
 

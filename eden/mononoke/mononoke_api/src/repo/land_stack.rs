@@ -198,6 +198,7 @@ impl RepoContext {
                 pushvars,
                 CrossRepoPushSource::PushRedirected,
                 bookmark_restrictions,
+                true, // log_new_public_commits_to_scribe
             )
             .await?;
             // Convert response back, finishing the land on the small repo
@@ -216,6 +217,7 @@ impl RepoContext {
                 pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
                 bookmark_restrictions,
+                true, // log_new_public_commits_to_scribe
             )
             .await?
         };
