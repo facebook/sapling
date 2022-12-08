@@ -20,6 +20,7 @@ import type {
   MergeConflicts,
   MergeConflictsEvent,
   RepositoryError,
+  PlatformSpecificClientToServerMessages,
 } from 'isl/src/types';
 
 import {browserServerPlatform} from './serverPlatform';
@@ -138,9 +139,22 @@ export default class ServerToClientAPI {
 
   private handleIncomingMessage(data: IncomingMessage) {
     this.handleIncomingGeneralMessage(data as GeneralMessage);
-    if (this.currentState.type === 'repo') {
-      const {repo, cwd} = this.currentState;
-      this.handleIncomingMessageWithRepo(data as WithRepoMessage, repo, cwd);
+    const {currentState} = this;
+    switch (currentState.type) {
+      case 'repo': {
+        const {repo, cwd} = currentState;
+        this.handleIncomingMessageWithRepo(data as WithRepoMessage, repo, cwd);
+        break;
+      }
+
+      // If the repo is in the loading or error state, the client may still send
+      // platform messages such as `platform/openExternal` that should be processed.
+      case 'loading':
+      case 'error':
+        if (data.type.startsWith('platform/')) {
+          this.platform.handleMessageFromClient(/*repo=*/undefined, data as PlatformSpecificClientToServerMessages, message => this.postMessage(message));
+        }
+        break;
     }
   }
 
