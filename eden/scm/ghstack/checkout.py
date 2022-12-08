@@ -39,7 +39,7 @@ def main(pull_request: str,
             repo_id=repo_id,
             ref=orig_ref,
         )['commit']
-        sh.run_sapling_command("update", oid)
+        sh.run_sapling_command("goto", oid)
     else:
         sh.git("fetch", "--prune", remote_name)
         sh.git("checkout", remote_name + "/" + orig_ref)
