@@ -13,9 +13,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import pexpect
-from eden.fs.cli.util import get_pid_using_lockfile, poll_until
+from eden.fs.cli.util import EdenStartError, get_pid_using_lockfile, poll_until
 from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import FaultDefinition, UnblockFaultArg
+from facebook.eden.ttypes import FaultDefinition, MountState, UnblockFaultArg
 from fb303_core.ttypes import fb303_status
 
 from .lib import testcase
@@ -433,6 +433,40 @@ class TakeoverTest(TakeoverTestBase):
             )
 
             p.join()
+
+    def test_takeover_during_mount(self) -> None:
+        self.eden.unmount(self.mount_path)
+
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
+            )
+
+        try:
+            mountProcess = Process(target=self.eden.mount, args=(self.mount_path,))
+            mountProcess.start()
+
+            def mount_initializing() -> Optional[bool]:
+                with self.eden.get_thrift_client_legacy() as client:
+                    for mount_info in client.listMounts():
+                        if mount_info.mountPoint == self.mount_path_bytes:
+                            if mount_info.state == MountState.INITIALIZING:
+                                return True
+                            return False
+                return None
+
+            poll_until(mount_initializing, timeout=60)
+
+            with self.assertRaisesRegex(
+                EdenStartError, "edenfs exited before becoming healthy"
+            ):
+                self.eden.graceful_restart()
+        finally:
+            with self.eden.get_thrift_client_legacy() as client:
+                client.unblockFault(
+                    UnblockFaultArg(keyClass="mount", keyValueRegex=".*")
+                )
+            mountProcess.join()
 
 
 @testcase.eden_repo_test(run_on_nfs=False)
