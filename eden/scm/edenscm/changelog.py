@@ -358,14 +358,13 @@ def gitcommittext(
     # Updating submodules
     committer = (extra.get("committer") if extra else None) or user
     committerdate = (extra.get("committer_date") if extra else None) or date
-    text = "tree %s\n%sauthor %s %s\ncommitter %s %s\n\n%s\n" % (
-        hex(tree),
-        "".join("parent %s\n" % hex(p) for p in parents),
-        gituser(user),
-        gitdatestr(date),
-        gituser(committer),
-        gitdatestr(committerdate),
-        stripdesc(desc),
-    )
+    parent_entries = "".join(f"parent {hex(p)}\n" for p in parents)
+    pre_sig_text = f"""\
+tree {hex(tree)}
+{parent_entries}author {gituser(user)} {gitdatestr(date)}
+committer {gituser(committer)} {gitdatestr(committerdate)}"""
+
+    normalized_desc = stripdesc(desc)
+    text = pre_sig_text + f"\n\n{normalized_desc}\n"
     text = encodeutf8(text, errors="surrogateescape")
     return text
