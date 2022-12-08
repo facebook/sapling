@@ -68,7 +68,7 @@ class SaplingShell(ghstack.shell.Shell):
         # not be able to resolve arguments like HEAD, so we must resolve those
         # to a full hash before running Git.
         if 'HEAD' in args:
-            top = self._run_sapling_command(['log', '-r', 'max(descendants(.))', '-T', '{node}'])
+            top = self._run_sapling_command(['log', '-r', '.', '-T', '{node}'])
             for index, arg in enumerate(args):
                 if arg == 'HEAD':
                     args[index] = top
