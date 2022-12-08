@@ -518,6 +518,7 @@ async fn normal_pushrebase<'a>(
                     maybe_pushvars,
                     cross_repo_push_source,
                     bookmark_restriction,
+                    false, // We will log new commits locally
                 )
                 .await;
             match (result, &remote_mode) {
@@ -564,6 +565,7 @@ async fn normal_pushrebase<'a>(
         maybe_pushvars,
         cross_repo_push_source,
         bookmark_restriction,
+        false, // We log commits to scribe ourselves
     )
     .await;
     if let Some((mut scuba, err)) = maybe_fallback_scuba {

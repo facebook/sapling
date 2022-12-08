@@ -38,5 +38,6 @@ pub trait PushrebaseClient: Sync + Send {
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,
+        log_new_public_commits_to_scribe: bool,
     ) -> Result<PushrebaseOutcome, BookmarkMovementError>;
 }

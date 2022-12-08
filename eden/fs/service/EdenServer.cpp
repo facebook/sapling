@@ -2027,6 +2027,18 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
           enumValue(state->state))));
     }
 
+    if (getMountPoints() != getAllMountPoints()) {
+      return makeFuture<TakeoverData>(std::runtime_error(
+          "can only perform graceful restart when all mount points are initialized"));
+      // TODO(xavierd): There is still a potential race after this check if a
+      // mount is initiated at this point. Injecting a block below and starting
+      // a mount would manifest it. In practice, this should be fairly rare.
+      // Moving this further (in stopMountsForTakeover for instance) to avoid
+      // this race requires EdenFS to being able to gracefully handle failures
+      // and recover in these cases by restarting several components after they
+      // have been already shutdown.
+    }
+
     // Make a copy of the thrift server socket so we can transfer it to the
     // new edenfs process.  Our local thrift will close its own socket when
     // we stop the server.  The easiest way to avoid completely closing the

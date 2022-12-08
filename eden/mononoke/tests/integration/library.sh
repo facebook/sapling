@@ -1296,6 +1296,11 @@ function s_client {
 }
 
 function scs {
+  SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
+  if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
+    mkdir "$SCRIBE_LOGS_DIR"
+  fi
+
   rm -f "$TESTTMP/scs_server_addr.txt"
   GLOG_minloglevel=5 \
     THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
@@ -1308,6 +1313,7 @@ function scs {
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/scs_server_addr.txt" \
+    --scribe-logging-directory "$TESTTMP/scribe_logs" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"

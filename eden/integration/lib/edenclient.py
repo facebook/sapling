@@ -450,7 +450,13 @@ class EdenFS(object):
         old_pid = self.get_pid_via_thrift()
 
         self._process = None
-        self.start(timeout=timeout, takeover_from=old_pid)
+        try:
+            self.start(timeout=timeout, takeover_from=old_pid)
+        except Exception:
+            # TODO: There might be classes of errors where the old_process is
+            # gone and we do need to track the new process here.
+            self._process = old_process
+            raise
 
         # Check the return code from the old edenfs process
         return_code = old_process.wait()
