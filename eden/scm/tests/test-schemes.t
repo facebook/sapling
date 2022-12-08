@@ -19,7 +19,7 @@
   $ cat >> .hg/hgrc << EOF
   > [paths]
   > default = dotdot://server
-  > default-push = push://server
+  > default-push = push:server
   > normal-path = mononoke://mononoke.internal.tfbnw.net/server
   > [remotefilelog]
   > fallbackpath = fallback://server
@@ -38,12 +38,17 @@ test converting debug output for all paths
 
   $ hg debugexpandpaths
   paths.default=ssh://user@dummy/server (expanded from dotdot://server)
-  paths.default-push=ssh://user@dummy/server (expanded from push://server)
+  paths.default-push=ssh://user@dummy/server (expanded from push:server)
   paths.normal-path=mononoke://mononoke.internal.tfbnw.net/server (not expanded)
 
 check that paths are expanded
 
 check that debugexpandscheme outputs the canonical form
+
+  $ hg debugexpandscheme fb-test:opsfiles
+  mononoke://mononoke.internal.tfbnw.net/opsfiles
+
+check this still works if someone adds some extra slashes
 
   $ hg debugexpandscheme fb-test://opsfiles
   mononoke://mononoke.internal.tfbnw.net/opsfiles
@@ -55,7 +60,7 @@ expanding an unknown scheme emits the input
 
   $ mkcommit foobar
   $ hg push --create --to master
-  pushing rev 582ab9cb184e to destination push://server/ bookmark master
+  pushing rev 582ab9cb184e to destination push:server bookmark master
   searching for changes
   exporting bookmark master
   remote: adding changesets
@@ -64,7 +69,7 @@ expanding an unknown scheme emits the input
 
   $ mkcommit something
   $ hg push -r . --to scratch/test123 --create
-  pushing to push://server/
+  pushing to push:server
   searching for changes
   remote: pushing 1 commit:
   remote:     6e16a5f9c216  something

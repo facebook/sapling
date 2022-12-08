@@ -696,22 +696,46 @@ pub fn repo_name_from_url(s: &str) -> Option<String> {
     match parse_opts.parse(s) {
         Ok(url) => {
             tracing::trace!("parsed url {}: {:?}", s, url);
-            // Try the last segment in url path.
-            if let Some(last_segment) = url
-                .path_segments()
-                .and_then(|s| s.rev().find(|s| !s.is_empty()))
-            {
-                return Some(last_segment.to_string());
-            }
-            // Try path. `path_segment` can be `None` for URL like "test:reponame".
-            let path = url.path();
-            if !path.contains('/') && !path.is_empty() {
-                return Some(path.to_string());
-            }
-            // Try the hostname. ex. in "fb://fbsource", "fbsource" is a host not a path.
-            // Also see https://www.mercurial-scm.org/repo/hg/help/schemes
-            if let Some(host_str) = url.host_str() {
-                return Some(host_str.to_string());
+            match url.scheme() {
+                "mononoke" => {
+                    // In Mononoke URLs, the repo name is always the full path
+                    // with slashes trimmed.
+                    let path = url.path().trim_matches('/');
+                    if !path.is_empty() {
+                        return Some(path.to_string());
+                    }
+                }
+                "fb" => {
+                    // In FB URLs, the path is the reponame, however some `fb`
+                    // URLs have a double-slash after the colon that shouldn't be
+                    // there, which splits up the repo name into different
+                    // components of the URL. So let's just parse the string.
+                    if let Some(path) = s.strip_prefix("fb:") {
+                        let path = path.trim_matches('/');
+                        if !path.is_empty() {
+                            return Some(path.to_string());
+                        }
+                    }
+                }
+                _ => {
+                    // Try the last segment in url path.
+                    if let Some(last_segment) = url
+                        .path_segments()
+                        .and_then(|s| s.rev().find(|s| !s.is_empty()))
+                    {
+                        return Some(last_segment.to_string());
+                    }
+                    // Try path. `path_segment` can be `None` for URL like "test:reponame".
+                    let path = url.path();
+                    if !path.contains('/') && !path.is_empty() {
+                        return Some(path.to_string());
+                    }
+                    // Try the hostname. ex. in "fb://fbsource", "fbsource" is a host not a path.
+                    // Also see https://www.mercurial-scm.org/repo/hg/help/schemes
+                    if let Some(host_str) = url.host_str() {
+                        return Some(host_str.to_string());
+                    }
+                }
             }
         }
         Err(e) => {
@@ -1166,6 +1190,43 @@ mod tests {
         assert_eq!(cfg.get("s", "a"), Some("other".into()));
         assert_eq!(cfg.get("s", "b"), Some("flag".into()));
         assert_eq!(cfg.get("s", "c"), Some("orig".into()));
+    }
+
+    #[test]
+    fn test_repo_name_from_url() {
+        let check = |url, name| {
+            assert_eq!(repo_name_from_url(url).as_deref(), name);
+        };
+
+        // Ordinary schemes use the basename as the repo name
+        check("repo", Some("repo"));
+        check("../path/to/repo", Some("repo"));
+        check("file:repo", Some("repo"));
+        check("file:/path/to/repo", Some("repo"));
+        check("file://server/path/to/repo", Some("repo"));
+        check("ssh://user@host/repo", Some("repo"));
+        check("ssh://user@host/path/to/repo", Some("repo"));
+        check("file:/", None);
+
+        // This isn't correct, but is a side-effect of earlier hacks (should
+        // be `None`)
+        check("ssh://user@host:100/", Some("host"));
+
+        // Mononoke scheme uses the full path, and repo names can contain
+        // slashes.
+        check("mononoke://example.com/repo", Some("repo"));
+        check("mononoke://example.com/path/to/repo", Some("path/to/repo"));
+        check("mononoke://example.com/", None);
+
+        // FB scheme uses the full path.
+        check("fb:repo", Some("repo"));
+        check("fb:path/to/repo", Some("path/to/repo"));
+        check("fb:", None);
+
+        // FB scheme works even when there are extra slashes that shouldn't be
+        // there.
+        check("fb://repo/", Some("repo"));
+        check("fb://path/to/repo", Some("path/to/repo"));
     }
 }
 

@@ -58,16 +58,17 @@ class ShortRepository(object):
         return hg._peerlookup(url).instance(ui, url, create, initial_config)
 
     def resolve(self, url):
-        # Should this use the urlutil.url class, or is manual parsing better?
+        # We are only interested in the part after the scheme, so split on the
+        # first colon, and discard any leading slashes.
         try:
-            short_url = url.split("://", 1)[1]
+            scheme_specific_part = url.split(":", 1)[1].lstrip("/")
         except IndexError:
-            raise error.Abort(_("no '://' in scheme url '%s'") % url)
+            raise error.Abort(_("no ':' in url '%s'") % url)
         placeholder = "{1}"
         if placeholder in self.url:
-            return self.url.replace(placeholder, short_url)
+            return self.url.replace(placeholder, scheme_specific_part)
         else:
-            return self.url + short_url
+            return self.url + scheme_specific_part
 
 
 def hasdriveletter(orig, path):
