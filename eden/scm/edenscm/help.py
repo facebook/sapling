@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import itertools
 import textwrap
+from typing import List, Set
 
 from bindings import cliparser
 
@@ -37,7 +38,7 @@ from . import (
 from .i18n import _, gettext
 
 
-_exclkeywords = {
+_exclkeywords: Set[str] = {
     "(ADVANCED)",
     "(DEPRECATED)",
     "(EXPERIMENTAL)",
@@ -51,7 +52,7 @@ _exclkeywords = {
 }
 
 
-def listexts(header, exts, indent=1, showdeprecated=False):
+def listexts(header, exts, indent: int = 1, showdeprecated: bool = False) -> List[str]:
     """return a text listing of the given extensions"""
     rst = []
     if exts:
@@ -64,7 +65,7 @@ def listexts(header, exts, indent=1, showdeprecated=False):
     return rst
 
 
-def extshelp(ui):
+def extshelp(ui) -> str:
     rst = loaddoc("extensions")(ui).splitlines(True)
     rst.extend(
         listexts(_("Enabled extensions:"), extensions.enabled(), showdeprecated=True)
@@ -74,7 +75,7 @@ def extshelp(ui):
     return doc
 
 
-def optrst(header, options, verbose):
+def optrst(header: str, options, verbose) -> str:
     data = []
     multioccur = False
     for option in options:
@@ -118,13 +119,13 @@ def optrst(header, options, verbose):
     return "".join(rst)
 
 
-def indicateomitted(rst, omitted, notomitted=None):
+def indicateomitted(rst, omitted, notomitted=None) -> None:
     rst.append("\n\n.. container:: omitted\n\n    %s\n\n" % omitted)
     if notomitted:
         rst.append("\n\n.. container:: notomitted\n\n    %s\n\n" % notomitted)
 
 
-def filtercmd(ui, cmd, kw, doc):
+def filtercmd(ui, cmd, kw, doc) -> bool:
     if not ui.debugflag and cmd.startswith("debug") and kw != "debug":
         return True
     if not ui.verbose and doc and any(w in doc for w in _exclkeywords):
@@ -195,11 +196,11 @@ subtopics = {}
 helphooks = {}
 
 
-def addtopichook(topic, rewriter):
+def addtopichook(topic, rewriter) -> None:
     helphooks.setdefault(topic, []).append(rewriter)
 
 
-def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
+def makeitemsdoc(ui, topic, doc, marker, items, dedent: bool = False):
     """Extract docstring from the items key to function mapping, build a
     single documentation block and use it to overwrite the marker in doc.
     """
@@ -233,7 +234,7 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     return doc.replace(marker, entries)
 
 
-def makesubcmdlist(cmd, categories, subcommands, verbose, quiet):
+def makesubcmdlist(cmd, categories, subcommands, verbose, quiet) -> List[str]:
     subcommandindex = {}
     for name, entry in subcommands.items():
         for alias in cmdutil.parsealiases(name):
@@ -288,7 +289,7 @@ def makesubcmdlist(cmd, categories, subcommands, verbose, quiet):
     return rst
 
 
-def addtopicsymbols(topic, marker, symbols, dedent=False):
+def addtopicsymbols(topic, marker, symbols, dedent: bool = False) -> None:
     def add(ui, topic, doc):
         return makeitemsdoc(ui, topic, doc, marker, symbols, dedent=dedent)
 
@@ -789,7 +790,15 @@ class _helpdispatch(object):
         return results
 
 
-def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts):
+def help_(
+    ui,
+    commands,
+    name,
+    unknowncmd: bool = False,
+    full: bool = True,
+    subtopic=None,
+    **opts,
+) -> str:
     """
     Generate the help for 'name' as unformatted restructured text. If
     'name' is None, describe the commands available.
@@ -833,7 +842,9 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None, **opts
     return "".join(rst)
 
 
-def formattedhelp(ui, commands, name, keep=None, unknowncmd=False, full=True, **opts):
+def formattedhelp(
+    ui, commands, name, keep=None, unknowncmd: bool = False, full: bool = True, **opts
+):
     """get help for a given topic (as a dotted name) as rendered rst
 
     Either returns the rendered help text or raises an exception.
