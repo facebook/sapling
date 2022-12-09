@@ -89,11 +89,6 @@ class EdenConfig : private ConfigSettingManager {
       struct stat* configFileStat);
 
   /**
-   * Stringify the EdenConfig for logging or debugging.
-   */
-  std::string toString() const;
-
-  /**
    * Return the config data as a EdenConfigData structure that can be
    * thrift-serialized.
    */
@@ -157,7 +152,6 @@ class EdenConfig : private ConfigSettingManager {
   std::shared_ptr<ConfigVariables> substitutions_;
   AbsolutePath userConfigPath_;
   AbsolutePath systemConfigPath_;
-  AbsolutePath systemConfigDir_;
 
   struct stat systemConfigFileStat_ {};
   struct stat userConfigFileStat_ {};

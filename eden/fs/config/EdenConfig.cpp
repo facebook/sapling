@@ -110,46 +110,6 @@ std::string EdenConfig::toString(ConfigSource cs) const {
       folly::to<std::string>("invalid config source value: ", enumValue(cs)));
 }
 
-std::string EdenConfig::toString() const {
-  std::string rslt = fmt::format(
-      "[ EdenConfig settings ]\n"
-      "userConfigPath={}\n"
-      "systemConfigDir={}\n"
-      "systemConfigPath={}\n",
-      userConfigPath_,
-      systemConfigDir_,
-      systemConfigPath_);
-
-  rslt += "[ EdenConfig values ]\n";
-  for (const auto& sectionEntry : configMap_) {
-    auto sectionKey = sectionEntry.first;
-    for (const auto& keyEntry : sectionEntry.second) {
-      rslt += folly::to<std::string>(
-          sectionKey,
-          ":",
-          keyEntry.first,
-          "=",
-          keyEntry.second->getStringValue(),
-          "\n");
-    }
-  }
-  rslt += "[ EdenConfig sources ]\n";
-  for (const auto& sectionEntry : configMap_) {
-    auto sectionKey = sectionEntry.first;
-    for (const auto& keyEntry : sectionEntry.second) {
-      rslt += folly::to<std::string>(
-          sectionKey,
-          ":",
-          keyEntry.first,
-          "=",
-          EdenConfig::toString(keyEntry.second->getSource()),
-          "\n");
-    }
-  }
-  rslt += "]\n";
-  return rslt;
-}
-
 EdenConfigData EdenConfig::toThriftConfigData() const {
   EdenConfigData result;
   for (const auto& sectionEntry : configMap_) {
@@ -173,15 +133,14 @@ EdenConfig::EdenConfig(
     : substitutions_{std::make_shared<ConfigVariables>(
           std::move(substitutions))},
       userConfigPath_{std::move(userConfigPath)},
-      systemConfigPath_{std::move(systemConfigPath)},
-      systemConfigDir_{std::move(systemConfigDir)} {
+      systemConfigPath_{std::move(systemConfigPath)} {
   // Force set defaults that require passed arguments
   edenDir.setValue(
       userHomePath + kDefaultEdenDirectory, ConfigSource::Default, true);
   userIgnoreFile.setValue(
       userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
   systemIgnoreFile.setValue(
-      systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
+      systemConfigDir + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
 
   // I have observed Clang on macOS (Xcode 11.6.0) not zero-initialize
   // padding in these members, even though they should be
@@ -220,7 +179,6 @@ void EdenConfig::doCopy(const EdenConfig& source) {
   substitutions_ = source.substitutions_;
   userConfigPath_ = source.userConfigPath_;
   systemConfigPath_ = source.systemConfigPath_;
-  systemConfigDir_ = source.systemConfigDir_;
 
   systemConfigFileStat_ = source.systemConfigFileStat_;
   userConfigFileStat_ = source.userConfigFileStat_;

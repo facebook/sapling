@@ -293,7 +293,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
   auto startupLogger =
       daemonizeIfRequested(logPath, privHelper.get(), originalCommandLine);
-  XLOG(DBG3) << edenConfig->toString();
   std::optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   try {
