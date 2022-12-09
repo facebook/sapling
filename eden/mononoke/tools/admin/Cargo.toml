@@ -54,6 +54,7 @@ phases = { version = "0.1.0", path = "../../phases" }
 prettytable-rs = "0.8"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
+question = "0.2.2"
 regex = "1.6.0"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }

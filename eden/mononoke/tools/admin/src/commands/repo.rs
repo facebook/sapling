@@ -27,6 +27,7 @@ pub struct CommandArgs {
     subcommand: RepoSubcommand,
 }
 
+#[derive(Clone)]
 #[facet::container]
 pub struct Repo {
     #[facet]

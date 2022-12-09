@@ -11,6 +11,7 @@ use cached_config::ConfigStore;
 use commitsync::types::RawCommitSyncCurrentVersions;
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
+use vec1::vec1;
 use vec1::Vec1;
 
 #[derive(Clone)]
@@ -89,5 +90,15 @@ impl RepoGroup {
             }
         }
         Vec1::try_from(repos).ok()
+    }
+
+    pub fn into_vec(self) -> Vec1<RepositoryId> {
+        match self {
+            Self::Single(repo) => vec1![repo],
+            Self::Megarepo { large, mut small } => {
+                small.push(large);
+                small
+            }
+        }
     }
 }
