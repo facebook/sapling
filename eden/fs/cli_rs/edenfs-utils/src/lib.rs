@@ -22,6 +22,7 @@ use edenfs_error::ResultExt;
 use glob::glob;
 use subprocess::Exec;
 use subprocess::Redirection;
+use sysinfo::Pid;
 use sysinfo::ProcessExt;
 use sysinfo::SystemExt;
 use tracing::trace;
@@ -134,7 +135,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
     if system.refresh_process(pid) {
         if let Some(process) = system.process(pid) {
             let executable = process.exe();
-            trace!(pid, ?executable, "found process executable");
+            trace!(%pid, ?executable, "found process executable");
 
             #[cfg(unix)]
             {
@@ -150,7 +151,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
                 return Some(executable.into());
             }
         } else {
-            trace!(pid, "unable to find process");
+            trace!(%pid, "unable to find process");
         }
     } else {
         trace!("unable to load process information");
@@ -159,7 +160,7 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
     None
 }
 
-pub fn is_process_running(pid: sysinfo::Pid) -> bool {
+pub fn is_process_running(pid: Pid) -> bool {
     let mut system = sysinfo::System::new();
 
     if system.refresh_process(pid) {
@@ -213,12 +214,8 @@ pub fn stop_buckd_for_repo(path: &Path) {
 pub fn is_buckd_running_for_path(path: &Path) -> bool {
     let pid_file = path.join(".buckd").join("pid");
     let file_contents = read_to_string(&pid_file).unwrap_or_default();
-    #[cfg(windows)]
-    let buck_pid_parse = file_contents.trim().parse::<usize>();
-    #[cfg(not(windows))]
-    let buck_pid_parse = file_contents.trim().parse::<i32>();
 
-    if let Ok(buck_pid) = buck_pid_parse {
+    if let Ok(buck_pid) = file_contents.trim().parse::<Pid>() {
         is_process_running(buck_pid)
     } else {
         false

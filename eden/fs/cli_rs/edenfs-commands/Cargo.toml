@@ -26,7 +26,7 @@ serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 shlex = "1.0"
 subprocess = "0.2.7"
-sysinfo = "0.20.4"
+sysinfo = "0.26.8"
 tabular = "0.2.0"
 termwiz = { version = "0.18", features = ["widgets"] }
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }

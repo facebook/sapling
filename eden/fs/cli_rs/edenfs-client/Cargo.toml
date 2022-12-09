@@ -24,7 +24,7 @@ regex = "1.6.0"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 subprocess = "0.2.7"
-sysinfo = "0.20.4"
+sysinfo = "0.26.8"
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 thrift_streaming = { version = "0.1.0", path = "../../service/thrift_streaming" }
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

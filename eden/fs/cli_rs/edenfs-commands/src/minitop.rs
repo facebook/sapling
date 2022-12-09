@@ -204,7 +204,11 @@ impl Process {
 
     /// Test if this `Process` is still running.
     fn is_running(&self, system: &System) -> bool {
-        system.process(self.pid as Pid).is_some()
+        #[cfg(not(windows))]
+        let pid = Pid::from(self.pid);
+        #[cfg(windows)]
+        let pid = Pid::from(self.pid as usize);
+        system.process(pid).is_some()
     }
 }
 
