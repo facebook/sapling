@@ -36,20 +36,18 @@ constexpr PathComponentPiece kDefaultEdenDirectory{".eden"};
 void getConfigStat(
     AbsolutePathPiece configPath,
     int configFd,
-    struct stat& configStat) {
-  int statRslt{-1};
+    std::optional<struct stat>& configStat) {
   if (configFd >= 0) {
-    statRslt = fstat(configFd, &configStat);
+    struct stat st;
+    int statRslt = fstat(configFd, &st);
     // Report failure that is not due to ENOENT
-    if (statRslt != 0) {
+    if (statRslt) {
       XLOG(WARN) << "error accessing config file " << configPath << ": "
                  << folly::errnoStr(errno);
+      configStat = std::nullopt;
+    } else {
+      configStat = st;
     }
-  }
-
-  // We use all 0's to check if a file is created/deleted
-  if (statRslt != 0) {
-    memset(&configStat, 0, sizeof(configStat));
   }
 }
 
@@ -141,16 +139,6 @@ EdenConfig::EdenConfig(
       userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
   systemIgnoreFile.setValue(
       systemConfigDir + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
-
-  // I have observed Clang on macOS (Xcode 11.6.0) not zero-initialize
-  // padding in these members, even though they should be
-  // zero-initialized. Explicitly zero.  (Technically, none of this
-  // code relies on the padding bits of these stat() results being
-  // zeroed, but since we assert it elsewhere to catch bugs,
-  // explicitly zero here to be consistent. Another option would be to
-  // use std::optional.)
-  memset(&systemConfigFileStat_, 0, sizeof(systemConfigFileStat_));
-  memset(&userConfigFileStat_, 0, sizeof(userConfigFileStat_));
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -220,25 +208,34 @@ const std::optional<AbsolutePath> EdenConfig::getClientCertificate() const {
 namespace {
 FileChangeReason hasConfigFileChanged(
     AbsolutePath configFileName,
-    const struct stat& oldStat) {
-  struct stat currentStat;
-
+    const std::optional<struct stat>& oldStat) {
   // We are using stat to check for file deltas. Since we don't open file,
   // there is no chance of TOCTOU attack.
-  int rslt = stat(configFileName.c_str(), &currentStat);
+  struct stat st;
+  int rslt = stat(configFileName.c_str(), &st);
+
+  std::optional<struct stat> currentStat;
 
   // Treat config file as if not present on error.
   // Log error if not ENOENT as they are unexpected and useful for debugging.
-  if (rslt != 0) {
+  if (rslt) {
     if (errno != ENOENT) {
       XLOG(WARN) << "error accessing config file " << configFileName << ": "
                  << folly::errnoStr(errno);
     }
-    // We use all 0's to check if a file is created/deleted
-    memset(&currentStat, 0, sizeof(currentStat));
+  } else {
+    currentStat = st;
   }
 
-  return hasFileChanged(currentStat, oldStat);
+  if (oldStat && currentStat) {
+    return hasFileChanged(*oldStat, *currentStat);
+  } else if (oldStat) {
+    return FileChangeReason::SIZE;
+  } else if (currentStat) {
+    return FileChangeReason::SIZE;
+  } else {
+    return FileChangeReason::NONE;
+  }
 }
 } // namespace
 
@@ -269,19 +266,18 @@ void EdenConfig::clearAll(ConfigSource configSource) {
 void EdenConfig::loadSystemConfig() {
   clearAll(ConfigSource::SystemConfig);
   loadConfig(
-      systemConfigPath_, ConfigSource::SystemConfig, &systemConfigFileStat_);
+      systemConfigPath_, ConfigSource::SystemConfig, systemConfigFileStat_);
 }
 
 void EdenConfig::loadUserConfig() {
   clearAll(ConfigSource::UserConfig);
-  loadConfig(userConfigPath_, ConfigSource::UserConfig, &userConfigFileStat_);
+  loadConfig(userConfigPath_, ConfigSource::UserConfig, userConfigFileStat_);
 }
 
 void EdenConfig::loadConfig(
     AbsolutePathPiece path,
     ConfigSource configSource,
-    struct stat* configFileStat) {
-  struct stat configStat;
+    std::optional<struct stat>& configFileStat) {
   // Load the config path and update its stat information
   auto configFd = open(path.copy().c_str(), O_RDONLY);
   if (configFd < 0) {
@@ -290,8 +286,7 @@ void EdenConfig::loadConfig(
                  << folly::errnoStr(errno);
     }
   }
-  getConfigStat(path, configFd, configStat);
-  memcpy(configFileStat, &configStat, sizeof(struct stat));
+  getConfigStat(path, configFd, configFileStat);
   if (configFd >= 0) {
     parseAndApplyConfigFile(configFd, path, configSource);
   }
