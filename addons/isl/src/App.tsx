@@ -127,6 +127,7 @@ function ISLNullState({repoError}: {repoError: RepositoryError}) {
           }
           buttons={[
             <VSCodeButton
+              key="help-button"
               appearance="secondary"
               onClick={e => {
                 platform.openExternalLink('https://sapling-scm.com/docs/introduction/installation');
