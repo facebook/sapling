@@ -23,6 +23,12 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use sql_ext::TransactionResult;
+use stats::prelude::*;
+
+define_stats! {
+    prefix = "mononoke.mutable_counters";
+    cur_value: dynamic_singleton_counter("{}.cur_value", (name: String)),
+}
 
 #[facet::facet]
 #[async_trait]
@@ -149,6 +155,7 @@ impl MutableCounters for SqlMutableCounters {
         match txn_result {
             TransactionResult::Succeeded(txn) => {
                 txn.commit().await?;
+                STATS::cur_value.set_value(ctx.fb, value, (name.to_owned(),));
                 Ok(true)
             }
             TransactionResult::Failed => Ok(false),
