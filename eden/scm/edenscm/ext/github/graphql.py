@@ -9,6 +9,7 @@
 import asyncio
 from typing import Dict, Iterable, List, Optional, Union
 
+from ghstack.github import GitHubEndpoint
 from ghstack.github_gh_cli import make_request
 
 from .pullrequest import GraphQLPullRequest, PullRequestId
@@ -69,10 +70,11 @@ def get_pull_request_data(pr: PullRequestId) -> Optional[GraphQLPullRequest]:
 
 
 def get_pull_request_data_list(
+    github: GitHubEndpoint,
     pr_list: Iterable[PullRequestId],
 ) -> List[Optional[GraphQLPullRequest]]:
     requests = [
-        make_request(_generate_params(pr), hostname=pr.get_hostname()) for pr in pr_list
+        github.graphql(PULL_REQUEST_QUERY, **_generate_params(pr)) for pr in pr_list
     ]
     loop = asyncio.get_event_loop()
     responses = loop.run_until_complete(asyncio.gather(*requests))
@@ -88,7 +90,6 @@ def get_pull_request_data_list(
 
 def _generate_params(pr: PullRequestId) -> Dict[str, Union[str, int, bool]]:
     return {
-        "query": PULL_REQUEST_QUERY,
         "owner": pr.owner,
         "name": pr.name,
         "number": pr.number,

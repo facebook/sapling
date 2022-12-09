@@ -6,6 +6,7 @@
 from typing import List, Optional
 
 from edenscm import smartset, util
+from ghstack.github import get_github_endpoint
 
 from . import graphql
 from .github_repo_util import is_github_repo
@@ -81,4 +82,8 @@ def _memoize(f):
 def _get_pull_request_data_list(
     _repo, *pr_list: PullRequestId
 ) -> List[Optional[GraphQLPullRequest]]:
-    return graphql.get_pull_request_data_list(pr_list)
+    if pr_list:
+        github = get_github_endpoint(pr_list[0].get_hostname())
+        return graphql.get_pull_request_data_list(github, pr_list)
+    else:
+        return []

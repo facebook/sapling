@@ -73,3 +73,13 @@ class GitHubEndpoint(metaclass=ABCMeta):
         Returns: parsed JSON response
         """
         pass
+
+
+def get_github_endpoint(hostname: str) -> GitHubEndpoint:
+    """Factory method to generate a GitHubEndpoint.
+
+    Currently, it only supports GitHubCLIEndpoint. We will add a fake
+    GitHubEndpoint for integration test later.
+    """
+    from ghstack.github_cli_endpoint import GitHubCLIEndpoint
+    return GitHubCLIEndpoint(hostname)
