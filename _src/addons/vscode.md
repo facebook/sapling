@@ -33,4 +33,4 @@ Sapling also implements the VS Code API for source control:
 - You can see your uncommitted changes in the Source Control sidebar.
 - Files you change will have gutters that show what lines of code have changed.
 - You can open an editable diff viewer from the command palette with
-**Sapling: Open Diff View For Current File**
+**Sapling SCM: Open Diff View For Current File**

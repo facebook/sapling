@@ -4,7 +4,7 @@ sidebar_position: 17
 
 ## graft
 <!--
-  @generated SignedSource<<057d8870f5e34cee489f3b3056d2edb8>>
+  @generated SignedSource<<c32587ab6d698105ce2244b5c32a35be>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -14,7 +14,14 @@ sidebar_position: 17
 Use Sapling's merge logic to copy individual commits from other
 locations without making merge commits. This is sometimes known as
 'backporting' or 'cherry-picking'. By default, graft will also
-copy user, date, and description from the source commits.
+copy user and description from the source commits. If you want to
+keep the date of the source commits, you can add below config to your
+configuration file:
+
+```
+[tweakdefaults]
+graftkeepdate = True
+```
 
 Source commits will be skipped if they are ancestors of the
 current commit, have already been grafted, or are merges.
