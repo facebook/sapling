@@ -9,7 +9,6 @@
 
 #include <fmt/core.h>
 #include <folly/File.h>
-#include <sys/stat.h>
 #include <chrono>
 #include <functional>
 #include <optional>
@@ -50,13 +49,36 @@ class FileChangeReason {
 };
 
 /**
+ * Subset of `struct stat` and `BY_HANDLE_FILE_INFORMATION` for detecting
+ * whether a file's attributes have changed.
+ */
+struct FileStat {
+  mode_t mode = 0;
+  uint64_t size = 0;
+  timespec mtime = {};
+  timespec ctime = {};
+  uint32_t device = 0;
+  uint64_t inode = 0;
+};
+
+/**
+ * Reads a FileStat from the given file descriptor.
+ */
+folly::Expected<FileStat, int> getFileStat(int fd);
+
+/**
+ * Reads a FileStat from the given path.
+ */
+folly::Expected<FileStat, int> getFileStat(const char* path);
+
+/**
  * If two stat results are equal, returns a value that converts to
  * boolean true. Otherwise, returns the reason why we consider the
  * field to have changed.
  */
 FileChangeReason hasFileChanged(
-    const struct stat& stat1,
-    const struct stat& stat2) noexcept;
+    const FileStat& stat1,
+    const FileStat& stat2) noexcept;
 
 /**
  * FileChangeMonitor monitors a file for changes. The "invokeIfUpdated()"
@@ -163,7 +185,7 @@ class FileChangeMonitor {
     // Set values for stat to force changedSinceUpdate() to return TRUE.
     // We use a novel setting to force change to be detected
     fileStat_ = {};
-    fileStat_.st_mtime = 1;
+    fileStat_.mtime.tv_sec = 1;
 
     statErrno_ = 0;
     openErrno_ = 0;
@@ -173,7 +195,7 @@ class FileChangeMonitor {
   }
 
   AbsolutePath filePath_;
-  struct stat fileStat_ {};
+  FileStat fileStat_;
   int statErrno_{0};
   int openErrno_{0};
   std::chrono::milliseconds throttleDuration_;

@@ -36,17 +36,16 @@ constexpr PathComponentPiece kDefaultEdenDirectory{".eden"};
 void getConfigStat(
     AbsolutePathPiece configPath,
     int configFd,
-    std::optional<struct stat>& configStat) {
+    std::optional<FileStat>& configStat) {
   if (configFd >= 0) {
-    struct stat st;
-    int statRslt = fstat(configFd, &st);
+    auto result = getFileStat(configFd);
     // Report failure that is not due to ENOENT
-    if (statRslt) {
+    if (result.hasError()) {
       XLOG(WARN) << "error accessing config file " << configPath << ": "
-                 << folly::errnoStr(errno);
+                 << folly::errnoStr(result.error());
       configStat = std::nullopt;
     } else {
-      configStat = st;
+      configStat = result.value();
     }
   }
 }
@@ -208,23 +207,21 @@ const std::optional<AbsolutePath> EdenConfig::getClientCertificate() const {
 namespace {
 FileChangeReason hasConfigFileChanged(
     AbsolutePath configFileName,
-    const std::optional<struct stat>& oldStat) {
+    const std::optional<FileStat>& oldStat) {
   // We are using stat to check for file deltas. Since we don't open file,
   // there is no chance of TOCTOU attack.
-  struct stat st;
-  int rslt = stat(configFileName.c_str(), &st);
-
-  std::optional<struct stat> currentStat;
+  std::optional<FileStat> currentStat;
+  auto result = getFileStat(configFileName.c_str());
 
   // Treat config file as if not present on error.
   // Log error if not ENOENT as they are unexpected and useful for debugging.
-  if (rslt) {
-    if (errno != ENOENT) {
+  if (result.hasError()) {
+    if (result.error() != ENOENT) {
       XLOG(WARN) << "error accessing config file " << configFileName << ": "
-                 << folly::errnoStr(errno);
+                 << folly::errnoStr(result.error());
     }
   } else {
-    currentStat = st;
+    currentStat = result.value();
   }
 
   if (oldStat && currentStat) {
@@ -277,7 +274,7 @@ void EdenConfig::loadUserConfig() {
 void EdenConfig::loadConfig(
     AbsolutePathPiece path,
     ConfigSource configSource,
-    std::optional<struct stat>& configFileStat) {
+    std::optional<FileStat>& configFileStat) {
   // Load the config path and update its stat information
   auto configFd = open(path.copy().c_str(), O_RDONLY);
   if (configFd < 0) {
@@ -285,16 +282,16 @@ void EdenConfig::loadConfig(
       XLOG(WARN) << "error accessing config file " << path << ": "
                  << folly::errnoStr(errno);
     }
+    // TODO: If a config is deleted from underneath, should we clear configs
+    // from that file?
+    configFileStat = std::nullopt;
+    return;
   }
-  getConfigStat(path, configFd, configFileStat);
+  folly::File configFile(configFd, /*ownsFd=*/true);
+  getConfigStat(path, configFile.fd(), configFileStat);
   if (configFd >= 0) {
     parseAndApplyConfigFile(configFd, path, configSource);
   }
-  SCOPE_EXIT {
-    if (configFd >= 0) {
-      close(configFd);
-    }
-  };
 }
 
 namespace {

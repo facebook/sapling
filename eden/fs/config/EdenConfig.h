@@ -86,7 +86,7 @@ class EdenConfig : private ConfigSettingManager {
   void loadConfig(
       AbsolutePathPiece path,
       ConfigSource configSource,
-      std::optional<struct stat>& configFileStat);
+      std::optional<FileStat>& configFileStat);
 
   /**
    * Return the config data as a EdenConfigData structure that can be
@@ -153,8 +153,8 @@ class EdenConfig : private ConfigSettingManager {
   AbsolutePath userConfigPath_;
   AbsolutePath systemConfigPath_;
 
-  std::optional<struct stat> systemConfigFileStat_;
-  std::optional<struct stat> userConfigFileStat_;
+  std::optional<FileStat> systemConfigFileStat_;
+  std::optional<FileStat> userConfigFileStat_;
 
   /*
    * Settings follow. Their initialization registers themselves with the

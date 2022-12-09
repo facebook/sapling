@@ -7,6 +7,7 @@
 
 #include <folly/FileUtil.h>
 #include <folly/logging/xlog.h>
+#include <sys/stat.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/utils/StatTimes.h"
@@ -14,30 +15,71 @@
 
 namespace facebook::eden {
 
+namespace {
+FileStat computeFileStat(const struct stat& st) {
+  // On Windows, some stat entries are synthesized by MSVCRT, and
+  // checking them may falsely consider files changed.
+  FileStat rv;
+  if (!folly::kIsWindows) {
+    rv.mode = st.st_mode;
+  }
+  rv.size = st.st_size;
+  rv.mtime = stMtime(st);
+  if (!folly::kIsWindows) {
+    rv.ctime = stCtime(st);
+    rv.device = st.st_dev;
+    rv.inode = st.st_ino;
+  }
+  return rv;
+}
+} // namespace
+
+folly::Expected<FileStat, int> getFileStat(int fd) {
+  // TODO: It would be faster on Windows to call `GetFileInformationByHandleW`
+  // directly.
+
+  struct stat st {};
+  int result = ::fstat(fd, &st);
+  if (result) {
+    return folly::Unexpected{errno};
+  }
+
+  return computeFileStat(st);
+}
+
+folly::Expected<FileStat, int> getFileStat(const char* path) {
+  // TODO: It would be faster on Windows to call `GetFileInformationByHandleW`
+  // directly.
+
+  struct stat st {};
+  int result = ::stat(path, &st);
+  if (result) {
+    return folly::Unexpected{errno};
+  }
+
+  return computeFileStat(st);
+}
+
 FileChangeReason hasFileChanged(
-    const struct stat& stat1,
-    const struct stat& stat2) noexcept {
-  if (stat1.st_size != stat2.st_size) {
+    const FileStat& stat1,
+    const FileStat& stat2) noexcept {
+  if (stat1.mode != stat2.mode) {
+    return FileChangeReason::MODE;
+  }
+  if (stat1.size != stat2.size) {
     return FileChangeReason::SIZE;
   }
-  if (stMtime(stat1) != stMtime(stat2)) {
+  if (stat1.mtime != stat2.mtime) {
     return FileChangeReason::MTIME;
   }
-  if (!folly::kIsWindows) {
-    // On Windows, these stat entries are synthesized by MSVCRT, and
-    // checking them may falsely consider files changed.
-    if (stat1.st_dev != stat2.st_dev) {
-      return FileChangeReason::DEV;
-    }
-    if (stat1.st_ino != stat2.st_ino) {
-      return FileChangeReason::INO;
-    }
-    if (stat1.st_mode != stat2.st_mode) {
-      return FileChangeReason::MODE;
-    }
-    if (stCtime(stat1) != stCtime(stat2)) {
-      return FileChangeReason::CTIME_;
-    }
+  if (stat1.ctime != stat2.ctime) {
+    return FileChangeReason::CTIME_;
+  }
+  if (stat1.device != stat2.device) {
+    return FileChangeReason::DEV;
+  }
+  if (stat1.inode != stat2.inode) {
+    return FileChangeReason::INO;
   }
   return FileChangeReason::NONE;
 }
@@ -79,10 +121,8 @@ bool FileChangeMonitor::throttle() {
 
 std::optional<folly::Expected<folly::File, int>>
 FileChangeMonitor::checkIfUpdated(bool noThrottle) {
-  std::optional<folly::Expected<folly::File, int>> rslt;
-
   if (!noThrottle && throttle()) {
-    return rslt;
+    return std::nullopt;
   }
 
   // Update lastCheck - we use it for throttling
@@ -93,7 +133,7 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
   // If there was no open error, proceed to do stat to check for file changes.
   if (!openErrno_) {
     if (!isChanged()) {
-      return rslt;
+      return std::nullopt;
     }
   }
 
@@ -106,12 +146,14 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
     auto fileDescriptor = open(filePath_.c_str(), O_RDONLY);
     if (fileDescriptor != -1) {
       file = folly::File(fileDescriptor, /**ownsFd=*/true);
-      int rc = fstat(file.fd(), &fileStat_);
+      auto current = getFileStat(file.fd());
       int currentStatErrno{0};
-      if (rc != 0) {
-        currentStatErrno = errno;
-        XLOG(WARN) << "error calling fstat() on " << filePath_ << ": "
+      if (current.hasError()) {
+        currentStatErrno = current.error();
+        XLOG(WARN) << "error calling getFileStat() on " << filePath_ << ": "
                    << folly::errnoStr(currentStatErrno);
+      } else {
+        fileStat_ = current.value();
       }
       openErrno_ = 0;
       statErrno_ = currentStatErrno;
@@ -124,30 +166,29 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
       } else {
         // Open is failing, for the same reason. It is possible that the file
         // has changed, but, not meaningful for the client.
-        return rslt;
+        return std::nullopt;
       }
       openErrno_ = currentOpenErrno;
     }
   }
 
   if (openErrno_ || statErrno_) {
-    rslt = folly::Unexpected<int>(openErrno_ ? openErrno_ : statErrno_);
+    return folly::Unexpected<int>(openErrno_ ? openErrno_ : statErrno_);
   } else {
-    rslt = folly::makeExpected<int>(std::move(file));
+    return folly::makeExpected<int>(std::move(file));
   }
-  return rslt;
 }
 
 bool FileChangeMonitor::isChanged() {
-  struct stat currentStat;
+  FileStat currentStat;
   int prevStatErrno{statErrno_};
 
   // We are using stat to check for file deltas. Since we don't open file,
   // there is no chance of TOCTOU attack.
   statErrno_ = 0;
-  int rslt = stat(filePath_.c_str(), &currentStat);
-  if (rslt != 0) {
-    statErrno_ = errno;
+  auto rslt = getFileStat(filePath_.c_str());
+  if (rslt.hasError()) {
+    statErrno_ = rslt.error();
     // Log unexpected errors accessing the file (e.g., permission denied, or
     // unexpected file type).  Don't log if the file simply doesn't exist.
     // Also only log when the error changes, so that we don't repeatedly log
@@ -156,6 +197,8 @@ bool FileChangeMonitor::isChanged() {
       XLOG(WARN) << "error accessing file " << filePath_ << ": "
                  << folly::errnoStr(statErrno_);
     }
+  } else {
+    currentStat = rslt.value();
   }
 
   // If error is different, report a change.
