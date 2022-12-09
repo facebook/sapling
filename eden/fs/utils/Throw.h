@@ -42,9 +42,9 @@ template <typename E>
  * concatenation and does not parse a format string.
  */
 template <typename E, typename... T>
-[[noreturn]] void throw_(const T&... args) {
-  detail::throw_dedup<E>(
-      fmt::to_string(fmt::join(std::make_tuple<const T&...>(args...), "")));
+[[noreturn]] void throw_(T&&... args) {
+  detail::throw_dedup<E>(fmt::to_string(
+      fmt::join(std::make_tuple<T&&...>(std::forward<T>(args)...), "")));
 }
 
 /**
@@ -53,10 +53,8 @@ template <typename E, typename... T>
  * generates less code.
  */
 template <typename E, typename... T>
-[[noreturn]] void throwf(
-    fmt::format_string<const T&...> fmt,
-    const T&... args) {
-  detail::throw_dedup<E>(fmt::format(std::move(fmt), args...));
+[[noreturn]] void throwf(fmt::format_string<T...> fmt, T&&... args) {
+  detail::throw_dedup<E>(fmt::format(std::move(fmt), std::forward<T>(args)...));
 }
 
 } // namespace facebook::eden
