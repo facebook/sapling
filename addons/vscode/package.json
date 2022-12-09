@@ -2,7 +2,7 @@
   "name": "sapling-scm",
   "displayName": "Sapling SCM",
   "description": "Sapling: A Scalable, User-Friendly Source Control System",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "meta",
   "license": "MIT",
   "engines": {

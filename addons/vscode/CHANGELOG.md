@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- Fixed an issue with path normalization that was preventing extension commands from working on Windows because files were not recognized as part of a Sapling repository: https://github.com/facebook/sapling/commit/206c7fbf6bc94e7e5940630b812fba7dcd55140e.
+- Cleaned up the instructions on how to use the extension in the README: https://github.com/facebook/sapling/commit/4ee418ca7aab519b1b4f96edd0991311e8c6b03f
+- Fixed an issue where the **See installation docs** button in ISL failed to open the installation docs: https://github.com/facebook/sapling/issues/282.
+
 ## 0.1.5
 
 - Did not realize a release and pre-release cannot share a version number. Re-publishing the 0.1.4 pre-release with 4c29208c91256f4306aec9f0e9ec626e96ea3cba included as an official release.
