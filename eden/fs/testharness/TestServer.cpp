@@ -75,8 +75,7 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
   auto userInfo = UserInfo::lookup();
   userInfo.setHomeDirectory(tmpDir + "home"_pc);
   auto config = make_shared<EdenConfig>(
-      userInfo.getUsername(),
-      userInfo.getUid(),
+      getUserConfigVariables(userInfo),
       userInfo.getHomeDirectory(),
       userInfo.getHomeDirectory() + ".edenrc"_pc,
       tmpDir + "etc"_pc,

@@ -94,8 +94,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
   initTestDirectory(caseSensitivity);
 
   edenConfig_ = make_shared<EdenConfig>(
-      /*userName=*/std::string{"bob"},
-      /*userID=*/uid_t{},
+      ConfigVariables{},
       /*userHomePath=*/canonicalPath(testDir_->path().string()),
       /*userConfigPath=*/
       canonicalPath(testDir_->path().string() + ".edenrc"),

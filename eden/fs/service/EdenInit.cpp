@@ -128,8 +128,7 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
   // Create the default EdenConfig. Next, update with command line arguments.
   // Command line arguments will take precedence over config file settings.
   auto edenConfig = std::make_unique<EdenConfig>(
-      identity.getUsername(),
-      identity.getUid(),
+      getUserConfigVariables(identity),
       identity.getHomeDirectory(),
       userConfigPath,
       systemConfigDir,

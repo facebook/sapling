@@ -82,9 +82,13 @@ std::pair<StringPiece, StringPiece> parseKey(StringPiece fullKey) {
 const AbsolutePath kUnspecifiedDefault{};
 
 std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
+  ConfigVariables subst;
+  subst["HOME"] = "/tmp";
+  subst["USER"] = "testuser";
+  subst["USER_ID"] = "0";
+
   return std::make_unique<EdenConfig>(
-      /* userName=*/"testuser",
-      /* userID=*/uid_t{},
+      std::move(subst),
       /* userHomePath=*/canonicalPath("/tmp"),
       /* userConfigPath=*/canonicalPath("/tmp"),
       /* systemConfigDir=*/canonicalPath("/tmp"),
@@ -161,23 +165,21 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
 }
 
 EdenConfig::EdenConfig(
-    std::string userName,
-    uid_t userID,
+    ConfigVariables substitutions,
     AbsolutePath userHomePath,
     AbsolutePath userConfigPath,
     AbsolutePath systemConfigDir,
     AbsolutePath systemConfigPath)
-    : userName_{std::move(userName)},
-      userID_{userID},
-      userHomePath_{std::move(userHomePath)},
+    : substitutions_{std::make_shared<ConfigVariables>(
+          std::move(substitutions))},
       userConfigPath_{std::move(userConfigPath)},
       systemConfigPath_{std::move(systemConfigPath)},
       systemConfigDir_{std::move(systemConfigDir)} {
   // Force set defaults that require passed arguments
   edenDir.setValue(
-      userHomePath_ + kDefaultEdenDirectory, ConfigSource::Default, true);
+      userHomePath + kDefaultEdenDirectory, ConfigSource::Default, true);
   userIgnoreFile.setValue(
-      userHomePath_ + kDefaultUserIgnoreFile, ConfigSource::Default, true);
+      userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
   systemIgnoreFile.setValue(
       systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
 
@@ -194,18 +196,6 @@ EdenConfig::EdenConfig(
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
   doCopy(source);
-}
-
-AbsolutePathPiece EdenConfig::getUserHomePath() const {
-  return userHomePath_;
-}
-
-const std::string& EdenConfig::getUserName() const {
-  return userName_;
-}
-
-uid_t EdenConfig::getUserID() const {
-  return userID_;
 }
 
 std::optional<std::string> EdenConfig::getValueByFullKey(
@@ -227,9 +217,7 @@ EdenConfig& EdenConfig::operator=(const EdenConfig& source) {
 }
 
 void EdenConfig::doCopy(const EdenConfig& source) {
-  userName_ = source.userName_;
-  userID_ = source.userID_;
-  userHomePath_ = source.userHomePath_;
+  substitutions_ = source.substitutions_;
   userConfigPath_ = source.userConfigPath_;
   systemConfigPath_ = source.systemConfigPath_;
   systemConfigDir_ = source.systemConfigDir_;
@@ -394,13 +382,6 @@ void EdenConfig::parseAndApplyConfigFile(
     AbsolutePathPiece configPath,
     ConfigSource configSource) {
   std::shared_ptr<cpptoml::table> configRoot;
-  std::map<std::string, std::string> attrMap;
-  attrMap["HOME"] = userHomePath_.value();
-  attrMap["USER"] = userName_;
-  attrMap["USER_ID"] = std::to_string(userID_);
-  if (auto certPath = std::getenv("THRIFT_TLS_CL_CERT_PATH")) {
-    attrMap["THRIFT_TLS_CL_CERT_PATH"] = certPath;
-  }
 
   try {
     std::string fileContents;
@@ -441,7 +422,7 @@ void EdenConfig::parseAndApplyConfigFile(
         auto valueStr = itemAsString(currSection, entryKey);
         if (valueStr) {
           auto rslt = configMapKeyEntry->second->setStringValue(
-              *valueStr, attrMap, configSource);
+              *valueStr, *substitutions_, configSource);
           if (rslt.hasError()) {
             XLOG(WARNING) << "Ignoring invalid config entry " << configPath
                           << " " << sectionName << ":" << entryKey

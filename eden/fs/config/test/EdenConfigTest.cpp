@@ -115,6 +115,14 @@ class EdenConfigTest : public ::testing::Test {
     testPathMap_[simpleOverRideTest_] =
         std::pair<AbsolutePath, AbsolutePath>(systemConfigPath, userConfigPath);
   }
+
+  ConfigVariables getDefaultVariables() {
+    ConfigVariables rv;
+    rv["HOME"] = testHomeDir_.c_str();
+    rv["USER"] = testUser_;
+    rv["USER_ID"] = "0";
+    return rv;
+  }
 };
 } // namespace
 
@@ -122,8 +130,7 @@ TEST_F(EdenConfigTest, defaultTest) {
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      ConfigVariables{},
       testHomeDir_,
       defaultUserConfigPath_,
       systemConfigDir,
@@ -148,9 +155,11 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath systemConfigPath = canonicalPath("/etc/eden/fix/edenfs.rc");
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden/fix");
 
+  ConfigVariables substitutions;
+  substitutions["USER"] = testUser_;
+
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      std::move(substitutions),
       testHomeDir_,
       userConfigPath,
       systemConfigDir,
@@ -180,7 +189,6 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
 }
 
 TEST_F(EdenConfigTest, cloneTest) {
-  uid_t userID{};
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   AbsolutePath ignoreFile = canonicalPath("/NON_DEFAULT_IGNORE_FILE");
@@ -192,11 +200,13 @@ TEST_F(EdenConfigTest, cloneTest) {
   writeFile(clientCertificate, folly::StringPiece{"test"}).value();
   bool useMononoke = true;
 
+  ConfigVariables substitutions;
+  substitutions["USER"] = testUser_;
+
   std::shared_ptr<EdenConfig> configCopy;
   {
     auto edenConfig = std::make_shared<EdenConfig>(
-        testUser_,
-        userID,
+        std::move(substitutions),
         testHomeDir_,
         defaultUserConfigPath_,
         systemConfigDir,
@@ -211,8 +221,6 @@ TEST_F(EdenConfigTest, cloneTest) {
         {clientCertificate}, ConfigSource::UserConfig);
     edenConfig->useMononoke.setValue(useMononoke, ConfigSource::UserConfig);
 
-    EXPECT_EQ(edenConfig->getUserName(), testUser_);
-    EXPECT_EQ(edenConfig->getUserID(), userID);
     EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
     EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
 
@@ -225,8 +233,6 @@ TEST_F(EdenConfigTest, cloneTest) {
     configCopy = std::make_shared<EdenConfig>(*edenConfig);
   }
 
-  EXPECT_EQ(configCopy->getUserName(), testUser_);
-  EXPECT_EQ(configCopy->getUserID(), userID);
   EXPECT_EQ(configCopy->getUserConfigPath(), defaultUserConfigPath_);
   EXPECT_EQ(configCopy->getSystemConfigPath(), defaultSystemConfigPath_);
 
@@ -252,8 +258,7 @@ TEST_F(EdenConfigTest, clearAllTest) {
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      getDefaultVariables(),
       testHomeDir_,
       defaultUserConfigPath_,
       systemConfigDir,
@@ -306,8 +311,7 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      getDefaultVariables(),
       testHomeDir_,
       defaultUserConfigPath_,
       systemConfigDir,
@@ -337,8 +341,7 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
 TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
   // TODO: GET THE BASE NAME FOR THE SYSTEM CONFIG DIR!
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      getDefaultVariables(),
       testHomeDir_,
       testPathMap_[simpleOverRideTest_].second,
       testPathMap_[simpleOverRideTest_].first,
@@ -381,8 +384,7 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   auto systemConfigPath = systemConfigDir + "FILE_DOES_NOT_EXIST.rc"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      getDefaultVariables(),
       testHomeDir_,
       userConfigPath,
       systemConfigDir,
@@ -406,9 +408,14 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
 
   auto userConfigPath = rootTestDir_ + "user-edenrc"_pc;
   auto getConfig = [&]() {
+    ConfigVariables substitutions;
+    substitutions["HOME"] = canonicalPath("/testhomedir").c_str();
+    substitutions["USER"] = "testusername";
+    substitutions["USER_ID"] = "42";
+    substitutions["THRIFT_TLS_CL_CERT_PATH"] = "edenTest";
+
     auto config = EdenConfig{
-        "testusername",
-        uid_t{42},
+        std::move(substitutions),
         canonicalPath("/testhomedir"),
         userConfigPath,
         systemConfigDir,
@@ -452,11 +459,6 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
       getConfig().userIgnoreFile.getValue(),
       canonicalPath("/var/user/42/myignore"));
 
-#ifndef _WIN32
-  setenv("THRIFT_TLS_CL_CERT_PATH", "edenTest", 1);
-#else
-  _putenv_s("THRIFT_TLS_CL_CERT_PATH", "edenTest");
-#endif
   writeFile(
       userConfigPath,
       folly::ByteRange{fmt::format(
@@ -480,8 +482,7 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
   ensureDirectoryExists(systemConfigDir);
 
   EdenConfig config{
-      "username",
-      42,
+      ConfigVariables{},
       userConfigDir,
       userConfigPath,
       systemConfigDir,
@@ -491,7 +492,6 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
 }
 
 TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
-  uid_t userID{};
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   // cert1 and cert2 are both be avialable, so they could be returned from
@@ -503,8 +503,7 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
   AbsolutePath clientCertificate3 = rootTestDir_ + "cert3"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      userID,
+      ConfigVariables{},
       testHomeDir_,
       defaultUserConfigPath_,
       systemConfigDir,
@@ -528,7 +527,6 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
 }
 
 TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
-  uid_t userID{};
   AbsolutePath systemConfigDir = canonicalPath("/etc/eden");
 
   // used in list cert
@@ -542,8 +540,7 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   AbsolutePath clientCertificate4 = rootTestDir_ + "cert4"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      userID,
+      getDefaultVariables(),
       testHomeDir_,
       defaultUserConfigPath_,
       systemConfigDir,
@@ -568,8 +565,7 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
 
 TEST_F(EdenConfigTest, getValueByFullKey) {
   auto edenConfig = std::make_shared<EdenConfig>(
-      testUser_,
-      uid_t{},
+      ConfigVariables{},
       testHomeDir_,
       defaultUserConfigPath_,
       canonicalPath("/etc/eden"),

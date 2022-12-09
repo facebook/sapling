@@ -19,6 +19,7 @@
 
 #include "common/rust/shed/hostcaps/hostcaps.h"
 #include "eden/fs/config/ConfigSetting.h"
+#include "eden/fs/config/ConfigVariables.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/config/MountProtocol.h"
@@ -47,8 +48,7 @@ class EdenConfig : private ConfigSettingManager {
    * load methods to populate the EdenConfig.
    */
   explicit EdenConfig(
-      std::string userName,
-      uid_t userID,
+      ConfigVariables substitutions,
       AbsolutePath userHomePath,
       AbsolutePath userConfigPath,
       AbsolutePath systemConfigDir,
@@ -126,21 +126,6 @@ class EdenConfig : private ConfigSettingManager {
   void registerConfiguration(ConfigSettingBase* configSetting) override;
 
   /**
-   * Returns the user's home directory
-   */
-  AbsolutePathPiece getUserHomePath() const;
-
-  /**
-   * Returns the user's username
-   */
-  const std::string& getUserName() const;
-
-  /**
-   * Returns the user's UID
-   */
-  uid_t getUserID() const;
-
-  /**
    * Returns the value in optional string for the given config key.
    * Throws if the config key is ill-formed.
    */
@@ -169,9 +154,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   std::map<std::string, std::map<std::string, ConfigSettingBase*>> configMap_;
 
-  std::string userName_;
-  uid_t userID_;
-  AbsolutePath userHomePath_;
+  std::shared_ptr<ConfigVariables> substitutions_;
   AbsolutePath userConfigPath_;
   AbsolutePath systemConfigPath_;
   AbsolutePath systemConfigDir_;
