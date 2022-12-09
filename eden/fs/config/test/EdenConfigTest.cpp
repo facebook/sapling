@@ -132,7 +132,6 @@ TEST_F(EdenConfigTest, defaultTest) {
   // Config path
   EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
   EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
-  EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
 
   // Configuration
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
@@ -163,17 +162,6 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath clientCertificate = rootTestDir_ + clientCertificatePath_;
   bool useMononoke = true;
 
-  AbsolutePath updatedUserConfigPath =
-      canonicalPath("/home/bob/differentConfigPath/.edenrcUPDATED");
-  AbsolutePath updatedSystemConfigPath =
-      canonicalPath("/etc/eden/fix/edenfs.rcUPDATED");
-  AbsolutePath updatedSystemConfigDir = canonicalPath("/etc/eden/fixUPDATED");
-
-  // Config path
-  edenConfig->setUserConfigPath(updatedUserConfigPath);
-  edenConfig->setSystemConfigDir(updatedSystemConfigDir);
-  edenConfig->setSystemConfigPath(updatedSystemConfigPath);
-
   // Configuration
   edenConfig->userIgnoreFile.setValue(ignoreFile, ConfigSource::CommandLine);
   edenConfig->systemIgnoreFile.setValue(
@@ -182,11 +170,6 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->clientCertificateLocations.setValue(
       {clientCertificate}, ConfigSource::CommandLine);
   edenConfig->useMononoke.setValue(useMononoke, ConfigSource::CommandLine);
-
-  // Config path
-  EXPECT_EQ(edenConfig->getUserConfigPath(), updatedUserConfigPath);
-  EXPECT_EQ(edenConfig->getSystemConfigDir(), updatedSystemConfigDir);
-  EXPECT_EQ(edenConfig->getSystemConfigPath(), updatedSystemConfigPath);
 
   // Configuration
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
@@ -232,7 +215,6 @@ TEST_F(EdenConfigTest, cloneTest) {
     EXPECT_EQ(edenConfig->getUserID(), userID);
     EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
     EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
-    EXPECT_EQ(edenConfig->getSystemConfigDir(), systemConfigDir);
 
     EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
     EXPECT_EQ(edenConfig->systemIgnoreFile.getValue(), systemIgnoreFile);
@@ -247,7 +229,6 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getUserID(), userID);
   EXPECT_EQ(configCopy->getUserConfigPath(), defaultUserConfigPath_);
   EXPECT_EQ(configCopy->getSystemConfigPath(), defaultSystemConfigPath_);
-  EXPECT_EQ(configCopy->getSystemConfigDir(), systemConfigDir);
 
   EXPECT_EQ(configCopy->userIgnoreFile.getValue(), ignoreFile);
   EXPECT_EQ(configCopy->systemIgnoreFile.getValue(), systemIgnoreFile);

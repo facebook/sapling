@@ -271,16 +271,6 @@ const std::optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   return std::nullopt;
 }
 
-void EdenConfig::setUserConfigPath(AbsolutePath userConfigPath) {
-  userConfigPath_ = userConfigPath;
-}
-void EdenConfig::setSystemConfigDir(AbsolutePath systemConfigDir) {
-  systemConfigDir_ = systemConfigDir;
-}
-void EdenConfig::setSystemConfigPath(AbsolutePath systemConfigPath) {
-  systemConfigPath_ = systemConfigPath;
-}
-
 namespace {
 FileChangeReason hasConfigFileChanged(
     AbsolutePath configFileName,
@@ -320,10 +310,6 @@ const AbsolutePath& EdenConfig::getUserConfigPath() const {
 
 const AbsolutePath& EdenConfig::getSystemConfigPath() const {
   return systemConfigPath_;
-}
-
-const AbsolutePath& EdenConfig::getSystemConfigDir() const {
-  return systemConfigDir_;
 }
 
 void EdenConfig::clearAll(ConfigSource configSource) {

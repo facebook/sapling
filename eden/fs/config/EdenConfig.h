@@ -108,18 +108,11 @@ class EdenConfig : private ConfigSettingManager {
   /** Get the user config path. Default "userHomePath/.edenrc" */
   const AbsolutePath& getUserConfigPath() const;
 
-  /** Get the system config dir. Default "/etc/eden" */
-  const AbsolutePath& getSystemConfigDir() const;
-
   /** Get the system config path. Default "/etc/eden/edenfs.rc" */
   const AbsolutePath& getSystemConfigPath() const;
 
   /** Get the path to client certificate. */
   const std::optional<AbsolutePath> getClientCertificate() const;
-
-  void setUserConfigPath(AbsolutePath userConfigPath);
-  void setSystemConfigDir(AbsolutePath systemConfigDir);
-  void setSystemConfigPath(AbsolutePath systemConfigDir);
 
   /**
    * Clear all configuration for the given config source.
