@@ -40,6 +40,7 @@ use tabular::row;
 use tabular::Table;
 
 use crate::util::expand_path_or_cwd;
+use crate::util::remove_trailing_slash;
 use crate::ExitCode;
 use crate::Subcommand;
 
@@ -185,6 +186,7 @@ impl RedirectCmd {
         force_remount_bind_mounts: bool,
         strict: bool,
     ) -> Result<ExitCode> {
+        let repo_path = remove_trailing_slash(repo_path);
         let redir_type = RedirectionType::from_str(redir_type)?;
         let instance = EdenFsInstance::global();
         let mount = match mount {
@@ -199,7 +201,7 @@ impl RedirectCmd {
         try_add_redirection(
             &checkout,
             &config_dir,
-            repo_path,
+            &repo_path,
             redir_type,
             force_remount_bind_mounts,
             strict,
@@ -208,7 +210,7 @@ impl RedirectCmd {
         .with_context(|| {
             format!(
                 "Could not add redirection {} of type {}",
-                repo_path.display(),
+                &repo_path.display(),
                 redir_type,
             )
         })?;

@@ -21,11 +21,22 @@ pub mod jsonrpc;
 /// #[clap(..., parse(try_from_str = expand_path_or_cwd), default_value = "", ...)]
 /// ```
 pub fn expand_path_or_cwd(input: &str) -> Result<PathBuf> {
+    // TODO(T135653638): This function must be updated when expand_path is updated to use OsString
     if input.is_empty() {
         std::env::current_dir().context("Unable to retrieve current working directory")
     } else {
         Ok(expand_path(input))
     }
+}
+
+/// Utility function to remove trailing slashes from user provided relative paths. This is required
+/// because some EdenFS internals do not allow trailing slashses on relative paths.
+pub fn remove_trailing_slash(path: &Path) -> PathBuf {
+    // TODO(T135653638): This function must be updated when expand_path is updated to use OsString
+    PathBuf::from(
+        path.to_string_lossy()
+            .trim_end_matches(if cfg!(windows) { r"\" } else { "/" }),
+    )
 }
 
 /// Traverse up and locate the repository root
