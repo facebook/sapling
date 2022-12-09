@@ -9,7 +9,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
-from edenscm import error, git
+from edenscm import error, git, gituser
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
 
@@ -496,9 +496,14 @@ async def add_pr_head_to_archives(
 
         # Synthetically create a new commit that has `tip` and the old branch
         # head as parents and force-push it as the new branch head.
+        user_name, user_email = gituser.get_identity_or_raise(ui)
         merge_commit = (
             run_git_command(
                 [
+                    "-c",
+                    f"user.name={user_name}",
+                    "-c",
+                    f"user.email={user_email}",
                     "commit-tree",
                     "-m",
                     "merge commit for archive created by Sapling",
