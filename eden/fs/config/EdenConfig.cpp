@@ -10,7 +10,6 @@
 #include <cpptoml.h>
 #include <array>
 #include <optional>
-#include <sstream>
 
 #include <boost/filesystem.hpp>
 #include <folly/File.h>
@@ -18,18 +17,13 @@
 #include <folly/MapUtil.h>
 #include <folly/Range.h>
 #include <folly/String.h>
-#include <folly/io/Cursor.h>
-#include <folly/json.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 
 using folly::StringPiece;
-using std::optional;
-using std::string;
 
 namespace facebook::eden {
 
@@ -38,11 +32,6 @@ namespace {
 constexpr PathComponentPiece kDefaultUserIgnoreFile{".edenignore"};
 constexpr PathComponentPiece kDefaultSystemIgnoreFile{"ignore"};
 constexpr PathComponentPiece kDefaultEdenDirectory{".eden"};
-
-template <typename String>
-void toAppend(EdenConfig& ec, String* result) {
-  folly::toAppend(ec.toString(), result);
-}
 
 void getConfigStat(
     AbsolutePathPiece configPath,
@@ -114,7 +103,7 @@ std::string EdenConfig::toString(ConfigSource cs) const {
       return systemConfigPath_.c_str();
   }
   throw std::invalid_argument(
-      folly::to<string>("invalid config source value: ", enumValue(cs)));
+      folly::to<std::string>("invalid config source value: ", enumValue(cs)));
 }
 
 std::string EdenConfig::toString() const {
@@ -162,7 +151,7 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
   for (const auto& sectionEntry : configMap_) {
     const auto& sectionKey = sectionEntry.first;
     for (const auto& keyEntry : sectionEntry.second) {
-      auto keyName = folly::to<string>(sectionKey, ":", keyEntry.first);
+      auto keyName = folly::to<std::string>(sectionKey, ":", keyEntry.first);
       auto& configValue = result.values_ref()[keyName];
       *configValue.parsedValue_ref() = keyEntry.second->getStringValue();
       *configValue.source_ref() = keyEntry.second->getSource();
@@ -172,23 +161,23 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
 }
 
 EdenConfig::EdenConfig(
-    folly::StringPiece userName,
+    std::string userName,
     uid_t userID,
     AbsolutePath userHomePath,
     AbsolutePath userConfigPath,
     AbsolutePath systemConfigDir,
     AbsolutePath systemConfigPath)
-    : userName_(userName),
-      userID_(userID),
-      userHomePath_(userHomePath),
-      userConfigPath_(userConfigPath),
-      systemConfigPath_(systemConfigPath),
-      systemConfigDir_(systemConfigDir) {
+    : userName_{std::move(userName)},
+      userID_{userID},
+      userHomePath_{std::move(userHomePath)},
+      userConfigPath_{std::move(userConfigPath)},
+      systemConfigPath_{std::move(systemConfigPath)},
+      systemConfigDir_{std::move(systemConfigDir)} {
   // Force set defaults that require passed arguments
   edenDir.setValue(
       userHomePath_ + kDefaultEdenDirectory, ConfigSource::Default, true);
   userIgnoreFile.setValue(
-      userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
+      userHomePath_ + kDefaultUserIgnoreFile, ConfigSource::Default, true);
   systemIgnoreFile.setValue(
       systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
 
@@ -268,7 +257,7 @@ void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
   keyMap[key.str()] = configSetting;
 }
 
-const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
+const std::optional<AbsolutePath> EdenConfig::getClientCertificate() const {
   // return the first cert path that exists
   for (auto& cert : clientCertificateLocations.getValue()) {
     if (boost::filesystem::exists(cert.asString())) {

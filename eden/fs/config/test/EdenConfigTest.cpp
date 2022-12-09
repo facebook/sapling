@@ -19,8 +19,6 @@
 #include "folly/Range.h"
 
 using folly::test::TemporaryDirectory;
-using std::optional;
-using namespace folly::literals::string_piece_literals;
 using namespace facebook::eden;
 using namespace facebook::eden::path_literals;
 
@@ -43,7 +41,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultSystemIgnoreFilePath_;
   AbsolutePath defaultEdenDirPath_;
   RelativePath clientCertificatePath_{"home/bob/client.pem"};
-  optional<AbsolutePath> defaultClientCertificatePath_;
+  std::optional<AbsolutePath> defaultClientCertificatePath_;
   bool defaultUseMononoke_ = false;
 
   // Map of test names to system, user path
@@ -428,7 +426,7 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
   auto userConfigPath = rootTestDir_ + "user-edenrc"_pc;
   auto getConfig = [&]() {
     auto config = EdenConfig{
-        "testusername"_sp,
+        "testusername",
         uid_t{42},
         canonicalPath("/testhomedir"),
         userConfigPath,

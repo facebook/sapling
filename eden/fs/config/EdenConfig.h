@@ -12,7 +12,6 @@
 #include <optional>
 #include <vector>
 
-#include <folly/dynamic.h>
 #include <folly/portability/SysStat.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
@@ -48,7 +47,7 @@ class EdenConfig : private ConfigSettingManager {
    * load methods to populate the EdenConfig.
    */
   explicit EdenConfig(
-      folly::StringPiece userName,
+      std::string userName,
       uid_t userID,
       AbsolutePath userHomePath,
       AbsolutePath userConfigPath,

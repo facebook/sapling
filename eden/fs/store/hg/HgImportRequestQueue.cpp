@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include <folly/MapUtil.h>
 #include <folly/futures/Future.h>
 #include <algorithm>
 #include "eden/fs/config/ReloadableConfig.h"
