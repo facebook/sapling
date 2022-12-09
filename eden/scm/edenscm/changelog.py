@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 from typing import Dict, List, Optional
 
-from . import encoding, error, revlog, util
+from . import encoding, error, gituser, revlog, util
 from .i18n import _
 from .node import bbin, hex, nullid
 from .pycompat import decodeutf8, encodeutf8, iteritems
@@ -284,14 +284,6 @@ def gitdatestr(datestr: str) -> str:
     return "%d %s%02d%02d" % (utc, offsetsign, offsethour, offsetminute)
 
 
-def gituser(userstr: str) -> str:
-    """ensure the userstr contains '<>' for email, required by git"""
-    if userstr.endswith(">") and " <" in userstr:
-        return userstr
-    else:
-        return "%s <>" % userstr
-
-
 def gitcommittext(
     tree: bytes,
     parents: List[bytes],
@@ -361,8 +353,8 @@ def gitcommittext(
     parent_entries = "".join(f"parent {hex(p)}\n" for p in parents)
     pre_sig_text = f"""\
 tree {hex(tree)}
-{parent_entries}author {gituser(user)} {gitdatestr(date)}
-committer {gituser(committer)} {gitdatestr(committerdate)}"""
+{parent_entries}author {gituser.normalize(user)} {gitdatestr(date)}
+committer {gituser.normalize(committer)} {gitdatestr(committerdate)}"""
 
     normalized_desc = stripdesc(desc)
     text = pre_sig_text + f"\n\n{normalized_desc}\n"
