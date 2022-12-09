@@ -6,11 +6,14 @@
 # mysqlutil.py - useful utility methods for accessing mysql from server-side hg
 
 
+from typing import Any, Dict
+
+
 class InvalidConnectionString(Exception):
     pass
 
 
-def parseconnectionstring(connstr):
+def parseconnectionstring(connstr) -> Dict[str, Any]:
     """
     Parses connection string in format 'IP:PORT:DB_NAME:USER:PASSWORD' and return
     parameters for mysql.connection module
@@ -29,7 +32,7 @@ def parseconnectionstring(connstr):
         raise InvalidConnectionString()
 
 
-def insert(sqlconn, tablename, argsdict):
+def insert(sqlconn, tablename, argsdict) -> None:
     """
     Inserts new row into a table, given a name of a table and a mapping
     column name -> column value
