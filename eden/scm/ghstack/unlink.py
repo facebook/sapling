@@ -8,7 +8,6 @@ import ghstack.diff
 import ghstack.git
 import ghstack.github
 import ghstack.github_utils
-import ghstack.gpg_sign
 import ghstack.shell
 from ghstack.ghs_types import GitCommitHash, GitTreeHash
 
@@ -128,12 +127,10 @@ def main(*,
             # it so the return value is consistent with the Git codepath.
             head = GitCommitHash(stack[index].commit_id)
         else:
-            head = GitCommitHash(sh.git(
-                "commit-tree",
-                *ghstack.gpg_sign.gpg_args_if_necessary(sh),
+            head = sh.git_commit_tree(
                 s.tree,
                 "-p", head,
-                input=commit_msg))
+                input=commit_msg)
 
     if sh.is_git():
         sh.git('reset', '--soft', head)

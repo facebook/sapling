@@ -4,8 +4,10 @@ import os
 import shlex
 import subprocess
 import sys
-from typing import (IO, Any, Dict, Optional, Sequence, Tuple, TypeVar, Union,
+from typing import (IO, Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union,
                     overload)
+
+from ghstack.ghs_types import GitCommitHash
 
 # Shell commands generally return str, but with exitcode=True
 # they return a bool, and if stdout is piped straight to sys.stdout
@@ -281,6 +283,18 @@ class Shell(object):
 
         return self._maybe_rstrip(self.sh(*(("git",) + args), **kwargs))
 
+    def git_commit_tree(self, *args, **kwargs: Any  # noqa: F811
+            ) -> GitCommitHash:
+        """Run `git commit-tree`, adding GPG flags, if appropriate.
+        """
+        gpg_args = self.get_gpg_args()
+        full_args = ["commit-tree"] + gpg_args + list(args)
+        return GitCommitHash(self.git(*full_args, **kwargs))
+
+    def get_gpg_args(self) -> List[str]:
+        """args to include with `git commit` or `git commit-tree` for GPG signing"""
+        return gpg_args_if_necessary(self)
+
     @overload  # noqa: F811
     def hg(self, *args: str) -> str:
         ...
@@ -343,3 +357,22 @@ class Shell(object):
             d: directory to change to
         """
         self.cwd = os.path.join(self.cwd, d)
+
+
+_should_sign = None
+
+
+def gpg_args_if_necessary(shell: Shell) -> List[str]:
+    global _should_sign
+    # cache the config result
+    if _should_sign is None:
+        # If the config is not set, we get exit 1
+        try:
+            # Why the complicated compare
+            # https://git-scm.com/docs/git-config#Documentation/git-config.txt-boolean
+            _should_sign = shell.git("config", "--get", "commit.gpgsign") in ("yes", "on", "true", "1")
+        except (subprocess.CalledProcessError, RuntimeError):
+            # Note shell.git() raises RuntimeError for a non-zero exit code.
+            _should_sign = False
+
+    return ["-S"] if _should_sign else []
