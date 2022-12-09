@@ -130,3 +130,18 @@ Tests for hg cloud log
   date:        Tue Jul 10 18:56:51 2018 +0000
   description:
   some commit
+
+Test with date range spec
+  $ hg cloud log -d "jul 19 2018 to aug 2018" -T "{node}: {date(date, '%Y-%m-%d')}\n"
+  the repository is not connected to any workspace, assuming the 'default' workspace
+  773bd8234d94c44079b4409525028517fcbd98ba: 2018-07-25
+  
+  $ hg cloud log -d "jul 10 2018 to aug 2018" -T "{node}: {date(date, '%Y-%m-%d')}\n"
+  the repository is not connected to any workspace, assuming the 'default' workspace
+  773bd8234d94c44079b4409525028517fcbd98ba: 2018-07-25
+  685a62272258b3bd4d71ac0b331486276b3c2599: 2018-07-12
+  aa84f0443f949a6accca6d67b2790d2f37927451: 2018-07-10
+
+  $ hg cloud log -d "jul 10 2018 to aug 2018" -T "{node}: {date(date, '%Y-%m-%d')}\n" -l 1
+  the repository is not connected to any workspace, assuming the 'default' workspace
+  773bd8234d94c44079b4409525028517fcbd98ba: 2018-07-25

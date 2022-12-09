@@ -505,6 +505,7 @@ cloudsmartlogopts = [
     [
         ("T", "template", "", _("display with template"), _("TEMPLATE")),
         ("l", "limit", "", _("limit number of changes displayed"), _("NUM")),
+        ("d", "date", "", _("show revisions matching date spec"), _("DATE")),
     ]
     + workspace.workspaceopts,
 )
@@ -517,7 +518,25 @@ def cloudlog(ui, repo, **opts):
 
     The style can be customised via a template.
 
+    The command allows the user to specify a date or date range,
+    this date spec is for selecting certain time range for the latest version of the commit cloud smartlog.
+    This feature is not related to Commit Cloud History.
+
+    For example:
+        @prog@ cloud log -d "may 2022 to jul 2022"
+        @prog@ cloud log -d "2022-11-29"
+
+    See '@prog@ help dates to learn more about date formats and date ranges.
     """
+
+    date = opts.get("date")
+    if date:
+        datematcher = util.matchdate(date)
+    else:
+
+        def datematcher(date):
+            return True
+
     reponame = ccutil.getreponame(repo)
     workspacename = workspace.parseworkspaceordefault(ui, repo, opts)
 
@@ -532,7 +551,7 @@ def cloudlog(ui, repo, **opts):
     limit = cmdutil.loglimit(opts)
 
     for (rev, _type, ctx, parents) in revdag:
-        if ctx.mutable():
+        if ctx.mutable() and datematcher(ctx.date()[0]):
             if limit is not None:
                 if limit == 0:
                     break
