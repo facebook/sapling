@@ -21,6 +21,7 @@ pub use rendez_vous::RendezVous;
 pub use rendez_vous::RendezVousController;
 pub use rendez_vous_stats::RendezVousStats;
 
+pub use crate::tunables::ConfigurableRendezVousController;
 pub use crate::tunables::TunablesMultiRendezVousController;
 pub use crate::tunables::TunablesRendezVousController;
 

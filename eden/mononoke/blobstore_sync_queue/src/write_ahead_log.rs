@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ops::Index;
 use std::slice::SliceIndex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::format_err;
 use anyhow::Context;
@@ -30,6 +33,10 @@ use futures::stream::TryStreamExt;
 use metaconfig_types::MultiplexId;
 use mononoke_types::Timestamp;
 use rand::Rng;
+use rendezvous::ConfigurableRendezVousController;
+use rendezvous::RendezVous;
+use rendezvous::RendezVousOptions;
+use rendezvous::RendezVousStats;
 use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use sql::Connection;
@@ -37,6 +44,7 @@ use sql::WriteResult;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
+use tunables::tunables;
 use vec1::Vec1;
 
 const SQL_WAL_WRITE_BUFFER_SIZE: usize = 1000;
@@ -127,10 +135,12 @@ impl BlobstoreWalEntry {
 type QueueResult = Result<BlobstoreWalEntry, SharedError>;
 type EnqueueSender = mpsc::UnboundedSender<(oneshot::Sender<QueueResult>, BlobstoreWalEntry)>;
 
+const DEL_CHUNK: usize = 10_000;
+
 #[derive(Clone)]
 pub struct SqlBlobstoreWal {
     read_master_connections: Vec1<Connection>,
-    write_connections: Vec1<Connection>,
+    write_connections: Arc<Vec1<Connection>>,
     /// Sending entry over the channel allows it to be queued till
     /// the worker is free and able to write new entries to Mysql.
     enqueue_entry_sender: EnqueueSender,
@@ -139,11 +149,13 @@ pub struct SqlBlobstoreWal {
     ensure_worker_scheduled: Shared<BoxFuture<'static, ()>>,
     /// Used to cycle through shards when reading
     conn_idx: Arc<AtomicUsize>,
+    /// Used to batch deletions together and not overwhelm db with too many queries
+    delete_rendezvous: RendezVous<BlobstoreWalEntry, (), ConfigurableRendezVousController>,
 }
 
 impl SqlBlobstoreWal {
     fn setup_worker(
-        write_connections: Vec1<Connection>,
+        write_connections: Arc<Vec1<Connection>>,
     ) -> (EnqueueSender, Shared<BoxFuture<'static, ()>>) {
         // The mpsc channel needed as a way to enqueue new entries while there is an
         // in-flight write query to Mysql.
@@ -201,6 +213,44 @@ impl SqlBlobstoreWal {
             read_master_connections: read.to_vec().try_into()?,
             ..self
         })
+    }
+
+    // This doesn't do any automatic rendezvous/queueing
+    async fn inner_delete_by_key(
+        write_connections: &[Connection],
+        entries: HashSet<BlobstoreWalEntry>,
+    ) -> Result<()> {
+        // We're grouping by shard id AND multiplex id
+        type GroupBy = (usize, MultiplexId);
+        let mut del_info: Vec<(GroupBy, &String)> = entries
+            .iter()
+            .map(|entry| {
+                let shard_id = entry
+                    .read_info
+                    .shard_id
+                    .context("BlobstoreWalEntry must have `shard_id` to delete by key")?;
+                Ok(((shard_id, entry.multiplex_id), &entry.blobstore_key))
+            })
+            .collect::<Result<_>>()?;
+        del_info.sort_unstable_by_key(|(group, _)| *group);
+        stream::iter(
+            del_info
+                .group_by(|(group1, _), (group2, _)| group1 == group2)
+                .map(|batch| async move {
+                    let (shard_id, multiplex_id) = batch[0].0;
+                    let del_entries: Vec<String> =
+                        batch.iter().map(|(_, key)| (*key).clone()).collect();
+                    for chunk in del_entries.chunks(DEL_CHUNK) {
+                        WalDeleteKeys::query(&write_connections[shard_id], &multiplex_id, chunk)
+                            .await?;
+                    }
+                    anyhow::Ok(())
+                })
+                .collect::<Vec<_>>(), // prevents compiler bug
+        )
+        .buffered(10)
+        .try_collect::<()>()
+        .await
     }
 }
 
@@ -347,42 +397,23 @@ impl BlobstoreWal for SqlBlobstoreWal {
         .await
     }
 
-    async fn delete_by_key(&self, _ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
-        // We're grouping by shard id AND multiplex id
-        type GroupBy = (usize, MultiplexId);
-        let mut del_info: Vec<(GroupBy, &String)> = entries
-            .iter()
-            .map(|entry| {
-                let shard_id = entry
-                    .read_info
-                    .shard_id
-                    .context("BlobstoreWalEntry must have `shard_id` to delete by key")?;
-                Ok(((shard_id, entry.multiplex_id), &entry.blobstore_key))
-            })
-            .collect::<Result<_>>()?;
-        del_info.sort_unstable_by_key(|(group, _)| *group);
-        stream::iter(
-            del_info
-                .group_by(|(group1, _), (group2, _)| group1 == group2)
-                .map(|batch| async move {
-                    let (shard_id, multiplex_id) = batch[0].0;
-                    let del_entries: Vec<String> =
-                        batch.iter().map(|(_, key)| (*key).clone()).collect();
-                    for chunk in del_entries.chunks(10_000) {
-                        WalDeleteKeys::query(
-                            &self.write_connections[shard_id],
-                            &multiplex_id,
-                            chunk,
-                        )
-                        .await?;
+    async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
+        if !tunables().get_wal_disable_rendezvous_on_deletes() {
+            self.delete_rendezvous
+                .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
+                    let connections = self.write_connections.clone();
+                    |keys| async move {
+                        Self::inner_delete_by_key(&connections, keys).await?;
+                        // We don't care about results
+                        Ok(HashMap::new())
                     }
-                    anyhow::Ok(())
                 })
-                .collect::<Vec<_>>(), // prevents compiler bug
-        )
-        .buffered(10)
-        .try_collect::<()>()
-        .await
+                .await?;
+        } else {
+            Self::inner_delete_by_key(&self.write_connections, entries.iter().cloned().collect())
+                .await?;
+        }
+        Ok(())
     }
 }
 
@@ -397,6 +428,7 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             read_master_connections,
             write_connections,
         } = connections;
+        let write_connections = Arc::new(write_connections);
 
         let (sender, ensure_worker_scheduled) =
             SqlBlobstoreWal::setup_worker(write_connections.clone());
@@ -408,6 +440,20 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             enqueue_entry_sender: sender,
             ensure_worker_scheduled,
             conn_idx: Arc::new(AtomicUsize::new(conn_idx)),
+            // For the delete rendezvous, we don't need to be super fast.
+            // - 1 free connection just so we don't wait unnecessarily if traffic is very low
+            // - It's fine to wait up to 5 secs to remove, though this likely won't happen.
+            // - We're batching underlying requests at 10k
+            delete_rendezvous: RendezVous::new(
+                ConfigurableRendezVousController::new(
+                    RendezVousOptions {
+                        free_connections: 1,
+                    },
+                    || Duration::from_secs(5),
+                    || DEL_CHUNK,
+                ),
+                Arc::new(RendezVousStats::new("wal_delete".to_owned())),
+            ),
         }
     }
 }

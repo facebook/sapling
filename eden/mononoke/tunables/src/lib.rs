@@ -341,6 +341,9 @@ pub struct MononokeTunables {
     disable_sql_auto_retries: AtomicBool,
     // Disable SQL queries being cached using `cacheable` keyword
     disable_sql_auto_cache: AtomicBool,
+    // Disable using rendezvous for batching WAL deletes.
+    // TODO: delete once it using WAL here shows to be stable
+    wal_disable_rendezvous_on_deletes: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
