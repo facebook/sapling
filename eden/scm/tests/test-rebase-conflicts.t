@@ -340,7 +340,7 @@ Test rebase with obsstore turned on and off (issue5606)
   > A
   > EOS
 
-  $ hg update E -q
+  $ hg goto E -q
   $ echo 3 > B
   $ hg commit --amend -m E -A B -q
   $ hg rebase -r B+D -d . --config experimental.evolution=true

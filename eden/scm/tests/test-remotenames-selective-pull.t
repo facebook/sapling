@@ -141,7 +141,7 @@ Delete bookmark on the server
      secondremote/master       0238718db2b1
 
 Update to the remote bookmark
-  $ hg update thirdbook --config 'remotenames.autopullhoistpattern=re:.*'
+  $ hg goto thirdbook --config 'remotenames.autopullhoistpattern=re:.*'
   pulling 'thirdbook' from 'ssh://user@dummy/remoterepo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book --verbose
@@ -152,13 +152,13 @@ Update to the remote bookmark
      secondremote/master       0238718db2b1
 
 Trying to update to unknown bookmark
-  $ hg update unknownbook --config 'remotenames.autopullhoistpattern=re:.*'
+  $ hg goto unknownbook --config 'remotenames.autopullhoistpattern=re:.*'
   pulling 'unknownbook' from 'ssh://user@dummy/remoterepo'
   abort: unknown revision 'unknownbook'!
   [255]
 
 Update to the remote bookmark from secondremote
-  $ hg update secondremote/secondbook --config 'remotenames.autopullpattern=re:.*' --config remotenames.autopullhoistpattern=
+  $ hg goto secondremote/secondbook --config 'remotenames.autopullpattern=re:.*' --config remotenames.autopullhoistpattern=
   pulling 'secondbook' from 'ssh://user@dummy/secondremoterepo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book --list-subscriptions
@@ -388,7 +388,7 @@ Check the repo.pull API
 --- The above pull pulls "master" as a side effect to make sure phases are correct.
 --- Therefore 0238718db becomes available locally.
 
-  $ hg update '0238718db^'
+  $ hg goto '0238718db^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 --- For "+" in revset expressions:

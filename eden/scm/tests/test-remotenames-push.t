@@ -178,6 +178,6 @@ Expect update for the bookmark after the push.
   $ hg book --all
   no bookmarks set
      default/rbook             7c3bad9141dc
-  $ hg update rbook
+  $ hg goto rbook
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

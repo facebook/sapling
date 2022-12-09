@@ -181,7 +181,7 @@
 
 # Second branch starting at nullrev:
 
-  $ hg update null
+  $ hg goto null
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
 
   >>> with open("second", "wb") as f:
@@ -3108,7 +3108,7 @@
   $ hg ci -Am h1c -d '2 0'
   adding head1
 
-  $ hg update -q 1
+  $ hg goto -q 1
   $ echo d >> head2
   $ hg ci -Am h2d -d '3 0'
   adding head2

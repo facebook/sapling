@@ -421,7 +421,7 @@ def _getsvnrev(commitextra):
         return convertrev.rsplit("@", 1)[-1]
 
 
-@command("updateglobalrevmeta", [], _("@prog@ updateglobalrevmeta"))
+@command("updateglobalrevmeta", [], _("@prog@ gotoglobalrevmeta"))
 def updateglobalrevmeta(ui, repo, *args, **opts) -> None:
     """Reads globalrevs from the latest @prog@ commits and adds them to the
     globalrev-hg mapping."""

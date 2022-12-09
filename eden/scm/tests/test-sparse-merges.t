@@ -17,12 +17,12 @@ test merging things outside of the sparse checkout
   $ hg commit -m 'feature - bar1' -A bar
   $ hg bookmark -ir. feature1
 
-  $ hg update --inactive -q initial
+  $ hg goto --inactive -q initial
   $ echo bar2 > bar
   $ hg commit -m 'feature - bar2' -A bar
   $ hg bookmark -ir. feature2
 
-  $ hg update --inactive -q feature1
+  $ hg goto --inactive -q feature1
   $ hg sparse --exclude 'bar*'
 
   $ hg merge feature2 --tool :merge-other

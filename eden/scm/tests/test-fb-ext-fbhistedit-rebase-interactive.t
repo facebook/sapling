@@ -19,13 +19,13 @@
   >     hg init r
   >     cd r
   >     addcommits a b c d e f
-  >     hg update 1
+  >     hg goto 1
   >     addcommits g h i
-  >     hg update 1
+  >     hg goto 1
   >     echo CONFLICT > f
   >     hg add f
   >     hg ci -m "conflict f"
-  >     hg update 9
+  >     hg goto 9
   > }
 
   $ initrepo
@@ -58,7 +58,7 @@ log before rebase
   
 Simple rebase with -s and -d
 
-  $ hg update cf7e1bc6a982390237dd47e096c15bca92fe2237
+  $ hg goto cf7e1bc6a982390237dd47e096c15bca92fe2237
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -s cf7e1bc6a982390237dd47e096c15bca92fe2237 -d 652413bf663ef2a641cab26574e46d5f5a64a55a
 
@@ -85,7 +85,7 @@ Simple rebase with -s and -d
   
 
 Try to rebase with conflict (also check -d without -s)
-  $ hg update 'desc("conflict f")'
+  $ hg goto 'desc("conflict f")'
   1 files updated, 0 files merged, 4 files removed, 0 files unresolved
 
   $ HGEDITOR=true hg rebase -i -d 'desc(i)'
@@ -124,7 +124,7 @@ Try to rebase with conflict (also check -d without -s)
   
 
 Rebase with base
-  $ hg update 'desc(h)'
+  $ hg goto 'desc(h)'
   2 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -b . -d 'desc(conflict)'
   $ hg log -G -T '{node|short} {desc|firstline}\n'
@@ -153,10 +153,10 @@ either the source or destination.  This unfortunately is rejected since the
 histedit code currently requires all edited commits to be ancestors of the
 current working directory parent.
 
-  $ hg update 'desc(i) - desc(conflict)'
+  $ hg goto 'desc(i) - desc(conflict)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ addcommits x y z
-  $ hg update 'desc(f) - desc(conflict)'
+  $ hg goto 'desc(f) - desc(conflict)'
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   o  70ff95fe5c79 z

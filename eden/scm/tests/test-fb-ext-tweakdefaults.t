@@ -54,19 +54,19 @@ Dirty update to different rev fails with --check
   $ echo x >> a
   $ hg st
   M a
-  $ hg update ".^" --check
+  $ hg goto ".^" --check
   abort: uncommitted changes
   [255]
 
 Dirty update allowed to same rev, with no conflicts, and --clean
 
-  $ hg update .
+  $ hg goto .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg update ".^"
+  $ hg goto ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   hint[update-prev]: use 'hg prev' to move to the parent changeset
   hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints
-  $ hg update --clean 'desc(b)'
+  $ hg goto --clean 'desc(b)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Log on dir's works
@@ -138,7 +138,7 @@ Rebase is blocked if you have conflicting changes
   $ hg rebase -d tip
   abort: 1 conflicting file changes:
    a
-  (commit, shelve, update --clean to discard all your changes, or update --merge to merge them)
+  (commit, shelve, goto --clean to discard all your changes, or update --merge to merge them)
   [255]
   $ hg revert -q --all
   $ hg up -qC hyphen-book

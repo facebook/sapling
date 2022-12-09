@@ -24,7 +24,7 @@
   $ hg id
   dfab7f3c2efb
 
-  $ hg update -C 0
+  $ hg goto -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   c3fa057dd86f
@@ -40,18 +40,18 @@
   $ hg id
   c3fa057dd86f
 
-  $ hg update
+  $ hg goto
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg diff
   $ hg status
   $ hg id
   dfab7f3c2efb
 
-  $ hg update -C 0
+  $ hg goto -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'changed file1 different' >> file1
 
-  $ hg update
+  $ hg goto
   merging file1
   warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -92,7 +92,7 @@
   $ hg id
   dfab7f3c2efb
 
-  $ hg update -C
+  $ hg goto -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg diff
   $ hg status

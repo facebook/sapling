@@ -59,7 +59,7 @@ create test repos
   adding changesets
   adding manifests
   adding file changes
-  $ hg update
+  $ hg goto
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir tst
   $ hg mv * tst

@@ -236,7 +236,7 @@ Verify merge fails if merging excluded files
   merging hide
   warning: 1 conflicts while merging hide! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg sparse
   [include]

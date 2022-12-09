@@ -57,12 +57,12 @@ Python utility:
   #     A
   # 
   # To mark files as resolved:  hg resolve --mark FILE
-  # To continue:                hg update --continue
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To continue:                hg goto --continue
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 # Cannot --continue right now
 
-  $ hg update --continue
+  $ hg goto --continue
   abort: outstanding merge conflicts
   (use 'hg resolve --list' to list, 'hg resolve --mark FILE' to mark resolved)
   [255]
@@ -72,18 +72,18 @@ Python utility:
 
   $ hg resolve -m A
   (no more unresolved files)
-  continue: hg update --continue
+  continue: hg goto --continue
   $ hg status
   M A
   
   # The repository is in an unfinished *update* state.
   # No unresolved merge conflicts.
-  # To continue:                hg update --continue
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To continue:                hg goto --continue
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 # To get rid of the state
 
-  $ hg update --continue
+  $ hg goto --continue
   $ hg status
   M A
 
@@ -91,7 +91,7 @@ Python utility:
 
   $ createstate
 
-  $ hg update --clean . -q
+  $ hg goto --clean . -q
   $ hg status
 
 # Test 'hg continue'
@@ -109,7 +109,7 @@ Python utility:
 
   $ hg resolve -m A
   (no more unresolved files)
-  continue: hg update --continue
+  continue: hg goto --continue
 
   $ hg continue
 

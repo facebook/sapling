@@ -135,7 +135,7 @@ extension and python hooks - use the eol extension for a pythonhook
   $ echo 'eol=' >> .hg/hgrc
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'update = echo hooked' >> .hg/hgrc
-  $ hg update
+  $ hg goto
   hooked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "d02f48003e62: c"

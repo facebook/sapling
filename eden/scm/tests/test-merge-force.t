@@ -27,7 +27,7 @@ Create remote changeset
 
 Create local changeset
 
-  $ hg update -q 'desc(base)'
+  $ hg goto -q 'desc(base)'
   $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 3
   $ hg addremove -q --similarity 0
   $ hg commit -qm 'local'
@@ -221,7 +221,7 @@ Merge with remote
   warning: 1 conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
   18 files updated, 3 files merged, 8 files removed, 35 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
 
 Check which files need to be resolved (should correspond to the output above).
 This should be the files for which the base (1st filename segment), the remote
@@ -782,7 +782,7 @@ Re-resolve and check status
 
 Set up working directory again
 
-  $ hg -q update --clean 'desc(local)'
+  $ hg -q goto --clean 'desc(local)'
   $ hg purge
   $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 wc
   $ hg addremove -q --similarity 0

@@ -733,7 +733,7 @@ Issue5360: Deleted chunk in p1 of a merge changeset
   $ hg commit -m 2
   $ echo a > a
   $ hg commit -m a
-  $ hg update '.^' -q
+  $ hg goto '.^' -q
   $ echo 3 >> a
   $ hg commit -m 3 -q
   $ hg merge 'desc(a)' -q

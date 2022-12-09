@@ -99,7 +99,7 @@ Criss cross merging
   picked tool ':dump' for f1 (binary False symlink False changedelete False)
   my f1@78d7b604d909+ other f1@f05367a88590 ancestor f1@0e415ae82418
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ f --dump --recurse *
@@ -140,7 +140,7 @@ Criss cross merging
   resolving manifests
   merging f1
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 Redo merge with merge.preferancestor="*" to enable bid merge
@@ -400,17 +400,17 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
   $ cd ancestor-merging
   $ echo a > x
   $ hg commit -A -m a x
-  $ hg update -q 'desc(a)'
+  $ hg goto -q 'desc(a)'
   $ echo b >> x
   $ hg commit -m b
-  $ hg update -q 'desc(a)'
+  $ hg goto -q 'desc(a)'
   $ echo c >> x
   $ hg commit -qm c
-  $ hg update -q 'desc(b)'
+  $ hg goto -q 'desc(b)'
   $ hg merge -q --tool internal:local 'desc(c)'
   $ echo c >> x
   $ hg commit -m bc
-  $ hg update -q b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
+  $ hg goto -q b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
   $ hg merge -q --tool internal:local 70008a2163f6ed1dec3130b2fd23f815019a6c85
   $ echo b >> x
   $ hg commit -qm cb

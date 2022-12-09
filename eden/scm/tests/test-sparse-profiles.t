@@ -170,7 +170,7 @@ Verify conflicting merge pulls in the conflicting changes
   warning: 1 conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging data.py! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ rm *.orig

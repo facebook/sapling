@@ -36,7 +36,7 @@ Shallow clone from full
   store
   treestate
 
-  $ hg update
+  $ hg goto
   fetching tree '' 05bd2758dd7a25912490d0633b8975bf52bfab06
   1 trees fetched over 0.00s
   fetching tree 'dir' 8a87e5128a9877c501d5a20c32dbd2103a54afad

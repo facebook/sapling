@@ -205,7 +205,7 @@ Test rebase across repeating renames:
   $ hg rename file2.txt file1.txt
   $ hg ci -m "Rename file2 back to file1"
 
-  $ hg update -r 'desc(Unrelated)'
+  $ hg goto -r 'desc(Unrelated)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo Another unrelated change >> unrelated.txt
@@ -260,13 +260,13 @@ Note that there are four entries in the log for d
   o  b220cd6d2326 'File a created'
   
 Update back to before we performed copies, and inject an unrelated change.
-  $ hg update b220cd6d23263f59a707389fdbe7cef2ce3947ad
+  $ hg goto b220cd6d23263f59a707389fdbe7cef2ce3947ad
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
   $ echo unrelated > unrelated
   $ hg add unrelated
   $ hg commit --message "Unrelated file created"
-  $ hg update 'desc(Unrelated)'
+  $ hg goto 'desc(Unrelated)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Rebase the copies on top of the unrelated change.
@@ -274,7 +274,7 @@ Rebase the copies on top of the unrelated change.
   rebasing 79d255d24ad2 "File b created as copy of a and modified"
   rebasing 327f772bc074 "File c created as copy of b and modified"
   rebasing 421b7e82bb85 "File d created as copy of c and modified"
-  $ hg update 'max(desc(File))'
+  $ hg goto 'max(desc(File))'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 There should still be four entries in the log for d

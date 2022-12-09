@@ -157,7 +157,7 @@
 # (discard pulled changes)
 
   $ cd $TESTTMP/tt
-  $ hg update -q 483b76ad4309
+  $ hg goto -q 483b76ad4309
 
 # Test that updating deactivates current active bookmark, if the
 # destination of the update is explicitly specified, and it doesn't
@@ -190,6 +190,6 @@
 
 # (discard pulled changes)
 
-  $ hg update -q 483b76ad4309
+  $ hg goto -q 483b76ad4309
 
   $ cd ..

@@ -469,7 +469,7 @@ hg bisect --command "hg debugshell -c \"sys.exit(1 if (repo['.'].rev() < 6) else
 # ensure that the bisect state file is updated before running a test
 # command
 
-  $ hg update null
+  $ hg goto null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat > script.sh << 'EOF'
   > rev=$(hg log -r $HG_NODE --template '{rev}')

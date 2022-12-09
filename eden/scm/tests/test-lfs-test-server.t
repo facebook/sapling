@@ -61,7 +61,7 @@ XXX: This test is currently broken if lfs-test-server is installed.
 Clear the cache to force a download
   $ rm -rf `hg config lfs.usercache`
   $ cd ../repo2
-  $ hg update tip -v
+  $ hg goto tip -v
   resolving manifests
   getting a
   lfs: downloading 31cf46fbc4ecd458a0943c5b4881f1f5a6dd36c53d6167d5b69ac45149b38e5b (12 bytes)
@@ -130,7 +130,7 @@ Check error message when the remote missed a blob:
   $ hg commit -m b b
   $ rm -rf .hg/store/lfs
   $ rm -rf `hg config lfs.usercache`
-  $ hg update -C '.^'
+  $ hg goto -C '.^'
   abort: LFS server error. Remote object for file data/b.i not found: * (glob)
   [255]
 

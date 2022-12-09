@@ -88,7 +88,7 @@
   abort: uncommitted changes
   (cannot pull with rebase: please commit or shelve your changes first)
   [255]
-  $ hg update --clean --quiet
+  $ hg goto --clean --quiet
 
 # Abort pull early if another operation (histedit) is in progress:
 
@@ -113,10 +113,10 @@
   o  783333faa078 'C2'
   │
   o  05d58a0c15dd 'C1'
-  $ hg update --quiet 0
+  $ hg goto --quiet 0
   $ echo M1 > M1
   $ hg commit --quiet -Am M1
-  $ hg update --quiet 1
+  $ hg goto --quiet 1
   $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -124,7 +124,7 @@
   abort: outstanding uncommitted merge
   (cannot pull with rebase: please commit or shelve your changes first)
   [255]
-  $ hg update --clean --quiet
+  $ hg goto --clean --quiet
 
 # Invoke pull --rebase and nothing to rebase:
 

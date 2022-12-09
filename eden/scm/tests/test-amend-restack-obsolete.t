@@ -24,7 +24,7 @@ Test invalid value for amend.autorestack
   > |/
   > A
   > EOS
-  $ hg update -qC B
+  $ hg goto -qC B
   $ echo "new content" > B
   $ showgraph
   o  3c36beb5705f D

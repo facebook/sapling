@@ -16,7 +16,7 @@ Basic amend
   > A
   > EOS
 
-  $ hg update B -q
+  $ hg goto B -q
   $ echo 2 >> B
   $ hg amend
   $ hg log -r . -T '{files}'

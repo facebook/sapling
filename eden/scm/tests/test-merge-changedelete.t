@@ -65,7 +65,7 @@ Non-interactive merge:
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ status
@@ -132,7 +132,7 @@ Interactive merge:
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 2 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ status
@@ -209,7 +209,7 @@ Interactive merge with bad input:
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 1 files merged, 1 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ status
@@ -273,7 +273,7 @@ Interactive merge with not enough input:
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 1 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ status
@@ -426,7 +426,7 @@ Fail
 
   $ hg merge --tool :fail
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ status 2>&1 | tee $TESTTMP/fail.status
   --- status ---
@@ -483,7 +483,7 @@ Force prompts with no input (should be similar to :fail)
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? 
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ status 2>&1 | tee $TESTTMP/prompt.status
   --- status ---
@@ -542,7 +542,7 @@ Force prompts
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? u
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ status
   --- status ---
@@ -600,7 +600,7 @@ Choose to merge all files
   merging file3
   warning: 1 conflicts while merging file3! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ status
   --- status ---
@@ -754,7 +754,7 @@ Non-interactive linear update
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 -y
+  $ hg goto 10f9a0a634e82080907e62f075ab119cbc565ea6 -y
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [destination] changed file2 which local [working copy] deleted
@@ -803,7 +803,7 @@ Choose local versions of files
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :local
+  $ hg goto 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :local
   1 files updated, 2 files merged, 0 files removed, 0 files unresolved
   $ status 2>&1 | tee $TESTTMP/local.status
   --- status ---
@@ -844,7 +844,7 @@ Choose other versions of files
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :other
+  $ hg goto 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :other
   1 files updated, 1 files merged, 1 files removed, 0 files unresolved
   $ status 2>&1 | tee $TESTTMP/other.status
   --- status ---
@@ -885,7 +885,7 @@ Fail
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :fail
+  $ hg goto 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :fail
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -930,7 +930,7 @@ Force prompts with no input
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --config ui.interactive=True --tool :prompt
+  $ hg goto 10f9a0a634e82080907e62f075ab119cbc565ea6 --config ui.interactive=True --tool :prompt
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [destination] changed file2 which local [working copy] deleted
@@ -980,7 +980,7 @@ Choose to merge all files
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :merge3
+  $ hg goto 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :merge3
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [destination] changed file2 which local [working copy] deleted

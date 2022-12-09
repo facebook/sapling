@@ -229,18 +229,18 @@ msgdestmerge: Dict[
     },
     # repository have a single head and we are not on it
     "nootherheadsbehind": {
-        "merge": (_("nothing to merge"), _("use '@prog@ update' instead")),
-        "rebase": (_("nothing to rebase"), _("use '@prog@ update' instead")),
+        "merge": (_("nothing to merge"), _("use '@prog@ goto' instead")),
+        "rebase": (_("nothing to rebase"), _("use '@prog@ goto' instead")),
     },
     # We are not on a head
     "notatheads": {
         "merge": (
             _("working directory not at a head revision"),
-            _("use '@prog@ update' or merge with an explicit revision"),
+            _("use '@prog@ goto' or merge with an explicit revision"),
         ),
         "rebase": (
             _("working directory not at a head revision"),
-            _("use '@prog@ update' or rebase to an explicit revision"),
+            _("use '@prog@ goto' or rebase to an explicit revision"),
         ),
     },
     "emptysourceset": {

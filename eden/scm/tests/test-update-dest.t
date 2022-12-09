@@ -20,7 +20,7 @@
   $ hg commit -qAm aa
   $ hg up
   abort: you must specify a destination
-  (for example: hg update ".::")
+  (for example: hg goto ".::")
   [255]
   $ hg up .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -41,7 +41,7 @@
   $ cd ../clone
   $ hg pull --update
   abort: update destination required by configuration
-  (use hg pull followed by hg update DEST)
+  (use hg pull followed by hg goto DEST)
   [255]
 
   $ cd ..

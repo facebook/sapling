@@ -68,7 +68,7 @@
 
   $ hg revert
   abort: uncommitted merge with no revision specified
-  (use 'hg update' or see 'hg help revert')
+  (use 'hg goto' or see 'hg help revert')
   [255]
 
 # Revert should be ok now:

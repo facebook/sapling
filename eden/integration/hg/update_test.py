@@ -6,6 +6,7 @@
 
 import logging
 import os
+import re
 import sys
 import threading
 import unittest
@@ -379,11 +380,16 @@ class UpdateTest(EdenHgTestCase):
             traceback=False,
         )
         self.maxDiff = None
-        self.assertEqual(
-            "abort: conflicting changes:\n"
-            "  foo/new_file.txt\n"
-            "(commit or update --clean to discard changes)\n",
+        # TODO: Make this an assertEquals() once "goto" renaming in docs is
+        # rolled out everywhere.
+        self.assertRegex(
             result.stderr.decode("utf-8"),
+            re.compile(
+                "abort: conflicting changes:\n"
+                "  foo/new_file.txt\n"
+                "\\(commit or (goto|update) --clean to discard changes\\)\n",
+                re.MULTILINE,
+            ),
         )
         self.assertNotEqual(0, result.returncode)
 

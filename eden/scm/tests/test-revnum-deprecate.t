@@ -25,7 +25,7 @@
 
 # negative revnum
 
-  $ hg update -r -2
+  $ hg goto -r -2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   hint[revnum-deprecate]: Local revision numbers (ex. -2) are being deprecated and will stop working in the future. Please use commit hashes instead.
   hint[hint-ack]: use 'hg hint --ack revnum-deprecate' to silence these hints

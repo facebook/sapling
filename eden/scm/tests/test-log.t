@@ -1053,13 +1053,13 @@
   $ echo 2 >> f2
   $ hg ci -qAm k2 -u u2
 
-  $ hg update -q b2
+  $ hg goto -q b2
   $ echo 3 >> f2
   $ hg ci -qAm k2 -u u2
-  $ hg update -q b1
+  $ hg goto -q b1
   $ echo 4 >> f1
   $ hg ci -qAm k1 -u u1
-  $ hg update -q b0
+  $ hg goto -q b0
   $ echo 5 >> f0
   $ hg ci -qAm k0 -u u0
 
@@ -1305,7 +1305,7 @@
   merging foo
   warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ echo 'merge 1' > foo
   $ hg resolve -m foo
@@ -1316,7 +1316,7 @@
   merging foo
   warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ echo 'merge 2' > foo
   $ hg resolve -m foo

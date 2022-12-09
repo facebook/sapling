@@ -14,7 +14,7 @@
   $ echo This is file b1 > b
   $ hg add b
   $ hg commit -m 'commit #1'
-  $ hg update 0
+  $ hg goto 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo This is file c1 > c
   $ hg add c

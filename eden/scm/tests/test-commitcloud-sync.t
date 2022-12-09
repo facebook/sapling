@@ -466,7 +466,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been replaced remotely with multiple revisions
-  (run 'hg update HASH' to go to the desired revision)
+  (run 'hg goto HASH' to go to the desired revision)
   $ tglog
   o  cebbb614447e 'commit2 amended amended'
   │
@@ -592,7 +592,7 @@ Expected result: client2 should be moved to 68e035cc1996
 
 Clean up by hiding some commits, and create a new stack
 
-  $ hg update d20a80d4def3 -q
+  $ hg goto d20a80d4def3 -q
   $ hg hide a7bb357e7299
   hiding commit a7bb357e7299 "commit1 amended"
   hiding commit 8134e74ecdc8 "commit2 amended amended"
@@ -609,7 +609,7 @@ Clean up by hiding some commits, and create a new stack
   $ hg cloud sync -q
   $ cd ..
   $ cd client1
-  $ hg update d20a80d4def3 -q
+  $ hg goto d20a80d4def3 -q
   $ hg cloud sync -q
   $ tglog
   o  f2ccc2716735 'stack commit 2' testbookmark

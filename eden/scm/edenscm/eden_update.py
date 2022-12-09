@@ -136,7 +136,7 @@ def update(
 
         with repo.dirstate.parentchange():
             if force:
-                # If the user has done an `update --clean`, then we should
+                # If the user has done an `goto --clean`, then we should
                 # remove all entries from the dirstate. Note this call to
                 # clear() will also remove the parents, but we set them on the
                 # next line, so we'll be OK.
@@ -275,7 +275,7 @@ def _check_actions_and_raise_if_there_are_conflicts(actions):
             num_remaining = total_conflicts - len(conflict_paths)
             conflict_paths.append("... (%d more conflicts)" % num_remaining)
         msg = _("conflicting changes:\n  ") + "\n  ".join(conflict_paths)
-        hint = _("commit or update --clean to discard changes")
+        hint = _("commit or goto --clean to discard changes")
         raise error.Abort(msg, hint=hint)
 
 

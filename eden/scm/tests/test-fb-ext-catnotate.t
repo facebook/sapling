@@ -38,7 +38,7 @@ Test catnotate
   b:3: \x00 (esc)
   b:4: 
 
-  $ hg update 'desc(Hello)'
+  $ hg goto 'desc(Hello)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg catnotate --rev . a
   a:1: Hell

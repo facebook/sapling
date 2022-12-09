@@ -300,7 +300,7 @@ class mergestate(object):
 
         Mercurial versions prior to 3.7 have a bug where if there are
         unsupported mandatory merge records, attempting to clear out the merge
-        state with hg update --clean or similar aborts. The 't' record type
+        state with hg goto --clean or similar aborts. The 't' record type
         works around that by writing out what those versions treat as an
         advisory record, but later versions interpret as special: the first
         character is the 'real' record type and everything onwards is the data.
@@ -2263,7 +2263,7 @@ def update(
     x = can't happen
     * = don't-care
     1 = incompatible options (checked in commands.py)
-    2 = abort: uncommitted changes (commit or update --clean to discard changes)
+    2 = abort: uncommitted changes (commit or goto --clean to discard changes)
     3 = abort: uncommitted changes (checked in commands.py)
 
     The merge is performed inside ``wc``, a workingctx-like objects. It defaults
@@ -2463,7 +2463,7 @@ def update(
                 if not mergeancestor and wc.branch() == p2.branch():
                     raise error.Abort(
                         _("nothing to merge"),
-                        hint=_("use '@prog@ update' " "or check '@prog@ heads'"),
+                        hint=_("use '@prog@ goto' " "or check '@prog@ heads'"),
                     )
             if not force and (wc.files() or wc.deleted()):
                 raise error.Abort(
@@ -2492,7 +2492,7 @@ def update(
                         pass  # allow updating to successors
                     else:
                         msg = _("uncommitted changes")
-                        hint = _("commit or update --clean to discard changes")
+                        hint = _("commit or goto --clean to discard changes")
                         raise error.UpdateAbort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
@@ -2554,7 +2554,7 @@ def update(
                 for path in i18n.limititems(paths):
                     msg += " %s\n" % path
                 hint = _(
-                    "commit, shelve, update --clean to discard all your changes"
+                    "commit, shelve, goto --clean to discard all your changes"
                     ", or update --merge to merge them"
                 )
                 raise error.Abort(msg.strip(), hint=hint)
@@ -2775,7 +2775,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             msg = _("%d conflicting file changes:\n") % len(conflicts)
             msg += " " + "\n ".join(i18n.limititems(conflicts)) + "\n"
             hint = _(
-                "commit, shelve, update --clean to discard all your changes"
+                "commit, shelve, goto --clean to discard all your changes"
                 ", or update --merge to merge them"
             )
             raise error.Abort(msg.strip(), hint=hint)

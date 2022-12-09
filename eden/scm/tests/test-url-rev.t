@@ -204,7 +204,7 @@ Test handling common incoming revisions between "default" and
 
   $ cd repo
 
-  $ hg update -q -C default
+  $ hg goto -q -C default
   $ echo modified >> bar
   $ hg commit -m "new head to push current default head"
 

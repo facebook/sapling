@@ -35,7 +35,7 @@ failing merge
   $ hg up -qC 'max(desc(append))'
   $ hg merge --tool=internal:fail dc77451844e37f03f5c559e3b8529b2b48d381d1
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 resolve -l should contain unresolved entries
@@ -243,7 +243,7 @@ get back to conflicting state
   $ hg up -qC 'max(desc(append))'
   $ hg merge --tool=internal:fail dc77451844e37f03f5c559e3b8529b2b48d381d1
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 resolve without arguments should suggest --all
@@ -366,7 +366,7 @@ insert unsupported mandatory merge record
   commit: 2 modified, 2 unknown (merge)
   phases: 5 draft
 
-update --clean shouldn't abort on unsupported records
+goto --clean shouldn't abort on unsupported records
 
   $ hg up -qC dc77451844e37f03f5c559e3b8529b2b48d381d1
   $ hg debugmergestate

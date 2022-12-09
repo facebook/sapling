@@ -917,7 +917,7 @@ Create a change in trunk
   $ hg commit -m "willconflict first version"
 
 Create the changes that we will rebase
-  $ hg update -C 'max(desc(bar))' -q
+  $ hg goto -C 'max(desc(bar))' -q
   $ printf "b" > willconflict
   $ hg add willconflict
   $ hg commit -m "willconflict second version"
@@ -1453,7 +1453,7 @@ parent gets moved:
   >  |/
   >  A
   > EOS
-  $ hg update "desc(D1)" -q --hidden
+  $ hg goto "desc(D1)" -q --hidden
   $ hg bookmark book -i
   $ hg rebase -r "desc(B)+desc(D1)" -d "desc(E)"
   rebasing 112478962961 "B"
@@ -1518,7 +1518,7 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
   > EOS
 
   $ hg hide -q $B --config extensions.amend=
-  $ hg update -q $C --hidden
+  $ hg goto -q $C --hidden
   $ hg rebase -s $B -d $D
   rebasing 2ec65233581b "B"
   merging D

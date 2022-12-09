@@ -105,7 +105,7 @@ def unshelvemsg(repo, ui):
 
 def updatecleanmsg(dest=None):
     warning = _("warning: this will discard uncommitted changes")
-    return _("@prog@ update --clean %s    (%s)") % (dest or ".", warning)
+    return _("@prog@ goto --clean %s    (%s)") % (dest or ".", warning)
 
 
 def graftmsg(repo, ui):
@@ -118,13 +118,13 @@ def updatemsg(repo, ui):
     if previousargs:
         continuecmd = _("@prog@ ") + previousargs
     else:
-        continuecmd = _("@prog@ update ") + repo.localvfs.readutf8("updatestate")[:12]
+        continuecmd = _("@prog@ goto ") + repo.localvfs.readutf8("updatestate")[:12]
     abortcmd = updatecleanmsg(repo._activebookmark)
     helpmessage(ui, continuecmd, abortcmd)
 
 
 def updatemergemsg(repo, ui):
-    helpmessage(ui, _("@prog@ update --continue"), updatecleanmsg())
+    helpmessage(ui, _("@prog@ goto --continue"), updatecleanmsg())
 
 
 def mergemsg(repo, ui):

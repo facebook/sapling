@@ -23,7 +23,7 @@
   $ hg id
   08a16e8e4408
 
-  $ hg update -C 0
+  $ hg goto -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   d29c767a4b52
@@ -39,7 +39,7 @@
   $ hg id
   d29c767a4b52
 
-  $ hg update
+  $ hg goto
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg diff
   $ hg status
@@ -47,11 +47,11 @@
   $ hg id
   08a16e8e4408
 
-  $ hg update -C 0
+  $ hg goto -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'changed file1' >> file1
 
-  $ hg update
+  $ hg goto
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg diff
   $ hg status
@@ -73,7 +73,7 @@
   $ hg id
   08a16e8e4408
 
-  $ hg update -C
+  $ hg goto -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg diff
   $ hg status

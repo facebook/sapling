@@ -42,7 +42,7 @@
   $ hg push -q --to master
   $ cd ../shallow
   $ hg pull -q
-  $ hg update master -q
+  $ hg goto master -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ echo x > x
   $ hg commit -qAm xx3

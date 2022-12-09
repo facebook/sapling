@@ -79,9 +79,9 @@ update with worker processes
   > done
   $ hg ci -qAm 'add 100 files'
 
-  $ hg update null
+  $ hg goto null
   0 files updated, 0 files merged, 100 files removed, 0 files unresolved
-  $ hg update -v | grep 100
+  $ hg goto -v | grep 100
   getting 100
   100 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

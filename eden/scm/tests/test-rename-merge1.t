@@ -166,7 +166,7 @@ Check for issue3074
   $ hg commit -m "added file"
   $ hg mv file newfile
   $ hg commit -m "renamed file"
-  $ hg update 'desc(added)'
+  $ hg goto 'desc(added)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg rm file
   $ hg commit -m "deleted file"

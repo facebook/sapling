@@ -15,7 +15,7 @@
   > EOS
 
   $ hg sparse --exclude A B C D E
-  $ hg update A -q
+  $ hg goto A -q
   $ printf D > D
   $ echo 2 > E
   $ hg rebase -s C -d B

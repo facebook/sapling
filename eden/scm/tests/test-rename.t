@@ -26,7 +26,7 @@ rename a single file
   A d2/c
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
@@ -37,7 +37,7 @@ rename a single file using absolute paths
   A d2/c
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
@@ -49,7 +49,7 @@ rename --after a single file
   A d2/c
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
@@ -64,7 +64,7 @@ rename --after a single file when src and tgt already tracked
   A d2/c
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
@@ -80,7 +80,7 @@ move a single file to an existing directory
   A d2/a1
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/a1
 
@@ -92,7 +92,7 @@ move --after a single file to an existing directory
   A d2/a1
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/a1
 
@@ -103,7 +103,7 @@ rename a file using a relative path
   A d1/d11/e
     d2/b
   R d2/b
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/d11/e
 
@@ -114,7 +114,7 @@ rename --after a file using a relative path
   A d1/d11/e
     d2/b
   R d2/b
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/d11/e
 
@@ -138,7 +138,7 @@ rename directory d1 as d3
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -163,7 +163,7 @@ rename --after directory d1 as d3
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -175,7 +175,7 @@ move a directory using a relative path
   A d2/d3/d11/a1
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d3
 
@@ -187,7 +187,7 @@ move --after a directory using a relative path
   A d2/d3/d11/a1
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d3
 
@@ -199,7 +199,7 @@ move directory d1/d11 to an existing directory d2 (removes empty d1)
   A d2/d11/a1
     d1/d11/a1
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d11
 
@@ -228,7 +228,7 @@ move directories d1 and d2 to a new directory d3
   R d1/ba
   R d1/d11/a1
   R d2/b
-  $ hg update -C
+  $ hg goto -C
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -258,7 +258,7 @@ move --after directories d1 and d2 to a new directory d3
   R d1/ba
   R d1/d11/a1
   R d2/b
-  $ hg update -C
+  $ hg goto -C
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -286,7 +286,7 @@ overwrite existing files (d2/b)
   -d1/b
   +d2/b
   [1]
-  $ hg update -C
+  $ hg goto -C
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/a d2/ba d2/d11/a1
 
@@ -296,7 +296,7 @@ attempt to move one file into a non-existent directory
   abort: destination dx/ is not a directory
   [255]
   $ hg status -C
-  $ hg update -C
+  $ hg goto -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 attempt to move potentially more than one file into a non-existent directory
@@ -326,7 +326,7 @@ move every file under d1 to d2/d21
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d21
 
@@ -346,7 +346,7 @@ move --after some files under d1 to d2/d21
     d1/d11/a1
   R d1/a
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d21
 
@@ -363,7 +363,7 @@ move every file under d1 starting with an 'a' to d2/d21 (regexp)
     d1/d11/a1
   R d1/a
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d2/d21
 
@@ -375,7 +375,7 @@ attempt to overwrite an existing file
   (hg rename --after to record the rename)
   $ hg status -C
   ? d1/ca
-  $ hg update -C
+  $ hg goto -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 forced overwrite of an existing file
@@ -386,7 +386,7 @@ forced overwrite of an existing file
   A d1/ca
     d1/ba
   R d1/ba
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/ca
 
@@ -399,7 +399,7 @@ attempt to overwrite an existing broken symlink
   (hg rename --after to record the rename)
   $ hg status -C
   ? d1/ca
-  $ hg update -C
+  $ hg goto -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/ca
 
@@ -411,7 +411,7 @@ replace a symlink with a file
   A d1/ca
     d1/ba
   R d1/ba
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/ca
 #endif
@@ -435,7 +435,7 @@ do not copy more than one source file to the same destination file
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -460,7 +460,7 @@ move a whole subtree with "hg rename ."
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -486,7 +486,7 @@ move a whole subtree with "hg rename --after ."
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -510,7 +510,7 @@ move the parent tree with "hg rename .."
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -532,7 +532,7 @@ skip removed files
   R d1/b
   R d1/ba
   R d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf d3
 
@@ -544,7 +544,7 @@ transitive rename
   A d1/bc
     d1/b
   R d1/b
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/bc
 
@@ -557,7 +557,7 @@ transitive rename --after
   A d1/bc
     d1/b
   R d1/b
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/bc
 
@@ -568,7 +568,7 @@ transitive rename --after
   $ hg rename d1/bb d1/b
   $ hg status -C
   M d1/b
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 overwriting with renames (issue1959)
@@ -597,9 +597,9 @@ overwriting with renames (issue1959)
   diff --git a/d1/a b/d1/c
   copy from d1/a
   copy to d1/c
-  $ hg update -C
+  $ hg goto -C
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ rm d1/c # The file was marked as added, so 'hg update' action  was 'forget'
+  $ rm d1/c # The file was marked as added, so 'hg goto' action  was 'forget'
 
 check illegal path components
 
@@ -618,7 +618,7 @@ check illegal path components
   [255]
   $ hg status -C
   ! d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm .hg/foo
 
@@ -637,7 +637,7 @@ check illegal path components
   [255]
   $ hg status -C
   ! d1/d11/a1
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm .hg/a1
 

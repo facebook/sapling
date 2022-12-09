@@ -10,7 +10,7 @@
   $ hg add b
   $ hg commit -m "commit #1"
   $ rm b
-  $ hg update 538afb845929a25888be4211c3e2195445e26b7e
+  $ hg goto 538afb845929a25888be4211c3e2195445e26b7e
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo This is file b2 > b
   $ hg add b
@@ -27,7 +27,7 @@
   $ hg add b
   $ hg commit -m "commit #1"
   $ rm b
-  $ hg update 538afb845929a25888be4211c3e2195445e26b7e
+  $ hg goto 538afb845929a25888be4211c3e2195445e26b7e
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo This is file b2 > b
   $ hg commit -A -m "commit #2"
@@ -44,7 +44,7 @@
   $ hg commit -m "commit #1"
   $ rm b
   $ hg remove b
-  $ hg update 538afb845929a25888be4211c3e2195445e26b7e
+  $ hg goto 538afb845929a25888be4211c3e2195445e26b7e
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo This is file b2 > b
   $ hg commit -A -m "commit #2"

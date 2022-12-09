@@ -45,7 +45,7 @@ Add "fork" as another remote:
   ~
 
 Can check out our branch without first pulling:
-  $ hg update -q fork/existing-branch
+  $ hg goto -q fork/existing-branch
   $ hg smartlog -T '{desc} {remotebookmarks}'
   @  existing-branch fork/existing-branch
   │

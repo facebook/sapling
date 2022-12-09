@@ -142,7 +142,7 @@ temporarily.
   [255]
 
   $ mv .hg/histedit-state .hg/histedit-state.back
-  $ hg update --quiet --clean 'desc(three)'
+  $ hg goto --quiet --clean 'desc(three)'
   $ echo alpha >> alpha
   $ mv .hg/histedit-state.back .hg/histedit-state
 
@@ -263,7 +263,7 @@ short hash. This tests issue3893.
   HG: branch 'default'
   HG: changed alpha
 
-  $ hg update -q 'desc(three)'
+  $ hg goto -q 'desc(three)'
   $ echo x > x
   $ hg add x
   $ hg commit -m'x' x

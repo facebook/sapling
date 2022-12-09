@@ -35,7 +35,7 @@ Test amend copytrace
   x
   $ cat b
   a
-  $ hg update 'max(desc(mod))'
+  $ hg goto 'max(desc(mod))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat b
   b
@@ -108,7 +108,7 @@ Test amend copytrace with multiple renames of the same file
   $ hg rebase --restack
   rebasing ad25e018afa9 "mod a"
   merging c and a to c
-  $ hg update 'max(desc(mod))'
+  $ hg goto 'max(desc(mod))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat c
   b

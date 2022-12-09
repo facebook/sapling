@@ -24,7 +24,7 @@
   $ hg commit -qAm y
   $ echo z >> x
   $ hg commit -qAm z
-  $ hg update 1
+  $ hg goto 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo w >> x
   $ hg commit -qAm w

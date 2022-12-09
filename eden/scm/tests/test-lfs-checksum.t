@@ -19,7 +19,7 @@ Download it from another repo
 
   $ newrepo
   $ hg pull ../source -q
-  $ hg update tip -q
+  $ hg goto tip -q
 
 Corrupt the remote store
 
@@ -31,7 +31,7 @@ Download it again in a fresh new repo - should fail
   $ newrepo
   $ echo remotefilelog >> .hg/requires
   $ hg pull ../source -q
-  $ hg update tip -q
+  $ hg goto tip -q
   abort: blobstore: sha256 mismatch (oid: 2f7548e627a92d9ce3f912eb71226f692ec83deed2e72298270b198540d7c70b, content: 3dff7d61038895144c0eca9d06ac8d067919785a5ba2604db7aef154899a494d)
   [255]
 

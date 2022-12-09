@@ -1518,7 +1518,7 @@ Test --user when ui.username not set
 
 Moving files
 
-  $ hg update -C .
+  $ hg goto -C .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv plain plain3
   $ echo somechange >> plain3
@@ -1550,7 +1550,7 @@ The #if execbit block above changes the hash here on some systems
   
 Editing patch of newly added file
 
-  $ hg update -C .
+  $ hg goto -C .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > editor.sh << '__EOF__'
   > cat "$1"  | sed "s/first/very/g"  > tt
@@ -1587,7 +1587,7 @@ Editing patch of newly added file
   This is the third line
 
 Add new file from within a subdirectory
-  $ hg update -C .
+  $ hg goto -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir folder
   $ cd folder
@@ -1635,8 +1635,8 @@ Clear win32text configuration before size/timestamp sensitive test
   > [patch]
   > eol = strict
   > EOF
-  $ hg update -q -C null
-  $ hg update -q -C tip
+  $ hg goto -q -C null
+  $ hg goto -q -C tip
 
 Test that partially committed file is still treated as "modified",
 even if none of mode, size and timestamp is changed on the filesystem

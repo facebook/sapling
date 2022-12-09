@@ -1416,7 +1416,7 @@ tests for 'remote()' predicate:
   $ hg book -r 7 ".a.b.c."
   $ hg book -r 2 "a-b-c-"
   $ cd ../remote3
-  $ hg update -q 7
+  $ hg goto -q 7
   $ echo r > r
   $ hg ci -Aqm 10
   $ log 'remote()'
@@ -1496,7 +1496,7 @@ prepare repository that has "default" branches of multiple roots
   $ echo stable3 >> a
   $ commit -m3
 
-  $ hg update -q null
+  $ hg goto -q null
   $ echo default4 >> a
   $ hg ci -Aqm4
   $ echo default5 >> a

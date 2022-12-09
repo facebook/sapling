@@ -393,7 +393,7 @@ def _maybeupdateworkingcopy(repo, currentnode):
         ui.status(
             _(
                 "current revision %s has been replaced remotely with multiple revisions\n"
-                "(run '@prog@ update HASH' to go to the desired revision)\n"
+                "(run '@prog@ goto HASH' to go to the desired revision)\n"
             )
             % nodemod.short(currentnode),
             component="commitcloud",

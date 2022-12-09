@@ -80,7 +80,7 @@ Specifying an empty revision should abort.
 
 Test diff during merge:
 
-  $ hg update -C 'desc(test1)'
+  $ hg goto -C 'desc(test1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
   $ hg add c
@@ -122,7 +122,7 @@ issue4463: usage of command line configuration without additional quoting
   > 4463b = echo b-naked 'single quoted' "double quoted"
   > echo =
   > EOF
-  $ hg update -q -C 'desc(test1)'
+  $ hg goto -q -C 'desc(test1)'
   $ echo a >> a
 
   $ hg --debug 4463a 2>&1 | grep '^running'
@@ -202,7 +202,7 @@ Empty argument must be quoted
 
 Test extdiff of multiple files in tmp dir:
 
-  $ hg update -C 'desc(test1)' > /dev/null
+  $ hg goto -C 'desc(test1)' > /dev/null
   $ echo changed > a
   $ echo changed > b
 #if execbit

@@ -29,7 +29,7 @@ Testing update -B feature
   o
   
 
-  $ hg update -B bar foo
+  $ hg goto -B bar foo
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark foo)
   $ hg log -G -T '{bookmarks} {remotebookmarks}'
@@ -43,13 +43,13 @@ Testing update -B feature
    * bar                       661086655130            [foo]
      foo                       661086655130
 
-  $ hg update -B foo bar
+  $ hg goto -B foo bar
   abort: bookmark 'foo' already exists
   [255]
 
 Test that a bare update no long moves the active bookmark
 
-  $ hg update
+  $ hg goto
   updating to active bookmark bar
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

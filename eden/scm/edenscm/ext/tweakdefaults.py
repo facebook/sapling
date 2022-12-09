@@ -10,7 +10,7 @@ This extension changes defaults to be more user friendly.
   @prog@ bookmark   always use unfiltered repo (--hidden)
   @prog@ log        always follows history (-f)
   @prog@ rebase     aborts without arguments
-  @prog@ update     aborts without arguments
+  @prog@ goto     aborts without arguments
   @prog@ grep       greps the working directory instead of history
   @prog@ histgrep   renamed from grep
 

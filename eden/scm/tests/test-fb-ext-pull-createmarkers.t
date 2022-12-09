@@ -90,7 +90,7 @@ push doesn't directly go to the server
 
 We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 
-  $ hg update 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
+  $ hg goto 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Here pull should mark 2, 3, and 4 as obsolete since they landed as 6, 7, 8 on

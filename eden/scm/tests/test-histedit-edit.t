@@ -78,7 +78,7 @@ edit the history
   (hg histedit --continue to resume)
 
 try to update and get an error
-  $ hg update tip
+  $ hg goto tip
   abort: histedit in progress
   (use 'hg histedit --continue' or 'hg histedit --abort')
   [255]

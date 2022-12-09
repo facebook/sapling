@@ -28,7 +28,7 @@ update to bookmark X
 
   $ hg bookmarks
    * X                         000000000000
-  $ hg update X
+  $ hg goto X
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 list bookmarks
@@ -71,7 +71,7 @@ list bookmarks
      Z                         000000000000
 
 Verify that switching to Z updates the active bookmark:
-  $ hg update Z
+  $ hg goto Z
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark Z)
   $ hg bookmark
@@ -79,7 +79,7 @@ Verify that switching to Z updates the active bookmark:
    * Z                         000000000000
 
 Switch back to Y for the remaining tests in this file:
-  $ hg update Y
+  $ hg goto Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark Y)
 
@@ -95,7 +95,7 @@ list bookmarks
 
 update to tip
 
-  $ hg update tip
+  $ hg goto tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 set bookmark Y using -r . but make sure that the active
@@ -154,7 +154,7 @@ bare update moves the active bookmark forward and clear the divergent bookmarks
   $ hg ci -Am2
   $ hg bookmark X@1 -r 'desc(1)'
   $ hg bookmark X@2 -r 'desc(2)'
-  $ hg update X
+  $ hg goto X
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark X)
   $ hg bookmarks
@@ -162,7 +162,7 @@ bare update moves the active bookmark forward and clear the divergent bookmarks
      X@1                       cc586d725fbe
      X@2                       49e1c4e84c58
      Z                         719295282060
-  $ hg update
+  $ hg goto
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark X
   $ hg bookmarks

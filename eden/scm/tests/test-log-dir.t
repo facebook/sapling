@@ -18,7 +18,7 @@
   > A   # A/x/1=1
   > EOS
 
-  $ hg update -q $C
+  $ hg goto -q $C
 
 # Log a directory:
 

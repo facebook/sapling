@@ -24,7 +24,7 @@
   $ hg add b
   $ hg commit -m "commit #1"
 
-  $ hg update 538afb845929a25888be4211c3e2195445e26b7e
+  $ hg goto 538afb845929a25888be4211c3e2195445e26b7e
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Test interrupted updates by having a non-empty dir with the same name as one
@@ -89,7 +89,7 @@ no merges expected
   $ hg add b
   $ hg commit -m "commit #1"
 
-  $ hg update 538afb845929a25888be4211c3e2195445e26b7e
+  $ hg goto 538afb845929a25888be4211c3e2195445e26b7e
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo This is file c1 > c
   $ hg add c
@@ -258,7 +258,7 @@ this merge of b should work
   $ hg commit -m "commit #1"
   $ echo This is file b22 > b
   $ hg commit -m "commit #2"
-  $ hg update b8bb4a988f252d4b5d47afa4be3465dbca46f10a
+  $ hg goto b8bb4a988f252d4b5d47afa4be3465dbca46f10a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo This is file c1 > c
   $ hg add c
@@ -298,7 +298,7 @@ merge expected!
   $ hg commit -m "commit #1"
   $ echo This is file b22 > b
   $ hg commit -m "commit #2"
-  $ hg update b8bb4a988f252d4b5d47afa4be3465dbca46f10a
+  $ hg goto b8bb4a988f252d4b5d47afa4be3465dbca46f10a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo This is file c1 > c
   $ hg add c
@@ -363,11 +363,11 @@ isn't changed on the filesystem (see also issue4583).
 
 (file gotten from other revision)
 
-  $ hg update -q -C 6f3a5daccd8d9e79d8992347be056c1c4c3a98fd
+  $ hg goto -q -C 6f3a5daccd8d9e79d8992347be056c1c4c3a98fd
   $ echo 'THIS IS FILE B5' > b
   $ hg commit -m 'commit #5'
 
-  $ hg update -q -C 85de557015a885e766d39be36993986a40acdc4d
+  $ hg goto -q -C 85de557015a885e766d39be36993986a40acdc4d
   $ cat b
   This is file b1
   $ touch -t 200001010000 b
@@ -395,7 +395,7 @@ isn't changed on the filesystem (see also issue4583).
 
 (file merged from other revision)
 
-  $ hg update -q -C 85de557015a885e766d39be36993986a40acdc4d
+  $ hg goto -q -C 85de557015a885e766d39be36993986a40acdc4d
   $ echo 'this is file b6' > b
   $ hg commit -m 'commit #6'
 

@@ -320,7 +320,7 @@ test 'resolve -l'
   $ echo "file a change 1" > a
   $ echo "file b change 1" > b
   $ hg commit -m "head 1"
-  $ hg update 'desc(initial)'
+  $ hg goto 'desc(initial)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "file a change 2" > a
   $ echo "file b change 2" > b
@@ -331,7 +331,7 @@ test 'resolve -l'
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg resolve -m b
 

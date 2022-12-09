@@ -19,7 +19,7 @@ Setting up test
   $ echo 3 >> afile
   $ hg commit -m "0.3"
   $ hg push -q -r . --to head1 --create
-  $ hg update -C 'desc(0.0)'
+  $ hg goto -C 'desc(0.0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 >> afile
   $ hg commit -m "1.1"
@@ -32,7 +32,7 @@ Setting up test
   $ hg mv afile adifferentfile
   $ hg commit -m "1.3m"
   $ hg push -q -r . --to head2 --create
-  $ hg update -C 'desc(0.3)'
+  $ hg goto -C 'desc(0.3)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg mv afile anotherfile
   $ hg commit -m "0.3m"
@@ -291,12 +291,12 @@ directory does not exist
   $ echo "ccc" >> c
   $ hg commit -A -m 2
   adding c
-  $ hg update -r 'desc(1)'
+  $ hg goto -r 'desc(1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "ddd" >> d
   $ hg commit -A -m 3
   adding d
-  $ hg update -r 'desc(2)'
+  $ hg goto -r 'desc(2)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   o  commit:      8bd3e1f196af

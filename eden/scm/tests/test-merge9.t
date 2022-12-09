@@ -42,7 +42,7 @@
   merging foo and baz to baz
   merging bar failed!
   1 files updated, 1 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg resolve -l
   U bar
@@ -57,7 +57,7 @@
   merging baz and foo to baz
   merging bar failed!
   1 files updated, 1 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 # show unresolved

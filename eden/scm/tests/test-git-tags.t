@@ -40,7 +40,7 @@ Pull tags explicitly
 
 Pull implicitly via autopull
 
-  $ hg update tags/v2
+  $ hg goto tags/v2
   pulling 'tags/v2' from '$TESTTMP/git-repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

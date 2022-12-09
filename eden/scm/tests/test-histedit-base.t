@@ -50,7 +50,7 @@ Verify that implicit base command and help are listed
   #  b, base = checkout changeset and apply further changesets from there
 
 Go to D
-  $ hg update 'desc(D)'
+  $ hg goto 'desc(D)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 edit the history to rebase B onto H
 

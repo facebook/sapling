@@ -158,7 +158,7 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
 
   $ cp -R a2heads a2
   $ cd a2
-  $ hg update -q 'desc(D)'
+  $ hg goto -q 'desc(D)'
 
   $ hg rebase --base .
   rebasing f68855660cff "B"

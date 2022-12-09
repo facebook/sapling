@@ -2037,7 +2037,7 @@ def clearstatus(repo) -> None:
 
 
 def needupdate(repo, state) -> bool:
-    """check whether we should `update --clean` away from a merge, or if
+    """check whether we should `goto --clean` away from a merge, or if
     somehow the working dir got forcibly updated, e.g. by older hg"""
     parents = [p.rev() for p in repo[None].parents()]
 

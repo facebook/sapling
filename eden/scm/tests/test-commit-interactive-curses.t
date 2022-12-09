@@ -176,7 +176,7 @@ Committing only one hunk while aborting edition of hunk
 
 Newly added files can be selected with the curses interface
 
-  $ hg update -C .
+  $ hg goto -C .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "hello" > x
   $ hg add x
@@ -218,7 +218,7 @@ Make file empty
   > X
   > EOF
   $ hg ci -i -m emptify -d "0 0"
-  $ hg update -C '.^' -q
+  $ hg goto -C '.^' -q
 
 Editing a hunk puts you back on that hunk when done editing (issue5041)
 To do that, we change two lines in a file, pretend to edit the second line,
@@ -226,7 +226,7 @@ exit, toggle the line selected at the end of the edit and commit.
 The first line should be recorded if we were put on the second line at the end
 of the edit.
 
-  $ hg update -C .
+  $ hg goto -C .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "foo" > x
   $ echo "hello world" >> x
@@ -254,7 +254,7 @@ the first hunk of the third file. During review, we will decide that
 "lower" sounds better than "bottom", and the final commit should
 reflect this edition.
 
-  $ hg update -C .
+  $ hg goto -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "top" > c
   $ cat x >> c

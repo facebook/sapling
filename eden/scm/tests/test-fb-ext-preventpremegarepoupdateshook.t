@@ -22,19 +22,19 @@
   $ hg commit -A -m another_commit
   adding b
 
-  $ hg update .^
+  $ hg goto .^
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ echo n | hg update --config ui.interactive=true .^
+  $ echo n | hg goto --config ui.interactive=true .^
   Checking out commits from before megarepo merge is discouraged. The resulting checkout will contain just the contents of one git subrepo. Many tools might not work as expected. Do you want to continue (Yn)?   n
   abort: preupdate.preventpremegarepoupdates hook failed
   [255]
 
-  $ hg update --config ui.interactive=false .^
+  $ hg goto --config ui.interactive=false .^
   Checking out commits from before megarepo merge is discouraged. The resulting checkout will contain just the contents of one git subrepo. Many tools might not work as expected. Do you want to continue (Yn)?   y
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg update tip^
+  $ hg goto tip^
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ HGPLAIN=1 hg update --config ui.interactive=true .^
+  $ HGPLAIN=1 hg goto --config ui.interactive=true .^
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

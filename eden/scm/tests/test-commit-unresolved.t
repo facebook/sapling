@@ -18,7 +18,7 @@
   $ echo "C" >> A
   $ commit "C" 2
 
-  $ hg update -C 'desc(A)'
+  $ hg goto -C 'desc(A)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "D" >> A
   $ commit "D" 3
@@ -29,7 +29,7 @@ Merging a conflict araises
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 Correct the conflict without marking the file as resolved
@@ -54,7 +54,7 @@ Test that if a file is removed but not marked resolved, the commit still fails
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg rm --force A
   $ hg commit -m merged

@@ -42,9 +42,9 @@ Basic merge - local file conflicts with remote directory
   moving a to a~853701544ac3
   getting a/b
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
-  $ hg update --clean .
+  $ hg goto --clean .
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ rm a~853701544ac3
 

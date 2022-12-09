@@ -20,7 +20,7 @@ this is also case for issue3370.
   $ hg rename a tmp
   $ hg rename tmp A
   $ hg commit -m '#1'
-  $ hg update -q 'desc("#0")'
+  $ hg goto -q 'desc("#0")'
   $ touch x
   $ hg add x
   $ hg commit -m '#2'
@@ -32,7 +32,7 @@ this is also case for issue3370.
   C b
   C x
 
-  $ hg update -q --clean 'desc("#1")'
+  $ hg goto -q --clean 'desc("#1")'
   $ hg merge -q
   $ hg status -A
   M x
@@ -59,12 +59,12 @@ additional test for issue3452:
 |
 | issue3452 occurs when (B) is recorded before (C)
 
-  $ hg update -q --clean 'desc("#2")'
+  $ hg goto -q --clean 'desc("#2")'
   $ echo "modify 'a' at (E)" > a
   $ echo "modify 'b' at (E)" > b
   $ hg commit -m '(E)'
 
-  $ hg update -q --clean 'desc("(D)")'
+  $ hg goto -q --clean 'desc("(D)")'
   $ echo "modify 'A' at (F)" > A
   $ hg commit -m '(F)'
 
@@ -83,7 +83,7 @@ regression by changes in the future.
 to avoid unexpected (successful) behavior by filelog unification,
 target file is not 'a'/'A' but 'b'/'B' in this case.
 
-  $ hg update -q --clean 'desc("#0")'
+  $ hg goto -q --clean 'desc("#0")'
   $ hg rename b tmp
   $ hg rename tmp B
   $ hg commit -m '(B1)'
@@ -121,7 +121,7 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ echo A > A
   $ hg add A
   $ hg commit -m '#2'
-  $ hg update --clean 'desc("#0")'
+  $ hg goto --clean 'desc("#0")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo x > x
   $ hg add x
@@ -140,7 +140,7 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ cat a
   modified at #4
 
-  $ hg update --clean 'desc("#2")'
+  $ hg goto --clean 'desc("#2")'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg merge
   abort: case-folding collision between [aA] and [Aa] (re)
@@ -156,7 +156,7 @@ test for deletion awareness of case-folding collision check (issue3648):
 revision '#3' doesn't change 'a', so 'a' should be recognized as
 safely removed in merging between #2 and #3.
 
-  $ hg update --clean 'desc("#3")'
+  $ hg goto --clean 'desc("#3")'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge 'desc("#2")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -166,7 +166,7 @@ safely removed in merging between #2 and #3.
   R a
   C x
 
-  $ hg update --clean 'desc("#2")'
+  $ hg goto --clean 'desc("#2")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge 'desc("#3")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -234,11 +234,11 @@ test for rename awareness of case-folding collision check:
   $ hg rename tmp A
   $ hg commit -m '#1'
 
-  $ hg update 'desc("#0")'
+  $ hg goto 'desc("#0")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo 'this is added line' >> a
-  $ hg update 'desc("#1")'
+  $ hg goto 'desc("#1")'
   merging a and A to A
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg status -A
@@ -262,7 +262,7 @@ test for rename awareness of case-folding collision check:
   $ hg add A
   $ hg commit -m '#2'
 
-  $ hg update 'desc("#0")'
+  $ hg goto 'desc("#0")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg parents --template '{node}\n'
   bf5e395ced2c2bd0d77b2b1d06907af3a19a7836
@@ -272,7 +272,7 @@ test for rename awareness of case-folding collision check:
   a
   $ hg up -qC 'desc("#2")'
 
-  $ hg update --check 'desc("#0")'
+  $ hg goto --check 'desc("#0")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg parents --template '{node}\n'
   bf5e395ced2c2bd0d77b2b1d06907af3a19a7836
@@ -281,7 +281,7 @@ test for rename awareness of case-folding collision check:
   $ cat a
   a
 
-  $ hg update --clean 'desc("#2")'
+  $ hg goto --clean 'desc("#2")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg parents --template '{node}\n'
   f2bf84af4a6f05abc8d9f0e760d5081bb737b00a
@@ -301,7 +301,7 @@ test for rename awareness of case-folding collision check:
   $ hg commit -m '#0'
   $ hg rename a b
   $ hg commit -m '#1'
-  $ hg update 'desc("#0")'
+  $ hg goto 'desc("#0")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo B > B
@@ -309,15 +309,15 @@ test for rename awareness of case-folding collision check:
   warning: possible case-folding collision for B (?)
   $ hg status
   A B
-  $ hg update
+  $ hg goto
   abort: case-folding collision between [bB] and [Bb] (re)
   [255]
 
-  $ hg update --check
+  $ hg goto --check
   abort: uncommitted changes
   [255]
 
-  $ hg update --clean
+  $ hg goto --clean
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg parents --template '{node}\n'
   e419dd32c623b89f5fd3b5870b5df6a3666d4d3a

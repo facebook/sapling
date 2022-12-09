@@ -190,7 +190,7 @@
   $ hg commit -m foo -A A
   $ hg log -r . -T '{node}\n'
   383ce605500277f879b7460a16ba620eb6930b7f
-  $ hg update -r '.^' -q
+  $ hg goto -r '.^' -q
   $ echo 1 > A
   $ hg commit -m foo -A A
   $ hg log -r . -T '{node}\n'

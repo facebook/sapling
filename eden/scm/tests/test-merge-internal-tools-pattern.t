@@ -35,7 +35,7 @@ Branch 1: editing line 1:
 
 Branch 2: editing line 3:
 
-  $ hg update 'desc(revision)'
+  $ hg goto 'desc(revision)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/line 3/third line/' f > f.new
   $ mv f.new f
@@ -48,7 +48,7 @@ Merge using internal:fail tool:
 
   $ hg merge
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ cat f
@@ -61,7 +61,7 @@ Merge using internal:fail tool:
 
 Merge using internal:local tool:
 
-  $ hg update -C 'max(desc(edited))'
+  $ hg goto -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/internal:fail/internal:local/' .hg/hgrc > .hg/hgrc.new
   $ mv .hg/hgrc.new .hg/hgrc
@@ -80,7 +80,7 @@ Merge using internal:local tool:
 
 Merge using internal:other tool:
 
-  $ hg update -C 'max(desc(edited))'
+  $ hg goto -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/internal:local/internal:other/' .hg/hgrc > .hg/hgrc.new
   $ mv .hg/hgrc.new .hg/hgrc
@@ -99,7 +99,7 @@ Merge using internal:other tool:
 
 Merge using default tool:
 
-  $ hg update -C 'max(desc(edited))'
+  $ hg goto -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm .hg/hgrc
 
@@ -118,12 +118,12 @@ Merge using default tool:
 
 Merge using internal:union tool:
 
-  $ hg update -C 'max(desc(edited))'
+  $ hg goto -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo "line 4a" >>f
   $ hg ci -Am "Adding fourth line (commit 4)"
-  $ hg update 'max(desc(edited))'
+  $ hg goto 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo "line 4b" >>f

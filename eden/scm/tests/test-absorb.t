@@ -265,7 +265,7 @@
   $ echo 1 > m1
   $ hg commit -A m1 -m m1
   $ hg bookmark -q -i m1
-  $ hg update -q '.^'
+  $ hg goto -q '.^'
   $ echo 2 > m2
   $ hg commit -q -A m2 -m m2
   $ hg merge -q m1

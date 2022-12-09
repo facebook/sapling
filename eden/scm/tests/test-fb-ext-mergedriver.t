@@ -41,7 +41,7 @@ basic merge driver: just lists out files and contents, doesn't resolve any files
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:$TESTTMP/mergedriver-list.py (state "s")
@@ -123,7 +123,7 @@ mark a file driver-resolved, and leave others unresolved
   merging bar.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg summary
   parent: ede3d67b8d0f 
@@ -190,14 +190,14 @@ mark a file driver-resolved, and leave others unresolved
 
 mark a file driver-resolved, and leave others unresolved (but skip merge driver)
 (r = False, unresolved = y, driver-resolved = y)
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 'desc(b)'
   * preprocess called
   merging bar.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg resolve --list
   U bar.txt
@@ -240,7 +240,7 @@ implicitly makes them resolved
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-driveronly.py
   > EOF
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 'desc(b)'
   * preprocess called
@@ -291,7 +291,7 @@ indicate merge driver is necessary at commit
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-special.py
   > EOF
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 XXX shouldn't output a warning
   $ hg merge 'desc(b)'
@@ -335,7 +335,7 @@ make sure this works sensibly when files are unresolved
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-exit.py
   > EOF
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 XXX shouldn't output a warning
   $ hg merge 'desc(b)'
@@ -346,7 +346,7 @@ XXX shouldn't output a warning
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg debugmergestate
   * version 2 records
@@ -369,13 +369,13 @@ XXX shouldn't output a warning
   $ hg commit -m 'merged'
   abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
-  $ hg update 'desc(c)'
+  $ hg goto 'desc(c)'
   abort: outstanding uncommitted merge
   [255]
 
 raise an error
 
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-mark-and-raise.py << EOF
   > from edenscm import error
@@ -403,7 +403,7 @@ raise an error
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg debugmergestate
   * version 2 records
@@ -460,7 +460,7 @@ subsequent resolves shouldn't trigger the merge driver at all
 this should go through at this point
   $ hg commit -m merged
 
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge 'desc(b)'
@@ -472,7 +472,7 @@ this should go through at this point
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 XXX this is really confused
@@ -513,26 +513,26 @@ this should go through
   $ hg commit -m merged
 
 this shouldn't invoke the merge driver
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 nor should this no-op update
-  $ hg update 'desc(c)'
+  $ hg goto 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 nor should this update with no working copy changes
-  $ hg update 'desc(b)'
+  $ hg goto 'desc(b)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test some other failure modes
 
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge 'desc(b)' --config experimental.mergedriver=fail
   abort: merge driver must be a python hook
   [255]
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 this should proceed as if there's no merge driver
   $ hg merge 'desc(b)' --config experimental.mergedriver=python:fail
@@ -542,11 +542,11 @@ this should proceed as if there's no merge driver
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:fail (state "s")
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 ensure the right path to load the merge driver hook
@@ -557,7 +557,7 @@ ensure the right path to load the merge driver hook
   warning: 1 conflicts while merging repo1/bar.txt! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging repo1/foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 verify behavior with different merge driver
   $ hg -R repo1 debugmergestate
@@ -601,7 +601,7 @@ verify behavior with different merge driver
 
 this should invoke the merge driver
   $ cd repo1
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-raise.py << EOF
   > from edenscm import error
@@ -617,7 +617,7 @@ this should invoke the merge driver
   > mergedriver = python:$TESTTMP/mergedriver-raise.py
   > EOF
   $ echo foowd >> foo.txt
-  $ hg update ".^"
+  $ hg goto ".^"
   * preprocess called
   error: preprocess hook failed: foo
   Traceback (most recent call last):
@@ -667,7 +667,7 @@ test merge with automatic commit afterwards -- e.g. graft
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-other.py
   > EOF
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugmergestate
   no merge state found
@@ -716,7 +716,7 @@ test merge with automatic commit afterwards -- e.g. graft
 
 graft with failing merge
 
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat >> $HGRCPATH << EOF
   > [experimental]
@@ -781,7 +781,7 @@ XXX hg resolve --unmark --all doesn't cause the merge driver to be rerun
 
 delete all the files
 
-  $ hg update --clean 'desc(c)'
+  $ hg goto --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-delete.py << EOF
   > import os

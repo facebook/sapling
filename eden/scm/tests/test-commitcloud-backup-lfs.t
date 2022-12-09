@@ -45,7 +45,7 @@ Setup client
 Setup another client
   $ hg clone ssh://user@dummy/repo client2 -q
   $ cd client2
-  $ hg update scratch/lfscommit
+  $ hg goto scratch/lfscommit
   pulling 'scratch/lfscommit' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

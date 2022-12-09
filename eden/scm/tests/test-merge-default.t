@@ -32,7 +32,7 @@ Should fail because not at a head:
 
   $ hg merge
   abort: working directory not at a head revision
-  (use 'hg update' or merge with an explicit revision)
+  (use 'hg goto' or merge with an explicit revision)
   [255]
 
   $ hg up
@@ -100,7 +100,7 @@ Should fail because there is only one head:
 
   $ hg merge
   abort: nothing to merge
-  (use 'hg update' instead)
+  (use 'hg goto' instead)
   [255]
 
   $ hg up 'desc(d)'

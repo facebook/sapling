@@ -1011,7 +1011,7 @@ def merge(
         repo.ui.status(
             _(
                 "use '@prog@ resolve' to retry unresolved file merges "
-                "or '@prog@ update -C .' to abandon\n"
+                "or '@prog@ goto -C .' to abandon\n"
             )
         )
     elif remind:

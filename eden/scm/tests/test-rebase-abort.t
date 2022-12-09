@@ -133,7 +133,7 @@ earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
   [1]
 
   $ mv .hg/rebasestate .hg/rebasestate.back
-  $ hg update --quiet --clean 'desc(C3)'
+  $ hg goto --quiet --clean 'desc(C3)'
   $ hg debugstrip --quiet "tip"
   $ mv .hg/rebasestate.back .hg/rebasestate
 

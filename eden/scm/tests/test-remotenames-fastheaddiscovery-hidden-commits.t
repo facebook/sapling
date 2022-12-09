@@ -42,7 +42,7 @@ Load the commit in repo3, hide it, check that we can still pull.
   commitB
   $ hg hide -q -r tip
 
-  $ hg update -q default/book
+  $ hg goto -q default/book
   $ hg log -r tip -T '{desc}\n'
   commitB
 

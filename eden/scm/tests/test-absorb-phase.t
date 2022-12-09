@@ -22,7 +22,7 @@
 
   $ hg debugmakepublic -r A
 
-  $ hg update C -q
+  $ hg goto C -q
   $ printf B1 > B
 
   $ hg absorb -aq

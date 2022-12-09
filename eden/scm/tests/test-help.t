@@ -1664,7 +1664,7 @@ Test dynamic list of merge tools only shows up once
       the two file versions, so they can determine the changes made on both
       branches.
   
-      Merge tools are used both for 'hg resolve', 'hg merge', 'hg update', 'hg
+      Merge tools are used both for 'hg resolve', 'hg merge', 'hg goto', 'hg
       backout' and in several extensions.
   
       Usually, the merge tool tries to automatically reconcile the files by

@@ -480,7 +480,7 @@ test hg debugstrip -B bookmark
   $ hg id -ir 'desc(r10)':2702dd0c91e7
   abort: unknown revision '2702dd0c91e7'!
   [255]
-  $ hg update B
+  $ hg goto B
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark B)
   $ echo a > a

@@ -25,7 +25,7 @@
 
 comparing two empty files caused ZeroDivisionError in the past
 
-  $ hg update -C 'desc(A)'
+  $ hg goto -C 'desc(A)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ rm empty-file
   $ touch another-empty-file

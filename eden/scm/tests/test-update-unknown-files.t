@@ -46,7 +46,7 @@
   $ hg up null
   abort: 1 conflicting file changes:
    a
-  (commit, shelve, update --clean to discard all your changes, or update --merge to merge them)
+  (commit, shelve, goto --clean to discard all your changes, or update --merge to merge them)
   [255]
 #if no-windows
 Replacing symlink with content

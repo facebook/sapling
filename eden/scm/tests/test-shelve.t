@@ -1286,7 +1286,7 @@
   2
   $ tglog
   @  6408d34d8180 'commit1'
-  $ hg update --clean --quiet .
+  $ hg goto --clean --quiet .
   $ hg shelve --list
   default * shelve changes to: commit1 (glob)
   $ hg unshelve

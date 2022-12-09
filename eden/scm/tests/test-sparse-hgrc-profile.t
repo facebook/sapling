@@ -25,7 +25,7 @@
   alwaysincluded
   excludedbyconfig
 
-Test hg update reads new hgrc profile config
+Test hg goto reads new hgrc profile config
   $ cp .hg/hgrc .hg/hgrc.bak
   $ cat >> .hg/hgrc <<EOF
   > [sparseprofile]

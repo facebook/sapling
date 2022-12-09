@@ -465,7 +465,7 @@ running into merge conflict and invoking rebase --continue.
   $ hg commit -m "a"
   $ echo "a-default" > a
   $ hg commit -m "a-default"
-  $ hg update -r 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg goto -r 3903775176ed42b1458a6281db4a0ccf4d9f287a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "a-dev" > a
   $ hg commit -m "a-dev"

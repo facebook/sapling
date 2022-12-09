@@ -292,7 +292,7 @@ even if commit message is empty
   $ hg tip -T "{node}\n"
   7bb02e5e6d9de292a9e1b1cb2af5911ed53a378f
   $ hg export -o ../empty-log.diff .
-  $ hg update -q -C ".^1"
+  $ hg goto -q -C ".^1"
   $ hg debugstrip -q tip
   $ HGEDITOR=cat hg import --exact --bypass ../empty-log.diff
   applying ../empty-log.diff

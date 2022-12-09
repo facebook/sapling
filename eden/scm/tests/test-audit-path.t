@@ -85,7 +85,7 @@ attack .hg/test
 
   $ hg manifest -rb7da9bf6b037936363b456cdc950279bf7edb320
   .hg/test
-  $ hg update -Crb7da9bf6b037936363b456cdc950279bf7edb320
+  $ hg goto -Crb7da9bf6b037936363b456cdc950279bf7edb320
   abort: path contains illegal component: .hg/test
   [255]
 
@@ -93,7 +93,7 @@ attack foo/.hg/test
 
   $ hg manifest -r64cae21979bae51b18687c5777e4765dfa3397ab
   foo/.hg/test
-  $ hg update -Cr64cae21979bae51b18687c5777e4765dfa3397ab
+  $ hg goto -Cr64cae21979bae51b18687c5777e4765dfa3397ab
   abort: path 'foo/.hg/test' is inside nested repo 'foo'
   [255]
 
@@ -103,12 +103,12 @@ attack back/test where back symlinks to ..
   back
   back/test
 #if symlink
-  $ hg update -Cr4d3561dc450daacc43cf09e0ff551cd94cff8662
+  $ hg goto -Cr4d3561dc450daacc43cf09e0ff551cd94cff8662
   abort: path 'back/test' traverses symbolic link 'back'
   [255]
 #else
 ('back' will be a file and cause some other system specific error)
-  $ hg update -Cr2
+  $ hg goto -Cr2
   back: is both a file and a directory
   abort: * (glob)
   [255]
@@ -120,7 +120,7 @@ attack ../test
   ../test
   $ mkdir ../test
   $ echo data > ../test/file
-  $ hg update -Cr40f5112af0dd4eea43a68a26af2433ee68c45ae6
+  $ hg goto -Cr40f5112af0dd4eea43a68a26af2433ee68c45ae6
   abort: path contains illegal component: ../test
   [255]
   $ cat ../test/file
@@ -130,7 +130,7 @@ attack /tmp/test
 
   $ hg manifest -r'max(desc(add))'
   /tmp/test
-  $ hg update -Cr'max(desc(add))'
+  $ hg goto -Cr'max(desc(add))'
   abort: path contains illegal component: /tmp/test
   [255]
 

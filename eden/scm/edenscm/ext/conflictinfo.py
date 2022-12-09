@@ -83,7 +83,7 @@ CONFLICTSTATES = [
     # interrupted. See coment for mergestate.
     [
         "updatestate",
-        {"cmd": "update", "to_continue": "update", "to_abort": "update --clean"},
+        {"cmd": "update", "to_continue": "update", "to_abort": "goto --clean"},
     ],
     # Check for mergestate last, since other commands (shelve, rebase, histedit,
     # etc.) will leave a statefile of their own, as well as a mergestate, if
@@ -94,7 +94,7 @@ CONFLICTSTATES = [
         {
             "cmd": "merge",
             "to_continue": "merge --continue",
-            "to_abort": "update --clean",
+            "to_abort": "goto --clean",
         },
     ],
 ]

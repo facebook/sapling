@@ -136,7 +136,7 @@ and committed in local target directory.
   merging b/c and a/c to b/c
   warning: 1 conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg st -A
   M b/c
@@ -166,7 +166,7 @@ and committed in local source directory.
   merging a/c and b/c to b/c
   warning: 1 conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   2 files updated, 0 files merged, 2 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg st -A
   M b/a

@@ -264,7 +264,7 @@
   # To mark files as resolved:  hg resolve --mark FILE
   
   # To continue:                hg graft --continue
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 # Commit while interrupted should fail:
 
@@ -518,7 +518,7 @@
   > |/|
   > A B
   > EOS
-  $ hg update -q $C
+  $ hg goto -q $C
   $ hg graft $B
   grafting fc2b737bb2e5 "B"
   $ hg rm A B C

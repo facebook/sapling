@@ -20,7 +20,7 @@ Test that checks that relative paths are used in merge
   merging dir/file
   warning: 1 conflicts while merging dir/file! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ hg up -q -C .
@@ -29,7 +29,7 @@ Test that checks that relative paths are used in merge
   merging file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 Merging with different paths

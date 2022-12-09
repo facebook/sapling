@@ -138,7 +138,7 @@ Check that we did not generate any check:heads parts
   $ rm stuff
 
   $ cd ../server
-  $ hg update main
+  $ hg goto main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  b => baz [draft:4cfedb0dc25f] main
@@ -196,7 +196,7 @@ Push using changegroup2
   pulling from ssh://user@dummy/server
   searching for changes
   no changes found
-  $ hg update default
+  $ hg goto default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Regular commits should go through without changing hash
@@ -231,7 +231,7 @@ Regular commits should go through without changing hash
   o  initial [public:2bb9d20e471c]
   
   $ cd ../server
-  $ hg update main
+  $ hg goto main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log
@@ -593,7 +593,7 @@ Test that hooks are fired with the correct variables
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg update master
+  $ hg goto master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo >> file && hg ci -Aqm first
   $ echo >> file && hg ci -Aqm second
@@ -639,7 +639,7 @@ Test that failing prechangegroup hooks block the push
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg update master
+  $ hg goto master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo >> file && hg ci -Aqm first
   $ echo >> file && hg ci -Aqm second
@@ -952,7 +952,7 @@ Push a file-copy changeset and the copy source gets modified by others:
 
 Push an already-public changeset and confirm it is rejected
 
-  $ hg update -q '.^'
+  $ hg goto -q '.^'
   $ echo 2 > C
   $ hg commit -m C -A C
   $ hg debugmakepublic -r.

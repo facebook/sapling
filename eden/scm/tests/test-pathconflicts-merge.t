@@ -52,7 +52,7 @@ Merge - local file conflicts with remote directory
   moving a/b to a/b~029c48e05f7e
   getting a/b/c/d
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg status
   M a/b/c/d
@@ -76,7 +76,7 @@ Merge - local symlink conflicts with remote directory
   the local file has been renamed to a/b~f02dc228b64d
   resolve manually then use 'hg resolve --mark a/b'
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg status
   M a/b/c/d
@@ -104,7 +104,7 @@ Merge - local directory conflicts with remote file or link
   the remote file has been renamed to a/b~029c48e05f7e
   resolve manually then use 'hg resolve --mark a/b'
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg status
   A a/b~029c48e05f7e
@@ -126,7 +126,7 @@ Merge - local directory conflicts with remote file or link
   the remote file has been renamed to a/b~f02dc228b64d
   resolve manually then use 'hg resolve --mark a/b'
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
   $ hg mv a/b~f02dc228b64d a/b.old
   $ f a/b.old

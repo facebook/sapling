@@ -22,7 +22,7 @@ Restack does topological sort and only rebases "D" once:
   > |
   > A
   > EOS
-  $ hg update $B -q
+  $ hg goto $B -q
   $ hg commit --amend -m B2 -q --no-rebase 2>/dev/null
   $ B2=`hg log -r . -T '{node}'`
   $ hg rebase -r $C -d $B2 -q
@@ -67,20 +67,20 @@ Restack will only restack the "current" stack and leave other stacks untouched.
 
   $ hg debugmakepublic -r $Z+$I+$A+$E
 
-  $ hg update -q $Z
+  $ hg goto -q $Z
   $ hg rebase --restack
   nothing to restack
   [1]
 
-  $ hg update -q $D
+  $ hg goto -q $D
   $ hg rebase --restack
   rebasing be0ef73c17ad "D"
 
-  $ hg update -q $G
+  $ hg goto -q $G
   $ hg rebase --restack
   rebasing cc209258a732 "H"
 
-  $ hg update -q $I
+  $ hg goto -q $I
   $ hg rebase --restack
   rebasing 59760668f0e1 "K"
 
@@ -121,7 +121,7 @@ Restack could resume after resolving merge conflicts.
   >  A
   > EOS
 
-  $ hg update -q $F
+  $ hg goto -q $F
   $ hg rebase --restack
   rebasing ed8545a5c22a "F"
   merging C

@@ -228,7 +228,7 @@ Test with weird bookmark names
   [255]
 
 Test with two unrelated histories
-  $ hg update null
+  $ hg goto null
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   (leaving bookmark feature2)
   $ touch u1 && hg add u1 && hg ci -mu1
@@ -339,7 +339,7 @@ Recent arg select days correctly
   $ echo 1 >> b
   $ myday=`hg debugsh -c 'import time; ui.write(str(int(time.time()) - 24 * 3600 * 20))'`
   $ hg commit --date "$myday 0" -m test2
-  $ hg update 'desc(r0)' -q
+  $ hg goto 'desc(r0)' -q
   $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T '{node|short} {bookmarks} {desc}'
   o  66f7d451a68b master r1
   │

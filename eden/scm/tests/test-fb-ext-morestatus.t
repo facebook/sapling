@@ -87,7 +87,7 @@ Test graft state
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg graft --continue
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 
 Test hg status is normal after graft abort
@@ -206,7 +206,7 @@ Test conflicted merge state
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 
 Test if listed files have a relative path to current location
@@ -223,12 +223,12 @@ Test if listed files have a relative path to current location
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg commit
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
   $ cd ../..
 
 Test hg status is normal after merge abort
-  $ hg update --clean -q
+  $ hg goto --clean -q
   $ hg status
   ? a.orig
   $ rm a.orig
@@ -244,7 +244,7 @@ Test non-conflicted merge state
   
   # The repository is in an unfinished *merge* state.
   # To continue:                hg commit
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 
 Test hg status is normal after merge commit (no output)
@@ -253,45 +253,45 @@ Test hg status is normal after merge commit (no output)
 
 Test interrupted update state, without active bookmark and REV is a hash
   $ breakupdate
-  $ hg update -C 2977a57ce863
+  $ hg goto -C 2977a57ce863
   $ hg status
   
   # The repository is in an unfinished *update* state.
-  # To continue:                hg update -C 2977a57ce863
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To continue:                hg goto -C 2977a57ce863
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 
 Test interrupted update state, with active bookmark and REV is a bookmark
   $ hg bookmark b1
   $ hg bookmark -r 79361b8cdbb5 b2
-  $ hg update b2
+  $ hg goto b2
   $ hg status
   
   # The repository is in an unfinished *update* state.
-  # To continue:                hg update b2
-  # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
+  # To continue:                hg goto b2
+  # To abort:                   hg goto --clean b1    (warning: this will discard uncommitted changes)
 
 
 Test update state can be reset using bookmark
-  $ hg update b1 -q
+  $ hg goto b1 -q
   $ hg bookmark -d b1 -q
   $ hg status
 
 Test interrupted update state, without active bookmark and REV is specified using date
   $ echo a >> a
   $ hg commit --date "1234567890 0" -m m -q
-  $ hg update --date 1970-1-1 -q
+  $ hg goto --date 1970-1-1 -q
   $ hg status
   
   # The repository is in an unfinished *update* state.
-  # To continue:                hg update --date 1970-1-1 -q
-  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  # To continue:                hg goto --date 1970-1-1 -q
+  # To abort:                   hg goto --clean .    (warning: this will discard uncommitted changes)
 
 
   $ unbreakupdate
 
 Test update state can be reset using .
-  $ hg update . -q
+  $ hg goto . -q
   $ hg status
 
 Test args escaping in continue command
@@ -302,11 +302,11 @@ Test args escaping in continue command
   
   # The repository is in an unfinished *update* state.
   # To continue:                hg --config 'extensions.fsmonitor=!' --config 'ui.ssh=ssh -oControlMaster=no' update -C 2977a57ce863
-  # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
+  # To abort:                   hg goto --clean b1    (warning: this will discard uncommitted changes)
 
 
   $ unbreakupdate
-  $ hg update --clean b1
+  $ hg goto --clean b1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
 

@@ -65,7 +65,7 @@
   side1
   side2
 
-  $ hg update -C 71a760306cafb582ff672db4d4beb9625f34022d
+  $ hg goto -C 71a760306cafb582ff672db4d4beb9625f34022d
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ ls

@@ -164,7 +164,7 @@ bookmark rev 0 again
 
   $ hg bookmark -r 'desc(0)' Z
 
-  $ hg update X
+  $ hg goto X
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark X)
   $ echo c > c

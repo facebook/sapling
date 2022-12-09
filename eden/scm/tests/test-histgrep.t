@@ -319,12 +319,12 @@ of just using revision numbers.
   $ echo red > color
   $ hg commit -A -m "1 red"
 
-  $ hg update 'desc(0)'
+  $ hg goto 'desc(0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo black > color
   $ hg commit -A -m "2 black"
 
-  $ hg update --clean 'desc(1)'
+  $ hg goto --clean 'desc(1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo blue > color
   $ hg commit -A -m "3 blue"

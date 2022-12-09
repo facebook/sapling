@@ -476,7 +476,7 @@ only known on target revision.
   $ hg add 1/2/3/4/5/b.txt
   $ hg commit -m '#1'
 
-  $ hg update -C 10edc5093fbb6ac8a9eea22a09d22f54188ab09b > /dev/null
+  $ hg goto -C 10edc5093fbb6ac8a9eea22a09d22f54188ab09b > /dev/null
   $ hg status -A
   C a.txt
 

@@ -96,7 +96,7 @@
   [1]
 
 # Update to the last revision containing the large file
-  $ hg update
+  $ hg goto
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check the blobstore has been populated on update
@@ -297,7 +297,7 @@
   >   hg commit -m a-$i -A a
   > done
 
-  $ hg update 5b495c34b2630950b01ace9083c5260430bd2d52 -q
+  $ hg goto 5b495c34b2630950b01ace9083c5260430bd2d52 -q
   $ echo 'THIS-IS-LFS-2-CHILD' > a
   $ hg commit -m branching -q
 
@@ -481,7 +481,7 @@
   >     if [ $i = 3 ]; then
   >         # make a content-only change
   >         hg import -q --bypass ../patch.diff
-  >         hg update -q
+  >         hg goto -q
   >         rm ../patch.diff
   >     else
   >         echo $i >> a

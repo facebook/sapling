@@ -181,7 +181,7 @@ Test --no-backup
   >>> _ = open('folder1/g', 'wb').write(b"1\n2\n3\n4\n5\nd\n")
 
 
-  $ hg update -C 'max(desc(modifying))'
+  $ hg goto -C 'max(desc(modifying))'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg revert -i -r .~4 --all -- << EOF
   > n
@@ -328,7 +328,7 @@ Test --no-backup
   4
   5
   $ rm f.orig
-  $ hg update -C .
+  $ hg goto -C .
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Check editing files newly added by a revert
@@ -364,7 +364,7 @@ Check editing files newly added by a revert
   $ cat k
   42
 
-  $ hg update -C .
+  $ hg goto -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg purge
   $ touch newfile

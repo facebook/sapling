@@ -45,7 +45,7 @@ commit bug fixes on bug fix branch
   o  feature 1  [default]
   
 transplant bug fixes onto release branch
-  $ hg update 23224ffa3bb0b0d891aeadc0bd225327c05426ca
+  $ hg goto 23224ffa3bb0b0d891aeadc0bd225327c05426ca
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg graft 1f6b59d373ef839c739a0f64390ef31d3bf14c21
   grafting 1f6b59d373ef "fix 1"

@@ -21,7 +21,7 @@ Test invalid value for amend.autorestack
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ hg amend -m "new message"
   invalid amend.autorestack config of "test"; falling back to only-trivial
   rebasing ca039b450ae0 "C" (C)
@@ -39,7 +39,7 @@ If they disabled amend.autorestack, disable the new behavior (for now, during ro
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ hg amend -m "new message"
   hint[amend-restack]: descendants of fe14e2b67b65 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
@@ -54,7 +54,7 @@ amend.autorestack=only-trivial, and simple changes (expect restack)
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ hg amend -m 'Unchanged manifest for B'
   rebasing 26805aba1e60 "C" (C)
   hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
@@ -80,7 +80,7 @@ amend.autorestack=never
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ hg amend -m 'Unchanged manifest for B'
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
@@ -103,7 +103,7 @@ amend.autorestack=only-trivial, and manifest changes (expect no restack)
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ echo 'new b' > B
   $ hg amend -m 'Change manifest for B'
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
@@ -119,7 +119,7 @@ amend.autorestack=only-trivial, and dirty working copy (expect no restack)
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ echo 'new b' > B
   $ hg amend a -m 'Unchanged manifest, but dirty workdir'
   a: $ENOENT$ (?)
@@ -134,7 +134,7 @@ amend.autorestack=only-trivial, and no manifest changes, but no children (expect
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ hg amend -m 'Unchanged manifest for B'
 
 amend.autorestack=no-conflict, and mergeable changes (expect restack)
@@ -148,7 +148,7 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ seq 0 2 > file
   $ hg amend
   custom autorestack message
@@ -175,7 +175,7 @@ amend.autorestack=no-conflict, and mergeable changes, but dirty WC (expect no re
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ echo "new content" > other
   $ seq 0 2 > file
   $ cat <<EOS | hg amend -i --config ui.interactive=1
@@ -216,7 +216,7 @@ amend.autorestack=no-conflict, and conflicting changes (expect cancelled restack
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ echo 'unmergeable!' > file
   $ hg amend
   restacking children automatically (unless they conflict)
@@ -250,7 +250,7 @@ amend.autorestack=always, and conflicting changes (expect restack)
   > |
   > A
   > EOS
-  $ hg update B -q
+  $ hg goto B -q
   $ echo 'unmergeable!' > file
   $ hg amend
   rebasing b6c0d35dc9e9 "C" (C)
@@ -291,7 +291,7 @@ Test rebasing children with obsolete children themselves needing a restack.
   > |
   > Z
   > EOS
-  $ hg update A -q
+  $ hg goto A -q
   $ echo "new value" > A
   $ hg amend
   restacking children automatically (unless they conflict)

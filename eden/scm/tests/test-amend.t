@@ -16,7 +16,7 @@ Basic amend
   > A
   > EOS
 
-  $ hg update B -q
+  $ hg goto B -q
   $ echo 2 >> B
 
   $ hg amend
@@ -130,7 +130,7 @@ Amend in the middle of a stack
   > A
   > EOS
 
-  $ hg update -q B
+  $ hg goto -q B
   $ echo 2 >> B
   $ hg amend
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
@@ -148,7 +148,7 @@ Amend in the middle of a stack
 Cannot amend public changeset
 
   $ hg debugmakepublic -r A
-  $ hg update -C -q A
+  $ hg goto -C -q A
   $ hg amend -m AMEND
   abort: cannot amend public changesets
   [255]
@@ -162,7 +162,7 @@ Amend a merge changeset
   >  /|
   > A B
   > EOS
-  $ hg update -q C
+  $ hg goto -q C
   $ hg amend -m FOO
   $ hg log -G -T '{desc}\n'
   @    FOO

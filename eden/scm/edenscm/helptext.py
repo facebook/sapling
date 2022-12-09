@@ -651,7 +651,7 @@ effect and style see :prog:`help color`.
     (default: False)
 
 ``update.check``
-    Determines what level of checking :prog:`update` will perform before moving
+    Determines what level of checking :prog:`goto` will perform before moving
     to a destination revision. Valid values are ``abort``, ``none``,
     ``linear``, and ``noconflict``. ``abort`` always fails if the working
     directory has uncommitted changes. ``none`` performs no checking, and may
@@ -663,8 +663,8 @@ effect and style see :prog:`help color`.
     (default: ``linear``)
 
 ``update.requiredest``
-    Require that the user pass a destination when running :prog:`update`.
-    For example, :prog:`update .::` will be allowed, but a plain :prog:`update`
+    Require that the user pass a destination when running :prog:`goto`.
+    For example, :prog:`goto .::` will be allowed, but a plain :prog:`goto`
     will be disallowed.
     (default: False)
 
@@ -1122,7 +1122,7 @@ Example ``.hg/hgrc``::
 
   [hooks]
   # update working directory after adding changesets
-  changegroup.update = @prog@ update
+  changegroup.update = @prog@ goto
   # do not use the site-wide hook
   incoming =
   incoming.email = /my/email/hook
@@ -3120,7 +3120,7 @@ Bookmark
     Bookmarks are pointers to certain commits that move when
     committing. They are similar to tags in that it is possible to use
     bookmark names in all places where @Product@ expects a changeset
-    ID, e.g., with :prog:`update`. Unlike tags, bookmarks move along
+    ID, e.g., with :prog:`goto`. Unlike tags, bookmarks move along
     when you make a commit.
 
     Bookmarks can be renamed, copied and deleted. Bookmarks are local,
@@ -3399,7 +3399,7 @@ Parent, working directory
     The working directory parent reflects a virtual revision which is
     the child of the changeset (or two changesets with an uncommitted
     merge) shown by :prog:`parents`. This is changed with
-    :prog:`update`. Other commands to see the working directory parent
+    :prog:`goto`. Other commands to see the working directory parent
     are :prog:`summary` and :prog:`id`. Can be specified by the alias ".".
 
 Patch
@@ -3448,7 +3448,7 @@ Repository head
 
 Revision
     A state of the repository at some point in time. Earlier revisions
-    can be updated to by using :prog:`update`.  See also 'Revision
+    can be updated to by using :prog:`goto`.  See also 'Revision
     number'; See also 'Changeset'.
 
 Revision number
@@ -3481,7 +3481,7 @@ Secret
 Tag
     An alternative name given to a changeset. Tags can be used in all
     places where @Product@ expects a changeset ID, e.g., with
-    :prog:`update`. The creation of a tag is stored in the history and
+    :prog:`goto`. The creation of a tag is stored in the history and
     will thus automatically be shared with other using push and pull.
 
 Tip
@@ -3523,7 +3523,7 @@ file. Merge tools are given the two files and the greatest common
 ancestor of the two file versions, so they can determine the changes
 made on both branches.
 
-Merge tools are used both for :prog:`resolve`, :prog:`merge`, :prog:`update`,
+Merge tools are used both for :prog:`resolve`, :prog:`merge`, :prog:`goto`,
 :prog:`backout` and in several extensions.
 
 Usually, the merge tool tries to automatically reconcile the files by
@@ -3858,7 +3858,7 @@ working directory is checked out, it is equivalent to null. If an
 uncommitted merge is in progress, "." is the revision of the first
 parent.
 
-Finally, commands that expect a single revision (like ``@prog@ update``) also
+Finally, commands that expect a single revision (like ``@prog@ goto``) also
 accept revsets (see below for details). When given a revset, they use the
 last revision of the revset. A few commands accept two single revisions
 (like ``@prog@ diff``). When given a revset, they use the first and the last
@@ -4044,7 +4044,7 @@ Some sample queries:
 - Update to the commit that bookmark @ is pointing to, without activating the
   bookmark (this works because the last revision of the revset is used)::
 
-    @prog@ update :@
+    @prog@ goto :@
 
 - Show diff between tags 1.3 and 1.5 (this works because the first and the
   last revisions of the revset are used)::

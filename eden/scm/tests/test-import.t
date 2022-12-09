@@ -109,7 +109,7 @@
   $ hg tip -T '{node}\n'
   e7df5eeeca3300b311991dbe19748d533edb2e8a
   $ hg export -o ../empty-log.diff .
-  $ hg update -q -C '.^1'
+  $ hg goto -q -C '.^1'
   $ hg hide -q -r tip
   $ HGEDITOR=cat hg import --exact ../empty-log.diff
   applying ../empty-log.diff
@@ -638,7 +638,7 @@ def mkmsg2(path1, path2):
 # apply a good patch followed by an empty patch (mainly to ensure
 # that dirstate is *not* updated when import crashes)
 
-  $ hg update -q -C .
+  $ hg goto -q -C .
   $ rm b
   $ touch empty.patch
   $ hg import a.patch empty.patch
@@ -1239,7 +1239,7 @@ sh % "hg diff --git -c tip" == r"""
 
 # Importing with some success and some errors:
 
-  $ hg update --rev 'desc(initial)'
+  $ hg goto --rev 'desc(initial)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg export --rev 'desc(five)' | hg import --partial -
   applying patch from stdin
@@ -1289,7 +1289,7 @@ sh % "hg diff --git -c tip" == r"""
 
 # Importing with zero success:
 
-  $ hg update --rev 'desc(initial)'
+  $ hg goto --rev 'desc(initial)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg export --rev 'desc(four)' | hg import --partial -
   applying patch from stdin
@@ -1334,7 +1334,7 @@ sh % "hg diff --git -c tip" == r"""
 
 # Importing with unknown file:
 
-  $ hg update --rev 'desc(initial)'
+  $ hg goto --rev 'desc(initial)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg export --rev 'desc("extended jungle")' | hg import --partial -
   applying patch from stdin
@@ -1382,7 +1382,7 @@ sh % "hg diff --git -c tip" == r"""
 
 # Importing multiple failing patches:
 
-  $ hg update --rev 'desc(initial)'
+  $ hg goto --rev 'desc(initial)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo B > b
   $ hg commit -m 'a new base'

@@ -47,7 +47,7 @@
   warning: 1 conflicts while merging F1! (edit, then use 'hg resolve --mark')
   warning: 1 conflicts while merging F2! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
 5) Get the paths:
@@ -55,7 +55,7 @@
   [
    {
     "command": "merge",
-    "command_details": {"cmd": "merge", "to_abort": "update --clean", "to_continue": "merge --continue"},
+    "command_details": {"cmd": "merge", "to_abort": "goto --clean", "to_continue": "merge --continue"},
     "conflicts": [{"base": {"contents": "Unconflicted base, F1\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "Second conflicted version, F1\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "First conflicted version, F1\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< working copy: 13124abb51b9 b - test: second version, b\nSecond conflicted version, F1\n=======\nFirst conflicted version, F1\n>>>>>>> merge rev:    6dd692b7db4a a - test: first version, a\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/basic/F1"}, "path": "F1"}, {"base": {"contents": "Unconflicted base, F2\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "Second conflicted version, F2\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "First conflicted version, F2\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< working copy: 13124abb51b9 b - test: second version, b\nSecond conflicted version, F2\n=======\nFirst conflicted version, F2\n>>>>>>> merge rev:    6dd692b7db4a a - test: first version, a\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/basic/F2"}, "path": "F2"}],
     "pathconflicts": []
    }
@@ -66,7 +66,7 @@
   [
    {
     "command": "merge",
-    "command_details": {"cmd": "merge", "to_abort": "update --clean", "to_continue": "merge --continue"},
+    "command_details": {"cmd": "merge", "to_abort": "goto --clean", "to_continue": "merge --continue"},
     "conflicts": [{"base": {"contents": "Unconflicted base, F2\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "Second conflicted version, F2\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "First conflicted version, F2\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< working copy: 13124abb51b9 b - test: second version, b\nSecond conflicted version, F2\n=======\nFirst conflicted version, F2\n>>>>>>> merge rev:    6dd692b7db4a a - test: first version, a\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/basic/F2"}, "path": "F2"}],
     "pathconflicts": []
    }
@@ -138,14 +138,14 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
   merging file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ hg resolve --tool=internal:dumpjson --all
   [
    {
     "command": "merge",
-    "command_details": {"cmd": "merge", "to_abort": "update --clean", "to_continue": "merge --continue"},
+    "command_details": {"cmd": "merge", "to_abort": "goto --clean", "to_continue": "merge --continue"},
     "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "some local changes\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "other change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< working copy: fd7d10c36158 - test: dest\nsome local changes\n=======\nother change\n>>>>>>> merge rev:    9b65ba2922f0 - test: source\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }
@@ -181,14 +181,14 @@ tldr: Since we couldn't premerge, the working copy is left alone.
   local [working copy] changed file which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ hg resolve --tool=internal:dumpjson --all
   [
    {
     "command": "merge",
-    "command_details": {"cmd": "merge", "to_abort": "update --clean", "to_continue": "merge --continue"},
+    "command_details": {"cmd": "merge", "to_abort": "goto --clean", "to_continue": "merge --continue"},
     "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "some local changes\n", "exists": true, "isexec": true, "issymlink": false}, "other": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "output": {"contents": "some local changes\n", "exists": true, "isexec": true, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }
@@ -257,14 +257,14 @@ Test case 1b: Like #1 but with a merge, with local changes
   local [working copy] changed file which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
 
   $ hg resolve --tool=internal:dumpjson --all
   [
    {
     "command": "merge",
-    "command_details": {"cmd": "merge", "to_abort": "update --clean", "to_continue": "merge --continue"},
+    "command_details": {"cmd": "merge", "to_abort": "goto --clean", "to_continue": "merge --continue"},
     "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "some local changes\n", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "output": {"contents": "some local changes\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }

@@ -115,7 +115,7 @@
 # Let's validate that both the LFS extension, and the remotefilelog LFS can co-exist when pulling blobs
   $ setconfig extensions.lfs= lfs.threshold=10B lfs.url=file:$TESTTMP/lfs-server/ remotefilelog.lfs=True
 
-  $ hg update -r tip
+  $ hg goto -r tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat x
   THIS IS AN LFS BLOB

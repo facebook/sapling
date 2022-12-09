@@ -715,7 +715,7 @@ def _unshelvemsg():
 
 def _updatecleanmsg(dest=None):
     warning = _("warning: this will discard uncommitted changes")
-    return _("@prog@ update --clean %s    (%s)") % (dest or ".", warning)
+    return _("@prog@ goto --clean %s    (%s)") % (dest or ".", warning)
 
 
 def _graftmsg():
@@ -4416,7 +4416,7 @@ unfinishedstates = [
         True,
         True,
         _("update --merge in progress"),
-        _("use '@prog@ update --continue' to continue"),
+        _("use '@prog@ goto --continue' to continue"),
     ),
     (
         "updatestate",
@@ -4424,8 +4424,8 @@ unfinishedstates = [
         False,
         _("last update was interrupted"),
         _(
-            "use '@prog@ update DESTINATION' to get a consistent checkout\n"
-            "note: '@prog@ update --continue' is supported in some cases, such as "
+            "use '@prog@ goto DESTINATION' to get a consistent checkout\n"
+            "note: '@prog@ goto --continue' is supported in some cases, such as "
             "during clone, and will resume the checkout where it left off"
         ),
     ),
@@ -4458,7 +4458,7 @@ def clearunfinished(repo):
 
 afterresolvedstates = [
     ("graftstate", _("@prog@ graft --continue")),
-    ("updatemergestate", _("@prog@ update --continue")),
+    ("updatemergestate", _("@prog@ goto --continue")),
 ]
 
 

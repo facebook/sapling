@@ -83,7 +83,7 @@ Pull the new commits in the clone
   $ hg pull
   pulling from test:repo_server
   searching for changes
-  $ hg update
+  $ hg goto
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  f838bfaca5c7 public test  C

@@ -194,7 +194,7 @@
   $ hg st d
   R d
 
-  $ hg update -C
+  $ hg goto -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 #if execbit
@@ -269,7 +269,7 @@
   adding a
   $ echo a >> a
   $ hg commit -d '2 0' -m a
-  $ hg update 0
+  $ hg goto 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir b
   $ echo b > b/b
@@ -279,7 +279,7 @@
 
   $ hg revert -rtip
   abort: no files or directories specified
-  (use --all to revert all files, or 'hg update 1' to update)
+  (use --all to revert all files, or 'hg goto 1' to update)
   [255]
 
 # call `hg revert` with -I
@@ -385,7 +385,7 @@
 # someone set up us the copies
 
   $ rm .gitignore
-  $ hg update -C
+  $ hg goto -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv ignored allyour
   $ hg copy removed base
@@ -393,7 +393,7 @@
 
 # copies and renames, you have no chance to survive make your time (issue3920)
 
-  $ hg update '.^'
+  $ hg goto '.^'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg revert -rtip -a
   adding allyour

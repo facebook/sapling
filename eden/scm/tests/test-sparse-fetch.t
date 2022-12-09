@@ -70,7 +70,7 @@ def collectprefetch(command):
   >>> collectprefetch("hg update -q $B")
   ['x', 'x/x', 'x/x/y']
 
-  $ hg update -q $D
+  $ hg goto -q $D
 
 # Good: Rebasing B to D should avoid downloading d/ or c/, or z/.
 # (This is optimized by "rebase: use matcher to optimize manifestmerge",

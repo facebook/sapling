@@ -183,7 +183,7 @@ rebase --continue with bookmarks present (issue3802)
 ensure that bookmarks given the names of revset functions can be used
 as --rev arguments (issue3950)
 
-  $ hg update -q 'desc(other)'
+  $ hg goto -q 'desc(other)'
   $ echo bimble > bimble
   $ hg add bimble
   $ hg commit -q -m 'bisect'
@@ -192,7 +192,7 @@ as --rev arguments (issue3950)
   $ echo e >> bimble
   $ hg ci -m bisect3
   $ hg book bisect
-  $ hg update -q Y
+  $ hg goto -q Y
   $ hg rebase -r '"bisect"^^::"bisect"^' -r bisect -d Z
   rebasing 345c90f326a4 "bisect"
   rebasing f677a2907404 "bisect2"

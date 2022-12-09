@@ -85,7 +85,7 @@
   $ hg st
   ? foo
   $ enable amend
-  $ hg update '.^'
+  $ hg goto '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   hint[update-prev]: use 'hg prev' to move to the parent changeset
   hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints

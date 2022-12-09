@@ -28,7 +28,7 @@
 
   $ mkstack() {
   >    # Creates a stack of commit based on $1 with messages from $2, $3 ..
-  >    hg update $1 -C
+  >    hg goto $1 -C
   >    shift
   >    mkcommits $*
   > }
@@ -97,7 +97,7 @@ Test
   o  : ROOT - test
   
 
-  $ hg update --clean .
+  $ hg goto --clean .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg metaedit -r 'desc(ROOT)'
   abort: cannot edit commit information for public revisions
@@ -217,7 +217,7 @@ metaedit a commit in the middle of the stack:
   $ hg init metaedit2
   $ cd metaedit2
   $ hg debugbuilddag '+5'
-  $ hg update tip
+  $ hg goto tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ glog -r 'all()'
@@ -329,7 +329,7 @@ metaedit noncontinuous set of commits in the stack:
   $ hg init metaeditnoncontinues
   $ cd metaeditnoncontinues
   $ hg debugbuilddag '+5'
-  $ hg update tip
+  $ hg goto tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ glog -r 'all()'

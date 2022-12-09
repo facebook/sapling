@@ -161,7 +161,7 @@ Test pull with --rebase and --tool
   $ mkcommit remotecommit
   $ cd ../localrepo
   $ hg book -t default/bookmarkonremote -r default/bookmarkonremote tracking2
-  $ hg update tracking2 -q
+  $ hg goto tracking2 -q
   $ echo localchanges > editedbyboth
   $ hg add editedbyboth
   $ mkcommit somelocalchanges

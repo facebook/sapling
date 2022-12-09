@@ -69,7 +69,7 @@ Set up a client repository, and work on 3 diffs
 Now land the first two diff, but with amended commit messages, as would happen
 when a diff is landed with landcastle.
 
-  $ hg update -r 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
+  $ hg goto -r 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg graft -r 948715751816b5aaf59c890f413d3b4c89008f12
   grafting 948715751816 "add b"
@@ -90,7 +90,7 @@ when a diff is landed with landcastle.
 
 Strip the commits we just landed.
 
-  $ hg update -r 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
+  $ hg goto -r 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg debugstrip -r e0672eeeb97c5767cc642e702951cfcfa73cdc82
 
@@ -133,7 +133,7 @@ hide them since there is a non-hidden successor.
 
 Now land the last diff.
 
-  $ hg update -r 'max(desc("add c")-obsolete())'
+  $ hg goto -r 'max(desc("add c")-obsolete())'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg graft -r e4b5974890c0ceff0317ecbc08ec357613fd01dd
   grafting e4b5974890c0 "add d"
@@ -151,7 +151,7 @@ Now land the last diff.
 
 And strip the commit we just landed.
 
-  $ hg update -r cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8
+  $ hg goto -r cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugstrip -r 'max(desc("add d")-obsolete())'
 
