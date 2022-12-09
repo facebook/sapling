@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <folly/CppAttributes.h>
 #include <folly/futures/Future.h>
 #include <atomic>
