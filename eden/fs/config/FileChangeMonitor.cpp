@@ -42,7 +42,7 @@ FileChangeReason hasFileChanged(
   return FileChangeReason::NONE;
 }
 
-folly::StringPiece FileChangeReason::str() const {
+std::string_view FileChangeReason::str() const {
   switch (reason) {
     case NONE:
       return "none";

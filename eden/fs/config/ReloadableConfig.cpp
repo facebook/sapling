@@ -22,23 +22,25 @@ constexpr std::chrono::seconds kEdenConfigMinimumPollDuration{5};
 namespace facebook::eden {
 
 ReloadableConfig::ReloadableConfig(std::shared_ptr<const EdenConfig> config)
-    : state_{ConfigState{config}} {}
+    : state_{ConfigState{std::move(config)}} {}
+
 ReloadableConfig::ReloadableConfig(
     std::shared_ptr<const EdenConfig> config,
     ConfigReloadBehavior reloadBehavior)
-    : state_{ConfigState{config}}, reloadBehavior_{reloadBehavior} {}
+    : state_{ConfigState{std::move(config)}}, reloadBehavior_{reloadBehavior} {}
 
-ReloadableConfig::~ReloadableConfig() {}
+ReloadableConfig::~ReloadableConfig() = default;
 
 std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
     ConfigReloadBehavior reload) {
   auto now = std::chrono::steady_clock::now();
 
-  // TODO: Update this monitoring code to use FileChangeMonitor.
-  bool shouldReload;
   if (reloadBehavior_.has_value()) {
     reload = reloadBehavior_.value();
   }
+
+  // TODO: Update this monitoring code to use FileChangeMonitor.
+  bool shouldReload;
   switch (reload) {
     case ConfigReloadBehavior::NoReload:
       shouldReload = false;
@@ -73,13 +75,19 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
   if (userConfigChanged || systemConfigChanged) {
     auto newConfig = std::make_shared<EdenConfig>(*config);
     if (userConfigChanged) {
-      XLOG(DBG3) << "Reloading " << config->getUserConfigPath() << " because "
-                 << userConfigChanged.str();
+      XLOGF(
+          DBG3,
+          "Reloading {} because {}",
+          config->getUserConfigPath(),
+          userConfigChanged);
       newConfig->loadUserConfig();
     }
     if (systemConfigChanged) {
-      XLOG(DBG3) << "Reloading " << config->getSystemConfigPath() << " because "
-                 << systemConfigChanged.str();
+      XLOGF(
+          DBG3,
+          "Reloading {} because {}",
+          config->getSystemConfigPath(),
+          systemConfigChanged);
       newConfig->loadSystemConfig();
     }
     state->config = std::move(newConfig);

@@ -7,11 +7,13 @@
 
 #pragma once
 
+#include <fmt/core.h>
 #include <folly/File.h>
 #include <sys/stat.h>
 #include <chrono>
 #include <functional>
 #include <optional>
+#include <string_view>
 
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -44,7 +46,7 @@ class FileChangeReason {
   /**
    * Return a human-readable string for why a file changed.
    */
-  folly::StringPiece str() const;
+  std::string_view str() const;
 };
 
 /**
@@ -179,3 +181,12 @@ class FileChangeMonitor {
 };
 
 } // namespace facebook::eden
+
+template <>
+struct fmt::formatter<facebook::eden::FileChangeReason>
+    : formatter<std::string_view> {
+  template <typename Context>
+  auto format(facebook::eden::FileChangeReason reason, Context& ctx) const {
+    return formatter<std::string_view>::format(reason.str(), ctx);
+  }
+};

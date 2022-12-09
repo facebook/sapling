@@ -25,9 +25,15 @@ class EdenConfig;
 class ReloadableConfig {
  public:
   explicit ReloadableConfig(std::shared_ptr<const EdenConfig> config);
+
+  /**
+   * Create a ReloadableConfig with a hardcoded, overridden reload behavior. The
+   * reload behavior passed to `getEdenConfig` will be ignored.
+   */
   ReloadableConfig(
       std::shared_ptr<const EdenConfig> config,
       ConfigReloadBehavior reload);
+
   ~ReloadableConfig();
 
   /**
@@ -41,18 +47,16 @@ class ReloadableConfig {
 
  private:
   struct ConfigState {
-    explicit ConfigState(const std::shared_ptr<const EdenConfig>& config)
-        : config{config} {}
     std::shared_ptr<const EdenConfig> config;
   };
 
   folly::Synchronized<ConfigState> state_;
   std::atomic<std::chrono::steady_clock::time_point::rep> lastCheck_{};
 
-  // Reload behavior, when set this overrides reload behavior passed to methods
-  // This is used in tests where we want to set the manually set the EdenConfig
-  // and avoid reloading it from disk.
-  std::optional<ConfigReloadBehavior> reloadBehavior_{std::nullopt};
+  // When set, this overrides reload behavior passed to `getEdenConfig`.
+  // Used in tests where we want to set the manually set the EdenConfig and
+  // avoid reloading it from disk.
+  std::optional<ConfigReloadBehavior> reloadBehavior_;
 };
 
 } // namespace facebook::eden
