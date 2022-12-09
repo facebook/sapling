@@ -710,7 +710,10 @@ def cloudmove(ui, repo, *revs, **opts):
         )
 
     if destination:
-        destinationworkspace = workspace.userworkspaceprefix(ui) + destination
+        if destination == ".":
+            destinationworkspace = workspace.currentworkspace(repo)
+        else:
+            destinationworkspace = workspace.userworkspaceprefix(ui) + destination
     else:
         if rawdestination:
             destinationworkspace = rawdestination
@@ -724,7 +727,10 @@ def cloudmove(ui, repo, *revs, **opts):
         raise error.Abort("conflicting 'source' and 'raw-source' options provided")
 
     if source:
-        sourceworkspace = workspace.userworkspaceprefix(ui) + source
+        if source == ".":
+            sourceworkspace = workspace.currentworkspace(repo)
+        else:
+            sourceworkspace = workspace.userworkspaceprefix(ui) + source
     else:
         if rawsource:
             sourceworkspace = rawsource
