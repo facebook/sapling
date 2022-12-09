@@ -49,7 +49,7 @@ class RealGitHubEndpoint(ghstack.github.GitHubEndpoint):
     def push_hook(self, refName: Sequence[str]) -> None:
         pass
 
-    def graphql(self, query: str, **kwargs: Any) -> Any:
+    def graphql_sync(self, query: str, **kwargs: Any) -> Any:
         headers = {}
         if self.oauth_token:
             headers['Authorization'] = 'bearer {}'.format(self.oauth_token)

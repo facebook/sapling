@@ -94,7 +94,9 @@ query PullRequestQuery($owner: String!, $name: String!, $number: Int!) {
   }
 }
 """
-    response = github.graphql(query, owner=pr.owner, name=pr.name, number=pr.number)
+    response = github.graphql_sync(
+        query, owner=pr.owner, name=pr.name, number=pr.number
+    )
     pr = response["data"]["repository"]["pullRequest"]
     return {
         "merged": pr["merged"],

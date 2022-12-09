@@ -414,7 +414,7 @@ class Submitter(object):
         number = commit.pull_request_resolved.number
         # TODO: There is no reason to do a node query here; we can
         # just look up the repo the old fashioned way
-        r = self.github.graphql("""
+        r = self.github.graphql_sync("""
           query ($repo_id: ID!, $number: Int!) {
             node(id: $repo_id) {
               ... on Repository {

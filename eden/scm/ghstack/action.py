@@ -12,7 +12,7 @@ def main(pull_request: str,
          ) -> None:
 
     params = ghstack.github_utils.parse_pull_request(pull_request)
-    pr_result = github.graphql("""
+    pr_result = github.graphql_sync("""
         query ($owner: String!, $name: String!, $number: Int!) {
             repository(name: $name, owner: $owner) {
                 pullRequest(number: $number) {
@@ -25,7 +25,7 @@ def main(pull_request: str,
 
     if close:
         logging.info("Closing {owner}/{name}#{number}".format(**params))
-        github.graphql("""
+        github.graphql_sync("""
             mutation ($input: ClosePullRequestInput!) {
                 closePullRequest(input: $input) {
                     clientMutationId

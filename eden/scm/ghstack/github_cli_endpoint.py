@@ -39,7 +39,7 @@ class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
         else:
             return result.ok
 
-    def graphql(self, query: str, **kwargs: Any) -> Any:
+    def graphql_sync(self, query: str, **kwargs: Any) -> Any:
         params: Dict[str, Union[str, int, bool]] = dict(kwargs)
         params["query"] = query
         loop = asyncio.get_event_loop()

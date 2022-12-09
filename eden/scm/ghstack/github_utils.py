@@ -74,7 +74,7 @@ def get_github_repo_info(
     name = name_with_owner["name"]
 
     # TODO: Cache this guy
-    repo = github.graphql(
+    repo = github.graphql_sync(
         """
         query ($owner: String!, $name: String!) {
             repository(name: $name, owner: $owner) {
@@ -131,7 +131,7 @@ def parse_pull_request(pull_request: str) -> GitHubPullRequestParams:
 
 
 def lookup_pr_to_orig_ref(github: ghstack.github.GitHubEndpoint, *, owner: str, name: str, number: int) -> str:
-    pr_result = github.graphql("""
+    pr_result = github.graphql_sync("""
         query ($owner: String!, $name: String!, $number: Int!) {
             repository(name: $name, owner: $owner) {
                 pullRequest(number: $number) {
@@ -160,7 +160,7 @@ def get_commit_and_tree_for_ref(
     repo_id: GitHubRepositoryId,
     ref: str,
 ) -> GitCommitAndTree:
-    target = github.graphql(
+    target = github.graphql_sync(
     """
       query ($repo_id: ID!, $ref: String!) {
         node(id: $repo_id) {
@@ -238,7 +238,7 @@ def get_base_heads(
     after_cursor: str = "",
 ) -> BaseHeads:
     ref_prefix = f"refs/heads/gh/{username}/"
-    data = github.graphql(
+    data = github.graphql_sync(
         """
       query ($repo_id: ID!, $ref_prefix: String!, $after: String!) {
         node(id: $repo_id) {
@@ -297,7 +297,7 @@ def update_ref(
         ref=target_ref,
     )['commit']
 
-    data = github.graphql(
+    data = github.graphql_sync(
         """
         mutation ($refId: ID!, $oid: GitObjectID!) {
             updateRef(input: {
@@ -326,7 +326,7 @@ def get_id_for_ref(
     repo_id: GitHubRepositoryId,
     ref: str,
 ) -> GitCommitAndTree:
-    return github.graphql(
+    return github.graphql_sync(
     """
       query ($repo_id: ID!, $ref: String!) {
         node(id: $repo_id) {

@@ -4,7 +4,7 @@ from typing import Any, Sequence
 
 class GitHubEndpoint(metaclass=ABCMeta):
     @abstractmethod
-    def graphql(self, query: str, **kwargs: Any) -> Any:
+    def graphql_sync(self, query: str, **kwargs: Any) -> Any:
         """
         Args:
             query: string GraphQL query to execute

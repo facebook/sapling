@@ -223,7 +223,7 @@ def _create_ghstack_context(ui, repo):
     username_config_name = "github_username"
     github_username = ui.config(config_section, username_config_name)
     if not github_username:
-        github_username = github.graphql(
+        github_username = github.graphql_sync(
             """
 query UsernameQuery {
   viewer {
