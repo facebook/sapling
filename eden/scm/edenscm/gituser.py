@@ -5,6 +5,9 @@
 
 from typing import Tuple
 
+from edenscm import error
+from edenscm.i18n import _
+
 
 def parse_username(username: str) -> Tuple[str, str]:
     r"""parses `username` and returns a tuple (name, email)
@@ -72,3 +75,14 @@ def normalize(userstr: str) -> str:
         return userstr
     else:
         return "%s <>" % userstr
+
+
+def get_identity_or_raise(ui) -> Tuple[str, str]:
+    """Returns a Git identity (name, email) based on ui.username or raises."""
+    username = ui.config("ui", "username")
+    if not username:
+        raise error.Abort(
+            _("ui.username not set. See %s for information on setting your identity.")
+            % "https://sapling-scm.com/docs/introduction/getting-started"
+        )
+    return parse_username(username)
