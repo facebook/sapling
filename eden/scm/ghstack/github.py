@@ -4,8 +4,21 @@ from typing import Any, Sequence
 
 class GitHubEndpoint(metaclass=ABCMeta):
     @abstractmethod
-    def graphql_sync(self, query: str, **kwargs: Any) -> Any:
+    async def graphql(self, query: str, **kwargs: Any) -> Any:
+        """Execute a GraphQL query asynchronously.
+
+        Args:
+            query: string GraphQL query to execute
+            **kwargs: values for variables in the graphql query
+
+        Returns: parsed JSON response
         """
+        pass
+
+    @abstractmethod
+    def graphql_sync(self, query: str, **kwargs: Any) -> Any:
+        """Execute a GraphQL query synchronously.
+
         Args:
             query: string GraphQL query to execute
             **kwargs: values for variables in the graphql query

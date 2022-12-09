@@ -7,7 +7,7 @@ import asyncio
 from typing import Any, Dict, Generic, List, Optional, Sequence, TypeVar, Union
 
 import ghstack.github
-from ghstack.github_gh_cli import make_request
+from ghstack.github_gh_cli import make_request, Result
 
 
 class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
@@ -48,3 +48,8 @@ class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
             raise RuntimeError(result.error)
         else:
             return result.ok
+
+    async def graphql(self, query: str, **kwargs: Any) -> Result:
+        params: Dict[str, Union[str, int, bool]] = dict(kwargs)
+        params["query"] = query
+        return await make_request(params, hostname=self.hostname)
