@@ -923,7 +923,7 @@ fn init_tunables<'a>(
             .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
         let config_handle = ConfigHandle::from_json(&value)
             .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return init_tunables_worker(logger, config_handle, handle);
+        return tunables::init_tunables(&logger, &config_handle);
     }
 
     let tunables_spec = matches

@@ -353,14 +353,7 @@ pub fn init_tunables_worker(
     config_handle: ConfigHandle<TunablesStruct>,
     runtime_handle: Handle,
 ) -> Result<()> {
-    let init_tunables = config_handle.get();
-    debug!(
-        logger,
-        "Initializing tunables: {}",
-        log_tunables(&init_tunables)
-    );
-    update_tunables(init_tunables)?;
-
+    init_tunables(&logger, &config_handle)?;
     if TUNABLES_WORKER_STATE
         .set(TunablesWorkerState {
             config_handle,
@@ -373,6 +366,12 @@ pub fn init_tunables_worker(
     runtime_handle.spawn(wait_and_update());
 
     Ok(())
+}
+
+pub fn init_tunables(logger: &Logger, config_handle: &ConfigHandle<TunablesStruct>) -> Result<()> {
+    let tunables = config_handle.get();
+    debug!(logger, "Initializing tunables: {}", log_tunables(&tunables));
+    update_tunables(tunables)
 }
 
 /// Tunables are updated when the underlying config source notifies of a change.

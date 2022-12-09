@@ -539,7 +539,7 @@ fn init_tunables_worker(
             .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
         let config_handle = ConfigHandle::from_json(&value)
             .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
-        return tunables::init_tunables_worker(logger, config_handle, handle);
+        return tunables::init_tunables(&logger, &config_handle);
     }
 
     let tunables_config = tunables_args.tunables_config_or_default();
