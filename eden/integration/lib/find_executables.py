@@ -265,8 +265,9 @@ class FindExeClass(object):
             if path:
                 if not os.access(path, os.X_OK):
                     raise Exception(
-                        f"unable to find {name}: specified as {path!r} "
-                        f"by ${env}, but not available there"
+                        f"able to find {name}: specified as {path!r} "
+                        f"by ${env}, but it doesn't exist or we lack"
+                        " permissions to execute it"
                     )
                 return path
 
