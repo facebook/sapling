@@ -20,6 +20,8 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_service_if::DerivationType;
+use derived_data_service_if::DeriveUnderived;
 use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -473,6 +475,54 @@ impl DerivedDataManager {
 
     /// Derive or retrieve derived data for a changeset.
     pub async fn derive<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Derivable, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        const RETRY_DELAY: Duration = Duration::from_millis(100);
+        const RETRY_ATTEMPTS_LIMIT: u8 = 10;
+        if let Some(client) = self.derivation_service_client() {
+            let mut attempt = 0;
+            while let Some(true) =
+                tunables::tunables().get_by_repo_enable_remote_derivation(self.repo_name())
+            {
+                match client
+                    .derive_remotely(
+                        self.repo_name().to_string(),
+                        Derivable::NAME.to_string(),
+                        csid,
+                        self.config_name(),
+                        DerivationType::derive_underived(DeriveUnderived {}),
+                    )
+                    .await
+                {
+                    Ok(Some(data)) => {
+                        return Ok(Derivable::from_thrift(data)?);
+                    }
+                    Ok(None) => {
+                        tokio::time::sleep(RETRY_DELAY).await;
+                    }
+                    Err(e) => {
+                        if attempt >= RETRY_ATTEMPTS_LIMIT {
+                            self.derived_data_scuba::<Derivable>(&None)
+                                .add("changeset", csid.to_string())
+                                .log_with_msg("Derived data service failed", format!("{:#}", e));
+                            break;
+                        }
+                        attempt += 1;
+                    }
+                }
+            }
+        }
+
+        self.derive_locally(ctx, csid, rederivation).await
+    }
+
+    pub async fn derive_locally<Derivable>(
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,

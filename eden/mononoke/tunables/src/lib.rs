@@ -341,6 +341,8 @@ pub struct MononokeTunables {
     // Disable using rendezvous for batching WAL deletes.
     // TODO: delete once it using WAL here shows to be stable
     wal_disable_rendezvous_on_deletes: AtomicBool,
+    // Enable derivation on service per repo
+    enable_remote_derivation: TunableBoolByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
