@@ -56,6 +56,7 @@ ALLOW_NETWORK_ACCESS_BY_PREFIX: Set[str] = {
     "test-snapshot",
     "test-remote-gitimport",
     "test-new-walker",
+    "test-derived-data-service",
 }
 
 
