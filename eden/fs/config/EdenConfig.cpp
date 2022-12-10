@@ -101,22 +101,36 @@ std::string EdenConfig::toString(ConfigSource cs) const {
     case ConfigSource::SystemConfig:
       return systemConfigPath_.c_str();
   }
-  throw std::invalid_argument(
-      folly::to<std::string>("invalid config source value: ", enumValue(cs)));
+  throwf<std::invalid_argument>(
+      "invalid config source value: {}", enumValue(cs));
 }
 
 EdenConfigData EdenConfig::toThriftConfigData() const {
   EdenConfigData result;
-  for (const auto& sectionEntry : configMap_) {
-    const auto& sectionKey = sectionEntry.first;
-    for (const auto& keyEntry : sectionEntry.second) {
-      auto keyName = folly::to<std::string>(sectionKey, ":", keyEntry.first);
+  for (const auto& [sectionName, section] : configMap_) {
+    for (const auto& [key, setting] : section) {
+      auto keyName = fmt::format("{}:{}", sectionName, key);
       auto& configValue = result.values_ref()[keyName];
-      *configValue.parsedValue_ref() = keyEntry.second->getStringValue();
-      *configValue.source_ref() = keyEntry.second->getSource();
+      configValue.parsedValue() = setting->getStringValue();
+      configValue.source() = setting->getSource();
+      configValue.sourcePath() = toSourcePath(setting->getSource());
     }
   }
   return result;
+}
+
+std::string EdenConfig::toSourcePath(ConfigSource cs) const {
+  switch (cs) {
+    case ConfigSource::Default:
+      return {};
+    case ConfigSource::SystemConfig:
+      return absolutePathToThrift(systemConfigPath_);
+    case ConfigSource::UserConfig:
+      return absolutePathToThrift(userConfigPath_);
+    case ConfigSource::CommandLine:
+      return {};
+  }
+  return {};
 }
 
 EdenConfig::EdenConfig(

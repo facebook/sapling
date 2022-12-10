@@ -341,25 +341,6 @@ facebook::eden::InodePtr inodeFromUserPath(
   return mount.getInodeSlow(relPath, context).get();
 }
 
-/**
- * Convert an arbitrary Thrift path to a canonicalized AbsolutePath
- *
- * May throw if the path is malformed.
- */
-AbsolutePath absolutePathFromThrift(StringPiece path) {
-  return canonicalPath(path);
-}
-
-/**
- * Convert an AbsolutePath to a Thrift path.
- *
- * In particular on Windows, AbsolutePath are UNC paths internally, but the UNC
- * prefix is stripped when sending the path to Thrift.
- */
-std::string absolutePathToThrift(AbsolutePathPiece path) {
-  return path.stringWithoutUNC();
-}
-
 } // namespace
 
 // INSTRUMENT_THRIFT_CALL returns a unique pointer to

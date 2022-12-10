@@ -131,7 +131,13 @@ class EdenConfig : private ConfigSettingManager {
    * Utility method for converting ConfigSource to the filename (or cli).
    * @return the string value for the ConfigSource.
    */
-  std::string toString(facebook::eden::ConfigSource cs) const;
+  std::string toString(ConfigSource cs) const;
+
+  /**
+   * Returns a Thrift-suitable path corresponding to the given source's config
+   * file.
+   */
+  std::string toSourcePath(ConfigSource cs) const;
 
   void doCopy(const EdenConfig& source);
 

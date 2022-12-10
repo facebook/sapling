@@ -2226,6 +2226,25 @@ void renameWithAbsolutePath(
     AbsolutePathPiece destPath);
 
 /**
+ * Convert an arbitrary Thrift path to a canonicalized AbsolutePath
+ *
+ * May throw if the path is malformed.
+ */
+inline AbsolutePath absolutePathFromThrift(std::string_view path) {
+  return canonicalPath(path);
+}
+
+/**
+ * Convert an AbsolutePath to a Thrift path.
+ *
+ * In particular on Windows, AbsolutePath are UNC paths internally, but the UNC
+ * prefix is stripped when sending the path to Thrift.
+ */
+inline std::string absolutePathToThrift(AbsolutePathPiece path) {
+  return path.stringWithoutUNC();
+}
+
+/**
  * Convenient literals for constructing path types.
  */
 inline namespace path_literals {
