@@ -2232,12 +2232,15 @@ function testtool_drawdag() {
 }
 
 function start_zelos_server() {
+  PORT=$1
   rm -f "$TESTTMP/local-zelos"
-  "$ZELOSCLI" --x server 5678 "$TESTTMP/local-zelos" > /dev/null 2>&1 &
+  "$ZELOSCLI" --x server "$PORT" "$TESTTMP/local-zelos" > /dev/null 2>&1 &
   pid=$!
   echo "$pid" >> "$DAEMON_PIDS"
 }
 
 function zeloscli() {
-  "$ZELOSCLI" --server localhost:5678 -x "$@" 2>/dev/null
+  PORT=$1
+  shift
+  "$ZELOSCLI" --server localhost:"$PORT" -x "$@" 2>/dev/null
 }
