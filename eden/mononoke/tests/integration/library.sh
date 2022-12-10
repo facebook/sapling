@@ -2232,6 +2232,7 @@ function testtool_drawdag() {
 }
 
 function start_zelos_server() {
+  rm -f "$TESTTMP/local-zelos"
   "$ZELOSCLI" --x server 5678 "$TESTTMP/local-zelos" > /dev/null 2>&1 &
   pid=$!
   echo "$pid" >> "$DAEMON_PIDS"
