@@ -15,15 +15,12 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
-#include <folly/Range.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
-
-using folly::StringPiece;
 
 namespace facebook::eden {
 
@@ -50,14 +47,15 @@ void getConfigStat(
   }
 }
 
-std::pair<StringPiece, StringPiece> parseKey(StringPiece fullKey) {
+std::pair<std::string_view, std::string_view> parseKey(
+    std::string_view fullKey) {
   auto pos = fullKey.find(":");
   if (pos == std::string::npos) {
     EDEN_BUG() << "ConfigSetting key must contain a colon: " << fullKey;
   }
 
-  StringPiece section{fullKey.data(), pos};
-  StringPiece key{fullKey.data() + pos + 1, fullKey.end()};
+  std::string_view section{fullKey.data(), pos};
+  std::string_view key = fullKey.substr(pos + 1);
 
   // Avoid use of locales. Standardize on - instead of _.
   auto isConfigChar = [](char c) {
@@ -145,12 +143,12 @@ EdenConfig::EdenConfig(const EdenConfig& source) {
 }
 
 std::optional<std::string> EdenConfig::getValueByFullKey(
-    folly::StringPiece configKey) const {
+    std::string_view configKey) const {
   // Throws if the config key is ill-formed.
   auto [sectionKey, entryKey] = parseKey(configKey);
 
-  if (auto* entry =
-          folly::get_ptr(configMap_, sectionKey.str(), entryKey.str())) {
+  if (auto* entry = folly::get_ptr(
+          configMap_, std::string{sectionKey}, std::string{entryKey})) {
     return (*entry)->getStringValue();
   }
 
@@ -183,11 +181,11 @@ void EdenConfig::doCopy(const EdenConfig& source) {
 }
 
 void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
-  StringPiece fullKeyStr = configSetting->getConfigKey();
+  std::string_view fullKeyStr = configSetting->getConfigKey();
   auto [section, key] = parseKey(fullKeyStr);
 
-  auto& keyMap = configMap_[section.str()];
-  keyMap[key.str()] = configSetting;
+  auto& keyMap = configMap_[std::string{section}];
+  keyMap[std::string{key}] = configSetting;
 }
 
 const std::optional<AbsolutePath> EdenConfig::getClientCertificate() const {

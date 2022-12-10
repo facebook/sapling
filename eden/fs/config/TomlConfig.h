@@ -8,8 +8,7 @@
 #pragma once
 
 #include <cpptoml.h>
-#include <folly/Range.h>
-#include <folly/String.h>
+#include <fmt/ranges.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/utils/Throw.h"
 
@@ -17,20 +16,17 @@ namespace facebook::eden {
 
 class TomlPath {
  public:
-  /*implicit*/ constexpr TomlPath(
-      std::initializer_list<folly::StringPiece> list)
+  /*implicit*/ constexpr TomlPath(std::initializer_list<std::string_view> list)
       : begin_{list.begin()}, end_{list.end()} {}
 
-  constexpr TomlPath(
-      const folly::StringPiece* begin,
-      const folly::StringPiece* end)
+  constexpr TomlPath(const std::string_view* begin, const std::string_view* end)
       : begin_{begin}, end_{end} {}
 
-  constexpr const folly::StringPiece* begin() const {
+  constexpr const std::string_view* begin() const {
     return begin_;
   }
 
-  constexpr const folly::StringPiece* end() const {
+  constexpr const std::string_view* end() const {
     return end_;
   }
 
@@ -39,8 +35,8 @@ class TomlPath {
   }
 
  private:
-  const folly::StringPiece* begin_;
-  const folly::StringPiece* end_;
+  const std::string_view* begin_;
+  const std::string_view* end_;
 };
 
 /**
@@ -64,14 +60,14 @@ setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
 
   cpptoml::table* table = &root;
   for (; begin + 1 < end; ++begin) {
-    auto keystr = begin->str();
+    auto keystr = std::string{*begin};
     if (table->contains(keystr)) {
       auto entry = table->get(keystr);
       if (entry->is_table()) {
         table = static_cast<cpptoml::table*>(entry.get());
       } else {
-        throw_<std::runtime_error>(
-            folly::join(".", key.begin(), begin + 1), " is not a table");
+        throwf<std::runtime_error>(
+            "{} is not a table", fmt::join(key.begin(), begin + 1, "."));
       }
     } else {
       auto entry = cpptoml::make_table();
@@ -81,16 +77,16 @@ setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
     }
   }
 
-  auto keystr = begin->str();
+  std::string keystr{*begin};
   if (table->contains(keystr)) {
     if (auto value = table->get(keystr)->as<T>()) {
       return std::make_pair(value->get(), false);
     } else {
-      throw_<std::runtime_error>(
-          folly::join(".", key.begin(), key.end()), " has mismatched type");
+      throwf<std::runtime_error>(
+          "{} has mismatched type", fmt::join(key.begin(), key.end(), "."));
     }
   }
-  table->insert(begin->str(), defaultValue);
+  table->insert(std::string{*begin}, defaultValue);
   return std::make_pair(defaultValue, true);
 }
 

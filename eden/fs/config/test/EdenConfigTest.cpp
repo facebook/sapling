@@ -8,6 +8,7 @@
 #include "eden/fs/config/EdenConfig.h"
 
 #include <boost/algorithm/string/replace.hpp>
+#include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
@@ -16,7 +17,6 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "folly/Range.h"
 
 using folly::test::TemporaryDirectory;
 using namespace facebook::eden;

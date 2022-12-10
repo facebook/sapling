@@ -12,14 +12,14 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 #include <cpptoml.h>
+#include <fmt/ranges.h>
 #include <re2/re2.h>
 
 #include <folly/Expected.h>
-#include <folly/Range.h>
-#include <folly/String.h>
 
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -42,7 +42,7 @@ class FieldConverter<AbsolutePath> {
    * @return the converted AbsolutePath or an error message.
    */
   folly::Expected<AbsolutePath, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(const AbsolutePath& path) const {
@@ -54,7 +54,7 @@ template <>
 class FieldConverter<std::string> {
  public:
   folly::Expected<std::string, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(const std::string& value) const {
@@ -66,7 +66,7 @@ template <typename T>
 class FieldConverter<std::optional<T>> {
  public:
   folly::Expected<std::optional<T>, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& convData) const {
     return FieldConverter<T>{}.fromString(value, convData);
   }
@@ -80,12 +80,12 @@ template <typename T>
 class FieldConverter<std::vector<T>> {
  public:
   folly::Expected<std::vector<T>, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& convData) const {
     // make the array parsable by cpptoml
     std::string kArrayKeyName{"array"};
     std::istringstream valueStream{
-        folly::to<std::string>(kArrayKeyName, " = ", value.str())};
+        fmt::format("{} = {}", kArrayKeyName, value)};
 
     // parse in toml type
     std::shared_ptr<cpptoml::array> elements;
@@ -94,8 +94,8 @@ class FieldConverter<std::vector<T>> {
       auto table = parser.parse();
       elements = table->get_array(kArrayKeyName);
     } catch (cpptoml::parse_exception& err) {
-      return folly::Unexpected<std::string>(folly::to<std::string>(
-          "Error parsing an array of strings: ", err.what()));
+      return folly::Unexpected(
+          fmt::format("Error parsing an array of strings: {}", err.what()));
     }
 
     // parse from toml type to eden type
@@ -129,7 +129,7 @@ class FieldConverter<std::vector<T>> {
         [](auto& element) {
           return FieldConverter<T>{}.toDebugString(element);
         });
-    return folly::join(", ", serializedElements);
+    return fmt::to_string(fmt::join(serializedElements, ", "));
   }
 };
 
@@ -148,7 +148,7 @@ class FieldConverter<
    * @return the converted boolean or an error message.
    */
   folly::Expected<T, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& /* convData */) const {
     auto result = folly::tryTo<T>(value);
     if (result.hasValue()) {
@@ -178,7 +178,7 @@ template <>
 class FieldConverter<std::chrono::nanoseconds> {
  public:
   folly::Expected<std::chrono::nanoseconds, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(std::chrono::nanoseconds value) const;
@@ -188,7 +188,7 @@ template <>
 class FieldConverter<std::shared_ptr<re2::RE2>> {
  public:
   folly::Expected<std::shared_ptr<re2::RE2>, std::string> fromString(
-      folly::StringPiece value,
+      std::string_view value,
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(std::shared_ptr<re2::RE2> value) const;

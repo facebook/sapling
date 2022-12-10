@@ -24,7 +24,6 @@
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -125,7 +124,7 @@ class EdenConfig : private ConfigSettingManager {
    * Throws if the config key is ill-formed.
    */
   std::optional<std::string> getValueByFullKey(
-      folly::StringPiece configKey) const;
+      std::string_view configKey) const;
 
  private:
   /**

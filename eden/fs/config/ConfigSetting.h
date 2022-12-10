@@ -8,13 +8,11 @@
 #pragma once
 
 #include <array>
-#include <cstddef>
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <typeindex>
-
-#include <folly/Range.h>
 
 #include "eden/fs/config/FieldConverter.h"
 #include "eden/fs/config/gen-cpp2/eden_config_types.h"
@@ -45,7 +43,7 @@ class ConfigSettingManager {
 class ConfigSettingBase {
  public:
   ConfigSettingBase(
-      folly::StringPiece key,
+      std::string_view key,
       const std::type_info& valueType,
       ConfigSettingManager* csm)
       : key_{key}, valueType_{valueType} {
@@ -77,7 +75,7 @@ class ConfigSettingBase {
    */
   FOLLY_NODISCARD virtual folly::Expected<folly::Unit, std::string>
   setStringValue(
-      folly::StringPiece stringValue,
+      std::string_view stringValue,
       const std::map<std::string, std::string>& attrMap,
       ConfigSource newSource) = 0;
   /**
@@ -121,7 +119,7 @@ class ConfigSetting final : private ConfigSettingBase {
 
  public:
   ConfigSetting(
-      folly::StringPiece key,
+      std::string_view key,
       T value,
       ConfigSettingManager* configSettingManager)
       : ConfigSettingBase{key, typeid(T), configSettingManager} {
@@ -158,7 +156,7 @@ class ConfigSetting final : private ConfigSettingBase {
    * @return an error in the Optional if the operation failed.
    */
   folly::Expected<folly::Unit, std::string> setStringValue(
-      folly::StringPiece stringValue,
+      std::string_view stringValue,
       const std::map<std::string, std::string>& attrMap,
       ConfigSource newSource) override {
     if (newSource == ConfigSource::Default) {

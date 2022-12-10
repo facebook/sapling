@@ -7,8 +7,6 @@
 
 #include "eden/fs/config/FieldConverter.h"
 
-#include <folly/Conv.h>
-
 #include "eden/fs/utils/ChronoParse.h"
 
 using folly::Expected;
@@ -17,11 +15,11 @@ using std::string;
 namespace facebook::eden {
 
 namespace {
-constexpr std::array<folly::StringPiece, 4> kEnvVars = {
-    folly::StringPiece{"HOME"},
-    folly::StringPiece{"USER"},
-    folly::StringPiece{"USER_ID"},
-    folly::StringPiece{"THRIFT_TLS_CL_CERT_PATH"},
+constexpr std::array<std::string_view, 4> kEnvVars = {
+    std::string_view{"HOME"},
+    std::string_view{"USER"},
+    std::string_view{"USER_ID"},
+    std::string_view{"THRIFT_TLS_CL_CERT_PATH"},
 };
 
 /**
@@ -37,13 +35,13 @@ bool isValidAbsolutePath(string_view path) {
 } // namespace
 
 Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
-    folly::StringPiece value,
+    std::string_view value,
     const std::map<string, string>& convData) const {
-  auto sString = value.str();
+  auto sString = std::string{value};
   for (auto varName : kEnvVars) {
-    auto it = convData.find(varName.str());
+    auto it = convData.find(std::string{varName});
     if (it != convData.end()) {
-      auto envVar = folly::to<string>("${", varName, "}");
+      auto envVar = fmt::format("${{{}}}", varName);
       // There may be multiple ${USER} tokens to replace, so loop
       // until we've processed all of them
       while (true) {
@@ -57,31 +55,30 @@ Expected<AbsolutePath, string> FieldConverter<AbsolutePath>::fromString(
   }
 
   if (!isValidAbsolutePath(sString)) {
-    return folly::makeUnexpected<string>(folly::to<string>(
-        "Cannot convert value '", value, "' to an absolute path"));
+    return folly::makeUnexpected<string>(
+        fmt::format("Cannot convert value '{}' to an absolute path", value));
   }
   // normalizeBestEffort typically will not throw, but, we want to handle
   // cases where it does, eg. getcwd fails.
   try {
     return facebook::eden::normalizeBestEffort(sString);
   } catch (const std::exception& ex) {
-    return folly::makeUnexpected<string>(folly::to<string>(
-        "Failed to convert value '",
+    return folly::makeUnexpected<string>(fmt::format(
+        "Failed to convert value '{}' to an absolute path, error : {}",
         value,
-        "' to an absolute path, error : ",
         ex.what()));
   }
 }
 
 Expected<string, string> FieldConverter<string>::fromString(
-    folly::StringPiece value,
+    std::string_view value,
     const std::map<string, string>& /* unused */) const {
-  return folly::makeExpected<string, string>(value.toString());
+  return folly::makeExpected<string, string>(std::string{value});
 }
 
 Expected<std::chrono::nanoseconds, string>
 FieldConverter<std::chrono::nanoseconds>::fromString(
-    folly::StringPiece value,
+    std::string_view value,
     const std::map<string, string>& /* unused */) const {
   auto result = stringToDuration(value);
   if (result.hasValue()) {
@@ -97,10 +94,10 @@ std::string FieldConverter<std::chrono::nanoseconds>::toDebugString(
 
 Expected<std::shared_ptr<re2::RE2>, string>
 FieldConverter<std::shared_ptr<re2::RE2>>::fromString(
-    folly::StringPiece value,
+    std::string_view value,
     const std::map<string, string>& /* unused */) const {
   // value is a regex
-  return std::make_shared<re2::RE2>(value.str());
+  return std::make_shared<re2::RE2>(std::string{value});
 }
 
 std::string FieldConverter<std::shared_ptr<re2::RE2>>::toDebugString(
