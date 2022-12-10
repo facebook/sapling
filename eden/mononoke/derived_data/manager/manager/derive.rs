@@ -36,6 +36,7 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
+use tunables::tunables;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -483,7 +484,7 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        const RETRY_DELAY: Duration = Duration::from_millis(100);
+        const RETRY_DELAY_MS: u64 = 100;
         const RETRY_ATTEMPTS_LIMIT: u8 = 10;
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
@@ -504,7 +505,15 @@ impl DerivedDataManager {
                         return Ok(Derivable::from_thrift(data)?);
                     }
                     Ok(None) => {
-                        tokio::time::sleep(RETRY_DELAY).await;
+                        let retry_delay = {
+                            let delay = tunables().get_derivation_request_retry_delay();
+                            Duration::from_millis(if delay > 0 {
+                                delay as u64
+                            } else {
+                                RETRY_DELAY_MS
+                            })
+                        };
+                        tokio::time::sleep(retry_delay).await;
                     }
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {

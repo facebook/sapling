@@ -203,6 +203,16 @@ pub struct MononokeTunables {
     // Stops deriving on derivation workers. Will not drain Derivation Queue
     derived_data_disable_derivation_workers: AtomicBool,
 
+    // How long to wait before worker retries in case of an error
+    // or empty Derivation queue.
+    derivation_worker_sleep_duration: AtomicI64,
+
+    // How long client should wait between polls of Derived data service
+    derivation_request_retry_delay: AtomicI64,
+
+    // Sets the size of the batch for derivaiton.
+    derivation_batch_size: AtomicI64,
+
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: AtomicBool,
 
