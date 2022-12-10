@@ -90,15 +90,15 @@ std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
       /* setSystemConfigPath=*/canonicalPath("/tmp"));
 }
 
-std::string EdenConfig::toString(ConfigSource cs) const {
+std::string EdenConfig::toString(ConfigSourceType cs) const {
   switch (cs) {
-    case ConfigSource::Default:
+    case ConfigSourceType::Default:
       return "default";
-    case ConfigSource::CommandLine:
+    case ConfigSourceType::CommandLine:
       return "command-line";
-    case ConfigSource::UserConfig:
+    case ConfigSourceType::UserConfig:
       return userConfigPath_.c_str();
-    case ConfigSource::SystemConfig:
+    case ConfigSourceType::SystemConfig:
       return systemConfigPath_.c_str();
   }
   throwf<std::invalid_argument>(
@@ -112,22 +112,22 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
       auto keyName = fmt::format("{}:{}", sectionName, key);
       auto& configValue = result.values_ref()[keyName];
       configValue.parsedValue() = setting->getStringValue();
-      configValue.source() = setting->getSource();
-      configValue.sourcePath() = toSourcePath(setting->getSource());
+      configValue.sourceType() = setting->getSourceType();
+      configValue.sourcePath() = toSourcePath(setting->getSourceType());
     }
   }
   return result;
 }
 
-std::string EdenConfig::toSourcePath(ConfigSource cs) const {
+std::string EdenConfig::toSourcePath(ConfigSourceType cs) const {
   switch (cs) {
-    case ConfigSource::Default:
+    case ConfigSourceType::Default:
       return {};
-    case ConfigSource::SystemConfig:
+    case ConfigSourceType::SystemConfig:
       return absolutePathToThrift(systemConfigPath_);
-    case ConfigSource::UserConfig:
+    case ConfigSourceType::UserConfig:
       return absolutePathToThrift(userConfigPath_);
-    case ConfigSource::CommandLine:
+    case ConfigSourceType::CommandLine:
       return {};
   }
   return {};
@@ -145,11 +145,13 @@ EdenConfig::EdenConfig(
       systemConfigPath_{std::move(systemConfigPath)} {
   // Force set defaults that require passed arguments
   edenDir.setValue(
-      userHomePath + kDefaultEdenDirectory, ConfigSource::Default, true);
+      userHomePath + kDefaultEdenDirectory, ConfigSourceType::Default, true);
   userIgnoreFile.setValue(
-      userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
+      userHomePath + kDefaultUserIgnoreFile, ConfigSourceType::Default, true);
   systemIgnoreFile.setValue(
-      systemConfigDir + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
+      systemConfigDir + kDefaultSystemIgnoreFile,
+      ConfigSourceType::Default,
+      true);
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -264,7 +266,7 @@ const AbsolutePath& EdenConfig::getSystemConfigPath() const {
   return systemConfigPath_;
 }
 
-void EdenConfig::clearAll(ConfigSource configSource) {
+void EdenConfig::clearAll(ConfigSourceType configSource) {
   for (const auto& sectionEntry : configMap_) {
     for (auto& keyEntry : sectionEntry.second) {
       keyEntry.second->clearValue(configSource);
@@ -273,19 +275,20 @@ void EdenConfig::clearAll(ConfigSource configSource) {
 }
 
 void EdenConfig::loadSystemConfig() {
-  clearAll(ConfigSource::SystemConfig);
+  clearAll(ConfigSourceType::SystemConfig);
   loadConfig(
-      systemConfigPath_, ConfigSource::SystemConfig, systemConfigFileStat_);
+      systemConfigPath_, ConfigSourceType::SystemConfig, systemConfigFileStat_);
 }
 
 void EdenConfig::loadUserConfig() {
-  clearAll(ConfigSource::UserConfig);
-  loadConfig(userConfigPath_, ConfigSource::UserConfig, userConfigFileStat_);
+  clearAll(ConfigSourceType::UserConfig);
+  loadConfig(
+      userConfigPath_, ConfigSourceType::UserConfig, userConfigFileStat_);
 }
 
 void EdenConfig::loadConfig(
     AbsolutePathPiece path,
-    ConfigSource configSource,
+    ConfigSourceType configSource,
     std::optional<FileStat>& configFileStat) {
   // Load the config path and update its stat information
   auto configFd = open(path.copy().c_str(), O_RDONLY);
@@ -342,7 +345,7 @@ cpptoml::option<std::string> itemAsString(
 void EdenConfig::parseAndApplyConfigFile(
     int configFd,
     AbsolutePathPiece configPath,
-    ConfigSource configSource) {
+    ConfigSourceType configSource) {
   std::shared_ptr<cpptoml::table> configRoot;
 
   try {

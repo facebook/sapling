@@ -10,7 +10,7 @@ from pathlib import Path
 from eden.thrift.legacy import EdenClient
 from facebook.eden.eden_config.ttypes import (
     ConfigReloadBehavior,
-    ConfigSource,
+    ConfigSourceType,
     EdenConfigData,
 )
 from facebook.eden.ttypes import GetConfigParams
@@ -23,13 +23,17 @@ class ConfigTest(testcase.EdenTestCase):
     enable_logview: bool = False
 
     def assert_config(
-        self, config: EdenConfigData, name: str, value: str, source: ConfigSource
+        self,
+        config: EdenConfigData,
+        name: str,
+        value: str,
+        sourceType: ConfigSourceType,
     ) -> None:
         actual_value = config.values.get(name)
         self.assertIsNotNone(actual_value)
         assert actual_value is not None  # just to make the type checkers happy
         self.assertEqual(value, actual_value.parsedValue)
-        self.assertEqual(source, actual_value.source)
+        self.assertEqual(sourceType, actual_value.sourceType)
 
     def test_get_config(self) -> None:
         self.maxDiff = None
@@ -43,19 +47,22 @@ class ConfigTest(testcase.EdenTestCase):
             # (This is to ensure it cannot later be overwitten by a config file change
             # once edenfs has started.)
             self.assert_config(
-                config, "core:edenDirectory", self.eden_dir, ConfigSource.CommandLine
+                config,
+                "core:edenDirectory",
+                self.eden_dir,
+                ConfigSourceType.CommandLine,
             )
             self.assert_config(
                 config,
                 "core:ignoreFile",
                 str(Path(self.home_dir) / ".edenignore"),
-                ConfigSource.Default,
+                ConfigSourceType.Default,
             )
             self.assert_config(
                 config,
                 "core:systemIgnoreFile",
                 str(Path(self.etc_eden_dir) / "ignore"),
-                ConfigSource.Default,
+                ConfigSourceType.Default,
             )
 
             # Update the config on disk
@@ -78,7 +85,7 @@ ignoreFile = "{new_ignore_path}"
                 config,
                 "core:ignoreFile",
                 str(Path(self.home_dir) / ".edenignore"),
-                ConfigSource.Default,
+                ConfigSourceType.Default,
             )
 
             # Now get the config, asking for a reload
@@ -88,7 +95,10 @@ ignoreFile = "{new_ignore_path}"
             )
             # The ignore path should be updated
             self.assert_config(
-                config, "core:ignoreFile", str(new_ignore_path), ConfigSource.UserConfig
+                config,
+                "core:ignoreFile",
+                str(new_ignore_path),
+                ConfigSourceType.UserConfig,
             )
 
     def test_periodic_reload(self) -> None:

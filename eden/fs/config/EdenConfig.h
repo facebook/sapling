@@ -84,7 +84,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   void loadConfig(
       AbsolutePathPiece path,
-      ConfigSource configSource,
+      ConfigSourceType configSourceType,
       std::optional<FileStat>& configFileStat);
 
   /**
@@ -111,7 +111,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Clear all configuration for the given config source.
    */
-  void clearAll(ConfigSource);
+  void clearAll(ConfigSourceType);
 
   /**
    *  Register the configuration setting. The fullKey is used to parse values
@@ -128,16 +128,16 @@ class EdenConfig : private ConfigSettingManager {
 
  private:
   /**
-   * Utility method for converting ConfigSource to the filename (or cli).
-   * @return the string value for the ConfigSource.
+   * Utility method for converting ConfigSourceType to the filename (or cli).
+   * @return the string value for the ConfigSourceType.
    */
-  std::string toString(ConfigSource cs) const;
+  std::string toString(ConfigSourceType cs) const;
 
   /**
    * Returns a Thrift-suitable path corresponding to the given source's config
    * file.
    */
-  std::string toSourcePath(ConfigSource cs) const;
+  std::string toSourcePath(ConfigSourceType cs) const;
 
   void doCopy(const EdenConfig& source);
 
@@ -146,7 +146,7 @@ class EdenConfig : private ConfigSettingManager {
   void parseAndApplyConfigFile(
       int configFd,
       AbsolutePathPiece configPath,
-      ConfigSource configSource);
+      ConfigSourceType configSourceType);
 
   /**
    * Mapping of section name : (map of attribute : config values). The

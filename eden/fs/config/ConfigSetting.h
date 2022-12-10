@@ -69,28 +69,33 @@ class ConfigSettingBase {
   virtual void copyFrom(const ConfigSettingBase& rhs) = 0;
 
   virtual ~ConfigSettingBase() {}
+
   /**
-   * Parse and set the value for the provided ConfigSource.
+   * Parse and set the value for the provided ConfigSourceType.
    * @return Optional will have error message if the value was invalid.
    */
   FOLLY_NODISCARD virtual folly::Expected<folly::Unit, std::string>
   setStringValue(
       std::string_view stringValue,
       const std::map<std::string, std::string>& attrMap,
-      ConfigSource newSource) = 0;
+      ConfigSourceType newSourceType) = 0;
+
   /**
-   * Get the ConfigSource of the configuration setting. It is the highest
+   * Get the ConfigSourceType of the configuration setting. It is the highest
    * priority ConfigurationSource of all populated values.
    */
-  virtual ConfigSource getSource() const = 0;
+  virtual ConfigSourceType getSourceType() const = 0;
+
   /**
    * Get a string representation of the configuration setting.
    */
   virtual std::string getStringValue() const = 0;
+
   /**
-   * Clear the configuration value (if present) for the passed ConfigSource.
+   * Clear the configuration value (if present) for the passed ConfigSourceType.
    */
-  virtual void clearValue(ConfigSource source) = 0;
+  virtual void clearValue(ConfigSourceType source) = 0;
+
   /**
    * Get the configuration key (used to identify) this setting. They key is
    * used to identify the entry in a configuration file. Example "core.edenDir"
@@ -98,6 +103,7 @@ class ConfigSettingBase {
   const std::string& getConfigKey() const {
     return key_;
   }
+
   std::type_index getValueType() const {
     return valueType_;
   }
@@ -123,7 +129,7 @@ class ConfigSetting final : private ConfigSettingBase {
       T value,
       ConfigSettingManager* configSettingManager)
       : ConfigSettingBase{key, typeid(T), configSettingManager} {
-    getSlot(ConfigSource::Default).emplace(std::move(value));
+    getSlot(ConfigSourceType::Default).emplace(std::move(value));
   }
 
   ConfigSetting(const ConfigSetting&) = delete;
@@ -135,14 +141,15 @@ class ConfigSetting final : private ConfigSettingBase {
   ConfigSetting<T>& operator=(const ConfigSetting& rhs) = delete;
   ConfigSetting<T>& operator=(ConfigSetting&& rhs) = delete;
 
-  /** Get the highest priority ConfigSource (we ignore unpopulated values).*/
-  ConfigSource getSource() const override {
-    return static_cast<ConfigSource>(getHighestPriorityIdx());
+  /** Get the highest priority ConfigSourceType (we ignore unpopulated
+   * values).*/
+  ConfigSourceType getSourceType() const override {
+    return static_cast<ConfigSourceType>(getHighestPriorityIdx());
   }
 
   /** Get the highest priority value for this setting.*/
   const T& getValue() const {
-    return getSlot(getSource()).value();
+    return getSlot(getSourceType()).value();
   }
 
   /** Get the string value for this setting. Intended for debug purposes. .*/
@@ -158,30 +165,30 @@ class ConfigSetting final : private ConfigSettingBase {
   folly::Expected<folly::Unit, std::string> setStringValue(
       std::string_view stringValue,
       const std::map<std::string, std::string>& attrMap,
-      ConfigSource newSource) override {
-    if (newSource == ConfigSource::Default) {
+      ConfigSourceType newSourceType) override {
+    if (newSourceType == ConfigSourceType::Default) {
       return folly::makeUnexpected<std::string>(
           "Convert ignored for default value");
     }
     Converter c;
     return c.fromString(stringValue, attrMap).then([&](T&& convertResult) {
-      getSlot(newSource).emplace(std::move(convertResult));
+      getSlot(newSourceType).emplace(std::move(convertResult));
     });
   }
 
   /**
    * Set the value with the identified source.
    */
-  void setValue(T newVal, ConfigSource newSource, bool force = false) {
-    if (force || newSource != ConfigSource::Default) {
-      getSlot(newSource).emplace(std::move(newVal));
+  void setValue(T newVal, ConfigSourceType newSourceType, bool force = false) {
+    if (force || newSourceType != ConfigSourceType::Default) {
+      getSlot(newSourceType).emplace(std::move(newVal));
     }
   }
 
-  /** Clear the value for the passed ConfigSource. The operation will be
-   * ignored for ConfigSource::Default. */
-  void clearValue(ConfigSource source) override {
-    if (source != ConfigSource::Default && getSlot(source).has_value()) {
+  /** Clear the value for the passed ConfigSourceType. The operation will be
+   * ignored for ConfigSourceType::Default. */
+  void clearValue(ConfigSourceType source) override {
+    if (source != ConfigSourceType::Default && getSlot(source).has_value()) {
       getSlot(source).reset();
     }
   }
@@ -217,12 +224,12 @@ class ConfigSetting final : private ConfigSettingBase {
   }
 
   static constexpr size_t kConfigSourceLastIndex =
-      static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSource>::max());
+      static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSourceType>::max());
 
-  std::optional<T>& getSlot(ConfigSource source) {
+  std::optional<T>& getSlot(ConfigSourceType source) {
     return configValueArray_[static_cast<size_t>(source)];
   }
-  const std::optional<T>& getSlot(ConfigSource source) const {
+  const std::optional<T>& getSlot(ConfigSourceType source) const {
     return configValueArray_[static_cast<size_t>(source)];
   }
 
@@ -231,18 +238,18 @@ class ConfigSetting final : private ConfigSettingBase {
    */
   size_t getHighestPriorityIdx() const {
     for (auto idx = kConfigSourceLastIndex;
-         idx > static_cast<size_t>(ConfigSource::Default);
+         idx > static_cast<size_t>(ConfigSourceType::Default);
          --idx) {
       if (configValueArray_[idx].has_value()) {
         return idx;
       }
     }
-    return static_cast<size_t>(ConfigSource::Default);
+    return static_cast<size_t>(ConfigSourceType::Default);
   }
 
   /**
-   * Stores the values, indexed by ConfigSource (as int). Optional is used to
-   * allow unpopulated entries. Default values should always be present.
+   * Stores the values, indexed by ConfigSourceType (as int). Optional is used
+   * to allow unpopulated entries. Default values should always be present.
    */
   std::array<std::optional<T>, kConfigSourceLastIndex + 1> configValueArray_;
 };

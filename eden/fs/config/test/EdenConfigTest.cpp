@@ -172,13 +172,14 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   bool useMononoke = true;
 
   // Configuration
-  edenConfig->userIgnoreFile.setValue(ignoreFile, ConfigSource::CommandLine);
+  edenConfig->userIgnoreFile.setValue(
+      ignoreFile, ConfigSourceType::CommandLine);
   edenConfig->systemIgnoreFile.setValue(
-      systemIgnoreFile, ConfigSource::CommandLine);
-  edenConfig->edenDir.setValue(edenDir, ConfigSource::CommandLine);
+      systemIgnoreFile, ConfigSourceType::CommandLine);
+  edenConfig->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate}, ConfigSource::CommandLine);
-  edenConfig->useMononoke.setValue(useMononoke, ConfigSource::CommandLine);
+      {clientCertificate}, ConfigSourceType::CommandLine);
+  edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::CommandLine);
 
   // Configuration
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
@@ -213,13 +214,14 @@ TEST_F(EdenConfigTest, cloneTest) {
         defaultSystemConfigPath_);
 
     // Configuration
-    edenConfig->userIgnoreFile.setValue(ignoreFile, ConfigSource::CommandLine);
+    edenConfig->userIgnoreFile.setValue(
+        ignoreFile, ConfigSourceType::CommandLine);
     edenConfig->systemIgnoreFile.setValue(
-        systemIgnoreFile, ConfigSource::SystemConfig);
-    edenConfig->edenDir.setValue(edenDir, ConfigSource::UserConfig);
+        systemIgnoreFile, ConfigSourceType::SystemConfig);
+    edenConfig->edenDir.setValue(edenDir, ConfigSourceType::UserConfig);
     edenConfig->clientCertificateLocations.setValue(
-        {clientCertificate}, ConfigSource::UserConfig);
-    edenConfig->useMononoke.setValue(useMononoke, ConfigSource::UserConfig);
+        {clientCertificate}, ConfigSourceType::UserConfig);
+    edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::UserConfig);
 
     EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
     EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
@@ -242,9 +244,9 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(configCopy->getClientCertificate(), clientCertificate);
   EXPECT_EQ(configCopy->useMononoke.getValue(), useMononoke);
 
-  configCopy->clearAll(ConfigSource::UserConfig);
-  configCopy->clearAll(ConfigSource::SystemConfig);
-  configCopy->clearAll(ConfigSource::CommandLine);
+  configCopy->clearAll(ConfigSourceType::UserConfig);
+  configCopy->clearAll(ConfigSourceType::SystemConfig);
+  configCopy->clearAll(ConfigSourceType::CommandLine);
 
   EXPECT_EQ(configCopy->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(
@@ -273,13 +275,14 @@ TEST_F(EdenConfigTest, clearAllTest) {
   // We will set the config on 3 properties, each with different sources
   // We will then run for each source to check results
   edenConfig->userIgnoreFile.setValue(
-      fromUserConfigPath, ConfigSource::UserConfig);
+      fromUserConfigPath, ConfigSourceType::UserConfig);
   edenConfig->systemIgnoreFile.setValue(
-      fromSystemConfigPath, ConfigSource::SystemConfig);
-  edenConfig->edenDir.setValue(fromCommandLine, ConfigSource::CommandLine);
-  edenConfig->edenDir.setValue(fromUserConfigPath, ConfigSource::UserConfig);
+      fromSystemConfigPath, ConfigSourceType::SystemConfig);
+  edenConfig->edenDir.setValue(fromCommandLine, ConfigSourceType::CommandLine);
   edenConfig->edenDir.setValue(
-      fromSystemConfigPath, ConfigSource::SystemConfig);
+      fromUserConfigPath, ConfigSourceType::UserConfig);
+  edenConfig->edenDir.setValue(
+      fromSystemConfigPath, ConfigSourceType::SystemConfig);
 
   // Check over-rides
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), fromUserConfigPath);
@@ -287,20 +290,20 @@ TEST_F(EdenConfigTest, clearAllTest) {
   EXPECT_EQ(edenConfig->edenDir.getValue(), fromCommandLine);
 
   // Clear UserConfig and check
-  edenConfig->clearAll(ConfigSource::UserConfig);
+  edenConfig->clearAll(ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(edenConfig->systemIgnoreFile.getValue(), fromSystemConfigPath);
   EXPECT_EQ(edenConfig->edenDir.getValue(), fromCommandLine);
 
   // Clear SystemConfig and check
-  edenConfig->clearAll(ConfigSource::SystemConfig);
+  edenConfig->clearAll(ConfigSourceType::SystemConfig);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->edenDir.getValue(), fromCommandLine);
 
   // Clear CommandLine and check
-  edenConfig->clearAll(ConfigSource::CommandLine);
+  edenConfig->clearAll(ConfigSourceType::CommandLine);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
@@ -327,14 +330,15 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   AbsolutePath ignoreFile = canonicalPath("/USER_IGNORE_FILE");
   AbsolutePath systemIgnoreFile = canonicalPath("/SYSTEM_IGNORE_FILE");
 
-  edenConfig->userIgnoreFile.setValue(cliIgnoreFile, ConfigSource::CommandLine);
+  edenConfig->userIgnoreFile.setValue(
+      cliIgnoreFile, ConfigSourceType::CommandLine);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), cliIgnoreFile);
 
   edenConfig->userIgnoreFile.setValue(
-      cliIgnoreFile, ConfigSource::SystemConfig);
+      cliIgnoreFile, ConfigSourceType::SystemConfig);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), cliIgnoreFile);
 
-  edenConfig->userIgnoreFile.setValue(ignoreFile, ConfigSource::UserConfig);
+  edenConfig->userIgnoreFile.setValue(ignoreFile, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), cliIgnoreFile);
 }
 
@@ -510,19 +514,19 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
       defaultSystemConfigPath_);
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate1, clientCertificate2}, ConfigSource::UserConfig);
+      {clientCertificate1, clientCertificate2}, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate2, clientCertificate1}, ConfigSource::UserConfig);
+      {clientCertificate2, clientCertificate1}, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate2);
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate1, clientCertificate3}, ConfigSource::UserConfig);
+      {clientCertificate1, clientCertificate3}, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
 
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate3, clientCertificate1}, ConfigSource::UserConfig);
+      {clientCertificate3, clientCertificate1}, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
 }
 
@@ -548,18 +552,18 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
 
   // Without clientCertificateLocations set clientCertificate should be used.
   edenConfig->clientCertificate.setValue(
-      clientCertificate4, ConfigSource::UserConfig);
+      clientCertificate4, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
 
   // Now that clientCertificateLocations is set this should be used.
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate1, clientCertificate2}, ConfigSource::UserConfig);
+      {clientCertificate1, clientCertificate2}, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
 
   // Now that clientCertificateLocations does not contain a valid cert we should
   // fall back to the old single cert.
   edenConfig->clientCertificateLocations.setValue(
-      {clientCertificate3}, ConfigSource::UserConfig);
+      {clientCertificate3}, ConfigSourceType::UserConfig);
   EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
 }
 
@@ -572,7 +576,7 @@ TEST_F(EdenConfigTest, getValueByFullKey) {
       defaultSystemConfigPath_);
 
   EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "false");
-  edenConfig->useMononoke.setValue(true, ConfigSource::CommandLine);
+  edenConfig->useMononoke.setValue(true, ConfigSourceType::CommandLine);
   EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "true");
 
   EXPECT_EQ(

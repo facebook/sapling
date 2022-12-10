@@ -83,9 +83,9 @@ struct BlobAccessTest : ::testing::Test {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
-        kTreeCacheMaximumSize, ConfigSource::Default, true);
+        kTreeCacheMaximumSize, ConfigSourceType::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
-        kTreeCacheMinimumEntries, ConfigSource::Default, true);
+        kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto edenConfig = std::make_shared<ReloadableConfig>(
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     auto treeCache = TreeCache::create(edenConfig);

@@ -58,9 +58,9 @@ struct TestRepo {
 struct HgBackingStoreTest : TestRepo, ::testing::Test {
   HgBackingStoreTest() {
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
-        kTreeCacheMaximumSize, ConfigSource::Default, true);
+        kTreeCacheMaximumSize, ConfigSourceType::Default, true);
     rawEdenConfig->inMemoryTreeCacheMinElements.setValue(
-        kTreeCacheMinimumEntries, ConfigSource::Default, true);
+        kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto treeCache = TreeCache::create(edenConfig);
     objectStore = ObjectStore::create(
         localStore,

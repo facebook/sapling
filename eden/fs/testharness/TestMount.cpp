@@ -103,7 +103,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       canonicalPath(testDir_->path().string() + "edenfs.rc"));
 
   edenConfig_->enableActivityBuffer.setValue(
-      enableActivityBuffer, ConfigSource::Default, true);
+      enableActivityBuffer, ConfigSourceType::Default, true);
   // Create treeCache
   auto edenConfig = std::make_shared<ReloadableConfig>(
       edenConfig_, ConfigReloadBehavior::NoReload);

@@ -151,7 +151,7 @@ TEST(PlainSqliteInodeCatalogTest, reopened_overlay_is_clean_buffered) {
 
 TEST(PlainSqliteInodeCatalogTest, close_overlay_with_no_capacity_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
-  config->overlayBufferSize.setValue(0, ConfigSource::Default, true);
+  config->overlayBufferSize.setValue(0, ConfigSourceType::Default, true);
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),
@@ -168,7 +168,7 @@ TEST(
     PlainSqliteInodeCatalogTest,
     small_capacity_write_multiple_directories_buffered) {
   auto config = EdenConfig::createTestEdenConfig();
-  config->overlayBufferSize.setValue(1, ConfigSource::Default, true);
+  config->overlayBufferSize.setValue(1, ConfigSourceType::Default, true);
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
       canonicalPath(testDir.path().string()),

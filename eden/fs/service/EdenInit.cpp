@@ -56,7 +56,7 @@ void findEdenDir(EdenConfig& config) {
     // makes sure that any future updates to the config file do not affect the
     // value we use.  Once we start we want to always use a fixed location for
     // the eden directory.
-    config.edenDir.setValue(resolvedDir, ConfigSource::CommandLine);
+    config.edenDir.setValue(resolvedDir, ConfigSourceType::CommandLine);
   } catch (const std::exception& ex) {
     throw ArgumentError(fmt::format(
         FMT_STRING("error creating {}: {}"),

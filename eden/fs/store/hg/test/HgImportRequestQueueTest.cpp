@@ -32,8 +32,9 @@ struct HgImportRequestQueueTest : ::testing::Test {
   void SetUp() override {
     rawEdenConfig = EdenConfig::createTestEdenConfig();
 
-    rawEdenConfig->importBatchSize.setValue(1, ConfigSource::Default, true);
-    rawEdenConfig->importBatchSizeTree.setValue(1, ConfigSource::Default, true);
+    rawEdenConfig->importBatchSize.setValue(1, ConfigSourceType::Default, true);
+    rawEdenConfig->importBatchSizeTree.setValue(
+        1, ConfigSourceType::Default, true);
 
     edenConfig = std::make_shared<ReloadableConfig>(
         rawEdenConfig, ConfigReloadBehavior::NoReload);
@@ -216,9 +217,10 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
     enqueued_tree.emplace(hash);
   }
 
-  rawEdenConfig->importBatchSize.setValue(3, ConfigSource::UserConfig, true);
+  rawEdenConfig->importBatchSize.setValue(
+      3, ConfigSourceType::UserConfig, true);
   rawEdenConfig->importBatchSizeTree.setValue(
-      2, ConfigSource::UserConfig, true);
+      2, ConfigSourceType::UserConfig, true);
 
   // Pre dequeue, queue has tree requests from priority 1 to 10 and blob
   // requests from priority 0 to 9.
@@ -287,7 +289,7 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
   }
 
   rawEdenConfig->importBatchSizeTree.setValue(
-      10, ConfigSource::UserConfig, true);
+      10, ConfigSourceType::UserConfig, true);
   auto dequeuedTree = queue.dequeue();
   EXPECT_EQ(dequeuedTree.size(), 10);
   for (int i = 0; i < 10; i++) {
@@ -308,7 +310,8 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
         dequeuedRequest->getRequest<HgImportRequest::TreeImport>()->hash, tree);
   }
 
-  rawEdenConfig->importBatchSize.setValue(20, ConfigSource::UserConfig, true);
+  rawEdenConfig->importBatchSize.setValue(
+      20, ConfigSourceType::UserConfig, true);
   auto dequeuedBlob = queue.dequeue();
   EXPECT_EQ(dequeuedBlob.size(), 10);
   for (int i = 0; i < 10; i++) {
