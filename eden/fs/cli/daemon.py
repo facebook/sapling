@@ -143,7 +143,7 @@ def _start_edenfs_service(
 ) -> int:
     """Get the command and environment to use to start edenfs."""
     daemon_binary = daemon_util.find_daemon_binary(daemon_binary)
-    cmd = get_edenfs_cmd(instance, daemon_binary)
+    cmd, privhelper = get_edenfs_cmd(instance, daemon_binary)
 
     if takeover:
         cmd.append("--takeover")
@@ -152,8 +152,9 @@ def _start_edenfs_service(
 
     eden_env = get_edenfs_environment()
 
-    # Wrap the command in sudo, if necessary
-    cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
+    # Wrap the command in sudo, if necessary. See help text in
+    # prepare_edenfs_privileges for more info.
+    cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env, privhelper)
 
     creation_flags = 0
 
@@ -175,7 +176,10 @@ def get_edenfsctl_cmd() -> str:
     return os.path.normpath(edenfsctl)
 
 
-def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
+def get_edenfs_cmd(
+    instance: EdenInstance,
+    daemon_binary: str,
+) -> Tuple[List[str], str]:
     """Get the command line arguments to use to start the edenfs daemon."""
 
     cmd = []
@@ -197,18 +201,38 @@ def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
     ]
 
     privhelper_path = os.environ.get("EDENFS_PRIVHELPER_PATH")
-    if privhelper_path is not None:
-        cmd += ["--privhelper_path", privhelper_path]
+    # TODO(cuev): Avoid hardcoding the privhelper path. Instead, we should
+    # share candidate paths with FindExe (which is used in integration tests)
+    if privhelper_path is None:
+        # Default to using the system privhelper. See explanation below.
+        privhelper_path = "/usr/local/libexec/eden/edenfs_privhelper"
 
-    return cmd
+    cmd += ["--privhelper_path", privhelper_path]
+
+    return cmd, privhelper_path
 
 
 def prepare_edenfs_privileges(
-    daemon_binary: str, cmd: List[str], env: Dict[str, str]
+    daemon_binary: str,
+    cmd: List[str],
+    env: Dict[str, str],
+    privhelper_path: str,
 ) -> Tuple[List[str], Dict[str, str]]:
-    """Update the EdenFS command and environment settings in order to run it as root.
+    """Update the EdenFS command and environment settings in order to run the
+    privhelper as root. Note: in most cases, we don't need to do anything to
+    run the privhelper as root since we ship it as a setuid-root binary. This
+    is the default case/behavior.
 
-    This wraps the command using sudo, if necessary.
+    However, sometimes we need to test non-setuid-root privhelper binaries in
+    dev instances of EdenFS or integration tests. In those cases, we need to
+    wrap the command in sudo.
+
+    This happens when a non-setuid-root binary is specified by the
+    EDENFS_PRIVHELPER_PATH environment variable. In most cases, this env
+    variable will not be set and we will simply use the system privhelper. This
+    environment variable is set by some development Buck targets in
+    fbcode/eden/fs/{cli, cli_rs}/TARGETS. It could also potentially be set by
+    other external sources.
     """
     # Nothing to do on Windows
     if sys.platform == "win32":
@@ -218,25 +242,10 @@ def prepare_edenfs_privileges(
     if os.geteuid() == 0:
         return (cmd, env)
 
-    privhelper = os.path.join(os.path.dirname(daemon_binary), "edenfs_privhelper")
-
-    # EdenFS accepts a privhelper_path argument to locate the privhelper, so if
-    # we are about to pass that we should extract it.
-    next_arg_is_privhelper = False
-    for arg in cmd:
-        if next_arg_is_privhelper:
-            privhelper = arg
-            break
-        next_arg_is_privhelper = arg == "--privhelper_path"
-
-    privhelper_from_env = os.getenv("EDENFS_PRIVHELPER_PATH")
-    if privhelper_from_env:
-        privhelper = privhelper_from_env
-
     # If the EdenFS privhelper is installed as setuid root we don't need to use
     # sudo.
     try:
-        s = os.stat(privhelper)
+        s = os.stat(privhelper_path)
         if s.st_uid == 0 and (s.st_mode & stat.S_ISUID):
             return (cmd, env)
     except FileNotFoundError:
@@ -244,7 +253,11 @@ def prepare_edenfs_privileges(
         # instead of here.
         return cmd, env
 
-    # If we're still here we need to run edenfs under sudo
+    # If we're still here, we need to run edenfs under sudo. This is
+    # undesireable with passwordless sudo as it requires multiple password
+    # prompts, but we will try to run with sudo anyway.
+    # In some rare cases, we may want to test using a non-setuid-root
+    # privhelper binary.
     sudo_cmd = ["/usr/bin/sudo"]
     # Add environment variable settings
     # Depending on the sudo configuration, these may not

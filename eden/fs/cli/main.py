@@ -1715,7 +1715,7 @@ class StartCmd(Subcmd):
         self, instance: EdenInstance, daemon_binary: str, args: argparse.Namespace
     ) -> int:
         # Build the core command
-        cmd = daemon.get_edenfs_cmd(instance, daemon_binary)
+        cmd, privhelper = daemon.get_edenfs_cmd(instance, daemon_binary)
         cmd.append("--foreground")
         if sys.platform != "win32" and args.takeover:
             cmd.append("--takeover")
@@ -1731,7 +1731,9 @@ class StartCmd(Subcmd):
 
         # Wrap the command in sudo, if necessary
         eden_env = daemon.get_edenfs_environment()
-        cmd, eden_env = daemon.prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
+        cmd, eden_env = daemon.prepare_edenfs_privileges(
+            daemon_binary, cmd, eden_env, privhelper
+        )
 
         if sys.platform == "win32":
             return subprocess.call(cmd, env=eden_env)

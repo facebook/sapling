@@ -660,7 +660,7 @@ _can_run_fake_edenfs: Optional[bool] = None
 _can_run_sudo: Optional[bool] = None
 
 
-def can_run_eden() -> bool:
+def can_run_eden(use_non_setuid_privhelper: bool = False) -> bool:
     """
     Determine if we can run eden.
 
@@ -670,13 +670,13 @@ def can_run_eden() -> bool:
     global _can_run_eden
     can_run = _can_run_eden
     if can_run is None:
-        can_run = _compute_can_run_eden()
+        can_run = _compute_can_run_eden(use_non_setuid_privhelper=False)
         _can_run_eden = can_run
 
     return can_run
 
 
-def can_run_fake_edenfs() -> bool:
+def can_run_fake_edenfs(use_non_setuid_privhelper: bool = False) -> bool:
     """
     Determine if we can run the fake_edenfs helper program.
 
@@ -685,19 +685,21 @@ def can_run_fake_edenfs() -> bool:
     global _can_run_fake_edenfs
     can_run = _can_run_fake_edenfs
     if can_run is None:
-        can_run = _compute_can_run_eden(require_fuse=False)
+        can_run = _compute_can_run_eden(
+            require_fuse=False, use_non_setuid_privhelper=False
+        )
         _can_run_fake_edenfs = can_run
 
     return can_run
 
 
-def _compute_can_run_eden(require_fuse: bool = True) -> bool:
-    if "SANDCASTLE" in os.environ and sys.platform != "darwin":
+def _compute_can_run_eden(
+    require_fuse: bool = True, use_non_setuid_privhelper: bool = False
+) -> bool:
+    if "SANDCASTLE" in os.environ:
         # On Sandcastle, pretend that we can always run EdenFS, this prevents
         # blindspots where tests are suddenly skipped but still marked as
         # passed.
-        # TODO(T100403433): The tests aren't compatible with macOS right now
-        # due to Sandcastle not running the job as root.
         return True
 
     if sys.platform == "win32":
@@ -712,14 +714,17 @@ def _compute_can_run_eden(require_fuse: bool = True) -> bool:
     if sys.platform == "linux" and require_fuse and not os.path.exists("/dev/fuse"):
         return False
 
-    # We must be able to start eden as root.
+    # If we're root, we won't have any privilege issues.
     if os.geteuid() == 0:
         return True
 
-    # The daemon must either be setuid root, or we must have sudo priviliges.
-    # Typically for the tests the daemon process is not setuid root,
-    # so check if we have are able to run things under sudo.
-    return can_run_sudo()
+    # If we aren't using a setuid privhelper binary, we need sudo privileges.
+    if use_non_setuid_privhelper:
+        return can_run_sudo()
+
+    # By default we use the system privhelper which is setuid-root, so we can
+    # return True.
+    return True
 
 
 def can_run_sudo() -> bool:

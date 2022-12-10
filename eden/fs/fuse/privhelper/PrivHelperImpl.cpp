@@ -538,9 +538,9 @@ unique_ptr<PrivHelper>
 startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   std::string helperPathFromArgs;
 
-  // We can't use FLAGS_ here because we are called before folly::init() and
-  // the args haven't been parsed. We do a very simple iteration here to parse
-  // out the options.
+  // We can't use FLAGS_ here because startOrConnectToPrivHelper() is called
+  // before folly::init() and the args haven't been parsed yet. We do a very
+  // simple iteration here to parse out the options.
 
   // But at least reference the symbol so it's included in the binary.
   void* volatile fd_arg = &FLAGS_privhelper_fd;
@@ -549,8 +549,8 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   for (int i = 1; i < argc - 1; ++i) {
     StringPiece arg{argv[i]};
     if (arg == "--privhelper_fd") {
-      // If we were passed the --privhelper_fd option (eg: by
-      // daemonizeIfRequested) then we have a channel through which we can
+      // If EdenFS was passed the --privhelper_fd option (eg: by
+      // daemonizeIfRequested) then it has a channel through which it can
       // communicate with a previously spawned privhelper process. Return a
       // client constructed from that channel.
       if ((i + 1) >= argc) {
@@ -571,11 +571,16 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
 
   SpawnedProcess::Options opts;
 
-  // If are as running as setuid, we need to be cautious about the privhelper
-  // process that we are about start.
-  // We require that `edenfs_privhelper` be a sibling of our executable file,
-  // and that both of these paths are not symlinks, and that both are owned
-  // and controlled by the same user.
+  // If EdenFS is running as setuid-root, it needs to be cautious about the
+  // privhelper process that it's about start. Note: from a standard release
+  // package, this is unlikely because the privhelper daemon is installed as
+  // setuid-root and this allows us to avoid running the EdenFS executable as
+  // setuid-root. All warnings will stay in the code since outside users should
+  // be aware of the security implications of changing this code.
+  //
+  // This code require that both of these paths (the EdenFS exe and the
+  // privhelper daemon) are not symlinks and that both are owned and controlled
+  // by the same user (unless the privhelper daemon is owned by root).
 
   auto exePath = executablePath();
   auto canonPath = realpath(exePath.c_str());
@@ -593,15 +598,20 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
 
   AbsolutePath helperPath;
 
-  if (helperPathFromArgs.empty()) {
-    helperPath = exePath.dirname() + "edenfs_privhelper"_relpath;
-  } else {
+  // We should ALWAYS hit the first branch if running through official channels
+  // (i.e. `eden start` and other internal methods), but there's a chance the
+  // binary is invoked directly without --privhelper-path passed. In that case,
+  // fall back to searching for a privhelper binary relative to the executable.
+  if (!helperPathFromArgs.empty()) {
     if (isSetuid) {
       throw std::invalid_argument(
           "Cannot provide privhelper_path when executing a setuid binary");
     }
     helperPath = canonicalPath(helperPathFromArgs);
+  } else {
+    helperPath = exePath.dirname() + "edenfs_privhelper"_relpath;
   }
+  XLOGF(DBG1, "Using '%s' as the privhelper daemon.\n", helperPath.c_str());
 
   struct stat helperStat {};
   struct stat selfStat {};
@@ -613,9 +623,15 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
       fmt::format("lstat {}", helperPath));
 
   if (isSetuid) {
-    // We are a setuid binary.  Require that our executable be owned by
-    // root, otherwise refuse to continue on the basis that something is
-    // very fishy.
+    // Note: In a standard release package, the privhelper daemon is setuid-root
+    // and the EdenFS executable is NOT. Therefore, the following is an unlikely
+    // scenario. This comment/code is a warning to anyone who modifies this code
+    // that there are major risks if shipping/running the EdenFS daemon as
+    // setuid-root.
+    //
+    // When the EdenFS executable is a setuid binary: Require that our
+    // executable be owned by root, otherwise refuse to continue on the basis
+    // that something is very fishy.
     if (selfStat.st_uid != 0) {
       throw_<std::runtime_error>(
           "Refusing to start because my exePath ",
@@ -626,20 +642,19 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
     }
   }
 
-  if (selfStat.st_uid != helperStat.st_uid ||
-      selfStat.st_gid != helperStat.st_gid) {
-    throw_<std::runtime_error>(
-        "Refusing to start because my exePath ",
+  // This is not a concern if the privhelper is setuid-root. At that point,
+  // there are bigger concerns than our uid/gid not matching. In addition, we
+  // want dev EdenFS instances to be able to use system (setuid-root) privhelper
+  // binaries while being run as a non-root user.
+  if ((helperStat.st_uid != 0 && (selfStat.st_uid != helperStat.st_uid)) ||
+      (helperStat.st_gid != 0 && (selfStat.st_gid != helperStat.st_gid))) {
+    throwf<std::runtime_error>(
+        "Refusing to start because my exePath {} is owned by uid={} gid={} and that doesn't match the ownership of {} which is owned by uid={} gid={}",
         exePath,
-        "is owned by uid=",
         selfStat.st_uid,
-        " gid=",
         selfStat.st_gid,
-        " and that doesn't match the ownership of ",
         helperPath,
-        "which is owned by uid=",
         helperStat.st_uid,
-        " gid=",
         helperStat.st_gid);
   }
 

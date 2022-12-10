@@ -222,22 +222,34 @@ std::shared_ptr<IHiveLogger> DefaultEdenMain::getHiveLogger(
 
 int runEdenMain(EdenMain&& main, int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
-  // When running tests or development builds, EdenFS is started with sudo, in
-  // order to execute the privhelper as root. When installed, the privhelper
-  // has suid root and thus EdenFS never runs as root.
+  // There are two options for running test instances or development builds of
+  // EdenFS:
+  //
+  // 1. EdenFS uses a system (or pre-installed) privhelper so that `sudo` is not
+  // required to run the privhelper as root. When installed, the privhelper is
+  // setuid-root and thus the EdenFS daemon never runs as root.
+  //
+  // 2. EdenFS is started with sudo in order to execute a dev instance of
+  // privhelper as root.
+  //
+  // #1 is the default behavior, but #2 can be achieved through the use of
+  // environment variables. See prepare_edenfs_privileges() in fs/cli/daemon.py
+  // for more information on how this works.
   //
   // Since this code can be started with root privileges, we should be very
-  // careful about anything we do here before we have dropped privileges.  In
+  // careful about anything EdenFS does here before it drops privileges.  In
   // general do not add any new code here at the start of main: new
   // initialization logic should only go after the "Root privileges dropped"
   // comment below.
   ////////////////////////////////////////////////////////////////////
 
-  // Fork the privhelper process, then drop privileges in the main process.
-  // This should be done as early as possible, so that everything else we do
-  // runs only with normal user privileges.
+  // Start the privhelper process, then drop privileges in the main process.
+  // This should be done as early as possible, so that everything else EdenFS
+  // does runs only with normal user privileges. Note: as mentioned above, this
+  // is not an issue in the default case since EdenFS will not be run as root,
+  // and only the privhelper daemon will be run as a setuid-root binary.
   //
-  // We do this even before calling folly::init().  The privhelper server
+  // EdenFS does this even before calling folly::init().  The privhelper server
   // process will call folly::init() on its own.
   //
   // If the privileged parent edenfs process has already started a privhelper

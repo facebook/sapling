@@ -16,7 +16,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 import eden.config
 
@@ -123,6 +123,7 @@ class FindExeClass(object):
             buck_path="eden/fs/service/edenfs_privhelper",
             cmake_path="eden/fs/edenfs_privhelper",
             require_found=False,
+            system_candidates=["/usr/local/libexec/eden/edenfs_privhelper"],
         )
 
     @cached_property
@@ -259,6 +260,7 @@ class FindExeClass(object):
         cmake_path: Optional[str] = None,
         require_found: bool = False,
         buck_cell_path: Optional[str] = None,
+        system_candidates: Optional[List[str]] = None,
     ) -> Optional[str]:
         if env is not None:
             path = os.environ.get(env)
@@ -272,6 +274,11 @@ class FindExeClass(object):
                 return path
 
         candidates = []
+        # In some cases, we want to use a pre-installed (or system) binary
+        # instead of a dev built one
+        if system_candidates is not None:
+            candidates.extend(system_candidates)
+
         if self.is_buck_build():
             if buck_path is not None:
                 buck_out = self.BUCK_OUT
