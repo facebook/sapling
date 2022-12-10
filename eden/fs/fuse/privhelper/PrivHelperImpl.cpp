@@ -86,8 +86,8 @@ class PrivHelperClientImpl : public PrivHelper,
     {
       auto state = state_.wlock();
       if (state->status != Status::NOT_STARTED) {
-        throw_<std::runtime_error>(
-            "PrivHelper::start() called in unexpected state ",
+        throwf<std::runtime_error>(
+            "PrivHelper::start() called in unexpected state {}",
             static_cast<uint32_t>(state->status));
       }
       state->eventBase = eventBase;
@@ -262,9 +262,8 @@ class PrivHelperClientImpl : public PrivHelper,
     if (iter == pendingRequests_.end()) {
       // This normally shouldn't happen unless there is a bug.
       // We'll throw and our caller will turn this into an EDEN_BUG()
-      throw_<std::runtime_error>(
-          "received unexpected response from privhelper for unknown "
-          "transaction ID ",
+      throwf<std::runtime_error>(
+          "received unexpected response from privhelper for unknown transaction ID {}",
           packet.metadata.transaction_id);
     }
 
@@ -379,9 +378,9 @@ Future<File> PrivHelperClientImpl::fuseMount(
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_MOUNT_FUSE, response);
         if (response.files.size() != 1) {
-          throw_<std::runtime_error>(
+          throwf<std::runtime_error>(
               "expected privhelper FUSE response to contain a single file "
-              "descriptor; got ",
+              "descriptor; got {}",
               response.files.size());
         }
         return std::move(response.files[0]);
@@ -585,13 +584,13 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   auto exePath = executablePath();
   auto canonPath = realpath(exePath.c_str());
   if (exePath != canonPath) {
-    throw_<std::runtime_error>(
-        "Refusing to start because my exePath ",
+    throwf<std::runtime_error>(
+        "Refusing to start because my exePath {} is not the realpath to myself"
+        " (which is {}). This is an unsafe installation and may be an"
+        " indication of a symlink attack or similar attempt to escalate"
+        " privileges.",
         exePath,
-        " is not the realpath to myself (which is ",
-        canonPath,
-        "). This is an unsafe installation and may be an indication of a "
-        "symlink attack or similar attempt to escalate privileges");
+        canonPath);
   }
 
   bool isSetuid = getuid() != geteuid();
@@ -633,12 +632,11 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
     // executable be owned by root, otherwise refuse to continue on the basis
     // that something is very fishy.
     if (selfStat.st_uid != 0) {
-      throw_<std::runtime_error>(
-          "Refusing to start because my exePath ",
+      throwf<std::runtime_error>(
+          "Refusing to start because my exePath {} is owned by uid {} rather"
+          " than by root.",
           exePath,
-          " is owned by uid ",
-          selfStat.st_uid,
-          " rather than by root.");
+          selfStat.st_uid);
     }
   }
 
@@ -649,7 +647,9 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   if ((helperStat.st_uid != 0 && (selfStat.st_uid != helperStat.st_uid)) ||
       (helperStat.st_gid != 0 && (selfStat.st_gid != helperStat.st_gid))) {
     throwf<std::runtime_error>(
-        "Refusing to start because my exePath {} is owned by uid={} gid={} and that doesn't match the ownership of {} which is owned by uid={} gid={}",
+        "Refusing to start because my exePath {} is owned by uid={} gid={} and"
+        " that doesn't match the ownership of {} which is owned by uid={}"
+        " gid={}",
         exePath,
         selfStat.st_uid,
         selfStat.st_gid,
@@ -659,8 +659,8 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   }
 
   if (S_ISLNK(helperStat.st_mode)) {
-    throw_<std::runtime_error>(
-        "Refusing to start because ", helperPath, " is a symlink");
+    throwf<std::runtime_error>(
+        "Refusing to start because {} is a symlink", helperPath);
   }
 
   opts.executablePath(helperPath);
