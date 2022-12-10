@@ -31,17 +31,6 @@ class PrivHelper;
 std::unique_ptr<PrivHelper>
 startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv);
 
-#ifdef __linux__
-/**
- * Start a privhelper process using a custom PrivHelperServer class.
- *
- * This is really only intended for use in unit tests.
- */
-std::unique_ptr<PrivHelper> forkPrivHelper(
-    PrivHelperServer* server,
-    const UserInfo& userInfo);
-#endif
-
 #ifndef _WIN32
 /**
  * Create a PrivHelper client object using the specified connection rather than

@@ -675,45 +675,6 @@ unique_ptr<PrivHelper> createTestPrivHelper(File&& conn) {
   return make_unique<PrivHelperClientImpl>(std::move(conn), std::nullopt);
 }
 
-#ifdef __linux__
-std::unique_ptr<PrivHelper> forkPrivHelper(
-    PrivHelperServer* server,
-    const UserInfo& userInfo) {
-  File clientConn;
-  File serverConn;
-  PrivHelperConn::createConnPair(clientConn, serverConn);
-
-  const auto pid = fork();
-  checkUnixError(pid, "failed to fork mount helper");
-  if (pid > 0) {
-    // Parent
-    serverConn.close();
-    XLOG(DBG1) << "Forked mount helper process: pid=" << pid;
-    return make_unique<PrivHelperClientImpl>(
-        std::move(clientConn), SpawnedProcess::fromExistingProcess(pid));
-  }
-
-  // Child
-  clientConn.close();
-  int rc = 1;
-  try {
-    // Redirect stdin
-    folly::File devNullIn("/dev/null", O_RDONLY);
-    auto retcode = folly::dup2NoInt(devNullIn.fd(), STDIN_FILENO);
-    folly::checkUnixError(retcode, "failed to redirect stdin");
-
-    server->init(std::move(serverConn), userInfo.getUid(), userInfo.getGid());
-    server->run();
-    rc = 0;
-  } catch (const std::exception& ex) {
-    XLOG(ERR) << "error inside mount helper: " << folly::exceptionStr(ex);
-  } catch (...) {
-    XLOG(ERR) << "invalid type thrown inside mount helper";
-  }
-  _exit(rc);
-}
-#endif
-
 #else // _WIN32
 
 unique_ptr<PrivHelper>
