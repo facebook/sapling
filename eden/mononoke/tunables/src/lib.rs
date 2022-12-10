@@ -200,9 +200,6 @@ pub struct MononokeTunables {
     // How often to check if derived data is disabled or not
     derived_data_disabled_watcher_delay_secs: AtomicI64,
 
-    // Disable derivation via direved data service.
-    derived_data_disable_remote_derivation: AtomicBool,
-
     // Stops deriving on derivation workers. Will not drain Derivation Queue
     derived_data_disable_derivation_workers: AtomicBool,
 

@@ -20,8 +20,6 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data_service_if::types::DerivationType;
-use derived_data_service_if::types::DeriveSingle;
 use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -140,54 +138,7 @@ impl DerivedDataManager {
 
     /// Perform derivation for a single changeset.
     /// Will fail in case data for parents changeset wasn't derived
-    pub async fn perform_single_derivation<Derivable>(
-        &self,
-        ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
-        csid: ChangesetId,
-        discovery_stats: &Option<DiscoveryStats>,
-    ) -> Result<(ChangesetId, Derivable)>
-    where
-        Derivable: BonsaiDerivable,
-    {
-        const RETRY_DELAY: Duration = Duration::from_millis(100);
-        const RETRY_ATTEMPTS_LIMIT: u8 = 10;
-        if let Some(client) = self.derivation_service_client() {
-            let mut attempt = 0;
-            while !tunables::tunables().get_derived_data_disable_remote_derivation() {
-                match client
-                    .derive_remotely(
-                        self.repo_name().to_string(),
-                        Derivable::NAME.to_string(),
-                        csid,
-                        self.config_name(),
-                        DerivationType::derive_single(DeriveSingle {}),
-                    )
-                    .await
-                {
-                    Ok(Some(data)) => {
-                        return Ok((csid, Derivable::from_thrift(data)?));
-                    }
-                    Ok(None) => {
-                        tokio::time::sleep(RETRY_DELAY).await;
-                    }
-                    Err(e) => {
-                        if attempt >= RETRY_ATTEMPTS_LIMIT {
-                            self.derived_data_scuba::<Derivable>(discovery_stats)
-                                .add("changeset", csid.to_string())
-                                .log_with_msg("Derived data service failed", format!("{:#}", e));
-                            break;
-                        }
-                        attempt += 1;
-                    }
-                }
-            }
-        }
-        self.perform_single_derivation_locally(ctx, derivation_ctx, csid, discovery_stats)
-            .await
-    }
-
-    async fn perform_single_derivation_locally<Derivable>(
+    async fn perform_single_derivation<Derivable>(
         &self,
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
