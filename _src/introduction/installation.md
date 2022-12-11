@@ -144,4 +144,14 @@ make oss
 `}
 </pre>
 
+Though the Windows build is slightly different:
+
+<pre>{`\
+git clone ${gitHubRepo}
+cd ${gitHubRepoName}/eden/scm
+python3 .\\packaging\\windows\\build_windows_zip.py
+.\\build\\embedded\\sl.exe --help
+`}
+</pre>
+
 Once you have Sapling installed, follow the [Getting Started](./getting-started.md) instructions.
