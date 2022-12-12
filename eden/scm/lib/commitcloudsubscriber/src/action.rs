@@ -42,6 +42,7 @@ impl CloudSyncTrigger {
                 .args(vec!["cloud", "sync"])
                 .arg("--check-autosync-enabled")
                 .arg("--use-bgssh")
+                .arg("--best-effort")
                 .args(&workspace_args)
                 .args(&vec!["--reason", &reason])
                 .stdout(Stdio::piped())

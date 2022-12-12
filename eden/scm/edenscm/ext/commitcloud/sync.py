@@ -128,7 +128,8 @@ def _hashrepostate(repo) -> bytes:
     The hash is used to detect repo changes.
     """
     buf = []
-    ml = repo.metalog()
+    with repo.wlock(), repo.lock(), repo.transaction("cloudsyncmetalog"):
+        ml = repo.metalog()
     for key in ["bookmarks", "remotenames", "visibleheads"]:
         buf.append(ml.get(key) or b"")
     return hashlib.sha1(b"".join(buf)).digest()

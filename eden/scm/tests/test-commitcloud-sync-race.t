@@ -4,6 +4,27 @@
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
+  $ cat >>$TESTTMP/ccdelay.py <<EOF
+  > 
+  > import os
+  > import time
+  > 
+  > from edenscm import extensions
+  > 
+  > def extsetup(ui):
+  >    cc = extensions.find("commitcloud")
+  >    if cc is not None:
+  >        extensions.wrapfunction(cc.sync, "_hashrepostate", delayhash)
+  > 
+  > def delayhash(orig, repo):
+  >    ret = orig(repo)
+  >    filename = os.environ.get("CCWAITFILE")
+  >    if filename:
+  >         while os.path.exists(filename):
+  >             time.sleep(0.1)
+  >    return ret
+  > EOF
+
   $ enable commitcloud infinitepush amend rebase remotenames
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
@@ -26,7 +47,7 @@
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig extralog.events="visibility, commitcloud_sync"
-  $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
+  $ setconfig extensions.ccdelay="$TESTTMP/ccdelay.py"
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
@@ -41,7 +62,7 @@
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig extralog.events="visibility, commitcloud_sync"
-  $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
+  $ setconfig extensions.ccdelay="$TESTTMP/ccdelay.py"
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
@@ -71,8 +92,8 @@
 
 Start a background sync to pull in the changes from the other repo.
 
-  $ touch $TESTTMP/wlockpre1
-  $ HGPREWLOCKFILE=$TESTTMP/wlockpre1 hg cloud sync > $TESTTMP/bgsync.out 2>&1 &
+  $ touch $TESTTMP/ccdelay1
+  $ CCWAITFILE=$TESTTMP/ccdelay1 hg cloud sync --best-effort > $TESTTMP/bgsync.out 2>&1 &
 
 While that is getting started, create a new commit locally.
 
@@ -93,11 +114,13 @@ While that is getting started, create a new commit locally.
 
 Let the background sync we started earlier continue, and start a concurrent cloud sync.
 
-  $ rm $TESTTMP/wlockpre1
-  $ hg cloud sync
+  $ rm $TESTTMP/ccdelay1
+  $ hg cloud sync --best-effort
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
+  visibility: read 1 heads: 1292cc1f1c17
   backing up stack rooted at 1292cc1f1c17
+  visibility: read 1 heads: 1292cc1f1c17
   pulling 79089e97b9e7 from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -122,12 +145,15 @@ Let the background sync we started earlier continue, and start a concurrent clou
   ├─╯
   @  df4f53cec30a public 'base'
   
+
 Wait for the background backup to finish and check its output.
 
   $ hg debugwaitbackup
   $ cat $TESTTMP/bgsync.out
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 0 heads: 
+  visibility: read 0 heads: 
+  visibility: read 1 heads: 1292cc1f1c17
   abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
   (please retry 'hg cloud sync')
   (please contact the Source Control Team if this error persists)
