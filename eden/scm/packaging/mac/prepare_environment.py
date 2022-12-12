@@ -143,7 +143,8 @@ def set_up_downloaded_crates(tmpdir):
     os.remove(dylib_location)
     shutil.copy(
         os.path.join(
-            tmpdir, "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/Python"
+            tmpdir,
+            "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/Python",
         ),
         dylib_location,
     )
