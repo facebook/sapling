@@ -42,12 +42,12 @@ UBUNTU_DEPS = [
 MACOS_RELEASES = {
     "x86": {
         "target": "x86_64-apple-darwin",
-        "python_bottle_hash": "c247a261048c510b963705acfbea23b09cc193b5d4256a5d10b42d199a8f8869",
+        "python_bottle_hash": "919aeadea2828aad7ccd95538e4db27943f8c1fc3c185e5d19d4afd89b1a79ad",
         "openssl_bottle_hash": "d915175bedb146e38d7a2c95e86888a60a5058a5cd21f835813d43d1372a29d9",
     },
     "arm64": {
         "target": "aarch64-apple-darwin",
-        "python_bottle_hash": "3e95fbf0f18b59af7aeaa957be4499a9c521ec199f2ec2a419b8a7b9ac627a3a",
+        "python_bottle_hash": "4e968bd8f28aee189bd829c2b9feabeb8c5edd95b949cf327ea2f1f62ac76e66",
         "openssl_bottle_hash": "c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6",
     },
 }
@@ -360,7 +360,7 @@ RUN rm -rf /tmp/repo
                     "name": "Prepare build environment",
                     "run": "eden/scm/packaging/mac/prepare_environment.py \\\n"
                     + f"-s {openssl_bottle_hash} -f openssl@1.1 \\\n"
-                    + f"-s {python_bottle_hash} -f python@3.8 \\\n"
+                    + f"-s {python_bottle_hash} -f python@3.11 \\\n"
                     + f"-t {target} \\\n"
                     + "-r ${{ env.SAPLING_VERSION }} \\\n"
                     + "-o $(brew tap-info homebrew/core | sed -n '2p' | awk '{printf $1}')/Formula/sapling.rb",

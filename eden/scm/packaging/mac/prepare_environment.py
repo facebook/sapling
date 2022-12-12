@@ -88,7 +88,7 @@ def get_bottle(bottle_name: str, bottle_hash: str, tmpdir: str):
     The hash corresponds to the hash of some bottle (which can be specified in
     the bottle section of homebrew formulas).
 
-    https://github.com/Homebrew/homebrew-core/blob/75bac0ef0c7a68d3607fc5d7e94ef417d93df138/Formula/python%403.8.rb#L14
+    https://github.com/Homebrew/homebrew-core/blob/75bac0ef0c7a68d3607fc5d7e94ef417d93df138/Formula/python%403.11.rb#L14
     is an example of this.
     """
     auth_url = f"https://ghcr.io/v2/homebrew/core/{bottle_name.replace('@', '/')}/blobs/sha256:{bottle_hash}"
@@ -109,7 +109,7 @@ def get_bottle(bottle_name: str, bottle_hash: str, tmpdir: str):
             url = line.split()[1]
             break
     if url is None:
-        raise RuntimeException(f"Unable to get actual url when querying {auth_url}")
+        raise RuntimeError(f"Unable to get actual url when querying {auth_url}")
     cmd = [
         "curl",
         "--location",
@@ -128,22 +128,22 @@ def set_up_downloaded_crates(tmpdir):
     print(f"LOCATION IS {brew_location}")
     dylib_location = os.path.join(
         brew_location,
-        "python@3.8/3.8.15/Frameworks/Python.framework/Versions/3.8/lib/libpython3.8.dylib",
+        "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib",
     )
     run_cmd(
         [
             "tar",
             "-zxvf",
-            os.path.join(tmpdir, "python@3.8.bottle.tar.gz"),
+            os.path.join(tmpdir, "python@3.11.bottle.tar.gz"),
             "-C",
             tmpdir,
-            "python@3.8/3.8.15/Frameworks/Python.framework/Versions/3.8/Python",
+            "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/Python",
         ]
     )
     os.remove(dylib_location)
     shutil.copy(
         os.path.join(
-            tmpdir, "python@3.8/3.8.15/Frameworks/Python.framework/Versions/3.8/Python"
+            tmpdir, "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/Python"
         ),
         dylib_location,
     )
@@ -200,8 +200,8 @@ if __name__ == "__main__":
         print("Number of hashes and formulas to download must be the same")
         exit(1)
 
-    if "python@3.8" not in args.formula or "openssl@1.1" not in args.formula:
-        print("Must specify both python3.8 and openssl@1.1 bottles to download")
+    if "python@3.11" not in args.formula or "openssl@1.1" not in args.formula:
+        print("Must specify both python3.11 and openssl@1.1 bottles to download")
         exit(1)
 
     tmpdir = tempfile.mkdtemp()
