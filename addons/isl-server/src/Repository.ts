@@ -597,7 +597,10 @@ export class Repository {
   /** Return file content at a given revset, e.g. hash or `.` */
   public cat(file: AbsolutePath, rev: Revset): Promise<string> {
     return this.catLimiter.enqueueRun(async () => {
-      return (await this.runCommand(['cat', file, '--rev', rev])).stdout;
+      // For `sl cat`, we want the output of the command verbatim.
+      const options = {stripFinalNewline: false};
+      return (await this.runCommand(['cat', file, '--rev', rev], /*cwd=*/ undefined, options))
+        .stdout;
     });
   }
 
