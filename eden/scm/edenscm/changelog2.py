@@ -383,12 +383,24 @@ class changelog(object):
         return readfiles(text)
 
     def add(
-        self, manifest, files, desc, transaction, p1, p2, user, date=None, extra=None
+        self,
+        manifest,
+        files,
+        desc,
+        transaction,
+        p1,
+        p2,
+        user,
+        date=None,
+        extra=None,
+        gpgkeyid: Optional[str] = None,
     ):
         parents = [p for p in (p1, p2) if p != nullid]
         if self._isgit:
             # 'files' is not used by git
-            text = gitcommittext(manifest, parents, desc, user, date, extra)
+            text = gitcommittext(
+                manifest, parents, desc, user, date, extra, gpgkeyid=gpgkeyid
+            )
             node = git.hashobj(b"commit", text)
         else:
             text = hgcommittext(manifest, files, desc, user, date, extra)

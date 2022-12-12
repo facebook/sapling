@@ -45,6 +45,7 @@ from . import (
     extensions,
     filelog,
     git,
+    gpg,
     hook,
     identity,
     lock as lockmod,
@@ -2807,6 +2808,7 @@ class localrepository(object):
                 user,
                 ctx.date(),
                 extra,
+                gpg.get_gpg_keyid(self.ui),
             )
             xp1, xp2 = p1.hex(), p2 and p2.hex() or ""
             self.hook("pretxncommit", throw=True, node=hex(n), parent1=xp1, parent2=xp2)
