@@ -179,10 +179,7 @@ impl SparseProfileMonitoring {
     fn is_profile_config_change(&self, path: &MononokePath) -> bool {
         let matcher = match self.monitoring_profiles {
             MonitoringProfiles::Exact { .. } => &self.exact_profiles_matcher,
-            MonitoringProfiles::All => self
-                .monitoring_profiles_only_matcher
-                .as_ref()
-                .map_or_else(|| &self.profiles_location_with_excludes_matcher, |m| m),
+            MonitoringProfiles::All => &self.profiles_location_with_excludes_matcher,
         };
         matcher.matches(path.to_string())
     }
