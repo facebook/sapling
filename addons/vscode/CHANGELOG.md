@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7
+
+- Fixed an issue where we were stripping the trailing newline in the output to `sl cat`, which caused the VS Code extension to constantly report that the user had modified a file by adding a newline to the end: https://github.com/facebook/sapling/commit/f65f499ba95a742444b61cb181adb39d2a3af4c2.
+
 ## 0.1.6
 
 - Fixed an issue with path normalization that was preventing extension commands from working on Windows because files were not recognized as part of a Sapling repository: https://github.com/facebook/sapling/commit/206c7fbf6bc94e7e5940630b812fba7dcd55140e.
