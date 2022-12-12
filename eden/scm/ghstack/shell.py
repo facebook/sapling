@@ -287,13 +287,9 @@ class Shell(object):
             ) -> GitCommitHash:
         """Run `git commit-tree`, adding GPG flags, if appropriate.
         """
-        gpg_args = self.get_gpg_args()
+        gpg_args = gpg_args_if_necessary(self)
         full_args = ["commit-tree"] + gpg_args + list(args)
         return GitCommitHash(self.git(*full_args, **kwargs))
-
-    def get_gpg_args(self) -> List[str]:
-        """args to include with `git commit` or `git commit-tree` for GPG signing"""
-        return gpg_args_if_necessary(self)
 
     @overload  # noqa: F811
     def hg(self, *args: str) -> str:

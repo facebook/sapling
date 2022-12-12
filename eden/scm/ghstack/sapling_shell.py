@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Any, Dict, Optional, List
 
+from edenscm import gpg
 import ghstack
 import ghstack.config
 from ghstack.ghs_types import GitCommitHash
@@ -14,6 +15,7 @@ class SaplingShell(ghstack.shell.Shell):
     def __init__(self,
                  *,
                  conf: ghstack.config.Config,
+                 ui = None,  # Sapling ui object.
                  git_dir: str,
                  user_name: str,
                  user_email: str,
@@ -32,6 +34,7 @@ class SaplingShell(ghstack.shell.Shell):
         """
         super().__init__(quiet=quiet, cwd=cwd, testing=testing)
         self.conf = conf
+        self.ui = ui
         self.git_dir = git_dir
         self.user_name = user_name
         self.user_email = user_email
@@ -132,7 +135,9 @@ class SaplingShell(ghstack.shell.Shell):
         """Run `git commit-tree`, adding GPG flags, if appropriate.
         """
         config_flags = ['-c', f'user.name={self.user_name}', '-c', f'user.email={self.user_email}']
-        full_args = config_flags + ["commit-tree"] + list(args)
+        keyid = gpg.get_gpg_keyid(self.ui)
+        gpg_args = [f'-S{keyid}'] if keyid else []
+        full_args = config_flags + ["commit-tree"] + gpg_args + list(args)
         stdout = self.git(*full_args, **kwargs)
         if isinstance(stdout, str):
             return GitCommitHash(stdout)
