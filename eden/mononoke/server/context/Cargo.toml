@@ -16,10 +16,10 @@ doc = false
 async_limiter = { version = "0.1.0", path = "../../common/async_limiter" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+governor = "0.3.2"
 metadata = { version = "0.1.0", path = "../metadata" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
-ratelimit_meter = "5"
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 session_id = { version = "0.1.0", path = "../session_id" }

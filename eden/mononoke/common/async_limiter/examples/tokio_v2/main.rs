@@ -9,13 +9,13 @@ use anyhow::Error;
 use async_limiter::AsyncLimiter;
 use chrono::Local;
 use futures::future::join_all;
+use governor::Quota;
+use governor::RateLimiter;
 use nonzero_ext::nonzero;
-use ratelimit_meter::algorithms::LeakyBucket;
-use ratelimit_meter::DirectRateLimiter;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
+    let limiter = RateLimiter::direct(Quota::per_second(nonzero!(5u32)));
     let limiter = AsyncLimiter::new(limiter).await;
 
     let futs = (0..10).map(|i| {

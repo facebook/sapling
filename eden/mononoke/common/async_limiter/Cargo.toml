@@ -11,8 +11,7 @@ autoexamples = false
 [dependencies]
 anyhow = "1.0.65"
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
-pin-project = "0.4.30"
-ratelimit_meter = "5"
+governor = "0.3.2"
 thiserror = "1.0.36"
 tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 

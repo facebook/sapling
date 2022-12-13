@@ -10,16 +10,14 @@ use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future;
 use futures::future::Future;
-use futures::future::FutureExt;
-use futures::stream;
 use futures::stream::StreamExt;
-use ratelimit_meter::algorithms::Algorithm;
-use ratelimit_meter::clock::Clock;
-use ratelimit_meter::DirectRateLimiter;
+use governor::clock::ReasonablyRealtime;
+use governor::state::direct::DirectStateStore;
+use governor::state::direct::NotKeyed;
+use governor::state::direct::StreamRateLimitExt;
+use governor::RateLimiter;
 
-use crate::EarliestPossible;
 use crate::ErrorKind;
-use crate::RateLimitStream;
 
 /// A shared asynchronous rate limiter.
 #[derive(Clone)]
@@ -31,24 +29,26 @@ pub struct AsyncLimiter {
 impl AsyncLimiter {
     // NOTE: This function is async because it requires a Tokio runtme to spawn things. The best
     // way to require a Tokio runtime to be present is to just make the function async.
-    pub async fn new<A, C>(limiter: DirectRateLimiter<A, C>) -> Self
+    pub async fn new<S, C>(limiter: RateLimiter<NotKeyed, S, C>) -> Self
     where
-        A: Algorithm<C::Instant> + 'static,
-        C: Clock + Send + 'static,
-        A::NegativeDecision: EarliestPossible,
+        S: DirectStateStore + Send + Sync + 'static,
+        C: ReasonablyRealtime + Send + Sync + 'static,
     {
         let (dispatch, dispatch_recv) = mpsc::unbounded();
         let (cancel, cancel_recv) = mpsc::channel(1);
-        let rate_limit = RateLimitStream::new(limiter);
 
-        let worker = dispatch_recv
-            .zip(stream::select(cancel_recv, rate_limit))
-            .for_each(|(reply, ()): (oneshot::Sender<()>, ())| {
-                let _ = reply.send(());
-                future::ready(())
-            });
-
-        tokio_shim::task::spawn(worker.boxed());
+        tokio_shim::task::spawn(async move {
+            let worker = dispatch_recv
+                .zip(futures::stream::select(
+                    cancel_recv,
+                    futures::stream::repeat(()).ratelimit_stream(&limiter),
+                ))
+                .for_each(|(reply, _): (oneshot::Sender<()>, _)| {
+                    let _ = reply.send(());
+                    future::ready(())
+                });
+            worker.await
+        });
 
         Self { dispatch, cancel }
     }
@@ -91,15 +91,15 @@ mod test {
     use std::time::Duration;
     use std::time::Instant;
 
+    use governor::Quota;
+    use governor::RateLimiter;
     use nonzero_ext::nonzero;
-    use ratelimit_meter::algorithms::LeakyBucket;
-    use ratelimit_meter::DirectRateLimiter;
 
     use super::*;
 
     #[tokio::test]
     async fn test_access_enters_queue_lazily() -> Result<(), Error> {
-        let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
+        let limiter = RateLimiter::direct(Quota::per_second(nonzero!(5u32)));
         let limiter = AsyncLimiter::new(limiter).await;
 
         for _ in 0..10 {
@@ -116,7 +116,7 @@ mod test {
 
     #[tokio::test]
     async fn test_cancel() -> Result<(), Error> {
-        let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1u32));
+        let limiter = RateLimiter::direct(Quota::per_second(nonzero!(1u32)));
         let limiter = AsyncLimiter::new(limiter).await;
 
         let now = Instant::now();

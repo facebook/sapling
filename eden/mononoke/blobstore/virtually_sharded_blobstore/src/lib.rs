@@ -1090,9 +1090,9 @@ mod test {
         use borrowed::borrowed;
         use context::SessionContainer;
         use fbinit::FacebookInit;
+        use governor::Quota;
+        use governor::RateLimiter;
         use nonzero_ext::nonzero;
-        use ratelimit_meter::algorithms::LeakyBucket;
-        use ratelimit_meter::DirectRateLimiter;
         use scuba_ext::MononokeScubaSampleBuilder;
         use slog::o;
         use slog::Drain;
@@ -1155,14 +1155,10 @@ mod test {
 
         #[fbinit::test]
         async fn test_qps(fb: FacebookInit) -> Result<()> {
-            let l1 =
-                DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
+            let l1 = RateLimiter::direct(Quota::with_period(Duration::from_millis(10)).unwrap());
             let l1 = AsyncLimiter::new(l1).await;
-
-            let l2 =
-                DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
+            let l2 = RateLimiter::direct(Quota::with_period(Duration::from_millis(10)).unwrap());
             let l2 = AsyncLimiter::new(l2).await;
-
             let session = SessionContainer::builder(fb)
                 .blobstore_read_limiter(l1)
                 .blobstore_write_limiter(l2)
@@ -1211,12 +1207,13 @@ mod test {
 
         #[fbinit::test]
         async fn test_early_cache_hits_do_not_count(fb: FacebookInit) -> Result<()> {
-            let l1 =
-                DirectRateLimiter::<LeakyBucket>::new(nonzero!(10u32), Duration::from_millis(100));
+            let l1 = RateLimiter::direct(
+                Quota::per_second(nonzero!(100u32)).allow_burst(nonzero!(10u32)),
+            );
             let l1 = AsyncLimiter::new(l1).await;
-
-            let l2 =
-                DirectRateLimiter::<LeakyBucket>::new(nonzero!(10u32), Duration::from_millis(100));
+            let l2 = RateLimiter::direct(
+                Quota::per_second(nonzero!(100u32)).allow_burst(nonzero!(10u32)),
+            );
             let l2 = AsyncLimiter::new(l2).await;
 
             let session = SessionContainer::builder(fb)

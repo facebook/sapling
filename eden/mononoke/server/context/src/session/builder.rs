@@ -10,10 +10,10 @@ use std::sync::Arc;
 
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
+use governor::Quota;
+use governor::RateLimiter;
 use metadata::Metadata;
 use rate_limiting::BoxRateLimiter;
-use ratelimit_meter::algorithms::LeakyBucket;
-use ratelimit_meter::DirectRateLimiter;
 
 use super::SessionClass;
 use super::SessionContainer;
@@ -66,7 +66,7 @@ impl SessionContainerBuilder {
     pub async fn blobstore_maybe_read_qps_limiter(mut self, qps: impl TryInto<u32>) -> Self {
         if let Ok(Some(qps)) = qps.try_into().map(NonZeroU32::new) {
             self.inner.blobstore_read_limiter =
-                Some(AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await);
+                Some(AsyncLimiter::new(RateLimiter::direct(Quota::per_second(qps))).await);
         }
         self
     }
@@ -79,7 +79,7 @@ impl SessionContainerBuilder {
     pub async fn blobstore_maybe_write_qps_limiter(mut self, qps: impl TryInto<u32>) -> Self {
         if let Ok(Some(qps)) = qps.try_into().map(NonZeroU32::new) {
             self.inner.blobstore_write_limiter =
-                Some(AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await);
+                Some(AsyncLimiter::new(RateLimiter::direct(Quota::per_second(qps))).await);
         }
         self
     }

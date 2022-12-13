@@ -138,12 +138,12 @@ impl SessionContainer {
         self.metadata().identities().is_hg_sync_job()
     }
 
-    pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {
-        &self.inner.blobstore_read_limiter
+    pub fn blobstore_read_limiter(&self) -> Option<&AsyncLimiter> {
+        self.inner.blobstore_read_limiter.as_ref()
     }
 
-    pub fn blobstore_write_limiter(&self) -> &Option<AsyncLimiter> {
-        &self.inner.blobstore_write_limiter
+    pub fn blobstore_write_limiter(&self) -> Option<&AsyncLimiter> {
+        self.inner.blobstore_write_limiter.as_ref()
     }
 
     pub fn session_class(&self) -> SessionClass {
