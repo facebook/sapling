@@ -6,6 +6,7 @@
  */
 
 mod fetch;
+mod fetch_many;
 mod upload;
 
 use anyhow::Context;
@@ -13,6 +14,7 @@ use anyhow::Result;
 use clap::Parser;
 use clap::Subcommand;
 use fetch::BlobstoreFetchArgs;
+use fetch_many::BlobstoreFetchManyArgs;
 use mononoke_app::args::RepoBlobstoreArgs;
 use mononoke_app::MononokeApp;
 use upload::BlobstoreUploadArgs;
@@ -33,6 +35,9 @@ pub enum BlobstoreSubcommand {
     Fetch(BlobstoreFetchArgs),
     /// Upload a blob to the blobstore
     Upload(BlobstoreUploadArgs),
+    /// Fetches multiple blobs, and outputs how many were present, not present or errored.
+    /// Most useful to use with scrub to repair blobs.
+    FetchMany(BlobstoreFetchManyArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -46,6 +51,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         BlobstoreSubcommand::Fetch(fetch_args) => {
             fetch::fetch(&ctx, &blobstore, fetch_args).await?
+        }
+        BlobstoreSubcommand::FetchMany(args) => {
+            fetch_many::fetch_many(&ctx, &blobstore, args).await?
         }
         BlobstoreSubcommand::Upload(upload_args) => {
             upload::upload(&ctx, &blobstore, upload_args).await?
