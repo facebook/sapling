@@ -164,7 +164,7 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv) -> None:
 
 
 def _hg_runner(
-    root: int,
+    root: str,
     manifest_env: ManifestEnv,
     extra_args: Args,
     extra_env: Env,
@@ -223,8 +223,6 @@ def _hg_runner(
 
         subprocess.check_call(
             args,
-            # pyre-fixme[6]: For 2nd param expected `Union[None, PathLike[bytes],
-            #  PathLike[str], bytes, str]` but got `int`.
             cwd=root,
             env=env,
             stdin=stdin,
@@ -234,7 +232,6 @@ def _hg_runner(
 
 
 def hg_runner_public(manifest_env: Env, *args, **kwargs) -> bool:
-    # pyre-fixme[6]: For 1st param expected `int` but got `str`.
     _hg_runner(public_test_root(manifest_env), manifest_env, *args, **kwargs)
     return True
 
@@ -244,7 +241,6 @@ def hg_runner_facebook(manifest_env: Env, *args, **kwargs) -> bool:
     if fb_root is None:
         return False
     else:
-        # pyre-fixme[6]: For 1st param expected `int` but got `str`.
         _hg_runner(fb_root, manifest_env, *args, **kwargs)
         return True
 
