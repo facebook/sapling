@@ -12,6 +12,10 @@ if [ -n "$USE_MONONOKE" ] ; then
   . "$TESTDIR/../../mononoke/tests/integration/library.sh"
 fi
 
+sl() {
+  HGIDENTITY=sl hg "$@"
+}
+
 dummysshcmd() {
   if [ -n "$DUMMYSSH" ]
   then

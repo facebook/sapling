@@ -297,7 +297,7 @@ config editing without an editor
 
   $ cd
   $ HGIDENTITY=sl newrepo
-  $ HGIDENTITY=sl hg config --local foo.bar baz
+  $ sl config --local foo.bar baz
   updated config in $TESTTMP/repo3/.sl/config
   $ cat .sl/config | dos2unix
   # example repository config (see 'sl help config' for more info)

@@ -23,12 +23,12 @@ Test locating user config
   System config path: C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc (windows !)
   $ hg configfile --user
   $TESTTMP/.hgrc
-  $ HGIDENTITY=sl hg configfile --user
+  $ sl configfile --user
   $TESTTMP/.config/sapling/sapling.conf (linux !)
   $TESTTMP/Library/Preferences/sapling/sapling.conf (osx !)
   $TESTTMP\AppData\Roaming\sapling\sapling.conf (windows !)
   $ touch $TESTTMP/.hgrc
-  $ HGIDENTITY=sl hg configfile --user
+  $ sl configfile --user
   $TESTTMP/.hgrc
 
 Test locating other configs
