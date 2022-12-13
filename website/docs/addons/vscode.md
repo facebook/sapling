@@ -13,7 +13,7 @@ Sapling provides an extension for [Visual Studio Code](https://code.visualstudio
 :::caution
 
 Sapling must be installed through the normal installation instructions in order for
-the vscode extension to work properly.
+the VS Code extension to work properly.
 
 [See installation instructions.](../introduction/installation.md)
 
@@ -30,7 +30,7 @@ Just run the **Sapling: Open Interactive Smartlog** command from the [command pa
 ### VS Code source control API
 
 Sapling also implements the VS Code API for source control:
-- You can see your uncommitted changes in the Source Control sidebar.
+- You can see your uncommitted changes in the **Source Control** sidebar.
 - Files you change will have gutters that show what lines of code have changed.
 - You can open an editable diff viewer from the command palette with
-**Sapling SCM: Open Diff View For Current File**
+**Sapling SCM: Open Diff View For Current File**.
