@@ -28,7 +28,3 @@ CREATE TABLE IF NOT EXISTS bookmarks_update_log (
   timestamp BIGINT NOT NULL,
   PRIMARY KEY (repo_id, id)
 );
-
-CREATE TABLE IF NOT EXISTS bookmarks_update_log_lock (
-  id INTEGER PRIMARY KEY NOT NULL
-);
