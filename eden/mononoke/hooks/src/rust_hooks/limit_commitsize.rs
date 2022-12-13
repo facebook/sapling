@@ -200,7 +200,7 @@ impl ChangesetHook for LimitCommitsize {
                 return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                     "Commit too large",
                     format!(
-                        "Commit changed {} files but at most {} are allowed. Reach out to Source Control @ Meta for instructions.",
+                        "Commit changed {} files but at most {} are allowed. See https://fburl.com/landing_big_diffs for instructions.",
                         num_changed_files, changed_files_limit,
                     ),
                 )));
