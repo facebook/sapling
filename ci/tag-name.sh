@@ -6,5 +6,5 @@
 
 DIR=$(dirname -- "$0")
 VERSION=$(<"$DIR"/../SAPLING_VERSION)
-COMMIT_INFO=$(git -c "core.abbrev=8" show -s "--format=%cd-r%h" "--date=format:%Y%m%d-%H%M%S")
+COMMIT_INFO=$(git -c "core.abbrev=8" show -s "--format=%cd-h%h" "--date=format:%Y%m%d-%H%M%S")
 echo "$VERSION"."$COMMIT_INFO"
