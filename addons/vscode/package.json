@@ -48,7 +48,11 @@
       {
         "command": "sapling.open-isl",
         "title": "%sapling.open-isl-command%",
-        "category": "%sapling.command-category%"
+        "category": "%sapling.command-category%",
+        "icon": {
+          "light": "resources/Sapling_favicon-light-green.svg",
+          "dark": "resources/Sapling_favicon-light-green.svg"
+        }
       },
       {
         "command": "sapling.open-file-diff-uncommitted",
@@ -65,7 +69,15 @@
         "title": "%sapling.open-diff-stack-command%",
         "category": "%sapling.command-category%"
       }
-    ]
+    ],
+    "menus":{
+      "editor/title": [
+        {
+          "command": "sapling.open-isl",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "eslint": "eslint extension webview --ext .ts --ext .tsx",
