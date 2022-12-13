@@ -18,9 +18,21 @@ import CodeBlock from '@theme/CodeBlock';
 
 ### macOS
 
-First, make sure that [Homebrew](https://brew.sh/) is installed on your system. Then follow the instructions depending on your architecture.
+First, make sure that [Homebrew](https://brew.sh/) is installed on your system. Then either install directly from Homebrew-core or install the bottle released by us:
 
-#### Apple silicon (arm64)
+#### Installing from Homebrew-core
+
+Just run:
+
+<CodeBlock>
+brew install sapling
+</CodeBlock>
+
+#### Installing from our prebuilt bottles
+
+Follow the instructions depending on your architecture.
+
+##### Apple silicon (arm64)
 
 Download using `curl`:
 
@@ -34,7 +46,7 @@ Then install:
 brew install ./{macArmAsset.name}
 </CodeBlock>
 
-#### Intel (x86_64)
+##### Intel (x86_64)
 
 Download using `curl`:
 
@@ -48,13 +60,6 @@ Then install:
 brew install ./{macIntelAsset.name}
 </CodeBlock>
 
-Note that to clone larger repositories, you need to change the open files limit. We recommend doing it now so it doesn't bite you in the future:
-
-<CodeBlock>
-echo "ulimit -n 1048576 1048576" >> ~/.bash_profile{'\n'}
-echo "ulimit -n 1048576 1048576" >> ~/.zshrc
-</CodeBlock>
-
 :::caution
 
 Downloading the bottle using a web browser instead of `curl` will cause macOS to tag Sapling as "untrusted" and the security manager will prevent you from running it. You can remove this annotation as follows:
@@ -64,6 +69,13 @@ xattr -r -d com.apple.quarantine ~/Downloads/{macArmAsset.name}
 </CodeBlock>
 
 :::
+
+Note that to clone larger repositories, you need to change the open files limit. We recommend doing it now so it doesn't bite you in the future:
+
+<CodeBlock>
+echo "ulimit -n 1048576 1048576" >> ~/.bash_profile{'\n'}
+echo "ulimit -n 1048576 1048576" >> ~/.zshrc
+</CodeBlock>
 
 ### Windows
 
@@ -120,6 +132,14 @@ Then install:
 
 <CodeBlock>
 sudo apt install -y ./{ubuntu20.name}
+</CodeBlock>
+
+#### Other Linux distros
+
+Sapling can be installed from Homebrew on Linux. First install Homebrew on your machine, then run
+
+<CodeBlock>
+brew install sapling
 </CodeBlock>
 
 ## Building from source
