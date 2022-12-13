@@ -2277,6 +2277,7 @@ def update(
     assert node is not None
 
     _prefetchlazychildren(repo, node)
+    _logupdatedistance(repo.ui, repo, node, branchmerge)
 
     if edenfs.requirement in repo.requirements:
         if matcher is not None and not matcher.always():
@@ -2354,8 +2355,6 @@ def update(
         partial = False
     else:
         partial = True
-
-    _logupdatedistance(repo.ui, repo, node, branchmerge)
 
     with repo.wlock():
         prerecrawls = querywatchmanrecrawls(repo)
