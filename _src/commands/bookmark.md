@@ -4,7 +4,7 @@ sidebar_position: 6
 
 ## bookmark | bo | book
 <!--
-  @generated SignedSource<<81689317a83457c326f404c55f3e4de0>>
+  @generated SignedSource<<4b1cbe1e4861c6ef3c7def8082831523>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -18,7 +18,7 @@ Deleting or moving a bookmark has no effect on the associated changesets.
 Creating or updating to a bookmark causes it to be marked as 'active'.
 The active bookmark is indicated with a '*'.
 When a commit is made, the active bookmark will advance to the new commit.
-A plain `sl update` will also advance an active bookmark, if possible.
+A plain `sl goto` will also advance an active bookmark, if possible.
 Updating away from a bookmark will cause it to be deactivated.
 
 Bookmarks can be pushed and pulled between repositories (see
