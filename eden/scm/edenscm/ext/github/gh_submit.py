@@ -16,6 +16,7 @@ from typing import Dict, Optional, Tuple, Union
 from edenscm.i18n import _
 from ghstack.github_gh_cli import make_request, Result
 
+from .consts import query
 from .pullrequest import PullRequestId
 
 _Params = Union[str, int, bool]
@@ -60,35 +61,11 @@ async def get_repository(hostname: str, owner: str, name: str) -> Result[Reposit
     """Returns an "ID!" for the repository that is necessary in other
     GitHub API calls.
     """
-    query = """
-query ($owner: String!, $name: String!) {
-  repository(name: $name, owner: $owner) {
-    id
-    owner {
-      id
-      login
+    params: Dict[str, _Params] = {
+        "query": query.GRAPHQL_GET_REPOSITORY,
+        "owner": owner,
+        "name": name,
     }
-    name
-    isFork
-    defaultBranchRef {
-      name
-    }
-    parent {
-      id
-      owner {
-        id
-        login
-      }
-      name
-      isFork
-      defaultBranchRef {
-        name
-      }
-    }
-  }
-}
-"""
-    params: Dict[str, _Params] = {"query": query, "owner": owner, "name": name}
     result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
@@ -120,20 +97,8 @@ class PullRequestDetails:
 async def get_pull_request_details(
     pr: PullRequestId,
 ) -> Result[PullRequestDetails]:
-    query = """
-query ($owner: String!, $name: String!, $number: Int!) {
-  repository(name: $name, owner: $owner) {
-    pullRequest(number: $number) {
-      id
-      url
-      headRefOid
-      headRefName
-    }
-  }
-}
-"""
     params = {
-        "query": query,
+        "query": query.GRAPHQL_GET_PULL_REQUEST,
         "owner": pr.owner,
         "name": pr.name,
         "number": pr.number,
@@ -217,23 +182,11 @@ async def guess_next_pull_request_number(
     The endpoint the web UI hits is on github.com, not api.github.com, so it
     does not appear to be accessible to us.
     """
-    query = """
-query ($owner: String!, $name: String!) {
-  repository(owner: $owner, name: $name) {
-    issues(orderBy: {field: CREATED_AT, direction: ASC}, last: 1) {
-      nodes {
-        number
-      }
+    params: Dict[str, _Params] = {
+        "query": query.GRAPHQL_GET_MAX_PR_ISSUE_NUMBER,
+        "owner": owner,
+        "name": name,
     }
-    pullRequests(orderBy: {field: CREATED_AT, direction: ASC}, last: 1) {
-      nodes {
-        number
-      }
-    }
-  }
-}
-"""
-    params: Dict[str, _Params] = {"query": query, "owner": owner, "name": name}
     result = await make_request(params, hostname=hostname)
     if result.is_error():
         return result
@@ -270,19 +223,8 @@ async def update_pull_request(
     """Returns an "ID!" for the pull request, which should match the node_id
     that was passed in.
     """
-    query = """
-mutation ($pullRequestId: ID!, $title: String!, $body: String!) {
-  updatePullRequest(
-    input: {pullRequestId: $pullRequestId, title: $title, body: $body}
-  ) {
-    pullRequest {
-      id
-    }
-  }
-}
-"""
     params: Dict[str, _Params] = {
-        "query": query,
+        "query": query.GRAPHQL_UPDATE_PULL_REQUEST,
         "pullRequestId": node_id,
         "title": title,
         "body": body,
@@ -300,17 +242,8 @@ async def create_branch(
     """Attempts to create the branch. If successful, returns the ID of the newly
     created Ref.
     """
-    query = """
-mutation ($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
-  createRef(input: {repositoryId: $repositoryId, name: $name, oid: $oid}) {
-    ref {
-      id
-    }
-  }
-}
-"""
     params: Dict[str, _Params] = {
-        "query": query,
+        "query": query.GRAPHQL_CREATE_BRANCH,
         "repositoryId": repo_id,
         "name": f"refs/heads/{branch_name}",
         "oid": oid,
@@ -326,17 +259,8 @@ async def merge_into_branch(
     *, hostname: str, repo_id: str, oid_to_merge: str, branch_name: str
 ) -> Result[str]:
     """Takes the hash, oid_to_merge, and merges it into the specified branch_name."""
-    query = """
-mutation ($repositoryId: ID!, $base: String!, $head: String!) {
-  mergeBranch(input: {repositoryId: $repositoryId, base: $base, head: $head}) {
-    mergeCommit {
-      oid
-    }
-  }
-}
-"""
     params: Dict[str, _Params] = {
-        "query": query,
+        "query": query.GRAPHQL_MERGE_BRANCH,
         "repositoryId": repo_id,
         "base": branch_name,
         "head": oid_to_merge,
@@ -353,15 +277,8 @@ async def get_username(hostname: str) -> Result[str]:
     slightly faster to call graphql.try_parse_oath_token_from_hosts_yml() and
     read the value from hosts.yml.
     """
-    query = """
-query {
-  viewer {
-    login
-  }
-}
-"""
     params: Dict[str, _Params] = {
-        "query": query,
+        "query": query.GRAPHQL_GET_LOGIN,
     }
     result = await make_request(params, hostname=hostname)
     if result.is_error():
