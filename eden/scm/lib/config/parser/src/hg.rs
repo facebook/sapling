@@ -642,13 +642,13 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
     Ok(repo_name)
 }
 
-impl ConfigSet {
+trait ConfigSetExtInternal {
+    fn load_user_internal(&mut self, path: Option<&PathBuf>, opts: Options) -> Vec<Error>;
+}
+
+impl ConfigSetExtInternal for ConfigSet {
     // For easier testing.
-    pub(crate) fn load_user_internal(
-        &mut self,
-        path: Option<&PathBuf>,
-        opts: Options,
-    ) -> Vec<Error> {
+    fn load_user_internal(&mut self, path: Option<&PathBuf>, opts: Options) -> Vec<Error> {
         let mut errors = Vec::new();
 
         // Covert "$VISUAL", "$EDITOR" to "ui.editor".
@@ -925,11 +925,12 @@ pub fn all_existing_user_paths<'a>(id: &'a Identity) -> impl Iterator<Item = Pat
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
     use once_cell::sync::Lazy;
     use tempdir::TempDir;
 
     use super::*;
-    use crate::config::tests::write_file;
     use crate::lock_env;
 
     static CONFIG_ENV_VAR: Lazy<&str> =
@@ -938,6 +939,12 @@ mod tests {
         Lazy::new(|| identity::default().env_name_static("PLAIN").unwrap());
     static HGPLAINEXCEPT: Lazy<&str> =
         Lazy::new(|| identity::default().env_name_static("PLAINEXCEPT").unwrap());
+
+    fn write_file(path: PathBuf, content: &str) {
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut f = fs::File::create(path).unwrap();
+        f.write_all(content.as_bytes()).unwrap();
+    }
 
     #[test]
     fn test_basic_hgplain() {

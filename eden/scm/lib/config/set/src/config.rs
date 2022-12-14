@@ -6,8 +6,6 @@
  */
 
 use std::borrow::Cow;
-#[cfg(any(feature = "fb", test))]
-use std::collections::hash_map::RandomState;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -359,7 +357,6 @@ impl ConfigSet {
         result
     }
 
-    #[cfg(any(feature = "fb", test))]
     /// Ensures that every value set by `superset_location` matches the final value set by one of
     /// `subset_locations`. This is used during config migrations to ensure the final config
     /// location contains the exact same configs as the original locations.
@@ -375,7 +372,7 @@ impl ConfigSet {
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
-        let subset_locations: HashSet<String, RandomState> =
+        let subset_locations: HashSet<String, std::collections::hash_map::RandomState> =
             HashSet::from_iter(subset_locations.into_iter());
 
         for (sname, section) in self.sections.iter_mut() {
