@@ -19,8 +19,8 @@ use anyhow::format_err;
 use anyhow::Error;
 use async_runtime::block_on;
 use async_runtime::stream_to_iter as block_on_stream;
+use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
 use cpython::*;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
@@ -1187,7 +1187,7 @@ impl ExtractInnerRef for memcachestore {
 /// to the provided legacy HgIdDataStore.
 fn make_filescmstore<'a>(
     path: Option<&'a Path>,
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     remote: Arc<PyHgIdRemoteStore>,
     memcache: Option<Arc<MemcacheStore>>,
     edenapi_filestore: Option<Arc<EdenApiFileStore>>,
@@ -1443,7 +1443,7 @@ impl ExtractInnerRef for filescmstore {
 /// to the provided legacy HgIdDataStore.
 fn make_treescmstore<'a>(
     path: Option<&'a Path>,
-    config: &'a ConfigSet,
+    config: &'a dyn Config,
     remote: Arc<PyHgIdRemoteStore>,
     memcache: Option<Arc<MemcacheStore>>,
     edenapi_treestore: Option<Arc<EdenApiTreeStore>>,
