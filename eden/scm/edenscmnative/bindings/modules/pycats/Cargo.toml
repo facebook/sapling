@@ -8,6 +8,6 @@ anyhow = "1.0"
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 cats = { path = "../../../../lib/cats" }
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }
 url = "2.1.0"
 

@@ -44,7 +44,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             checkout,
             clientinfo,
             cliparser,
-            configparser,
+            configloader,
             dag,
             diffhelpers,
             dirs,

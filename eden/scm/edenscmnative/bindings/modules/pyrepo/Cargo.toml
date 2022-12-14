@@ -10,7 +10,7 @@ cpython = { version = "0.7", default-features = false }
 repo = { path = "../../../../lib/repo" }
 util = { path = "../../../../lib/util" }
 parking_lot = "0.11.2"
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }
 pydag = { path = "../pydag" }
 pyedenapi = { path = "../pyedenapi" }
 pymetalog = { path = "../pymetalog" }

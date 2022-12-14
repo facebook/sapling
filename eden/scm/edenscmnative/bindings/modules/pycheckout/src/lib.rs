@@ -29,7 +29,7 @@ use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
-use pyconfigparser::config;
+use pyconfigloader::config;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;

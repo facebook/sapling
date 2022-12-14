@@ -11,7 +11,7 @@ use async_runtime::block_on;
 use async_runtime::stream_to_iter as block_on_stream;
 use clidispatch::errors;
 use clidispatch::ReqCtx;
-use configparser::config::ConfigSet;
+use configloader::config::ConfigSet;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAttributes;

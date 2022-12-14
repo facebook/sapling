@@ -11,7 +11,7 @@ use cats::CatsSection;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use pyconfigparser::config;
+use pyconfigloader::config;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "cats"].join(".");

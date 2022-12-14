@@ -16,9 +16,9 @@ use cliparser::parser::ParseError;
 use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
+use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
 use repo::repo::Repo;
 
 use crate::command::CommandDefinition;
@@ -129,7 +129,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
         let config = repo.config();
         let max_size = config
             .get_or("blackbox", "maxsize", || {
-                configparser::convert::ByteCount::from(1u64 << 12)
+                configloader::convert::ByteCount::from(1u64 << 12)
             })?
             .value();
         let max_files = config.get_or("blackbox", "maxfiles", || 3)?;
@@ -217,7 +217,7 @@ impl Dispatcher {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
                 if let Ok(config) =
-                    configparser::hg::load(None, &global_opts.config, &global_opts.configfile)
+                    configloader::hg::load(None, &global_opts.config, &global_opts.configfile)
                 {
                     Err(errors::triage_error(&config, err, None))
                 } else {
@@ -259,7 +259,7 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        configparser::hg::load(None, &self.global_opts.config, &self.global_opts.configfile)
+        configloader::hg::load(None, &self.global_opts.config, &self.global_opts.configfile)
     }
 
     fn default_command(&self) -> Result<String, UnknownCommand> {

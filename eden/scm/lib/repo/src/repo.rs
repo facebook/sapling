@@ -13,9 +13,9 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use configloader::config::ConfigSet;
+use configloader::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
-use configparser::Config;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
@@ -136,7 +136,7 @@ impl Repo {
 
         let config = match config {
             Some(config) => config,
-            None => configparser::hg::load(Some(&path), extra_config_values, extra_config_files)?,
+            None => configloader::hg::load(Some(&path), extra_config_values, extra_config_files)?,
         };
 
         let dot_hg_path = path.join(ident.dot_dir());
@@ -148,7 +148,7 @@ impl Repo {
         let shared_dot_hg_path = shared_path.join(shared_ident.dot_dir());
         let store_path = shared_dot_hg_path.join("store");
 
-        let repo_name = configparser::hg::read_repo_name_from_disk(&shared_dot_hg_path)
+        let repo_name = configloader::hg::read_repo_name_from_disk(&shared_dot_hg_path)
             .ok()
             .or_else(|| {
                 config

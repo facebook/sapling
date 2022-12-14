@@ -15,7 +15,7 @@ use clidispatch::errors;
 use clidispatch::io::IsTty;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use configparser::configmodel::ConfigExt;
+use configloader::configmodel::ConfigExt;
 use pathmatcher::AlwaysMatcher;
 use print::PrintConfig;
 use print::PrintConfigStatusTypes;

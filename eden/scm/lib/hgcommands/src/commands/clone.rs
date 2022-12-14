@@ -177,7 +177,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
             logger.verbose(|| format!("Repo name is {} from config", c));
             c
         }
-        Some(_) | None => match configparser::hg::repo_name_from_url(&ctx.opts.source) {
+        Some(_) | None => match configloader::hg::repo_name_from_url(&ctx.opts.source) {
             Some(name) => {
                 logger.verbose(|| format!("Repo name is {} via URL {}", name, ctx.opts.source));
                 config.set(

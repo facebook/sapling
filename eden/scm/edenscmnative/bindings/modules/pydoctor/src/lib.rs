@@ -8,7 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use pyconfigparser::config;
+use pyconfigloader::config;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "doctor"].join(".");

@@ -13,7 +13,7 @@ use auth::AuthSection;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use pyconfigparser::config;
+use pyconfigloader::config;
 use url::Url;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

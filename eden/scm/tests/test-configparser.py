@@ -10,11 +10,11 @@ import tempfile
 import unittest
 
 import silenttestrunner
-from bindings import configparser
+from bindings import configloader
 
 
 def createConfig():
-    return configparser.config()
+    return configloader.config()
 
 
 def normalizeSources(cfg, section, name):

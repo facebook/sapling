@@ -40,10 +40,10 @@ pub struct BackingStore {
 impl BackingStore {
     pub fn new<P: AsRef<Path>>(root: P, allow_retries: bool) -> Result<Self> {
         let root = root.as_ref();
-        let mut config = configparser::hg::load(Some(root), &[], &[])?;
+        let mut config = configloader::hg::load(Some(root), &[], &[])?;
 
         if !allow_retries {
-            let source = configparser::config::Options::new().source("backingstore");
+            let source = configloader::config::Options::new().source("backingstore");
             config.set("lfs", "backofftimes", Some(""), &source);
             config.set("lfs", "throttlebackofftimes", Some(""), &source);
             config.set("edenapi", "max-retry-per-request", Some("0"), &source);

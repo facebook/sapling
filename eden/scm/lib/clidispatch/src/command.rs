@@ -12,7 +12,7 @@ use anyhow::Result;
 use cliparser::parser::Flag;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
-use configparser::config::ConfigSet;
+use configloader::config::ConfigSet;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 

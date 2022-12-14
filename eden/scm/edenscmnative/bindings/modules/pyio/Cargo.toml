@@ -7,6 +7,6 @@ edition = "2021"
 clidispatch = { path = "../../../../lib/clidispatch", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }
 termstyle = { path = "../../../../lib/io/term/style" }
 

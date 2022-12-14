@@ -32,7 +32,7 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use io::IO;
 use parking_lot::RwLock;
-use pyconfigparser::config;
+use pyconfigloader::config;
 use revisionstore::repack;
 use revisionstore::scmstore::file_to_async_key_stream;
 use revisionstore::scmstore::FetchMode;

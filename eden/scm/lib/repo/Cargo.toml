@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.65"
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
+configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
-configparser = { version = "0.1.0", path = "../config/parser" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 fail = { version = "0.4", features = ["failpoints"] }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
@@ -35,4 +35,4 @@ tempfile = "3.3"
 
 [features]
 default = []
-fb = ["configparser/fb"]
+fb = ["configloader/fb"]

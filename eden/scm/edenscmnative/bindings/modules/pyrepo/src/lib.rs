@@ -18,7 +18,7 @@ use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use parking_lot::RwLock;
-use pyconfigparser::config;
+use pyconfigloader::config;
 use pydag::commits::commits as PyCommits;
 use pyedenapi::PyClient as PyEdenApi;
 use pymetalog::metalog as PyMetaLog;

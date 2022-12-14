@@ -9,7 +9,7 @@ use std::io::Write;
 
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
-use configparser::config::Options;
+use configloader::config::Options;
 
 use super::NoOpts;
 use super::Result;

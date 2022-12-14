@@ -22,7 +22,7 @@ use cpython_ext::PyPathBuf;
 use io::IO;
 use parking_lot::RwLock;
 use pathmatcher::Matcher;
-use pyconfigparser::config;
+use pyconfigloader::config;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pytreestate::treestate;

@@ -17,7 +17,7 @@ edenapi_types = { path = "../../../../lib/edenapi/types" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 minibytes = { path = "../../../../lib/minibytes" }
 progress-model = { path = "../../../../lib/progress/model" }
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }
 pyprogress = { path = "../pyprogress" }
 pyrevisionstore = { path = "../pyrevisionstore" }
 revisionstore = { path = "../../../../lib/revisionstore" }

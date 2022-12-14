@@ -15,7 +15,7 @@ use cpython::*;
 use cpython_ext::wrap_rust_write;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use pyconfigparser::config as PyConfig;
+use pyconfigloader::config as PyConfig;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "io"].join(".");

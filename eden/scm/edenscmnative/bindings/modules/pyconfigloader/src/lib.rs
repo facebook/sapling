@@ -9,13 +9,13 @@
 
 use std::cell::RefCell;
 
-use configparser::config::ConfigSet;
-use configparser::config::Options;
-use configparser::config::SupersetVerification;
-use configparser::convert::parse_list;
-use configparser::hg::ConfigSetHgExt;
-use configparser::hg::OptionsHgExt;
-use configparser::Config;
+use configloader::config::ConfigSet;
+use configloader::config::Options;
+use configloader::config::SupersetVerification;
+use configloader::convert::parse_list;
+use configloader::hg::ConfigSetHgExt;
+use configloader::hg::OptionsHgExt;
+use configloader::Config;
 use cpython::*;
 use cpython_ext::error::Result;
 use cpython_ext::error::ResultPyErrExt;
@@ -25,7 +25,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
-    let name = [package, "configparser"].join(".");
+    let name = [package, "configloader"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<config>(py)?;
     m.add(py, "parselist", py_fn!(py, parselist(value: String)))?;
@@ -216,7 +216,7 @@ fn parselist(py: Python, value: String) -> PyResult<Vec<PyUnicode>> {
         .collect())
 }
 
-fn errors_to_str_vec(errors: Vec<configparser::error::Error>) -> Vec<Str> {
+fn errors_to_str_vec(errors: Vec<configloader::error::Error>) -> Vec<Str> {
     errors
         .into_iter()
         .map(|err| Str::from(format!("{}", err)))

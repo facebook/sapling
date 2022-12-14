@@ -7,4 +7,4 @@ edition = "2021"
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 clientinfo = { path = "../../../../lib/clientinfo" }
 cpython = { version = "0.7", default-features = false }
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }

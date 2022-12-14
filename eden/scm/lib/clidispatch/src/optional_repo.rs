@@ -8,7 +8,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use configparser::config::ConfigSet;
+use configloader::config::ConfigSet;
 use repo::errors;
 use repo::repo::Repo;
 
@@ -31,7 +31,7 @@ impl OptionalRepo {
             let repo = Repo::load(path, &opts.config, &opts.configfile)?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(configparser::hg::load(
+            Ok(OptionalRepo::None(configloader::hg::load(
                 None,
                 &opts.config,
                 &opts.configfile,

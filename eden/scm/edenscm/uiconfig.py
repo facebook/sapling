@@ -16,7 +16,7 @@ import random
 import time
 from typing import List, Optional, Tuple
 
-from bindings import configparser
+from bindings import configloader
 
 from . import configitems, error, pycompat, util
 from .encoding import unifromlocal, unitolocal
@@ -53,7 +53,7 @@ class uiconfig(object):
             self._pinnedconfigs = src._pinnedconfigs.copy()
             self._knownconfig = src._knownconfig
         else:
-            self._rcfg = rcfg or configparser.config()
+            self._rcfg = rcfg or configloader.config()
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
             # config "pinned" that cannot be loaded from files.
@@ -69,7 +69,7 @@ class uiconfig(object):
         u = cls()
         try:
             # repopath should be the non-shared root directory
-            rcfg, issues = configparser.config.load(repopath or None)
+            rcfg, issues = configloader.config.load(repopath or None)
         except Exception as ex:
             raise error.ParseError(str(ex))
 
@@ -537,7 +537,7 @@ class uiconfig(object):
 
 def parselist(value):
     if isinstance(value, str):
-        return [unitolocal(v) for v in configparser.parselist(unifromlocal(value))]
+        return [unitolocal(v) for v in configloader.parselist(unifromlocal(value))]
     else:
         return value
 

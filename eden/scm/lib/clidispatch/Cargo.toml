@@ -10,8 +10,8 @@ edition = "2021"
 anyhow = "1.0.65"
 blackbox = { version = "0.1.0", path = "../blackbox" }
 cliparser = { version = "0.1.0", path = "../cliparser" }
+configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
-configparser = { version = "0.1.0", path = "../config/parser" }
 hgplain = { version = "0.1.0", path = "../util/hgplain" }
 identity = { version = "0.1.0", path = "../identity" }
 indexedlog = { version = "0.1.0", path = "../indexedlog" }

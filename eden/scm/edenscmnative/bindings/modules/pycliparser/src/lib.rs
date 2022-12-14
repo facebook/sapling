@@ -13,7 +13,7 @@ use cliparser::parser::*;
 use configmodel::Config;
 use cpython::*;
 use cpython_ext::Str;
-use pyconfigparser::config;
+use pyconfigloader::config;
 
 mod exceptions {
     use super::*;

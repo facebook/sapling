@@ -9,9 +9,9 @@ use std::str::FromStr;
 
 use clidispatch::errors;
 use clidispatch::ReqCtx;
+use configloader::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::convert::ByteCount;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;
 use revisionstore::ExtStoredPolicy;

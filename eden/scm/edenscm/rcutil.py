@@ -46,7 +46,7 @@ def editconfig(path, section, name, value):
     except IOError as ex:
         if ex.errno != errno.ENOENT:
             raise
-    cfg = bindings.configparser.config()
+    cfg = bindings.configloader.config()
     cfg.parse(content, source="editconfig")
     sources = cfg.sources(section, name)
 

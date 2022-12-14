@@ -8,7 +8,7 @@ build = "build.rs"
 
 [dependencies]
 clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
-configparser = { version = "0.1.0", path = "../../lib/config/parser" }
+configparser = { package = "configloader", version = "0.1.0", path = "../../lib/config/loader" }
 dirs = { version = "2.0", optional = true }
 encoding = { version = "0.1.0", path = "../../lib/encoding" }
 hgcommands = { version = "0.1.0", path = "../../lib/hgcommands", default-features = false }

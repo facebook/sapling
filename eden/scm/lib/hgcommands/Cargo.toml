@@ -16,8 +16,8 @@ clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cliparser = { version = "0.1.0", path = "../cliparser", features = ["python"] }
 clone = { version = "0.1.0", path = "../clone" }
 comfy-table = "4.0.1"
+configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
-configparser = { version = "0.1.0", path = "../config/parser" }
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", default-features = false }
 dag = { version = "0.1.0", path = "../dag" }
@@ -48,7 +48,7 @@ pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 procinfo = { version = "0.1.0", path = "../procinfo" }
 progress-model = { version = "0.1.0", path = "../progress/model" }
 progress-render = { version = "0.1.0", path = "../progress/render" }
-pyconfigparser = { path = "../../edenscmnative/bindings/modules/pyconfigparser" }
+pyconfigloader = { path = "../../edenscmnative/bindings/modules/pyconfigloader" }
 python3-sys = "0.7.1"
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
@@ -76,4 +76,4 @@ zstd = { version = "0.11.2+zstd.1.5.2", features = ["zstdmt"] }
 [features]
 default = []
 eden = ["clidispatch/eden", "edenfs_client"]
-fb = ["configparser/fb"]
+fb = ["configloader/fb"]

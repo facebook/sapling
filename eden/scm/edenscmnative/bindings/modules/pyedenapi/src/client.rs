@@ -53,7 +53,7 @@ use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
 use futures::TryStreamExt;
 use minibytes::Bytes;
-use pyconfigparser::config;
+use pyconfigloader::config;
 use pyrevisionstore::edenapifilestore;
 use pyrevisionstore::edenapitreestore;
 use revisionstore::EdenApiFileStore;

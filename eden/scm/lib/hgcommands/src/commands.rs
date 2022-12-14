@@ -44,7 +44,7 @@ use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::Write;
 pub use clidispatch::io::IO;
 pub use cliparser::define_flags;
-pub use configparser::config::ConfigSet;
+pub use configloader::config::ConfigSet;
 use formatter::formatter;
 pub use repo::repo::Repo;
 

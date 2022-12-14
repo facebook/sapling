@@ -31,9 +31,9 @@ use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
+use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use configparser::config::ConfigSet;
 use fail::FailScenario;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
@@ -709,7 +709,7 @@ fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
         let opt_path_default: std::result::Result<Option<String>, _> =
             config.get_or_default("paths", "default");
         if let Ok(Some(path_default)) = opt_path_default {
-            if let Some(repo_name) = configparser::hg::repo_name_from_url(&path_default) {
+            if let Some(repo_name) = configloader::hg::repo_name_from_url(&path_default) {
                 tracing::info!(
                     target: "command_info",
                     version = version::VERSION,

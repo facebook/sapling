@@ -241,7 +241,7 @@ def openstore(repo):
 def readconfig(repo):
     """Read git config into a config object"""
     out = callgit(repo, ["config", "-l"])
-    config = bindings.configparser.config()
+    config = bindings.configloader.config()
     for line in out.splitlines():
         line = line.decode("utf-8", "surrogateescape")
         if "=" not in line:
@@ -547,7 +547,7 @@ def parsesubmodules(ctx):
     data = ctx[".gitmodules"].data()
     # strip leading spaces
     data = b"".join(l.strip() + b"\n" for l in data.splitlines())
-    config = bindings.configparser.config()
+    config = bindings.configloader.config()
     config.parse(data.decode("utf-8", "surrogateescape"), ".gitmodules")
     prefix = 'submodule "'
     suffix = '"'

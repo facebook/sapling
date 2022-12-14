@@ -13,8 +13,8 @@ use clidispatch::abort_if;
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
-use configparser::hg::all_existing_system_paths;
-use configparser::hg::all_existing_user_paths;
+use configloader::hg::all_existing_system_paths;
+use configloader::hg::all_existing_user_paths;
 
 use super::Result;
 

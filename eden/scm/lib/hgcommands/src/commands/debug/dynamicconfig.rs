@@ -7,9 +7,9 @@
 
 use clidispatch::ReqCtx;
 #[cfg(feature = "fb")]
-use configmodel::Config;
+use configloader::hg::generate_dynamicconfig;
 #[cfg(feature = "fb")]
-use configparser::hg::generate_dynamicconfig;
+use configmodel::Config;
 
 use super::define_flags;
 use super::Repo;

@@ -40,6 +40,6 @@ Make sure --config options are available when loading config itself.
 
 
 Only load config a single time.
-  $ LOG=configparser::hg=info hg files abc
-   INFO configparser::hg: loading config repo_path=$TESTTMP* (glob)
+  $ LOG=configloader::hg=info hg files abc
+   INFO configloader::hg: loading config repo_path=$TESTTMP* (glob)
   [1]

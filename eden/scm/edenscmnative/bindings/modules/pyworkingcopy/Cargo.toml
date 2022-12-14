@@ -10,7 +10,7 @@ cpython_ext = { path = "../../../../lib/cpython-ext" }
 io = { path = "../../../../lib/io" }
 parking_lot = "0.11.2"
 pathmatcher = { path = "../../../../lib/pathmatcher" }
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }
 pymanifest = { path = "../pymanifest" }
 pypathmatcher = { path = "../pypathmatcher" }
 pystatus = { path = "../pystatus" }

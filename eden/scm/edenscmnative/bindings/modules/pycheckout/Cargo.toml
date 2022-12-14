@@ -12,7 +12,7 @@ cpython = { version = "0.7", default-features = false }
 manifest-tree = { path = "../../../../lib/manifest-tree" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 progress-model = { path = "../../../../lib/progress/model" }
-pyconfigparser = { path = "../pyconfigparser" }
+pyconfigloader = { path = "../pyconfigloader" }
 pypathmatcher = { path = "../pypathmatcher" }
 pymanifest = { path = "../pymanifest" }
 pystatus = { path = "../pystatus" }

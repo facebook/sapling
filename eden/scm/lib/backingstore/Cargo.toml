@@ -11,7 +11,7 @@ crate-type = ["lib", "staticlib"]
 
 [dependencies]
 anyhow = "1.0.65"
-configparser = { version = "0.1.0", path = "../config/parser" }
+configloader = { version = "0.1.0", path = "../config/loader" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 env_logger = "0.7"
@@ -27,4 +27,4 @@ tracing-subscriber = { version = "0.3.16", features = ["ansi", "env-filter", "fm
 types = { version = "0.1.0", path = "../types" }
 
 [features]
-fb = ["configparser/fb"]
+fb = ["configloader/fb"]

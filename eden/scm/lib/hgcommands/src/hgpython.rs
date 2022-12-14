@@ -10,7 +10,7 @@ use std::env;
 use std::path::PathBuf;
 
 use clidispatch::io::IO;
-use configparser::config::ConfigSet;
+use configloader::config::ConfigSet;
 use cpython::*;
 use cpython_ext::format_py_error;
 use cpython_ext::wrap_pyio;
@@ -154,7 +154,7 @@ impl HgPython {
             });
             let args: Vec<Str> = args.into_iter().map(Str::from).collect();
             let config =
-                pyconfigparser::config::create_instance(py, RefCell::new(config.clone())).unwrap();
+                pyconfigloader::config::create_instance(py, RefCell::new(config.clone())).unwrap();
             (args, fin, fout, ferr, config).to_py_object(py)
         };
         entry_point_mod.call(py, "run", call_args, None)?;
