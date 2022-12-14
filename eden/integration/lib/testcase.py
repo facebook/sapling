@@ -248,7 +248,7 @@ class EdenTestCase(EdenTestCaseBase):
         {"namespace": ["key1=value1", "key2=value2"}
         """
         configs = {"experimental": ["enable-nfs-server = true"]}
-        if self.use_nfs():
+        if self.use_nfs() or sys.platform == "darwin":
             configs["clone"] = ['default-mount-protocol = "NFS"']
         return configs
 
@@ -379,6 +379,8 @@ class EdenTestCase(EdenTestCaseBase):
         else:
             return fn
 
+    # TODO(T140123741): add a use_fuse() so we can get rid of the hack to
+    # default to NFS on macOS
     def use_nfs(self) -> bool:
         """
         Should this test case mount the repo using NFS. This is used by the

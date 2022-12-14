@@ -151,6 +151,155 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         # issue.
         "test_post_clone_permissions"
     ]
+elif sys.platform.startswith("darwin"):
+    # Linux cgroups obviously do not work on macOS
+    TEST_DISABLED["linux_cgroup_test.LinuxCgroupTest"] = True
+
+    # Redirect targets are different on macOS
+    TEST_DISABLED["redirect_test.RedirectTest"] = True
+
+    # Incorrect result
+    TEST_DISABLED["hg.grep_test.GrepTestTreeOnly"] = [
+        "test_grep_that_does_not_match_anything",
+        "test_grep_that_does_not_match_anything_in_directory",
+    ]
+
+    # OSERROR AF_UNIX path too long
+    TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = [
+        "test_status_socket",
+    ]
+
+    # update fails because new file created while checkout operation in progress
+    TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = [
+        "test_change_casing_with_untracked",
+    ]
+
+    # hg tests with misc failures
+    TEST_DISABLED["hg.add_test.AddTestTreeOnly"] = True
+    TEST_DISABLED["hg.commit_test.CommitTestTreeOnly"] = True
+    TEST_DISABLED["hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly"] = True
+    TEST_DISABLED["hg.files_test.FilesTestTreeOnly"] = True
+    TEST_DISABLED["hg.merge_test.MergeTestTreeOnly"] = True
+    TEST_DISABLED["hg.move_test.MoveTestTreeOnly"] = True
+    TEST_DISABLED["hg.rebase_test.RebaseTestTreeOnly"] = True
+    TEST_DISABLED["hg.revert_test.RevertTestTreeOnly"] = True
+    TEST_DISABLED["hg.split_test.SplitTestTreeOnly"] = True
+    TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = True
+    TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = True
+
+    # Assertion error and invalid argument
+    TEST_DISABLED["snapshot.test_snapshots.InfraTestsDefault"] = [
+        "test_snapshot",
+        "test_verify_directory",
+    ]
+    TEST_DISABLED["snapshot.test_snapshots.Testbasic-20210712"] = True
+
+    # Non-OSS: "EdenStartError: edenfs exited before becoming healthy: exit status 1"
+    # OSS: fails for a variety of issues (permissions, no such file or directory, etc)
+    TEST_DISABLED["basic_test.BasicTest"] = True
+    TEST_DISABLED["basic_test.PosixTest"] = True
+
+    # `edenfsctl chown` returns non-zero status
+    TEST_DISABLED["chown_test.ChownTest"] = True
+
+    # I'm not sure if overlay corruption logic even exists on macOS?
+    TEST_DISABLED["corrupt_overlay_test.CorruptOverlayTest"] = True
+
+    # Assertion error (output doesn't match expected output)
+    TEST_DISABLED["debug_getpath_test.DebugGetPathTest"] = [
+        "test_getpath_unlinked_inode",
+        "test_getpath_unloaded_inode_rename_parent",
+        "test_getpath_unloaded_inode",
+    ]
+
+    # CalledProcessError
+    TEST_DISABLED["health_test.HealthOfFakeEdenFSTest"] = True
+
+    # incorrect result
+    TEST_DISABLED["info_test.InfoTest"] = True
+
+    # /proc/mounts DNE on macOS
+    TEST_DISABLED["mount_test.MountTest"] = [
+        "test_double_unmount",
+        "test_remount_creates_mount_point_dir",
+        "test_unmount_remount",
+    ]
+
+    # eden clone fails bc Git not supported?
+    TEST_DISABLED["remount_test.RemountTest"] = [
+        "test_git_and_hg",
+    ]
+
+    # EOF error?
+    TEST_DISABLED["restart_test.RestartTestAdHoc"] = [
+        "test_eden_restart_fails_if_edenfs_crashes_on_start",
+        # timeout
+        "test_restart_starts_edenfs_if_not_running",
+    ]
+    TEST_DISABLED["restart_test.RestartTestManaged"] = [
+        "test_eden_restart_fails_if_edenfs_crashes_on_start",
+        # timeout
+        "test_restart_starts_edenfs_if_not_running",
+    ]
+
+    # timeout
+    TEST_DISABLED["restart_test.RestartTest"] = [
+        "test_graceful_restart_unresponsive_thrift",
+        "test_restart",
+    ]
+
+    # Requires the use of passwordless `sudo`
+    TEST_DISABLED["stale_test.StaleTest"] = True
+
+    # CalledProcessError (same as health_test above?). Seems like
+    # FakeEdenFS is broken on MacOS
+    TEST_DISABLED["service_log_test.ServiceLogFakeEdenFSTest"] = True
+    TEST_DISABLED["service_log_test.ServiceLogRealEdenFSTest"] = True
+
+    # Expect OSError but does not happen (T89439721)
+    TEST_DISABLED["setattr_test.SetAttrTest"] = [
+        "test_chown_gid_as_nonroot_fails_if_not_member",
+        "test_chown_uid_as_nonroot_fails",
+        "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
+    ]
+
+    # Various errors for startup
+    TEST_DISABLED["start_test.StartFakeEdenFSTest"] = True
+
+    # Broken on NFS (T89440036)
+    TEST_DISABLED["stats_test.FUSEStatsTest"] = True
+
+    # Various errors (See NFS specific skips for more takeover failures)
+    TEST_DISABLED["takeover_test.TakeoverTestHg"] = True
+    TEST_DISABLED["takeover_test.TakeoverTestNoNFSServer"] = [
+        "test_takeover",
+    ]
+
+    # Key error?
+    TEST_DISABLED["thrift_test.ThriftTest"] = [
+        "test_pid_fetch_counts",
+    ]
+
+    # Assertion error (output doesn't match expected result)
+    TEST_DISABLED["unicode_test.UnicodeTest"] = True
+
+    # OSError: AF_UNIX path too long
+    TEST_DISABLED["unixsocket_test.UnixSocketTest"] = True
+
+    # Output doesn't match expected result
+    TEST_DISABLED["unlink_test.UnlinkTest"] = [
+        "test_unlink_dir",
+        "test_unlink_empty_dir",
+    ]
+
+    # Requires NFSv4 as mentioned below in NFS specific skips
+    TEST_DISABLED["xattr_test.XattrTest"] = True
+
+    # fsck doesn't work on macOS?
+    TEST_DISABLED["fsck.basic_snapshot_tests.Basic20210712TestDefault"] = True
+
+    # flakey (actual timing doesn't match expected timing)
+    TEST_DISABLED["config_test.ConfigTest"] = True
 
 # Windows specific tests
 if sys.platform != "win32":

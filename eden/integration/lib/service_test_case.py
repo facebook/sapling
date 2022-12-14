@@ -123,6 +123,21 @@ def _replicate_service_test(
     return tests
 
 
+def _replicate_fake_service_test(
+    test_class: typing.Type[ServiceTestCaseBase],
+) -> typing.Iterable[typing.Tuple[str, typing.Type[ServiceTestCaseBase]]]:
+    tests = []
+
+    class ManagedTest(ManagedFakeEdenFSMixin, test_class):
+        pass
+
+    tests.append(
+        ("Managed", typing.cast(typing.Type[ServiceTestCaseBase], ManagedTest))
+    )
+
+    return tests
+
+
 # A decorator function used to create ServiceTestCaseBase subclasses from a
 # given input test class.
 #
@@ -132,3 +147,4 @@ def _replicate_service_test(
 # * MyTestAdHoc tests with ad-hoc edenfs processes [1]
 # * MyTestManaged tests with 'eden start' edenfs processes
 service_test = test_replicator(_replicate_service_test)
+fake_service_test = test_replicator(_replicate_fake_service_test)
