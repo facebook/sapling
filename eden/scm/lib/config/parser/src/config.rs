@@ -198,26 +198,6 @@ impl ConfigSet {
         }
     }
 
-    /// override config values from a list of --config overrides
-    pub(crate) fn set_overrides(&mut self, overrides: &[String]) -> crate::Result<()> {
-        for config_override in overrides {
-            let equals_pos = config_override
-                .find('=')
-                .ok_or_else(|| Error::ParseFlag(config_override.to_string()))?;
-            let section_name_pair = &config_override[..equals_pos];
-            let value = &config_override[equals_pos + 1..];
-
-            let dot_pos = section_name_pair
-                .find('.')
-                .ok_or_else(|| Error::ParseFlag(config_override.to_string()))?;
-            let section = &section_name_pair[..dot_pos];
-            let name = &section_name_pair[dot_pos + 1..];
-
-            self.set(section, name, Some(value), &"--config".into());
-        }
-        Ok(())
-    }
-
     fn load_file(
         &mut self,
         path: &Path,

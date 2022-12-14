@@ -107,7 +107,7 @@ pub fn load(
         errors.extend(cfg.load_path(&path, &"--configfile".into()));
     }
 
-    if let Err(err) = cfg.set_overrides(extra_values) {
+    if let Err(err) = set_overrides(&mut cfg, extra_values) {
         errors.push(err);
     }
 
@@ -130,7 +130,7 @@ pub fn load(
         cfg.load_path(&path, &"--configfile".into());
     }
 
-    let _ = cfg.set_overrides(extra_values);
+    let _ = set_overrides(&mut cfg, extra_values);
 
     Ok(cfg)
 }
@@ -250,6 +250,26 @@ impl OptionsHgExt for Options {
 
         self.append_filter(Box::new(filter))
     }
+}
+
+/// override config values from a list of --config overrides
+fn set_overrides(config: &mut ConfigSet, overrides: &[String]) -> crate::Result<()> {
+    for config_override in overrides {
+        let equals_pos = config_override
+            .find('=')
+            .ok_or_else(|| Error::ParseFlag(config_override.to_string()))?;
+        let section_name_pair = &config_override[..equals_pos];
+        let value = &config_override[equals_pos + 1..];
+
+        let dot_pos = section_name_pair
+            .find('.')
+            .ok_or_else(|| Error::ParseFlag(config_override.to_string()))?;
+        let section = &section_name_pair[..dot_pos];
+        let name = &section_name_pair[dot_pos + 1..];
+
+        config.set(section, name, Some(value), &"--config".into());
+    }
+    Ok(())
 }
 
 impl ConfigSetHgExt for ConfigSet {
