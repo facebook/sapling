@@ -97,8 +97,8 @@ impl Config for UnionConfig {
         result.into()
     }
 
-    fn layers(&self) -> Option<Vec<Arc<dyn Config>>> {
-        Some(self.configs.clone())
+    fn layers(&self) -> Vec<Arc<dyn Config>> {
+        self.configs.clone()
     }
 
     fn layer_name(&self) -> Text {
@@ -194,7 +194,6 @@ v=23
         assert_eq!(
             config
                 .layers()
-                .unwrap()
                 .into_iter()
                 .map(|c| c.layer_name())
                 .collect::<Vec<_>>(),
