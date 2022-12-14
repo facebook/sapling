@@ -347,6 +347,10 @@ impl ConfigSet {
                         let value = value.replace("\n", "\n ");
                         result.push_str(&value);
                         result.push_str("\n");
+                    } else {
+                        result.push_str("%unset ");
+                        result.push_str(key);
+                        result.push('\n');
                     }
                 }
             }
@@ -1027,10 +1031,12 @@ space_list=value1.a value1.b
         let serialized = cfg.to_string();
         assert_eq!(
             serialized,
-            "[section_one]
+            r#"[section_one]
 normal=normal_value
 space key=space value
-newline=new\n line
+newline=new
+ line
+%unset unset_me
 
 [section_two]
 empty=
@@ -1038,7 +1044,7 @@ list=value1,value2,value3
 space_list=value1.a value1.b
  value2.a value2.b
 
-"
+"#
         );
 
         // Verify it round trips
