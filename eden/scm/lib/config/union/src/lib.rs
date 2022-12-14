@@ -21,6 +21,12 @@ pub struct UnionConfig {
     name: Text,
 }
 
+impl Default for UnionConfig {
+    fn default() -> Self {
+        Self::from_configs(Vec::new())
+    }
+}
+
 impl UnionConfig {
     /// Construct `UnionConfig` from a list of configs.
     /// In case of conflicts, the last one wins.
