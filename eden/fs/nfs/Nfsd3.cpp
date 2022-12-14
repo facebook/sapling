@@ -58,6 +58,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
         stopPromise_{stopPromise},
         processAccessLog_{processAccessLog},
         traceDetailedArguments_(traceDetailedArguments),
+        metadataSizeMismatchLogged_(false),
         traceBus_(traceBus) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
@@ -183,6 +184,9 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   ProcessAccessLog& processAccessLog_;
   std::atomic_int32_t numberOfClients_;
   std::atomic<size_t>& traceDetailedArguments_;
+  // TODO(T136422586): Remove once we've identified the cause of mismatched file
+  // size metadata.
+  std::atomic_bool metadataSizeMismatchLogged_;
   std::shared_ptr<TraceBus<NfsTraceEvent>>& traceBus_;
 };
 
@@ -562,8 +566,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
       .thenTry([this, ser = std::move(ser), ino = args.file.ino, &context](
                    folly::Try<NfsDispatcher::ReadRes> tryRead) mutable {
         return dispatcher_->getattr(ino, context.getObjectFetchContext())
-            .thenTry([ser = std::move(ser), tryRead = std::move(tryRead)](
-                         const folly::Try<struct stat>& tryStat) mutable {
+            .thenTry([this,
+                      ser = std::move(ser),
+                      tryRead = std::move(tryRead),
+                      ino](const folly::Try<struct stat>& tryStat) mutable {
               if (tryRead.hasException()) {
                 READ3res res{
                     {{exceptionToNfsError(tryRead.exception()),
@@ -572,6 +578,23 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::read(
               } else {
                 auto& read = tryRead.value();
                 auto length = read.data->computeChainDataLength();
+
+                if (UNLIKELY(
+                        tryStat.hasValue() &&
+                        length > folly::to_unsigned(tryStat.value().st_size) &&
+                        !this->metadataSizeMismatchLogged_.exchange(true))) {
+                  XLOG(
+                      ERR,
+                      fmt::format(
+                          "Mismatch in blob size and cached size for inode {} ! "
+                          "content chunk size {} greater than file size {}.",
+                          ino,
+                          length,
+                          tryStat.value().st_size));
+
+                  this->structuredLogger_->logEvent(
+                      MetadataSizeMismatch{"NFS", "read"});
+                }
 
                 if (UNLIKELY(tryStat.hasException())) {
                   XLOG(
