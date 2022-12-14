@@ -380,7 +380,6 @@ impl Redirection {
         std::fs::create_dir_all(&mount_path)
             .from_err()
             .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
-        let mount_path = checkout_path.join(&self.repo_path);
         let args = &["mount", &mount_path.to_string_lossy()];
         let output = Command::new(APFS_HELPER)
             .args(args)

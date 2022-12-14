@@ -15,14 +15,24 @@ from eden.fs.cli.util import mkscratch_bin
 from .lib import testcase
 
 
-def scratch_path(repo: str, subdir: str) -> str:
-    return (
-        subprocess.check_output(
-            [os.fsdecode(mkscratch_bin()), "path", repo, "--subdir", subdir]
+def scratch_path(repo: str, subdir: str, redir: str, sym_type: str) -> str:
+    # on macOS, a bind mount's target == repo_path
+    if sym_type == "bind" and sys.platform == "darwin":
+        return str(os.path.join(repo, redir))
+    else:
+        return (
+            subprocess.check_output(
+                [
+                    os.fsdecode(mkscratch_bin()),
+                    "path",
+                    repo,
+                    "--subdir",
+                    os.path.join(subdir, redir),
+                ]
+            )
+            .decode("utf-8")
+            .strip()
         )
-        .decode("utf-8")
-        .strip()
-    )
 
 
 @testcase.eden_repo_test
@@ -47,7 +57,10 @@ via-profile = "bind"
     def test_list_no_legacy_bind_mounts(self) -> None:
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            "via-profile",
+            "bind",
         )
         self.assertEqual(
             json.loads(output),
@@ -105,7 +118,10 @@ via-profile = "bind"
     def test_list(self) -> None:
         repo_path = os.path.join("a", "new-one")
         profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            "via-profile",
+            "bind",
         )
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
@@ -131,7 +147,10 @@ via-profile = "bind"
             "redirect", "list", "--json", "--mount", self.mount
         )
         target_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            os.path.join("a", "new-one"),
+            "bind",
         )
         self.assertEqual(
             json.loads(list_output),
@@ -191,6 +210,12 @@ via-profile = "bind"
         )
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
 
+        target_path = scratch_path(
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            os.path.join("a", "new-one"),
+            "symlink",
+        )
         list_output = self.eden.run_cmd(
             "redirect", "list", "--json", "--mount", self.mount
         )
@@ -248,7 +273,10 @@ via-profile = "bind"
 
     def test_fixup_mounts_things(self) -> None:
         profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            "via-profile",
+            "bind",
         )
         repo_path = os.path.join("a", "new-one")
 
@@ -258,7 +286,10 @@ via-profile = "bind"
         )
         self.assertEqual(output, "", msg="we believe we set up a new symlink mount")
         target_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            repo_path,
+            "symlink",
         )
 
         # unmount all redirections to ensure `fixup` must fix them all
@@ -363,7 +394,10 @@ via-profile = "bind"
 
     def test_unmount_unmounts_things(self) -> None:
         profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            "via-profile",
+            "bind",
         )
 
         # setup new symlink redirection
@@ -375,7 +409,10 @@ via-profile = "bind"
             output, "", msg="we believe we set up a new symlink redirection"
         )
         target_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            os.path.join("a", "new-one"),
+            "symlink",
         )
 
         # assert both redirections exist and are mounted
@@ -426,7 +463,10 @@ via-profile = "bind"
 
     def test_redirect_no_config_dir(self) -> None:
         profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            "via-profile",
+            "bind",
         )
 
         output = self.eden.run_cmd(
@@ -452,7 +492,10 @@ via-profile = "bind"
 
     def test_add_absolute_target(self) -> None:
         profile_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            "via-profile",
+            "bind",
         )
 
         # providing an absolute path should behave in the exact same way as providing a rel path
@@ -464,7 +507,10 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we set up a new bind mount")
 
         target_path = scratch_path(
-            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+            self.mount,
+            os.path.join("edenfs", "redirections"),
+            os.path.join("a", "new-one"),
+            "bind",
         )
         output = self.eden.run_cmd(
             "redirect",

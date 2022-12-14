@@ -155,9 +155,6 @@ elif sys.platform.startswith("darwin"):
     # Linux cgroups obviously do not work on macOS
     TEST_DISABLED["linux_cgroup_test.LinuxCgroupTest"] = True
 
-    # Redirect targets are different on macOS
-    TEST_DISABLED["redirect_test.RedirectTest"] = True
-
     # Incorrect result
     TEST_DISABLED["hg.grep_test.GrepTestTreeOnly"] = [
         "test_grep_that_does_not_match_anything",
@@ -199,7 +196,7 @@ elif sys.platform.startswith("darwin"):
     TEST_DISABLED["basic_test.BasicTest"] = True
     TEST_DISABLED["basic_test.PosixTest"] = True
 
-    # `edenfsctl chown` returns non-zero status
+    # `edenfsctl chown` requires sudo
     TEST_DISABLED["chown_test.ChownTest"] = True
 
     # I'm not sure if overlay corruption logic even exists on macOS?
