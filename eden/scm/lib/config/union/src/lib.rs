@@ -44,6 +44,11 @@ impl UnionConfig {
             name,
         }
     }
+
+    /// Push a config as a layer. It overrides other configs.
+    pub fn push(&mut self, config: Arc<dyn Config>) {
+        self.configs.push(config)
+    }
 }
 
 impl Config for UnionConfig {
@@ -208,5 +213,17 @@ v=23
 
         // layer_name()
         assert_eq!(config.layer_name(), "unioned");
+    }
+
+    #[test]
+    fn test_push() {
+        let config1 = static_config!{"b": { "v": "1" }};
+        let config2 = static_config!{"b": { "v": "2" }};
+
+        let mut config = UnionConfig::default();
+        config.push(Arc::new(config1));
+        assert_eq!(config.get("b", "v").unwrap(), "1");
+        config.push(Arc::new(config2));
+        assert_eq!(config.get("b", "v").unwrap(), "2");
     }
 }
