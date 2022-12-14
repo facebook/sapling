@@ -13,7 +13,6 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
-use configparser::config::ConfigSet;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
@@ -81,7 +80,7 @@ impl WorkingCopy {
         treestate: Arc<Mutex<TreeState>>,
         tree_resolver: ArcReadTreeManifest,
         filestore: ArcReadFileContents,
-        config: &ConfigSet,
+        config: &dyn Config,
         locker: Arc<RepoLocker>,
     ) -> Result<Self> {
         tracing::debug!(target: "dirstate_size", dirstate_size=treestate.lock().len());
@@ -169,7 +168,7 @@ impl WorkingCopy {
         }
     }
 
-    fn global_ignore_paths(root: &Path, config: &ConfigSet) -> Vec<PathBuf> {
+    fn global_ignore_paths(root: &Path, config: &dyn Config) -> Vec<PathBuf> {
         let mut ignore_paths = vec![];
         if let Some(value) = config.get("ui", "ignore") {
             let path = Path::new(value.as_ref());
