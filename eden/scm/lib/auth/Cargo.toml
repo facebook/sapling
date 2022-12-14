@@ -18,5 +18,5 @@ url = "2.2.2"
 util = { version = "0.1.0", path = "../util" }
 
 [dev-dependencies]
-configparser = { version = "0.1.0", path = "../config/parser" }
 once_cell = "1.12"
+staticconfig = { version = "0.1.0", path = "../config/static" }

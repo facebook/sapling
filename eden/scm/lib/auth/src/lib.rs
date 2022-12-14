@@ -258,30 +258,26 @@ fn strip_scheme_and_user(url: &Url) -> String {
 
 #[cfg(test)]
 mod test {
-    use configparser::config::ConfigSet;
-    use configparser::config::Options;
+    use staticconfig::static_config;
 
     use super::*;
 
     #[test]
     fn test_auth_groups() {
-        let mut config = ConfigSet::new();
-        let _errors = config.parse(
-            "[auth]\n\
-             foo.prefix = foo.com\n\
-             foo.cert = /foo/cert\n\
-             foo.key = /foo/key\n\
-             foo.cacerts = /foo/cacerts\n\
-             bar.prefix = bar.com\n\
-             bar.cert = /bar/cert\n\
-             bar.key = /bar/key\n\
-             baz.cert = /baz/cert\n\
-             baz.key = /baz/key\n\
-             foo.username = user\n\
-             foo.schemes = http https\n\
-             foo.priority = 1\n
-             ",
-            &Options::default(),
+        let config = static_config!(
+            r#"[auth]
+foo.prefix = foo.com
+foo.cert = /foo/cert
+foo.key = /foo/key
+foo.cacerts = /foo/cacerts
+bar.prefix = bar.com
+bar.cert = /bar/cert
+bar.key = /bar/key
+baz.cert = /baz/cert
+baz.key = /baz/key
+foo.username = user
+foo.schemes = http https
+foo.priority = 1"#
         );
         let groups = AuthSection::from_config(&config).groups;
 
@@ -332,29 +328,26 @@ mod test {
 
     #[test]
     fn test_best_match_for() -> Result<()> {
-        let mut config = ConfigSet::new();
-        let _errors = config.parse(
-            "[auth]\n\
-             default.prefix = *\n\
-             a.prefix = example.com\n\
-             a.schemes = http https\n\
-             b.prefix = foo.com/bar\n\
-             c.prefix = foo.com/bar/baz\n\
-             d.prefix = bar.com\n\
-             d.priority = 1\n\
-             e.prefix = bar.com\n\
-             e.username = e_user\n\
-             f.prefix = baz.com\n\
-             f.username = f_user\n\
-             g.prefix = baz.com\n\
-             h.prefix = example.net\n\
-             h.username = h_user\n\
-             i.prefix = example.net\n\
-             i.username = i_user\n\
-             j.prefix = invalid.com\n\
-             j.cert = /does/not/exist\n\
-             ",
-            &Options::default(),
+        let config = static_config!(
+            r#"[auth]
+default.prefix = *
+a.prefix = example.com
+a.schemes = http https
+b.prefix = foo.com/bar
+c.prefix = foo.com/bar/baz
+d.prefix = bar.com
+d.priority = 1
+e.prefix = bar.com
+e.username = e_user
+f.prefix = baz.com
+f.username = f_user
+g.prefix = baz.com
+h.prefix = example.net
+h.username = h_user
+i.prefix = example.net
+i.username = i_user
+j.prefix = invalid.com
+j.cert = /does/not/exist"#
         );
         let auth = AuthSection::from_config(&config);
 
@@ -425,15 +418,13 @@ mod test {
 
     #[test]
     fn test_extras() -> Result<()> {
-        let mut config = ConfigSet::new();
-        let _errors = config.parse(
-            "[auth]\n\
-             foo.prefix = foo.com\n\
-             foo.username = user\n\
-             foo.hello = world\n\
-             foo.bar = baz\n\
-             ",
-            &Options::default(),
+        let config = static_config!(
+            r#"[auth]
+foo.prefix = foo.com
+foo.username = user
+foo.hello = world
+foo.bar = baz
+             "#
         );
         let auth = AuthSection::from_config(&config);
 
