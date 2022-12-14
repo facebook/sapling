@@ -215,9 +215,6 @@ elif sys.platform.startswith("darwin"):
     # CalledProcessError
     TEST_DISABLED["health_test.HealthOfFakeEdenFSTest"] = True
 
-    # incorrect result
-    TEST_DISABLED["info_test.InfoTest"] = True
-
     # /proc/mounts DNE on macOS
     TEST_DISABLED["mount_test.MountTest"] = [
         "test_double_unmount",

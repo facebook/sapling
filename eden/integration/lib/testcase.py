@@ -248,7 +248,7 @@ class EdenTestCase(EdenTestCaseBase):
         {"namespace": ["key1=value1", "key2=value2"}
         """
         configs = {"experimental": ["enable-nfs-server = true"]}
-        if self.use_nfs() or sys.platform == "darwin":
+        if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
         return configs
 
@@ -389,7 +389,7 @@ class EdenTestCase(EdenTestCaseBase):
         individual tests from using NFS. Individual tests can be disabled
         from running with NFS via skip lists in eden/integration/lib/skip.py.
         """
-        return False
+        return sys.platform == "darwin"
 
 
 # pyre-ignore[13]: T62487924
