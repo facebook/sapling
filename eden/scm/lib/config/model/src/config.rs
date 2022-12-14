@@ -19,7 +19,7 @@ use crate::Result;
 
 /// Readable config. This can be used as a trait object.
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait Config {
+pub trait Config: Send + Sync {
     /// Get config names in the given section. Sorted by insertion order.
     fn keys(&self, section: &str) -> Vec<Text>;
 
