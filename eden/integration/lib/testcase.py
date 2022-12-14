@@ -443,7 +443,7 @@ class EdenRepoTest(EdenTestCase):
 
     def populate_repo(self) -> None:
         raise NotImplementedError(
-            "individual test classes must implement " "populate_repo()"
+            "individual test classes must implement populate_repo()"
         )
 
     def create_repo(self, name: str) -> repobase.Repository:
@@ -457,10 +457,8 @@ class EdenRepoTest(EdenTestCase):
           accessed as repo.path on the returned repo object.
         """
         raise NotImplementedError(
-            "test subclasses must implement "
-            "create_repo().  This is normally "
-            "implemented automatically by "
-            "@eden_repo_test"
+            "test subclasses must implement create_repo().  This is normally"
+            " implemented automatically by @eden_repo_test"
         )
 
     def assert_checkout_root_entries(
@@ -551,9 +549,7 @@ def test_replicator(
         # will find the subclasses we define.
         current_frame = inspect.currentframe()
         if current_frame is None:
-            raise Exception(
-                "we require a python interpreter with " "stack frame support"
-            )
+            raise Exception("we require a python interpreter with stack frame support")
         # pyre-fixme[16]: `Optional` has no attribute `f_locals`.
         caller_scope = current_frame.f_back.f_locals
 
