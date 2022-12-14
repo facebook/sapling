@@ -27,6 +27,7 @@ use crate::error::Error;
 /// Collection of config sections loaded from various sources.
 #[derive(Clone, Default, Debug)]
 pub struct ConfigSet {
+    name: Text,
     sections: IndexMap<Text, Section>,
     // canonicalized files that were loaded, including files with errors
     files: Vec<PathBuf>,
@@ -93,7 +94,11 @@ impl Config for ConfigSet {
     }
 
     fn layer_name(&self) -> Text {
-        Text::from_static("ConfigSet")
+        if self.name.is_empty() {
+            Text::from_static("ConfigSet")
+        } else {
+            self.name.clone()
+        }
     }
 }
 
@@ -101,6 +106,12 @@ impl ConfigSet {
     /// Return an empty `ConfigSet`.
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Update the name of the `ConfigSet`.
+    pub fn named(&mut self, name: &str) -> &mut Self {
+        self.name = Text::copy_from_slice(name);
+        self
     }
 
     /// Load config files at given path. The path is a file.
@@ -1005,6 +1016,14 @@ pub(crate) mod tests {
 
         assert_eq!(cfg.get("x", "a"), Some(Text::from("1")));
         assert_eq!(cfg.get("y", "b"), Some(Text::from("2")));
+    }
+
+    #[test]
+    fn test_named() {
+        let mut cfg = ConfigSet::new();
+        assert_eq!(cfg.layer_name(), "ConfigSet");
+        cfg.named("foo");
+        assert_eq!(cfg.layer_name(), "foo");
     }
 
     #[test]
