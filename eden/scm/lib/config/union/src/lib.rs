@@ -217,8 +217,8 @@ v=23
 
     #[test]
     fn test_push() {
-        let config1 = static_config!{"b": { "v": "1" }};
-        let config2 = static_config!{"b": { "v": "2" }};
+        let config1 = static_config! {"b": { "v": "1" }};
+        let config2 = static_config! {"b": { "v": "2" }};
 
         let mut config = UnionConfig::default();
         config.push(Arc::new(config1));
