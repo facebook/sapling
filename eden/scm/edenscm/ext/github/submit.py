@@ -12,6 +12,7 @@ from typing import Any, Callable, List, Optional, Tuple, TypeVar
 from edenscm import error, git, gituser, gpg
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
+from ghstack.github_gh_cli import Result
 
 from . import gh_submit, github_repo_util
 from .gh_submit import PullRequestDetails, Repository
@@ -97,12 +98,8 @@ async def update_commits_in_stack(
 
     # git push --force any heads that need updating, creating new branch names,
     # if necessary.
-    refs_to_update = []
-    pull_requests_to_create = []
-
-    # These are set lazily because they require GraphQL calls.
-    next_pull_request_number = None
-    repository: Optional[Repository] = None
+    refs_to_update: List[str] = []
+    commits_that_need_pull_requests: List[CommitData] = []
 
     # Note that `partitions` is ordered from the top of the stack to the bottom,
     # but we want to create PRs from the bottom to the top so the PR numbers are
@@ -118,31 +115,22 @@ async def update_commits_in_stack(
                     f"{hex(top.node)}:refs/heads/{pr.head_branch_name}"
                 )
         else:
-            # top.node will become the head of a new PR, so it needs a branch
-            # name.
-            if next_pull_request_number is None:
-                repository = await get_repository_for_origin(
-                    origin, github_repo.hostname
-                )
-                upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
-                result = await gh_submit.guess_next_pull_request_number(
-                    github_repo.hostname, upstream_owner, upstream_name
-                )
-                if result.is_error():
-                    raise error.Abort(
-                        _(
-                            "could not determine the next pull request number for %s/%s: %s"
-                        )
-                        % (upstream_owner, upstream_name, result.error)
-                    )
-                else:
-                    next_pull_request_number = result.ok
-            else:
-                next_pull_request_number += 1
+            commits_that_need_pull_requests.append(top)
+
+    # Reserve one GitHub issue number for each pull request (in parallel) and
+    # then assign them in increasing order.
+    repository: Optional[Repository] = None
+    pull_requests_to_create: List[Tuple[CommitData, str, int]] = []
+    if commits_that_need_pull_requests:
+        repository = await get_repository_for_origin(origin, github_repo.hostname)
+        issue_numbers = await _create_placeholder_issues(
+            repository, len(commits_that_need_pull_requests)
+        )
+        for commit, number in zip(commits_that_need_pull_requests, issue_numbers):
             # Consider including username in branch_name?
-            branch_name = f"pr{next_pull_request_number}"
-            refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
-            pull_requests_to_create.append((top, branch_name))
+            branch_name = f"pr{number}"
+            refs_to_update.append(f"{hex(commit.node)}:refs/heads/{branch_name}")
+            pull_requests_to_create.append((commit, branch_name, number))
 
     gitdir = None
 
@@ -224,16 +212,16 @@ async def rewrite_pull_request_body(
 
 
 async def create_pull_requests(
-    commits: List[Tuple[CommitData, str]],
+    commits: List[Tuple[CommitData, str, int]],
     repository: Repository,
     store: PullRequestStore,
     ui,
     is_draft: bool,
-):
+) -> None:
     """Creates a new pull request for each entry in the `commits` list.
 
-    Each CommitData in `commits` will be updated such that its `.pr` field is
-    set appropriately.
+    Each entry in `commits` is a (CommitData, branch_name, issue_number). Each
+    CommitData will be updated such that its `.pr` field is set appropriately.
     """
     head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
     owner, name = repository.get_upstream_owner_and_name()
@@ -242,22 +230,21 @@ async def create_pull_requests(
     base = repository.get_base_branch()
     hostname = repository.hostname
 
-    # Create the pull requests in order serially to give us the best chance of
-    # the number in the branch name matching that of the actual pull request.
-    commits_to_update = []
-    for commit, branch_name in commits:
+    async def create_pull_request(commit, branch_name, issue_number):
         body = commit.get_msg()
-        title = firstline(body)
         response = await gh_submit.create_pull_request(
             hostname=repository.hostname,
             owner=owner,
             name=name,
             base=base,
             head=f"{head_ref_prefix}{branch_name}",
-            title=title,
             body=body,
+            issue=issue_number,
             is_draft=is_draft,
         )
+        # At this point, the title of the PR will be the placeholder value from
+        # create_pull_request_placeholder_issue(), but so the caller is
+        # responsible for ensuring update_pull_request() is eventually called.
 
         if response.is_error():
             raise error.Abort(
@@ -273,18 +260,22 @@ async def create_pull_requests(
         url = data["html_url"]
         ui.status_err(_("created new pull request: %s\n") % url)
         number = data["number"]
+        if issue_number != number:
+            ui.status_err(
+                _("Issue number mismatch: supplied %d and received %d.\n")
+                % (issue_number, number)
+            )
         pr_id = PullRequestId(hostname=hostname, owner=owner, name=name, number=number)
         store.map_commit_to_pull_request(commit.node, pr_id)
-        commits_to_update.append((commit, pr_id))
 
-    # Now that all of the pull requests have been created, update the .pr field
-    # on each CommitData. We prioritize the create_pull_request() calls to try
-    # to get the pull request numbers to match up.
-    prs = await asyncio.gather(
-        *[get_pull_request_details_or_throw(c[1]) for c in commits_to_update]
-    )
-    for (commit, _pr_id), pr in zip(commits_to_update, prs):
+        # Now that the pull request has been created, update the .pr field on
+        # CommitData.
+        pr = await get_pull_request_details_or_throw(pr_id)
         commit.pr = pr
+
+    # Because the issue numbers have been reserved in advance, each pull request
+    # can be created in parallel.
+    await asyncio.gather(*[create_pull_request(*c) for c in commits])
 
 
 def create_pull_request_title_and_body(
@@ -352,6 +343,36 @@ def format_stack_entry(
     if num_commits > 1:
         line += f" ({num_commits} commits)"
     return line
+
+
+async def _create_placeholder_issues(repository: Repository, num: int) -> List[int]:
+    """create the specified number of placeholder issues in parallel"""
+    upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
+    issue_number_results = await asyncio.gather(
+        *[
+            gh_submit.create_pull_request_placeholder_issue(
+                hostname=repository.hostname,
+                owner=upstream_owner,
+                name=upstream_name,
+            )
+            for _ in range(num)
+        ]
+    )
+
+    def unwrap(r: Result[int]) -> int:
+        if r.is_error():
+            raise error.Abort(
+                _(
+                    "Error while trying to create a placeholder issue for a pull request on %s/%s: %s"
+                )
+                % (upstream_owner, upstream_name, r.error)
+            )
+        else:
+            return none_throws(r.ok)
+
+    issue_numbers = [unwrap(r) for r in issue_number_results]
+    issue_numbers.sort()
+    return issue_numbers
 
 
 async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
