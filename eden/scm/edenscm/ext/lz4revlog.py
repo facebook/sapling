@@ -36,7 +36,7 @@ from edenscm import extensions, localrepo, revlog, util
 testedwith = "3.9.1"
 
 
-def replaceclass(container, classname):
+def replaceclass(container, classname: str):
     """Replace a class with another in a module, and interpose it into
     the hierarchies of all loaded subclasses. This function is
     intended for use as a decorator.
@@ -78,7 +78,7 @@ def requirements(orig, repo):
     return reqs
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     if util.safehasattr(localrepo, "newreporequirements"):
         extensions.wrapfunction(localrepo, "newreporequirements", requirements)
     else:
