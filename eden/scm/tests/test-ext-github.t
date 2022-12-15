@@ -18,7 +18,7 @@ Confirm 'github_repo' does not error
   False (no-eol)
 
 Confirm pull request creation will fail
-  $ hg pr
+  $ hg pr submit
   abort: not a Git repo
   [255]
   $ hg ghstack

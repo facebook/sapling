@@ -8,7 +8,7 @@
 
 from typing import Optional
 
-from edenscm import registrar
+from edenscm import error, registrar
 from edenscm.i18n import _
 
 from . import follow, github_repo_util, link, pr_status, submit, templates
@@ -25,11 +25,15 @@ def extsetup(ui):
 @command(
     "pr",
     [],
-    _("SUBCOMMAND (default: submit)"),
+    _("<submit|link|unlink|...>"),
 )
 def pull_request_command(ui, repo, *args, **opts):
     """exchange local commit data with GitHub pull requests"""
-    return submit.submit(ui, repo, *args, **opts)
+    raise error.Abort(
+        _(
+            "you need to specify a subcommand (run with --help to see a list of subcommands)"
+        )
+    )
 
 
 subcmd = pull_request_command.subcommand(
@@ -44,7 +48,7 @@ subcmd = pull_request_command.subcommand(
 
 
 @subcmd(
-    "submit",
+    "s|submit",
     [
         (
             "s",
