@@ -112,6 +112,12 @@ pub struct MetadataDiffLinesCount {
 
     /// Number of deleted lines.
     pub deleted_lines_count: usize,
+
+    /// Number of significant (not generated) added lines.
+    pub significant_added_lines_count: usize,
+
+    /// Number of significant (not generated) deleted lines.
+    pub significant_deleted_lines_count: usize,
 }
 
 impl MetadataDiffLinesCount {
@@ -145,6 +151,12 @@ impl MetadataDiffLinesCount {
             |mut acc: MetadataDiffLinesCount, hunk| {
                 acc.add_to_added_lines_count(hunk.add.len());
                 acc.add_to_deleted_lines_count(hunk.remove.len());
+                acc.add_to_significant_added_lines_count(
+                    new_text_file.significant_lines_count_in_a_range(hunk.add),
+                );
+                acc.add_to_significant_deleted_lines_count(
+                    old_text_file.significant_lines_count_in_a_range(hunk.remove),
+                );
                 acc
             },
         )
@@ -153,6 +165,7 @@ impl MetadataDiffLinesCount {
     fn file_created(new_text_file: &TextFile) -> Self {
         Self {
             added_lines_count: new_text_file.content.lines().count(),
+            significant_added_lines_count: new_text_file.significant_lines_count(),
             ..Default::default()
         }
     }
@@ -160,6 +173,7 @@ impl MetadataDiffLinesCount {
     fn file_deleted(old_text_file: &TextFile) -> Self {
         Self {
             deleted_lines_count: old_text_file.content.lines().count(),
+            significant_deleted_lines_count: old_text_file.significant_lines_count(),
             ..Default::default()
         }
     }
@@ -170,6 +184,16 @@ impl MetadataDiffLinesCount {
 
     fn add_to_deleted_lines_count(&mut self, count: usize) {
         self.deleted_lines_count = self.deleted_lines_count.saturating_add(count);
+    }
+
+    fn add_to_significant_added_lines_count(&mut self, count: usize) {
+        self.significant_added_lines_count =
+            self.significant_added_lines_count.saturating_add(count);
+    }
+
+    fn add_to_significant_deleted_lines_count(&mut self, count: usize) {
+        self.significant_deleted_lines_count =
+            self.significant_deleted_lines_count.saturating_add(count);
     }
 }
 
@@ -236,6 +260,33 @@ impl<'a> TextFile<'a> {
         TextFile {
             content,
             generated_span: FileGeneratedSpan::new(content),
+        }
+    }
+
+    fn significant_lines_count(&self) -> usize {
+        match &self.generated_span {
+            FileGeneratedSpan::FullyGenerated => 0usize,
+            FileGeneratedSpan::PartiallyGenerated(manual_sections) => manual_sections
+                .iter()
+                .fold(0usize, |acc, section| acc.saturating_add(section.len())),
+            FileGeneratedSpan::NotGenerated => self.content.lines().count(),
+        }
+    }
+
+    fn significant_lines_count_in_a_range(&self, range: Range<usize>) -> usize {
+        match &self.generated_span {
+            FileGeneratedSpan::FullyGenerated => 0usize,
+            FileGeneratedSpan::PartiallyGenerated(manual_sections) => {
+                manual_sections.iter().fold(0usize, |acc, section| {
+                    acc.saturating_add(
+                        section
+                            .end
+                            .min(range.end)
+                            .saturating_sub(section.start.max(range.start)),
+                    )
+                })
+            }
+            FileGeneratedSpan::NotGenerated => range.len(),
         }
     }
 }

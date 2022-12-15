@@ -223,6 +223,8 @@ impl IntoResponse<Option<thrift::MetadataDiffLinesCount>> for Option<MetadataDif
         self.map(|lines_count| thrift::MetadataDiffLinesCount {
             added_lines_count: lines_count.added_lines_count as i64,
             deleted_lines_count: lines_count.deleted_lines_count as i64,
+            significant_added_lines_count: lines_count.significant_added_lines_count as i64,
+            significant_deleted_lines_count: lines_count.significant_deleted_lines_count as i64,
             ..Default::default()
         })
     }

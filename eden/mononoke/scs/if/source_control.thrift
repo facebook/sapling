@@ -424,6 +424,12 @@ struct MetadataDiffLinesCount {
 
   /// Number of deleted lines.
   2: i64 deleted_lines_count;
+
+  /// Number of signifcant (not generated) lines.
+  3: i64 significant_added_lines_count;
+
+  /// Number of significant (not generated) lines.
+  4: i64 significant_deleted_lines_count;
 }
 
 /// Indicates whether the file was copied or moved
