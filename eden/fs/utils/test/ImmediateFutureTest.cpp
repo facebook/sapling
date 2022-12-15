@@ -10,8 +10,9 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
-namespace facebook::eden {
+namespace {
 
+using namespace facebook::eden;
 using namespace std::literals::chrono_literals;
 
 TEST(ImmediateFuture, get) {
@@ -615,4 +616,46 @@ TEST(ImmediateFuture, constructionFromCompatible) {
       });
 }
 
-} // namespace facebook::eden
+struct Counted {
+  explicit Counted(size_t* count) noexcept : count{count} {
+    ++*count;
+  }
+  Counted(const Counted& c) noexcept : count{c.count} {
+    ++*count;
+  }
+  Counted(Counted&& c) noexcept : count{c.count} {
+    ++*count;
+  }
+  ~Counted() {
+    --*count;
+  }
+
+  Counted& operator=(const Counted&) noexcept {
+    return *this;
+  }
+  Counted& operator=(Counted&&) noexcept {
+    return *this;
+  }
+
+  size_t* count;
+};
+
+TEST(ImmediateFuture, destructors_are_called_by_ImmediateFuture_move) {
+  size_t count = 0;
+  {
+    ImmediateFuture<Counted> p{Counted{&count}};
+    EXPECT_EQ(1, count);
+
+    ImmediateFuture<Counted> q{std::move(p)};
+    EXPECT_EQ(1, count);
+
+    p = std::move(q);
+    EXPECT_EQ(1, count);
+
+    p = std::move(*&p);
+  }
+
+  EXPECT_EQ(0, count);
+}
+
+} // namespace

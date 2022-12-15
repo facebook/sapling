@@ -252,6 +252,9 @@ class ImmediateFuture {
   }
 
  private:
+  using Try = folly::Try<T>;
+  using SemiFuture = folly::SemiFuture<T>;
+
   /**
    * Define the behavior of the SemiFuture constructor and continuation when
    * dealing with ready SemiFuture.
@@ -271,9 +274,7 @@ class ImmediateFuture {
     LazySemiFuture,
   };
 
-  ImmediateFuture(
-      folly::SemiFuture<T>&& fut,
-      SemiFutureReadiness readiness) noexcept;
+  ImmediateFuture(SemiFuture fut, SemiFutureReadiness readiness) noexcept;
 
   friend ImmediateFuture<folly::Unit> makeNotReadyImmediateFuture();
 
@@ -283,11 +284,6 @@ class ImmediateFuture {
    * Any subsequent access to it will throw a DestroyedImmediateFutureError.
    */
   void destroy();
-
-  union {
-    folly::Try<T> immediate_;
-    folly::SemiFuture<T> semi_;
-  };
 
   enum class Kind {
     /** Holds an immediate value, immediate_ is valid. */
@@ -305,6 +301,11 @@ class ImmediateFuture {
   // four by merging these tag bits with Try's tag bits, and differentiate
   // between Value, Exception, SemiFuture, and Nothing.
   Kind kind_;
+
+  union {
+    Try immediate_;
+    SemiFuture semi_;
+  };
 };
 
 /**

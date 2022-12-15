@@ -15,44 +15,43 @@ template <typename T>
 void ImmediateFuture<T>::destroy() {
   switch (kind_) {
     case Kind::Immediate:
-      using TryType = folly::Try<T>;
-      immediate_.~TryType();
+      kind_ = Kind::Nothing;
+      immediate_.~Try();
       break;
     case Kind::SemiFuture:
     case Kind::LazySemiFuture:
-      using SemiFutureType = folly::SemiFuture<T>;
-      semi_.~SemiFutureType();
+      kind_ = Kind::Nothing;
+      semi_.~SemiFuture();
       break;
     case Kind::Nothing:
       break;
   }
-  kind_ = Kind::Nothing;
 }
 
 template <typename T>
 ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept {
   if (detail::kImmediateFutureAlwaysDefer) {
+    new (&semi_) SemiFuture{std::move(value)};
     kind_ = Kind::SemiFuture;
-    new (&semi_) folly::SemiFuture<T>{std::move(value)};
   } else {
+    new (&immediate_) Try{std::move(value)};
     kind_ = Kind::Immediate;
-    new (&immediate_) folly::Try<T>{std::move(value)};
   }
 }
 
 template <typename T>
 ImmediateFuture<T>::ImmediateFuture(
-    folly::SemiFuture<T>&& fut,
+    SemiFuture fut,
     SemiFutureReadiness readiness) noexcept {
   if (readiness == SemiFutureReadiness::LazySemiFuture) {
+    new (&semi_) folly::SemiFuture<T>{std::move(fut)};
     kind_ = Kind::LazySemiFuture;
-    new (&semi_) folly::SemiFuture<T>{std::move(fut)};
   } else if (!fut.isReady() || detail::kImmediateFutureAlwaysDefer) {
-    kind_ = Kind::SemiFuture;
     new (&semi_) folly::SemiFuture<T>{std::move(fut)};
+    kind_ = Kind::SemiFuture;
   } else {
+    new (&immediate_) Try{std::move(fut).getTry()};
     kind_ = Kind::Immediate;
-    new (&immediate_) folly::Try<T>{std::move(fut).getTry()};
   }
 }
 
@@ -62,42 +61,54 @@ ImmediateFuture<T>::~ImmediateFuture() {
 }
 
 template <typename T>
-ImmediateFuture<T>::ImmediateFuture(ImmediateFuture<T>&& other) noexcept
-    : kind_(other.kind_) {
-  switch (kind_) {
+ImmediateFuture<T>::ImmediateFuture(ImmediateFuture&& other) noexcept {
+  // The unfortunate duplication between the following and destroy() is to avoid
+  // a redundant load and branch on other.kind_ when the compiler cannot see
+  // through the dataflow of T's move constructor.
+  switch (other.kind_) {
     case Kind::Immediate:
-      new (&immediate_) folly::Try<T>(std::move(other.immediate_));
+      new (&immediate_) Try{std::move(other.immediate_)};
+      kind_ = Kind::Immediate;
+      other.kind_ = Kind::Nothing;
+      other.immediate_.~Try();
       break;
     case Kind::SemiFuture:
     case Kind::LazySemiFuture:
-      new (&semi_) folly::SemiFuture<T>(std::move(other.semi_));
+      new (&semi_) SemiFuture{std::move(other.semi_)};
+      kind_ = other.kind_;
+      other.kind_ = Kind::Nothing;
+      other.semi_.~SemiFuture();
       break;
     case Kind::Nothing:
+      kind_ = Kind::Nothing;
       break;
   }
-  other.kind_ = Kind::Nothing;
 }
 
 template <typename T>
 ImmediateFuture<T>& ImmediateFuture<T>::operator=(
-    ImmediateFuture<T>&& other) noexcept {
-  if (this == &other) {
-    return *this;
-  }
+    ImmediateFuture&& other) noexcept {
   destroy();
+  // The unfortunate duplication between the following and destroy() is to avoid
+  // a redundant load and branch on other.kind_ when the compiler cannot see
+  // through the dataflow of T's move constructor.
   switch (other.kind_) {
     case Kind::Immediate:
-      new (&immediate_) folly::Try<T>(std::move(other.immediate_));
+      new (&immediate_) Try{std::move(other.immediate_)};
+      kind_ = Kind::Immediate;
+      other.kind_ = Kind::Nothing;
+      other.immediate_.~Try();
       break;
     case Kind::SemiFuture:
     case Kind::LazySemiFuture:
-      new (&semi_) folly::SemiFuture<T>(std::move(other.semi_));
+      new (&semi_) SemiFuture{std::move(other.semi_)};
+      kind_ = other.kind_;
+      other.kind_ = Kind::Nothing;
+      other.semi_.~SemiFuture();
       break;
     case Kind::Nothing:
       break;
   }
-  kind_ = other.kind_;
-  other.kind_ = Kind::Nothing;
   return *this;
 }
 
