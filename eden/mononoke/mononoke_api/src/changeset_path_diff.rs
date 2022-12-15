@@ -5,15 +5,26 @@
  * GNU General Public License version 2.
  */
 
+use std::ops::Range;
+
 use anyhow::anyhow;
 use anyhow::Error;
 use bytes::Bytes;
 use futures::try_join;
+use lazy_static::lazy_static;
+use regex::Regex;
 pub use xdiff::CopyInfo;
 
 use crate::changeset_path::ChangesetPathContentContext;
 use crate::errors::MononokeError;
 use crate::file::FileType;
+
+lazy_static! {
+    static ref BEGIN_MANUAL_SECTION_REGEX: Regex =
+        Regex::new(r"^\s*[[:punct:]]*\s*BEGIN MANUAL SECTION").unwrap();
+    static ref END_MANUAL_SECTION_REGEX: Regex =
+        Regex::new(r"^\s*[[:punct:]]*\s*END MANUAL SECTION").unwrap();
+}
 
 /// A path difference between two commits.
 ///
@@ -70,13 +81,22 @@ pub struct MetadataDiffFileInfo {
 
     /// File content type (text, non-utf8, or binary)
     pub file_content_type: Option<FileContentType>,
+
+    /// File generated status (fully, partially, or not generated)
+    pub file_generated_status: Option<FileGeneratedStatus>,
 }
 
 impl MetadataDiffFileInfo {
     fn new(file_type: Option<FileType>, parsed_file_content: Option<&ParsedFileContent>) -> Self {
+        let file_generated_status = match parsed_file_content {
+            Some(ParsedFileContent::Text(text_file)) => Some((&text_file.generated_span).into()),
+            _ => None,
+        };
+
         MetadataDiffFileInfo {
             file_type,
             file_content_type: parsed_file_content.map(FileContentType::from),
+            file_generated_status,
         }
     }
 }
@@ -87,8 +107,17 @@ pub enum FileContentType {
     Binary,
 }
 
+pub enum FileGeneratedStatus {
+    /// File is fully generated.
+    FullyGenerated,
+    /// File is partially generated.
+    PartiallyGenerated,
+    /// File is not generated.
+    NotGenerated,
+}
+
 enum ParsedFileContent<'a> {
-    Text(&'a str),
+    Text(TextFile<'a>),
     NonUtf8,
     Binary,
 }
@@ -103,14 +132,81 @@ impl From<&ParsedFileContent<'_>> for FileContentType {
     }
 }
 
+impl From<&FileGeneratedSpan> for FileGeneratedStatus {
+    fn from(file_generated_span: &FileGeneratedSpan) -> Self {
+        match file_generated_span {
+            FileGeneratedSpan::FullyGenerated => FileGeneratedStatus::FullyGenerated,
+            FileGeneratedSpan::PartiallyGenerated(_) => FileGeneratedStatus::PartiallyGenerated,
+            FileGeneratedSpan::NotGenerated => FileGeneratedStatus::NotGenerated,
+        }
+    }
+}
+
 impl<'a> ParsedFileContent<'a> {
     fn new(content: &'a Bytes) -> Self {
         if let Ok(parsed_content) = std::str::from_utf8(content) {
-            ParsedFileContent::Text(parsed_content)
+            ParsedFileContent::Text(TextFile::new(parsed_content))
         } else if content.contains(&0) {
             ParsedFileContent::Binary
         } else {
             ParsedFileContent::NonUtf8
+        }
+    }
+}
+
+struct TextFile<'a> {
+    content: &'a str,
+    generated_span: FileGeneratedSpan,
+}
+
+impl<'a> TextFile<'a> {
+    fn new(content: &'a str) -> Self {
+        TextFile {
+            content,
+            generated_span: FileGeneratedSpan::new(content),
+        }
+    }
+}
+
+enum FileGeneratedSpan {
+    FullyGenerated,
+    PartiallyGenerated(Vec<Range<usize>>),
+    NotGenerated,
+}
+
+impl FileGeneratedSpan {
+    fn new<'a>(content: &'a str) -> Self {
+        let mut found_generated_annotation = false;
+        let mut manual_sections_ranges = Vec::new();
+        let mut manual_section_start = None;
+
+        for (line_number, line) in content.lines().enumerate() {
+            if line.contains(concat!("{}{}", "@", "generated"))
+                || line.contains(concat!("{}{}", "@", "partially-generated"))
+            // The redundant concat is used to avoid marking this file as generated.
+            {
+                found_generated_annotation = true;
+            }
+
+            if END_MANUAL_SECTION_REGEX.is_match(line) {
+                if let Some(manual_section_start) = manual_section_start {
+                    manual_sections_ranges.push(manual_section_start..line_number);
+                }
+                manual_section_start = None;
+            }
+
+            if BEGIN_MANUAL_SECTION_REGEX.is_match(line) {
+                manual_section_start = Some(line_number + 1);
+            }
+        }
+
+        match (
+            found_generated_annotation,
+            manual_sections_ranges.is_empty(),
+        ) {
+            (true, true) => FileGeneratedSpan::FullyGenerated,
+            (true, false) => FileGeneratedSpan::PartiallyGenerated(manual_sections_ranges),
+            (false, _) => FileGeneratedSpan::NotGenerated,
         }
     }
 }

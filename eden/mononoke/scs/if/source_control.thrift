@@ -376,6 +376,9 @@ struct MetadataDiffFileInfo {
 
   /// File content type (text, non-utf8, or binary)
   2: optional MetadataDiffFileContentType file_content_type;
+
+  /// File generated status (fully, partially, or not generated)
+  3: optional FileGeneratedStatus file_generated_status;
 }
 
 enum MetadataDiffFileType {
@@ -398,6 +401,17 @@ enum MetadataDiffFileContentType {
 
   /// File content includes NUL bytes, thus is likely to be binary
   BINARY = 3,
+}
+
+enum FileGeneratedStatus {
+  /// File is fully generated.
+  FULLY_GENERATED = 1,
+
+  /// File is partially generated (contains manual sections)
+  PARTIALLY_GENERATED = 2,
+
+  /// File is not generated.
+  NOT_GENERATED = 3,
 }
 
 /// Indicates whether the file was copied or moved

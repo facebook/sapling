@@ -20,6 +20,7 @@ use mononoke_api::ChangesetId;
 use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::CopyInfo;
 use mononoke_api::FileContentType;
+use mononoke_api::FileGeneratedStatus;
 use mononoke_api::FileMetadata;
 use mononoke_api::FileType;
 use mononoke_api::HeaderlessUnifiedDiff;
@@ -188,11 +189,29 @@ impl IntoResponse<Option<thrift::MetadataDiffFileContentType>> for Option<FileCo
     }
 }
 
+impl IntoResponse<Option<thrift::FileGeneratedStatus>> for Option<FileGeneratedStatus> {
+    fn into_response(self) -> Option<thrift::FileGeneratedStatus> {
+        match self {
+            None => None,
+            Some(FileGeneratedStatus::FullyGenerated) => {
+                Some(thrift::FileGeneratedStatus::FULLY_GENERATED)
+            }
+            Some(FileGeneratedStatus::PartiallyGenerated) => {
+                Some(thrift::FileGeneratedStatus::PARTIALLY_GENERATED)
+            }
+            Some(FileGeneratedStatus::NotGenerated) => {
+                Some(thrift::FileGeneratedStatus::NOT_GENERATED)
+            }
+        }
+    }
+}
+
 impl IntoResponse<thrift::MetadataDiffFileInfo> for MetadataDiffFileInfo {
     fn into_response(self) -> thrift::MetadataDiffFileInfo {
         thrift::MetadataDiffFileInfo {
             file_type: self.file_type.into_response(),
             file_content_type: self.file_content_type.into_response(),
+            file_generated_status: self.file_generated_status.into_response(),
             ..Default::default()
         }
     }

@@ -47,6 +47,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hooks = { version = "0.1.0", path = "../hooks" }
 itertools = "0.10.3"
+lazy_static = "1.4"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"

@@ -49,6 +49,7 @@ pub use crate::changeset_path::PathEntry;
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::changeset_path_diff::CopyInfo;
 pub use crate::changeset_path_diff::FileContentType;
+pub use crate::changeset_path_diff::FileGeneratedStatus;
 pub use crate::changeset_path_diff::MetadataDiff;
 pub use crate::changeset_path_diff::MetadataDiffFileInfo;
 pub use crate::changeset_path_diff::UnifiedDiff;
