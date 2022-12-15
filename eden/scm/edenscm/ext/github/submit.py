@@ -25,7 +25,10 @@ from .pullrequeststore import PullRequestStore
 def submit(ui, repo, *args, **opts):
     """Create or update GitHub pull requests."""
     github_repo = check_github_repo(repo)
-    return asyncio.run(update_commits_in_stack(ui, repo, github_repo))
+    is_draft = opts.get("draft")
+    return asyncio.run(
+        update_commits_in_stack(ui, repo, github_repo, is_draft=is_draft)
+    )
 
 
 @dataclass
@@ -51,7 +54,9 @@ class CommitData:
         return self.msg
 
 
-async def update_commits_in_stack(ui, repo, github_repo: GitHubRepo) -> int:
+async def update_commits_in_stack(
+    ui, repo, github_repo: GitHubRepo, is_draft: bool
+) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
         ui.status_err(_("commit has no parent: currently unsupported\n"))
@@ -160,7 +165,9 @@ async def update_commits_in_stack(ui, repo, github_repo: GitHubRepo) -> int:
 
     if pull_requests_to_create:
         assert repository is not None
-        await create_pull_requests(pull_requests_to_create, repository, store, ui)
+        await create_pull_requests(
+            pull_requests_to_create, repository, store, ui, is_draft
+        )
 
     # Now that each pull request has a named branch pushed to GitHub, we can
     # create/update the pull request title and body, as appropriate.
@@ -221,6 +228,7 @@ async def create_pull_requests(
     repository: Repository,
     store: PullRequestStore,
     ui,
+    is_draft: bool,
 ):
     """Creates a new pull request for each entry in the `commits` list.
 
@@ -248,6 +256,7 @@ async def create_pull_requests(
             head=f"{head_ref_prefix}{branch_name}",
             title=title,
             body=body,
+            is_draft=is_draft,
         )
 
         if response.is_error():

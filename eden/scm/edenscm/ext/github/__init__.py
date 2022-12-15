@@ -57,6 +57,7 @@ subcmd = pull_request_command.subcommand(
             _("also include draft ancestors"),
         ),
         ("m", "message", None, _("message describing changes to updated commits")),
+        ("d", "draft", False, _("mark new pull requests as draft")),
     ],
 )
 def submit_cmd(ui, repo, *args, **opts):

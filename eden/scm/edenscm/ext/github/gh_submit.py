@@ -205,7 +205,14 @@ async def guess_next_pull_request_number(
 
 
 async def create_pull_request(
-    hostname: str, owner: str, name: str, base: str, head: str, title: str, body: str
+    hostname: str,
+    owner: str,
+    name: str,
+    base: str,
+    head: str,
+    title: str,
+    body: str,
+    is_draft: bool = False,
 ) -> Result:
     endpoint = f"repos/{owner}/{name}/pulls"
     params: Dict[str, _Params] = {
@@ -213,6 +220,7 @@ async def create_pull_request(
         "head": head,
         "title": title,
         "body": body,
+        "draft": is_draft,
     }
     return await make_request(params, hostname=hostname, endpoint=endpoint)
 
