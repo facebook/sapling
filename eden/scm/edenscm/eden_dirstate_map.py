@@ -7,7 +7,7 @@
 
 import errno
 import stat
-from typing import BinaryIO
+from typing import BinaryIO, Dict
 
 import eden.dirstate as eden_dirstate_serializer
 
@@ -16,12 +16,12 @@ from edenscmnative import parsers
 from . import dirstate, EdenThriftClient, localrepo, pycompat, ui as ui_mod, util, vfs
 
 
-MERGE_STATE_NOT_APPLICABLE = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
-MERGE_STATE_BOTH_PARENTS = eden_dirstate_serializer.MERGE_STATE_BOTH_PARENTS
-MERGE_STATE_OTHER_PARENT = eden_dirstate_serializer.MERGE_STATE_OTHER_PARENT
+MERGE_STATE_NOT_APPLICABLE: int = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
+MERGE_STATE_BOTH_PARENTS: int = eden_dirstate_serializer.MERGE_STATE_BOTH_PARENTS
+MERGE_STATE_OTHER_PARENT: int = eden_dirstate_serializer.MERGE_STATE_OTHER_PARENT
 DUMMY_MTIME = 0
 
-modefromflag = {
+modefromflag: Dict[str, int] = {
     "": stat.S_IFREG | 0o644,
     "x": stat.S_IFREG | 0o755,
     "l": (stat.S_IFREG if pycompat.iswindows else stat.S_IFLNK) | 0o755,
