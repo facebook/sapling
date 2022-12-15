@@ -658,4 +658,16 @@ TEST(ImmediateFuture, destructors_are_called_by_ImmediateFuture_move) {
   EXPECT_EQ(0, count);
 }
 
+TEST(ImmediateFuture, invalid_if_makeEmpty) {
+  EXPECT_FALSE(ImmediateFuture<int>::makeEmpty().valid());
+}
+
+TEST(ImmediateFuture, invalid_if_moved_from) {
+  ImmediateFuture<int> f{10};
+  EXPECT_TRUE(f.valid());
+  auto p = std::move(f);
+  EXPECT_TRUE(p.valid());
+  EXPECT_FALSE(f.valid());
+}
+
 } // namespace

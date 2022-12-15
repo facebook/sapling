@@ -40,6 +40,9 @@ ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept {
 }
 
 template <typename T>
+ImmediateFuture<T>::ImmediateFuture(Empty) noexcept : kind_{Kind::Nothing} {}
+
+template <typename T>
 ImmediateFuture<T>::ImmediateFuture(
     SemiFuture fut,
     SemiFutureReadiness readiness) noexcept {
@@ -205,7 +208,7 @@ bool ImmediateFuture<T>::isReady() const {
     case Kind::LazySemiFuture:
       return false;
     case Kind::Nothing:
-      throw DestroyedImmediateFutureError{};
+      throw folly::FutureInvalid{};
   }
   folly::assume_unreachable();
 }
@@ -242,7 +245,7 @@ T ImmediateFuture<T>::get() && {
     case Kind::LazySemiFuture:
       return std::move(semi_).get();
     case Kind::Nothing:
-      throw DestroyedImmediateFutureError();
+      throw folly::FutureInvalid();
   }
   folly::assume_unreachable();
 }
@@ -256,7 +259,7 @@ folly::Try<T> ImmediateFuture<T>::getTry() && {
     case Kind::LazySemiFuture:
       return std::move(semi_).getTry();
     case Kind::Nothing:
-      throw DestroyedImmediateFutureError();
+      throw folly::FutureInvalid();
   }
   folly::assume_unreachable();
 }
@@ -270,7 +273,7 @@ T ImmediateFuture<T>::get(folly::HighResDuration timeout) && {
     case Kind::LazySemiFuture:
       return std::move(semi_).get(timeout);
     case Kind::Nothing:
-      throw DestroyedImmediateFutureError();
+      throw folly::FutureInvalid();
   }
   folly::assume_unreachable();
 }
@@ -284,7 +287,7 @@ folly::Try<T> ImmediateFuture<T>::getTry(folly::HighResDuration timeout) && {
     case Kind::LazySemiFuture:
       return std::move(semi_).getTry(timeout);
     case Kind::Nothing:
-      throw DestroyedImmediateFutureError();
+      throw folly::FutureInvalid();
   }
   folly::assume_unreachable();
 }
@@ -298,7 +301,7 @@ folly::SemiFuture<T> ImmediateFuture<T>::semi() && {
     case Kind::LazySemiFuture:
       return std::move(semi_);
     case Kind::Nothing:
-      throw DestroyedImmediateFutureError();
+      throw folly::FutureInvalid();
   }
   folly::assume_unreachable();
 }

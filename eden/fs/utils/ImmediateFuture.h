@@ -25,9 +25,8 @@ namespace facebook::eden {
  * An attached callback may run either immediately or later, when the
  * ImmediateFuture's value is consumed.
  *
- * All methods can throw an DestroyedImmediateFutureError if an ImmediateFuture
- * is used after being destroyed. This can happen if an ImmediateFuture is used
- * after being moved.
+ * Like folly::Future and folly::SemiFuture, all methods can throw a
+ * folly::FutureInvalid exception if an ImmediateFuture is used after move.
  *
  * When detail::kImmediateFutureAlwaysDefer is set, all ImmediateFuture
  * constructor are pessimized to behave as if constructed from a non-ready
@@ -103,6 +102,22 @@ class ImmediateFuture {
 
   ImmediateFuture(ImmediateFuture&&) noexcept;
   ImmediateFuture& operator=(ImmediateFuture&&) noexcept;
+
+  /**
+   * Returns an ImmediateFuture in an empty state. Any attempt to then*() or
+   * get*() the returned ImmediateFuture will throw folly::FutureInvalid.
+   */
+  static ImmediateFuture makeEmpty() noexcept {
+    return ImmediateFuture{Empty{}};
+  }
+
+  /**
+   * Returns whether this future is valid. Returns false if moved-from or if
+   * returned by makeEmpty().
+   */
+  bool valid() const noexcept {
+    return kind_ != Kind::Nothing;
+  }
 
   /**
    * Call the func continuation once this future is ready.
@@ -255,6 +270,9 @@ class ImmediateFuture {
   using Try = folly::Try<T>;
   using SemiFuture = folly::SemiFuture<T>;
 
+  struct Empty {};
+  explicit ImmediateFuture(Empty) noexcept;
+
   /**
    * Define the behavior of the SemiFuture constructor and continuation when
    * dealing with ready SemiFuture.
@@ -279,9 +297,9 @@ class ImmediateFuture {
   friend ImmediateFuture<folly::Unit> makeNotReadyImmediateFuture();
 
   /**
-   * Destroy this ImmediateFuture.
+   * Clear this ImmediateFuture's contents, marking it empty.
    *
-   * Any subsequent access to it will throw a DestroyedImmediateFutureError.
+   * Any subsequent access to it will throw folly::FutureInvalid.
    */
   void destroy();
 
@@ -306,15 +324,6 @@ class ImmediateFuture {
     Try immediate_;
     SemiFuture semi_;
   };
-};
-
-/**
- * Exception thrown if the ImmediateFuture is used after being destroyed.
- */
-class DestroyedImmediateFutureError : public std::logic_error {
- public:
-  DestroyedImmediateFutureError()
-      : std::logic_error{"ImmediateFuture used after destruction"} {}
 };
 
 /**
