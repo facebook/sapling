@@ -367,6 +367,9 @@ struct MetadataDiff {
 
   /// Information about the file after the change.
   6: MetadataDiffFileInfo new_file_info;
+
+  /// Lines count in the diff between the two files.
+  7: optional MetadataDiffLinesCount lines_count;
 }
 
 /// File information that concerns the metadata diff.
@@ -412,6 +415,15 @@ enum FileGeneratedStatus {
 
   /// File is not generated.
   NOT_GENERATED = 3,
+}
+
+/// Lines count in a diff.
+struct MetadataDiffLinesCount {
+  /// Number of added lines.
+  1: i64 added_lines_count;
+
+  /// Number of deleted lines.
+  2: i64 deleted_lines_count;
 }
 
 /// Indicates whether the file was copied or moved

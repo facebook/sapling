@@ -26,6 +26,7 @@ use mononoke_api::FileType;
 use mononoke_api::HeaderlessUnifiedDiff;
 use mononoke_api::MetadataDiff;
 use mononoke_api::MetadataDiffFileInfo;
+use mononoke_api::MetadataDiffLinesCount;
 use mononoke_api::MononokeError;
 use mononoke_api::PushrebaseOutcome;
 use mononoke_api::RepoContext;
@@ -217,11 +218,22 @@ impl IntoResponse<thrift::MetadataDiffFileInfo> for MetadataDiffFileInfo {
     }
 }
 
+impl IntoResponse<Option<thrift::MetadataDiffLinesCount>> for Option<MetadataDiffLinesCount> {
+    fn into_response(self) -> Option<thrift::MetadataDiffLinesCount> {
+        self.map(|lines_count| thrift::MetadataDiffLinesCount {
+            added_lines_count: lines_count.added_lines_count as i64,
+            deleted_lines_count: lines_count.deleted_lines_count as i64,
+            ..Default::default()
+        })
+    }
+}
+
 impl IntoResponse<thrift::Diff> for MetadataDiff {
     fn into_response(self) -> thrift::Diff {
         thrift::Diff::metadata_diff(thrift::MetadataDiff {
             old_file_info: self.old_file_info.into_response(),
             new_file_info: self.new_file_info.into_response(),
+            lines_count: self.lines_count.into_response(),
             ..Default::default()
         })
     }

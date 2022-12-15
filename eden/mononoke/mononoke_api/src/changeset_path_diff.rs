@@ -72,6 +72,9 @@ pub struct MetadataDiff {
 
     /// Information about the file after the change.
     pub new_file_info: MetadataDiffFileInfo,
+
+    /// Lines count in the diff between the two files.
+    pub lines_count: Option<MetadataDiffLinesCount>,
 }
 
 /// File information that concerns the metadata diff.
@@ -98,6 +101,75 @@ impl MetadataDiffFileInfo {
             file_content_type: parsed_file_content.map(FileContentType::from),
             file_generated_status,
         }
+    }
+}
+
+/// Lines count in a diff for the metadata diff.
+#[derive(Default)]
+pub struct MetadataDiffLinesCount {
+    /// Number of added lines.
+    pub added_lines_count: usize,
+
+    /// Number of deleted lines.
+    pub deleted_lines_count: usize,
+}
+
+impl MetadataDiffLinesCount {
+    fn new(
+        old_parsed_file_content: Option<&ParsedFileContent>,
+        new_parsed_file_content: Option<&ParsedFileContent>,
+    ) -> Option<Self> {
+        match (old_parsed_file_content, new_parsed_file_content) {
+            (
+                Some(ParsedFileContent::Text(old_text_file)),
+                Some(ParsedFileContent::Text(new_text_file)),
+            ) => Some(Self::diff_files(old_text_file, new_text_file)),
+            (Some(ParsedFileContent::Text(old_text_file)), _) => {
+                Some(Self::file_deleted(old_text_file))
+            }
+            (_, Some(ParsedFileContent::Text(new_text_file))) => {
+                Some(Self::file_created(new_text_file))
+            }
+            _ => None,
+        }
+    }
+
+    fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Self {
+        xdiff::diff_hunks(
+            old_text_file.content.as_bytes(),
+            new_text_file.content.as_bytes(),
+        )
+        .into_iter()
+        .fold(
+            Default::default(),
+            |mut acc: MetadataDiffLinesCount, hunk| {
+                acc.add_to_added_lines_count(hunk.add.len());
+                acc.add_to_deleted_lines_count(hunk.remove.len());
+                acc
+            },
+        )
+    }
+
+    fn file_created(new_text_file: &TextFile) -> Self {
+        Self {
+            added_lines_count: new_text_file.content.lines().count(),
+            ..Default::default()
+        }
+    }
+
+    fn file_deleted(old_text_file: &TextFile) -> Self {
+        Self {
+            deleted_lines_count: old_text_file.content.lines().count(),
+            ..Default::default()
+        }
+    }
+
+    fn add_to_added_lines_count(&mut self, count: usize) {
+        self.added_lines_count = self.added_lines_count.saturating_add(count);
+    }
+
+    fn add_to_deleted_lines_count(&mut self, count: usize) {
+        self.deleted_lines_count = self.deleted_lines_count.saturating_add(count);
     }
 }
 
@@ -370,6 +442,10 @@ impl ChangesetPathDiffContext {
             ),
             new_file_info: MetadataDiffFileInfo::new(
                 new_file_type,
+                new_parsed_file_content.as_ref(),
+            ),
+            lines_count: MetadataDiffLinesCount::new(
+                old_parsed_file_content.as_ref(),
                 new_parsed_file_content.as_ref(),
             ),
         })

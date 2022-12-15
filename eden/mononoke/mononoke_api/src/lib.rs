@@ -52,6 +52,7 @@ pub use crate::changeset_path_diff::FileContentType;
 pub use crate::changeset_path_diff::FileGeneratedStatus;
 pub use crate::changeset_path_diff::MetadataDiff;
 pub use crate::changeset_path_diff::MetadataDiffFileInfo;
+pub use crate::changeset_path_diff::MetadataDiffLinesCount;
 pub use crate::changeset_path_diff::UnifiedDiff;
 pub use crate::changeset_path_diff::UnifiedDiffMode;
 pub use crate::errors::MononokeError;
