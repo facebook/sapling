@@ -48,17 +48,17 @@ messages = []
 triggered = set()
 
 
-def loadhint(ui, extname, registrarobj):
+def loadhint(ui, extname, registrarobj) -> None:
     for name, func in pycompat.iteritems(registrarobj._table):
         hinttable[name] = func
 
 
-def loadhintconfig(ui):
+def loadhintconfig(ui) -> None:
     for name, message in ui.configitems("hint-definitions"):
         hinttable[name] = lambda *args, **kwargs: message
 
 
-def trigger(name, *args, **kwargs):
+def trigger(name, *args, **kwargs) -> None:
     """Trigger a hint message. It will be shown at the end of the command."""
     func = hinttable.get(name)
     if func and name not in triggered:
@@ -68,7 +68,7 @@ def trigger(name, *args, **kwargs):
             messages.append((name, msg.rstrip()))
 
 
-def triggershow(ui, name, *args, **kwargs):
+def triggershow(ui, name, *args, **kwargs) -> None:
     """Trigger a hint message and show it immediately. Useful for warning
     things that might be slow before running the slow operation.
     """
@@ -81,7 +81,7 @@ def triggershow(ui, name, *args, **kwargs):
             ui.write_err("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
 
 
-def show(ui):
+def show(ui) -> None:
     """Show all triggered hint messages"""
     if ui.plain("hint"):
         return
@@ -105,7 +105,7 @@ def show(ui):
     triggered.clear()
 
 
-def silence(ui, names):
+def silence(ui, names) -> None:
     """Silence given hints"""
     paths = ui.identity.userconfigpaths()
     # In case there are multiple candidate paths, pick the one that exists.
@@ -119,7 +119,7 @@ def silence(ui, names):
     rcutil.editconfig(path, "hint", "ack", value)
 
 
-def clear():
+def clear() -> None:
     """Clear all triggered hints"""
     triggered.clear()
     del messages[:]
