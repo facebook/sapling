@@ -56,11 +56,63 @@ pub enum UnifiedDiffMode {
 /// Metadata about the differences between two files that is useful to
 /// Phabricator.
 pub struct MetadataDiff {
-    /// The file type before the change.
-    pub old_file_type: Option<FileType>,
+    /// Information about the file before the change.
+    pub old_file_info: MetadataDiffFileInfo,
 
-    /// The file type after the change.
-    pub new_file_type: Option<FileType>,
+    /// Information about the file after the change.
+    pub new_file_info: MetadataDiffFileInfo,
+}
+
+/// File information that concerns the metadata diff.
+pub struct MetadataDiffFileInfo {
+    /// File type (file, exec, or link)
+    pub file_type: Option<FileType>,
+
+    /// File content type (text, non-utf8, or binary)
+    pub file_content_type: Option<FileContentType>,
+}
+
+impl MetadataDiffFileInfo {
+    fn new(file_type: Option<FileType>, parsed_file_content: Option<&ParsedFileContent>) -> Self {
+        MetadataDiffFileInfo {
+            file_type,
+            file_content_type: parsed_file_content.map(FileContentType::from),
+        }
+    }
+}
+
+pub enum FileContentType {
+    Text,
+    NonUtf8,
+    Binary,
+}
+
+enum ParsedFileContent<'a> {
+    Text(&'a str),
+    NonUtf8,
+    Binary,
+}
+
+impl From<&ParsedFileContent<'_>> for FileContentType {
+    fn from(parsed_file_content: &ParsedFileContent) -> Self {
+        match parsed_file_content {
+            ParsedFileContent::Text(_) => FileContentType::Text,
+            ParsedFileContent::NonUtf8 => FileContentType::NonUtf8,
+            ParsedFileContent::Binary => FileContentType::Binary,
+        }
+    }
+}
+
+impl<'a> ParsedFileContent<'a> {
+    fn new(content: &'a Bytes) -> Self {
+        if let Ok(parsed_content) = std::str::from_utf8(content) {
+            ParsedFileContent::Text(parsed_content)
+        } else if content.contains(&0) {
+            ParsedFileContent::Binary
+        } else {
+            ParsedFileContent::NonUtf8
+        }
+    }
 }
 
 impl ChangesetPathDiffContext {
@@ -203,17 +255,27 @@ impl ChangesetPathDiffContext {
     }
 
     pub async fn metadata_diff(&self) -> Result<MetadataDiff, MononokeError> {
-        let new_file_type = match self.base() {
-            Some(path) => path.file_type().await?,
-            None => None,
+        let (new_file_type, new_file_content) = match self.base() {
+            Some(path) => try_join!(path.file_type(), path.file_content())?,
+            None => (None, None),
         };
-        let old_file_type = match self.other() {
-            Some(path) => path.file_type().await?,
-            None => None,
+        let new_parsed_file_content = new_file_content.as_ref().map(ParsedFileContent::new);
+
+        let (old_file_type, old_file_content) = match self.other() {
+            Some(path) => try_join!(path.file_type(), path.file_content())?,
+            None => (None, None),
         };
+        let old_parsed_file_content = old_file_content.as_ref().map(ParsedFileContent::new);
+
         Ok(MetadataDiff {
-            old_file_type,
-            new_file_type,
+            old_file_info: MetadataDiffFileInfo::new(
+                old_file_type,
+                old_parsed_file_content.as_ref(),
+            ),
+            new_file_info: MetadataDiffFileInfo::new(
+                new_file_type,
+                new_parsed_file_content.as_ref(),
+            ),
         })
     }
 }

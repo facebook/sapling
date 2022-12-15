@@ -281,6 +281,13 @@ impl ChangesetPathContentContext {
         Ok(file)
     }
 
+    pub async fn file_content(&self) -> Result<Option<Bytes>, MononokeError> {
+        Ok(match self.file().await? {
+            Some(context) => Some(context.content_concat().await?),
+            None => None,
+        })
+    }
+
     /// Returns a `TreeContext` or `FileContext` and `FileType` for the tree
     /// or file at this path. Returns `NotPresent` if the path is not a file
     /// or directory in this commit.

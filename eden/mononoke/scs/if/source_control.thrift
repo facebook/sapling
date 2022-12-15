@@ -362,19 +362,20 @@ struct RawDiff {
 
 /// Metadata diff (file types, summaries of added and removed lines, etc.).
 struct MetadataDiff {
-  /// File type (file, exec, or link) of the file before the change.
-  1: optional MetadataDiffFileType old_file_type;
+  /// Information about the file before the change.
+  5: MetadataDiffFileInfo old_file_info;
 
-  /// File type (file, exec, or link) of the file after the change.
-  2: optional MetadataDiffFileType new_file_type;
+  /// Information about the file after the change.
+  6: MetadataDiffFileInfo new_file_info;
+}
 
-  /// File content type (text, non-utf8, or binary) of the file before the change.
-  /// Not yet implemented.
-  3: optional MetadataDiffFileContentType old_file_content_type;
+/// File information that concerns the metadata diff.
+struct MetadataDiffFileInfo {
+  /// File type (file, exec, or link)
+  1: optional MetadataDiffFileType file_type;
 
-  /// File content type (text, non-utf8, or binary) of the file after the change.
-  /// Not yet implemented.
-  4: optional MetadataDiffFileContentType new_file_content_type;
+  /// File content type (text, non-utf8, or binary)
+  2: optional MetadataDiffFileContentType file_content_type;
 }
 
 enum MetadataDiffFileType {
