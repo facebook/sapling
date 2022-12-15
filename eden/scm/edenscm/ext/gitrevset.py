@@ -18,16 +18,18 @@ short version:
 from __future__ import absolute_import
 
 import re
+from typing import Pattern
 
 from edenscm import error, hg, namespaces, registrar, revset
 from edenscm.i18n import _
+from edenscm.namespaces import namespace
 from edenscm.node import hex
 
 
 namespacepredicate = registrar.namespacepredicate()
 revsetpredicate = registrar.revsetpredicate()
 
-githashre = re.compile("g([0-9a-fA-F]{40})")
+githashre: Pattern[str] = re.compile("g([0-9a-fA-F]{40})")
 
 templatekeyword = registrar.templatekeyword()
 
@@ -98,7 +100,7 @@ def _lookup_node(repo, hexnode, from_scm_type):
 
 
 @namespacepredicate("gitrev", priority=75)
-def _getnamespace(_repo):
+def _getnamespace(_repo) -> namespace:
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_gitlookup, nodemap=lambda repo, node: []
     )
