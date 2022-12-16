@@ -467,22 +467,11 @@ impl ConfigSet {
     ///
     /// This function is being removed but we need logging to understand its
     /// side-effect.
-    ///
-    /// About `superset_location` and `subset_locations`: They were intended to
-    /// check that `hgrc.dynamic` (`superset_location`) matches staticfiles
-    /// config (the `/etc/` config, `subset_locations`). However,
-    /// `subset_locations` is always set (by `configs.validationsubset`) to
-    /// empty in production config so this feature no longer works.
     pub fn ensure_location_supersets(
         &mut self,
-        _superset_location: String,
-        _subset_locations: Vec<String>,
         allowed_locations: Option<HashSet<&str>>,
         allowed_configs: Option<HashSet<(&str, &str)>>,
-    ) -> SupersetVerification {
-        let result = SupersetVerification::new();
-
-        // subset_locations (configs.validationsubset) is always empty in production.
+    ) {
         for (sname, section) in self.sections.iter_mut() {
             for (kname, values) in section.items.iter_mut() {
                 let values_copy = values.clone();
@@ -550,8 +539,6 @@ impl ConfigSet {
                 }
             }
         }
-
-        result
     }
 }
 
@@ -589,30 +576,6 @@ impl Options {
 impl<S: Into<Text>> From<S> for Options {
     fn from(source: S) -> Options {
         Options::new().source(source.into())
-    }
-}
-
-#[derive(Debug)]
-pub struct SupersetVerification {
-    // Configs (and their values) not set by the superset config, but should be.
-    pub missing: Vec<((Text, Text), Text)>,
-    // Configs (and their values) set by the superset config, but should not be.
-    pub extra: Vec<((Text, Text), Text)>,
-    // Configs (and their superset and subset values) who's values don't match.
-    pub mismatched: Vec<((Text, Text), Text, Text)>,
-}
-
-impl SupersetVerification {
-    pub fn new() -> Self {
-        SupersetVerification {
-            missing: vec![],
-            extra: vec![],
-            mismatched: vec![],
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.missing.is_empty() && self.extra.is_empty() && self.mismatched.is_empty()
     }
 }
 
@@ -1172,7 +1135,7 @@ space_list=value1.a value1.b
         let mut allow_list = HashSet::new();
         allow_list.insert("subset1");
 
-        cfg.ensure_location_supersets("super".to_string(), vec![], Some(allow_list.clone()), None);
+        cfg.ensure_location_supersets(Some(allow_list.clone()), None);
         assert_eq!(
             cfg.get("section1", "key1"),
             Some(Text::from_static("value1"))
@@ -1184,12 +1147,7 @@ space_list=value1.a value1.b
         allow_configs.insert(("section2", "key2"));
 
         set(&mut cfg, "section2", "key2", "value2", "subset2");
-        cfg.ensure_location_supersets(
-            "super".to_string(),
-            vec![],
-            Some(allow_list),
-            Some(allow_configs),
-        );
+        cfg.ensure_location_supersets(Some(allow_list), Some(allow_configs));
         assert_eq!(
             cfg.get("section1", "key1"),
             Some(Text::from_static("value1"))
@@ -1293,12 +1251,7 @@ x = 2
         let mut allowed_locations = HashSet::new();
         allowed_locations.insert("super");
 
-        cfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset".to_string()],
-            Some(allowed_locations),
-            None,
-        );
+        cfg.ensure_location_supersets(Some(allowed_locations), None);
     }
 
     #[test]

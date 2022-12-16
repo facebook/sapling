@@ -31,7 +31,6 @@ use util::path::expand_path;
 
 use crate::config::ConfigSet;
 use crate::config::Options;
-use crate::config::SupersetVerification;
 use crate::error::Error;
 use crate::error::Errors;
 #[cfg(not(feature = "fb"))]
@@ -62,7 +61,7 @@ pub trait ConfigSetHgExt {
         &mut self,
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<SupersetVerification, Errors>;
+    ) -> Result<(), Errors>;
 
     /// Load system config files if config environment variable is not set.
     /// Return errors parsing files.
@@ -89,7 +88,7 @@ pub trait ConfigSetHgExt {
     /// Return errors parsing files.
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
 
-    fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error>;
+    fn validate_dynamic(&mut self) -> Result<(), Error>;
 }
 
 /// Load config from specified repo root path, or global config if no path specified.
@@ -278,7 +277,7 @@ impl ConfigSetHgExt for ConfigSet {
         &mut self,
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<SupersetVerification, Errors> {
+    ) -> Result<(), Errors> {
         tracing::info!(
             repo_path = %repo_path.and_then(|p| p.to_str()).unwrap_or("<none>"),
             "loading config"
@@ -543,18 +542,13 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(feature = "fb")]
-    fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
-        let superset_location: String = "hgrc.dynamic".to_string();
-        let subset_locations: Vec<String> =
-            self.get_or("configs", "validationsubset", || vec![])?;
+    fn validate_dynamic(&mut self) -> Result<(), Error> {
         let allowed_locations: Option<Vec<String>> =
             self.get_opt::<Vec<String>>("configs", "allowedlocations")?;
         let allowed_configs: Option<Vec<String>> =
             self.get_opt::<Vec<String>>("configs", "allowedconfigs")?;
 
         Ok(self.ensure_location_supersets(
-            superset_location,
-            subset_locations,
             allowed_locations
                 .as_ref()
                 .map(|v| HashSet::from_iter(v.iter().map(|s| s.as_str()))),
@@ -568,8 +562,8 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     #[cfg(not(feature = "fb"))]
-    fn validate_dynamic(&mut self) -> Result<SupersetVerification, Error> {
-        Ok(SupersetVerification::new())
+    fn validate_dynamic(&mut self) -> Result<(), Error> {
+        Ok(())
     }
 }
 

@@ -11,7 +11,6 @@ use std::cell::RefCell;
 
 use configloader::config::ConfigSet;
 use configloader::config::Options;
-use configloader::config::SupersetVerification;
 use configloader::convert::parse_list;
 use configloader::hg::ConfigSetHgExt;
 use configloader::hg::OptionsHgExt;
@@ -137,71 +136,34 @@ py_class!(pub class config |py| {
     }
 
     @staticmethod
-    def load(repopath: Option<PyPathBuf>) -> PyResult<(config, Vec<(Str, Str, Option<Str>, Option<Str>)>)> {
+    def load(repopath: Option<PyPathBuf>) -> PyResult<Self> {
         let repopath = repopath.as_ref().map(|p| p.as_path());
         let mut cfg = ConfigSet::new();
-        let results = cfg.load::<String, String>(repopath, None).map_pyerr(py)?;
-        Ok((
-            config::create_instance(py, RefCell::new(cfg))?,
-            convert_superset_verification(results)
-        ))
+        cfg.load::<String, String>(repopath, None).map_pyerr(py)?;
+        Self::create_instance(py, RefCell::new(cfg))
     }
 
     def reload(
         &self,
         repopath: Option<PyPathBuf>,
         readonly_items: Option<Vec<(String, String)>>
-    ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
+    ) -> PyResult<PyNone> {
         let repopath = repopath.as_ref().map(|p| p.as_path());
         let mut cfg = self.cfg(py).borrow_mut();
-        let results = cfg.load(repopath, readonly_items).map_pyerr(py)?;
-        Ok(convert_superset_verification(results))
+        cfg.load(repopath, readonly_items).map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     def files(&self) -> PyResult<Vec<PyPathBuf>> {
         self.cfg(py).borrow().files().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
 
-    def validate(&self) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
+    def validate(&self) -> PyResult<PyNone> {
         let mut cfg = self.cfg(py).borrow_mut();
-        let results = cfg.validate_dynamic().map_pyerr(py)?;
-        Ok(convert_superset_verification(results))
+        cfg.validate_dynamic().map_pyerr(py)?;
+        Ok(PyNone)
     }
 });
-
-fn convert_superset_verification(
-    results: SupersetVerification,
-) -> Vec<(Str, Str, Option<Str>, Option<Str>)> {
-    let mut output: Vec<(Str, Str, Option<Str>, Option<Str>)> = vec![];
-    for ((section, key), value) in results.missing.iter() {
-        output.push((
-            section.to_string().into(),
-            key.to_string().into(),
-            None,
-            Some(value.to_string().into()),
-        ));
-    }
-
-    for ((section, key), value) in results.extra.iter() {
-        output.push((
-            section.to_string().into(),
-            key.to_string().into(),
-            Some(value.to_string().into()),
-            None,
-        ));
-    }
-
-    for ((section, key), super_value, sub_value) in results.mismatched.iter() {
-        output.push((
-            section.to_string().into(),
-            key.to_string().into(),
-            Some(super_value.to_string().into()),
-            Some(sub_value.to_string().into()),
-        ));
-    }
-
-    output
-}
 
 impl config {
     pub fn get_cfg(&self, py: Python) -> ConfigSet {
