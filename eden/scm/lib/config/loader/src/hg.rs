@@ -34,8 +34,6 @@ use crate::config::ConfigSet;
 use crate::config::Options;
 use crate::error::Error;
 use crate::error::Errors;
-#[cfg(not(feature = "fb"))]
-use crate::opensource;
 
 pub trait OptionsHgExt {
     /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
@@ -499,14 +497,10 @@ impl ConfigSetHgExt for ConfigSet {
     fn load_dynamic(
         &mut self,
         _repo_path: Option<&Path>,
-        opts: Options,
+        _opts: Options,
         _identity: &Identity,
     ) -> Result<Vec<Error>> {
-        if env::var("TESTTMP").is_ok() {
-            Ok(vec![])
-        } else {
-            Ok(self.parse(opensource::STATIC_HGRC, &opts))
-        }
+        Ok(Vec::new())
     }
 
     fn load_user(&mut self, opts: Options, ident: &Identity) -> Vec<Error> {

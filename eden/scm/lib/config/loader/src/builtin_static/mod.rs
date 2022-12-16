@@ -18,6 +18,7 @@ use unionconfig::UnionConfig;
 
 mod core;
 mod merge_tools;
+pub(crate) mod sapling;
 
 /// Return static builtin system config.
 ///
@@ -29,6 +30,10 @@ pub(crate) fn builtin_system(ident: &Identity) -> UnionConfig {
     let mut configs: Vec<Arc<dyn Config>> = vec![Arc::new(&core::CONFIG)];
     if ident.env_var("CONFIG").is_none() {
         configs.push(Arc::new(&merge_tools::CONFIG));
+    }
+    let is_test = std::env::var_os("TESTTMP").is_some();
+    if ident.cli_name() == "sl" && !is_test {
+        configs.push(Arc::new(&sapling::CONFIG));
     }
     UnionConfig::from_configs(configs)
 }

@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-pub const STATIC_HGRC: &str = r###"
+use staticconfig::static_config;
+use staticconfig::StaticConfig;
+
+/// Config used by the Sapling identity. Might be merged with core config.
+pub static CONFIG: StaticConfig = static_config!("builtin:sapling" => r###"
 [alias]
 metaedit=metaedit --batch
 journal=journal --verbose
@@ -621,4 +625,4 @@ post-pull.prmarker=sl debugprmarker
 
 [init]
 prefer-git=True
-"###;
+"###);

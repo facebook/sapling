@@ -30,8 +30,6 @@ pub use minibytes::Text;
 
 #[cfg(feature = "fb")]
 mod fb;
-#[cfg(not(feature = "fb"))]
-mod opensource;
 
 mod builtin_static;
 
