@@ -13,6 +13,7 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
@@ -169,17 +170,17 @@ impl WorkingCopy {
     }
 
     fn global_ignore_paths(root: &Path, config: &dyn Config) -> Vec<PathBuf> {
-        let mut ignore_paths = vec![];
-        if let Some(value) = config.get("ui", "ignore") {
-            let path = Path::new(value.as_ref());
-            ignore_paths.push(root.join(path));
-        }
-        for name in config.keys_prefixed("ui", "ignore.") {
-            let value = config.get("ui", &name).unwrap();
-            let path = Path::new(value.as_ref());
-            ignore_paths.push(root.join(path));
-        }
-        ignore_paths
+        config
+            .keys_prefixed("ui", "ignore.")
+            .iter()
+            .chain(Some(&"ignore".into()))
+            .filter_map(
+                |name| match config.get_nonempty_opt::<PathBuf>("ui", name) {
+                    Ok(Some(path)) => Some(root.join(path)),
+                    _ => None,
+                },
+            )
+            .collect()
     }
 
     fn construct_file_system(

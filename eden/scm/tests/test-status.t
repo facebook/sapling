@@ -583,3 +583,9 @@ using log status template, the copy information is displayed correctly.
   
 
   $ cd ..
+
+Make sure we expand env vars in ignore file path.
+  $ newclientrepo global-ignore-path
+  $ echo ignored > $TESTTMP/global_ignore
+  $ touch ignored
+  $ hg status --config ui.ignore='$TESTTMP/global_ignore'
