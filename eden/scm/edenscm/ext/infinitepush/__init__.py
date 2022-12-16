@@ -196,8 +196,7 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
 def pushbackupbundlewithdiscovery(ui, repo, other, heads, bookmarks):
 
     if heads:
-        with ui.configoverride({("remotenames", "fastheaddiscovery"): False}):
-            outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=heads)
+        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=heads)
     else:
         outgoing = None
 

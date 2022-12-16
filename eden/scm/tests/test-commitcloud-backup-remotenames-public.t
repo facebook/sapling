@@ -29,8 +29,7 @@ test covers the issue.
   >    done
   > }
 
-Setup server with a few commits and one remote bookmark. This remotebookmark
-may be used by remotenames extension in fastheaddiscovery heuristic
+Setup server with a few commits and one remote bookmark.
   $ hg init repo
   $ cd repo
   $ setupserver
@@ -84,8 +83,7 @@ Pull to get remote names
      default/master            05fb75d88dcd
      default/remotebook        b75a450e74d5
 
-Strip public commits from the repo, otherwise fastheaddiscovery heuristic will
-be skipped
+Strip public commits from the repo (still needed?)
   $ hg debugstrip -q -r 'desc(second):'
   $ hg log --graph -T '{desc}'
   @  first

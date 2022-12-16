@@ -552,7 +552,6 @@ class localrepository(object):
         if "hgsql" in self.requirements:
             # hgsql wants raw access to revlog. Disable modern features
             # unconditionally for hgsql.
-            self.ui.setconfig("experimental", "evolution", "obsolete", "hgsql")
             self.ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
             self.ui.setconfig("experimental", "rust-commits", "false", "hgsql")
             self.ui.setconfig("visibility", "enabled", "false", "hgsql")

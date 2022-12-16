@@ -181,7 +181,6 @@ def uisetup(ui) -> None:
     ui.setconfig("experimental", "rust-commits-changelog", "false", "hgsql")
     # hgsql does not want any kind of filtering - everything is public.
     ui.setconfig("mutation", "enabled", "false", "hgsql")
-    ui.setconfig("experimental", "evolution", "obsolete", "hgsql")
 
     if ishgsqlbypassed(ui):
         return

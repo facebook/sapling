@@ -200,12 +200,6 @@ Clean up repo1
 
 Test that rebasing and pushing works as expected
 
-#testcases setdiscovery fastdiscovery
-#if fastdiscovery
-  $ setconfig discovery.fastdiscovery=True
-#else
-  $ setconfig remotenames.fastheaddiscovery=1
-#endif
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes

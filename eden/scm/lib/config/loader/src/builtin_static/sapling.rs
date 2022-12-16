@@ -533,10 +533,6 @@ names=master main
 repos=remote/
 indentnonpublic=True
 
-[discovery]
-fastdiscovery=False
-knownserverbookmarks=master
-
 [rebase]
 experimental.inmemory.nomergedriver=False
 experimental.inmemory=True

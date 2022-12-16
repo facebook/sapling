@@ -4,7 +4,6 @@
 
   $ enable remotenames
   $ enable amend
-  $ setconfig remotenames.fastheaddiscovery=True
 
 Set up repositories
 
