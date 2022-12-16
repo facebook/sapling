@@ -35,5 +35,9 @@ pub(crate) fn builtin_system(ident: &Identity) -> UnionConfig {
     if ident.cli_name() == "sl" && !is_test {
         configs.push(Arc::new(&sapling::CONFIG));
     }
+    #[cfg(feature = "fb")]
+    if !is_test || std::env::var_os("TEST_PROD_CONFIGS").is_some() {
+        configs.push(Arc::new(&crate::fb::static_system::CONFIG));
+    }
     UnionConfig::from_configs(configs)
 }
