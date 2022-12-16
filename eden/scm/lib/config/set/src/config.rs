@@ -482,12 +482,14 @@ impl ConfigSet {
                     let index = index - removals;
 
                     // Get the filename of the value's rc location
-                    let location: Option<String> = value
-                        .location()
-                        .map(|l| l.0) // location PathBuf
-                        .map(|p| p.file_name().map(|f| f.to_str().map(|s| s.to_string())))
-                        .flatten()
-                        .flatten();
+                    let path: PathBuf = match value.location() {
+                        None => continue,
+                        Some((path, _)) => path,
+                    };
+                    let location: Option<String> = path
+                        .file_name()
+                        .and_then(|f| f.to_str())
+                        .map(|s| s.to_string());
                     // If only certain locations are allowed, and this isn't one of them, remove
                     // it. If location is None, it came from inmemory, so don't filter it.
                     if let Some(location) = location {
@@ -502,15 +504,16 @@ impl ConfigSet {
                                 != Some(true)
                         {
                             tracing::trace!(
-                                "dropping {}.{}={} set by {}",
+                                target: "configset::validate",
+                                "dropping {}.{} set by {} ({})",
                                 sname.as_ref(),
                                 kname.as_ref(),
+                                path.display().to_string(),
                                 value
                                     .value()
                                     .as_ref()
                                     .map(|v| v.as_ref())
                                     .unwrap_or_default(),
-                                &location,
                             );
                             values.remove(index);
                             removals += 1;
