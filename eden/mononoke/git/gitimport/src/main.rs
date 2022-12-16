@@ -263,9 +263,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .iter()
                 .filter_map(|(name, changeset)| changeset.map(|cs| (name, cs)))
             {
-                let name = name
+                let mut name = name
                     .strip_prefix("refs/")
-                    .context("Ref does not start with refs/")?;
+                    .context("Ref does not start with refs/")?
+                    .to_string();
+                if name.starts_with("remotes/origin/") {
+                    name = name.replacen("remotes/origin/", "heads/", 1);
+                };
                 let pushvars = None;
                 if repo_context
                     .create_bookmark(&name, *changeset, pushvars)
