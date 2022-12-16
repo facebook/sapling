@@ -6,6 +6,7 @@
  */
 
 use configloader::config::ConfigSet;
+use configloader::hg::ConfigSetHgExt;
 use configloader::Text;
 use minibench::bench;
 use minibench::elapsed;
@@ -25,6 +26,24 @@ fn main() {
         elapsed(|| {
             let mut cfg = ConfigSet::new();
             cfg.parse(text.clone(), &"bench".into());
+        })
+    });
+
+    bench("load system and user", || {
+        elapsed(|| {
+            let mut cfg = ConfigSet::new();
+            cfg.load::<String, String>(None, None).unwrap();
+        })
+    });
+
+    bench("load repo", || {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        std::fs::create_dir(path.join(".hg")).unwrap();
+        std::fs::create_dir(path.join(".sl")).unwrap();
+        elapsed(|| {
+            let mut cfg = ConfigSet::new();
+            cfg.load::<String, String>(Some(path), None).unwrap();
         })
     });
 }
