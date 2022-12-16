@@ -13,14 +13,14 @@ mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 reqwest = { git = "https://github.com/vmagro/reqwest", rev = "f9490c06756a9d35ab874c44657db790a87af80b" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+scip = { git = "https://github.com/davidbarsky/scip.git", rev = "58b9509f04aa853006ed1b1256434c421bb54eec" }
 solana-program = { git = "https://github.com/omertxyz/solana.git", rev = "03a3b241622b6248bb245c29baef538a88f04c0b" }
 solana-zk-token-sdk = { git = "https://github.com/omertxyz/solana.git", rev = "03a3b241622b6248bb245c29baef538a88f04c0b" }
 tar = { package = "tar", git = "https://github.com/jrwats/tar-rs.git", rev = "21eeccdc08d9b87f6ad610f9b20a5839aabe5974" }
 tempfile = { git = "https://github.com/Stebalien/tempfile.git", rev = "66aa57f7d3a38234fcd393077366b61d36171e42" }
 terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
 toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }
-windows-sys = { git = "https://github.com/fanzeyi/windows-rs", rev = "8775afca5d2017da427d34b291ae4f85f5820740" }
-windows-sys028 = { package = "windows-sys", git = "https://github.com/wilfred/windows-rs", rev = "eacf60132fc798a8e59174a7f25471bad541a042" }
+windows-sys = { package = "windows-sys", git = "https://github.com/davidbarsky/windows-rs", rev = "0489fa456a104f49c7807ae309743c36709bf179" }
 
 [workspace]
 members = [

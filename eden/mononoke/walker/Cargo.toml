@@ -33,7 +33,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 cmdlib_scrubbing = { version = "0.1.0", path = "../cmdlib/scrubbing" }
 context = { version = "0.1.0", path = "../server/context" }
-dashmap = { version = "5", features = ["rayon", "serde"] }
+dashmap = { version = "5.4", features = ["rayon", "serde"] }
 deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
 derive_more = "0.99.17"
 derived_data = { version = "0.1.0", path = "../derived_data" }

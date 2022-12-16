@@ -20,7 +20,7 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
-dashmap = { version = "5", features = ["rayon", "serde"] }
+dashmap = { version = "5.4", features = ["rayon", "serde"] }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
