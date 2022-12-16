@@ -502,7 +502,7 @@ impl ConfigSetHgExt for ConfigSet {
         opts: Options,
         _identity: &Identity,
     ) -> Result<Vec<Error>> {
-        if env::var("HG_NO_DEFAULT_CONFIG").is_ok() || env::var("TESTTMP").is_ok() {
+        if env::var("TESTTMP").is_ok() {
             Ok(vec![])
         } else {
             Ok(self.parse(opensource::STATIC_HGRC, &opts))
