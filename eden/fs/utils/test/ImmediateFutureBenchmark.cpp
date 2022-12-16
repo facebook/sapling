@@ -6,13 +6,16 @@
  */
 
 #include "eden/common/utils/benchharness/Bench.h"
+
+#include <folly/CPortability.h>
+
 #include "eden/fs/utils/ImmediateFuture.h"
 
 namespace {
 
 using namespace facebook::eden;
 
-void immediate_future(benchmark::State& state) {
+void ImmediateFuture_thenValue_with_int(benchmark::State& state) {
   ImmediateFuture<uint64_t> fut{};
 
   for (auto _ : state) {
@@ -21,8 +24,43 @@ void immediate_future(benchmark::State& state) {
   }
   state.SetItemsProcessed(std::move(fut).get());
 }
+BENCHMARK(ImmediateFuture_thenValue_with_int);
 
-void immediate_future_exc(benchmark::State& state) {
+// One byte storage, but every ctor and dtor is a function call.
+struct ExpensiveMove {
+  static volatile uint64_t count;
+
+  FOLLY_NOINLINE ExpensiveMove() {
+    ++count;
+  }
+  FOLLY_NOINLINE ~ExpensiveMove() {
+    ++count;
+  }
+  FOLLY_NOINLINE ExpensiveMove(ExpensiveMove&&) noexcept {
+    ++count;
+  }
+
+  ExpensiveMove& operator=(ExpensiveMove&&) noexcept = default;
+};
+
+volatile uint64_t ExpensiveMove::count;
+
+void ImmediateFuture_move_with_expensive_move(benchmark::State& state) {
+  ImmediateFuture<ExpensiveMove> fut;
+  uint64_t processed = 0;
+  for (auto _ : state) {
+    // Move construction.
+    ImmediateFuture<ExpensiveMove> newFut{std::move(fut)};
+    // Move assignment.
+    fut = std::move(newFut);
+    processed++;
+  }
+  benchmark::DoNotOptimize(fut);
+  state.SetItemsProcessed(processed);
+}
+BENCHMARK(ImmediateFuture_move_with_expensive_move);
+
+void ImmediateFuture_thenValue_with_exc(benchmark::State& state) {
   ImmediateFuture<uint64_t> fut{folly::Try<uint64_t>{std::logic_error("Foo")}};
 
   uint64_t processed = 0;
@@ -34,8 +72,9 @@ void immediate_future_exc(benchmark::State& state) {
   benchmark::DoNotOptimize(fut);
   state.SetItemsProcessed(processed);
 }
+BENCHMARK(ImmediateFuture_thenValue_with_exc);
 
-void folly_future(benchmark::State& state) {
+void folly_Future_thenValue_with_int(benchmark::State& state) {
   folly::Future<int> fut{0};
   for (auto _ : state) {
     auto newFut = std::move(fut).thenValue([](int v) { return v + 1; });
@@ -43,8 +82,6 @@ void folly_future(benchmark::State& state) {
   }
   state.SetItemsProcessed(std::move(fut).get());
 }
+BENCHMARK(folly_Future_thenValue_with_int);
 
-BENCHMARK(immediate_future);
-BENCHMARK(immediate_future_exc);
-BENCHMARK(folly_future);
 } // namespace
