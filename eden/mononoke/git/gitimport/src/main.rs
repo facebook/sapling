@@ -270,6 +270,10 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 if name.starts_with("remotes/origin/") {
                     name = name.replacen("remotes/origin/", "heads/", 1);
                 };
+                if name.as_str() == "heads/HEAD" {
+                    // Skip the HEAD revision: it shouldn't be imported as a bookmark in mononoke
+                    continue;
+                }
                 let pushvars = None;
                 if repo_context
                     .create_bookmark(&name, *changeset, pushvars)
