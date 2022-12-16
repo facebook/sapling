@@ -89,7 +89,7 @@ function populateAndSetISLWebview(
   panel.iconPath = vscode.Uri.joinPath(
     context.extensionUri,
     'resources',
-    'Sapling_favicon-light-green.svg',
+    'Sapling_favicon-light-green-transparent.svg',
   );
 
   logger.log('populate isl webview');
