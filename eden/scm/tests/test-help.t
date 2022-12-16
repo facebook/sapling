@@ -980,6 +980,8 @@ Test list of internal help commands
                  dump indexedlog data
    debugdumptrace
                  export tracing information
+   debugduplicatedconfig
+                 find duplicated or overridden configs
    debugdynamicconfig
                  generate the dynamic configuration
    debugedenimporthelper
