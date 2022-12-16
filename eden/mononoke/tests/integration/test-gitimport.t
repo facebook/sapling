@@ -76,6 +76,8 @@
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
+  * Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
+  * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created) (glob)
 # Importing a second time should still work
   $ gitimport "$GIT_REPO" --generate-bookmarks full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
@@ -86,6 +88,8 @@
   * Initializing repo: repo (glob)
   * Initialized repo: repo (glob)
   * All repos initialized. * (glob)
+  * Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
+  * Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date) (glob)
 
 
 # Start Mononoke

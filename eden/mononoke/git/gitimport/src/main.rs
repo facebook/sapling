@@ -289,7 +289,21 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         )
                         .await
                         .with_context(|| format!("failed to move bookmark {name} from {old_changeset:?} to {changeset:?}"))?;
+                        info!(
+                            ctx.logger(),
+                            "Bookmark: \"{name}\": {changeset:?} (moved from {old_changeset:?})"
+                        );
+                    } else {
+                        info!(
+                            ctx.logger(),
+                            "Bookmark: \"{name}\": {changeset:?} (already up-to-date)"
+                        );
                     }
+                } else {
+                    info!(
+                        ctx.logger(),
+                        "Bookmark: \"{name}\": {changeset:?} (created)"
+                    );
                 }
             }
         }
