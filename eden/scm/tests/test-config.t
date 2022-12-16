@@ -12,12 +12,7 @@ Invalid syntax: no value
   > EOF
   $ hg showconfig
   hg: parse errors: "*hgrc": (glob)
-   --> 1:11
-    |
-  1 | novaluekey\xe2\x90\x8a (esc)
-    |           ^---
-    |
-    = expected equal_sign
+  line 1: expect '[section]' or 'name = value'
   
   [255]
 
@@ -28,12 +23,18 @@ Invalid syntax: no key
   > EOF
   $ hg showconfig
   hg: parse errors: "*hgrc": (glob)
-   --> 1:1
-    |
-  1 | =nokeyvalue\xe2\x90\x8a (esc)
-    | ^---
-    |
-    = expected EOI, new_line, config_name, left_bracket, comment_line, or directive
+  line 1: empty config name
+  
+  [255]
+
+Invalid syntax: content after section
+
+  $ cat > .hg/hgrc << EOF
+  > [section]#
+  > EOF
+  $ hg showconfig
+  hg: parse errors: "*hgrc": (glob)
+  line 1: extra content after section header
   
   [255]
 
@@ -44,12 +45,7 @@ Test hint about invalid syntax from leading white space
   > EOF
   $ hg showconfig
   hg: parse errors: "*hgrc": (glob)
-   --> 1:2
-    |
-  1 |  key=value\xe2\x90\x8a (esc)
-    |  ^---
-    |
-    = expected EOI or new_line
+  line 1: indented line is not part of a multi-line config
   
   [255]
 
@@ -59,12 +55,7 @@ Test hint about invalid syntax from leading white space
   > EOF
   $ hg showconfig
   hg: parse errors: "*hgrc": (glob)
-   --> 1:2
-    |
-  1 |  [section]\xe2\x90\x8a (esc)
-    |  ^---
-    |
-    = expected EOI or new_line
+  line 1: indented line is not part of a multi-line config
   
   [255]
 

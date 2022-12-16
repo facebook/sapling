@@ -20,12 +20,7 @@ Basic syntax error
   $ echo "invalid" > $HGRC
   $ hg version
   hg: parse errors: "$TESTTMP*hgrc": (glob)
-   --> 1:8
-    |
-  1 | invalid\xe2\x90\x8a (esc)
-    |        ^---
-    |
-    = expected equal_sign
+  line 1: expect '[section]' or 'name = value'
   
   [255]
   $ cp orig.hgrc hgrc
@@ -50,12 +45,7 @@ issue1829: wrong indentation
   $ echo '  x = y' >> $HGRC
   $ hg version
   hg: parse errors: "$TESTTMP*hgrc": (glob)
-   --> 2:3
-    |
-  2 |   x = y\xe2\x90\x8a (esc)
-    |   ^---
-    |
-    = expected EOI or new_line
+  line 2: indented line is not part of a multi-line config
   
   [255]
 

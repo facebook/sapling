@@ -6,15 +6,8 @@
  */
 
 use std::borrow::Cow;
+use std::fmt;
 use std::ops::Range;
-
-use pest::Parser;
-use pest::Span;
-
-use crate::parser::ConfigParser;
-use crate::parser::Rule;
-
-type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 
 /// Instruction from parsed config.
 #[derive(Clone, Debug)]
@@ -39,7 +32,7 @@ pub enum Instruction<'a> {
 
 type ParseOutput<'a> = Vec<Instruction<'a>>;
 
-pub fn parse<'a>(text: &'a str) -> Result<ParseOutput<'a>, pest::error::Error<Rule>> {
+pub fn parse<'a>(text: &'a str) -> Result<ParseOutput<'a>, Error> {
     let ctx = Context { buf: text };
     ctx.parse()
 }
@@ -48,164 +41,177 @@ struct Context<'a> {
     buf: &'a str,
 }
 
+#[derive(Debug)]
+pub struct Error {
+    line_no: usize,
+    message: &'static str,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "line {}: {}", self.line_no + 1, self.message)
+    }
+}
+
+impl std::error::Error for Error {}
+
 impl<'a> Context<'a> {
-    fn handle_value(
-        &self,
-        pair: Pair<'a>,
-        section: &'a str,
-        name: &'a str,
-        span: Range<usize>,
-        output: &mut ParseOutput<'a>,
-    ) {
-        let pairs = pair.into_inner();
-        let mut lines = Vec::with_capacity(1);
-        for pair in pairs {
-            if Rule::line == pair.as_rule() {
-                lines.push(extract(self.buf, pair.as_span()));
+    fn parse(&self) -> Result<ParseOutput<'a>, Error> {
+        let mut output = Vec::with_capacity(self.instruction_size_hint());
+
+        // Parser state.
+        let mut section: &'a str = "";
+        let mut name: &'a str = "";
+        // For single or multi-line value.
+        let mut value_lines: Vec<&'a str> = Vec::with_capacity(1);
+
+        for (line_no, line) in self.buf.lines().enumerate().chain(std::iter::once((0, ""))) {
+            let first_char = line.chars().next().unwrap_or('#');
+            let value_empty: bool = value_lines.is_empty();
+            // Multi-line config.
+            if !value_empty && " \t".contains(first_char) {
+                value_lines.push(line.trim());
+                continue;
             }
-        }
-
-        let value = match lines.len() {
-            1 => Cow::Borrowed(strip_whitespace(lines[0], 0, lines[0].len())),
-            _ => {
-                // Strip empty lines at the end.
-                let mut n = lines.len();
-                while n > 0 && lines[n - 1].is_empty() {
-                    n -= 1;
-                }
-                Cow::Owned(lines[..n].join("\n"))
-            }
-        };
-
-        output.push(Instruction::SetConfig {
-            section,
-            name,
-            value,
-            span,
-        });
-    }
-
-    fn handle_config_item(&self, pair: Pair<'a>, section: &'a str, output: &mut ParseOutput<'a>) {
-        let pairs = pair.into_inner();
-        let mut name = "";
-        for pair in pairs {
-            match pair.as_rule() {
-                Rule::config_name => name = extract(self.buf, pair.as_span()),
-                Rule::value => {
-                    let span = pair.as_span();
-                    return self.handle_value(
-                        pair,
-                        section,
-                        name,
-                        span.start()..span.end(),
-                        output,
-                    );
-                }
-                _ => (),
-            }
-        }
-        unreachable!();
-    }
-
-    fn handle_section(&self, pair: Pair<'a>, section: &mut &'a str) {
-        let pairs = pair.into_inner();
-        for pair in pairs {
-            if let Rule::section_name = pair.as_rule() {
-                *section = extract(self.buf, pair.as_span());
-                return;
-            }
-        }
-        unreachable!();
-    }
-
-    fn handle_include(&self, pair: Pair<'a>, output: &mut ParseOutput<'a>) {
-        let pairs = pair.into_inner();
-        for pair in pairs {
-            if let Rule::line = pair.as_rule() {
-                let span = to_std_span(pair.as_span());
-                let path = pair.as_str();
-                output.push(Instruction::Include { path, span });
-            }
-        }
-    }
-
-    fn handle_unset(&self, pair: Pair<'a>, section: &'a str, output: &mut ParseOutput<'a>) {
-        let unset_span = pair.as_span();
-        let pairs = pair.into_inner();
-        for pair in pairs {
-            if let Rule::config_name = pair.as_rule() {
-                let name = extract(self.buf, pair.as_span());
-                let span = unset_span.start()..unset_span.end();
-                output.push(Instruction::UnsetConfig {
+            // Push parsed config.
+            if !value_empty {
+                let span = get_range(
+                    self.buf,
+                    value_lines.first().unwrap(),
+                    value_lines.last().unwrap(),
+                );
+                let value = if value_lines.len() == 1 {
+                    Cow::Borrowed(value_lines[0])
+                } else {
+                    // Strip empty lines at the end.
+                    let mut n = value_lines.len();
+                    while n > 0 && value_lines[n - 1].is_empty() {
+                        n -= 1;
+                    }
+                    Cow::Owned(value_lines[..n].join("\n"))
+                };
+                let inst = Instruction::SetConfig {
                     section,
                     name,
+                    value,
                     span,
-                });
-                return;
+                };
+                output.push(inst);
+                value_lines.clear();
+            }
+            // Handle different lines.
+            match first_char {
+                // [section] (space)
+                '[' => {
+                    let rest;
+                    (section, rest) = match line[1..].split_once(']') {
+                        None => {
+                            return Err(Error {
+                                line_no,
+                                message: "missing ']' for section header",
+                            });
+                        }
+                        Some((section, rest)) => (section.trim(), rest.trim()),
+                    };
+                    if !rest.is_empty() {
+                        return Err(Error {
+                            line_no,
+                            message: "extra content after section header",
+                        });
+                    }
+                    if section.is_empty() {
+                        return Err(Error {
+                            line_no,
+                            message: "empty section name",
+                        });
+                    }
+                }
+                // # comment
+                ';' | '#' => {
+                    continue;
+                }
+                // blank line
+                ' ' | '\t' => {
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+                    return Err(Error {
+                        line_no,
+                        message: "indented line is not part of a multi-line config",
+                    });
+                }
+                // %include or %unset
+                '%' => {
+                    if let Some(rest) = line.strip_prefix("%include ") {
+                        let path = rest.trim();
+                        let span = get_range(self.buf, path, path);
+                        let inst = Instruction::Include { path, span };
+                        output.push(inst);
+                    } else if let Some(rest) = line.strip_prefix("%unset ") {
+                        let name = rest.trim();
+                        let span = get_range(self.buf, name, name);
+                        if name.contains('=') {
+                            return Err(Error {
+                                line_no,
+                                message: "config name cannot include '='",
+                            });
+                        }
+                        let inst = Instruction::UnsetConfig {
+                            section,
+                            name,
+                            span,
+                        };
+                        output.push(inst);
+                    } else {
+                        return Err(Error {
+                            line_no,
+                            message: "unknown directive (expect '%include' or '%unset')",
+                        });
+                    }
+                }
+                // name = value
+                _ => {
+                    let value;
+                    (name, value) = match line.split_once('=') {
+                        None => {
+                            return Err(Error {
+                                line_no,
+                                message: "expect '[section]' or 'name = value'",
+                            });
+                        }
+                        Some((name, value)) => (name.trim(), value.trim()),
+                    };
+                    if name.is_empty() {
+                        return Err(Error {
+                            line_no,
+                            message: "empty config name",
+                        });
+                    }
+                    value_lines.push(value);
+                }
             }
         }
-        unreachable!();
-    }
 
-    fn handle_directive(&self, pair: Pair<'a>, section: &'a str, output: &mut ParseOutput<'a>) {
-        let pairs = pair.into_inner();
-        for pair in pairs {
-            match pair.as_rule() {
-                Rule::include => self.handle_include(pair, output),
-                Rule::unset => self.handle_unset(pair, section, output),
-                _ => {}
-            }
-        }
-    }
-
-    fn handle_file(&self, pair: Pair<'a>, section: &mut &'a str, output: &mut ParseOutput<'a>) {
-        match pair.as_rule() {
-            Rule::config_item => self.handle_config_item(pair, section, output),
-            Rule::section => self.handle_section(pair, section),
-            Rule::directive => self.handle_directive(pair, section, output),
-            Rule::blank_line | Rule::comment_line | Rule::new_line | Rule::EOI => {}
-
-            Rule::comment_start
-            | Rule::compound
-            | Rule::config_name
-            | Rule::equal_sign
-            | Rule::file
-            | Rule::include
-            | Rule::left_bracket
-            | Rule::line
-            | Rule::right_bracket
-            | Rule::section_name
-            | Rule::space
-            | Rule::unset
-            | Rule::value => unreachable!(),
-        }
-    }
-
-    fn parse(&self) -> Result<ParseOutput<'a>, pest::error::Error<Rule>> {
-        let mut output = Vec::new();
-        let mut section = "";
-        let pairs = ConfigParser::parse(Rule::file, self.buf)?;
-        for pair in pairs {
-            self.handle_file(pair, &mut section, &mut output);
-        }
         Ok(output)
     }
+
+    fn instruction_size_hint(&self) -> usize {
+        self.buf
+            .lines()
+            .filter(|l| l.starts_with('%') || l.contains('='))
+            .count()
+    }
 }
 
-/// Remove space characters from both ends. Remove newline characters from the end.
-/// `start` position is inclusive, `end` is exclusive.
-fn strip_whitespace(buf: &str, start: usize, end: usize) -> &str {
-    let slice: &str = &buf[start..end];
-    slice
-        .trim_start_matches(|c| c == '\t' || c == ' ')
-        .trim_end_matches(|c| " \t\r\n".contains(c))
-}
-
-/// Extract text from a larger buffer, with spaces stripped.
-fn extract<'a>(buf: &'a str, span: Span<'a>) -> &'a str {
-    strip_whitespace(buf, span.start(), span.end())
-}
-
-fn to_std_span(span: pest::Span) -> Range<usize> {
-    span.start()..span.end()
+/// Figure out a range in `text` so `text[range]` starts with the first byte
+/// of `start` and ends with the last byte of `end`.
+/// Assumes `start` and `end` are derived from (sub-strings of) `text`.
+fn get_range(text: &str, start: &str, end: &str) -> Range<usize> {
+    let text_offset: usize = text.as_ptr() as usize;
+    let start_offset: usize = start.as_ptr() as usize;
+    let end_offset: usize = (end.as_ptr() as usize) + end.len();
+    assert!(end_offset <= text_offset + text.len());
+    assert!(start_offset >= text_offset);
+    assert!(start_offset <= end_offset);
+    (start_offset - text_offset)..(end_offset - text_offset)
 }

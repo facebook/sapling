@@ -82,7 +82,7 @@ class ConfigParserTests(unittest.TestCase):
             normalizeSources(cfg, "a", "y"),
             [
                 ("2", ("a.rc", 10, 11, 3), "readpath"),
-                (None, ("b.rc", 29, 36, 5), "readpath"),
+                (None, ("b.rc", 35, 36, 5), "readpath"),
             ],
         )
         self.assertEqual(

@@ -15,7 +15,6 @@
 //! Pure. Do not depend on a filesystem.
 
 pub(crate) mod config;
-mod parser;
 #[cfg(test)]
 mod tests;
 

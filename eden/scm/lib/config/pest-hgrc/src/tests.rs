@@ -48,7 +48,7 @@ name3 = mutliple line,
     UnsetConfig {
         section: "section2",
         name: "name3",
-        span: 116..127,
+        span: 122..127,
     },
     Include {
         path: "bar",
@@ -62,13 +62,7 @@ name3 = mutliple line,
 fn test_parse_error() {
     let config = "%set a b";
     assert_eq!(
-        format!("\n{}", parse(config).unwrap_err()),
-        r#"
- --> 1:2
-  |
-1 | %set a b
-  |  ^---
-  |
-  = expected include or unset"#
+        format!("{}", parse(config).unwrap_err()),
+        "line 1: unknown directive (expect '%include' or '%unset')"
     );
 }

@@ -161,6 +161,7 @@ impl Config for ConfigSet {
 }
 
 /// Merge two lists. Preserve order (a is before b). Remove duplicated items.
+/// Assumes `a` and `b` do not have duplicated items respectively.
 fn merge_cow_list<'a, T: Clone + Hash + Eq>(a: Cow<'a, [T]>, b: Cow<'a, [T]>) -> Cow<'a, [T]> {
     if a.is_empty() {
         b
@@ -688,7 +689,7 @@ pub(crate) mod tests {
         assert_eq!(sources[0].source(), &"test_parse_basic");
         assert_eq!(sources[1].source(), &"test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
-        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..40));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..39));
         assert_eq!(sources[1].file_content().unwrap().len(), 100);
     }
 
@@ -756,113 +757,56 @@ pub(crate) mod tests {
     fn test_parse_errors() {
         let mut cfg = ConfigSet::new();
         let errors = cfg.parse("=foo", &"test_parse_errors".into());
-        assert_eq!(
-            format!("{}", errors[0]),
-            "\"\":
- --> 1:1
-  |
-1 | =foo
-  | ^---
-  |
-  = expected EOI, new_line, config_name, left_bracket, comment_line, or directive"
-        );
+        assert_eq!(format!("{}", errors[0]), "\"\":\nline 1: empty config name");
 
         let errors = cfg.parse(" a=b", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 1:2
-  |
-1 |  a=b
-  |  ^---
-  |
-  = expected EOI or new_line"
+            "\"\":\nline 1: indented line is not part of a multi-line config"
         );
 
         let errors = cfg.parse("%unset =foo", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 1:8
-  |
-1 | %unset =foo
-  |        ^---
-  |
-  = expected space or config_name"
+            "\"\":\nline 1: config name cannot include '='"
         );
 
         let errors = cfg.parse("[", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 1:2
-  |
-1 | [
-  |  ^---
-  |
-  = expected section_name"
+            "\"\":\nline 1: missing ']' for section header"
         );
 
         let errors = cfg.parse("[]", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 1:2
-  |
-1 | []
-  |  ^---
-  |
-  = expected section_name"
+            "\"\":\nline 1: empty section name"
         );
 
         let errors = cfg.parse("[a]]", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 1:4
-  |
-1 | [a]]
-  |    ^---
-  |
-  = expected EOI, new_line, or space"
+            "\"\":\nline 1: extra content after section header"
         );
 
         let errors = cfg.parse("# foo\n[y", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 2:3
-  |
-2 | [y
-  |   ^---
-  |
-  = expected right_bracket"
+            "\"\":\nline 2: missing ']' for section header"
         );
 
         let mut cfg = ConfigSet::new();
         let errors = cfg.parse("\n\n%unknown", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 3:2
-  |
-3 | %unknown
-  |  ^---
-  |
-  = expected include or unset"
+            "\"\":\nline 3: unknown directive (expect '%include' or '%unset')"
         );
 
         let mut cfg = ConfigSet::new();
         let errors = cfg.parse("[section]\nabc", &"test_parse_errors".into());
         assert_eq!(
             format!("{}", errors[0]),
-            "\"\":
- --> 2:4
-  |
-2 | abc
-  |    ^---
-  |
-  = expected equal_sign"
+            "\"\":\nline 2: expect '[section]' or 'name = value'"
         );
     }
 
@@ -894,7 +838,7 @@ pub(crate) mod tests {
         let sources = cfg.get_sources("x", "a");
         assert_eq!(sources.len(), 2);
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
-        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 26..35));
+        assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 33..34));
     }
 
     #[test]
