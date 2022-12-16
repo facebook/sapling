@@ -32,11 +32,12 @@ pub(crate) fn builtin_system(ident: &Identity) -> UnionConfig {
         configs.push(Arc::new(&merge_tools::CONFIG));
     }
     let is_test = std::env::var_os("TESTTMP").is_some();
-    if ident.cli_name() == "sl" && !is_test {
+    let force_prod = std::env::var_os("TEST_PROD_CONFIGS").is_some();
+    if ident.cli_name() == "sl" && (!is_test || force_prod) {
         configs.push(Arc::new(&sapling::CONFIG));
     }
     #[cfg(feature = "fb")]
-    if !is_test || std::env::var_os("TEST_PROD_CONFIGS").is_some() {
+    if !is_test || force_prod {
         configs.push(Arc::new(&crate::fb::static_system::CONFIG));
     }
     UnionConfig::from_configs(configs)
