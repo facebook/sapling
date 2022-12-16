@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
 from edenscm.i18n import _
-from ghstack.github_gh_cli import make_request, Result
+from ghstack import github_gh_cli as gh_cli
+from ghstack.github_gh_cli import Result
 
 from .consts import query
 from .pullrequest import PullRequestId
@@ -66,7 +67,7 @@ async def get_repository(hostname: str, owner: str, name: str) -> Result[Reposit
         "owner": owner,
         "name": name,
     }
-    result = await make_request(params, hostname=hostname)
+    result = await gh_cli.make_request(params, hostname=hostname)
     if result.is_error():
         return result
 
@@ -103,7 +104,7 @@ async def get_pull_request_details(
         "name": pr.name,
         "number": pr.number,
     }
-    result = await make_request(params, hostname=pr.get_hostname())
+    result = await gh_cli.make_request(params, hostname=pr.get_hostname())
     if result.is_error():
         return result
 
@@ -161,7 +162,7 @@ async def create_pull_request_placeholder_issue(
     params: Dict[str, _Params] = {
         "title": "placeholder for pull request",
     }
-    result = await make_request(params, hostname=hostname, endpoint=endpoint)
+    result = await gh_cli.make_request(params, hostname=hostname, endpoint=endpoint)
     if result.is_error():
         return result
     else:
@@ -211,7 +212,7 @@ async def create_pull_request(
         "issue": issue,
         "draft": is_draft,
     }
-    return await make_request(params, hostname=hostname, endpoint=endpoint)
+    return await gh_cli.make_request(params, hostname=hostname, endpoint=endpoint)
 
 
 async def update_pull_request(
@@ -226,7 +227,7 @@ async def update_pull_request(
         "title": title,
         "body": body,
     }
-    result = await make_request(params, hostname=hostname)
+    result = await gh_cli.make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
@@ -245,7 +246,7 @@ async def create_branch(
         "name": f"refs/heads/{branch_name}",
         "oid": oid,
     }
-    result = await make_request(params, hostname=hostname)
+    result = await gh_cli.make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
@@ -262,7 +263,7 @@ async def merge_into_branch(
         "base": branch_name,
         "head": oid_to_merge,
     }
-    result = await make_request(params, hostname=hostname)
+    result = await gh_cli.make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
@@ -277,7 +278,7 @@ async def get_username(hostname: str) -> Result[str]:
     params: Dict[str, _Params] = {
         "query": query.GRAPHQL_GET_LOGIN,
     }
-    result = await make_request(params, hostname=hostname)
+    result = await gh_cli.make_request(params, hostname=hostname)
     if result.is_error():
         return result
     else:
