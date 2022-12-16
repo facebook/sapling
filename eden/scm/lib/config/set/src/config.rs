@@ -17,11 +17,11 @@ use std::sync::Arc;
 use configmodel::Config;
 pub use configmodel::ValueLocation;
 pub use configmodel::ValueSource;
+use hgrc_parser::parse;
+use hgrc_parser::Instruction;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
 use minibytes::Text;
-use pest_hgrc::parse;
-use pest_hgrc::Instruction;
 use util::path::expand_path;
 
 use crate::error::Error;

@@ -6,8 +6,8 @@
  */
 
 extern crate proc_macro;
+use hgrc_parser::Instruction;
 use indexmap::IndexMap;
-use pest_hgrc::Instruction;
 use proc_macro::TokenStream;
 use proc_macro::TokenTree;
 
@@ -34,7 +34,7 @@ pub fn static_rc(tokens: TokenStream) -> TokenStream {
 
     // Parse hgrc.
     let mut items: Vec<(&str, &str, Option<String>)> = Vec::new();
-    for inst in pest_hgrc::parse(&content).expect("parse static_rc!") {
+    for inst in hgrc_parser::parse(&content).expect("parse static_rc!") {
         match inst {
             Instruction::SetConfig {
                 section,

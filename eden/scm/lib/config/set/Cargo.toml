@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 configmodel = { version = "0.1.0", path = "../model" }
+hgrc-parser = { version = "0.1.0", path = "../hgrc-parser" }
 indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
-pest-hgrc = { version = "0.1.0", path = "../pest-hgrc" }
 tracing = "0.1.35"
 util = { version = "0.1.0", path = "../../util" }
 

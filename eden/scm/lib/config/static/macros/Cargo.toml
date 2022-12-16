@@ -11,5 +11,5 @@ doctest = false
 proc-macro = true
 
 [dependencies]
+hgrc-parser = { version = "0.1.0", path = "../../hgrc-parser" }
 indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
-pest-hgrc = { version = "0.1.0", path = "../../pest-hgrc" }
