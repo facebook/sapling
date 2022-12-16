@@ -292,41 +292,50 @@ impl<'a> FileStoreBuilder<'a> {
     }
 
     pub fn build(mut self) -> Result<FileStore> {
+        tracing::trace!(target: "revisionstore::filestore", "checking cache");
         if self.contentstore.is_none() {
             if let Some(cache_path) = cache_path(self.config, &self.suffix)? {
                 check_cache_buster(&self.config, &cache_path);
             }
         }
 
+        tracing::trace!(target: "revisionstore::filestore", "processing extstored policy");
         let extstored_policy = self.get_extstored_policy()?;
+
+        tracing::trace!(target: "revisionstore::filestore", "processing lfs threshold");
         let lfs_threshold_bytes = self.get_lfs_threshold()?.map(|b| b.value());
 
         let edenapi_retries = self.get_edenapi_retries();
 
+        tracing::trace!(target: "revisionstore::filestore", "processing local");
         let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
             Some(indexedlog_local)
         } else {
             self.build_indexedlog_local()?
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing cache");
         let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {
             Some(indexedlog_cache)
         } else {
             self.build_indexedlog_cache()?
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing lfs local");
         let lfs_local = if let Some(lfs_local) = self.lfs_local.take() {
             Some(lfs_local)
         } else {
             self.build_lfs_local()?
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing lfs cache");
         let lfs_cache = if let Some(lfs_cache) = self.lfs_cache.take() {
             Some(lfs_cache)
         } else {
             self.build_lfs_cache()?
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing aux data");
         let (aux_local, aux_cache) = if self.store_aux_data {
             let aux_local = self.build_aux_local()?;
             let aux_cache = self.build_aux_cache()?;
@@ -335,6 +344,7 @@ impl<'a> FileStoreBuilder<'a> {
             (None, None)
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing lfs remote");
         let lfs_remote = if self.use_lfs()? {
             if let Some(ref lfs_cache) = lfs_cache {
                 // TODO(meyer): Refactor upload functionality so we don't need to use LfsRemote with it's own references to the
@@ -354,6 +364,7 @@ impl<'a> FileStoreBuilder<'a> {
 
         let memcache = self.memcache.take();
 
+        tracing::trace!(target: "revisionstore::filestore", "processing edenapi");
         let edenapi = if self.use_edenapi()? {
             if let Some(edenapi) = self.edenapi.take() {
                 Some(edenapi)
@@ -364,6 +375,7 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing contentstore");
         let contentstore = if self
             .config
             .get_or_default::<bool>("scmstore", "contentstorefallback")?
@@ -373,6 +385,7 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
+        tracing::trace!(target: "revisionstore::filestore", "processing fetch logger");
         let logging_regex = self
             .config
             .get_opt::<String>("remotefilelog", "undesiredfileregex")?
@@ -399,6 +412,7 @@ impl<'a> FileStoreBuilder<'a> {
                 None
             };
 
+        tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             extstored_policy,
             lfs_threshold_bytes,
@@ -592,18 +606,21 @@ impl<'a> TreeStoreBuilder<'a> {
     pub fn build(mut self) -> Result<TreeStore> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
         // (the EdenApiAdapter stuff needs to be fixed in particular)
+        tracing::trace!(target: "revisionstore::treestore", "checking cache");
         if self.contentstore.is_none() {
             if let Some(cache_path) = cache_path(self.config, &self.suffix)? {
                 check_cache_buster(&self.config, &cache_path);
             }
         }
 
+        tracing::trace!(target: "revisionstore::treestore", "processing local");
         let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
             Some(indexedlog_local)
         } else {
             self.build_indexedlog_local()?
         };
 
+        tracing::trace!(target: "revisionstore::treestore", "processing cache");
         let indexedlog_cache = if let Some(indexedlog_cache) = self.indexedlog_cache.take() {
             Some(indexedlog_cache)
         } else {
@@ -612,6 +629,7 @@ impl<'a> TreeStoreBuilder<'a> {
 
         let memcache = self.memcache.take();
 
+        tracing::trace!(target: "revisionstore::treestore", "processing edenapi");
         let edenapi = if self.use_edenapi()? {
             if let Some(edenapi) = self.edenapi.take() {
                 Some(edenapi)
@@ -622,6 +640,7 @@ impl<'a> TreeStoreBuilder<'a> {
             None
         };
 
+        tracing::trace!(target: "revisionstore::treestore", "processing contentstore");
         let contentstore = if self
             .config
             .get_or_default::<bool>("scmstore", "contentstorefallback")?
@@ -631,6 +650,7 @@ impl<'a> TreeStoreBuilder<'a> {
             None
         };
 
+        tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
 

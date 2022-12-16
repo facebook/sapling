@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use configloader::config::ConfigSet;
 use configloader::Config;
@@ -273,7 +274,9 @@ impl Repo {
         match &self.eden_api {
             Some(eden_api) => Ok(eden_api.clone()),
             None => {
+                tracing::trace!(target: "repo::eden_api", "creating edenapi");
                 let correlator = edenapi::DEFAULT_CORRELATOR.as_str();
+                tracing::trace!(target: "repo::eden_api", "getting edenapi builder");
                 let eden_api = Builder::from_config(&self.config)?
                     .correlator(Some(correlator))
                     .build()?;
@@ -331,6 +334,7 @@ impl Repo {
             return Ok(Arc::new(fs.clone()));
         }
 
+        tracing::trace!(target: "repo::file_store", "creating edenapi");
         let eden_api = if self.store_requirements.contains("git") {
             None
         } else {
@@ -342,6 +346,7 @@ impl Repo {
             }
         };
 
+        tracing::trace!(target: "repo::file_store", "building filestore");
         let mut file_builder = FileStoreBuilder::new(self.config())
             .local_path(self.store_path())
             .correlator(edenapi::DEFAULT_CORRELATOR.as_str());
@@ -352,10 +357,12 @@ impl Repo {
             file_builder = file_builder.override_edenapi(false);
         }
 
+        tracing::trace!(target: "repo::file_store", "configuring aux data");
         if self.config.get_or_default("scmstore", "auxindexedlog")? {
             file_builder = file_builder.store_aux_data();
         }
 
+        tracing::trace!(target: "repo::file_store", "configuring memcache");
         if self
             .config
             .get_nonempty("remotefilelog", "cachekey")
@@ -364,9 +371,12 @@ impl Repo {
             file_builder = file_builder.memcache(Arc::new(MemcacheStore::new(&self.config)?));
         }
 
-        let fs = Arc::new(ArcFileStore(Arc::new(file_builder.build()?)));
+        tracing::trace!(target: "repo::file_store", "building file store");
+        let file_store = file_builder.build().context("when building FileStore")?;
+        let fs = Arc::new(ArcFileStore(Arc::new(file_store)));
 
         self.file_store = Some(fs.clone());
+        tracing::trace!(target: "repo::file_store", "filestore created");
 
         Ok(fs)
     }
@@ -443,12 +453,18 @@ impl Repo {
             (false, false) => FileSystemType::Normal,
         };
 
+        tracing::trace!(target: "repo::workingcopy", "initializing vfs at {path:?}");
         let vfs = VFS::new(path.to_path_buf())?;
+        let case_sensitive = vfs.case_sensitive();
+        tracing::trace!(target: "repo::workingcopy", "case sensitive: {case_sensitive}");
 
         let dirstate_path = path.join(self.ident.dot_dir()).join("dirstate");
+        tracing::trace!(target: "repo::workingcopy", dirstate_path=?dirstate_path);
+
         let treestate = match filesystem {
             FileSystemType::Eden => {
-                TreeState::from_eden_dirstate(dirstate_path, vfs.case_sensitive())?
+                tracing::trace!(target: "repo::workingcopy", "loading edenfs dirstate");
+                TreeState::from_eden_dirstate(dirstate_path, case_sensitive)?
             }
             _ => {
                 let treestate_path = path.join(self.ident.dot_dir()).join("treestate");
@@ -456,22 +472,24 @@ impl Repo {
                     .map_err(anyhow::Error::from)?
                     .is_some()
                 {
+                    tracing::trace!(target: "repo::workingcopy", "reading dirstate file");
                     let mut buf =
                         util::file::open(dirstate_path, "r").map_err(anyhow::Error::from)?;
+                    tracing::trace!(target: "repo::workingcopy", "deserializing dirstate");
                     let dirstate = Dirstate::deserialize(&mut buf)?;
                     let fields = dirstate
                         .tree_state
                         .ok_or_else(|| anyhow!("missing treestate fields on dirstate"))?;
 
-                    TreeState::open(
-                        treestate_path.join(fields.tree_filename),
-                        fields.tree_root_id,
-                        vfs.case_sensitive(),
-                    )?
+                    let filename = fields.tree_filename;
+                    let root_id = fields.tree_root_id;
+                    tracing::trace!(target: "repo::workingcopy", "loading treestate {filename} {root_id:?}");
+                    TreeState::open(treestate_path.join(filename), root_id, case_sensitive)?
                 } else {
-                    let (treestate, root_id) =
-                        TreeState::new(&treestate_path, vfs.case_sensitive())?;
+                    tracing::trace!(target: "repo::workingcopy", "creating treestate");
+                    let (treestate, root_id) = TreeState::new(&treestate_path, case_sensitive)?;
 
+                    tracing::trace!(target: "repo::workingcopy", "creating dirstate");
                     let dirstate = Dirstate {
                         p1: *HgId::null_id(),
                         p2: *HgId::null_id(),
@@ -483,16 +501,23 @@ impl Repo {
                         }),
                     };
 
+                    tracing::trace!(target: "repo::workingcopy", "creating dirstate file");
                     let mut file =
                         util::file::create(dirstate_path).map_err(anyhow::Error::from)?;
+
+                    tracing::trace!(target: "repo::workingcopy", "serializing dirstate");
                     dirstate.serialize(&mut file)?;
                     treestate
                 }
             }
         };
+        tracing::trace!(target: "repo::workingcopy", "treestate loaded");
         let treestate = Arc::new(Mutex::new(treestate));
 
+        tracing::trace!(target: "repo::workingcopy", "creating file store");
         let file_store = self.file_store()?;
+
+        tracing::trace!(target: "repo::workingcopy", "creating tree resolver");
         let tree_resolver = Arc::new(self.tree_resolver()?);
 
         Ok(WorkingCopy::new(

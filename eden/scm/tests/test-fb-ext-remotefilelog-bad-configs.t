@@ -28,5 +28,5 @@ Verify error message when no fallback specified
   $ rm .hg/hgrc
   $ clearcache
   $ hg up tip
-  abort: working copy is missing information or corrupt: Missing required config item: edenapi.url
+  abort: cannot initialize working copy: Missing required config item: edenapi.url
   [255]

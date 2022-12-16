@@ -63,11 +63,16 @@ impl fmt::Debug for TreeState {
 impl TreeState {
     /// Read `TreeState` from a file, or create an empty new `TreeState` if `root_id` is None.
     pub fn open<P: AsRef<Path>>(path: P, root_id: BlockId, case_sensitive: bool) -> Result<Self> {
+        let path = path.as_ref();
+        tracing::trace!(target: "treestate::open", "creating filestore at {path:?}");
         let store = FileStore::open(path)?;
         let root = {
+            tracing::trace!(target: "treestate::open", "reading root data");
             let mut root_buf = Cursor::new(store.read(root_id)?);
+            tracing::trace!(target: "treestate::open", "deserializing root data");
             TreeStateRoot::deserialize(&mut root_buf)?
         };
+        tracing::trace!(target: "treestate::open", "constructing tree");
         let tree = Tree::open(root.tree_block_id(), root.file_count());
         Ok(TreeState {
             store,
@@ -80,9 +85,11 @@ impl TreeState {
     }
 
     pub fn new(directory: &Path, case_sensitive: bool) -> Result<(Self, BlockId)> {
+        tracing::trace!(target: "treestate::create", "creating directory {directory:?}");
         create_dir(directory)?;
         let name = format!("{:x}", uuid::Uuid::new_v4());
         let path = directory.join(&name);
+        tracing::trace!(target: "treestate::create", "creating filestore {path:?}");
         let store = FileStore::create(&path)?;
         let root = TreeStateRoot::default();
         let tree = Tree::new();
@@ -94,8 +101,10 @@ impl TreeState {
             eden_dirstate_path: None,
             case_sensitive,
         };
+        tracing::trace!(target: "treestate::create", "flushing treestate");
         let root_id = treestate.flush()?;
 
+        tracing::trace!(target: "treestate::create", "treestate created");
         Ok((treestate, root_id))
     }
 
