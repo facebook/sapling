@@ -5,33 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Write;
-
-use bytes::Bytes;
 use configloader::config::ConfigSet;
+use configloader::Text;
 use minibench::bench;
 use minibench::elapsed;
 
 fn main() {
     bench("parse 645KB file", || {
-        let mut config_file = Vec::new();
+        let mut config_file = String::new();
         for _ in 0..100 {
             for section in b'a'..b'z' {
-                config_file
-                    .write(format!("[{ch}{ch}{ch}{ch}]\n", ch = section as char).as_bytes())
-                    .unwrap();
+                config_file += &format!("[{ch}{ch}{ch}{ch}]\n", ch = section as char);
                 for name in b'a'..b'z' {
-                    config_file
-                        .write(
-                            format!("{ch}{ch}{ch} = {ch}{ch}{ch}\n", ch = name as char).as_bytes(),
-                        )
-                        .unwrap();
+                    config_file += &format!("{ch}{ch}{ch} = {ch}{ch}{ch}\n", ch = name as char);
                 }
             }
         }
+        let text = Text::from(config_file);
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.parse(Bytes::from(&config_file[..]), &"bench".into());
+            cfg.parse(text.clone(), &"bench".into());
         })
     });
 }
