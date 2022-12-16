@@ -1391,13 +1391,72 @@ pub mod scratch {
     use std::collections::BTreeSet;
     use std::collections::VecDeque;
     use std::fs;
+    use std::fs::DirEntry;
+    use std::path::Path;
     use std::path::PathBuf;
 
     use anyhow::Result;
+    use edenfs_utils::metadata::MetadataExt;
     use subprocess::Exec;
     use subprocess::Redirection as SubprocessRedirection;
 
     use super::Redirection;
+
+    pub fn usage_for_dir(
+        path: &Path,
+        device_id: Option<u64>,
+    ) -> std::io::Result<(u64, Vec<PathBuf>)> {
+        let device_id = match device_id {
+            Some(device_id) => device_id,
+            None => match fs::metadata(path) {
+                Ok(metadata) => metadata.eden_dev(),
+                Err(e) if ignored_io_error(&e) => return Ok((0, vec![path.to_path_buf()])),
+                Err(e) => return Err(e),
+            },
+        };
+
+        let mut total_size = 0;
+        let mut failed_to_check_files = Vec::new();
+        for dirent in fs::read_dir(path)? {
+            match usage_for_dir_entry(dirent, device_id) {
+                Ok((subtotal_size, mut failed_files)) => {
+                    total_size += subtotal_size;
+                    failed_to_check_files.append(&mut failed_files);
+                    Ok(())
+                }
+                Err(e) if ignored_io_error(&e) => {
+                    failed_to_check_files.push(path.to_path_buf());
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }?;
+        }
+        Ok((total_size, failed_to_check_files))
+    }
+
+    /// Intended to only be called by [usage_for_dir]
+    fn usage_for_dir_entry(
+        dirent: std::io::Result<DirEntry>,
+        parent_device_id: u64,
+    ) -> std::io::Result<(u64, Vec<PathBuf>)> {
+        let entry = dirent?;
+        let symlink_metadata = fs::symlink_metadata(entry.path())?;
+        if symlink_metadata.is_dir() {
+            // Don't recurse onto different filesystems
+            if cfg!(windows) || symlink_metadata.eden_dev() == parent_device_id {
+                usage_for_dir(&entry.path(), Some(parent_device_id))
+            } else {
+                Ok((0, vec![]))
+            }
+        } else {
+            Ok((symlink_metadata.eden_file_size(), vec![]))
+        }
+    }
+
+    fn ignored_io_error(error: &std::io::Error) -> bool {
+        error.kind() == std::io::ErrorKind::NotFound
+            || error.kind() == std::io::ErrorKind::PermissionDenied
+    }
 
     /// Find all the directories under `redirection_path` that aren't present in
     /// `existing_redirections`.
