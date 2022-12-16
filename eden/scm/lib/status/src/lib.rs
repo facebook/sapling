@@ -64,6 +64,10 @@ impl StatusBuilder {
         self
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (&RepoPath, FileStatus)> {
+        self.0.iter()
+    }
+
     // This fn has to take 'deconstructed' self, because you can't borrow &mut self and &self.xxx at the same time
     fn index(
         all: &mut HashMap<RepoPathBuf, FileStatus>,

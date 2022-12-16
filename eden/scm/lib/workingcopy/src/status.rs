@@ -17,7 +17,6 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
-use status::Status;
 use status::StatusBuilder;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
@@ -43,7 +42,7 @@ pub fn compute_status(
     treestate: Arc<Mutex<TreeState>>,
     pending_changes: impl Iterator<Item = Result<ChangeType>>,
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
-) -> Result<Status> {
+) -> Result<StatusBuilder> {
     let mut modified = vec![];
     let mut added = vec![];
     let mut removed = vec![];
@@ -216,8 +215,7 @@ pub fn compute_status(
         .added(added)
         .removed(removed)
         .deleted(deleted)
-        .unknown(unknown)
-        .build())
+        .unknown(unknown))
 }
 
 /// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
@@ -248,6 +246,7 @@ fn walk_treestate(
 #[cfg(test)]
 mod tests {
     use status::FileStatus;
+    use status::Status;
     use tempdir::TempDir;
     use treestate::filestate::FileStateV2;
     use types::RepoPath;
@@ -371,7 +370,7 @@ mod tests {
 
         // Compute the status.
         let matcher = Arc::new(pathmatcher::AlwaysMatcher::new());
-        compute_status(&manifest, treestate, changes, matcher)
+        compute_status(&manifest, treestate, changes, matcher).map(StatusBuilder::build)
     }
 
     /// Compare the [`Status`] with the expected status for each given file.

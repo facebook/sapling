@@ -41,4 +41,7 @@ status.ignored=black bold
 status.modified=blue bold
 status.removed=red bold
 status.unknown=magenta bold underline
+
+[unsafe]
+filtersuspectsymlink=true
 "#);

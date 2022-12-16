@@ -15,6 +15,8 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use io::IO;
+use manifest::FileType;
+use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
@@ -26,7 +28,9 @@ use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 use repolock::RepoLocker;
+use status::FileStatus;
 use status::Status;
+use status::StatusBuilder;
 use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
@@ -348,12 +352,62 @@ impl WorkingCopy {
             }));
 
         let p1_manifest = &*manifests[0].read();
-        compute_status(
+        let mut status_builder = compute_status(
             p1_manifest,
             self.treestate.clone(),
             pending_changes,
             matcher.clone(),
-        )
+        )?;
+
+        if !self.vfs.supports_symlinks()
+            && config
+                .get_or_default("unsafe", "filtersuspectsymlink")
+                .unwrap_or_default()
+        {
+            status_builder =
+                self.filter_accidential_symlink_changes(status_builder, p1_manifest)?;
+        }
+
+        Ok(status_builder.build())
+    }
+
+    // Filter out modified symlinks where it appears the symlink has
+    // been modified to no longer be a symlink. This happens often on
+    // Windows because we don't materialize symlinks in the working
+    // copy. The comment in Python's _filtersuspectsymlink suggests it
+    // can also happen on network mounts.
+    fn filter_accidential_symlink_changes(
+        &self,
+        mut status_builder: StatusBuilder,
+        manifest: &impl Manifest,
+    ) -> Result<StatusBuilder> {
+        let mut override_clean = Vec::new();
+        for (path, status) in status_builder.iter() {
+            if status != FileStatus::Modified {
+                continue;
+            }
+
+            let file_metadata = match manifest.get_file(path)? {
+                Some(md) => md,
+                None => continue,
+            };
+
+            if file_metadata.file_type != FileType::Symlink {
+                continue;
+            }
+
+            let data = self.vfs.read(path)?;
+            if data.is_empty() || data.len() >= 1024 || data.iter().any(|b| *b == b'\n' || *b == 0)
+            {
+                override_clean.push(path.to_owned());
+            }
+        }
+
+        if !override_clean.is_empty() {
+            status_builder = status_builder.clean(override_clean)
+        }
+
+        Ok(status_builder)
     }
 
     pub fn copymap(&self) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {

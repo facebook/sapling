@@ -428,6 +428,10 @@ mod unix_tests {
 /// Once the need to use NTFS on unices is gone (because this module solves the slowness), this
 /// hack will be removed.
 fn supports_symlinks(fs_type: &FsType) -> bool {
+    if std::env::var("SL_DEBUG_DISABLE_SYMLINKS").is_ok() {
+        return false;
+    }
+
     match *fs_type {
         FsType::NTFS => false,
         // TODO(T66590035): Once EdenFS on Windows support symlink, remove this

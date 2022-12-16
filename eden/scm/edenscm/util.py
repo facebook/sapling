@@ -138,7 +138,6 @@ _ = i18n._
 bindunixsocket = platform.bindunixsocket
 cachestat = platform.cachestat
 checkexec = platform.checkexec
-checklink = platform.checklink
 copymode = platform.copymode
 executablepath = platform.executablepath
 expandglobs = platform.expandglobs
@@ -211,6 +210,13 @@ except AttributeError:
 # Python compatibility
 
 _notset = object()
+
+
+def checklink(path: str) -> bool:
+    if os.environ.get("SL_DEBUG_DISABLE_SYMLINKS"):
+        return False
+
+    return platform.checklink(path)
 
 
 def safehasattr(thing, attr):

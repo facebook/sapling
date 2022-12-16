@@ -2,10 +2,14 @@
 
 #testcases pythonstatus ruststatus rustcommand scmstore
 #if pythonstatus
-  $ setconfig workingcopy.ruststatus=false 
+  $ setconfig workingcopy.ruststatus=false
+#else
+  $ setconfig workingcopy.ruststatus=true
 #endif
 #if rustcommand
   $ setconfig status.use-rust=True workingcopy.use-rust=True
+#else
+  $ setconfig status.use-rust=False workingcopy.use-rust=False
 #endif
 #if scmstore
   $ setconfig scmstore.auxindexedlog=true
@@ -589,3 +593,18 @@ Make sure we expand env vars in ignore file path.
   $ echo ignored > $TESTTMP/global_ignore
   $ touch ignored
   $ hg status --config ui.ignore='$TESTTMP/global_ignore'
+
+  $ cd ..
+
+#if symlink
+Ignore suspiciously modified symlinks.
+
+  $ newclientrepo suspicious-symlink
+  $ ln -s banana foo
+  $ hg commit -Aqm foo
+  $ rm foo
+  $ echo "not\nsymlink" > foo
+
+Force code to think we don't support symlinks to excercise code we want to test.
+  $ SL_DEBUG_DISABLE_SYMLINKS=1 hg status --config unsafe.filtersuspectsymlink=true
+#endif
