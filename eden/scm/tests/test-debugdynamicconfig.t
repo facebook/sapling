@@ -105,18 +105,6 @@ Verify mtime is updated even if no change is made
   $ [ "$(cat $TESTTMP/mtime3)" = "$(cat $TESTTMP/mtime2)" ]
   [1]
 
-Validate dynamic config
-  $ cat > $TESTTMP/input_hgrc <<EOF
-  > [section]
-  > key=valueX
-  > EOF
-  $ echo "%include $TESTTMP/input_hgrc" >> .hg/hgrc
-  $ hg status --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.validationsubset=input_hgrc
-  Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
-  Config mismatch: section.key has 'value' (dynamic) vs 'valueX' (file)
-  Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
-  Config mismatch: section.key has 'value' (dynamic) vs 'valueX' (file)
-
 Verify we generate and load from a shared repo
 
   $ cd ..
@@ -217,7 +205,7 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   --config: configs.allowedconfigs=zz_section.key .hgrc
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
 
-Verify we load and verify dynamicconfigs during clone
+Verify we load dynamicconfigs during clone
   $ cd $TESTTMP
   $ export HG_TEST_DYNAMICCONFIG="$TESTTMP/test_hgrc"
   $ cat > test_hgrc <<EOF
@@ -232,10 +220,7 @@ Clear the cached, non-repo dynamic config
   > [foo]
   > bar=True
   > EOF
-  $ hg clone test:server client2 --configfile $TESTTMP/good_hgrc --config configs.validationsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True
-  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
-  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
-  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
+  $ hg clone test:server client2 --configfile $TESTTMP/good_hgrc
   fetching lazy changelog
   populating main commit graph
   fetching selected remote bookmarks
@@ -252,20 +237,6 @@ Clear the cached, non-repo dynamic config
   [hooks]
   pretxnclose=printf "Hook ran!\n"
   
-Verify unicode characters in configs can be logged to our sampling extension
-  $ unset SCM_SAMPLING_FILEPATH
-  $ cat >> good_hgrc <<EOF
-  > [foo]
-  > bar = Å
-  > EOF
-  $ cp client2/.hg/hgrc client2/.hg/hgrc.bak
-  $ echo "%include $TESTTMP/good_hgrc" >> client2/.hg/hgrc
-  $ hg -R client2 log -q -r . --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.validationsubset=good_hgrc
-  000000000000
-  $ cat $TESTTMP/sampling.log
-  {"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00{"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00 (no-eol) (esc)
-  $ mv client2/.hg/hgrc.bak client2/.hg/hgrc
-
 Verify hgrc.dynamic is updated even if the original command is outside the repo
   $ echo "[junk_on_the_end]" >> client2/.hg/hgrc.dynamic
   $ sleep 1

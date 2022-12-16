@@ -462,31 +462,32 @@ impl ConfigSet {
         result
     }
 
-    /// Ensures that every value set by `superset_location` matches the final value set by one of
-    /// `subset_locations`. This is used during config migrations to ensure the final config
-    /// location contains the exact same configs as the original locations.
+    /// Drop configs from sources that are outside `allowed_locations` or
+    /// `allowed_configs`.
     ///
-    /// If a config from `superset_location` does not match the expected value, that config is
-    /// removed from this ConfigSet, and its section.name added to the returned structure.
+    /// This function is being removed but we need logging to understand its
+    /// side-effect.
+    ///
+    /// About `superset_location` and `subset_locations`: They were intended to
+    /// check that `hgrc.dynamic` (`superset_location`) matches staticfiles
+    /// config (the `/etc/` config, `subset_locations`). However,
+    /// `subset_locations` is always set (by `configs.validationsubset`) to
+    /// empty in production config so this feature no longer works.
     pub fn ensure_location_supersets(
         &mut self,
-        superset_location: String,
-        subset_locations: Vec<String>,
+        _superset_location: String,
+        _subset_locations: Vec<String>,
         allowed_locations: Option<HashSet<&str>>,
         allowed_configs: Option<HashSet<(&str, &str)>>,
     ) -> SupersetVerification {
-        let mut result = SupersetVerification::new();
+        let result = SupersetVerification::new();
 
-        let subset_locations: HashSet<String, std::collections::hash_map::RandomState> =
-            HashSet::from_iter(subset_locations.into_iter());
-
+        // subset_locations (configs.validationsubset) is always empty in production.
         for (sname, section) in self.sections.iter_mut() {
             for (kname, values) in section.items.iter_mut() {
-                let mut super_value = None;
-                let mut sub_value = None;
                 let values_copy = values.clone();
-
                 let mut removals = 0;
+                // value with a larger index takes precedence.
                 for (index, value) in values_copy.iter().enumerate() {
                     // Convert the index into the original index.
                     let index = index - removals;
@@ -498,15 +499,6 @@ impl ConfigSet {
                         .map(|p| p.file_name().map(|f| f.to_str().map(|s| s.to_string())))
                         .flatten()
                         .flatten();
-                    let loc_or_src: String = match location.as_ref() {
-                        Some(l) => l.clone(),
-                        None => {
-                            // It's possible the superset was set from in-memory, in which case the
-                            // source will match the superset location.
-                            value.source().to_string()
-                        }
-                    };
-
                     // If only certain locations are allowed, and this isn't one of them, remove
                     // it. If location is None, it came from inmemory, so don't filter it.
                     if let Some(location) = location {
@@ -536,39 +528,26 @@ impl ConfigSet {
                             continue;
                         }
                     }
-
-                    if loc_or_src == superset_location {
-                        super_value = value.value().clone();
-                    } else {
-                        if subset_locations.contains(&loc_or_src) {
-                            sub_value = value.value().clone();
-                        }
-                    }
                 }
 
-                // If the superset value doesn't match the most recent subset value, remove the
-                // superset value.
-                match (super_value.clone(), sub_value) {
-                    // Sub does not have it, but super does (and should not)
-                    (Some(value), None) => {
-                        result.extra.push(((sname.clone(), kname.clone()), value));
+                // If the removal changes the config, log it as mismatched.
+                if let (Some(before_remove), Some(after_remove)) =
+                    (values_copy.last(), values.last())
+                {
+                    if before_remove.value != after_remove.value {
+                        let source = match before_remove.location() {
+                            None => before_remove.source().to_string(),
+                            Some(l) => l.0.display().to_string(),
+                        };
+                        tracing::info!(
+                             target: "config_mismatch",
+                             config=&format!("{sname}.{kname}"),
+                             expected=after_remove.value.clone().unwrap_or_default().as_ref(),
+                             actual=before_remove.value.clone().unwrap_or_default().as_ref(),
+                             source=source,
+                        );
                     }
-                    // Super and sub have it, but don't match
-                    (Some(super_value), Some(sub_value)) => {
-                        if super_value != sub_value {
-                            result.mismatched.push((
-                                (sname.clone(), kname.clone()),
-                                super_value,
-                                sub_value,
-                            ));
-                        }
-                    }
-                    // Sub has it, super does not (but should)
-                    (None, Some(value)) => {
-                        result.missing.push(((sname.clone(), kname.clone()), value));
-                    }
-                    (None, None) => {}
-                };
+                }
             }
         }
 
@@ -1161,133 +1140,6 @@ space_list=value1.a value1.b
         let errors = cfg2.parse(serialized, &"".into());
         assert!(errors.is_empty(), "cfg2.parse had errors {:?}", errors);
         assert_eq!(cfg.sections(), cfg2.sections());
-    }
-
-    #[test]
-    fn test_superset_verifier() {
-        let mut cfg = ConfigSet::new();
-
-        fn set(
-            cfg: &mut ConfigSet,
-            section: &'static str,
-            key: &'static str,
-            value: &'static str,
-            location: &'static str,
-        ) {
-            cfg.set_internal(
-                Text::from_static(section),
-                Text::from_static(key),
-                Some(Text::from_static(value)),
-                Some(ValueLocation {
-                    path: Arc::new(Path::new(location).to_owned()),
-                    content: Text::from_static(""),
-                    location: 0..1,
-                }),
-                &Options::new().source(Text::from_static("source")),
-            );
-        }
-
-        set(&mut cfg, "section1", "key1", "value1", "subset1");
-        set(&mut cfg, "section2", "key2", "value2", "subset2");
-
-        // Verify a correct superset returns clean
-        let mut tempcfg = cfg.clone();
-        set(&mut tempcfg, "section1", "key1", "value1", "super");
-        set(&mut tempcfg, "section2", "key2", "value2", "super");
-
-        let result = tempcfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset1".to_string(), "subset2".to_string()],
-            None,
-            None,
-        );
-        assert!(result.is_empty());
-
-        // Verify a missing config
-        let mut tempcfg = cfg.clone();
-        set(&mut tempcfg, "section1", "key1", "value1", "super");
-
-        let result = tempcfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset1".to_string(), "subset2".to_string()],
-            None,
-            None,
-        );
-        assert_eq!(
-            result.missing,
-            vec![(
-                (Text::from_static("section2"), Text::from_static("key2")),
-                Text::from_static("value2")
-            )]
-        );
-        assert!(result.extra.is_empty());
-        assert!(result.mismatched.is_empty());
-
-        // Verify not specifying a subset avoids returning errors
-        let result = tempcfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset1".to_string()],
-            None,
-            None,
-        );
-        assert!(result.is_empty());
-
-        // Verify an extra config
-        let mut tempcfg = cfg.clone();
-        set(&mut tempcfg, "section1", "key1", "value1", "super");
-        set(&mut tempcfg, "section2", "key2", "value2", "super");
-        set(&mut tempcfg, "section3", "key3", "value3", "super");
-
-        let result = tempcfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset1".to_string(), "subset2".to_string()],
-            None,
-            None,
-        );
-        assert_eq!(
-            result.extra,
-            vec![(
-                (Text::from_static("section3"), Text::from_static("key3")),
-                Text::from_static("value3")
-            )]
-        );
-        assert!(result.missing.is_empty());
-        assert!(result.mismatched.is_empty());
-
-        // Verify a mismatched config
-        let mut tempcfg = cfg.clone();
-        set(&mut tempcfg, "section1", "key1", "value1", "super");
-        set(&mut tempcfg, "section2", "key2", "value3", "super");
-
-        let result = tempcfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset1".to_string(), "subset2".to_string()],
-            None,
-            None,
-        );
-        assert_eq!(
-            result.mismatched,
-            vec![(
-                (Text::from_static("section2"), Text::from_static("key2")),
-                Text::from_static("value3"),
-                Text::from_static("value2")
-            )]
-        );
-        assert!(result.missing.is_empty());
-        assert!(result.extra.is_empty());
-
-        // Verify a good superset that overwrites a non-subset final value also gets removed.
-        let mut tempcfg = cfg.clone();
-        set(&mut tempcfg, "section2", "key2", "value3", "nonsubset");
-        set(&mut tempcfg, "section2", "key2", "value2", "super");
-
-        let result = tempcfg.ensure_location_supersets(
-            "super".to_string(),
-            vec!["subset2".to_string()],
-            None,
-            None,
-        );
-        assert!(result.is_empty());
     }
 
     #[test]
