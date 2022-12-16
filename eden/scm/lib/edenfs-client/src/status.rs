@@ -37,9 +37,7 @@ use status::needs_morestatus_extension;
 use status::StatusBuilder;
 use thrift_types::edenfs as eden;
 use thrift_types::edenfs::client::EdenService;
-use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
-use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use tokio_uds_compat::UnixStream;
 use types::HgId;
 use types::RepoPath;
@@ -95,19 +93,9 @@ async fn get_status_internal(repo_root: &Path) -> Result<GetScmStatusResult> {
     let transport = get_socket_transport(&eden_config.socket).await?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
-    let transport = get_socket_transport(&eden_config.socket).await?;
-    let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
-
     let dirstate_data = read_hg_dirstate(eden_config.root.as_ref())?;
 
-    get_status_helper(
-        &client,
-        &fb303_client,
-        &eden_config.root,
-        dirstate_data.p1,
-        false,
-    )
-    .await
+    get_status_helper(&client, &eden_config.root, dirstate_data.p1, false).await
 }
 
 #[derive(Deserialize)]
@@ -174,11 +162,6 @@ async fn maybe_status_fastpath_internal(
         .map_err(|_| OperationNotSupported)?;
     let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
-    let transport = get_socket_transport(&eden_config.socket)
-        .await
-        .map_err(|_| OperationNotSupported)?;
-    let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
-
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
     let dirstate_data = read_hg_dirstate(eden_config.root.as_ref())?;
 
@@ -199,14 +182,8 @@ async fn maybe_status_fastpath_internal(
 
     let use_color = io.output().can_color();
 
-    let status = get_status_helper(
-        &client,
-        &fb303_client,
-        &eden_config.root,
-        dirstate_data.p1,
-        list_ignored,
-    )
-    .await?;
+    let status =
+        get_status_helper(&client, &eden_config.root, dirstate_data.p1, list_ignored).await?;
 
     let status_output = group_entries(&repo_root, &status.status, &dirstate_data, io)?;
     let copymap = dirstate_data.copymap;
@@ -244,67 +221,21 @@ Your running Eden server is more than 45 days old.  You should run
     Ok((status_output, copymap))
 }
 
-fn is_unknown_method_error(error: &eden::errors::eden_service::GetScmStatusV2Error) -> bool {
-    if let eden::errors::eden_service::GetScmStatusV2Error::ApplicationException(ref e) = error {
-        e.type_ == ApplicationExceptionErrorCode::UnknownMethod
-    } else {
-        false
-    }
-}
-
-async fn run_fallback_status(
-    client: &Arc<impl EdenService>,
-    fb303_client: &Arc<impl BaseService>,
-    eden_root: &String,
-    commit: CommitHash,
-    ignored: bool,
-) -> Result<GetScmStatusResult, Error> {
-    match client
-        .getScmStatus(&eden_root.as_bytes().to_vec(), ignored, &commit.to_vec())
-        .await
-    {
-        Ok(status) => {
-            let version = fb303_client
-                .getExportedValue("build_package_version")
-                .await
-                .unwrap_or_else(|_| "".to_owned());
-
-            Ok(GetScmStatusResult {
-                status,
-                version,
-                ..Default::default()
-            })
-        }
-        Err(error) => Err(error.into()),
-    }
-}
-
 async fn get_status_helper(
     client: &Arc<impl EdenService>,
-    fb303_client: &Arc<impl BaseService>,
     eden_root: &String,
     commit: CommitHash,
     ignored: bool,
 ) -> Result<GetScmStatusResult, Error> {
-    let status = client
+    client
         .getScmStatusV2(&GetScmStatusParams {
             mountPoint: eden_root.as_bytes().to_vec(),
             commit: commit.to_vec(),
             listIgnored: ignored,
             ..Default::default()
         })
-        .await;
-
-    match status {
-        Ok(status) => Ok(status),
-        Err(error) => {
-            if is_unknown_method_error(&error) {
-                run_fallback_status(&client, &fb303_client, &eden_root, commit, ignored).await
-            } else {
-                Err(error.into())
-            }
-        }
-    }
+        .await
+        .map_err(|err| err.into())
 }
 
 fn print_errors(raw_status: &ScmStatus, io: &IO) -> Result<u8> {
