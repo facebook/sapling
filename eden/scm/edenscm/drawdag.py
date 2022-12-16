@@ -420,7 +420,7 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
         dates[name] = date
 
     # do not create default files? (ex. commit A has file "A")
-    defaultfiles = (
+    defaultfiles = opts.get("files") and (
         not any("drawdag.defaultfiles=false" in c for c in comments) and not script
     )
 

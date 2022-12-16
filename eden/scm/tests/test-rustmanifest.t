@@ -28,8 +28,8 @@
 
   $ hginit emptycommit
   $ cd emptycommit
-  $ drawdag << 'EOS'
-  > A  # drawdag.defaultfiles=false
+  $ drawdag --no-files << 'EOS'
+  > A
   > EOS
 
   >>> listcommitandmanifesthashes("$A::")

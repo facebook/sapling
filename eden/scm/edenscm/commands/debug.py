@@ -3726,6 +3726,7 @@ def debugwireargs(ui, repopath, *vals, **opts) -> None:
     [
         ("p", "print", False, _("print name to hash mapping of created nodes")),
         ("b", "bookmarks", True, _("create bookmarks")),
+        ("f", "files", True, _("create files")),
         ("", "write-env", "", _("write NAME=HEX per line to a given file (ADVANCED)")),
     ],
 )

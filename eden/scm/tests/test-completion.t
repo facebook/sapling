@@ -446,7 +446,7 @@ Show all commands + options
   debugdirs: rev, print0
   debugdirstate: nodates, datesort, json
   debugdiscovery: rev
-  debugdrawdag: print, bookmarks, write-env
+  debugdrawdag: print, bookmarks, files, write-env
   debugdryup: 
   debugdumpdynamicconfig: reponame, username, canary
   debugdumpindexedlog: 
