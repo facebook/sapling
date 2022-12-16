@@ -247,7 +247,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         if args.generate_bookmarks {
             let authz = AuthorizationContext::new_bypass_access_control();
             let repo_context = app
-                .open_managed_repos()
+                .open_managed_repo_arg(&args.repo_args)
                 .await
                 .context("failed to create mononoke app")?
                 .make_mononoke_api()?
