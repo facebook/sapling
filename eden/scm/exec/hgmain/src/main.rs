@@ -22,6 +22,15 @@ use windows::is_edenfs_stopped;
 
 #[cfg_attr(fbcode_build, fbinit::main)]
 fn main() {
+    // Allow dropping root, which is useful when running under DTrace on Mac.
+    #[cfg(unix)]
+    if let Ok(Some((user, group))) = std::env::var("SL_DEBUG_DROP_ROOT")
+        .as_ref()
+        .map(|u| u.split_once(':'))
+    {
+        drop_root(user, group);
+    }
+
     let mut full_args = match dispatch::args() {
         Ok(args) => args,
         Err(_) => {
@@ -96,4 +105,48 @@ fn main() {
     }
     drop(io);
     std::process::exit(code as i32);
+}
+
+#[cfg(unix)]
+pub fn drop_root(user: &str, group: &str) {
+    use std::ffi::CStr;
+    use std::ffi::CString;
+
+    let cgroup = CString::new(group.as_bytes()).unwrap();
+    let libc_group = unsafe { libc::getgrnam(cgroup.as_ptr()) };
+    if libc_group.is_null() {
+        panic!("bad group '{}'", group);
+    }
+    if unsafe { libc::setgid((*libc_group).gr_gid) } != 0 {
+        panic!(
+            "failed setting group to '{}': {:?}",
+            group,
+            std::io::Error::last_os_error()
+        );
+    }
+
+    let cuser = CString::new(user.as_bytes()).unwrap();
+    let libc_user = unsafe { libc::getpwnam(cuser.as_ptr()) };
+    if libc_user.is_null() {
+        panic!("bad user '{}'", user);
+    }
+    if unsafe { libc::setuid((*libc_user).pw_uid) } != 0 {
+        panic!(
+            "failed setting user to '{}': {:?}",
+            user,
+            std::io::Error::last_os_error()
+        );
+    }
+
+    // Set $HOME and $USER for convenience since various things depend on those.
+    let home_dir = unsafe { (*libc_user).pw_dir };
+    if !home_dir.is_null() {
+        std::env::set_var(
+            "HOME",
+            unsafe { CStr::from_ptr(home_dir) }.to_str().unwrap(),
+        );
+    }
+    std::env::set_var("USER", user);
+
+    eprintln!("switched user/group to {}/{}", user, group);
 }
