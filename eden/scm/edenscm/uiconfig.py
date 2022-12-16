@@ -86,9 +86,6 @@ class uiconfig(object):
         # fixconfig expects the non-shard repo root, without the .hg.
         self.fixconfig(root=repopath)
 
-    def validatedynamic(self, ui):
-        self._rcfg.validate()
-
     def copy(self):
         return self.__class__(self)
 

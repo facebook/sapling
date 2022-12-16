@@ -157,12 +157,6 @@ py_class!(pub class config |py| {
     def files(&self) -> PyResult<Vec<PyPathBuf>> {
         self.cfg(py).borrow().files().iter().map(|p| p.as_path().try_into()).collect::<Result<Vec<PyPathBuf>>>().map_pyerr(py)
     }
-
-    def validate(&self) -> PyResult<PyNone> {
-        let mut cfg = self.cfg(py).borrow_mut();
-        cfg.validate_dynamic().map_pyerr(py)?;
-        Ok(PyNone)
-    }
 });
 
 impl config {

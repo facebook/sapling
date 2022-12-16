@@ -284,8 +284,6 @@ class ui(object):
             # Expand "paths" using proper repo root.
             self._uiconfig.fixconfig(root=repopath)
 
-            self._uiconfig.validatedynamic(self)
-
     def copy(self):
         return self.__class__(self)
 
