@@ -33,6 +33,8 @@ mod fb;
 #[cfg(not(feature = "fb"))]
 mod opensource;
 
+mod builtin_static;
+
 #[cfg(test)]
 mod test_util;
 

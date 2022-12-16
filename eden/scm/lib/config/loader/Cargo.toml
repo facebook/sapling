@@ -30,9 +30,11 @@ serde = { version = "1.0.136", features = ["derive", "rc"], optional = true }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"], optional = true }
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10", optional = true }
+staticconfig = { version = "0.1.0", path = "../static" }
 tempfile = { version = "3.3", optional = true }
 tracing = "0.1.35"
 types = { version = "0.1.0", path = "../../types", optional = true }
+unionconfig = { version = "0.1.0", path = "../union" }
 url = "2.2.2"
 util = { version = "0.1.0", path = "../../util" }
 version = { version = "0.1.0", path = "../../version" }

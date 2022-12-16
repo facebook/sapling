@@ -1817,7 +1817,7 @@ def config(ui, repo, *values, **opts):
                     fm.write("value", "%s\n", value)
                     fm.data(name=entryname)
                     matched = True
-        elif not source.startswith("<builtin>"):
+        elif not source.startswith("<builtin>") and not source.startswith("builtin:"):
             # Maintain backwards compatibility - don't write
             # builtin.rc values (formerly configitems.py) by default.
             fm.startitem()

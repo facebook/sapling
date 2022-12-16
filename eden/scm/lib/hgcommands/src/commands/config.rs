@@ -168,7 +168,8 @@ fn get_config_item<'a>(
         Some(v) => v.to_string(),
     };
 
-    let (source, builtin) = config_value_source
+    let builtin = config_value_source.source().starts_with("builtin:");
+    let source = config_value_source
         .location()
         .and_then(|(location, range)| {
             config_value_source.file_content().map(|file| {
@@ -178,18 +179,14 @@ fn get_config_item<'a>(
                     .filter(|ch| *ch == '\n')
                     .count();
                 if !location.as_os_str().is_empty() {
-                    (format!("{}:{}", location.display(), line), false)
+                    format!("{}:{}", location.display(), line)
                 } else {
                     let source = config_value_source.source();
-                    if source.to_string().as_str() == "builtin.rc" {
-                        (format!("<builtin>:{}", line), true)
-                    } else {
-                        (format!("{}:{}", source, line), false)
-                    }
+                    format!("{}:{}", source, line)
                 }
             })
         })
-        .unwrap_or_else(|| (config_value_source.source().to_string(), false));
+        .unwrap_or_else(|| config_value_source.source().to_string());
 
     Some(ConfigItem {
         source,
