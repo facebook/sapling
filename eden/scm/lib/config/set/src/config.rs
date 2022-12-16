@@ -8,6 +8,7 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs;
+use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str;
@@ -17,6 +18,7 @@ use configmodel::Config;
 pub use configmodel::ValueLocation;
 pub use configmodel::ValueSource;
 use indexmap::IndexMap;
+use indexmap::IndexSet;
 use minibytes::Text;
 use pest_hgrc::parse;
 use pest_hgrc::Instruction;
@@ -25,12 +27,15 @@ use util::path::expand_path;
 use crate::error::Error;
 
 /// Collection of config sections loaded from various sources.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct ConfigSet {
     name: Text,
     sections: IndexMap<Text, Section>,
-    // canonicalized files that were loaded, including files with errors
+    // Canonicalized files that were loaded, including files with errors
     files: Vec<PathBuf>,
+    // Secondary, immutable config to try out if `sections` does not
+    // contain the requested config.
+    secondary: Option<Arc<dyn Config>>,
 }
 
 /// Internal representation of a config section.
@@ -52,25 +57,46 @@ impl Config for ConfigSet {
     ///
     /// keys("foo") returns keys in section "foo".
     fn keys(&self, section: &str) -> Vec<Text> {
-        self.sections
+        let self_keys = self
+            .sections
             .get(section)
             .map(|section| section.items.keys().cloned().collect())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        if let Some(secondary) = &self.secondary {
+            let secondary_keys = secondary.keys(section);
+            let result = merge_cow_list(Cow::Owned(secondary_keys), Cow::Owned(self_keys));
+            result.into_owned()
+        } else {
+            self_keys
+        }
     }
 
     /// Get config value for a given config.
-    /// Return `None` if the config item does not exist or is unset.
+    /// Return `None` if the config item does not exist.
+    /// Return `Some(None)` if the config is is unset.
     fn get_considering_unset(&self, section: &str, name: &str) -> Option<Option<Text>> {
-        let section = self.sections.get(section)?;
-        let value_sources: &Vec<ValueSource> = section.items.get(name)?;
-        let value = value_sources.last()?.value.clone();
-        Some(value)
+        let self_value = (|| -> Option<Option<Text>> {
+            let section = self.sections.get(section)?;
+            let value_sources: &Vec<ValueSource> = section.items.get(name)?;
+            let value = value_sources.last()?.value.clone();
+            Some(value)
+        })();
+        if let (None, Some(secondary)) = (&self_value, &self.secondary) {
+            return secondary.get_considering_unset(section, name);
+        }
+        self_value
     }
 
     /// Get config sections.
     fn sections(&self) -> Cow<[Text]> {
         let sections = self.sections.keys().cloned().collect();
-        Cow::Owned(sections)
+        let self_sections: Cow<[Text]> = Cow::Owned(sections);
+        if let Some(secondary) = &self.secondary {
+            let secondary_sections = secondary.sections();
+            merge_cow_list(secondary_sections, self_sections)
+        } else {
+            self_sections
+        }
     }
 
     /// Get detailed sources of a given config, including overrides, and source information.
@@ -78,19 +104,43 @@ impl Config for ConfigSet {
     ///
     /// Return an emtpy vector if the config does not exist.
     fn get_sources(&self, section: &str, name: &str) -> Cow<[ValueSource]> {
-        match self
+        let self_sources: Cow<[ValueSource]> = match self
             .sections
             .get(section)
             .and_then(|section| section.items.get(name))
         {
             None => Cow::Owned(Vec::new()),
             Some(sources) => Cow::Borrowed(sources),
+        };
+        if let Some(secondary) = &self.secondary {
+            let secondary_sources = secondary.get_sources(section, name);
+            if secondary_sources.is_empty() {
+                self_sources
+            } else if self_sources.is_empty() {
+                secondary_sources
+            } else {
+                let sources: Vec<ValueSource> = secondary_sources
+                    .into_owned()
+                    .into_iter()
+                    .chain(self_sources.into_owned())
+                    .collect();
+                Cow::Owned(sources)
+            }
+        } else {
+            self_sources
         }
     }
 
     /// Get on-disk files loaded for this `Config`.
     fn files(&self) -> Cow<[PathBuf]> {
-        Cow::Borrowed(&self.files)
+        let self_files: Cow<[PathBuf]> = Cow::Borrowed(&self.files);
+        if let Some(secondary) = &self.secondary {
+            let secondary_files = secondary.files();
+            // file load order: secondary first
+            merge_cow_list(secondary_files, self_files)
+        } else {
+            self_files
+        }
     }
 
     fn layer_name(&self) -> Text {
@@ -100,12 +150,46 @@ impl Config for ConfigSet {
             self.name.clone()
         }
     }
+
+    fn layers(&self) -> Vec<Arc<dyn Config>> {
+        if let Some(secondary) = &self.secondary {
+            secondary.layers()
+        } else {
+            Vec::new()
+        }
+    }
+}
+
+/// Merge two lists. Preserve order (a is before b). Remove duplicated items.
+fn merge_cow_list<'a, T: Clone + Hash + Eq>(a: Cow<'a, [T]>, b: Cow<'a, [T]>) -> Cow<'a, [T]> {
+    if a.is_empty() {
+        b
+    } else if b.is_empty() {
+        a
+    } else {
+        let result: IndexSet<T> = a.into_owned().into_iter().chain(b.into_owned()).collect();
+        let result: Vec<T> = result.into_iter().collect();
+        Cow::Owned(result)
+    }
 }
 
 impl ConfigSet {
     /// Return an empty `ConfigSet`.
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Attach a secondary config as fallback for items missing from the
+    /// main config.
+    ///
+    /// The secondary config is immutable, is cheaper to clone, and provides
+    /// the layers information.
+    ///
+    /// If a secondary config was already attached, it will be completed
+    /// replaced by this call.
+    pub fn secondary(&mut self, secondary: Arc<dyn Config>) -> &mut Self {
+        self.secondary = Some(secondary);
+        self
     }
 
     /// Update the name of the `ConfigSet`.
@@ -340,25 +424,31 @@ impl ConfigSet {
     pub fn to_string(&self) -> String {
         let mut result = String::new();
 
-        for (name, section) in self.sections.iter() {
-            result.push_str("[");
-            result.push_str(name);
+        for section in self.sections().iter() {
+            result.push('[');
+            result.push_str(section.as_ref());
             result.push_str("]\n");
 
-            for (key, values) in section.items.iter() {
-                if let Some(value) = values.last() {
-                    // value.value() being None indicates the value was unset.
-                    if let Some(value) = value.value() {
+            for key in self.keys(section).iter() {
+                let value = self.get_considering_unset(section, key);
+                #[cfg(test)]
+                {
+                    let values = self.get_sources(section, key);
+                    assert_eq!(values.last().map(|v| v.value().clone()), value);
+                }
+                if let Some(value) = value {
+                    if let Some(value) = value {
                         result.push_str(key);
-                        result.push_str("=");
+                        result.push('=');
                         // When a newline delimited list is loaded, the whitespace around each
                         // entry is trimmed. In order for the serialized config to be parsable, we
                         // need some indentation after each newline. Since this whitespace will be
                         // stripped on load, it shouldn't hurt anything.
                         let value = value.replace("\n", "\n ");
                         result.push_str(&value);
-                        result.push_str("\n");
+                        result.push('\n');
                     } else {
+                        // None indicates the value was unset.
                         result.push_str("%unset ");
                         result.push_str(key);
                         result.push('\n');
@@ -1255,6 +1345,67 @@ space_list=value1.a value1.b
         assert_eq!(
             cfg.get("section2", "key2"),
             Some(Text::from_static("value2"))
+        );
+    }
+
+    #[test]
+    fn test_secondary() {
+        let mut cfg1 = ConfigSet::new();
+        let mut cfg2 = ConfigSet::new();
+
+        cfg1.parse(
+            r#"[b]
+x = 1
+[d]
+y = 1
+%unset x
+[a]
+x = 1
+y = 1
+"#,
+            &"test1".into(),
+        );
+        cfg2.parse(
+            r#"[a]
+z = 2
+x = 2
+[d]
+x = 2
+%unset z
+%unset y
+"#,
+            &"test2".into(),
+        );
+
+        let mut config = cfg1.clone();
+        config.secondary(Arc::new(cfg2));
+
+        // section order: a, d (cfg2), b
+        // name order: a.z, a.x (cfg2), a.y (cfg1); d.x, d.z, d.y (cfg2); b.x (cfg1)
+        // override: cfg1 overrides cfg2; d.x, d.y, a.x
+        // %unset in cfg1 and cfg2 is preserved
+        assert_eq!(
+            config.to_string(),
+            "[a]\nz=2\nx=1\ny=1\n\n[d]\n%unset x\n%unset z\ny=1\n\n[b]\nx=1\n\n"
+        );
+
+        assert_eq!(config.sections().into_owned(), ["a", "d", "b"]);
+        assert_eq!(config.keys("a"), ["z", "x", "y"]);
+        assert_eq!(config.keys("d"), ["x", "z", "y"]);
+        assert_eq!(config.keys("b"), ["x"]);
+        assert_eq!(config.get("a", "x").unwrap(), "1");
+        assert_eq!(config.get("d", "x"), None);
+        assert_eq!(config.get("d", "y").unwrap(), "1");
+        assert_eq!(config.get("d", "k"), None);
+        assert_eq!(config.get_considering_unset("d", "x"), Some(None));
+        assert_eq!(config.get_considering_unset("d", "k"), None);
+        assert_eq!(
+            config
+                .get_sources("a", "x")
+                .iter()
+                .map(|s| s.source.to_string())
+                .collect::<Vec<_>>(),
+            ["test2", "test1"]
         );
     }
 
