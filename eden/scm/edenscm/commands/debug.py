@@ -1413,7 +1413,8 @@ def debugexportrevlog(ui, repo, path, **opts) -> None:
             self.append_raw(revlog_i_path, data)
             return node
 
-    lite_repo = LiteRevlogRepo(os.path.join(path, ui.identity.dotdir()))
+    # not using ui.identity.dotdir() for Mercurial compatibility
+    lite_repo = LiteRevlogRepo(os.path.join(path, ".hg"))
 
     from .. import exchange
 
