@@ -2219,16 +2219,14 @@ void EdenServer::workingCopyGC() {
 
     // This code is running on the EventBase, let's make sure we don't block it
     // by moving ourself to another executor.
-    folly::via(
-        getServerState()->getThreadPool().get(),
-        [rootInode, cutoff, lease = std::move(lease)] {
-          static auto context =
-              ObjectFetchContext::getNullContextWithCauseDetail(
-                  "EdenServer::garbageCollect");
-          return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
-              .semi();
-        })
-        .ensure([rootInode] { rootInode->unloadChildrenUnreferencedByFs(); });
+    folly::via(getServerState()->getThreadPool().get(), [rootInode, cutoff] {
+      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+          "EdenServer::garbageCollect");
+      return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
+          .semi();
+    }).ensure([rootInode, lease = std::move(lease)] {
+      rootInode->unloadChildrenUnreferencedByFs();
+    });
   }
 }
 
