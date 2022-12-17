@@ -2206,15 +2206,13 @@ void EdenServer::workingCopyGC() {
     cutoff = std::chrono::system_clock::now() - cutoffConfig;
   }
 
-  const auto mountPoints = mountPoints_->rlock();
-  for (const auto& [mountPath, info] : *mountPoints) {
-    const auto& mount = info.edenMount;
-
+  const auto mountPoints = getMountPoints();
+  for (const auto& mount : mountPoints) {
     auto rootInode = mount->getRootInode();
 
     auto lease = mount->tryStartWorkingCopyGC(rootInode);
     if (!lease) {
-      XLOG(DBG6) << "Not running GC for: " << mountPath
+      XLOG(DBG6) << "Not running GC for: " << mount->getPath()
                  << ", another GC is already in progress";
       continue;
     }
