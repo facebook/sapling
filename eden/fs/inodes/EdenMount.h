@@ -970,7 +970,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
         : gcRunning_{gcRunning}, inode_{std::move(inode)} {}
 
     ~WorkingCopyGCLease() {
-      gcRunning_->store(false, std::memory_order_release);
+      if (inode_) {
+        gcRunning_->store(false, std::memory_order_release);
+      }
     }
 
     WorkingCopyGCLease(const WorkingCopyGCLease&) = delete;
