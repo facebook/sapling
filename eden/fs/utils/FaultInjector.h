@@ -14,6 +14,7 @@
 #include <folly/futures/Future.h>
 #include <chrono>
 #include <optional>
+#include <string_view>
 #include <variant>
 
 namespace facebook::eden {
@@ -72,7 +73,7 @@ class FaultInjector {
    * string may contain some additional runtime-specified value to filter the
    * fault to only trigger when this code path is hit with specific arguments.
    */
-  void check(folly::StringPiece keyClass, folly::StringPiece keyValue) {
+  void check(std::string_view keyClass, std::string_view keyValue) {
     if (UNLIKELY(enabled_)) {
       return checkImpl(keyClass, keyValue);
     }
@@ -91,8 +92,8 @@ class FaultInjector {
    * SemiFuture that will not be ready until the fault is complete.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsync(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValue) {
+      std::string_view keyClass,
+      std::string_view keyValue) {
     if (UNLIKELY(enabled_)) {
       return checkAsyncImpl(keyClass, keyValue);
     }
@@ -111,14 +112,14 @@ class FaultInjector {
    * and so has no extra overhead if fault injection is disabled.
    */
   template <typename... Args>
-  void check(folly::StringPiece keyClass, Args&&... args) {
+  void check(std::string_view keyClass, Args&&... args) {
     if (UNLIKELY(enabled_)) {
       checkImpl(keyClass, constructKey(std::forward<Args>(args)...));
     }
   }
   template <typename... Args>
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsync(
-      folly::StringPiece keyClass,
+      std::string_view keyClass,
       Args&&... args) {
     if (UNLIKELY(enabled_)) {
       return checkAsyncImpl(
@@ -139,8 +140,8 @@ class FaultInjector {
    * own, and can only be removed by a subsequent call to removeFault().
    */
   void injectError(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       folly::exception_wrapper error,
       size_t count = 0);
 
@@ -149,8 +150,8 @@ class FaultInjector {
    * unblocked with a later call to unblock() or unblockWithError()
    */
   void injectBlock(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       size_t count = 0);
 
   /**
@@ -158,13 +159,13 @@ class FaultInjector {
    * time before automatically continuing.
    */
   void injectDelay(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       std::chrono::milliseconds duration,
       size_t count = 0);
   void injectDelayedError(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       std::chrono::milliseconds duration,
       folly::exception_wrapper error,
       size_t count = 0);
@@ -173,8 +174,8 @@ class FaultInjector {
    * Inject a fault that causes the process to exit without cleanup.
    */
   void injectKill(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       size_t count = 0);
 
   /**
@@ -188,8 +189,8 @@ class FaultInjector {
    * afterwards.
    */
   void injectNoop(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       size_t count = 0);
 
   /**
@@ -204,9 +205,7 @@ class FaultInjector {
    * Returns true if a fault was removed, or false if no fault was defined with
    * the specified key information.
    */
-  bool removeFault(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex);
+  bool removeFault(std::string_view keyClass, std::string_view keyValueRegex);
 
   /**
    * Unblock pending check()/checkAsync() calls waiting on a block fault.
@@ -215,10 +214,10 @@ class FaultInjector {
    * For example, you can define a block fault for ".*", and then later unblock
    * just a subset of the check calls pending on this fault.
    */
-  size_t unblock(folly::StringPiece keyClass, folly::StringPiece keyValueRegex);
+  size_t unblock(std::string_view keyClass, std::string_view keyValueRegex);
   size_t unblockWithError(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       folly::exception_wrapper error);
   size_t unblockAll();
   size_t unblockAllWithError(folly::exception_wrapper error);
@@ -243,7 +242,7 @@ class FaultInjector {
       Kill // exit the process ungracefully
       >;
   struct Fault {
-    Fault(folly::StringPiece regex, FaultBehavior&& behavior, size_t count);
+    Fault(std::string_view regex, FaultBehavior&& behavior, size_t count);
 
     // A regular expression for the key values that this fault matches
     boost::regex keyValueRegex;
@@ -253,8 +252,8 @@ class FaultInjector {
     FaultBehavior behavior;
   };
   struct BlockedCheck {
-    BlockedCheck(folly::StringPiece kv, folly::Promise<folly::Unit>&& p)
-        : keyValue(kv.str()), promise(std::move(p)) {}
+    BlockedCheck(std::string_view kv, folly::Promise<folly::Unit>&& p)
+        : keyValue{kv}, promise{std::move(p)} {}
 
     std::string keyValue;
     folly::Promise<folly::Unit> promise;
@@ -274,25 +273,23 @@ class FaultInjector {
   }
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsyncImpl(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValue);
-  void checkImpl(folly::StringPiece keyClass, folly::StringPiece keyValue);
+      std::string_view keyClass,
+      std::string_view keyValue);
+  void checkImpl(std::string_view keyClass, std::string_view keyValue);
 
   void injectFault(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex,
+      std::string_view keyClass,
+      std::string_view keyValueRegex,
       FaultBehavior&& fault,
       size_t count);
-  FaultBehavior findFault(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValue);
+  FaultBehavior findFault(std::string_view keyClass, std::string_view keyValue);
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> addBlockedFault(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValue);
+      std::string_view keyClass,
+      std::string_view keyValue);
   FOLLY_NODISCARD std::vector<BlockedCheck> extractBlockedChecks(
-      folly::StringPiece keyClass,
-      folly::StringPiece keyValueRegex);
+      std::string_view keyClass,
+      std::string_view keyValueRegex);
   size_t unblockAllImpl(std::optional<folly::exception_wrapper> error);
 
   /**

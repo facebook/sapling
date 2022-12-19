@@ -8,16 +8,17 @@
 #include "eden/fs/utils/FaultInjector.h"
 
 #include <folly/Overload.h>
-#include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 
 using folly::SemiFuture;
-using folly::StringPiece;
 using folly::Unit;
 
 namespace facebook::eden {
 
-FaultInjector::Fault::Fault(StringPiece regex, FaultBehavior&& b, size_t count)
+FaultInjector::Fault::Fault(
+    std::string_view regex,
+    FaultBehavior&& b,
+    size_t count)
     : keyValueRegex(regex.begin(), regex.end()),
       countRemaining(count),
       behavior(std::move(b)) {}
@@ -35,8 +36,8 @@ FaultInjector::~FaultInjector() {
 }
 
 SemiFuture<Unit> FaultInjector::checkAsyncImpl(
-    StringPiece keyClass,
-    StringPiece keyValue) {
+    std::string_view keyClass,
+    std::string_view keyValue) {
   auto behavior = findFault(keyClass, keyValue);
   return std::visit(
       folly::overload(
@@ -66,7 +67,9 @@ SemiFuture<Unit> FaultInjector::checkAsyncImpl(
       behavior);
 }
 
-void FaultInjector::checkImpl(StringPiece keyClass, StringPiece keyValue) {
+void FaultInjector::checkImpl(
+    std::string_view keyClass,
+    std::string_view keyValue) {
   auto behavior = findFault(keyClass, keyValue);
   std::visit(
       folly::overload(
@@ -94,8 +97,8 @@ void FaultInjector::checkImpl(StringPiece keyClass, StringPiece keyValue) {
 }
 
 void FaultInjector::injectError(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     folly::exception_wrapper error,
     size_t count) {
   XLOG(INFO) << "injectError(" << keyClass << ", " << keyValueRegex
@@ -104,8 +107,8 @@ void FaultInjector::injectError(
 }
 
 void FaultInjector::injectBlock(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     size_t count) {
   XLOG(INFO) << "injectBlock(" << keyClass << ", " << keyValueRegex
              << ", count=" << count << ")";
@@ -113,8 +116,8 @@ void FaultInjector::injectBlock(
 }
 
 void FaultInjector::injectDelay(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     std::chrono::milliseconds duration,
     size_t count) {
   XLOG(INFO) << "injectDelay(" << keyClass << ", " << keyValueRegex
@@ -123,8 +126,8 @@ void FaultInjector::injectDelay(
 }
 
 void FaultInjector::injectKill(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     size_t count) {
   XLOG(INFO) << "injectKill(" << keyClass << ", " << keyValueRegex
              << ", count=" << count << ")";
@@ -132,8 +135,8 @@ void FaultInjector::injectKill(
 }
 
 void FaultInjector::injectDelayedError(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     std::chrono::milliseconds duration,
     folly::exception_wrapper error,
     size_t count) {
@@ -144,8 +147,8 @@ void FaultInjector::injectDelayedError(
 }
 
 void FaultInjector::injectNoop(
-    folly::StringPiece keyClass,
-    folly::StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     size_t count) {
   XLOG(INFO) << "injectNoop(" << keyClass << ", " << keyValueRegex
              << ", count=" << count << ")";
@@ -153,8 +156,8 @@ void FaultInjector::injectNoop(
 }
 
 void FaultInjector::injectFault(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     FaultBehavior&& behavior,
     size_t count) {
   if (!enabled_) {
@@ -167,8 +170,8 @@ void FaultInjector::injectFault(
 }
 
 bool FaultInjector::removeFault(
-    StringPiece keyClass,
-    StringPiece keyValueRegex) {
+    std::string_view keyClass,
+    std::string_view keyValueRegex) {
   auto state = state_.wlock();
 
   // Look for any faults matching this key class
@@ -197,7 +200,9 @@ bool FaultInjector::removeFault(
   return false;
 }
 
-size_t FaultInjector::unblock(StringPiece keyClass, StringPiece keyValueRegex) {
+size_t FaultInjector::unblock(
+    std::string_view keyClass,
+    std::string_view keyValueRegex) {
   XLOG(DBG1) << "unblock(" << keyClass << ", " << keyValueRegex << ")";
   auto matches = extractBlockedChecks(keyClass, keyValueRegex);
   for (auto& match : matches) {
@@ -207,8 +212,8 @@ size_t FaultInjector::unblock(StringPiece keyClass, StringPiece keyValueRegex) {
 }
 
 size_t FaultInjector::unblockWithError(
-    StringPiece keyClass,
-    StringPiece keyValueRegex,
+    std::string_view keyClass,
+    std::string_view keyValueRegex,
     folly::exception_wrapper error) {
   XLOG(DBG1) << "unblockWithError(" << keyClass << ", " << keyValueRegex << ")";
   auto matches = extractBlockedChecks(keyClass, keyValueRegex);
@@ -229,8 +234,8 @@ size_t FaultInjector::unblockAllWithError(folly::exception_wrapper error) {
 }
 
 FaultInjector::FaultBehavior FaultInjector::findFault(
-    StringPiece keyClass,
-    StringPiece keyValue) {
+    std::string_view keyClass,
+    std::string_view keyValue) {
   XLOG(DBG4) << "findFault(" << keyClass << ", " << keyValue << ")";
   auto state = state_.wlock();
 
@@ -275,8 +280,8 @@ FaultInjector::FaultBehavior FaultInjector::findFault(
 }
 
 SemiFuture<Unit> FaultInjector::addBlockedFault(
-    StringPiece keyClass,
-    StringPiece keyValue) {
+    std::string_view keyClass,
+    std::string_view keyValue) {
   auto state = state_.wlock();
 
   auto [promise, future] = folly::makePromiseContract<Unit>();
@@ -285,8 +290,8 @@ SemiFuture<Unit> FaultInjector::addBlockedFault(
 }
 
 std::vector<FaultInjector::BlockedCheck> FaultInjector::extractBlockedChecks(
-    StringPiece keyClass,
-    StringPiece keyValueRegex) {
+    std::string_view keyClass,
+    std::string_view keyValueRegex) {
   std::vector<BlockedCheck> results;
   auto state = state_.wlock();
 
