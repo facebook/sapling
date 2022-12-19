@@ -198,6 +198,25 @@ class MockGitHubServer:
         self._add_request(key, request)
         return request
 
+    def expect_merge_into_branch(
+        self,
+        head: str,
+        username: str = USER_NAME,
+        repo_id: str = REPO_ID,
+        base: str = "",
+    ) -> "MergeIntoBranchRequest":
+        base = base or f"sapling-pr-archive-{username}"
+        params: ParamsType = {
+            "query": query.GRAPHQL_MERGE_BRANCH,
+            "repositoryId": repo_id,
+            "base": base,
+            "head": head,
+        }
+        key = create_request_key(params, self.hostname)
+        request = MergeIntoBranchRequest(key, head)
+        self._add_request(key, request)
+        return request
+
 
 class MockRequest:
     @abstractmethod
@@ -346,6 +365,24 @@ class GetUsernameRequest(MockRequest):
 
     def and_respond(self, username: str = USER_NAME):
         data = {"data": {"viewer": {"login": f"{username}"}}}
+        self._response = Result.Ok(data)
+
+    def get_response(self) -> Result:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class MergeIntoBranchRequest(MockRequest):
+    def __init__(self, key: str, head: str) -> None:
+        self._key = key
+        self._response: Optional[Result] = None
+
+        self._head = head
+
+    def and_respond(self, merge_commit_oid: str = ""):
+        merge_commit_oid = merge_commit_oid or gen_hash_hexdigest(self._head)
+        data = {"data": {"mergeBranch": {"mergeCommit": {"oid": merge_commit_oid}}}}
         self._response = Result.Ok(data)
 
     def get_response(self) -> Result:

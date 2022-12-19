@@ -33,6 +33,9 @@ def setup_mock_github_server() -> MockGitHubServer:
     github_server.expect_update_pr_request(pr_id, pr_number, body).and_respond()
     github_server.expect_get_username_request().and_respond()
 
+    head = "3a120a3a153f7d2960967ce6f1d52698a4d3a436"
+    github_server.expect_merge_into_branch(head).and_respond()
+
     return github_server
 
 
