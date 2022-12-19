@@ -25,6 +25,10 @@ class Result(Generic[T]):
     def is_error(self) -> bool:
         return self.error is not None
 
+    @classmethod
+    def Ok(cls, val: T) -> 'Result':
+        return cls(ok=val)
+
 
 async def make_request(
     params: Dict[str, Union[str, int, bool]],
