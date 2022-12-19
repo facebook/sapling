@@ -64,16 +64,6 @@ else:
     import dbm
 
 
-try:
-    # pyre-fixme[21]: Could not find `gdbm`.
-    import gdbm
-
-    gdbm.open
-    hasgdbm = True
-except ImportError:
-    hasgdbm = False
-
-
 configtable = {}
 configitem = registrar.configitem(configtable)
 
@@ -180,8 +170,6 @@ def opendbm(repo, flag):
     but gdbm is unfortunately not available everywhere, like on Windows.
     """
     dbms = [(dbm.open, "amendcopytrace", dbm.error)]
-    if hasgdbm:
-        dbms.append((gdbm.open, "amendcopytrace.gdbm", gdbm.error))
 
     for opener, fname, error in dbms:
         path = repo.localvfs.join(fname)
