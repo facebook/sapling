@@ -8,6 +8,8 @@ from typing import List, Tuple
 
 from .gh_submit import Repository
 
+_HORIZONTAL_RULE = "---"
+
 
 def create_pull_request_title_and_body(
     commit_msg: str,
@@ -54,11 +56,56 @@ def create_pull_request_title_and_body(
     )
     title = firstline(commit_msg)
     body = f"""{commit_msg}
----
+{_HORIZONTAL_RULE}
 Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
 {bulleted_list}
 """
     return title, body
+
+
+_STACK_ENTRY = re.compile(r"^\* (__->__ )?#([1-9]\d*).*$")
+
+# Pair where the first value is True if this entry was noted as the "current"
+# one with the "__->__" marker; otherwise, False.
+# The second value is the pull request number for this entry.
+_StackEntry = Tuple[bool, int]
+
+
+def parse_stack_information(body: str) -> List[_StackEntry]:
+    r"""
+    >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
+    >>> body = (
+    ...     'The original commit message.\n' +
+    ...     'Second line of message.\n' +
+    ...     '---\n' +
+    ...     'Stack created with [Sapling](https://sapling-scm.com). ' +
+    ...     f'Best reviewed with [ReviewStack]({reviewstack_url}).\n' +
+    ...     '* #1\n' +
+    ...     '* #2 (2 commits)\n' +
+    ...     '* __->__ #42\n' +
+    ...     '* #4\n')
+    >>> parse_stack_information(body)
+    [(False, 1), (False, 2), (True, 42), (False, 4)]
+    """
+    is_prev_line_hr = False
+    in_stack_list = False
+    stack_entries = []
+    for line in body.splitlines():
+        if in_stack_list:
+            match = _STACK_ENTRY.match(line)
+            if match:
+                arrow, number = match.groups()
+                stack_entries.append((bool(arrow), int(number, 10)))
+            else:
+                # This must be the end of the list.
+                break
+        elif is_prev_line_hr:
+            if line.startswith("Stack created with [Sapling]"):
+                in_stack_list = True
+            is_prev_line_hr = False
+        elif line.rstrip() == _HORIZONTAL_RULE:
+            is_prev_line_hr = True
+    return stack_entries
 
 
 def _format_stack_entry(
