@@ -91,6 +91,8 @@ class PullRequestDetails:
     node_id: str
     number: int
     url: str
+    base_oid: str
+    base_branch_name: str
     head_oid: str
     head_branch_name: str
 
@@ -114,6 +116,8 @@ async def get_pull_request_details(
             node_id=data["id"],
             number=pr.number,
             url=data["url"],
+            base_oid=data["baseRefOid"],
+            base_branch_name=data["baseRefName"],
             head_oid=data["headRefOid"],
             head_branch_name=data["headRefName"],
         )
@@ -216,7 +220,11 @@ async def create_pull_request(
 
 
 async def update_pull_request(
-    hostname: str, node_id: str, title: str, body: str
+    hostname: str,
+    node_id: str,
+    title: str,
+    body: str,
+    base: str,
 ) -> Result[str]:
     """Returns an "ID!" for the pull request, which should match the node_id
     that was passed in.
@@ -226,6 +234,7 @@ async def update_pull_request(
         "pullRequestId": node_id,
         "title": title,
         "body": body,
+        "base": base,
     }
     result = await gh_cli.make_request(params, hostname=hostname)
     if result.is_error():

@@ -7,6 +7,7 @@ import asyncio
 import re
 import subprocess
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 from edenscm import error, git, gituser, gpg
@@ -32,12 +33,59 @@ def submit(ui, repo, *args, **opts):
     )
 
 
+class SubmitWorkflow(Enum):
+    """Various workflows supported by `sl pr submit`."""
+
+    """The "classic" GitHub pull request workflow where `main` is used as the
+    base branch for the PR and the PR contains an arbitrary number of commits
+    between the base and the head branch. For a Git user, the feature branch and
+    named branch are generally one in the same, so it is used as the head branch
+    for the PR. In Sapling, the commit that is used as the head of the pull
+    request is somewhere on the feature branch, but it is not necessarily the
+    tip.
+    """
+    CLASSIC = "classic"
+
+    """A "stacked diff" workflow where each pull request contains a single
+    commit. Creates synthetic base and head branches for each PR to ensure each
+    continues to include exactly one commit. Updates to PRs often require
+    force pushing. (An alternative that avoids force-pushing is `sl ghstack`.)
+    """
+    SINGLE = "single"
+
+    """An "overlapping" workflow where all PRs contain a common base branch
+    (`main`) while each commit in the stack gets its own pull request using
+    itself as the head branch. This approach is confusing to review in GitHub's
+    pull request UI (ReviewStack is strongly recommended in this case), but it
+    is supported to accommodate users who do not have write access to the GitHub
+    repo.
+    """
+    OVERLAP = "overlap"
+
+    @staticmethod
+    def from_config(ui) -> "SubmitWorkflow":
+        workflow = ui.config("github", "pr_workflow")
+        if not workflow or workflow == "overlap":
+            # For now, default to OVERLAP.
+            return SubmitWorkflow.OVERLAP
+        elif workflow == "single":
+            return SubmitWorkflow.SINGLE
+        else:
+            # Note that "classic" is not recognized yet.
+            ui.warn(
+                _("unrecognized config for github.pr_workflow: defaulting to 'overlap'")
+            )
+            return SubmitWorkflow.OVERLAP
+
+
 @dataclass
 class CommitData:
     """The data we need about each commit to support `submit`."""
 
     # Commit ID.
     node: bytes
+    # If present, should match pr.head_branch_name.
+    head_branch_name: Optional[str]
     # If present, the existing pull request this commit (and possibly some of
     # its immediate ancestors) is associated with.
     pr: Optional[PullRequestDetails]
@@ -53,6 +101,21 @@ class CommitData:
         if self.msg is None:
             self.msg = self.ctx.description()
         return self.msg
+
+
+@dataclass
+class CommitNeedsPullRequest:
+    commit: CommitData
+    parent: Optional[CommitData]
+
+
+@dataclass
+class PullRequestParams:
+    """Information necessary to create a pull request for a single commit."""
+
+    commit: CommitData
+    parent: Optional[CommitData]
+    number: int
 
 
 async def update_commits_in_stack(
@@ -74,6 +137,8 @@ async def update_commits_in_stack(
     if not commits_to_process:
         ui.status_err(_("no commits to submit\n"))
         return 0
+
+    workflow = SubmitWorkflow.from_config(ui)
 
     # Partition the chain.
     partitions: List[List[CommitData]] = []
@@ -99,38 +164,51 @@ async def update_commits_in_stack(
     # git push --force any heads that need updating, creating new branch names,
     # if necessary.
     refs_to_update: List[str] = []
-    commits_that_need_pull_requests: List[CommitData] = []
+    commits_that_need_pull_requests: List[CommitNeedsPullRequest] = []
 
     # Note that `partitions` is ordered from the top of the stack to the bottom,
     # but we want to create PRs from the bottom to the top so the PR numbers are
     # created in ascending order.
+    parent_commit = None
     for partition in reversed(partitions):
-        top = partition[0]
-        pr = top.pr
+        commit = partition[0]
+        pr = commit.pr
         if pr:
-            if pr.head_oid == hex(top.node):
+            if pr.head_oid == hex(commit.node):
                 ui.status_err(_("#%d is up-to-date\n") % pr.number)
             else:
                 refs_to_update.append(
-                    f"{hex(top.node)}:refs/heads/{pr.head_branch_name}"
+                    f"{hex(commit.node)}:refs/heads/{pr.head_branch_name}"
                 )
         else:
-            commits_that_need_pull_requests.append(top)
+            commit_needs_pr = CommitNeedsPullRequest(
+                commit=commit, parent=parent_commit
+            )
+            commits_that_need_pull_requests.append(commit_needs_pr)
+        parent_commit = commit
 
     # Reserve one GitHub issue number for each pull request (in parallel) and
-    # then assign them in increasing order.
+    # then assign them in increasing order. Also ensure head_branch_name is set
+    # on every CommitData.
     repository: Optional[Repository] = None
-    pull_requests_to_create: List[Tuple[CommitData, str, int]] = []
+    pull_requests_to_create: List[PullRequestParams] = []
     if commits_that_need_pull_requests:
         repository = await get_repository_for_origin(origin, github_repo.hostname)
         issue_numbers = await _create_placeholder_issues(
             repository, len(commits_that_need_pull_requests)
         )
-        for commit, number in zip(commits_that_need_pull_requests, issue_numbers):
+        for commit_needs_pr, number in zip(
+            commits_that_need_pull_requests, issue_numbers
+        ):
             # Consider including username in branch_name?
             branch_name = f"pr{number}"
+            commit = commit_needs_pr.commit
+            commit.head_branch_name = branch_name
             refs_to_update.append(f"{hex(commit.node)}:refs/heads/{branch_name}")
-            pull_requests_to_create.append((commit, branch_name, number))
+            params = PullRequestParams(
+                commit=commit, parent=commit_needs_pr.parent, number=number
+            )
+            pull_requests_to_create.append(params)
 
     gitdir = None
 
@@ -154,7 +232,7 @@ async def update_commits_in_stack(
     if pull_requests_to_create:
         assert repository is not None
         await create_pull_requests(
-            pull_requests_to_create, repository, store, ui, is_draft
+            pull_requests_to_create, workflow, repository, store, ui, is_draft
         )
 
     # Now that each pull request has a named branch pushed to GitHub, we can
@@ -170,9 +248,9 @@ async def update_commits_in_stack(
         repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
-            partition, index, pr_numbers_and_num_commits, repository, ui
+            partitions, index, pr_numbers_and_num_commits, repository, ui
         )
-        for index, partition in enumerate(partitions)
+        for index in range(len(partitions))
     ] + [
         add_pr_head_to_archives(
             ui=ui, origin=origin, repository=repository, tip=tip, get_gitdir=get_gitdir
@@ -183,12 +261,21 @@ async def update_commits_in_stack(
 
 
 async def rewrite_pull_request_body(
-    partition: List[CommitData],
+    partitions: List[List[CommitData]],
     index: int,
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     repository: Repository,
     ui,
 ):
+    # If available, use the head branch of the previous partition as the base
+    # of this branch. Recall that partitions is ordered from the top of the
+    # stack to the bottom.
+    partition = partitions[index]
+    if index == len(partitions) - 1:
+        base = repository.get_base_branch()
+    else:
+        base = none_throws(partitions[index + 1][0].head_branch_name)
+
     head_commit_data = partition[0]
     commit_msg = head_commit_data.get_msg()
     title, body = create_pull_request_title_and_body(
@@ -200,7 +287,7 @@ async def rewrite_pull_request_body(
     pr = head_commit_data.pr
     assert pr
     result = await gh_submit.update_pull_request(
-        repository.hostname, pr.node_id, title, body
+        repository.hostname, pr.node_id, title, body, base
     )
     if result.is_error():
         ui.status_err(
@@ -212,7 +299,8 @@ async def rewrite_pull_request_body(
 
 
 async def create_pull_requests(
-    commits: List[Tuple[CommitData, str, int]],
+    commits: List[PullRequestParams],
+    workflow: SubmitWorkflow,
     repository: Repository,
     store: PullRequestStore,
     ui,
@@ -225,19 +313,27 @@ async def create_pull_requests(
     """
     head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
     owner, name = repository.get_upstream_owner_and_name()
-    # Because these will be "overlapping" pull requests, all share the same
-    # base.
-    base = repository.get_base_branch()
+    base_branch_for_repo = repository.get_base_branch()
     hostname = repository.hostname
 
-    async def create_pull_request(commit, branch_name, issue_number):
+    async def create_pull_request(params: PullRequestParams):
+        commit = params.commit
         body = commit.get_msg()
+        issue_number = params.number
+
+        # Note that "overlapping" pull requests will all share the same base.
+        base = base_branch_for_repo
+        if workflow == SubmitWorkflow.SINGLE:
+            parent = params.parent
+            if parent:
+                base = none_throws(parent.head_branch_name)
+
         response = await gh_submit.create_pull_request(
             hostname=repository.hostname,
             owner=owner,
             name=name,
             base=base,
-            head=f"{head_ref_prefix}{branch_name}",
+            head=f"{head_ref_prefix}{none_throws(commit.head_branch_name)}",
             body=body,
             issue=issue_number,
             is_draft=is_draft,
@@ -275,7 +371,7 @@ async def create_pull_requests(
 
     # Because the issue numbers have been reserved in advance, each pull request
     # can be created in parallel.
-    await asyncio.gather(*[create_pull_request(*c) for c in commits])
+    await asyncio.gather(*[create_pull_request(c) for c in commits])
 
 
 def create_pull_request_title_and_body(
@@ -412,10 +508,19 @@ async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> Comm
     msg = None
     if pr:
         is_dep = False
+        head_branch_name = pr.head_branch_name
     else:
         msg = ctx.description()
         is_dep = store.is_follower(node)
-    return CommitData(node=node, pr=pr, ctx=ctx, is_dep=is_dep, msg=msg)
+        head_branch_name = None
+    return CommitData(
+        node=node,
+        head_branch_name=head_branch_name,
+        pr=pr,
+        ctx=ctx,
+        is_dep=is_dep,
+        msg=msg,
+    )
 
 
 async def get_pull_request_details_or_throw(pr_id: PullRequestId) -> PullRequestDetails:

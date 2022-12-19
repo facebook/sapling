@@ -170,6 +170,7 @@ class MockGitHubServer:
         pr_id: str,
         pr_number: int,
         body: str,
+        base: str = "main",
         owner: str = OWNER,
         name: str = REPO_NAME,
     ) -> "UpdatePrRequest":
@@ -183,6 +184,7 @@ class MockGitHubServer:
                 f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
                 f"* __->__ #1\n\n{body}\n"
             ),
+            "base": base,
         }
         key = create_request_key(params, self.hostname)
         request = UpdatePrRequest(key, pr_id)
@@ -318,9 +320,12 @@ class GetPrDetailsRequest(MockRequest):
         pr_id: str,
         head_ref_name: str = "",
         head_ref_oid: str = "",
+        base_ref_name: str = "main",
+        base_ref_oid: str = "",
     ):
         head_ref_name = head_ref_name or f"pr{self._pr_number}"
         head_ref_oid = head_ref_oid or gen_hash_hexdigest(pr_id)
+        base_ref_oid = base_ref_oid or gen_hash_hexdigest(base_ref_name)
         data = {
             "data": {
                 "repository": {
@@ -329,6 +334,8 @@ class GetPrDetailsRequest(MockRequest):
                         "url": f"https://github.com/{self._owner}/{self._name}/pull/{self._pr_number}",
                         "headRefOid": head_ref_oid,
                         "headRefName": head_ref_name,
+                        "baseRefOid": base_ref_oid,
+                        "baseRefName": base_ref_name,
                     }
                 }
             }

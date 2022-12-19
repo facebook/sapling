@@ -40,6 +40,8 @@ query ($owner: String!, $name: String!, $number: Int!) {
     pullRequest(number: $number) {
       id
       url
+      baseRefOid
+      baseRefName
       headRefOid
       headRefName
     }
@@ -65,9 +67,9 @@ query ($owner: String!, $name: String!) {
 """
 
 GRAPHQL_UPDATE_PULL_REQUEST = """
-mutation ($pullRequestId: ID!, $title: String!, $body: String!) {
+mutation ($pullRequestId: ID!, $title: String!, $body: String!, $base: String!) {
   updatePullRequest(
-    input: {pullRequestId: $pullRequestId, title: $title, body: $body}
+    input: {pullRequestId: $pullRequestId, title: $title, body: $body, baseRefName: $base}
   ) {
     pullRequest {
       id
