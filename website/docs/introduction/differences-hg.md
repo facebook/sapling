@@ -19,7 +19,7 @@ In Sapling, there are only bookmarks.  “Named Branches” in the Mercurial sen
 #### Sapling has remote bookmarks.
 In Mercurial, there are only local bookmarks which are synchronized with the server during push and pull.
 
-In Sapling, there are local bookmarks which only ever exist locally, and there are remote bookmarks, such as remote/main, which are immutable local representations of the location of the server bookmark at the time of the last hg pull.
+In Sapling, there are local bookmarks which only ever exist locally, and there are remote bookmarks, such as remote/main, which are immutable local representations of the location of the server bookmark at the time of the last `sl pull`.
 #### Sapling allows hiding/unhiding commits.
 In Mercurial, to remove a commit you must either strip the commit entirely, or use an extension like “Evolve” to semi-permanently prune the commit.
 
