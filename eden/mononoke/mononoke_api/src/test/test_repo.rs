@@ -750,10 +750,10 @@ async fn commit_find_files(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-async fn commit_find_files_with_bssm(fb: FacebookInit) {
+async fn commit_find_files_without_bssm(fb: FacebookInit) {
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {
-        "enable_basename_suffix_skeleton_manifest".to_string() => true
+        "disable_basename_suffix_skeleton_manifest".to_string() => true
     });
     with_tunables_async(tunables, commit_find_files_impl(fb).boxed())
         .await

@@ -335,7 +335,7 @@ pub struct MononokeTunables {
     disable_scs_pushredirect: AtomicBool,
 
     // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
-    enable_basename_suffix_skeleton_manifest: AtomicBool,
+    disable_basename_suffix_skeleton_manifest: AtomicBool,
 
     // List of targets in AOSP megarepo to apply squashing config overrides
     megarepo_squashing_config_override_targets: TunableVecOfStringsByRepo,

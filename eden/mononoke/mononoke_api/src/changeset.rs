@@ -1180,7 +1180,7 @@ impl ChangesetContext {
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
         Ok(match (to_vec1(basenames), to_vec1(basename_suffixes)) {
             (Some(basenames), None)
-                if tunables().get_enable_basename_suffix_skeleton_manifest() =>
+                if !tunables().get_disable_basename_suffix_skeleton_manifest() =>
             {
                 self.find_files_with_bssm(prefixes, basenames, ordering)
                     .await?
