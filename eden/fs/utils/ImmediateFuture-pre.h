@@ -16,6 +16,7 @@ template <typename T>
 class ImmediateFuture;
 
 namespace detail {
+
 template <typename T>
 struct isImmediateFuture : std::false_type {};
 
@@ -30,7 +31,7 @@ struct continuation_result_impl {
 template <typename T>
 struct continuation_result_impl<
     T,
-    typename std::enable_if_t<folly::isSemiFuture<T>::value>> {
+    typename std::enable_if_t<folly::isFutureOrSemiFuture<T>::value>> {
   using type = typename T::value_type;
 };
 

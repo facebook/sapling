@@ -687,4 +687,37 @@ TEST(ImmediateFuture, in_place_construction_multiple_arguments) {
   EXPECT_EQ("world", *result.second);
 }
 
+TEST(ImmediateFuture, conversion_from_ready_Future) {
+  auto fut = folly::makeFuture<int>(10);
+  // use = to ensure we can implicitly convert
+  ImmediateFuture<int> imm = std::move(fut);
+  EXPECT_FALSE(fut.valid());
+  EXPECT_TRUE(imm.valid());
+  EXPECT_NE(imm.isReady(), detail::kImmediateFutureAlwaysDefer);
+  EXPECT_EQ(10, std::move(imm).get());
+}
+
+TEST(ImmediateFuture, conversion_from_nonready_Future) {
+  folly::Promise<int> p;
+  auto fut = p.getFuture();
+  // use = to ensure we can implicitly convert
+  ImmediateFuture<int> imm = std::move(fut);
+  EXPECT_FALSE(fut.valid());
+  EXPECT_TRUE(imm.valid());
+  EXPECT_FALSE(imm.isReady());
+  p.setValue(10);
+  EXPECT_NE(imm.isReady(), detail::kImmediateFutureAlwaysDefer);
+  EXPECT_EQ(10, std::move(imm).get());
+}
+
+TEST(ImmediateFuture, then_with_Future) {
+  ImmediateFuture<int> imm = 10;
+  auto result = std::move(imm).thenValue([](int i) {
+    // It's funny to std::move() an int, but it's required to match makeFuture's
+    // type signature.
+    return folly::makeFuture<int>(std::move(i));
+  });
+  EXPECT_EQ(10, std::move(result).get());
+}
+
 } // namespace

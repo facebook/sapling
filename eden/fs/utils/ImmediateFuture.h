@@ -102,6 +102,14 @@ class ImmediateFuture {
   /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept
       : ImmediateFuture{std::move(fut), SemiFutureReadiness::EagerSemiFuture} {}
 
+  /**
+   * Construct an ImmediateFuture with a Future.
+   *
+   * This constructor has the same semantics as ImmediateFuture{future.semi()}.
+   */
+  /* implicit */ ImmediateFuture(folly::Future<T>&& fut) noexcept
+      : ImmediateFuture{std::move(fut).semi()} {}
+
   ~ImmediateFuture();
 
   ImmediateFuture(const ImmediateFuture&) = delete;
