@@ -221,6 +221,7 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
         // respond.
         auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
         return server_->faultInjector_.checkAsync("takeover", "ping_receive")
+            .semi()
             .via(server_->eventBase_)
             .thenValue(
                 [this, timeout](auto&&) { return socket_.receive(timeout); });

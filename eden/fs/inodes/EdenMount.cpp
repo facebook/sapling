@@ -389,6 +389,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       "EdenMount::initialize");
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().view())
+      .semi()
       .via(getServerThreadPool().get())
       .thenValue([this, parent](auto&&) {
         return objectStore_->getRootTree(parent, context)
@@ -1442,6 +1443,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().view())
+      .semi()
       .via(getServerThreadPool().get())
       .thenValue([this, ctx, parent1Hash = oldParent, snapshotHash](auto&&) {
         XLOG(DBG7) << "Checkout: getRoots";
@@ -1541,6 +1543,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         auto rootInode = getRootInode();
         return serverState_->getFaultInjector()
             .checkAsync("inodeCheckout", getPath().view())
+            .semi()
             .via(getServerThreadPool().get())
             .thenValue([ctx,
                         treeResults = std::move(treeResults),

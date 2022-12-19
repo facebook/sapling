@@ -2060,6 +2060,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 
   return serverState_->getFaultInjector()
       .checkAsync("takeover", "server_shutdown")
+      .semi()
       .via(serverState_->getThreadPool().get())
       .thenValue([this](auto&&) {
         // Compact storage for all key spaces in order to speed up the

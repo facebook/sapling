@@ -483,6 +483,7 @@ RocksDbLocalStore::getBatch(
   for (auto& batch : batches) {
     futures.emplace_back(
         faultInjector_.checkAsync("local store get batch", "")
+            .semi()
             .via(&ioPool_)
             .thenValue([store = getSharedFromThis(),
                         keySpace,

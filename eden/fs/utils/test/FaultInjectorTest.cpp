@@ -71,8 +71,8 @@ TEST(FaultInjector, blocking) {
   // Unblock both matches
   auto countUnblocked = fi.unblock("mount", ".*");
   EXPECT_EQ(2, countUnblocked);
-  ASSERT_TRUE(future1.isReady());
-  ASSERT_TRUE(future2.isReady());
+  ASSERT_NE(future1.isReady(), detail::kImmediateFutureAlwaysDefer);
+  ASSERT_NE(future2.isReady(), detail::kImmediateFutureAlwaysDefer);
   std::move(future1).get();
   std::move(future2).get();
 
@@ -86,13 +86,13 @@ TEST(FaultInjector, blocking) {
       fi.unblockWithError("mount", "/a/.*", std::runtime_error("paper jam"));
   EXPECT_EQ(1, countUnblocked);
   EXPECT_FALSE(future1.isReady());
-  ASSERT_TRUE(future2.isReady());
+  ASSERT_NE(future2.isReady(), detail::kImmediateFutureAlwaysDefer);
   EXPECT_THROW_RE(std::move(future2).get(), std::runtime_error, "paper jam");
 
   // Unblock the other call
   countUnblocked = fi.unblock("mount", "/x/y/z");
   EXPECT_EQ(1, countUnblocked);
-  ASSERT_TRUE(future1.isReady());
+  ASSERT_NE(future1.isReady(), detail::kImmediateFutureAlwaysDefer);
   std::move(future1).get();
   EXPECT_EQ(0, fi.unblockAll());
 
@@ -103,8 +103,8 @@ TEST(FaultInjector, blocking) {
 
   countUnblocked = fi.unblockAllWithError(std::domain_error("test"));
   EXPECT_EQ(2, countUnblocked);
-  ASSERT_TRUE(future1.isReady());
-  ASSERT_TRUE(future2.isReady());
+  ASSERT_NE(future1.isReady(), detail::kImmediateFutureAlwaysDefer);
+  ASSERT_NE(future2.isReady(), detail::kImmediateFutureAlwaysDefer);
   EXPECT_THROW_RE(std::move(future1).get(), std::domain_error, "test");
   EXPECT_THROW_RE(std::move(future2).get(), std::domain_error, "test");
 }

@@ -11,11 +11,12 @@
 #include <fmt/ranges.h>
 #include <folly/Synchronized.h>
 #include <folly/container/F14Map.h>
-#include <folly/futures/Future.h>
 #include <chrono>
 #include <optional>
 #include <string_view>
 #include <variant>
+
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -91,13 +92,13 @@ class FaultInjector {
    * matching fault that would block execution this method immediately returns a
    * SemiFuture that will not be ready until the fault is complete.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsync(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsync(
       std::string_view keyClass,
       std::string_view keyValue) {
     if (UNLIKELY(enabled_)) {
       return checkAsyncImpl(keyClass, keyValue);
     }
-    return folly::makeSemiFuture();
+    return folly::unit;
   }
 
   /**
@@ -118,14 +119,14 @@ class FaultInjector {
     }
   }
   template <typename... Args>
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsync(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsync(
       std::string_view keyClass,
       Args&&... args) {
     if (UNLIKELY(enabled_)) {
       return checkAsyncImpl(
           keyClass, constructKey(std::forward<Args>(args)...));
     }
-    return folly::makeSemiFuture();
+    return folly::unit;
   }
 
   /**
@@ -272,7 +273,7 @@ class FaultInjector {
         fmt::join(std::make_tuple<const Args&...>(args...), ", "));
   }
 
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> checkAsyncImpl(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkAsyncImpl(
       std::string_view keyClass,
       std::string_view keyValue);
   void checkImpl(std::string_view keyClass, std::string_view keyValue);

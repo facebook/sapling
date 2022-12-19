@@ -35,18 +35,19 @@ FaultInjector::~FaultInjector() {
       << " blocked check calls still pending";
 }
 
-SemiFuture<Unit> FaultInjector::checkAsyncImpl(
+ImmediateFuture<Unit> FaultInjector::checkAsyncImpl(
     std::string_view keyClass,
     std::string_view keyValue) {
   auto behavior = findFault(keyClass, keyValue);
+  using RV = ImmediateFuture<Unit>;
   return std::visit(
       folly::overload(
-          [&](const Unit&) { return folly::makeSemiFuture(); },
-          [&](const FaultInjector::Block&) {
+          [&](const Unit&) -> RV { return folly::unit; },
+          [&](const FaultInjector::Block&) -> RV {
             XLOG(DBG1) << "block fault hit: " << keyClass << ", " << keyValue;
             return addBlockedFault(keyClass, keyValue);
           },
-          [&](const FaultInjector::Delay& delay) -> SemiFuture<Unit> {
+          [&](const FaultInjector::Delay& delay) -> RV {
             XLOG(DBG1) << "delay fault hit: " << keyClass << ", " << keyValue;
             if (delay.error.has_value()) {
               return folly::futures::sleep(delay.duration)
@@ -56,11 +57,11 @@ SemiFuture<Unit> FaultInjector::checkAsyncImpl(
             }
             return folly::futures::sleep(delay.duration);
           },
-          [&](const folly::exception_wrapper& error) {
+          [&](const folly::exception_wrapper& error) -> RV {
             XLOG(DBG1) << "error fault hit: " << keyClass << ", " << keyValue;
-            return folly::makeSemiFuture<Unit>(error);
+            return RV{std::move(error)};
           },
-          [&](const FaultInjector::Kill&) -> SemiFuture<Unit> {
+          [&](const FaultInjector::Kill&) -> RV {
             XLOG(DBG1) << "kill fault hit: " << keyClass << ", " << keyValue;
             abort();
           }),
