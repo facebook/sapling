@@ -8,7 +8,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from edenscm.ext.github.consts import query
-from edenscm.ext.github.submit import firstline
+from edenscm.ext.github.pull_request_body import firstline
 
 from ghstack.github_gh_cli import Result
 
