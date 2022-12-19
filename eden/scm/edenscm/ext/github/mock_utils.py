@@ -189,6 +189,15 @@ class MockGitHubServer:
         self._add_request(key, request)
         return request
 
+    def expect_get_username_request(
+        self,
+    ) -> "GetUsernameRequest":
+        params: ParamsType = {"query": query.GRAPHQL_GET_LOGIN}
+        key = create_request_key(params, self.hostname)
+        request = GetUsernameRequest(key)
+        self._add_request(key, request)
+        return request
+
 
 class MockRequest:
     @abstractmethod
@@ -322,6 +331,21 @@ class UpdatePrRequest(MockRequest):
 
     def and_respond(self):
         data = {"data": {"updatePullRequest": {"pullRequest": {"id": self._pr_id}}}}
+        self._response = Result.Ok(data)
+
+    def get_response(self) -> Result:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class GetUsernameRequest(MockRequest):
+    def __init__(self, key: str) -> None:
+        self._key = key
+        self._response: Optional[Result] = None
+
+    def and_respond(self, username: str = USER_NAME):
+        data = {"data": {"viewer": {"login": f"{username}"}}}
         self._response = Result.Ok(data)
 
     def get_response(self) -> Result:
