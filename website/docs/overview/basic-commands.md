@@ -23,7 +23,7 @@ Here are the most commonly used commands in Sapling:
 | View | Move | Change | Fix | Save |
 | ---- | --- | ------ | --- | --- |
 | <Command name="status" /> | <Command name="goto" /> | <Command name="add" /> | <Command name="revert" /> | <Command name="commit" /> |
-| <Command name="diff" /> | <Command name="next" /> | <Command name="remove" /> | <Command name="purge" /> | <Command name="shelve" /> |
+| <Command name="diff" /> | <Command name="next" /> | <Command name="remove" /> | <Command name="clean" /> | <Command name="shelve" /> |
 | | <Command name="prev" /> | <Command name="forget" /> | | |
 | | | <Command name="move" /> | | |
 | | | <Command name="copy" /> | | |
@@ -211,15 +211,15 @@ When using Git support, file renames are not recorded since Git does not record 
 
 Related topics: AutoMove
 
-#### Purge
+#### Clean
 
-`sl purge` deletes any untracked files (`?` in status) in your working copy.
+`sl clean` deletes any untracked files (`?` in status) in your working copy.
 
 ```sl-shell-example
 $ sl st
 ? temp_file
 
-$ sl purge
+$ sl clean
 $ sl st
 ```
 
