@@ -147,6 +147,23 @@ class MockGitHubServer:
         self._add_request(key, request)
         return request
 
+    def expect_get_pr_details_request(
+        self,
+        pr_number: int,
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "GetPrDetailsRequest":
+        params: ParamsType = {
+            "query": query.GRAPHQL_GET_PULL_REQUEST,
+            "owner": owner,
+            "name": name,
+            "number": pr_number,
+        }
+        key = create_request_key(params, self.hostname)
+        request = GetPrDetailsRequest(key, owner, name, pr_number)
+        self._add_request(key, request)
+        return request
+
 
 class MockRequest:
     @abstractmethod
@@ -227,6 +244,43 @@ class CreatePrRequest(MockRequest):
                 "html_url": f"https://github.com/{self._owner}/{self._name}/pull/{self._number}",
             }
         )
+
+    def get_response(self) -> Result:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class GetPrDetailsRequest(MockRequest):
+    def __init__(self, key: str, owner: str, name: str, pr_number: int) -> None:
+        self._key = key
+        self._response: Optional[Result] = None
+
+        self._owner = owner
+        self._name = name
+        self._pr_number = pr_number
+
+    def and_respond(
+        self,
+        pr_id: str,
+        head_ref_name: str = "",
+        head_ref_oid: str = "",
+    ):
+        head_ref_name = head_ref_name or f"pr{self._pr_number}"
+        head_ref_oid = head_ref_oid or gen_hash_hexdigest(pr_id)
+        data = {
+            "data": {
+                "repository": {
+                    "pullRequest": {
+                        "id": pr_id,
+                        "url": f"https://github.com/{self._owner}/{self._name}/pull/{self._pr_number}",
+                        "headRefOid": head_ref_oid,
+                        "headRefName": head_ref_name,
+                    }
+                }
+            }
+        }
+        self._response = Result.Ok(data)
 
     def get_response(self) -> Result:
         if self._response is None:

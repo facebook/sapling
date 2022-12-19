@@ -27,6 +27,9 @@ def setup_mock_github_server() -> MockGitHubServer:
     body = "addfile\n"
     github_server.expect_create_pr_request(body=body, issue=pr_number).and_respond()
 
+    pr_id = f"PR_id_{pr_number}"
+    github_server.expect_get_pr_details_request(pr_number).and_respond(pr_id)
+
     return github_server
 
 
