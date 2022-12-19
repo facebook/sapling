@@ -180,9 +180,11 @@ class MockGitHubServer:
             "pullRequestId": pr_id,
             "title": title,
             "body": (
+                f"{body}\n"
+                "---\n"
                 "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
                 f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
-                f"* __->__ #1\n\n{body}\n"
+                f"* __->__ #1\n"
             ),
             "base": base,
         }

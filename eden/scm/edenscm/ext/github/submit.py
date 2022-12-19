@@ -401,15 +401,16 @@ def create_pull_request_title_and_body(
     >>> title == 'The original commit message.'
     True
     >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
-    >>> body == ('Stack created with [Sapling](https://sapling-scm.com). ' +
+    >>> body == (
+    ...     'The original commit message.\n' +
+    ...     'Second line of message.\n' +
+    ...     '---\n' +
+    ...     'Stack created with [Sapling](https://sapling-scm.com). ' +
     ...     f'Best reviewed with [ReviewStack]({reviewstack_url}).\n' +
     ...     '* #1\n' +
     ...     '* #2 (2 commits)\n' +
     ...     '* __->__ #42\n' +
-    ...     '* #4\n' +
-    ...     '\n' +
-    ...     'The original commit message.\n' +
-    ...     'Second line of message.\n')
+    ...     '* #4\n')
     True
     """
     owner, name = repository.get_upstream_owner_and_name()
@@ -422,10 +423,10 @@ def create_pull_request_title_and_body(
         ]
     )
     title = firstline(commit_msg)
-    body = f"""Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
+    body = f"""{commit_msg}
+---
+Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
 {bulleted_list}
-
-{commit_msg}
 """
     return title, body
 
