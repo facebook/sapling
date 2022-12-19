@@ -2628,7 +2628,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
 
-  ImmediateFuture<folly::Unit> backgroundFuture;
+  ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
   if (isBackground) {
     backgroundFuture = makeNotReadyImmediateFuture();
   }
@@ -2668,7 +2668,7 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
   auto& context = helper->getFetchContext();
   auto isBackground = *params->background();
 
-  ImmediateFuture<folly::Unit> backgroundFuture;
+  ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
   if (isBackground) {
     backgroundFuture = makeNotReadyImmediateFuture();
   }

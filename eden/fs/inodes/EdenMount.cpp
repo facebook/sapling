@@ -1662,11 +1662,13 @@ void EdenMount::forgetStaleInodes() {
 ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
 #ifndef _WIN32
   XLOG(DBG4) << "waiting for inode invalidations to complete";
-  ImmediateFuture<folly::Unit> flushInvalidationsFuture;
+  auto flushInvalidationsFuture = ImmediateFuture<folly::Unit>::makeEmpty();
   if (auto* fuseChannel = getFuseChannel()) {
     flushInvalidationsFuture = fuseChannel->flushInvalidations().semi();
   } else if (auto* nfsdChannel = getNfsdChannel()) {
     flushInvalidationsFuture = nfsdChannel->flushInvalidations().semi();
+  } else {
+    flushInvalidationsFuture = folly::unit;
   }
   return std::move(flushInvalidationsFuture).thenValue([](auto&&) {
     XLOG(DBG4) << "finished processing inode invalidations";

@@ -389,7 +389,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
         isIgnored);
   }
 
-  ImmediateFuture<std::string> gitIgnore{};
+  ImmediateFuture<std::string> gitIgnore{std::in_place};
   if (wdTree) {
     // If this directory has a .gitignore file, load it first.
     const auto it = wdTree->find(kIgnoreFilename);

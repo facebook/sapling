@@ -16,7 +16,7 @@ namespace {
 using namespace facebook::eden;
 
 void ImmediateFuture_thenValue_with_int(benchmark::State& state) {
-  ImmediateFuture<uint64_t> fut{};
+  ImmediateFuture<uint64_t> fut = 0;
 
   for (auto _ : state) {
     auto newFut = std::move(fut).thenValue([](uint64_t v) { return v + 1; });
@@ -46,7 +46,7 @@ struct ExpensiveMove {
 volatile uint64_t ExpensiveMove::count;
 
 void ImmediateFuture_move_with_expensive_move(benchmark::State& state) {
-  ImmediateFuture<ExpensiveMove> fut;
+  ImmediateFuture<ExpensiveMove> fut = ExpensiveMove{};
   uint64_t processed = 0;
   for (auto _ : state) {
     // Move construction.

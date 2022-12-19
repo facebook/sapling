@@ -23,7 +23,7 @@ ImmediateFuture<fuse_entry_out> TestDispatcher::lookup(
     const ObjectFetchContextPtr& /*context*/) {
   XLOG(DBG5) << "received lookup " << requestID << ": parent=" << parent
              << ", name=" << name;
-  ImmediateFuture<fuse_entry_out> result{};
+  auto result = ImmediateFuture<fuse_entry_out>::makeEmpty();
   {
     // Whenever we receive a lookup request just add it to the pendingLookups_
     // The test harness can then respond to it later however it wants.

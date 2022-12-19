@@ -29,6 +29,15 @@ void ImmediateFuture<T>::destroy() {
 }
 
 template <typename T>
+template <typename... Args>
+ImmediateFuture<T>::ImmediateFuture(std::in_place_t, Args&&... args) noexcept(
+    std::is_nothrow_constructible_v<T, Args&&...>)
+    // Initializing kind_ before immediate_ is legal because kind_
+    // initialization is nothrow.
+    : kind_{Kind::Immediate},
+      immediate_{folly::in_place, std::forward<Args>(args)...} {}
+
+template <typename T>
 ImmediateFuture<T>::ImmediateFuture(folly::Try<T>&& value) noexcept {
   if (detail::kImmediateFutureAlwaysDefer) {
     new (&semi_) SemiFuture{std::move(value)};

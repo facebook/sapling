@@ -2390,7 +2390,7 @@ ImmediateFuture<Unit> TreeInode::diff(
   }
 
   InodePtr inode;
-  ImmediateFuture<InodePtr> gitignoreInodeFuture;
+  auto gitignoreInodeFuture = ImmediateFuture<InodePtr>::makeEmpty();
   vector<IncompleteInodeLoad> pendingLoads;
   {
     // We have to get a write lock since we may have to load

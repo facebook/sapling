@@ -185,7 +185,7 @@ TEST(ImmediateFuture, defaultCtor) {
   });
   EXPECT_EQ(std::move(fortyThree).get(), 43);
 
-  ImmediateFuture<int> defaultCtor{};
+  ImmediateFuture<int> defaultCtor{std::in_place};
   auto one =
       std::move(defaultCtor).thenValue([](auto&& zero) { return zero + 1; });
   EXPECT_EQ(std::move(one).get(), 1);
@@ -668,6 +668,23 @@ TEST(ImmediateFuture, invalid_if_moved_from) {
   auto p = std::move(f);
   EXPECT_TRUE(p.valid());
   EXPECT_FALSE(f.valid());
+}
+
+TEST(ImmediateFuture, in_place_construction) {
+  size_t count = 0;
+  ImmediateFuture<Counted> p{std::in_place, &count};
+  EXPECT_EQ(1, count);
+}
+
+TEST(ImmediateFuture, in_place_construction_multiple_arguments) {
+  using StringPtr = std::unique_ptr<std::string>;
+  ImmediateFuture<std::pair<StringPtr, StringPtr>> p{
+      std::in_place,
+      std::make_unique<std::string>("hello"),
+      std::make_unique<std::string>("world")};
+  auto result = std::move(p).get();
+  EXPECT_EQ("hello", *result.first);
+  EXPECT_EQ("world", *result.second);
 }
 
 } // namespace

@@ -58,10 +58,17 @@ class ImmediateFuture {
   using value_type = T;
 
   /**
-   * Default construct an ImmediateFuture with T's default constructor.
+   * To match Future and SemiFuture, the default constructor is deleted.
+   * In-place construction should use the std::in_place constructor.
    */
-  ImmediateFuture() noexcept(std::is_nothrow_default_constructible_v<T>)
-      : ImmediateFuture{folly::Try<T>{T{}}} {}
+  ImmediateFuture() = delete;
+
+  /**
+   * Emplace an ImmediateFuture with the constructor arguments.
+   */
+  template <typename... Args>
+  explicit ImmediateFuture(std::in_place_t, Args&&... args) noexcept(
+      std::is_nothrow_constructible_v<T, Args&&...>);
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No

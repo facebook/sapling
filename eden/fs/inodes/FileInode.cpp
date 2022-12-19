@@ -179,7 +179,7 @@ FileInode::runWhileDataLoaded(
     const ObjectFetchContextPtr& fetchContext,
     std::shared_ptr<const Blob> blob,
     Fn&& fn) {
-  ImmediateFuture<std::shared_ptr<const Blob>> future;
+  auto future = ImmediateFuture<std::shared_ptr<const Blob>>::makeEmpty();
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
@@ -253,7 +253,7 @@ FileInode::runWhileMaterialized(
         getNameRacy()));
   }
 
-  ImmediateFuture<std::shared_ptr<const Blob>> future;
+  auto future = ImmediateFuture<std::shared_ptr<const Blob>>::makeEmpty();
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
       if (!blob) {
