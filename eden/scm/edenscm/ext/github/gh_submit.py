@@ -265,7 +265,11 @@ async def create_branch(
 async def merge_into_branch(
     *, hostname: str, repo_id: str, oid_to_merge: str, branch_name: str
 ) -> Result[str]:
-    """Takes the hash, oid_to_merge, and merges it into the specified branch_name."""
+    """Takes the hash, oid_to_merge, and merges it into the specified branch_name.
+
+    - base must be a branch name
+    - oid_to_merge is the head to merge into base: can be a branch name or an oid
+    """
     params: Dict[str, _Params] = {
         "query": query.GRAPHQL_MERGE_BRANCH,
         "repositoryId": repo_id,

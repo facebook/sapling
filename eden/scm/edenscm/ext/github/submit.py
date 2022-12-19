@@ -15,7 +15,7 @@ from edenscm.node import hex, nullid
 from ghstack.github_gh_cli import Result
 
 from . import gh_submit, github_repo_util
-from .archive_commit import add_pr_head_to_archives
+from .archive_commit import add_commit_to_archives
 from .gh_submit import PullRequestDetails, Repository
 from .github_repo_util import check_github_repo, GitHubRepo
 from .none_throws import none_throws
@@ -253,8 +253,12 @@ async def update_commits_in_stack(
         )
         for index in range(len(partitions))
     ] + [
-        add_pr_head_to_archives(
-            ui=ui, origin=origin, repository=repository, tip=tip, get_gitdir=get_gitdir
+        add_commit_to_archives(
+            oid_to_archive=tip,
+            ui=ui,
+            origin=origin,
+            repository=repository,
+            get_gitdir=get_gitdir,
         )
     ]
     await asyncio.gather(*rewrite_and_archive_requests)

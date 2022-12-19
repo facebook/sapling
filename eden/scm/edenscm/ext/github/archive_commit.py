@@ -15,35 +15,36 @@ from .none_throws import none_throws
 from .run_git_command import run_git_command
 
 
-async def add_pr_head_to_archives(
+async def add_commit_to_archives(
     *,
+    oid_to_archive: str,
     ui,
     origin: str,
     repository: Repository,
-    tip: str,
     get_gitdir: Callable[[], str],
 ):
-    """Takes the specified commit (tip) and merges it into the appropriate
-    archive branch for the (repo, username). GitHub will periodically garbage
-    collect commits that are no longer part of a public branch, but we want to
-    prevent this to ensure previous version of a PR can be viewed later, even
-    after it has been updated via a force-push.
+    """Takes the specified commit (oid_to_archive) and merges it into the
+    appropriate archive branch for the (repo, username). GitHub will
+    periodically garbage collect commits that are no longer part of a public
+    branch, but we want to prevent this to ensure previous version of a PR can
+    be viewed later, even after it has been updated via a force-push.
 
-    tip is the hex version of the commit hash to be merged into the archive branch.
+    oid_to_archive is the hex version of the commit hash to be merged into the
+    archive branch.
     """
     username = await get_username(hostname=repository.hostname)
     if not username:
         raise error.Abort(_("could not determine GitHub username"))
 
     branch_name = f"sapling-pr-archive-{username}"
-    # Try to merge the tip directly, though this may fail if tip has already
-    # been merged or if the branch has not been created before. We try to merge
-    # without checking for the existence of the branch to try to avoid a TOCTOU
-    # error.
+    # Try to merge the commit directly, though this may fail if oid_to_archive
+    # has already been merged or if the branch has not been created before. We
+    # try to merge without checking for the existence of the branch to try to
+    # avoid a TOCTOU error.
     result = await gh_submit.merge_into_branch(
         hostname=repository.hostname,
         repo_id=repository.id,
-        oid_to_merge=tip,
+        oid_to_merge=oid_to_archive,
         branch_name=branch_name,
     )
     if not result.is_error():
@@ -65,22 +66,22 @@ async def add_pr_head_to_archives(
         return
     elif response and _is_branch_does_not_exist_error(response):
         # Archive branch does not exist yet, so initialize it with the current
-        # tip.
+        # oid_to_archive.
         result = await gh_submit.create_branch(
             hostname=repository.hostname,
             repo_id=repository.id,
             branch_name=branch_name,
-            oid=tip,
+            oid=oid_to_archive,
         )
         if result.is_error():
             raise error.Abort(
                 _("unexpected error when trying to create branch %s with commit %s: %s")
-                % (branch_name, tip, result.error)
+                % (branch_name, oid_to_archive, result.error)
             )
     elif response and _is_merge_conflict(response):
         # Git cannot do the merge on its own, so we need to generate our own
-        # commit that merges the existing archive with the contents of `tip` to
-        # use as the new head for the archive branch.
+        # commit that merges the existing archive with the contents of
+        # `oid_to_archive` to use as the new head for the archive branch.
         gitdir = get_gitdir()
 
         # We must fetch the archive branch because we need to have the commit
@@ -104,17 +105,20 @@ async def add_pr_head_to_archives(
         branch_name_oid = match[1]
 
         # This will be the tree to use for the merge commit. We could use the
-        # tree for either `tip` or `branch_name_oid`, but since `tip` appears to
-        # be "newer," we prefer it as it seems less likely to cause a merge
-        # conflict the next time we update the archive branch.
+        # tree for either `oid_to_archive` or `branch_name_oid`, but since
+        # `oid_to_archive` appears to be "newer," we prefer it as it seems less
+        # likely to cause a merge conflict the next time we update the archive
+        # branch.
         tree_oid = (
-            run_git_command(["log", "--max-count=1", "--format=%T", tip], gitdir=gitdir)
+            run_git_command(
+                ["log", "--max-count=1", "--format=%T", oid_to_archive], gitdir=gitdir
+            )
             .decode()
             .rstrip()
         )
 
-        # Synthetically create a new commit that has `tip` and the old branch
-        # head as parents and force-push it as the new branch head.
+        # Synthetically create a new commit that has `oid_to_archive` and the
+        # old branch head as parents and force-push it as the new branch head.
         user_name, user_email = gituser.get_identity_or_raise(ui)
         keyid = gpg.get_gpg_keyid(ui)
         gpg_args = [f"-S{keyid}"] if keyid else []
@@ -131,7 +135,7 @@ async def add_pr_head_to_archives(
                 "-m",
                 "merge commit for archive created by Sapling",
                 "-p",
-                tip,
+                oid_to_archive,
                 "-p",
                 branch_name_oid,
                 tree_oid,
@@ -157,7 +161,7 @@ async def add_pr_head_to_archives(
     else:
         raise error.Abort(
             _("unexpected error when trying to merge %s into %s: %s")
-            % (tip, branch_name, err)
+            % (oid_to_archive, branch_name, err)
         )
 
 
