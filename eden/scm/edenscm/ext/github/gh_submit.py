@@ -95,6 +95,11 @@ class PullRequestDetails:
     base_branch_name: str
     head_oid: str
     head_branch_name: str
+    # body should be the pull request body as authored by the user (i.e.,
+    # containing Markdown source), as opposed to:
+    #   bodyText: plaintext version of body with Markdown markup removed
+    #   bodyHTML: body rendered as "safe" HTML
+    body: str
 
 
 async def get_pull_request_details(
@@ -120,6 +125,7 @@ async def get_pull_request_details(
             base_branch_name=data["baseRefName"],
             head_oid=data["headRefOid"],
             head_branch_name=data["headRefName"],
+            body=data["body"],
         )
     )
 

@@ -44,6 +44,7 @@ query ($owner: String!, $name: String!, $number: Int!) {
       baseRefName
       headRefOid
       headRefName
+      body
     }
   }
 }
