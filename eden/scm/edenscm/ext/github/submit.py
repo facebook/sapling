@@ -773,6 +773,8 @@ def is_branch_does_not_exist_error(response) -> bool:
     ...     }
     ...   ]
     ... }
+    >>> is_branch_does_not_exist_error(response)
+    True
     """
     errors = response.get("errors")
     if not errors or not isinstance(errors, list):
