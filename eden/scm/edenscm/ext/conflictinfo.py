@@ -24,6 +24,7 @@ and run `hg resolve --mark`.
 from __future__ import absolute_import
 
 import copy
+from typing import Any, Dict, Optional, Union
 
 from edenscm import (
     commands,
@@ -100,14 +101,14 @@ CONFLICTSTATES = [
 ]
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapcommand(commands.table, "resolve", _resolve)
 
 
 # Returns which command got us into the conflicted merge state. Since these
 # states are mutually exclusive, we can use the existence of any one statefile
 # as proof of culpability.
-def _findconflictcommand(repo):
+def _findconflictcommand(repo) -> Union[None, Dict[str, str], str]:
     for path, data in CONFLICTSTATES:
         if repo.localvfs.exists(path):
             return data
@@ -195,7 +196,7 @@ def _summarizefileconflicts(self, path, workingctx):
 
 
 # To become merge.summarizepathconflicts().
-def _summarizepathconflicts(self, path):
+def _summarizepathconflicts(self, path) -> Optional[Dict[str, Any]]:
     # 'pu' = unresolved path conflict
     if self[path] != "pu":
         return None
@@ -211,7 +212,7 @@ def _summarizepathconflicts(self, path):
 
 
 # To become filemerge.summarize().
-def _summarize(repo, workingfilectx, otherctx, basectx):
+def _summarize(repo, workingfilectx, otherctx, basectx) -> Dict[str, Any]:
     origfile = (
         None
         if workingfilectx.isabsent()
