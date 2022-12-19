@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import collections
 import errno
 import hashlib
+from typing import List, Tuple
 
 import bindings
 from edenscm import tracing
@@ -376,7 +377,7 @@ class pushoperation(object):
         # outgoing obsmarkers
         self.outobsmarkers = set()
         # outgoing bookmarks
-        self.outbookmarks = []
+        self.outbookmarks: List[Tuple[str, str, str]] = []
         # transaction manager
         self.trmanager = None
         # map { pushkey partid -> callback handling failure}
