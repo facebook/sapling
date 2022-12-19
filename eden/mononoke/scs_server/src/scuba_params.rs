@@ -205,8 +205,14 @@ impl AddScubaParams for thrift::CommitFindFilesParams {
         if let Some(basenames) = &self.basenames {
             scuba.add("param_basenames", basenames.iter().collect::<ScubaValue>());
         }
+        if let Some(suffixes) = &self.basename_suffixes {
+            scuba.add("param_suffixes", suffixes.iter().collect::<ScubaValue>());
+        }
         if let Some(prefixes) = &self.prefixes {
             scuba.add("param_prefixes", prefixes.iter().collect::<ScubaValue>());
+        }
+        if let Some(after) = &self.after {
+            scuba.add("param_after", after.as_str());
         }
     }
 }
