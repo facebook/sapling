@@ -8,6 +8,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from edenscm.ext.github.consts import query
+from edenscm.ext.github.submit import firstline
 
 from ghstack.github_gh_cli import Result
 
@@ -164,6 +165,30 @@ class MockGitHubServer:
         self._add_request(key, request)
         return request
 
+    def expect_update_pr_request(
+        self,
+        pr_id: str,
+        pr_number: int,
+        body: str,
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "UpdatePrRequest":
+        title = firstline(body)
+        params: ParamsType = {
+            "query": query.GRAPHQL_UPDATE_PULL_REQUEST,
+            "pullRequestId": pr_id,
+            "title": title,
+            "body": (
+                "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
+                f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
+                f"* __->__ #1\n\n{body}\n"
+            ),
+        }
+        key = create_request_key(params, self.hostname)
+        request = UpdatePrRequest(key, pr_id)
+        self._add_request(key, request)
+        return request
+
 
 class MockRequest:
     @abstractmethod
@@ -280,6 +305,23 @@ class GetPrDetailsRequest(MockRequest):
                 }
             }
         }
+        self._response = Result.Ok(data)
+
+    def get_response(self) -> Result:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class UpdatePrRequest(MockRequest):
+    def __init__(self, key: str, pr_id: str) -> None:
+        self._key = key
+        self._response: Optional[Result] = None
+
+        self._pr_id = pr_id
+
+    def and_respond(self):
+        data = {"data": {"updatePullRequest": {"pullRequest": {"id": self._pr_id}}}}
         self._response = Result.Ok(data)
 
     def get_response(self) -> Result:

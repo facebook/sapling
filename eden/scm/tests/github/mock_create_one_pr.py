@@ -30,6 +30,7 @@ def setup_mock_github_server() -> MockGitHubServer:
     pr_id = f"PR_id_{pr_number}"
     github_server.expect_get_pr_details_request(pr_number).and_respond(pr_id)
 
+    github_server.expect_update_pr_request(pr_id, pr_number, body).and_respond()
     return github_server
 
 
