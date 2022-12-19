@@ -433,7 +433,7 @@ def _makerage(ui, repo, **opts) -> str:
         ("debugstatus", lambda: hgcmd("debugstatus")),
         ("debugtree", lambda: hgcmd("debugtree")),
         ("hg config (all)", lambda: "\n".join(allconfig(ui))),
-        ("edenfs rage", _edenfs_rage),
+        ("eden rage", _edenfs_rage),
         (
             "environment variables",
             lambda: "\n".join(
