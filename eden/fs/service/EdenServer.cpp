@@ -2217,8 +2217,7 @@ void EdenServer::workingCopyGC() {
       continue;
     }
 
-    // This code is running on the EventBase, let's make sure we don't block it
-    // by moving ourself to another executor.
+    // Avoid blocking the Thrift EventBase by invalidating on another executor.
     folly::via(getServerState()->getThreadPool().get(), [rootInode, cutoff] {
       static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
           "EdenServer::garbageCollect");
