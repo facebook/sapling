@@ -8,7 +8,7 @@ import {Command} from '@site/elements'
 
 Sapling comes with a [`pr` subcommand](../commands/pr.md) to help you work with GitHub pull requests.
 
-Once you have a stack of commits, you can use <Command name="pr" linkText="sl pr submit" /> to create a pull request for each commit in the stack, or to update existing pull requests linked to the commits.
+Once you have a stack of commits, you can use <Command name="pr" linkText="sl pr submit --stack" /> (or `sl pr s -s`) to create a pull request for each commit in the stack, or to update existing pull requests linked to the commits.
 
 :::caution
 
