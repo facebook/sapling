@@ -58,7 +58,10 @@ impl WatchmanFileSystem {
         })
     }
 
+    #[tracing::instrument(skip_all, err)]
     async fn query_result(&self, state: &WatchmanState) -> Result<QueryResult<StatusQuery>> {
+        let start = std::time::Instant::now();
+
         let client = Connector::new().connect().await?;
         let resolved = client
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
@@ -82,6 +85,8 @@ impl WatchmanFileSystem {
             )
             .await?;
 
+        tracing::trace!(target: "measuredtimes", watchmanquery_time=start.elapsed().as_millis());
+
         Ok(result)
     }
 }
@@ -103,6 +108,12 @@ impl PendingChanges for WatchmanFileSystem {
         )?;
 
         let result = async_runtime::block_on(self.query_result(&state))?;
+
+        tracing::debug!(
+            target: "watchman_info",
+            watchmanfreshinstances= if result.is_fresh_instance { 1 } else { 0 },
+            watchmanfilecount=result.files.as_ref().map_or(0, |f| f.len()),
+        );
 
         let should_warn = config.get_or_default("fsmonitor", "warn-fresh-instance")?;
         if result.is_fresh_instance && should_warn {
