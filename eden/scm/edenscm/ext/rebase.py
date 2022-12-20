@@ -1274,6 +1274,7 @@ def _origrebase(ui, repo, rbsrt, **opts):
         srcf = opts.get("source", None)
         basef = opts.get("base", None)
         revf = opts.get("rev", [])
+        keepf = opts.get("keep", False)
         # search default destination in this space
         # used in the 'hg pull --rebase' case, see issue 5214.
         destspace = opts.get("_destspace")
@@ -1318,7 +1319,15 @@ def _origrebase(ui, repo, rbsrt, **opts):
                 return retcode
         else:
             destmap = _definedestmap(
-                ui, repo, rbsrt, destf, srcf, basef, revf, destspace=destspace
+                ui,
+                repo,
+                rbsrt,
+                destf,
+                srcf,
+                basef,
+                revf,
+                keepf=keepf,
+                destspace=destspace,
             )
             retcode = rbsrt._preparenewrebase(destmap)
             if retcode is not None:
@@ -1346,7 +1355,15 @@ def _origrebase(ui, repo, rbsrt, **opts):
 
 
 def _definedestmap(
-    ui, repo, rbsrt, destf=None, srcf=None, basef=None, revf=None, destspace=None
+    ui,
+    repo,
+    rbsrt,
+    destf=None,
+    srcf=None,
+    basef=None,
+    revf=None,
+    keepf=None,
+    destspace=None,
 ):
     """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
@@ -1399,7 +1416,7 @@ def _definedestmap(
             dest = repo[_destrebase(repo, base, destspace=destspace)]
             destf = str(dest)
 
-        roots = []  # selected children of branching points
+        rootnodes = []  # selected children of branching points
         bpbase = {}  # {branchingpoint: [origbase]}
         for b in base:  # group bases by branching points
             bp = repo.revs("ancestor(%d, %d)", b, dest).first()
@@ -1408,10 +1425,16 @@ def _definedestmap(
             # emulate the old behavior, showing "nothing to rebase" (a better
             # behavior may be abort with "cannot find branching point" error)
             bpbase.clear()
+        tonodes = repo.changelog.tonodes
         for bp, bs in pycompat.iteritems(bpbase):  # calculate roots
-            roots += list(repo.revs("children(%d) & ancestors(%ld)", bp, bs))
+            rootnodes += list(
+                repo.dageval(lambda: children(tonodes([bp])) & ancestors(tonodes(bs)))
+            )
 
-        rebaseset = repo.revs("%ld::", roots)
+        rebasenodes = repo.dageval(lambda: descendants(rootnodes))
+        if not keepf:
+            rebasenodes -= repo.dageval(lambda: public())
+        rebaseset = repo.changelog.torevset(rebasenodes)
 
         if not rebaseset:
             # transform to list because smartsets are not comparable to

@@ -52,6 +52,7 @@ Make conflicts halfway up the stack:
   rebasing in-memory!
   rebasing f4016ed9f5d0 "d" (d)
   rebasing 881eb15e0fdf "e" (e)
+  note: not rebasing 22d86c9ba040 "f" and its descendants as this would cause divergence
   rebasing e692c3b32196 "f" (f)
   merging c
   hit merge conflicts (in c); switching to on-disk merge
@@ -66,6 +67,7 @@ Make conflicts halfway up the stack:
   $ hg rebase --continue
   already rebased f4016ed9f5d0 "d" (d) as 32bb4413a7df
   already rebased 881eb15e0fdf "e" (e) as d82c41319fdd
+  note: not rebasing 22d86c9ba040 "f" and its descendants as this would cause divergence
   rebasing e692c3b32196 "f" (f)
   rebasing 2a19607ff85c "g" (g)
   $ hg log -G -r 'desc(a)':: -T '{desc} {node|short}'

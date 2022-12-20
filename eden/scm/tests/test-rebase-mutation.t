@@ -793,6 +793,7 @@ XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be oka
 
   $ hg rebase -d 'desc(B2)'
   note: not rebasing a8b11f55fb19 "B0", already in destination as 261e70097290 "B2"
+  rebasing 212cb178bcbb "C"
   rebasing 1a79b7535141 "D"
   $ hg up 'max(desc(C))'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

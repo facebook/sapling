@@ -534,6 +534,7 @@
   $ hg rebase -d 1 --config 'extensions.rebase='
   rebasing 323bfa07f744 "xyz"
   merging x
+  rebasing a2281b51947d "shelve changes to: xyz"
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
