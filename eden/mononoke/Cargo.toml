@@ -84,7 +84,7 @@ cmdlib = { version = "0.1.0", path = "cmdlib" }
 cmdlib_logging = { version = "0.1.0", path = "cmdlib/log" }
 context = { version = "0.1.0", path = "server/context" }
 criterion = "=0.3.1"
-dashmap = { version = "5.4", features = ["rayon", "serde"] }
+dashmap = { version = "5.4", features = ["raw-api", "rayon", "serde"] }
 derive_more = "0.99.17"
 derived_data = { version = "0.1.0", path = "derived_data" }
 environment = { version = "0.1.0", path = "cmdlib/environment" }

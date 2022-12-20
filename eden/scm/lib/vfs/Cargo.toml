@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.65"
 crossbeam = "0.8"
-dashmap = { version = "5.4", features = ["rayon", "serde"] }
+dashmap = { version = "5.4", features = ["raw-api", "rayon", "serde"] }
 fsinfo = { version = "0.1.0", path = "../fsinfo" }
 identity = { version = "0.1.0", path = "../identity" }
 libc = "0.2.137"
