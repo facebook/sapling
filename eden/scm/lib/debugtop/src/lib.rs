@@ -217,7 +217,7 @@ mod tests {
     fn test_table_generator() {
         let default_removal_delay = chrono::Duration::seconds(1);
         let default_generator = || TableGenerator::new("".to_string(), default_removal_delay);
-        let default_time = || Utc.timestamp(3, 100000000);
+        let default_time = || Utc.timestamp_opt(3, 100000000).unwrap();
 
         // Test invalid columns
         assert!(
@@ -256,7 +256,7 @@ mod tests {
                 pid: 101,
                 download_bytes: 0,
                 upload_bytes: 0,
-                start_time: Utc.timestamp(0, 0),
+                start_time: Utc.timestamp_opt(0, 0).unwrap(),
                 end_time: None,
                 exit_code: None,
                 progress: vec![Progress {
@@ -295,8 +295,8 @@ mod tests {
                     pid: 0,
                     download_bytes: 0,
                     upload_bytes: 0,
-                    start_time: Utc.timestamp(0, 0),
-                    end_time: Some(Utc.timestamp(2, 0)),
+                    start_time: Utc.timestamp_opt(0, 0).unwrap(),
+                    end_time: Some(Utc.timestamp_opt(2, 0).unwrap()),
                     exit_code: Some(0),
                     progress: vec![],
                 },
@@ -309,8 +309,8 @@ mod tests {
                     pid: 321,
                     download_bytes: 0,
                     upload_bytes: 0,
-                    start_time: Utc.timestamp(0, 0),
-                    end_time: Some(Utc.timestamp(3, 0)),
+                    start_time: Utc.timestamp_opt(0, 0).unwrap(),
+                    end_time: Some(Utc.timestamp_opt(3, 0).unwrap()),
                     exit_code: Some(123),
                     progress: vec![],
                 },
