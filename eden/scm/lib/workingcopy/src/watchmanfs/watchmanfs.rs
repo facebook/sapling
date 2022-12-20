@@ -17,6 +17,7 @@ use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::Matcher;
+use progress_model::ProgressBar;
 use repolock::RepoLocker;
 use treestate::treestate::TreeState;
 use vfs::VFS;
@@ -61,6 +62,8 @@ impl WatchmanFileSystem {
     #[tracing::instrument(skip_all, err)]
     async fn query_result(&self, state: &WatchmanState) -> Result<QueryResult<StatusQuery>> {
         let start = std::time::Instant::now();
+
+        let _bar = ProgressBar::register_new("querying watchman", 0, "");
 
         let client = Connector::new().connect().await?;
         let resolved = client
