@@ -372,7 +372,7 @@ the configuration file in which the ``%include`` directive is found.
 Environment variables and ``~user`` constructs are expanded in
 ``file``. This lets you do something like::
 
-  %include ~/.hgrc.d/$HOST.rc
+  %include ~/.@prog@/$HOST.config
 
 to include a different configuration file on each computer you use.
 
@@ -956,11 +956,11 @@ Otherwise, give a name that you choose, followed by ``=``, followed by
 the path to the ``.py`` file (including the file name extension) that
 defines the extension.
 
-To explicitly disable an extension that is enabled in an hgrc of
+To explicitly disable an extension that is enabled in a config file of
 broader scope, prepend its path with ``!``, as in ``foo = !/ext/path``
 or ``foo = !`` when path is not supplied.
 
-Example for ``~/.hgrc``::
+Example for ``sapling.conf``::
 
   [extensions]
   # (the amend extension will get loaded from @Product@'s path)
@@ -1040,7 +1040,7 @@ Some commands show hints about features, like::
     hint[import]: use '@prog@ import' to import commits exported by '@prog@ export'
 
 They can be silenced by ``@prog@ hint --ack import``, which writes the
-``hint.ack`` config in user hgrc.
+``hint.ack`` config to the user config.
 
 ``ack``
     A list of hint IDs that were acknowledged so they will not
@@ -1057,7 +1057,7 @@ value or setting it to an empty string.  Hooks can be prioritized
 by adding a prefix of ``priority.`` to the hook name on a new line
 and setting the priority. The default priority is 0.
 
-Example ``.hg/hgrc``::
+Example ``.@prog@/config``::
 
   [hooks]
   # update working directory after adding changesets
@@ -1567,7 +1567,7 @@ merges. This section has likely been preconfigured at install time.
 Use :prog:`config merge-tools` to check the existing configuration.
 Also see :prog:`help merge-tools` for more details.
 
-Example ``~/.hgrc``::
+Example ``sapling.conf``::
 
   [merge-tools]
   # Override stock tool location
@@ -2537,9 +2537,9 @@ User interface controls.
     username are expanded.
 
     (default: ``$EMAIL`` or ``username@hostname``. If the username in
-    hgrc is empty, e.g. if the system admin set ``username =`` in the
-    system hgrc, it has to be specified manually or in a different
-    hgrc file)
+    the config is empty, e.g. if the system admin set ``username =`` in the
+    system config, it has to be specified manually or in a different
+    config file)
 
 ``verbose``
     Increase the amount of output printed. (default: False)
@@ -2742,7 +2742,7 @@ HGRCPATH
     A list of files or directories to search for configuration
     files. Item separator is ":" on Unix, ";" on Windows. If HGRCPATH
     is not set, platform default search path is used. If empty, only
-    the .hg/hgrc from the current repository is read.
+    the current repository config is read.
 
     For each element in HGRCPATH:
 
@@ -3004,13 +3004,13 @@ List flags take multiple values. To specify them, pass the flag multiple times::
 Setting flag defaults
 =====================
 
-In order to set a default value for a flag in an hgrc file, it is recommended to
+In order to set a default value for a flag in a config file, it is recommended to
 use aliases::
 
     [alias]
     commit = commit --interactive
 
-For more information on hgrc files, see :prog:`help config`.
+For more information on config files, see :prog:`help config`.
 
 Overriding flags on the command line
 ====================================
@@ -3032,7 +3032,7 @@ then the following command will override that -m::
 Overriding flag defaults
 ========================
 
-Every flag has a default value, and you may also set your own defaults in hgrc
+Every flag has a default value, and you may also set your own defaults
 as described above.
 Except for list flags, defaults can be overridden on the command line simply by
 specifying the flag in that location.
@@ -3476,9 +3476,9 @@ programs but relies on external tools for that.
 Available merge tools
 =====================
 
-External merge tools and their properties are configured in the
-merge-tools configuration section - see hgrc(5) - but they can often just
-be named by their executable.
+External merge tools and their properties are configured in the merge-tools
+configuration section - see :prog:`help config.merge-tools` - but they can often
+just be named by their executable.
 
 A merge tool is generally usable if its executable can be found on the
 system and if it can handle the merge. The executable is found if it
@@ -3538,7 +3538,7 @@ Choosing a merge tool
    controlled by the premerge setting of the merge tool. Premerge is enabled by
    default unless the file is binary or a symlink.
 
-See the merge-tools and ui sections of hgrc(5) for details on the
+See the merge-tools and ui sections of :prog:`help config` for details on the
 configuration of merge tools.
 """
 
