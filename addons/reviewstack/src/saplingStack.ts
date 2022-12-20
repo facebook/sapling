@@ -53,16 +53,37 @@ export type SaplingPullRequestBody = {
   commitMessage: string;
 };
 
+const _STACK_SECTION_START = 'Stack created with [Sapling]';
+
 export function parseSaplingStackBody(body: string): SaplingPullRequestBody | null {
-  if (!body.startsWith('Stack created with [Sapling]')) {
-    return null;
+  const lines = body.split(/\r?\n/);
+
+  let firstLine: string;
+  let index: number;
+  let commitMessage = null;
+
+  // A Sapling stack either starts with the _STACK_SECTION_START pattern, or has
+  // a line starting with _STACK_SECTION_START after a horizontal rule.
+  if (body.startsWith(_STACK_SECTION_START)) {
+    firstLine = lines[0];
+    index = 1;
+  } else {
+    const lastHRIndex = lines.lastIndexOf('---');
+    if (lastHRIndex === -1 || !(lines[lastHRIndex + 1] ?? '').startsWith(_STACK_SECTION_START)) {
+      return null;
+    }
+
+    firstLine = lines[lastHRIndex + 1];
+    index = lastHRIndex + 2;
+    commitMessage = lines.slice(0, lastHRIndex).join('\n');
+    if (commitMessage !== '') {
+      commitMessage += '\n';
+    }
   }
 
-  const lines = body.split(/\r?\n/);
   const introductionLines = [];
   const stack: Array<{number: number; numCommits: number}> = [];
   let inIntroduction = true;
-  let index = 1;
   const numLines = lines.length;
   let currentStackEntry = null;
   while (index < numLines) {
@@ -108,10 +129,12 @@ export function parseSaplingStackBody(body: string): SaplingPullRequestBody | nu
     return null;
   }
 
-  const commitMessage = lines.slice(index).join('\n');
+  if (commitMessage == null) {
+    commitMessage = lines.slice(index).join('\n');
+  }
 
   return {
-    firstLine: lines[0],
+    firstLine,
     introduction: introductionLines.join('\n'),
     stack,
     currentStackEntry,
