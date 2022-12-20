@@ -49,6 +49,13 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         ctx: &CoreContext,
         blobstore: &Store,
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    /// List all subentries with a given prefix
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
     async fn lookup(
         &self,
         ctx: &CoreContext,
@@ -61,6 +68,13 @@ pub trait Manifest: Sync + Sized + 'static {
     type TreeId: Send + Sync;
     type LeafId: Send + Sync;
     fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>>;
+    /// List all subentries with a given prefix
+    fn list_prefix<'a>(
+        &'a self,
+        prefix: &'a [u8],
+    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
+        Box::new(self.list().filter(|(k, _)| k.starts_with(prefix)))
+    }
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>>;
 }
 
@@ -76,6 +90,21 @@ impl<M: Manifest, Store: Send + Sync> AsyncManifest<Store> for M {
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
     {
         Ok(stream::iter(Manifest::list(self).map(anyhow::Ok).collect::<Vec<_>>()).boxed())
+    }
+
+    async fn list_prefix(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(stream::iter(
+            Manifest::list_prefix(self, prefix)
+                .map(anyhow::Ok)
+                .collect::<Vec<_>>(),
+        )
+        .boxed())
     }
 
     async fn lookup(
@@ -109,6 +138,21 @@ impl<Store: Blobstore> AsyncManifest<Store> for BasenameSuffixSkeletonManifest {
         anyhow::Ok(
             self.clone()
                 .into_subentries(ctx, blobstore)
+                .map_ok(|(path, entry)| (path, to_mf_entry(entry)))
+                .boxed(),
+        )
+    }
+
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        anyhow::Ok(
+            self.clone()
+                .into_prefix_subentries(ctx, blobstore, prefix)
                 .map_ok(|(path, entry)| (path, to_mf_entry(entry)))
                 .boxed(),
         )

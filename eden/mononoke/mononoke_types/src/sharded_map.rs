@@ -480,19 +480,34 @@ impl<Value: MapValue> ShardedMapNode<Value> {
         ctx: &'a CoreContext,
         blobstore: &'a impl Blobstore,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        self.into_prefix_entries(ctx, blobstore, &[])
+    }
+
+    pub fn into_prefix_entries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
+        // TODO: prefix
         bounded_traversal_ordered_stream(
             nonzero!(256usize),
             nonzero!(256usize),
             vec![(
                 self.size(),
-                (SmallBinary::new(), ShardedMapChild::Inlined(self)),
+                (SmallBinary::new(), prefix, ShardedMapChild::Inlined(self)),
             )],
-            move |(mut cur_prefix, child): (SmallBinary, ShardedMapChild<Value>)| {
+            move |(mut cur_prefix, remaining_prefix, child): (
+                SmallBinary,
+                &[u8],
+                ShardedMapChild<Value>,
+            )| {
                 async move {
                     Ok(match child.load(ctx, blobstore).await? {
                         // Case 1. Prepend all keys with cur_prefix and output elements
                         Self::Terminal { values } => values
                             .into_iter()
+                            .filter(|(k, _)| k.starts_with(remaining_prefix))
                             .map(|(key, value)| {
                                 let mut full_key = cur_prefix.clone();
                                 full_key.extend(key);
@@ -506,22 +521,49 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                             edges,
                             ..
                         } => {
+                            let remaining_prefix = if remaining_prefix.len() >= new_prefix.len() {
+                                if let Some(new_remaining) =
+                                    remaining_prefix.strip_prefix(new_prefix.as_slice())
+                                {
+                                    new_remaining
+                                } else {
+                                    // prefix doesn't match
+                                    return Ok(vec![]);
+                                }
+                            } else {
+                                if new_prefix.starts_with(remaining_prefix) {
+                                    &[]
+                                } else {
+                                    // prefix doesn't match
+                                    return Ok(vec![]);
+                                }
+                            };
                             // Step 2-a. Extend cur_prefix
                             cur_prefix.extend(new_prefix);
                             let cur_prefix = &cur_prefix;
-                            value
-                                // Step 2-b. If value is present, output (cur_prefix, value)
+                            remaining_prefix
+                                .is_empty()
+                                .then_some(value)
+                                .flatten()
+                                // Step 2-b. If value is present (and prefix empty), output (cur_prefix, value)
                                 .map(|value| OrderedTraversal::Output((cur_prefix.clone(), value)))
                                 .into_iter()
                                 // Step 2-c. Copy prefix, append byte, and recurse.
-                                .chain(edges.into_iter().map(|(byte, edge)| {
-                                    let mut new_prefix = cur_prefix.clone();
-                                    new_prefix.push(byte);
-                                    let size_prediction = edge.size;
-                                    OrderedTraversal::Recurse(
-                                        size_prediction,
-                                        (new_prefix, edge.child),
-                                    )
+                                .chain(edges.into_iter().filter_map(|(byte, edge)| {
+                                    let (first, rest) =
+                                        remaining_prefix.split_first().unwrap_or((&byte, &[]));
+                                    if *first == byte {
+                                        let mut new_prefix = cur_prefix.clone();
+                                        new_prefix.push(byte);
+                                        let size_prediction = edge.size;
+                                        Some(OrderedTraversal::Recurse(
+                                            size_prediction,
+                                            (new_prefix, rest, edge.child),
+                                        ))
+                                    } else {
+                                        // Byte didn't match prefix
+                                        None
+                                    }
                                 }))
                                 .collect::<Vec<_>>()
                         }
@@ -770,9 +812,30 @@ mod test {
                 .and_then(|(k, v)| async move { Ok((String::from_utf8(k.to_vec())?, v.0)) })
         }
 
+        fn prefix_entries<'a>(
+            &'a self,
+            prefix: &'a str,
+        ) -> impl Stream<Item = Result<(String, i32)>> + 'a {
+            self.0
+                .clone()
+                .into_prefix_entries(&self.1, &self.2, prefix.as_bytes())
+                .and_then(|(k, v)| async move { Ok((String::from_utf8(k.to_vec())?, v.0)) })
+        }
+
         async fn assert_entries(&self, entries: &[(&str, i32)]) -> Result<()> {
             assert_eq!(
                 self.entries().try_collect::<Vec<_>>().await?,
+                entries
+                    .iter()
+                    .map(|(k, v)| (String::from(*k), *v))
+                    .collect::<Vec<_>>()
+            );
+            Ok(())
+        }
+
+        async fn assert_prefix_entries(&self, prefix: &str, entries: &[(&str, i32)]) -> Result<()> {
+            assert_eq!(
+                self.prefix_entries(prefix).try_collect::<Vec<_>>().await?,
                 entries
                     .iter()
                     .map(|(k, v)| (String::from(*k), *v))
@@ -965,6 +1028,18 @@ mod test {
 
         let map = MapHelper(example_map(), ctx, blobstore);
         map.assert_entries(EXAMPLE_ENTRIES).await?;
+        map.assert_prefix_entries("", EXAMPLE_ENTRIES).await?;
+        map.assert_prefix_entries("aba", &EXAMPLE_ENTRIES[0..8])
+            .await?;
+        map.assert_prefix_entries("abaca", &EXAMPLE_ENTRIES[1..6])
+            .await?;
+        map.assert_prefix_entries("omi", &EXAMPLE_ENTRIES[8..10])
+            .await?;
+        map.assert_prefix_entries("om", &EXAMPLE_ENTRIES[8..])
+            .await?;
+        map.assert_prefix_entries("o", &EXAMPLE_ENTRIES[8..])
+            .await?;
+        map.assert_prefix_entries("ban", &[]).await?;
         Ok(())
     }
 

@@ -192,6 +192,18 @@ impl BasenameSuffixSkeletonManifest {
             .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
             .boxed()
     }
+
+    pub fn into_prefix_subentries<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, BssmEntry)>> {
+        self.subentries
+            .into_prefix_entries(ctx, blobstore, prefix)
+            .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
+            .boxed()
+    }
 }
 
 impl BlobstoreValue for BasenameSuffixSkeletonManifest {

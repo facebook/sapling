@@ -369,6 +369,11 @@ impl MPathElement {
         self.0.ends_with(potential_suffix)
     }
 
+    #[inline]
+    pub fn starts_with(&self, prefix: &[u8]) -> bool {
+        self.0.starts_with(prefix)
+    }
+
     /// Reverse this path element inplace
     pub fn reverse(&mut self) {
         self.0.reverse()
