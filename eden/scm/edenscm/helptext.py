@@ -283,45 +283,10 @@ Files
 
 @Product@ reads configuration data from several files, if they exist.
 These files do not exist by default and you will have to create the
-appropriate configuration files yourself:
+appropriate configuration files yourself.
 
-Local configuration is put into the per-repository ``<repo>/.hg/hgrc`` file.
-
-Global configuration like the username setting is typically put into:
-
-.. container:: windows
-
-  - ``%USERPROFILE%\ini`` (on Windows)
-
-.. container:: unix.plan9
-
-  - ``$HOME/.hgrc`` (on Unix, Plan9)
-
-The names of these files depend on the system on which @Product@ is
-installed. ``*.rc`` files from a single directory are read in
-alphabetical order, later ones overriding earlier ones. Where multiple
-paths are given below, settings from earlier paths override later
-ones.
-
-.. container:: verbose.unix
-
-  On Unix, the following files are consulted:
-
-  - ``<repo>/.hg/hgrc`` (per-repository)
-  - ``$HOME/.hgrc`` (per-user)
-  - ``$XDG_CONFIG_HOME/hg/hgrc`` (per-user)
-  - ``/etc/mercurial/system.rc`` (per-system)
-  - ``<builtin>`` (builtin)
-
-.. container:: verbose.windows
-
-  On Windows, the following files are consulted:
-
-  - ``<repo>/.hg/hgrc`` (per-repository)
-  - ``%USERPROFILE%\.hgrc`` (per-user)
-  - ``%USERPROFILE%\@Product@.ini`` (per-user)
-  - ``%PROGRAMDATA%\Facebook\@Product@`` (per-installation)
-  - ``<builtin>`` (builtin)
+The configuration files' locations depend on the current platform. Please
+consult :prog:`configfile` to discover your platform's locations.
 
 Per-repository configuration options only apply in a
 particular repository. This file is not version-controlled, and
@@ -333,36 +298,10 @@ in these files apply to all @Product@ commands executed by this user in any
 directory. Options in these files override per-system and per-installation
 options.
 
-Per-installation configuration files are searched for in the
-directory where @Product@ is installed. ``<install-root>`` is the
-parent directory of the **hg** executable (or symlink) being run.
-
-.. container:: unix.plan9
-
-  For example, if installed in ``/shared/tools/bin/hg``, @Product@
-  will look in ``/shared/tools/etc/mercurial/hgrc``. Options in these
-  files apply to all @Product@ commands executed by any user in any
-  directory.
-
-Per-installation configuration files are for the system on
-which @Product@ is running. Options in these files apply to all
-@Product@ commands executed by any user in any directory. Registry
-keys contain PATH-like strings, every part of which must reference
-a ``@Product@.ini`` file or be a directory where ``*.rc`` files will
-be read.  @Product@ checks each of these locations in the specified
-order until one or more configuration files are detected.
-
 Per-system configuration files are for the system on which @Product@
 is running. Options in these files apply to all @Product@ commands
 executed by any user in any directory. Options in these files
 override per-installation options.
-
-@Product@ comes with some default configuration. The default configuration
-files are installed with @Product@ and will be overwritten on upgrades. Default
-configuration files should never be edited by users or administrators but can
-be overridden in other configuration files. So far the directory only contains
-merge tool configuration but packagers can also put other default configuration
-there.
 
 Warning: Running @prog@ inside, pushing to, pulling from, or cloning local
 repositories owned by other users will load the their config files. That could
