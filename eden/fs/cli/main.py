@@ -1484,17 +1484,16 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                 print("Not confirmed")
                 return 2
 
-        # Unmount + destroy everything
+        # Unmount and destroy everything
         exit_code = 0
         for mount, remove_type in mounts:
             print(f"Removing {mount}...")
             if remove_type == RemoveType.ACTIVE_MOUNT:
                 try:
-                    # We don't bother complaining about removing redirections on
-                    # Windows since redirections are symlinks on windows,
-                    # anyways so the removal of the repo will remove them.
-                    # This would usually happen because the daemon is not
-                    # running, so this is usually just extra spam for users.
+                    # We don't bother complaining about removing redirections on Windows
+                    # since redirections are symlinks on Windows anyway, so the removal
+                    # of the repo will remove them. This would usually happen because
+                    # the daemon is not running, so this is oftenjust extra spam for users.
                     print(f"Stopping aux processes for {mount}...")
                     stop_aux_processes_for_path(
                         mount,
@@ -1503,7 +1502,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                         ),
                     )
                 except Exception as ex:
-                    print_stderr(f"error stoping aux processes {mount}: {ex}")
+                    print_stderr(f"error stopping auxiliary processes {mount}: {ex}")
                     exit_code = 1
                     # We intentionally fall through here and remove the mount point
                     # so that the eden daemon will attempt to unmount it.
