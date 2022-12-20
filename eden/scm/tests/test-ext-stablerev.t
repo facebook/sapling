@@ -18,9 +18,13 @@
 If the script doesn't return anything, an abort is raised:
   $ printf "#!/bin/bash\n" > stable.sh
   $ chmod +x stable.sh
-  $ setconfig stablerev.script=./stable.sh
-  $ hg log -r "getstablerev()"
-  abort: stable rev returned by script (./stable.sh) was empty
+  $ setconfig stablerev.script=stable.sh
+  $ hg log -r "getstablerev()" --debug
+  Executing script: $TESTTMP/repo1/stable.sh
+  setting current working directory to: $TESTTMP/repo1
+  script stdout:
+  
+  abort: stable rev returned by script (stable.sh) was empty
   [255]
 
 Make the script return something:
@@ -48,7 +52,7 @@ JSON is also supported:
 Invalid JSON aborts:
   $ printf "#!/bin/bash\n\necho '{node\": \"D\"}'" > stable.sh
   $ hg log -r "getstablerev()"
-  abort: stable rev returned by script (./stable.sh) was invalid
+  abort: stable rev returned by script (stable.sh) was invalid
   [255]
 
 An alias can be used for simplicity:

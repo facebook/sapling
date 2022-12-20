@@ -201,8 +201,10 @@ def _lookupstables(repo, ctx):
 def _executescript(script, repo, extraenv=None):
     ui = repo.ui
 
-    ui.debug("Executing script: %s\n" % script)
     reporoot = repo.wvfs.join("")
+    script = repo.wvfs.join(script)
+
+    ui.debug("Executing script: %s\n" % script)
 
     env = encoding.environ.copy()
     env.update({"REAL_CWD": pycompat.getcwd(), "HG_ROOT": reporoot})
