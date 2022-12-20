@@ -196,10 +196,12 @@ export const gitHubUsername = selector<string | null>({
       return username;
     }
 
+    const graphQLEndpoint = get(gitHubGraphQLEndpoint);
     return queryGraphQL<UsernameQueryData, UsernameQueryVariables>(
       UsernameQuery,
       {},
       createRequestHeaders(token),
+      graphQLEndpoint,
     ).then(data => {
       const username = data.viewer.login;
       localStorage.setItem(key, username);
@@ -207,6 +209,48 @@ export const gitHubUsername = selector<string | null>({
     });
   },
 });
+
+export const gitHubHostname = atom<string>({
+  key: 'gitHubHostname',
+  default: 'github.com',
+});
+
+export const gitHubGraphQLEndpoint = selector<string>({
+  key: 'gitHubGraphQLEndpoint',
+  get: ({get}) => {
+    const hostname = get(gitHubHostname);
+    return createGraphQLEndpointForHostname(hostname);
+  },
+});
+
+export function createGraphQLEndpointForHostname(hostname: string): string {
+  // According to GitHub's documentation:
+  //
+  // https://docs.github.com/en/enterprise-server@3.6/graphql/guides/introduction-to-graphql#discovering-the-graphql-api
+  //
+  // The URL to use for the GraphQL API is:
+  //
+  //   http(s)://HOSTNAME/api/graphql
+  //
+  // Though for the GHE instance we tested, both of these appear to work:
+  //
+  //   https://api.HOSTNAME/graphql
+  //   https://HOSTNAME/api/graphql
+  //
+  // And for consumer GitHub, trying to make API requests using curl:
+  //
+  //   https://api.github.com/graphql works
+  //   https://github.com/api/graphql fails with "Cookies must be enabled to use GitHub."
+  //
+  // While it is possible that https://api.HOSTNAME/graphql always works for
+  // both enterprise and consume GitHub, we'll go with what is documented to
+  // play it safe.
+  if (hostname === 'github.com') {
+    return 'https://api.github.com/graphql';
+  } else {
+    return `https://${hostname}/api/graphql`;
+  }
+}
 
 function deriveLocalStoragePropForUsername(token: string): string {
   return `username.${token}`;

@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-const GITHUB_GRAPHQL_ENDPOINT = 'https://api.github.com/graphql';
-
 export default async function queryGraphQL<TData, TVariables>(
   query: string,
   variables: TVariables,
   requestHeaders: Record<string, string>,
+  graphQLEndpoint: string,
 ): Promise<TData> {
-  const response = await fetch(GITHUB_GRAPHQL_ENDPOINT, {
+  const response = await fetch(graphQLEndpoint, {
     headers: requestHeaders,
     method: 'POST',
     body: JSON.stringify({query, variables}),

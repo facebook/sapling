@@ -7,15 +7,18 @@
 
 import Link from './Link';
 import URLFor from './URLFor';
+import {gitHubHostname} from './github/gitHubCredentials';
 import {MarkGithubIcon} from '@primer/octicons-react';
 import {Box, Text} from '@primer/react';
+import {useRecoilValue} from 'recoil';
 
 export default function GitHubProjectPage(props: {org: string; repo: string}): React.ReactElement {
   const orgRepo = `${props.org}/${props.repo}`;
+  const hostname = useRecoilValue(gitHubHostname);
   return (
     <Box padding={2}>
       <Box pb={2}>
-        <Link href={`https://github.com${URLFor.project(props)}`}>
+        <Link href={`https://${hostname}${URLFor.project(props)}`}>
           <Text>
             View {orgRepo} on GitHub <MarkGithubIcon />
           </Text>

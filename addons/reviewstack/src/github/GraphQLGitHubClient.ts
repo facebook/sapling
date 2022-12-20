@@ -67,6 +67,7 @@ import {
   TreeQuery,
 } from '../generated/graphql';
 import {globalCacheStats} from './GitHubClientStats';
+import {createGraphQLEndpointForHostname} from './gitHubCredentials';
 import queryGraphQL from './queryGraphQL';
 import {createRequestHeaders} from 'shared/github/auth';
 import {notEmpty} from 'shared/utils';
@@ -80,9 +81,31 @@ const NUM_TIMELINE_ITEMS_TO_FETCH = 100;
  */
 export default class GraphQLGitHubClient implements GitHubClient {
   private requestHeaders: Record<string, string>;
+  private graphQLEndpoint: string;
 
-  constructor(private organization: string, private repositoryName: string, token: string) {
+  /**
+   * An instance of GraphQLGitHubClient is specific to a GitHub
+   * (hostname, organization, name). To query information about a different
+   * repo, create a new instance with a separate set of parameters.
+   *
+   * @param hostname to use when making API requests. For consumer GitHub, this
+   *   is "github.com". For GitHub Enterprise, it should be the hostname for
+   *   the GitHub Enterprise (GHE) account. Note that if the GHE hostname is
+   *   "foo.example.com", then "foo.example.com" should be passed as the value
+   *   of `hostname` rather than "api.foo.example.com".
+   * @param organization name of the GitHub organization to which the repository
+   *   belongs
+   * @param repositoryName name of the GitHub repository within the organization
+   * @param token GitHub Personal Access Token (PAT) to authenticate requests
+   */
+  constructor(
+    private hostname: string,
+    private organization: string,
+    private repositoryName: string,
+    token: string,
+  ) {
     this.requestHeaders = createRequestHeaders(token);
+    this.graphQLEndpoint = createGraphQLEndpointForHostname(hostname);
   }
 
   async getCommit(oid: GitObjectID): Promise<Commit | null> {
@@ -147,7 +170,7 @@ export default class GraphQLGitHubClient implements GitHubClient {
     // At the time of this writing, the GitHub GraphQL API v4 does not appear to
     // support fetching the content for binary blobs. For now, we use GitHub's
     // database API as a workaround.
-    const url = `https://api.github.com/repos/${encodeURIComponent(
+    const url = `https://api.${this.hostname}/repos/${encodeURIComponent(
       this.organization,
     )}/${encodeURIComponent(this.repositoryName)}/git/blobs/${oid}`;
     const response = await fetch(url, {
@@ -194,7 +217,7 @@ export default class GraphQLGitHubClient implements GitHubClient {
     // `basehead` param comprises two parts, `base` and `head`, each of which
     // can be either a branch name or commit hash.
     // https://docs.github.com/en/rest/reference/commits#compare-two-commits
-    const url = `https://api.github.com/repos/${encodeURIComponent(
+    const url = `https://api.${this.hostname}/repos/${encodeURIComponent(
       this.organization,
     )}/${encodeURIComponent(this.repositoryName)}/compare/${base}...${head}`;
     const response = await fetch(url, {
@@ -368,7 +391,7 @@ export default class GraphQLGitHubClient implements GitHubClient {
   }
 
   private query<TData, TVariables>(query: string, variables: TVariables): Promise<TData> {
-    return queryGraphQL(query, variables, this.requestHeaders);
+    return queryGraphQL(query, variables, this.requestHeaders, this.graphQLEndpoint);
   }
 }
 

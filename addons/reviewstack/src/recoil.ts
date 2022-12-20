@@ -44,7 +44,12 @@ import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import GraphQLGitHubClient from './github/GraphQLGitHubClient';
 import {diffCommits, diffCommitWithParent} from './github/diff';
 import {diffVersions} from './github/diffVersions';
-import {gitHubTokenPersistence, gitHubUsername} from './github/gitHubCredentials';
+import {
+  gitHubGraphQLEndpoint,
+  gitHubHostname,
+  gitHubTokenPersistence,
+  gitHubUsername,
+} from './github/gitHubCredentials';
 import queryGraphQL from './github/queryGraphQL';
 import {stackedPullRequest, stackedPullRequestFragments} from './stackState';
 import {getPathForChange, getTreeEntriesForChange, groupBy, groupByDiffSide} from './utils';
@@ -121,7 +126,8 @@ const gitHubClientForParams = selectorFamily<GitHubClient | null, GitHubOrgAndRe
       const token = get(gitHubTokenPersistence);
       if (token != null) {
         const db = get(databaseConnection);
-        return createClient(db, token, org, repo);
+        const hostname = get(gitHubHostname);
+        return createClient(db, token, hostname, org, repo);
       } else {
         return null;
       }
@@ -1001,7 +1007,8 @@ export const gitHubClient = selector<GitHubClient | null>({
     if (token != null && orgAndRepo != null) {
       const {org, repo} = orgAndRepo;
       const db = get(databaseConnection);
-      return createClient(db, token, org, repo);
+      const hostname = get(gitHubHostname);
+      return createClient(db, token, hostname, org, repo);
     } else {
       return null;
     }
@@ -1176,10 +1183,12 @@ export const gitHubUserHomePageData = selector<UserHomePageQueryData | null>({
     // Based on search query for https://github.com/pulls/review-requested
     const reviewRequestedQuery = 'is:open is:pr archived:false review-requested:@me';
 
+    const graphQLEndpoint = get(gitHubGraphQLEndpoint);
     return queryGraphQL<UserHomePageQueryData, UserHomePageQueryVariables>(
       UserHomePageQuery,
       {reviewRequestedQuery},
       createRequestHeaders(token),
+      graphQLEndpoint,
     );
   },
 });
@@ -1266,9 +1275,10 @@ export const gitHubPullRequestCheckRuns = selector<CheckRun[]>({
 function createClient(
   db: IDBDatabase,
   token: string,
+  hostname: string,
   organization: string,
   repository: string,
 ): GitHubClient | null {
-  const client = new GraphQLGitHubClient(organization, repository, token);
+  const client = new GraphQLGitHubClient(hostname, organization, repository, token);
   return new CachingGitHubClient(db, client, organization, repository);
 }
