@@ -700,38 +700,38 @@ one shown by default::
 
     [committemplate]
     changeset = {desc}\n\n
-        HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-        HG: {extramsg}
-        HG: --
-        HG: user: {author}\n{ifeq(p2rev, "-1", "",
-       "HG: branch merge\n")
-       }HG: branch '{branch}'\n{if(activebookmark,
-       "HG: bookmark '{activebookmark}'\n")   }{file_adds %
-       "HG: added {file}\n"                   }{file_mods %
-       "HG: changed {file}\n"                 }{file_dels %
-       "HG: removed {file}\n"                 }{if(files, "",
-       "HG: no files changed\n")}
+        @PROG@: Enter commit message.  Lines beginning with '@PROG@:' are removed.
+        @PROG@: {extramsg}
+        @PROG@: --
+        @PROG@: user: {author}\n{ifeq(p2rev, "-1", "",
+       "@PROG@: branch merge\n")
+       }@PROG@: branch '{branch}'\n{if(activebookmark,
+       "@PROG@: bookmark '{activebookmark}'\n")   }{file_adds %
+       "@PROG@: added {file}\n"                   }{file_mods %
+       "@PROG@: changed {file}\n"                 }{file_dels %
+       "@PROG@: removed {file}\n"                 }{if(files, "",
+       "@PROG@: no files changed\n")}
 
 ``diff()``
     String: show the diff (see :prog:`help templates` for detail)
 
 Sometimes it is helpful to show the diff of the changeset in the editor without
-having to prefix 'HG: ' to each line so that highlighting works correctly. For
+having to prefix '@PROG@: ' to each line so that highlighting works correctly. For
 this, @Product@ provides a special string which will ignore everything below
 it::
 
-     HG: ------------------------ >8 ------------------------
+     @PROG@: ------------------------ >8 ------------------------
 
 For example, the template configuration below will show the diff below the
 extra message::
 
     [committemplate]
     changeset = {desc}\n\n
-        HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-        HG: {extramsg}
-        HG: ------------------------ >8 ------------------------
-        HG: Do not touch the line above.
-        HG: Everything below will be removed.
+        @PROG@: Enter commit message.  Lines beginning with '@PROG@:' are removed.
+        @PROG@: {extramsg}
+        @PROG@: ------------------------ >8 ------------------------
+        @PROG@: Do not touch the line above.
+        @PROG@: Everything below will be removed.
         {diff()}
 
 .. note::
@@ -805,10 +805,10 @@ below can be referred as ``{listupfiles}``::
 
     [committemplate]
     listupfiles = {file_adds %
-       "HG: added {file}\n"     }{file_mods %
-       "HG: changed {file}\n"   }{file_dels %
-       "HG: removed {file}\n"   }{if(files, "",
-       "HG: no files changed\n")}
+       "@PROG@: added {file}\n"     }{file_mods %
+       "@PROG@: changed {file}\n"   }{file_dels %
+       "@PROG@: removed {file}\n"   }{if(files, "",
+       "@PROG@: no files changed\n")}
 
 ``common``
 ------------------
