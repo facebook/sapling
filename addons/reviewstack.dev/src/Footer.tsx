@@ -58,8 +58,8 @@ export default function Footer(): React.ReactElement {
     <Box
       as="footer"
       backgroundColor="canvas.subtle"
+      flex="0 0 auto"
       paddingTop={4}
-      position="fixed"
       bottom={0}
       width="100%">
       <Box margin="auto" width={800} paddingTop={2}>

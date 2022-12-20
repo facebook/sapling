@@ -37,41 +37,45 @@ export default function NetlifyLoginDialog({
   }, [setButtonDisabled, setErrorMessage, setTokenAndHostname]);
 
   return (
-    <Box>
-      <AppHeader orgAndRepo={null} />
-      <Box margin="auto" width={800} paddingTop={2}>
-        <Box pb={2}>
-          <Heading>Welcome to ReviewStack</Heading>
-          <Text as="p" pb={2}>
-            <Link href="https://sapling-scm.com/docs/addons/reviewstack">ReviewStack</Link> is a
-            novel user interface for GitHub pull requests with custom support for{' '}
-            <Text fontStyle="italic">stacked changes</Text>. For tools like{' '}
-            <Link href="http://sapling-scm.com/">Sapling</Link> or{' '}
-            <Link href="https://github.com/ezyang/ghstack">ghstack</Link> that create separate pull
-            requests for independent commits in a stack, ReviewStack facilitates navigating the
-            stack and ensuring that only the code that was meant to be considered for review is
-            displayed for each pull request.
-          </Text>
-          <Text as="p" pb={2}>
-            ReviewStack is owned and operated by Meta Platforms, Inc. Note that{' '}
-            <Link href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/authorizing-oauth-apps">
-              you must authorize ReviewStack to access your GitHub data
-            </Link>{' '}
-            in order to use ReviewStack. Once authorized, ReviewStack will store your GitHub access
-            token, and other data fetched from GitHub, locally in the browser. Clicking{' '}
-            <Text fontWeight="bold">Logout</Text> will remove the data that is stored locally, but
-            it will not delete your data from GitHub.
-          </Text>
-        </Box>
-        {errorMessage != null ? (
+    <Box display="flex" flexDirection="column" height="100vh">
+      <Box flex="0 0 auto">
+        <AppHeader orgAndRepo={null} />
+      </Box>
+      <Box flex="1 1 auto" overflowY="auto">
+        <Box margin="auto" width={800} paddingTop={2}>
           <Box pb={2}>
-            <Text color="danger.fg">{errorMessage}</Text>
+            <Heading>Welcome to ReviewStack</Heading>
+            <Text as="p" pb={2}>
+              <Link href="https://sapling-scm.com/docs/addons/reviewstack">ReviewStack</Link> is a
+              novel user interface for GitHub pull requests with custom support for{' '}
+              <Text fontStyle="italic">stacked changes</Text>. For tools like{' '}
+              <Link href="http://sapling-scm.com/">Sapling</Link> or{' '}
+              <Link href="https://github.com/ezyang/ghstack">ghstack</Link> that create separate
+              pull requests for independent commits in a stack, ReviewStack facilitates navigating
+              the stack and ensuring that only the code that was meant to be considered for review
+              is displayed for each pull request.
+            </Text>
+            <Text as="p" pb={2}>
+              ReviewStack is owned and operated by Meta Platforms, Inc. Note that{' '}
+              <Link href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/authorizing-oauth-apps">
+                you must authorize ReviewStack to access your GitHub data
+              </Link>{' '}
+              in order to use ReviewStack. Once authorized, ReviewStack will store your GitHub
+              access token, and other data fetched from GitHub, locally in the browser. Clicking{' '}
+              <Text fontWeight="bold">Logout</Text> will remove the data that is stored locally, but
+              it will not delete your data from GitHub.
+            </Text>
           </Box>
-        ) : null}
-        <Box>
-          <Button onClick={onClick} disabled={isButtonDisabled}>
-            Authorize ReviewStack to access GitHub
-          </Button>
+          {errorMessage != null ? (
+            <Box pb={2}>
+              <Text color="danger.fg">{errorMessage}</Text>
+            </Box>
+          ) : null}
+          <Box>
+            <Button onClick={onClick} disabled={isButtonDisabled}>
+              Authorize ReviewStack to access GitHub
+            </Button>
+          </Box>
         </Box>
       </Box>
       <Footer />
