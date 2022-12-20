@@ -31,6 +31,15 @@ fn main() {
         drop_root(user, group);
     }
 
+    if cfg!(windows) {
+        // Setting NoDefaultCurrentDirectoryInExePath disables the
+        // default Windows behavior of including the current working
+        // directory in $PATH. This avoids a class of security issues
+        // where we might accidentally prefer an executable (such as
+        // "watchman") from the working copy.
+        std::env::set_var("NoDefaultCurrentDirectoryInExePath", "1")
+    }
+
     let mut full_args = match dispatch::args() {
         Ok(args) => args,
         Err(_) => {
