@@ -5,17 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/** Used to mute the area behind the dialog. */
-.LoginDialog-overlay {
-  background-color: var(--login-overlay-bg-color);
-  position: absolute;
-  height: 100vh;
-  opacity: 0.5;
-  left: 0;
-  top: 0;
-  width: 100%;
-}
-
 .LoginDialog-container {
   display: flex;
   justify-content: center;

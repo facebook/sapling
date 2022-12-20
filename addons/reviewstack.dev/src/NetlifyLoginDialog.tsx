@@ -19,20 +19,22 @@ import Link from 'reviewstack/src/Link';
  */
 const GITHUB_OAUTH_SCOPE = ['user', 'repo'].join(' ');
 
-export default function NetlifyLoginDialog({setToken}: CustomLoginDialogProps): React.ReactElement {
+export default function NetlifyLoginDialog({
+  setTokenAndHostname,
+}: CustomLoginDialogProps): React.ReactElement {
   const [isButtonDisabled, setButtonDisabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const onClick = useCallback(async () => {
     setButtonDisabled(true);
     try {
       const token = await fetchGitHubToken();
-      setToken(token);
+      setTokenAndHostname(token, 'github.com');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'error fetching OAuth token';
       setErrorMessage(message);
     }
     setButtonDisabled(false);
-  }, [setButtonDisabled, setErrorMessage, setToken]);
+  }, [setButtonDisabled, setErrorMessage, setTokenAndHostname]);
 
   return (
     <Box>

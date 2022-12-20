@@ -40,6 +40,7 @@ import rejectAfterTimeout from 'shared/rejectAfterTimeout';
  */
 
 const GITHUB_TOKEN_PROPERTY = 'github.token';
+const GITHUB_HOSTNAME_PROPERTY = 'github.hostname';
 
 /**
  * This should not be accessed directly: readers and writers must go
@@ -102,10 +103,18 @@ const gitHubPersonalAccessToken = atom<Loadable<string | null>>({
   ],
 });
 
+/**
+ * Before writing this value via `useSetRecoilState()`, ensure that
+ * the `gitHubHostname` atom has been written first.
+ *
+ * TODO(mbolin): Modify this selector so that it takes {token, hostname} as a
+ * pair and change the use of the underlying storage to ensure they are
+ * persisted atomically.
+ */
 export const gitHubTokenPersistence = selector<string | null>({
   key: 'gitHubTokenPersistence',
   get: ({get}) => get(gitHubPersonalAccessToken),
-  set: ({set}, tokenArg) => {
+  set: ({get, set}, tokenArg) => {
     // If DefaultValue is passed in, this called via a reset action, so treat
     // it as if the value were null.
     const token = tokenArg instanceof DefaultValue ? null : tokenArg;
@@ -120,7 +129,15 @@ export const gitHubTokenPersistence = selector<string | null>({
     // - For a user logging in, we do not want to pick up any state written
     //   previously by a potentially nefarious user.
     // - For a user logging out, we want to remove all of their data.
-    const promise: Promise<string | null> = clearAllLocalData().then(() => token);
+    const hostname = get(gitHubHostname);
+    const promise: Promise<string | null> = clearAllLocalData().then(() => {
+      // localStorage was just cleared, so we need to ensure the GitHub hostname
+      // is persisted in localStorage.
+      if (token != null && hostname != null) {
+        localStorage.setItem(GITHUB_HOSTNAME_PROPERTY, hostname);
+      }
+      return token;
+    });
     const loadable = RecoilLoadable.of(promise);
     set(gitHubPersonalAccessToken, loadable);
   },
@@ -212,7 +229,7 @@ export const gitHubUsername = selector<string | null>({
 
 export const gitHubHostname = atom<string>({
   key: 'gitHubHostname',
-  default: 'github.com',
+  default: localStorage.getItem(GITHUB_HOSTNAME_PROPERTY) || 'github.com',
 });
 
 export const gitHubGraphQLEndpoint = selector<string>({
