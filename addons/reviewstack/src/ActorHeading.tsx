@@ -14,7 +14,7 @@ export default function ActorHeading({actor}: {actor?: Actor | null}): React.Rea
   const login = actor?.login ?? '[unknown]';
   return (
     <Box display="flex" paddingBottom={1} gridGap={1}>
-      <ActorAvatar url={actor?.avatarUrl} size={24} />
+      <ActorAvatar login={actor?.login} url={actor?.avatarUrl} size={24} />
       <Text fontSize={12} fontWeight="bold">
         {login}
       </Text>

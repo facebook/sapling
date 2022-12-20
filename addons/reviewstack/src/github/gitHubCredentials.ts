@@ -232,6 +232,11 @@ export const gitHubHostname = atom<string>({
   default: localStorage.getItem(GITHUB_HOSTNAME_PROPERTY) || 'github.com',
 });
 
+export const isConsumerGitHub = selector<boolean>({
+  key: 'isConsumerGitHub',
+  get: ({get}) => get(gitHubHostname) === 'github.com',
+});
+
 export const gitHubGraphQLEndpoint = selector<string>({
   key: 'gitHubGraphQLEndpoint',
   get: ({get}) => {
