@@ -313,7 +313,6 @@ coreconfigitem("experimental", "dynmatcher", default=False)
 coreconfigitem("experimental", "uncommitondirtywdir", default=True)
 coreconfigitem("experimental", "xdiff", default=True)
 coreconfigitem("extensions", ".*", default=None, generic=True)
-coreconfigitem("extdata", ".*", default=None, generic=True)
 coreconfigitem("format", "aggressivemergedeltas", default=False)
 coreconfigitem(
     "format", "cgdeltabase", default="default"  # changegroup.CFG_CGDELTA_DEFAULT

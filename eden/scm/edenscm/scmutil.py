@@ -1205,69 +1205,6 @@ class filecache(object):
             raise AttributeError(self.name)
 
 
-def extdatasource(repo, source):
-    """Gather a map of rev -> value dict from the specified source
-
-    A source spec is treated as a URL, with a special case shell: type
-    for parsing the output from a shell command.
-
-    The data is parsed as a series of newline-separated records where
-    each record is a revision specifier optionally followed by a space
-    and a freeform string value. If the revision is known locally, it
-    is converted to a rev, otherwise the record is skipped.
-
-    Note that both key and value are treated as UTF-8 and converted to
-    the local encoding. This allows uniformity between local and
-    remote data sources.
-    """
-
-    spec = repo.ui.config("extdata", source)
-    if not spec:
-        raise error.Abort(_("unknown extdata source '%s'") % source)
-
-    data = {}
-    src = proc = None
-    try:
-        if spec.startswith("shell:"):
-            # external commands should be run relative to the repo root
-            cmd = spec[6:]
-            proc = subprocess.Popen(
-                cmd,
-                shell=True,
-                bufsize=-1,
-                close_fds=util.closefds,
-                stdout=subprocess.PIPE,
-                cwd=repo.root,
-            )
-            src = proc.stdout
-        else:
-            # treat as a URL or file
-            src = url.open(repo.ui, spec)
-        for l in src:
-            if b" " in l:
-                k, v = l.strip().split(b" ", 1)
-            else:
-                k, v = l.strip(), b""
-
-            k = k.decode("utf8")
-            try:
-                data[repo[k].rev()] = v.decode("utf8")
-            except (error.LookupError, error.RepoLookupError):
-                pass  # we ignore data for nodes that don't exist locally
-    finally:
-        if proc:
-            proc.communicate()
-        if src:
-            src.close()
-    if proc and proc.returncode != 0:
-        raise error.Abort(
-            _("extdata command '%s' failed: %s")
-            % (cmd, util.explainexit(proc.returncode)[0])
-        )
-
-    return data
-
-
 def gdinitconfig(ui):
     """helper function to know if a repo should be created as general delta"""
     # experimental config: format.generaldelta

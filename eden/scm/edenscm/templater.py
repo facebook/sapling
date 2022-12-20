@@ -737,23 +737,6 @@ def enabled(context, mapping, args):
     return value
 
 
-@templatefunc("extdata(source)", argspec="source")
-def extdata(context, mapping, args):
-    """Show a text read from the specified extdata source. (EXPERIMENTAL)"""
-    if "source" not in args:
-        # i18n: "extdata" is a keyword
-        raise error.ParseError(_("extdata expects one argument"))
-
-    source = evalstring(context, mapping, args["source"])
-    cache = mapping["cache"].setdefault("extdata", {})
-    ctx = mapping["ctx"]
-    if source in cache:
-        data = cache[source]
-    else:
-        data = cache[source] = scmutil.extdatasource(ctx.repo(), source)
-    return data.get(ctx.rev(), "")
-
-
 @templatefunc("files(pattern)")
 def files(context, mapping, args):
     """All files of the current changeset matching the pattern. See

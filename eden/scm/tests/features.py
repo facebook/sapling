@@ -49,7 +49,6 @@ ignorerevnumincompatiblelist = """
     test-eol-hook.t
     test-eol-update.t
     test-export.t
-    test-extdata.t
     test-fb-ext-copytrace-errormsg.t
     test-fb-ext-drop.t
     test-fb-ext-fastannotate-corrupt.t
