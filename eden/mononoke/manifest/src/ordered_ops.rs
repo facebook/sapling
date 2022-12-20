@@ -33,7 +33,7 @@ use crate::PathTree;
 use crate::StoreLoadable;
 
 /// Track where we are relative to the `after` parameter.
-enum After {
+pub enum After {
     /// Include everything.
     All,
 
@@ -43,6 +43,12 @@ enum After {
     /// Include everything in this directory after the named element and the
     /// subpath within that element.
     After(MPathElement, Option<MPath>),
+}
+
+impl From<Option<Option<MPath>>> for After {
+    fn from(path: Option<Option<MPath>>) -> Self {
+        path.map_or(After::All, |p| After::new(p.as_ref()))
+    }
 }
 
 impl After {
@@ -61,7 +67,7 @@ impl After {
     /// We don't skip entries that match exactly, even though they themselves
     /// will not be included.  If the element name matches then we still want
     /// to descend into subdirectories.
-    fn skip(&self, name: &MPathElement) -> bool {
+    pub fn skip(&self, name: &MPathElement) -> bool {
         match self {
             After::All | After::AllContents => false,
             After::After(elem, _) => name < elem,
@@ -69,7 +75,7 @@ impl After {
     }
 
     /// Returns true if this directory itself should be included.
-    fn include_self(&self) -> bool {
+    pub fn include_self(&self) -> bool {
         match self {
             After::All => true,
             After::AllContents | After::After(..) => false,
@@ -78,7 +84,7 @@ impl After {
 
     /// Returns true if a file with the given name in this directory should be
     /// included.
-    fn include_file(&self, name: &MPathElement) -> bool {
+    pub fn include_file(&self, name: &MPathElement) -> bool {
         match self {
             After::All | After::AllContents => true,
             After::After(elem, _) => name > elem,
@@ -88,7 +94,7 @@ impl After {
     /// Enter a subdirectory.  The directory must be one that should be
     /// entered (i.e. skip is false).  Returns an instance of `After` suitable
     /// for the subdirectory.
-    fn enter_dir(&self, name: &MPathElement) -> After {
+    pub fn enter_dir(&self, name: &MPathElement) -> After {
         match self {
             After::All | After::AllContents => After::All,
             After::After(elem, rest) => {
@@ -116,7 +122,7 @@ where
         ctx: CoreContext,
         store: Store,
         paths_or_prefixes: I,
-        after: Option<Option<MPath>>,
+        after: impl Into<After>,
     ) -> BoxStream<
         'static,
         Result<
@@ -142,17 +148,7 @@ where
         // determining what can be scheduled.
         let queue_max = nonzero!(2560usize);
 
-        let after = match after {
-            None => {
-                // If `after` is `None`, then we include everything.
-                After::All
-            }
-            Some(mpath_opt) => {
-                // If `after` is `Some(None)`, then we include everything
-                // after the root (i.e. not the root itself).
-                After::new(mpath_opt.as_ref())
-            }
-        };
+        let after = after.into();
 
         let init = Some((
             queue_max.get(),

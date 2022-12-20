@@ -52,6 +52,13 @@ pub struct BssmDirectory {
 }
 
 impl BssmEntry {
+    pub fn into_dir(self) -> Option<BssmDirectory> {
+        match self {
+            Self::File => None,
+            Self::Directory(dir) => Some(dir),
+        }
+    }
+
     pub fn rollup_count(&self) -> u64 {
         match self {
             Self::File => 1,

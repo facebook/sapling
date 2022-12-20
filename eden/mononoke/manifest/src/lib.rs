@@ -20,6 +20,7 @@ pub use crate::ops::find_intersection_of_diffs;
 pub use crate::ops::find_intersection_of_diffs_and_parents;
 pub use crate::ops::Diff;
 pub use crate::ops::ManifestOps;
+pub use crate::ordered_ops::After;
 pub use crate::ordered_ops::ManifestOrderedOps;
 pub use crate::select::PathOrPrefix;
 pub use crate::types::AsyncManifest;

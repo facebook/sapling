@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
-use anyhow::Result;
 use mononoke_types::MPath;
 
 /// Put reversed basename in beginning
@@ -25,6 +23,7 @@ impl BssmPath {
         Self(MPath::from(rev_basename).join(&path))
     }
 
+    #[cfg(test)]
     pub(crate) fn from_bsm_formatted_path(path: MPath) -> Self {
         Self(path)
     }
@@ -33,7 +32,10 @@ impl BssmPath {
         self.0
     }
 
-    pub(crate) fn untransform(self) -> Result<MPath> {
+    #[cfg(test)]
+    pub(crate) fn untransform(self) -> anyhow::Result<MPath> {
+        use anyhow::Context;
+
         let (rev_basename, rest) = self.0.split_first();
         let rest = rest.with_context(|| format!("Invalid format for path {}", self.0))?;
         let mut rev_basename2 = rest.split_dirname().1.clone();

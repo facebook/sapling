@@ -42,6 +42,7 @@ use futures_lazy_shared::LazyShared;
 use hooks::CrossRepoPushSource;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
+use itertools::EitherOrBoth;
 use manifest::Diff as ManifestDiff;
 use manifest::Entry as ManifestEntry;
 use manifest::ManifestOps;
@@ -1151,7 +1152,7 @@ impl ChangesetContext {
         &self,
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>> + '_, MononokeError> {
         self.find_files(
             prefixes,
             basenames,
@@ -1177,28 +1178,42 @@ impl ChangesetContext {
         basenames: Option<Vec<String>>,
         basename_suffixes: Option<Vec<String>>,
         ordering: ChangesetFileOrdering,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
-        Ok(match (to_vec1(basenames), to_vec1(basename_suffixes)) {
-            (Some(basenames), None)
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>> + '_, MononokeError> {
+        let basenames_and_suffixes = match (to_vec1(basenames), to_vec1(basename_suffixes)) {
+            (None, None) => None,
+            (Some(basenames), None) => Some(EitherOrBoth::Left(basenames)),
+            (None, Some(suffixes)) => Some(EitherOrBoth::Right(suffixes)),
+            (Some(basenames), Some(suffixes)) => Some(EitherOrBoth::Both(basenames, suffixes)),
+        };
+        Ok(match basenames_and_suffixes {
+            Some(basenames_and_suffixes)
                 if !tunables().get_disable_basename_suffix_skeleton_manifest() =>
             {
-                self.find_files_with_bssm(prefixes, basenames, ordering)
+                self.find_files_with_bssm(prefixes, basenames_and_suffixes, ordering)
                     .await?
                     .left_stream()
             }
-            (basenames, basename_suffixes) => self
-                .find_files_without_bssm(to_vec1(prefixes), basenames, basename_suffixes, ordering)
+            basenames_and_suffixes => {
+                let (basenames, basename_suffixes) = basenames_and_suffixes
+                    .map_or((None, None), |b| b.map_any(Some, Some).or_default());
+                self.find_files_without_bssm(
+                    to_vec1(prefixes),
+                    basenames,
+                    basename_suffixes,
+                    ordering,
+                )
                 .await?
-                .right_stream(),
+                .right_stream()
+            }
         })
     }
 
     pub(crate) async fn find_files_with_bssm(
         &self,
         prefixes: Option<Vec<MononokePath>>,
-        basenames: Vec1<String>,
+        basenames_and_suffixes: EitherOrBoth<Vec1<String>, Vec1<String>>,
         ordering: ChangesetFileOrdering,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>> + '_, MononokeError> {
         Ok(self
             .root_basename_suffix_skeleton_manifest()
             .await?
@@ -1210,7 +1225,7 @@ impl ChangesetContext {
                     .into_iter()
                     .map(MononokePath::into_mpath)
                     .collect(),
-                basenames,
+                basenames_and_suffixes,
                 match ordering {
                     ChangesetFileOrdering::Unordered => None,
                     ChangesetFileOrdering::Ordered { after } => {
