@@ -10,6 +10,8 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use repolock::RepoLocker;
 use serde::Deserialize;
 use types::RepoPathBuf;
@@ -33,10 +35,11 @@ pub struct WatchmanState {
     treestate_needs_check: HashSet<RepoPathBuf>,
     clock: Option<Clock>,
     treestate_errors: Vec<Error>,
+    timeout: Option<std::time::Duration>,
 }
 
 impl WatchmanState {
-    pub fn new(mut treestate: impl WatchmanTreeStateRead) -> Result<Self> {
+    pub fn new(config: &dyn Config, mut treestate: impl WatchmanTreeStateRead) -> Result<Self> {
         let (needs_check, errors): (Vec<_>, Vec<_>) = treestate
             .list_needs_check()?
             .into_iter()
@@ -52,11 +55,21 @@ impl WatchmanState {
             treestate_needs_check: needs_check,
             clock: treestate.get_clock()?,
             treestate_errors: errors,
+            timeout: config
+                .get_opt::<u64>("fsmonitor", "timeout")?
+                .map(std::time::Duration::from_millis),
         })
     }
 
     pub fn get_clock(&self) -> Option<Clock> {
         self.clock.clone()
+    }
+
+    pub fn sync_timeout(&self) -> SyncTimeout {
+        match self.timeout {
+            None => SyncTimeout::Default,
+            Some(d) => SyncTimeout::Duration(d),
+        }
     }
 
     pub fn merge(
@@ -181,6 +194,7 @@ impl IntoIterator for WatchmanPendingChanges {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::collections::HashSet;
 
     use anyhow::Result;
@@ -405,7 +419,7 @@ mod tests {
         ];
 
         let test = WatchmanStateTest::new(events);
-        let state = WatchmanState::new(test.treestate()).unwrap();
+        let state = WatchmanState::new(&BTreeMap::<&str, &str>::new(), test.treestate()).unwrap();
 
         let pending_changes = state
             .merge(test.query_result(), test.file_change_detector())

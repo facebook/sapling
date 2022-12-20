@@ -76,6 +76,7 @@ impl WatchmanFileSystem {
                 QueryRequestCommon {
                     since: state.get_clock(),
                     expression: Some(Expr::Not(Box::new(excludes))),
+                    sync_timeout: state.sync_timeout(),
                     ..Default::default()
                 },
             )
@@ -93,10 +94,13 @@ impl PendingChanges for WatchmanFileSystem {
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
-        let state = WatchmanState::new(WatchmanTreeState {
-            treestate: self.treestate.clone(),
-            root: self.vfs.root(),
-        })?;
+        let state = WatchmanState::new(
+            config,
+            WatchmanTreeState {
+                treestate: self.treestate.clone(),
+                root: self.vfs.root(),
+            },
+        )?;
 
         let result = async_runtime::block_on(self.query_result(&state))?;
 
