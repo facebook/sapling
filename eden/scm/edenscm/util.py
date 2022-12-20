@@ -168,7 +168,6 @@ parsepatchoutput = platform.parsepatchoutput
 pconvert = platform.pconvert
 popen = platform.popen
 posixfile = platform.posixfile
-quotecommand = platform.quotecommand
 readlock = platform.readlock
 releaselock = platform.releaselock
 removedirs = platform.removedirs
@@ -1242,7 +1241,6 @@ def rawsystem(cmd, environ=None, cwd=None, out=None):
         stdout.flush()
     except Exception:
         pass
-    cmd = quotecommand(cmd)
 
     # Tripwire output to help identity relative script invocation that may not
     # work on Windows. We are looking relative path like "foo/bar" which work on

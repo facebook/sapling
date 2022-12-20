@@ -768,10 +768,6 @@ def shellquote(s):
         return "'%s'" % s.replace("'", "'\\''")
 
 
-def quotecommand(cmd):
-    return cmd
-
-
 def popen(command, mode="r"):
     return os.popen(command, mode)
 

@@ -125,7 +125,7 @@ class channeledsystem(object):
 
         exitcode length (unsigned int),
         exitcode (int)"""
-        args = [util.quotecommand(cmd), os.path.abspath(cwd or ".")]
+        args = [cmd, os.path.abspath(cwd or ".")]
         args.extend(self._environ_to_args(environ))
         self._send_request(b"s", args)
 
@@ -155,7 +155,7 @@ class channeledsystem(object):
         command name is empty.
         """
         redirectsettings = "stderr" if redirectstderr else ""
-        args = [util.quotecommand(pagercmd), redirectsettings]
+        args = [pagercmd, redirectsettings]
         args.extend(self._environ_to_args(environ))
         self._send_request(b"p", args)
 

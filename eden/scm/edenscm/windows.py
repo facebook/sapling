@@ -376,20 +376,12 @@ def shellquote(s):
     return '"%s"' % _quotere.sub(r"\1\1\\\2", s)
 
 
-def quotecommand(cmd):
-    """Build a command string suitable for os.popen* calls."""
-    if sys.version_info < (2, 7, 1):
-        # Python versions since 2.7.1 do this extra quoting themselves
-        return '"' + cmd + '"'
-    return cmd
-
-
 def popen(command, mode="r"):
     # Work around "popen spawned process may not write to stdout
     # under windows"
     # http://bugs.python.org/issue1366
     command += " 2> %s" % os.devnull
-    return os.popen(quotecommand(command), mode)
+    return os.popen(command, mode)
 
 
 def explainexit(code):

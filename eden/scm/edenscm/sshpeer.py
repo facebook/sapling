@@ -207,7 +207,6 @@ class sshpeer(stdiopeer.stdiopeer):
             ),
         )
         self.ui.debug("running %s\n" % cmd)
-        cmd = util.quotecommand(cmd)
 
         # while self._subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
