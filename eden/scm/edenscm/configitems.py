@@ -516,7 +516,6 @@ coreconfigitem(
 )
 coreconfigitem("ui", "nontty", default=False)
 coreconfigitem("ui", "origbackuppath", default=None)
-coreconfigitem("ui", "paginate", default=True)
 coreconfigitem("ui", "patch", default=None)
 coreconfigitem("ui", "portablefilenames", default="warn")
 coreconfigitem("ui", "promptecho", default=False)

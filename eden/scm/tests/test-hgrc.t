@@ -69,6 +69,7 @@ make sure global options given on the cmdline take precedence
   ui.debug=false
   ui.interactive=False
   ui.mergemarkers=detailed
+  ui.paginate=true
   ui.promptecho=True
   ui.quiet=true
   ui.slash=True

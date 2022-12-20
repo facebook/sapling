@@ -11,7 +11,6 @@ use anyhow::bail;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
-use clidispatch::io::IsTty;
 use clidispatch::OptionalRepo;
 use clidispatch::ReqCtx;
 use cliparser::define_flags;
@@ -87,9 +86,7 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
         Box::new(ctx.io().output()),
     )?;
 
-    if ctx.io().output().is_tty() {
-        ctx.io().start_pager(config)?;
-    }
+    ctx.maybe_start_pager(repo.config())?;
 
     formatter.begin_list()?;
     let exit_code = show_configs(ctx.opts.args, config, formatter.as_mut())?;

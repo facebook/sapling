@@ -20,6 +20,7 @@ repackfactor=3
 [ui]
 timeout=600
 color=auto
+paginate=true
 
 [checkout]
 resumable=true

@@ -9,6 +9,11 @@ use std::convert::TryInto;
 
 use anyhow::Result;
 use cliparser::parser::ParseOutput;
+use configmodel::convert::FromConfigValue;
+use configmodel::Config;
+use configmodel::ConfigExt;
+use hgplain::is_plain;
+use io::IsTty;
 use io::IO;
 
 use crate::global_flags::HgGlobalOpts;
@@ -49,5 +54,30 @@ where
 
     pub fn global_opts(&self) -> &HgGlobalOpts {
         &self.core.global_opts
+    }
+
+    pub fn maybe_start_pager(&self, config: &dyn Config) -> Result<()> {
+        let (enable_pager, reason) =
+            if bool::try_from_str(&self.core.global_opts.pager).unwrap_or(false) {
+                (true, "--pager")
+            } else if is_plain(Some("pager")) {
+                (false, "plain")
+            } else if self.core.global_opts.pager != "auto" {
+                (false, "--pager")
+            } else if !self.core.io.output().is_tty() {
+                (false, "not tty")
+            } else if !config.get_or("ui", "paginate", || true)? {
+                (false, "ui.paginate")
+            } else {
+                (true, "auto")
+            };
+
+        tracing::debug!(enable_pager, reason, "maybe starting pager");
+
+        if enable_pager {
+            self.core.io.start_pager(config)?;
+        }
+
+        Ok(())
     }
 }
