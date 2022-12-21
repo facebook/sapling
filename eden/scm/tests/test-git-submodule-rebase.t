@@ -41,16 +41,13 @@ Rebase the E1..E3 stack from A to C, so it is past the submodule change in B:
   $ sl rebase -qs $E1 -d $C
 
 The rebased E stack itself should not include submodule changes:
-BUG: m is included in rebase result!
 
   $ sl diff -r 'max(desc(E1))^' -r 'max(desc(E3))^' --stat
    E1 |  1 +
    E2 |  1 +
-   m  |  2 +-
-   3 files changed, 3 insertions(+), 1 deletions(-)
+   2 files changed, 2 insertions(+), 0 deletions(-)
 
 The rebased stack include the submodule change by commit B:
-BUG: rebased stack still uses A not B submodule!
 
   $ sl cat -r $A m
   Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
@@ -60,5 +57,4 @@ BUG: rebased stack still uses A not B submodule!
   $ sl cat -r $E1 m
   Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
   $ sl cat -r 'max(desc(E1))' m
-  Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
-
+  Subproject commit b1eae93731683dc9cf99f3714f5b4a23c6b0b13b

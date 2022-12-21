@@ -2663,7 +2663,13 @@ def update(
 
     if not partial:
         if git.isgitformat(repo) and not wc.isinmemory():
-            git.submodulecheckout(p2, matcher, force=force)
+            if branchmerge:
+                ctx = p1
+                mctx = p2
+            else:
+                ctx = p2
+                mctx = None
+            git.submodulecheckout(ctx, matcher, force=force, mctx=mctx)
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.

@@ -572,9 +572,59 @@ def parsesubmodules(ctx):
     return submodules
 
 
-def submodulecheckout(ctx, match=None, force=False):
-    """Checkout commits specified in submodules"""
+def submodulecheckout(ctx, match=None, force=False, mctx=None):
+    """Checkout commits specified in submodules
+
+    If mctx is also provided, it is a "merge" ctx to be considered.  This
+    happens during 'rebase -r mctx -d ctx'. If a submodule is only changed by
+    mctx, but remains unchanged in ctx, then mctx specifies the submodule.
+
+        o ctx (usually rebase destination, current working copy)
+        |
+        : o mctx (usually commit being rebased)
+        | |
+        | o pmctx (direct parent of mctx)
+        |/
+        o actx (common ancestor of ctx and mctx but is actually not considered)
+
+    Decision table:
+
+        ctx | pmctx | mctx | result
+        --------------------------------------
+        a   | a     | a    | a
+        a   | a     | b    | b
+        a   | b     | b    | a
+        a   | b     | a    | a
+        a   | b     | c    | a (with warnings)
+    """
     ui = ctx.repo().ui
+    if mctx:
+
+        def adjust_submodule_node(
+            node, path, mctx=mctx, pmctx=mctx.p1()
+        ) -> Optional[bytes]:
+            mnode = submodule_node_from_ctx_path(mctx, path)
+            if mnode == node:
+                return node
+
+            pmnode = submodule_node_from_ctx_path(pmctx, path)
+            if pmnode == node:
+                # the "a a b => b" case in the above table
+                return mnode
+            elif mnode != pmnode:
+                # the "a b c" case
+                ui.status_err(
+                    _("submodule '%s' changed by '%s' is dropped due to conflict\n")
+                    % (path, mctx.shortdescription())
+                )
+
+            return node
+
+    else:
+
+        def adjust_submodule_node(node, path) -> Optional[bytes]:
+            return node
+
     submodules = parsesubmodules(ctx)
     if match is not None:
         submodules = [submod for submod in submodules if match(submod.path)]
@@ -584,6 +634,7 @@ def submodulecheckout(ctx, match=None, force=False):
             prog.value = (value, submod.name)
             tracing.debug("checking out submodule %s\n" % submod.name)
             node = submodule_node_from_ctx_path(ctx, submod.path)
+            node = adjust_submodule_node(node, submod.path)
             if node is None:
                 continue
             submod.checkout(node, force=force)
