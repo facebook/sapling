@@ -94,9 +94,19 @@ from typing import Dict, List, Optional, Union
 
 import bindings
 
-from . import bookmarks, context, error, hg, mutation, pycompat, scmutil, visibility
+from . import (
+    bookmarks,
+    context,
+    error,
+    git,
+    hg,
+    mutation,
+    pycompat,
+    scmutil,
+    visibility,
+)
 from .i18n import _
-from .node import hex, nullid, short
+from .node import bin, hex, nullhex, nullid, short
 
 
 @dataclass
@@ -224,26 +234,35 @@ def _parseasciigraph(text: str):
 
 
 class simplefilectx(object):
-    def __init__(self, path, data, renamed=None):
+    def __init__(self, repo, path, data, renamed=None):
         assert isinstance(data, bytes)
+        filenode = None
         if b" (executable)" in data:
             data = data.replace(b" (executable)", b"")
             flags = "x"
         elif b" (symlink)" in data:
             data = data.replace(b" (symlink)", b"")
             flags = "l"
+        elif b" (submodule)" in data:
+            if not git.isgitformat(repo):
+                raise error.Abort(_("submodule requires Git format"))
+            data = data.replace(b" (submodule)", b"").strip()
+            assert len(data) == len(nullhex), f"{repr(data)} is not a valid hex hash"
+            filenode = bin(data)
+            flags = "m"
         else:
             flags = ""
         self._flags = flags
         self._data = data
         self._path = path
         self._renamed = renamed
+        self._filenode = filenode
 
     def data(self):
         return self._data
 
-    def filenode(self):
-        return None
+    def filenode(self) -> Optional[bytes]:
+        return self._filenode
 
     def path(self):
         return self._path
@@ -314,7 +333,7 @@ class simplecommitctx(context.committablectx):
             renamed = m.group(2)
         else:
             renamed = None
-        return simplefilectx(key, pycompat.encodeutf8(data), renamed)
+        return simplefilectx(self._repo, key, pycompat.encodeutf8(data), renamed)
 
     def commit(self):
         return self._repo.commitctx(self)
@@ -408,7 +427,7 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
     files = collections.defaultdict(dict)  # {(name, path): content}
     comments = list(_getcomments(text))
     commenttext = "\n".join(comments)
-    filere = re.compile(r"^(\w+)/([\w/]+)\s*=\s*(.*)$", re.M)
+    filere = re.compile(r"^(\w+)/([.\w/]+)\s*=\s*(.*)$", re.M)
     for name, path, content in filere.findall(commenttext):
         content = content.replace(r"\n", "\n").replace(r"\1", "\1")
         files[name][path] = content
