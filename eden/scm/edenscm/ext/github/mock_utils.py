@@ -9,8 +9,9 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from edenscm.ext.github.consts import query
 from edenscm.ext.github.pull_request_body import firstline
+from edenscm.result import Ok, Result
 
-from ghstack.github_gh_cli import Result
+from ghstack.github_gh_cli import JsonDict
 
 from .consts import GITHUB_HOSTNAME
 
@@ -27,7 +28,7 @@ REPO_ID = "R_test_github_repo"
 USER_NAME = "facebook_username"
 
 ParamsType = Dict[str, Union[bool, int, str]]
-MakeRequestType = Callable[[ParamsType, str, str, Optional[str]], Result]
+MakeRequestType = Callable[[ParamsType, str, str, Optional[str]], Result[JsonDict, str]]
 RunGitCommandType = Callable[[List[str], str], bytes]
 
 
@@ -81,7 +82,7 @@ class MockGitHubServer:
         hostname: str,
         endpoint: str = "graphql",
         method: Optional[str] = None,
-    ) -> Result:
+    ) -> Result[JsonDict, str]:
         """Wrapper function for `github_gh_cli.make_request`.
 
         It reads mock data from `self.requests` instead of sending network requests.
@@ -224,14 +225,14 @@ class MockGitHubServer:
 
 class MockRequest:
     @abstractmethod
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         pass
 
 
 class GetRepositoryRequest(MockRequest):
     def __init__(self, key: str, owner: str, name: str) -> None:
         self._key = key
-        self._response: Optional[Result] = None
+        self._response: Optional[Result[JsonDict, str]] = None
 
         self._owner = owner
         self._name = name
@@ -256,9 +257,9 @@ class GetRepositoryRequest(MockRequest):
                 }
             }
         }
-        self._response = Result.Ok(data)
+        self._response = Ok(data)
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
             raise MockResponseNotSet(self._key)
         return self._response
@@ -275,12 +276,12 @@ class CreatePrPlaceholderRequest(MockRequest):
         self._current_number = start_number
         self._num_times = num_times
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._num_times > 0:
             number = self._current_number
             self._current_number += 1
             self._num_times -= 1
-            return Result.Ok({"number": number})
+            return Ok({"number": number})
         else:
             raise MockResponseRunout(self._key)
 
@@ -288,21 +289,21 @@ class CreatePrPlaceholderRequest(MockRequest):
 class CreatePrRequest(MockRequest):
     def __init__(self, key: str, owner, name: str, number: int) -> None:
         self._key: str = key
-        self._response: Optional[Result] = None
+        self._response: Optional[Result[JsonDict, str]] = None
 
         self._owner = owner
         self._name = name
         self._number = number
 
     def and_respond(self):
-        self._response = Result.Ok(
+        self._response = Ok(
             {
                 "number": self._number,
                 "html_url": f"https://github.com/{self._owner}/{self._name}/pull/{self._number}",
             }
         )
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
             raise MockResponseNotSet(self._key)
         return self._response
@@ -311,7 +312,7 @@ class CreatePrRequest(MockRequest):
 class GetPrDetailsRequest(MockRequest):
     def __init__(self, key: str, owner: str, name: str, pr_number: int) -> None:
         self._key = key
-        self._response: Optional[Result] = None
+        self._response: Optional[Result[JsonDict, str]] = None
 
         self._owner = owner
         self._name = name
@@ -344,9 +345,9 @@ class GetPrDetailsRequest(MockRequest):
                 }
             }
         }
-        self._response = Result.Ok(data)
+        self._response = Ok(data)
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
             raise MockResponseNotSet(self._key)
         return self._response
@@ -355,15 +356,15 @@ class GetPrDetailsRequest(MockRequest):
 class UpdatePrRequest(MockRequest):
     def __init__(self, key: str, pr_id: str) -> None:
         self._key = key
-        self._response: Optional[Result] = None
+        self._response: Optional[Result[JsonDict, str]] = None
 
         self._pr_id = pr_id
 
     def and_respond(self):
         data = {"data": {"updatePullRequest": {"pullRequest": {"id": self._pr_id}}}}
-        self._response = Result.Ok(data)
+        self._response = Ok(data)
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
             raise MockResponseNotSet(self._key)
         return self._response
@@ -372,13 +373,13 @@ class UpdatePrRequest(MockRequest):
 class GetUsernameRequest(MockRequest):
     def __init__(self, key: str) -> None:
         self._key = key
-        self._response: Optional[Result] = None
+        self._response: Optional[Result[JsonDict, str]] = None
 
     def and_respond(self, username: str = USER_NAME):
         data = {"data": {"viewer": {"login": f"{username}"}}}
-        self._response = Result.Ok(data)
+        self._response = Ok(data)
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
             raise MockResponseNotSet(self._key)
         return self._response
@@ -387,16 +388,16 @@ class GetUsernameRequest(MockRequest):
 class MergeIntoBranchRequest(MockRequest):
     def __init__(self, key: str, head: str) -> None:
         self._key = key
-        self._response: Optional[Result] = None
+        self._response: Optional[Result[JsonDict, str]] = None
 
         self._head = head
 
     def and_respond(self, merge_commit_oid: str = ""):
         merge_commit_oid = merge_commit_oid or gen_hash_hexdigest(self._head)
         data = {"data": {"mergeBranch": {"mergeCommit": {"oid": merge_commit_oid}}}}
-        self._response = Result.Ok(data)
+        self._response = Ok(data)
 
-    def get_response(self) -> Result:
+    def get_response(self) -> Result[JsonDict, str]:
         if self._response is None:
             raise MockResponseNotSet(self._key)
         return self._response

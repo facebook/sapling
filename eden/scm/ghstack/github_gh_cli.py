@@ -7,27 +7,14 @@ import asyncio
 import itertools
 import json
 import os
-from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, TypeVar, Union
+from typing import Dict, List, Optional, TypeVar, Union, Any
 
 from edenscm import error
+from edenscm.result import Result, Ok, Err
 from edenscm.i18n import _
 
 
-T = TypeVar("T")
-
-
-@dataclass
-class Result(Generic[T]):
-    ok: Optional[T] = None
-    error: Optional[str] = None
-
-    def is_error(self) -> bool:
-        return self.error is not None
-
-    @classmethod
-    def Ok(cls, val: T) -> 'Result':
-        return cls(ok=val)
+JsonDict = Dict[str, Any]
 
 
 async def make_request(
@@ -35,7 +22,7 @@ async def make_request(
     hostname: str,
     endpoint="graphql",
     method: Optional[str] = None,
-) -> Result:
+) -> Result[JsonDict, str]:
     """If successful, returns a Result whose value is parsed JSON returned by
     the request.
     """
@@ -72,15 +59,15 @@ async def make_request(
     if proc.returncode == 0:
         assert response is not None
         assert "errors" not in response
-        return Result(ok=response)
+        return Ok(response)
     elif response is not None:
-        return Result(error=json.dumps(response, indent=1))
+        return Err(json.dumps(response, indent=1))
     elif b"gh auth login" in stderr:
         # The error message is likely referring to an authentication issue.
         raise error.Abort(_("Error calling the GitHub API:\n%s") % stderr.decode())
     else:
-        return Result(
-            error=f"exit({proc.returncode}) Failure running {' '.join(args)}\nstdout: {stdout.decode()}\nstderr: {stderr.decode()}\n"
+        return Err(
+            f"exit({proc.returncode}) Failure running {' '.join(args)}\nstdout: {stdout.decode()}\nstderr: {stderr.decode()}\n"
         )
 
 

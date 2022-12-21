@@ -14,8 +14,9 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
 from edenscm.i18n import _
+from edenscm.result import Err, Ok, Result
 from ghstack import github_gh_cli as gh_cli
-from ghstack.github_gh_cli import Result
+from ghstack.github_gh_cli import JsonDict
 
 from .consts import query
 from .pullrequest import PullRequestId
@@ -58,7 +59,9 @@ class Repository:
             return (self.owner, self.name)
 
 
-async def get_repository(hostname: str, owner: str, name: str) -> Result[Repository]:
+async def get_repository(
+    hostname: str, owner: str, name: str
+) -> Result[Repository, str]:
     """Returns an "ID!" for the repository that is necessary in other
     GitHub API calls.
     """
@@ -68,19 +71,19 @@ async def get_repository(hostname: str, owner: str, name: str) -> Result[Reposit
         "name": name,
     }
     result = await gh_cli.make_request(params, hostname=hostname)
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
 
-    data = result.ok["data"]
+    data = result.unwrap()["data"]
     repo = data["repository"]
     parent = repo["parent"]
 
     if parent:
         result = _parse_repository_from_dict(parent, hostname=hostname)
-        if result.is_error():
+        if result.is_err():
             return result
         else:
-            upstream = result.ok
+            upstream = result.unwrap()
     else:
         upstream = None
     return _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
@@ -104,7 +107,7 @@ class PullRequestDetails:
 
 async def get_pull_request_details(
     pr: PullRequestId,
-) -> Result[PullRequestDetails]:
+) -> Result[PullRequestDetails, str]:
     params = {
         "query": query.GRAPHQL_GET_PULL_REQUEST,
         "owner": pr.owner,
@@ -112,12 +115,12 @@ async def get_pull_request_details(
         "number": pr.number,
     }
     result = await gh_cli.make_request(params, hostname=pr.get_hostname())
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
 
-    data = result.ok["data"]["repository"]["pullRequest"]
-    return Result(
-        ok=PullRequestDetails(
+    data = result.unwrap()["data"]["repository"]["pullRequest"]
+    return Ok(
+        PullRequestDetails(
             node_id=data["id"],
             number=pr.number,
             url=data["url"],
@@ -132,7 +135,7 @@ async def get_pull_request_details(
 
 def _parse_repository_from_dict(
     repo_obj, hostname: str, upstream=None
-) -> Result[Repository]:
+) -> Result[Repository, str]:
     owner = repo_obj["owner"]["login"]
     name = repo_obj["name"]
     branch_ref = repo_obj["defaultBranchRef"]
@@ -148,9 +151,9 @@ repository.
             )
             % f"https://{hostname}/{owner}/{name}/new/main"
         )
-        return Result(error=error_message)
-    return Result(
-        ok=Repository(
+        return Err(error_message)
+    return Ok(
+        Repository(
             id=repo_obj["id"],
             hostname=hostname,
             owner=owner,
@@ -166,17 +169,17 @@ async def create_pull_request_placeholder_issue(
     hostname: str,
     owner: str,
     name: str,
-) -> Result[int]:
+) -> Result[int, str]:
     """creates a GitHub issue for the purpose of reserving an issue number"""
     endpoint = f"repos/{owner}/{name}/issues"
     params: Dict[str, _Params] = {
         "title": "placeholder for pull request",
     }
     result = await gh_cli.make_request(params, hostname=hostname, endpoint=endpoint)
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
     else:
-        return Result(ok=result.ok["number"])
+        return Ok(result.unwrap()["number"])
 
 
 async def create_pull_request(
@@ -188,7 +191,7 @@ async def create_pull_request(
     body: str,
     issue: int,
     is_draft: bool = False,
-) -> Result:
+) -> Result[JsonDict, str]:
     """Creates a new pull request by converting an existing issue into a PR.
 
     Note that `title` and `issue` are mutually exclusive fields when creating a
@@ -231,7 +234,7 @@ async def update_pull_request(
     title: str,
     body: str,
     base: str,
-) -> Result[str]:
+) -> Result[str, str]:
     """Returns an "ID!" for the pull request, which should match the node_id
     that was passed in.
     """
@@ -243,15 +246,15 @@ async def update_pull_request(
         "base": base,
     }
     result = await gh_cli.make_request(params, hostname=hostname)
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
     else:
-        return Result(ok=result.ok["data"]["updatePullRequest"]["pullRequest"]["id"])
+        return Ok(result.unwrap()["data"]["updatePullRequest"]["pullRequest"]["id"])
 
 
 async def create_branch(
     *, hostname: str, repo_id: str, branch_name: str, oid: str
-) -> Result[str]:
+) -> Result[str, str]:
     """Attempts to create the branch. If successful, returns the ID of the newly
     created Ref.
     """
@@ -262,15 +265,15 @@ async def create_branch(
         "oid": oid,
     }
     result = await gh_cli.make_request(params, hostname=hostname)
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
     else:
-        return Result(ok=result.ok["data"]["createRef"]["ref"]["id"])
+        return Ok(result.unwrap()["data"]["createRef"]["ref"]["id"])
 
 
 async def merge_into_branch(
     *, hostname: str, repo_id: str, oid_to_merge: str, branch_name: str
-) -> Result[str]:
+) -> Result[str, str]:
     """Takes the hash, oid_to_merge, and merges it into the specified branch_name.
 
     - base must be a branch name
@@ -283,13 +286,13 @@ async def merge_into_branch(
         "head": oid_to_merge,
     }
     result = await gh_cli.make_request(params, hostname=hostname)
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
     else:
-        return Result(ok=result.ok["data"]["mergeBranch"]["mergeCommit"]["oid"])
+        return Ok(result.unwrap()["data"]["mergeBranch"]["mergeCommit"]["oid"])
 
 
-async def get_username(hostname: str) -> Result[str]:
+async def get_username(hostname: str) -> Result[str, str]:
     """Returns the username associated with the auth token. Note that it is
     slightly faster to call graphql.try_parse_oath_token_from_hosts_yml() and
     read the value from hosts.yml.
@@ -298,7 +301,7 @@ async def get_username(hostname: str) -> Result[str]:
         "query": query.GRAPHQL_GET_LOGIN,
     }
     result = await gh_cli.make_request(params, hostname=hostname)
-    if result.is_error():
-        return result
+    if result.is_err():
+        return Err(result.unwrap_err())
     else:
-        return Result(ok=result.ok["data"]["viewer"]["login"])
+        return Ok(result.unwrap()["data"]["viewer"]["login"])

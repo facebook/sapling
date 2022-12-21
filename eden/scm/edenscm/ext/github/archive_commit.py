@@ -11,7 +11,6 @@ from edenscm.i18n import _
 
 from . import gh_submit
 from .gh_submit import Repository
-from .none_throws import none_throws
 from .run_git_command import run_git_command
 
 
@@ -47,13 +46,13 @@ async def add_commit_to_archives(
         oid_to_merge=oid_to_archive,
         branch_name=branch_name,
     )
-    if not result.is_error():
+    if result.is_ok():
         return
 
     import json
 
     # TODO: Store Result.error as Dict so we don't have to parse it again.
-    err = none_throws(result.error)
+    err = result.unwrap_err()
     response = None
     try:
         response = json.loads(err)
@@ -73,10 +72,10 @@ async def add_commit_to_archives(
             branch_name=branch_name,
             oid=oid_to_archive,
         )
-        if result.is_error():
+        if result.is_err():
             raise error.Abort(
                 _("unexpected error when trying to create branch %s with commit %s: %s")
-                % (branch_name, oid_to_archive, result.error)
+                % (branch_name, oid_to_archive, result.unwrap_err())
             )
     elif response and _is_merge_conflict(response):
         # Git cannot do the merge on its own, so we need to generate our own
@@ -279,7 +278,4 @@ def _is_branch_does_not_exist_error(response) -> bool:
 async def get_username(hostname: str) -> Optional[str]:
     """Returns the username for the user authenticated with the GitHub CLI."""
     result = await gh_submit.get_username(hostname=hostname)
-    if result.is_error():
-        return None
-    else:
-        return none_throws(result.ok)
+    return result.ok()

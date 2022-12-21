@@ -13,7 +13,6 @@ from edenscm.node import bin
 from ghstack.stackheader import STACK_HEADER_PREFIX as GHSTACK_HEADER_PREFIX
 
 from .gh_submit import get_pull_request_details
-from .none_throws import none_throws
 from .pull_request_arg import parse_pull_request_arg
 from .pull_request_body import parse_stack_information
 from .pullrequest import PullRequestId
@@ -38,10 +37,12 @@ async def _get_pr(ui, repo, pr_id: PullRequestId, is_goto: bool):
     pull_request_arg: the identifier the user supplied for the pull request.
     """
     result = await get_pull_request_details(pr_id)
-    if result.is_error():
-        raise error.Abort(_("could not get pull request details: %s") % result.error)
+    if result.is_err():
+        raise error.Abort(
+            _("could not get pull request details: %s") % result.unwrap_err()
+        )
 
-    pull_request = none_throws(result.ok)
+    pull_request = result.unwrap()
     body = pull_request.body
 
     # Test body to see if it is part of a ghstack stack, in which case the user
@@ -130,10 +131,10 @@ async def _link_pull_request(
         number=number,
     )
     result = await get_pull_request_details(pr_id)
-    if result.is_error():
+    if result.is_err():
         return pr_id
 
-    pull_request = none_throws(result.ok)
+    pull_request = result.unwrap()
     head_oid_node = bin(pull_request.head_oid)
     store.map_commit_to_pull_request(head_oid_node, pr_id)
     return None

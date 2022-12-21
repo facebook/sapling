@@ -7,7 +7,8 @@ import asyncio
 from typing import Any, Dict, Generic, List, Optional, Sequence, TypeVar, Union
 
 import ghstack.github
-from ghstack.github_gh_cli import make_request, Result
+from ghstack.github_gh_cli import make_request, JsonDict
+from edenscm.result import Result
 
 
 class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
@@ -34,22 +35,22 @@ class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):
         result = loop.run_until_complete(
             make_request(params, hostname=self.hostname, endpoint=path, method=method)
         )
-        if result.is_error():
-            raise RuntimeError(result.error)
+        if result.is_err():
+            raise RuntimeError(result.unwrap_err())
         else:
-            return result.ok
+            return result.unwrap()
 
     def graphql_sync(self, query: str, **kwargs: Any) -> Any:
         params: Dict[str, Union[str, int, bool]] = dict(kwargs)
         params["query"] = query
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(make_request(params, hostname=self.hostname))
-        if result.is_error():
-            raise RuntimeError(result.error)
+        if result.is_err():
+            raise RuntimeError(result.unwrap_err())
         else:
-            return result.ok
+            return result.unwrap()
 
-    async def graphql(self, query: str, **kwargs: Any) -> Result:
+    async def graphql(self, query: str, **kwargs: Any) -> Result[JsonDict, str]:
         params: Dict[str, Union[str, int, bool]] = dict(kwargs)
         params["query"] = query
         return await make_request(params, hostname=self.hostname)

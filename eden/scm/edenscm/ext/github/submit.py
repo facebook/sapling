@@ -11,7 +11,7 @@ from typing import Any, List, Optional, Tuple
 from edenscm import error, git
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
-from ghstack.github_gh_cli import Result
+from edenscm.result import Result
 
 from . import gh_submit, github_repo_util
 from .archive_commit import add_commit_to_archives
@@ -294,10 +294,10 @@ async def rewrite_pull_request_body(
     result = await gh_submit.update_pull_request(
         repository.hostname, pr.node_id, title, body, base
     )
-    if result.is_error():
+    if result.is_err():
         ui.status_err(
             _("warning, updating #%d may not have succeeded: %s\n")
-            % (pr.number, result.error)
+            % (pr.number, result.unwrap_err())
         )
     else:
         ui.status_err(_("updated body for %s\n") % pr.url)
@@ -347,17 +347,17 @@ async def create_pull_requests(
         # create_pull_request_placeholder_issue(), but so the caller is
         # responsible for ensuring update_pull_request() is eventually called.
 
-        if response.is_error():
+        if response.is_err():
             raise error.Abort(
                 _("error creating pull request for %s: %s")
-                % (hex(commit.node), response.error)
+                % (hex(commit.node), response.unwrap_err())
             )
 
         # Because create_pull_request() uses the REST API instead of the
         # GraphQL API [where we would have to enumerate the fields we
         # want in the response], the response JSON appears to contain
         # "anything" we might want, but we only care about the number and URL.
-        data = response.ok
+        data = response.unwrap()
         url = data["html_url"]
         ui.status_err(_("created new pull request: %s\n") % url)
         number = data["number"]
@@ -393,16 +393,16 @@ async def _create_placeholder_issues(repository: Repository, num: int) -> List[i
         ]
     )
 
-    def unwrap(r: Result[int]) -> int:
-        if r.is_error():
+    def unwrap(r: Result[int, str]) -> int:
+        if r.is_err():
             raise error.Abort(
                 _(
                     "Error while trying to create a placeholder issue for a pull request on %s/%s: %s"
                 )
-                % (upstream_owner, upstream_name, r.error)
+                % (upstream_owner, upstream_name, r.unwrap_err())
             )
         else:
-            return none_throws(r.ok)
+            return r.unwrap()
 
     issue_numbers = [unwrap(r) for r in issue_number_results]
     issue_numbers.sort()
@@ -432,11 +432,11 @@ def get_owner_and_name(origin: str) -> Tuple[str, str]:
 
 async def get_repo(hostname: str, owner: str, name: str) -> Repository:
     repo_result = await gh_submit.get_repository(hostname, owner, name)
-    repository = repo_result.ok
+    repository = repo_result.ok()
     if repository:
         return repository
     else:
-        raise error.Abort(_("failed to fetch repo id: %s") % repo_result.error)
+        raise error.Abort(_("failed to fetch repo id: %s") % repo_result.unwrap_err())
 
 
 async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> CommitData:
@@ -463,7 +463,9 @@ async def derive_commit_data(node: bytes, repo, store: PullRequestStore) -> Comm
 
 async def get_pull_request_details_or_throw(pr_id: PullRequestId) -> PullRequestDetails:
     result = await gh_submit.get_pull_request_details(pr_id)
-    if result.is_error():
-        raise error.Abort(_("error fetching %s: %s") % (pr_id.as_url(), result.error))
+    if result.is_err():
+        raise error.Abort(
+            _("error fetching %s: %s") % (pr_id.as_url(), result.unwrap_err())
+        )
     else:
-        return none_throws(result.ok)
+        return result.unwrap()
