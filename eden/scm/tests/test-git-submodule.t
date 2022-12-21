@@ -268,7 +268,6 @@ Rebase submodule change
   @@ -1,1 +1,1 @@
   -Subproject commit f02e91cd72c210709673488ad9224fdc72e49018
   +Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
-  
   $ hg st
   $ echo m2/*
   m2/C

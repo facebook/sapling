@@ -8,6 +8,8 @@ Dedicated test about rebase with submodule involved.
   $ . $TESTDIR/git.sh
   $ enable rebase
 
+Test case 1: rebase destination has submodule changes.
+
 Prepare submodule and main repo:
 
   $ sl init --git sub
@@ -58,3 +60,29 @@ The rebased stack include the submodule change by commit B:
   Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
   $ sl cat -r 'max(desc(E1))' m
   Subproject commit b1eae93731683dc9cf99f3714f5b4a23c6b0b13b
+
+Test case 2: the stack being rebased has submodule changes.
+
+  $ cd
+  $ sl init --git main2
+  $ cd main2
+  $ drawdag << EOS
+  >   E3
+  >   :    # E3/m=$S3 (submodule)
+  > C E1   # E1/m=$S2 (submodule)
+  > :/     # A/m=$S1 (submodule)
+  > A      # A/.gitmodules=[submodule "m"]\n path=m\n url=file://$TESTTMP/sub/.sl/store/git
+  > EOS
+
+  $ sl goto $C
+  pulling submodule m
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ sl rebase -qs $E1 -d $C
+
+  $ for i in E1 E2 E3; do
+  >   printf "$i: "
+  >   sl --cwd ~/sub log -r $(sl cat -r "max(desc($i))" m | sed 's/.* //') -T '{desc}\n'
+  > done
+  E1: S2
+  E2: S2
+  E3: S3

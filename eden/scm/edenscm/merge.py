@@ -1586,7 +1586,7 @@ def batchremove(repo, wctx, actions):
         )
 
 
-def updateone(repo, fctx, wctx, f, flags, backup=False, backgroundclose=False):
+def updateone(repo, fctxfunc, wctx, f, flags, backup=False, backgroundclose=False):
     if backup:
         # If a file or directory exists with the same name, back that
         # up.  Otherwise, look to see if there is a file that conflicts
@@ -1600,8 +1600,13 @@ def updateone(repo, fctx, wctx, f, flags, backup=False, backgroundclose=False):
         orig = scmutil.origpath(repo.ui, repo, absf)
         if repo.wvfs.lexists(absf):
             util.rename(absf, orig)
+    fctx = fctxfunc(f)
+    if fctx.flags() == "m" and not wctx.isinmemory():
+        # Do not handle submodules for on-disk checkout here.
+        # They are handled separately.
+        return 0
     wctx[f].clearunknown()
-    data = fctx(f).data()
+    data = fctx.data()
     wctx[f].write(data, flags, backgroundclose=backgroundclose)
 
     return len(data)
