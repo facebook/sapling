@@ -86,3 +86,32 @@ Test case 2: the stack being rebased has submodule changes.
   E1: S2
   E2: S2
   E3: S3
+
+Test case 3: the stack being rebased has conflicted submodule changes.
+
+  $ cd
+  $ sl init --git main3
+  $ cd main3
+  $ drawdag << EOS
+  >   E3   # B/m=$S4 (submodule)
+  >   :    # E3/m=$S3 (submodule)
+  > C E1   # E1/m=$S2 (submodule)
+  > :/     # A/m=$S1 (submodule)
+  > A      # A/.gitmodules=[submodule "m"]\n path=m\n url=file://$TESTTMP/sub/.sl/store/git
+  > EOS
+
+  $ sl goto -q $C
+  $ sl rebase -s $E1 -d $C
+  rebasing * "E1" (glob)
+  submodule 'm' changed by 'E1' is dropped due to conflict
+  rebasing * "E2" (glob)
+  rebasing * "E3" (glob)
+  submodule 'm' changed by 'E3' is dropped due to conflict
+
+  $ for i in E1 E2 E3; do
+  >   printf "$i: "
+  >   sl --cwd ~/sub log -r $(sl cat -r "max(desc($i))" m | sed 's/.* //') -T '{desc}\n'
+  > done
+  E1: S4
+  E2: S4
+  E3: S4

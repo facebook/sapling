@@ -1691,6 +1691,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         else:
             # TODO: move to absentfilectx
             fca = repo.filectx(f1, changeid=nullid, fileid=nullid)
+        # Skip submodules for now
+        if fcl.flags() == "m" or fco.flags() == "m":
+            continue
         ms.add(fcl, fco, fca, f)
         if f1 != f and move:
             moves.append(f1)
@@ -1930,7 +1933,16 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
                 z += 1
                 prog.value = (z, f)
-                wctx[f].audit()
+                wfctx = wctx[f]
+                wfctx.audit()
+                # Skip submodules for now
+                try:
+                    if wfctx.flags() == "m":
+                        continue
+                except error.ManifestLookupError:
+                    # Cannot check the flags - ignore.
+                    # This code path is hit by test-rebase-inmemory-conflicts.t.
+                    pass
                 complete, r = ms.preresolve(f, wctx)
                 if not complete:
                     numupdates += 1
