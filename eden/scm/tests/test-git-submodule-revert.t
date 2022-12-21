@@ -66,3 +66,15 @@ Revert submodule changes in working copy:
   $ sl --config extensions.reset= reset -kr '.^'
   $ sl st
 
+Revert committed submodule changes:
+
+  $ sl go -qC $B
+
+- revert submodule change so commit B looks like commit A
+BUG: amend should not crash
+
+  $ sl revert -r $A m
+  $ sl amend
+  ...
+  [1]
+
