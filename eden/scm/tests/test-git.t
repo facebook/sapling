@@ -255,15 +255,20 @@ Test clone with flags (--noupdate, --updaterev):
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
   4899b7b71a9c remote/foo alpha3
-  $ cd ..
 
-  $ hg clone --updaterev remote/foo --git "$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
+  $ hg clone --updaterev foo --git "$TESTTMP/gitrepo" cloned2
   From $TESTTMP/gitrepo
+   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
    * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
   4899b7b71a9c remote/foo alpha3
-  $ cd ..
+
+  $ hg clone --updaterev 4899b7b71a9c241a7c43171f525cc9d6fcabfd4f --git "$TESTTMP/gitrepo" cloned3
+  From $TESTTMP/gitrepo
+   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
+   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> refs/visibleheads/4899b7b71a9c241a7c43171f525cc9d6fcabfd4f
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test clone using scp-like path:
 

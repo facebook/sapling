@@ -129,7 +129,21 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         if url:
             if pullnames is None:
                 pullnames = bookmod.selectivepullbookmarknames(repo)
-            pull(repo, "default", names=pullnames)
+
+            # Make sure we pull "update". If it looks like a hash, add to
+            # "nodes", otherwise to "names".
+            nodes = []
+            if update and update is not True:
+                if len(update) == 40:
+                    try:
+                        nodes.append(bin(update))
+                    except TypeError:
+                        pass
+
+                if not nodes:
+                    pullnames.append(update)
+
+            pull(repo, "default", names=pullnames, nodes=nodes)
     except (Exception, KeyboardInterrupt):
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
