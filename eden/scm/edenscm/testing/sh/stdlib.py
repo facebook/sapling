@@ -10,6 +10,7 @@ For .t test specific commands such as "hg", look at t/runtime.py
 instead.
 """
 
+import sys
 import tarfile
 from functools import wraps
 from io import BytesIO
@@ -18,6 +19,7 @@ from typing import BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple
 from .types import Env, InterpResult, Scope, ShellExit, ShellFS, ShellReturn
 
 cmdtable = {}
+SKIP_PYTHON_LOOKUP = True
 
 
 def command(commandfunc):
@@ -871,6 +873,14 @@ def wc(args: List[str], stdin: BinaryIO, fs: ShellFS):
 
 
 @command
+def py(args: List[str], stdout: BinaryIO):
+    for name in args:
+        result = _lookup_python(name)
+        if result is not None:
+            stdout.write(f"{result}\n".encode())
+
+
+@command
 def sleep(args: List[str]):
     if len(args) != 1:
         raise NotImplementedError(f"sleep {args}")
@@ -879,6 +889,22 @@ def sleep(args: List[str]):
     import time
 
     time.sleep(duration)
+
+
+def _lookup_python(name):
+    """lookup Python variable name from the Python stack"""
+    f = sys._getframe(1)
+    nothing = object()
+    while f is not None:
+        skip = f.f_globals.get("SKIP_PYTHON_LOOKUP")
+        if not skip:
+            for variables in f.f_locals, f.f_globals:
+                result = variables.get(name, nothing)
+                if result is not nothing:
+                    return result
+        f = f.f_back
+    f = None
+    return None
 
 
 def _parseheadtail(args) -> Tuple[int, List[str]]:

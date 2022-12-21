@@ -430,6 +430,13 @@ sed:
     >>> t("seq 3 | sed '$d'")
     '1\n2\n'
 
+py (python lookup):
+
+    >>> pyval1 = 123
+    >>> pyval2 = 'xyz'
+    >>> t("py pyval1 not_found_name args pyval2")
+    '123\nxyz\n'
+
 """
 
 from . import stdlib

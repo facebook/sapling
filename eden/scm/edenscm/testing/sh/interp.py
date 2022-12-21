@@ -25,6 +25,8 @@ import conch_parser
 
 from .types import Env, InterpResult, OnError, Scope, ShellExit, ShellReturn
 
+SKIP_PYTHON_LOOKUP = True
+
 
 def sheval(code, env: Env, onerror=OnError.RAISE) -> str:
     """parse and interpret shell logic"""
