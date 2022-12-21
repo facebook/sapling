@@ -15,6 +15,7 @@ import subprocess
 import textwrap
 import weakref
 from dataclasses import dataclass
+from typing import Optional
 
 import bindings
 from edenscm import tracing
@@ -848,3 +849,18 @@ def hashobj(kind, text):
     """(bytes, bytes) -> bytes. obtain git SHA1 hash"""
     # git blob format: kind + " " + str(size) + "\0" + text
     return hashlib.sha1(b"%s %d\0%s" % (kind, len(text), text)).digest()
+
+
+def submodule_node_from_fctx(fctx) -> Optional[bytes]:
+    if fctx.flags() == "m":
+        fnode = fctx.filenode()
+        if fnode is None:
+            # workingfilectx (or overlayfilectx wrapping workingfilectx)
+            # might have "None" filenode. Try to extract from "data"
+            data = fctx.data()
+            prefix = b"Subproject commit "
+            if not data.startswith(prefix):
+                raise error.ProgrammingError(f"malformed submodule data: {data}")
+            fnode = bin(data[len(prefix) :].strip().decode())
+        return fnode
+    return None
