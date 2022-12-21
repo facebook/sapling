@@ -31,6 +31,17 @@ B makes a submodule change:
   > A      # A/.gitmodules=[submodule "m"]\n path=m\n url=file://$TESTTMP/sub/.sl/store/git
   > EOS
 
+Utility function to show commit and submodule commit:
+
+  $ showsub() {
+  >   local revs="${1:-all()}"
+  >   local nodes="$(sl log -r $revs -T '{node} ')"
+  >   for i in $nodes; do
+  >     sl log -r $i -T '{desc}: '
+  >     sl --cwd ~/sub log -r $(sl cat -r "$i" m | sed 's/.* //') -T '{desc}\n'
+  >   done
+  > }
+
 Sanity check on submodule:
 
   $ cd ~/main
@@ -44,10 +55,13 @@ Rebase the E1..E3 stack from A to C, so it is past the submodule change in B:
 
 The rebased E stack itself should not include submodule changes:
 
-  $ sl diff -r 'max(desc(E1))^' -r 'max(desc(E3))^' --stat
-   E1 |  1 +
-   E2 |  1 +
-   2 files changed, 2 insertions(+), 0 deletions(-)
+  $ showsub
+  A: S1
+  B: S2
+  C: S2
+  E1: S2
+  E2: S2
+  E3: S2
 
 The rebased stack include the submodule change by commit B:
 
@@ -79,10 +93,10 @@ Test case 2: the stack being rebased has submodule changes.
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sl rebase -qs $E1 -d $C
 
-  $ for i in E1 E2 E3; do
-  >   printf "$i: "
-  >   sl --cwd ~/sub log -r $(sl cat -r "max(desc($i))" m | sed 's/.* //') -T '{desc}\n'
-  > done
+  $ showsub
+  A: S1
+  B: S1
+  C: S1
   E1: S2
   E2: S2
   E3: S3
@@ -108,10 +122,10 @@ Test case 3: the stack being rebased has conflicted submodule changes.
   rebasing * "E3" (glob)
   submodule 'm' changed by 'E3' is dropped due to conflict
 
-  $ for i in E1 E2 E3; do
-  >   printf "$i: "
-  >   sl --cwd ~/sub log -r $(sl cat -r "max(desc($i))" m | sed 's/.* //') -T '{desc}\n'
-  > done
+  $ showsub
+  A: S1
+  B: S4
+  C: S4
   E1: S4
   E2: S4
   E3: S4
