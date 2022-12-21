@@ -11,6 +11,7 @@ import ghstack.github
 import ghstack.github_utils
 import ghstack.logs
 import ghstack.shell
+import ghstack.stackheader
 from ghstack.ghs_types import (GhNumber, GitCommitHash, GitHubNumber,
                            GitHubRepositoryId, GitTreeHash)
 
@@ -98,9 +99,6 @@ def strip_mentions(body: str) -> str:
     return RE_MENTION.sub(r'\1', body)
 
 
-STACK_HEADER = "Stack from [ghstack](https://github.com/ezyang/ghstack) (oldest at bottom)"
-
-
 @dataclass
 class DiffWithGitHubMetadata:
     diff: ghstack.diff.Diff
@@ -121,7 +119,7 @@ def main(*,
          github: ghstack.github.GitHubEndpoint,
          update_fields: bool = False,
          sh: ghstack.shell.Shell,
-         stack_header: str = STACK_HEADER,
+         stack_header: str = ghstack.stackheader.STACK_HEADER,
          repo_owner: Optional[str] = None,
          repo_name: Optional[str] = None,
          short: bool = False,

@@ -37,6 +37,7 @@ def testmod(name, optionflags=0, testtarget=None):
 testmod("edenscm.ext.github.archive_commit")
 testmod("edenscm.ext.github.github_repo_util")
 testmod("edenscm.ext.github.pr_parser")
+testmod("edenscm.ext.github.pull_request_arg")
 testmod("edenscm.ext.github.pull_request_body")
 testmod("edenscm.ext.github.templates")
 testmod("edenscm.changegroup")

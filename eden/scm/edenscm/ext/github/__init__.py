@@ -11,7 +11,15 @@ from typing import Optional
 from edenscm import error, registrar
 from edenscm.i18n import _
 
-from . import follow, github_repo_util, link, pr_status, submit, templates
+from . import (
+    follow,
+    github_repo_util,
+    import_pull_request,
+    link,
+    pr_status,
+    submit,
+    templates,
+)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -25,7 +33,7 @@ def extsetup(ui):
 @command(
     "pr",
     [],
-    _("<submit|link|unlink|...>"),
+    _("<submit|get|link|unlink|...>"),
 )
 def pull_request_command(ui, repo, *args, **opts):
     """exchange local commit data with GitHub pull requests"""
@@ -38,7 +46,10 @@ def pull_request_command(ui, repo, *args, **opts):
 
 subcmd = pull_request_command.subcommand(
     categories=[
-        ("Create or update pull requests", ["submit"]),
+        (
+            "Create or update pull requests, using `pull` to import a PR, if necessary",
+            ["submit", "pull"],
+        ),
         (
             "Manually manage associations with pull requests",
             ["follow", "link", "unlink"],
@@ -63,6 +74,32 @@ subcmd = pull_request_command.subcommand(
 def submit_cmd(ui, repo, *args, **opts):
     """create or update GitHub pull requests from local commits"""
     return submit.submit(ui, repo, *args, **opts)
+
+
+@subcmd(
+    "pull",
+    [
+        (
+            "g",
+            "goto",
+            False,
+            _("goto the pull request after importing it"),
+        )
+    ],
+    _("PULL_REQUEST"),
+)
+def pull_cmd(ui, repo, *args, **opts):
+    """import a pull request into your working copy
+
+    The PULL_REQUEST can be specified as either a URL:
+
+        https://github.com/facebook/sapling/pull/321
+
+    or just the PR number within the GitHub repository identified by
+    `sl config paths.default`.
+    """
+    ui.note(_("experimental command: this functionality may be folded into pull/goto"))
+    return import_pull_request.get_pr(ui, repo, *args, **opts)
 
 
 @subcmd(
