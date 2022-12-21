@@ -80,9 +80,6 @@ def extsetup(ui) -> None:
             "",
         )
     )
-    bookcmd[1].append(
-        ("", "remote-path", "", "name of the remote path to list the bookmarks")
-    )
 
     extensions.wrapcommand(commands.table, "pull", _pull)
     extensions.wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)

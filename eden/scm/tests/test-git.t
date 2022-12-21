@@ -244,7 +244,7 @@ Test clone with flags (--noupdate, --updaterev):
   $ cd gitrepo
   $ hg log -r . -T '{node|short}\n'
   000000000000
-  $ hg bookmarks --remote
+  $ hg bookmarks --list-subscriptions
      remote/master             3f5848713286
   $ cd ..
 
@@ -462,7 +462,7 @@ Tags are ignored during clone and pull:
   $ hg pull -q
   $ hg bookmarks
   no bookmarks set
-  $ hg bookmarks --remote
+  $ hg bookmarks --list-subscriptions
      remote/main               379d702a285c
   $ git --git-dir=.hg/store/git for-each-ref
   379d702a285c1e34e6365cc347249ec73bcd6b40 commit	refs/remotes/remote/main
@@ -547,3 +547,47 @@ Init with --git works without a reponame:
   $ cd
   $ grep -v reponame $HGRCPATH > $TESTTMP/hgrc-no-reponame
   $ HGRCPATH=$TESTTMP/hgrc-no-reponame hg init --git init-git-no-reponame
+
+Can fetch remote refs:
+
+  $ cd
+  $ git init -b first-branch -q remote-refs
+  $ cd remote-refs
+  $ echo 1 > a
+  $ git add a
+  $ git commit -q -m a
+  $ git tag v1
+  $ git checkout -qb second-branch
+  $ echo 2 >> a
+  $ git commit -aq -m b
+  $ git tag v2
+
+  $ cd
+  $ git clone -q remote-refs remote-refs2
+  $ cd remote-refs2
+  $ git branch other-remote-branch
+
+  $ cd
+  $ hg clone -q git+file://$TESTTMP/remote-refs cloned-remote-refs
+  $ cd cloned-remote-refs
+  $ hg paths --add banana file://$TESTTMP/remote-refs2
+  $ hg bookmarks --remote
+     remote/first-branch              379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote branches
+     remote/first-branch              379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote tags
+     remote/v1                        379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/v2                        c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote branches tags
+     remote/first-branch              379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969
+     remote/v1                        379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/v2                        c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote 'refs/heads/*'
+     remote/refs/heads/first-branch   379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/refs/heads/second-branch  c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote --remote-path banana
+     banana/other-remote-branch       c828c570a4109d85a6cee02b8bd2bdf355faf969
+     banana/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969

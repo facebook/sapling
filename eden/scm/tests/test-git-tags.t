@@ -53,7 +53,7 @@ Verify the pulled tags can be seen
   
 Pulled tags are listed as remote names
 
-  $ hg bookmarks --remote
+  $ hg bookmarks --list-subscriptions
      remote/main               bfff4215bb0b
      remote/tags/v1            bfff4215bb0b
      remote/tags/v2            e8a8a5525653

@@ -320,7 +320,7 @@ def pull(repo, source, names=(), nodes=()):
     missing names will be removed.
     nodes, if pulled, will be written to "visibleheads".
     """
-    url, remote = _urlremote(repo.ui, source)
+    url, remote = urlremote(repo.ui, source)
 
     # normalize names for listing
     refnames = [RefName(name) for name in names]
@@ -459,7 +459,7 @@ def _syncfromgit(repo):
     repo.changelog  # trigger updating metalog
 
 
-def _urlremote(ui, source):
+def urlremote(ui, source):
     """normalize source into (url, remotename)"""
     source = source or "default"
     if source in ui.paths:
@@ -514,7 +514,7 @@ def push(repo, dest, pushnode, to, force=False):
     else:
         fromspec = "%s" % hex(pushnode)
 
-    url, remote = _urlremote(repo.ui, dest)
+    url, remote = urlremote(repo.ui, dest)
     refname = RefName(name=to)
     refspec = "%s:%s" % (fromspec, refname)
     ret = rungit(repo, ["push", url, refspec])
@@ -539,7 +539,7 @@ def listremote(repo, url, patterns):
     patterns = [str(p) for p in patterns]
     if not patterns:
         return {}
-    out = callgit(repo, ["ls-remote", "--refs", url] + patterns)
+    out = callgit(repo, ["ls-remote", "--refs", url, *patterns])
     refs = {}
     for line in out.splitlines():
         if b"\t" not in line:

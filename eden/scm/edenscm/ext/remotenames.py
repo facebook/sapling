@@ -557,7 +557,11 @@ def extsetup(ui):
 
     newopts = [
         (bookcmd, ("a", "all", None, "show both remote and local bookmarks")),
-        (bookcmd, ("", "remote", None, _("show only remote bookmarks (DEPRECATED)"))),
+        (bookcmd, ("", "remote", None, _("fetch remote Git refs"))),
+        (
+            bookcmd,
+            ("", "remote-path", "", _("remote path from which to fetch bookmarks")),
+        ),
         (
             bookcmd,
             (
@@ -1048,7 +1052,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         _removetracking(repo, args)
         return
 
-    if delete or rename or args or inactive:
+    if delete or rename or (args and not remote) or inactive:
         if delete and track:
             msg = _("do not specifiy --track and --delete at the same time")
             raise error.Abort(msg)
@@ -1086,16 +1090,64 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         displaylocalbookmarks(ui, repo, opts, fm)
 
     if _isselectivepull(ui) and remote:
-        other = _getremotepeer(ui, repo, opts)
-        if other is None:
-            displayremotebookmarks(ui, repo, opts, fm)
+        if git.isgitpeer(repo):
+            refs, url = _fetchgitrefs(
+                repo, opts.get("remote_path") or "default", list(args)
+            )
+            _showfetchedbookmarks(repo.ui, url, refs, opts, fm)
         else:
-            remotebookmarks = other.listkeys("bookmarks")
-            _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
+            other = _getremotepeer(ui, repo, opts)
+            if other is None:
+                displayremotebookmarks(ui, repo, opts, fm)
+            else:
+                remotebookmarks = other.listkeys("bookmarks")
+                _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
     elif remote or subscriptions or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
     fm.end()
+
+
+def _fetchgitrefs(repo, source, pats):
+    """Fetch mapping of {name: hash} from Git source.
+
+    pats is a list of ref patterns (e.g. "refs/heads/*") or aliases.
+    Allowed aliases are "branches", "branch", "tags", "tag", "prs" and
+    "pr". If an alias is given, the "refs/*" prefix is trimmed from
+    the result for convenience.
+    """
+
+    if not pats:
+        pats = ["branches"]
+
+    trim = []
+    for i, p in enumerate(pats):
+        if p in {"branches", "branch"}:
+            pats[i] = "refs/heads/*"
+            trim.append("refs/heads/")
+        elif p in {"tags", "tag"}:
+            pats[i] = "refs/tags/*"
+            trim.append("refs/tags/")
+        elif p in {"prs", "pr"}:
+            pats[i] = "refs/pull/*"
+            trim.append("refs/pull/")
+
+    if trim and len(pats) != len(trim):
+        raise error.Abort(_("can't mix ref aliases with patterns"))
+
+    url, remote = git.urlremote(repo.ui, source)
+    remoterefs = git.listremote(repo, url, pats)
+
+    displayrefs = {}
+    for name, node in remoterefs.items():
+        for t in trim:
+            if name.startswith(t):
+                name = name[len(t) :]
+                break
+
+        displayrefs[name] = hex(node)
+
+    return displayrefs, url
 
 
 def displaylocalbookmarks(ui, repo, opts, fm):
@@ -1201,10 +1253,6 @@ def displayremotebookmarks(ui, repo, opts, fm):
 
 
 def _getremotepeer(ui, repo, opts):
-    if git.isgitpeer(repo):
-        # no peer interface for git (bare) repos
-        return None
-
     remotepath = opts.get("remote_path")
     path = ui.paths.getpath(remotepath or None, default="default")
 
