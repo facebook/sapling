@@ -263,6 +263,7 @@ query UsernameQuery {
     sh = ghstack.sapling_shell.SaplingShell(
         conf=conf,
         ui=ui,
+        repo=repo,
         git_dir=git_dir,
         user_name=user_name,
         user_email=user_email,

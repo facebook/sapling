@@ -3,7 +3,9 @@ import logging
 import os
 from typing import Any, Dict, Optional, List
 
-from edenscm import gpg
+from edenscm import error, gpg
+from edenscm.i18n import _
+from edenscm.node import hex, nullid
 import ghstack
 import ghstack.config
 from ghstack.ghs_types import GitCommitHash
@@ -16,6 +18,7 @@ class SaplingShell(ghstack.shell.Shell):
                  *,
                  conf: ghstack.config.Config,
                  ui = None,  # Sapling ui object.
+                 repo = None,  # Sapling repo object.
                  git_dir: str,
                  user_name: str,
                  user_email: str,
@@ -35,6 +38,7 @@ class SaplingShell(ghstack.shell.Shell):
         super().__init__(quiet=quiet, cwd=cwd, testing=testing)
         self.conf = conf
         self.ui = ui
+        self.repo = repo
         self.git_dir = git_dir
         self.user_name = user_name
         self.user_email = user_email
@@ -85,10 +89,14 @@ class SaplingShell(ghstack.shell.Shell):
         # not be able to resolve arguments like HEAD, so we must resolve those
         # to a full hash before running Git.
         if 'HEAD' in args:
-            top = self._run_sapling_command(['log', '-r', 'max(descendants(.))', '-T', '{node}'])
+            # Approximate `sl whereami`.
+            p1 = self.repo.dirstate.p1()
+            if p1 == nullid:
+                raise error.Abort(_("could not find a current commit hash"))
+
             for index, arg in enumerate(args):
                 if arg == 'HEAD':
-                    args[index] = top
+                    args[index] = hex(p1)
 
         return args
 
