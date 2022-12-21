@@ -6,6 +6,8 @@
 """utilities for interacting with GitHub (EXPERIMENTAL)
 """
 
+import os
+import shutil
 from typing import Optional
 
 from edenscm import error, registrar
@@ -20,6 +22,7 @@ from . import (
     submit,
     templates,
 )
+from .github_repo_util import find_github_repo
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -54,6 +57,7 @@ subcmd = pull_request_command.subcommand(
             "Manually manage associations with pull requests",
             ["follow", "link", "unlink"],
         ),
+        ("Wrappers for the GitHub CLI (`gh`)", ["list"]),
     ]
 )
 
@@ -150,6 +154,79 @@ def follow_cmd(ui, repo, *revs, **opts):
     """
     revs = list(revs) + opts.pop("rev", [])
     return follow.follow(ui, repo, *revs)
+
+
+@subcmd(
+    "list",
+    [
+        ("", "app", "", _("filter by GitHub App author"), _("string")),
+        ("a", "assignee", "", _("filter by assignee"), _("string")),
+        ("A", "author", "", _("filter by author"), _("string")),
+        ("B", "base", "", _("filter by base branch"), _("string")),
+        ("d", "draft", False, _("filter by draft state")),
+        ("H", "head", "", _("filter by head branch"), _("string")),
+        (
+            "q",
+            "jq",
+            "",
+            _("filter JSON output using a jq expression"),
+            _("expression"),
+        ),
+        ("", "json", "", _("output JSON with the specified fields"), _("fields")),
+        ("l", "label", "", _("filter by label"), _("strings")),
+        (
+            "L",
+            "limit",
+            30,
+            _("maximum number of items to fetch (default 30)"),
+            _("int"),
+        ),
+        ("S", "search", "", _("search pull requests with query"), _("query")),
+        (
+            "s",
+            "state",
+            "",
+            _('filter by state: {open|closed|merged|all} (default "open")'),
+            _("string"),
+        ),
+        (
+            "t",
+            "template",
+            "",
+            _('format JSON output using a Go template; see "gh help formatting"'),
+            _("string"),
+        ),
+        ("w", "web", False, _("list pull requests in the web browser")),
+    ],
+)
+def list_cmd(ui, repo, *args, **opts):
+    """calls `gh pr list [flags]` with the current repo as the value of --repo"""
+    github_repo = find_github_repo(repo).ok()
+    if not github_repo:
+        raise error.Abort(_("This does not appear to be a GitHub repo."))
+
+    argv0 = _find_gh_cli()
+    if argv0 is None:
+        raise error.Abort(_("Path to `gh` could not be found."))
+
+    gh_args = [argv0, "--repo", github_repo.as_gh_repo_arg(), "pr", "list"]
+    for opt, value in opts.items():
+        if value:
+            val_type = type(value)
+            if val_type == str:
+                gh_args.extend([f"--{opt}", value])
+            elif val_type == int:
+                gh_args.extend([f"--{opt}", str(value)])
+            elif val_type == bool:
+                gh_args.append(f"--{opt}")
+            else:
+                raise ValueError(f"unsupported type {val_type} for {value}")
+
+    os.execv(argv0, gh_args)
+
+
+def _find_gh_cli() -> Optional[str]:
+    return shutil.which("gh")
 
 
 @templatekeyword("github_repo")

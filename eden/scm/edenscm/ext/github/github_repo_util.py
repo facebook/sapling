@@ -35,6 +35,13 @@ class GitHubRepo:
     def to_url(self) -> str:
         return f"https://{self.hostname}/{self.owner}/{self.name}"
 
+    def as_gh_repo_arg(self) -> str:
+        """the value to use with --repo for the GitHub CLI"""
+        if self.hostname == "github.com":
+            return f"{self.owner}/{self.name}"
+        else:
+            return f"{self.hostname}/{self.owner}/{self.name}"
+
 
 def is_github_repo(repo) -> bool:
     """Returns True if it's a GitHub repo"""
