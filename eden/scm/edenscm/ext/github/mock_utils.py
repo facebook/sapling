@@ -95,7 +95,7 @@ class MockGitHubServer:
         try:
             return self.requests[key].get_response()
         except KeyError:
-            raise MockRequestNotFound(key)
+            raise MockRequestNotFound(key, self.requests)
 
     def _add_request(self, request_key: str, request: "MockRequest") -> None:
         self.requests[request_key] = request
@@ -403,7 +403,9 @@ class MergeIntoBranchRequest(MockRequest):
 
 
 class MockRequestNotFound(Exception):
-    pass
+    def __init__(self, key: str, requests: Dict[str, MockRequest]) -> None:
+        key_list = "\n\n".join(requests.keys())
+        super().__init__(f"key not found: {key}\nAvailable keys:\n{key_list}")
 
 
 class MockResponseNotSet(Exception):
