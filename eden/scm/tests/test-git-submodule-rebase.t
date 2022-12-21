@@ -8,27 +8,13 @@ Dedicated test about rebase with submodule involved.
   $ . $TESTDIR/git.sh
   $ enable rebase
 
-Test case 1: rebase destination has submodule changes.
-
-Prepare submodule and main repo:
+Prepare submodule:
 
   $ sl init --git sub
   $ drawdag --cwd sub << 'EOS'
   > S5
   > :
   > S1
-  > EOS
-
-In the main repo, E1..E3 is a feature stack, A..C is the main stack.
-B makes a submodule change:
-
-  $ sl init --git main
-  $ drawdag --cwd main << EOS
-  >   E3
-  >   :
-  > C E1   # B/m=$S2 (submodule)
-  > :/     # A/m=$S1 (submodule)
-  > A      # A/.gitmodules=[submodule "m"]\n path=m\n url=file://$TESTTMP/sub/.sl/store/git
   > EOS
 
 Utility function to show commit and submodule commit:
@@ -42,18 +28,32 @@ Utility function to show commit and submodule commit:
   >   done
   > }
 
-Sanity check on submodule:
+def main_test_cases():
+  # Test case 1: rebase destination has submodule changes.
 
-  $ cd ~/main
+  # In the main repo, E1..E3 is a feature stack, A..C is the main stack.
+  # B makes a submodule change:
+
+  $ newrepo '' --git
+  $ drawdag << EOS
+  >   E3
+  >   :
+  > C E1   # B/m=$S2 (submodule)
+  > :/     # A/m=$S1 (submodule)
+  > A      # A/.gitmodules=[submodule "m"]\n path=m\n url=file://$TESTTMP/sub/.sl/store/git
+  > EOS
+
+  # Sanity check on submodule:
+
   $ sl goto -q $B
   $ cat m/S2
   S2 (no-eol)
 
-Rebase the E1..E3 stack from A to C, so it is past the submodule change in B:
+  # Rebase the E1..E3 stack from A to C, so it is past the submodule change in B:
 
   $ sl rebase -qs $E1 -d $C
 
-The rebased E stack itself should not include submodule changes:
+  # The rebased E stack itself should not include submodule changes:
 
   $ showsub
   A: S1
@@ -63,7 +63,7 @@ The rebased E stack itself should not include submodule changes:
   E2: S2
   E3: S2
 
-The rebased stack include the submodule change by commit B:
+  # The rebased stack include the submodule change by commit B:
 
   $ sl cat -r $A m
   Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
@@ -75,11 +75,9 @@ The rebased stack include the submodule change by commit B:
   $ sl cat -r 'max(desc(E1))' m
   Subproject commit b1eae93731683dc9cf99f3714f5b4a23c6b0b13b
 
-Test case 2: the stack being rebased has submodule changes.
+  # Test case 2: the stack being rebased has submodule changes.
 
-  $ cd
-  $ sl init --git main2
-  $ cd main2
+  $ newrepo '' --git
   $ drawdag << EOS
   >   E3
   >   :    # E3/m=$S3 (submodule)
@@ -101,11 +99,9 @@ Test case 2: the stack being rebased has submodule changes.
   E2: S2
   E3: S3
 
-Test case 3: the stack being rebased has conflicted submodule changes.
+  # Test case 3: the stack being rebased has conflicted submodule changes.
 
-  $ cd
-  $ sl init --git main3
-  $ cd main3
+  $ newrepo '' --git
   $ drawdag << EOS
   >   E3   # B/m=$S4 (submodule)
   >   :    # E3/m=$S3 (submodule)
@@ -117,10 +113,10 @@ Test case 3: the stack being rebased has conflicted submodule changes.
   $ sl goto -q $C
   $ sl rebase -s $E1 -d $C
   rebasing * "E1" (glob)
-  submodule 'm' changed by 'E1' is dropped due to conflict
+  submodule 'm' changed by 'E1' is dropped due to conflict (?)
   rebasing * "E2" (glob)
   rebasing * "E3" (glob)
-  submodule 'm' changed by 'E3' is dropped due to conflict
+  submodule 'm' changed by 'E3' is dropped due to conflict (?)
 
   $ showsub
   A: S1
@@ -129,3 +125,9 @@ Test case 3: the stack being rebased has conflicted submodule changes.
   E1: S4
   E2: S4
   E3: S4
+
+for in_memory_rebase in [False, True]:
+  $ cd
+  $ setconfig rebase.experimental.inmemory=$(py in_memory_rebase)
+
+  main_test_cases()
