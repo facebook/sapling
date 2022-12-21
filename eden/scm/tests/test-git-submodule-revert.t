@@ -71,10 +71,12 @@ Revert committed submodule changes:
   $ sl go -qC $B
 
 - revert submodule change so commit B looks like commit A
-BUG: amend should not crash
 
   $ sl revert -r $A m
   $ sl amend
-  ...
-  [1]
+  $ sl cat -r . m
+  Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
+  $ sl cat -r $A m
+  Subproject commit 5d045cb6dd867debc8828c96e248804f892cf171
+  $ sl st
 

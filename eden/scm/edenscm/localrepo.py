@@ -2511,7 +2511,16 @@ class localrepository(object):
 
     def _filecommitgit(self, fctx):
         if fctx.flags() == "m":
-            return fctx.filenode()
+            fnode = fctx.filenode()
+            if fnode is None:
+                # workingfilectx (or overlayfilectx wrapping workingfilectx)
+                # might have "None" filenode. Try to extract from "data"
+                data = fctx.data()
+                prefix = b"Subproject commit "
+                if not data.startswith(prefix):
+                    raise errormod.ProgrammingError(f"malformed submodule data: {data}")
+                fnode = bin(data[len(prefix) :].strip().decode())
+            return fnode
         return self.fileslog.contentstore.writeobj("blob", fctx.data())
 
     def checkcommitpatterns(self, wctx, match, status, fail):

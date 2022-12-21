@@ -1342,8 +1342,15 @@ class filectx(basefilectx):
                 hint=_("set censor.policy to ignore errors"),
             )
 
-    def size(self):
-        return self._filelog.size(self._filerev)
+    def size(self) -> int:
+        try:
+            return self._filelog.size(self._filerev)
+        except error.RustError:
+            # For submodule, this raises "object not found" error.
+            # Let's just return a dummy size.
+            if self.flags() == "m":
+                return 0
+            raise
 
     @propertycache
     def _copied(self):
