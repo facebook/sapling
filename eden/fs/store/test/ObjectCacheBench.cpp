@@ -8,9 +8,10 @@
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/store/ObjectCache.h"
 
-namespace facebook::eden {
-
 namespace {
+
+using namespace facebook::eden;
+
 class Object {
  public:
   explicit Object(ObjectId hash) : hash_{std::move(hash)} {}
@@ -30,62 +31,53 @@ class Object {
 using SimpleObjectCache = ObjectCache<Object, ObjectCacheFlavor::Simple>;
 
 void getSimple(benchmark::State& st) {
-  auto numObjects = 100000u;
+  size_t numObjects = 100000;
   auto cache = SimpleObjectCache::create(40 * 1024 * 1024, 1);
-  for (auto i = 0u; i < numObjects; i++) {
-    auto object =
-        std::make_shared<Object>(ObjectId::sha1(fmt::format("{}", i)));
+
+  std::vector<ObjectId> ids;
+  ids.reserve(numObjects);
+
+  for (size_t i = 0u; i < numObjects; ++i) {
+    ids.push_back(ObjectId::sha1(fmt::to_string(i)));
+    auto object = std::make_shared<Object>(ids[i]);
     cache->insertSimple(object);
   }
 
-  auto i = 0u;
+  size_t i = 0;
   for (auto _ : st) {
-    auto hash = ObjectId::sha1(fmt::format("{}", i));
+    benchmark::DoNotOptimize(cache->getSimple(ids[i]));
 
-    auto start = std::chrono::high_resolution_clock::now();
-    auto res = cache->getSimple(hash);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    benchmark::DoNotOptimize(res);
-
-    auto elapsed =
-        std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-    st.SetIterationTime(elapsed.count());
-
-    i = (i + 1) % numObjects;
+    if (++i == numObjects) {
+      i = 0;
+    }
   }
 }
-
-BENCHMARK(getSimple)->UseManualTime();
+BENCHMARK(getSimple);
 
 void insertSimple(benchmark::State& st) {
-  auto numObjects = 100000u;
+  size_t numObjects = 100000;
   auto cache = SimpleObjectCache::create(40 * 1024 * 1024, 1);
+  std::vector<ObjectId> ids;
+  ids.reserve(numObjects);
   std::vector<std::shared_ptr<Object>> vec;
   vec.reserve(numObjects);
-  for (auto i = 0u; i < numObjects; i++) {
-    auto object =
-        std::make_shared<Object>(ObjectId::sha1(fmt::format("{}", i)));
-    vec.push_back(std::move(object));
+
+  for (size_t i = 0; i < numObjects; ++i) {
+    ids.push_back(ObjectId::sha1(fmt::to_string(i)));
+    vec.push_back(std::make_shared<Object>(ids[i]));
   }
 
-  auto i = 0u;
+  size_t i = 0;
   for (auto _ : st) {
-    auto start = std::chrono::high_resolution_clock::now();
     cache->insertSimple(vec[i]);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto elapsed =
-        std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
-    st.SetIterationTime(elapsed.count());
-
-    i = (i + 1) % numObjects;
+    if (++i == numObjects) {
+      i = 0;
+    }
   }
+  benchmark::DoNotOptimize(cache);
 }
-
-BENCHMARK(insertSimple)->UseManualTime();
+BENCHMARK(insertSimple);
 
 } // namespace
-} // namespace facebook::eden
 
 EDEN_BENCHMARK_MAIN();
