@@ -583,12 +583,9 @@ def submodulecheckout(ctx, match=None, force=False):
         for submod in submodules:
             prog.value = (value, submod.name)
             tracing.debug("checking out submodule %s\n" % submod.name)
-            if submod.path not in ctx:
+            node = submodule_node_from_ctx_path(ctx, submod.path)
+            if node is None:
                 continue
-            fctx = ctx[submod.path]
-            if fctx.flags() != "m":
-                continue
-            node = fctx.filenode()
             submod.checkout(node, force=force)
             value += 1
 
@@ -864,3 +861,14 @@ def submodule_node_from_fctx(fctx) -> Optional[bytes]:
             fnode = bin(data[len(prefix) :].strip().decode())
         return fnode
     return None
+
+
+def submodule_node_from_ctx_path(ctx, path) -> Optional[bytes]:
+    """return the submodule commit hash stored in ctx's manifest tree
+
+    If path is not a submodule or path does not exist in ctx, return None.
+    """
+    if path not in ctx:
+        return None
+    fctx = ctx[path]
+    return submodule_node_from_fctx(fctx)
