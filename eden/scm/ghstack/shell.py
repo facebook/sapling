@@ -218,8 +218,8 @@ class Shell(object):
             return returncode == 0
         if returncode != 0:
             raise RuntimeError(
-                "{} failed with exit code {}"
-                .format(' '.join(args), returncode)
+                "{} failed with exit code {}. Output was '{}'"
+                .format(' '.join(args), returncode, out)
             )
 
         if stdout == subprocess.PIPE:
