@@ -331,6 +331,8 @@ Test push:
 
 - --to without -r
   $ hg push -q --to book_change_beta
+  $ hg push -q --to remote/book_change_beta1
+  $ hg push -q remote/book_change_beta2
 
 - --to with -r
   $ hg push -r '.^' --to parent_change_beta
@@ -339,12 +341,15 @@ Test push:
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
   alpha3 remote/foo remote/parent_change_beta
-  beta.change remote/book_change_beta
+  beta.change remote/book_change_beta remote/book_change_beta1 remote/book_change_beta2
 
 - delete bookmark
   $ hg push --delete book_change_beta
   To $TESTTMP/gitrepo
    - [deleted]         book_change_beta
+
+  $ hg push -q --delete remote/book_change_beta1
+  $ hg push -q --delete default/book_change_beta2
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
   alpha3 remote/foo remote/parent_change_beta

@@ -767,7 +767,90 @@ def _guesspushtobookmark(repo, pushnode, remotename):
     return None
 
 
+def adjust_push_dest_opts(ui, dest, opts):
+    """Adjust (dest, opts) for ease of use. Returns the adjusted (dest, opts).
+
+    When --to matches a remote name:
+
+        push --to remote/foo/bar   => push default --to foo/bar
+        push --to upstream/foo/bar => push upstream --to foo/bar
+
+    With a --to:
+
+        push remote/foo/bar   => push default --to foo/bar
+        push upstream/foo/bar => push upstream --to foo/bar
+
+    Adjust --delete similarly to --to.
+    """
+    renames = _getrenames(ui)
+    paths = {k for k, v in ui.configitems("paths")}
+    return _adjust_push_dest_opts(paths, renames, dest, opts)
+
+
+def _adjust_push_dest_opts(paths, renames, dest, opts):
+    """See 'adjust_push_dest_opts'.
+
+    Do not use 'ui' for easier testing.
+
+    'paths' specifies the path names, ex. {'default'}
+    'renames' specifies the remote name renames, ex. {'default': 'remote'}
+
+    Tests:
+
+        >>> paths = {'default', 'upstream'}
+        >>> renames = {'default': 'remote'}
+
+        >>> import functools
+        >>> test = functools.partial(_adjust_push_dest_opts, paths, renames)
+        >>> test(None, {'to': 'remote/foo/bar'})
+        ('default', {'to': 'foo/bar'})
+        >>> test(None, {'to': 'default/foo/bar'})
+        ('default', {'to': 'foo/bar'})
+        >>> test(None, {'to': 'unknown/foo/bar'})
+        (None, {'to': 'unknown/foo/bar'})
+
+        >>> test('remote/foo/bar', {})
+        ('default', {'to': 'foo/bar'})
+        >>> test('default/foo/bar', {})
+        ('default', {'to': 'foo/bar'})
+        >>> test('unknown/foo/bar', {})
+        ('unknown/foo/bar', {})
+
+        >>> test(None, {'delete': 'remote/foo/bar'})
+        ('default', {'delete': 'foo/bar'})
+        >>> test(None, {'delete': 'default/foo/bar'})
+        ('default', {'delete': 'foo/bar'})
+        >>> test(None, {'delete': 'unknown/foo/bar'})
+        (None, {'delete': 'unknown/foo/bar'})
+
+        >>> test('default', {'to': 'remote/foo/bar'})
+        ('default', {'to': 'remote/foo/bar'})
+    """
+    reverse_renames = {p: p for p in paths}
+    reverse_renames.update((v, k) for k, v in renames.items())
+    if dest:
+        if not opts.get("to") and not opts.get("delete"):
+            remote, to = splitremotename(dest)
+            remote = reverse_renames.get(remote)
+            if remote:
+                opts["to"] = to
+                dest = remote
+    else:
+        for opt_name in "to", "delete":
+            opt = opts.get(opt_name)
+            if not opt:
+                continue
+            remote, to = splitremotename(opt)
+            remote = reverse_renames.get(remote)
+            if remote:
+                opts[opt_name] = to
+                dest = remote
+                break
+    return dest, opts
+
+
 def expushcmd(orig, ui, repo, dest=None, **opts):
+    dest, opts = adjust_push_dest_opts(ui, dest, opts)
     if git.isgitpeer(repo):
         if dest is None:
             dest = "default"
