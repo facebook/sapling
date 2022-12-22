@@ -937,3 +937,17 @@ def submodule_node_from_ctx_path(ctx, path) -> Optional[bytes]:
         return None
     fctx = ctx[path]
     return submodule_node_from_fctx(fctx)
+
+
+def update_extra_with_git_committer(ui, ctx, extra):
+    """process Git committer on local commit creation
+
+    Update the `extra` in place to contain the Git committer and committer date information.
+    """
+    committer = ui.config("git", "committer") or ui.username()
+    extra["committer"] = committer
+
+    date = ui.config("git", "committer-date") or "now"
+    unixtime, offset = util.parsedate(date)
+    committer_date = f"{unixtime} {offset}"
+    extra["committer_date"] = committer_date

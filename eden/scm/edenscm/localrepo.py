@@ -2798,6 +2798,8 @@ class localrepository(object):
             self.ui.note(_("committing changelog\n"))
             self.changelog.delayupdate(tr)
             extra = ctx.extra().copy()
+            if isgit:
+                git.update_extra_with_git_committer(self.ui, ctx, extra)
             n = self.changelog.add(
                 mn,
                 files,

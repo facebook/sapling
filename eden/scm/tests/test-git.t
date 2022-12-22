@@ -127,19 +127,19 @@ Test bookmarks:
 
   $ hg bookmark -r. foo
   $ hg bookmarks
-     foo                       4899b7b71a9c
+     foo                       57eda5013e06
      master                    3f5848713286
 
 Test changes are readable via git:
 
   $ export GIT_DIR="$TESTTMP/gitrepo/.git"
   $ git log foo --pretty='format:%s %an %d'
-  alpha3 test  (refs/visibleheads/4899b7b71a9c241a7c43171f525cc9d6fcabfd4f, foo)
+  alpha3 test  (refs/visibleheads/57eda5013e068ac543a52ad073cec3d7750113b5, foo)
   beta test  (HEAD -> master)
   alpha test  (no-eol)
   $ git fsck --strict
   $ git show foo
-  commit 4899b7b71a9c241a7c43171f525cc9d6fcabfd4f
+  commit 57eda5013e068ac543a52ad073cec3d7750113b5
   Author: test <>
   Date:   Sat Feb 3 14:56:01 2001 +0800
   
@@ -190,7 +190,7 @@ Test pull:
   $ hg pull origin -B foo
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
   From file:/*/$TESTTMP/gitrepo/ (glob)
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> origin/foo
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> origin/foo
   $ hg log -r origin/foo -T '{desc}\n'
   alpha3
 
@@ -250,24 +250,25 @@ Test clone with flags (--noupdate, --updaterev):
 
   $ hg clone --git "$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
   From $TESTTMP/gitrepo
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> remote/foo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
-  4899b7b71a9c remote/foo alpha3
+  57eda5013e06 remote/foo alpha3
 
   $ hg clone --updaterev foo --git "$TESTTMP/gitrepo" cloned2
   From $TESTTMP/gitrepo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
-  4899b7b71a9c remote/foo alpha3
+  57eda5013e06 remote/foo alpha3
 
-  $ hg clone --updaterev 4899b7b71a9c241a7c43171f525cc9d6fcabfd4f --git "$TESTTMP/gitrepo" cloned3
+  $ NODE=$(git --git-dir ~/gitrepo/.git for-each-ref | grep visibleheads | sed 's# .*##')
+  $ hg clone --updaterev $NODE --git "$TESTTMP/gitrepo" cloned3
   From $TESTTMP/gitrepo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> refs/visibleheads/4899b7b71a9c241a7c43171f525cc9d6fcabfd4f
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> refs/visibleheads/57eda5013e068ac543a52ad073cec3d7750113b5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test clone using scp-like path:
@@ -334,7 +335,7 @@ Test push:
 - --to with -r
   $ hg push -r '.^' --to parent_change_beta
   To $TESTTMP/gitrepo
-   * [new branch]      4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> parent_change_beta
+   * [new branch]      57eda5013e068ac543a52ad073cec3d7750113b5 -> parent_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
   alpha3 remote/foo remote/parent_change_beta

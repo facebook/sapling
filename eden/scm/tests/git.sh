@@ -11,3 +11,7 @@ export GIT_COMMITTER_NAME="test"
 export GIT_COMMITTER_EMAIL="test@example.org"
 export GIT_COMMITTER_DATE="2007-01-01 00:00:10 +0000"
 unset GIT_DIR
+
+# preserve test compatibility
+setconfig git.committer='test'
+setconfig git.committer-date='0 0'
