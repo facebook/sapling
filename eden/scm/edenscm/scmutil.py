@@ -442,13 +442,9 @@ class casecollisionauditor(object):
     def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort
-        if not dirstate._istreestate and not dirstate._istreedirstate:
-            allfiles = "\0".join(dirstate._map)
-            self._loweredfiles = set(encoding.lower(allfiles).split("\0"))
-        else:
-            # Still need an in-memory set to collect files being tested, but
-            # haven't been added to treestate yet.
-            self._loweredfiles = set()
+        # Still need an in-memory set to collect files being tested, but
+        # haven't been added to treestate yet.
+        self._loweredfiles = set()
         self._dirstate = dirstate
         # The purpose of _newfiles is so that we don't complain about
         # case collisions if someone were to call this object with the
