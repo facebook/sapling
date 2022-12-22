@@ -31,8 +31,6 @@ use crate::storage::CommitGraphStorage;
 
 pub mod edges;
 pub mod storage;
-#[cfg(test)]
-mod tests;
 
 /// The parents of a changeset.
 ///
