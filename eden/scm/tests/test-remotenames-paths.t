@@ -26,11 +26,9 @@ Delete .hg/hgrc fil
 
   $ rm .hg/hgrc
 
-Check that a path cannot be deleted when no .hg/hgrc file exists
+Non-existence of config file does not change behavior:
 
   $ hg paths -d stairwaytoheaven
-  abort: could not find repo config file
-  [255]
 
 Check that a path can be added when no .hg/hgrc file exists
 
@@ -38,3 +36,12 @@ Check that a path can be added when no .hg/hgrc file exists
   $ hg paths
   yellowbrickroad = $TESTTMP/pathsrepo/yellowbrickroad
 
+Helpful error with wrong args:
+
+  $ hg paths -a banana
+  abort: invalid URL - invoke as 'hg paths -a NAME URL'
+  [255]
+
+  $ hg paths -a banana too many
+  abort: invalid URL - invoke as 'hg paths -a NAME URL'
+  [255]

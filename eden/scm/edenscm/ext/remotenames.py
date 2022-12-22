@@ -41,6 +41,7 @@ from edenscm import (
     localrepo,
     mutation,
     pycompat,
+    rcutil,
     registrar,
     revset,
     scmutil,
@@ -417,48 +418,18 @@ def expaths(orig, ui, repo, *args, **opts):
     """
     delete = opts.get("delete")
     add = opts.get("add")
-    configrepofile = ui.identity.configrepofile()
+    configrepofile = repo.localvfs.join(ui.identity.configrepofile())
     if delete:
-        # find the first section and remote path that matches, and delete that
-        foundpaths = False
-        if not repo.localvfs.isfile(configrepofile):
-            raise error.Abort(_("could not find repo config file"))
-        oldrepoconfigfile = repo.localvfs.readutf8(configrepofile).splitlines(True)
-        f = repo.localvfs(configrepofile, "w", atomictemp=True)
-        for line in oldrepoconfigfile:
-            if "[paths]" in line:
-                foundpaths = True
-            if not (foundpaths and line.strip().startswith(delete)):
-                f.writeutf8(line)
-        f.close()
+        rcutil.editconfig(configrepofile, "paths", delete, None)
         saveremotenames(repo, {delete: {}})
         precachedistance(repo)
         return
 
     if add:
-        # find the first section that matches, then look for previous value; if
-        # not found add a new entry
-        foundpaths = False
-        oldrepoconfigfile = []
-        if repo.localvfs.isfile(configrepofile):
-            oldrepoconfigfile = repo.localvfs.readutf8(configrepofile).splitlines(True)
-        f = repo.localvfs(configrepofile, "w", atomictemp=True)
-        done = False
-        for line in oldrepoconfigfile:
-            if "[paths]" in line:
-                foundpaths = True
-            if foundpaths and line.strip().startswith(add):
-                done = True
-                line = "%s = %s\n" % (add, args[0])
-            f.writeutf8(line)
+        if len(args) != 1:
+            raise error.Abort(_("invalid URL - invoke as '@prog@ paths -a NAME URL'"))
 
-        # did we not find an existing path?
-        if not done:
-            done = True
-            f.writeutf8("[paths]\n")
-            f.writeutf8("%s = %s\n" % (add, args[0]))
-
-        f.close()
+        rcutil.editconfig(configrepofile, "paths", add, args[0])
         return
 
     return orig(ui, repo, *args)
