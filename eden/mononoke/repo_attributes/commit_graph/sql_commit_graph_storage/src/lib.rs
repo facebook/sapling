@@ -37,6 +37,9 @@ use sql::SqlConnections;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
+#[cfg(test)]
+mod tests;
+
 pub struct SqlCommitGraphStorageBuilder {
     connections: SqlConnections,
 }
