@@ -6,6 +6,7 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -145,6 +146,30 @@ pub async fn assert_skip_tree_lowest_common_ancestor(
             .await?
             .map(|node| node.cs_id),
         lca.map(name_cs_id)
+    );
+    Ok(())
+}
+
+pub async fn assert_get_ancestors_difference(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: Vec<&str>,
+    common: Vec<&str>,
+    ancestors_difference: Vec<&str>,
+) -> Result<()> {
+    let heads = heads.into_iter().map(name_cs_id).collect();
+    let common = common.into_iter().map(name_cs_id).collect();
+
+    assert_eq!(
+        graph
+            .get_ancestors_difference(ctx, heads, common)
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        ancestors_difference
+            .into_iter()
+            .map(name_cs_id)
+            .collect::<HashSet<_>>()
     );
     Ok(())
 }

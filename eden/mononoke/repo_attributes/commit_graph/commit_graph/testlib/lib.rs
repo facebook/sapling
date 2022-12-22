@@ -191,6 +191,70 @@ pub async fn test_skip_tree(ctx: &CoreContext, storage: Arc<dyn CommitGraphStora
     Ok(())
 }
 
+pub async fn test_get_ancestors_difference(
+    ctx: &CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        ctx,
+        r##"
+         A-B-C-D-G-H---J-K
+            \   /   \ /
+             E-F     I
+
+         L-M-N-O-P-Q-R-S-T-U
+         "##,
+        storage.clone(),
+    )
+    .await?;
+
+    assert_get_ancestors_difference(
+        &graph,
+        ctx,
+        vec!["K"],
+        vec![],
+        vec!["K", "J", "I", "H", "G", "D", "F", "C", "E", "B", "A"],
+    )
+    .await?;
+
+    assert_get_ancestors_difference(
+        &graph,
+        ctx,
+        vec!["K", "U"],
+        vec![],
+        vec![
+            "U", "T", "S", "R", "Q", "P", "O", "N", "M", "L", "K", "J", "I", "H", "G", "D", "F",
+            "C", "E", "B", "A",
+        ],
+    )
+    .await?;
+
+    assert_get_ancestors_difference(&graph, ctx, vec!["K"], vec!["G"], vec!["K", "J", "I", "H"])
+        .await?;
+
+    assert_get_ancestors_difference(&graph, ctx, vec!["K", "I"], vec!["J"], vec!["K"]).await?;
+
+    assert_get_ancestors_difference(
+        &graph,
+        ctx,
+        vec!["I"],
+        vec!["C"],
+        vec!["I", "H", "G", "F", "E", "D"],
+    )
+    .await?;
+
+    assert_get_ancestors_difference(
+        &graph,
+        ctx,
+        vec!["J", "S"],
+        vec!["C", "E", "O"],
+        vec!["J", "I", "H", "G", "F", "D", "S", "R", "Q", "P"],
+    )
+    .await?;
+
+    Ok(())
+}
+
 pub async fn test_find_by_prefix(
     ctx: &CoreContext,
     storage: Arc<dyn CommitGraphStorage>,

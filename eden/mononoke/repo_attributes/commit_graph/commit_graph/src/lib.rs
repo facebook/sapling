@@ -342,13 +342,22 @@ impl CommitGraph {
     }
 
     /// Obtain a frontier of changesets from a list of changeset ids.
-    #[allow(unused)]
     async fn frontier(
         &self,
-        _ctx: &CoreContext,
-        _cs_ids: Vec<ChangesetId>,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
     ) -> Result<ChangesetFrontier> {
-        todo!()
+        let all_edges = self.storage.fetch_many_edges(ctx, &cs_ids, None).await?;
+
+        let mut frontier = ChangesetFrontier::new();
+        for (cs_id, edges) in all_edges.into_iter() {
+            frontier
+                .entry(edges.node.generation)
+                .or_default()
+                .insert(cs_id);
+        }
+
+        Ok(frontier)
     }
 
     /// Lower a frontier so that it contains the highest ancestors of the
@@ -379,7 +388,7 @@ impl CommitGraph {
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
                     match edges
-                        .merge_ancestor
+                        .skip_tree_parent
                         .into_iter()
                         .chain(edges.skip_tree_skew_ancestor)
                         .filter(|ancestor| ancestor.generation >= target_generation)
@@ -428,5 +437,51 @@ impl CommitGraph {
             }
         }
         Ok(false)
+    }
+
+    // Returns all changesets that are ancestors of any changeset in heads
+    // excluding any changeset that is an ancestor of any changeset in common
+    pub async fn get_ancestors_difference(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        common: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        let mut cs_ids_inbetween = vec![];
+
+        let (mut heads, mut common) =
+            futures::try_join!(self.frontier(ctx, heads), self.frontier(ctx, common))?;
+
+        while let Some((generation, cs_ids)) = heads.pop_last() {
+            common = self.lower_frontier(ctx, common, generation).await?;
+
+            let mut cs_ids_not_excluded = vec![];
+            for cs_id in cs_ids {
+                if let Some((common_frontier_generation, common_cs_ids)) = common.last_key_value() {
+                    if *common_frontier_generation == generation && common_cs_ids.contains(&cs_id) {
+                        continue;
+                    }
+                }
+                cs_ids_not_excluded.push(cs_id)
+            }
+
+            cs_ids_inbetween.extend(&cs_ids_not_excluded);
+
+            let all_edges = self
+                .storage
+                .fetch_many_edges(ctx, &cs_ids_not_excluded, None)
+                .await?;
+
+            for (_, edges) in all_edges.into_iter() {
+                for parent in edges.parents.into_iter() {
+                    heads
+                        .entry(parent.generation)
+                        .or_default()
+                        .insert(parent.cs_id);
+                }
+            }
+        }
+
+        Ok(cs_ids_inbetween)
     }
 }

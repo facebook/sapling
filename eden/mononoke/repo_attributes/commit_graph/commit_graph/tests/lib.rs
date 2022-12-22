@@ -33,6 +33,14 @@ mod tests {
     }
 
     #[fbinit::test]
+    pub async fn test_in_memory_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+
+        test_get_ancestors_difference(&ctx, storage).await
+    }
+
+    #[fbinit::test]
     pub async fn test_in_memory_find_by_prefix(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
