@@ -850,7 +850,7 @@ def getcmdanddefaultopts(cmdname, table):
 
 def findcmd(cmd, table):
     """Return (aliases, command table entry) for command string."""
-    choice, allcmds = findpossible(cmd, table)
+    choice, _ = findpossible(cmd, table)
 
     if cmd in choice:
         return choice[cmd]
