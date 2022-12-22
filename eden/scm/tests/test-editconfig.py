@@ -83,6 +83,56 @@ name1 = baz
 """.lstrip(),
         )
 
+    def testdeleteconfig(self):
+        self.assertedit(
+            "sec1",
+            "name1",
+            None,
+            "",
+        )
+
+        self.assertedit(
+            "sec1",
+            "name1",
+            "foo",
+            """
+[sec1]
+name1 = foo
+""".lstrip(),
+        )
+
+        self.assertedit(
+            "sec1",
+            "name2",
+            "bar\nbaz",
+            """
+[sec1]
+name1 = foo
+name2 = bar
+  baz
+""".lstrip(),
+        )
+
+        self.assertedit(
+            "sec1",
+            "name1",
+            None,
+            """
+[sec1]
+name2 = bar
+  baz
+""".lstrip(),
+        )
+
+        self.assertedit(
+            "sec1",
+            "name2",
+            None,
+            """
+[sec1]
+""".lstrip(),
+        )
+
     def assertedit(self, section: str, name: str, value: Optional[str], expected: str):
         editconfig(self.path, section, name, value)
         self.assertEqual(self.path.read_text(), expected)
