@@ -28,11 +28,7 @@ def defaultpagerenv():
 
 
 def editconfig(path, section, name, value):
-    """Append a config item to the given config path.
-
-    Try to edit the config in-place without breaking config file syntax for
-    simple cases. Fallback to just append the new config.
-    """
+    """Add or remove a config item to the given config path."""
     path = os.path.realpath(path)
     content = ""
     try:
@@ -55,12 +51,27 @@ def editconfig(path, section, name, value):
         bcontent = b"%s%s%s" % (bcontent[:start], value.encode(), bcontent[end:])
         break
     else:
-        # append as new config
-        if bcontent:
-            bcontent += os.linesep.encode()
-        bcontent += (
-            "[%s]%s%s = %s%s" % (section, os.linesep, name, value, os.linesep)
-        ).encode()
+        # Name doesn't already exist. If section already exists, we want to
+        # re-use it, so find the end of the final pre-existing config value as
+        # our insert position.
+        insertpos = None
+        for othername in cfg.names(section):
+            for _value, (_filepath, _start, end, _line), _source in cfg.sources(
+                section, othername
+            ):
+                if not insertpos or end > insertpos:
+                    insertpos = end
+
+        inserttext = "%s%s = %s" % (os.linesep, name, value)
+
+        # If the section doesn't already exist we need to append a new section.
+        if insertpos is None:
+            insertpos = len(bcontent)
+            inserttext = "[%s]%s%s" % (section, inserttext, os.linesep)
+            if insertpos > 0:
+                inserttext = "%s%s" % (os.linesep, inserttext)
+
+        bcontent = bcontent[:insertpos] + inserttext.encode() + bcontent[insertpos:]
 
     with util.atomictempfile(path) as f:
         f.write(bcontent)
