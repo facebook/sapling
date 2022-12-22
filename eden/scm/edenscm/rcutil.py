@@ -17,13 +17,7 @@ import os
 
 import bindings
 
-from . import pycompat, util
-
-
-if pycompat.iswindows:
-    from . import scmwindows as scmplatform
-else:
-    from . import scmposix as scmplatform
+from . import util
 
 
 def defaultpagerenv():
