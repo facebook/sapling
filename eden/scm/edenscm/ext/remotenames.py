@@ -76,7 +76,6 @@ configitem("remotenames", "calculatedistance", default=True)
 configitem("remotenames", "disallowedbookmarks", default=[])
 configitem("remotenames", "disallowedhint", default=None)
 configitem("remotenames", "disallowedto", default=None)
-configitem("remotenames", "forcecompat", default=False)
 configitem("remotenames", "forceto", default=False)
 configitem("remotenames", "hoist", default="default")
 configitem("remotenames", "precachecurrent", default=True)
@@ -786,21 +785,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
                 raise error.Abort(_("use '--to' to specify destination bookmark"))
         return git.push(repo, dest, pushnode, to, force=force)
 
-    # during the upgrade from old to new remotenames, tooling that uses --force
-    # will continue working if remotenames.forcecompat is enabled
-    forcecompat = ui.configbool("remotenames", "forcecompat")
-
     # needed for discovery method
     opargs = {
         "delete": opts.get("delete"),
         "to": opts.get("to"),
-        "create": opts.get("create") or (opts.get("force") and forcecompat),
+        "create": opts.get("create"),
         "allowanon": opts.get("allow_anon")
-        or repo.ui.configbool("remotenames", "pushanonheads")
-        or (opts.get("force") and forcecompat),
+        or repo.ui.configbool("remotenames", "pushanonheads"),
         "nonforwardmove": opts.get("non_forward_move")
-        or repo.ui.configbool("remotenames", "allownonfastforward")
-        or (opts.get("force") and forcecompat),
+        or repo.ui.configbool("remotenames", "allownonfastforward"),
     }
 
     if opargs["delete"]:
