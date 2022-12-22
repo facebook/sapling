@@ -429,7 +429,15 @@ def expaths(orig, ui, repo, *args, **opts):
         if len(args) != 1:
             raise error.Abort(_("invalid URL - invoke as '@prog@ paths -a NAME URL'"))
 
-        rcutil.editconfig(configrepofile, "paths", add, args[0])
+        path = args[0]
+        if git.isgitpeer(repo):
+            origpath = path
+            # Normalize git URL. In particular, converts scp-like path to proper ssh url.
+            path = git.maybegiturl(path) or path
+            if origpath != path:
+                ui.status_err(_(f"normalized path {origpath} to {path}\n"))
+
+        rcutil.editconfig(configrepofile, "paths", add, path)
         return
 
     return orig(ui, repo, *args)
