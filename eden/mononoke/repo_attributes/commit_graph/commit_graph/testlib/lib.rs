@@ -191,6 +191,51 @@ pub async fn test_skip_tree(ctx: &CoreContext, storage: Arc<dyn CommitGraphStora
     Ok(())
 }
 
+pub async fn test_p1_linear_tree(
+    ctx: &CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        ctx,
+        r##"
+         A-B-C-D-G-H---J-K
+            \   /   \ /
+             E-F     I
+
+         L-M-N-O-P-Q-R-S-T-U
+         "##,
+        storage.clone(),
+    )
+    .await?;
+
+    assert_p1_linear_skew_ancestor(&storage, ctx, "A", None).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "B", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "C", Some("B")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "D", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "E", Some("B")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "F", Some("A")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "G", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "H", Some("G")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "I", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "J", Some("D")).await?;
+    assert_p1_linear_skew_ancestor(&storage, ctx, "K", Some("A")).await?;
+
+    assert_p1_linear_level_ancestor(&graph, ctx, "S", 4, Some("P")).await?;
+    assert_p1_linear_level_ancestor(&graph, ctx, "U", 7, Some("S")).await?;
+    assert_p1_linear_level_ancestor(&graph, ctx, "T", 7, Some("S")).await?;
+    assert_p1_linear_level_ancestor(&graph, ctx, "O", 2, Some("N")).await?;
+    assert_p1_linear_level_ancestor(&graph, ctx, "N", 3, None).await?;
+    assert_p1_linear_level_ancestor(&graph, ctx, "K", 2, Some("C")).await?;
+
+    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "D", "F", Some("B")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "K", "I", Some("H")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "D", "C", Some("C")).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "N", "K", None).await?;
+    assert_p1_linear_lowest_common_ancestor(&graph, ctx, "A", "I", Some("A")).await?;
+
+    Ok(())
+}
+
 pub async fn test_get_ancestors_difference(
     ctx: &CoreContext,
     storage: Arc<dyn CommitGraphStorage>,

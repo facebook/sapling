@@ -125,7 +125,14 @@ pub async fn assert_skip_tree_level_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .skip_tree_level_ancestor(ctx, name_cs_id(u), target_depth)
+            .level_ancestor(
+                ctx,
+                name_cs_id(u),
+                target_depth,
+                |edges| edges.skip_tree_parent,
+                |edges| edges.skip_tree_skew_ancestor,
+                |node| node.skip_tree_depth
+            )
             .await?
             .map(|node| node.cs_id),
         u_level_ancestor.map(name_cs_id)
@@ -142,7 +149,14 @@ pub async fn assert_skip_tree_lowest_common_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .skip_tree_lowest_common_ancestor(ctx, name_cs_id(u), name_cs_id(v))
+            .lowest_common_ancestor(
+                ctx,
+                name_cs_id(u),
+                name_cs_id(v),
+                |edges| edges.skip_tree_parent,
+                |edges| edges.skip_tree_skew_ancestor,
+                |node| node.skip_tree_depth
+            )
             .await?
             .map(|node| node.cs_id),
         lca.map(name_cs_id)
@@ -170,6 +184,72 @@ pub async fn assert_get_ancestors_difference(
             .into_iter()
             .map(name_cs_id)
             .collect::<HashSet<_>>()
+    );
+    Ok(())
+}
+
+pub async fn assert_p1_linear_skew_ancestor(
+    storage: &Arc<dyn CommitGraphStorage>,
+    ctx: &CoreContext,
+    u: &str,
+    u_p1_linear_skew_ancestor: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        storage
+            .fetch_edges(ctx, name_cs_id(u))
+            .await?
+            .unwrap()
+            .p1_linear_skew_ancestor
+            .map(|node| node.cs_id),
+        u_p1_linear_skew_ancestor.map(name_cs_id)
+    );
+    Ok(())
+}
+
+pub async fn assert_p1_linear_level_ancestor(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    target_depth: u64,
+    u_level_ancestor: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .level_ancestor(
+                ctx,
+                name_cs_id(u),
+                target_depth,
+                |edges| edges.parents.first().copied(),
+                |edges| edges.p1_linear_skew_ancestor,
+                |node| node.p1_linear_depth
+            )
+            .await?
+            .map(|node| node.cs_id),
+        u_level_ancestor.map(name_cs_id)
+    );
+    Ok(())
+}
+
+pub async fn assert_p1_linear_lowest_common_ancestor(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    v: &str,
+    lca: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .lowest_common_ancestor(
+                ctx,
+                name_cs_id(u),
+                name_cs_id(v),
+                |edges| edges.parents.first().copied(),
+                |edges| edges.p1_linear_skew_ancestor,
+                |node| node.p1_linear_depth
+            )
+            .await?
+            .map(|node| node.cs_id),
+        lca.map(name_cs_id)
     );
     Ok(())
 }

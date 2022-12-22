@@ -42,6 +42,18 @@ async fn test_sqlite_skip_tree(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+async fn test_sqlite_p1_linear_tree(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let storage = Arc::new(
+        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+    );
+
+    test_p1_linear_tree(&ctx, storage).await
+}
+
+#[fbinit::test]
 async fn test_sqlite_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(
