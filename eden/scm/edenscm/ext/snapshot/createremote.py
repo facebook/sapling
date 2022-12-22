@@ -174,7 +174,7 @@ def createremote(ui, repo, **opts) -> None:
     overrides = {}
     if ui.plain():
         overrides[("ui", "quiet")] = True
-    with repo.lock(), ui.configoverride(overrides):
+    with repo.lock(), repo.transaction("snapshot"), ui.configoverride(overrides):
         # Current working context
         wctx = repo[None]
 
@@ -208,10 +208,10 @@ def createremote(ui, repo, **opts) -> None:
             labels,
         )
 
-    csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
-    bubble = response["bubble_id"]
+        csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
+        bubble = response["bubble_id"]
 
-    storelatest(repo, csid, bubble)
+        storelatest(repo, csid, bubble)
     csid = csid.hex()
 
     if ui.plain():
