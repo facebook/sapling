@@ -142,7 +142,7 @@ def get_commands_json(extract_docs_from_sapling, command_list, command_docs_json
 
 # Uses mercurial's minirst module to render the rst. We might eventually wanna
 # swap this for a prettier rst to markdown.
-def rst_to_markdown(rsts: List[str]) -> List[str]:
+def rst_to_markdown(rsts: Dict[str, str]) -> Dict[str, str]:
     proc = subprocess.run(
         [
             get_sapling(),
@@ -156,7 +156,23 @@ def rst_to_markdown(rsts: List[str]) -> List[str]:
     if proc.returncode != 0:
         eprint(f"converting rst to md failed: \n {proc}")
         proc.check_returncode()
-    return json.loads(proc.stdout)
+    command_name_to_markdown = json.loads(proc.stdout)
+
+    # Temporary workaround: a more comprehensive escaping strategy should be
+    # done in rst-to-md.py.
+    return {k: _escape_import_in_doc(v) for k, v in command_name_to_markdown.items()}
+
+
+def _escape_import_in_doc(doc: str) -> str:
+    lines = doc.split("\n")
+    return "\n".join([_escape_import_in_line(line) for line in lines])
+
+
+def _escape_import_in_line(line: str) -> str:
+    if line.startswith("import"):
+        return "&#x69;" + line[1:]
+    else:
+        return line
 
 
 # Regenerate markdown from rst and recache it.

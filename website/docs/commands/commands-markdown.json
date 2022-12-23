@@ -1873,7 +1873,7 @@
       {
         "name": "pull",
         "aliases": [],
-        "doc": "\nimport a pull request into your working copy\n\nThe PULL_REQUEST can be specified as either a URL:\n\nhttps://github.com/facebook/sapling/pull/321\n\nor just the PR number within the GitHub repository identified by\n`sl config paths.default`.\n",
+        "doc": "\n&#x69;mport a pull request into your working copy\n\nThe PULL_REQUEST can be specified as either a URL:\n\nhttps://github.com/facebook/sapling/pull/321\n\nor just the PR number within the GitHub repository identified by\n`sl config paths.default`.\n",
         "args": [
           {
             "shortname": "g",

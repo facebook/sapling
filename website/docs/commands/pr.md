@@ -4,7 +4,7 @@ sidebar_position: 26
 
 ## pr
 <!--
-  @generated SignedSource<<51ed0a18257aafb94c4f42d4f2fb5094>>
+  @generated SignedSource<<11958e2f80f9a30ebe5618c3480062c3>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -23,7 +23,7 @@ create or update GitHub pull requests from local commits
 | `-m`| `--message`| | message describing changes to updated commits|
 | `-d`| `--draft`| `false`| mark new pull requests as draft|### pull
 
-import a pull request into your working copy
+&#x69;mport a pull request into your working copy
 
 The PULL_REQUEST can be specified as either a URL:
 
