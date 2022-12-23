@@ -4,7 +4,7 @@ sidebar_position: 6
 
 ## bookmark | bo | book
 <!--
-  @generated SignedSource<<4b1cbe1e4861c6ef3c7def8082831523>>
+  @generated SignedSource<<33d9c3a4e740d1830162333f66ce45e5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -28,9 +28,6 @@ be created. Using `sl merge` will resolve the divergence.
 
 Specifying bookmark as '.' to -m or -d options is equivalent to specifying
 the active bookmark's name.
-
-A bookmark named '@' has the special property that `sl clone` will
-check it out by default if it exists.
 
 Examples:
 
@@ -64,6 +61,34 @@ sl book -m turkey dinner
 sl book -f @
 ```
 
+In Git repos, bookmarks correspond to branches. Remote Git branches can be listed using the `--remote` flag.
+
+Examples:
+
+- list remote branches:
+
+```
+sl bookmark --remote
+```
+
+- list remote tags:
+
+```
+sl bookmark --remote tags
+```
+
+- list all refs:
+
+```
+sl bookmark --remote 'refs/*'
+```
+
+- list branches from specified path:
+
+```
+sl bookmark --remote --remote-path my-fork
+```
+
 ## arguments
 | shortname | fullname | default | description |
 | - | - | - | - |
@@ -76,4 +101,6 @@ sl book -f @
 | `-t`| `--track`| | track this bookmark or remote name|
 | `-u`| `--untrack`| | remove tracking for this bookmark|
 | `-a`| `--all`| | show both remote and local bookmarks|
+| | `--remote`| | fetch remote Git refs|
+| | `--remote-path`| | remote path from which to fetch bookmarks|
 | | `--list-subscriptions`| | show only remote bookmarks that are available locally|

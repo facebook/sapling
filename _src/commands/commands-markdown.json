@@ -461,7 +461,7 @@
       "bo",
       "book"
     ],
-    "doc": "\n**create a new bookmark or list existing bookmarks**\n\nBookmarks are labels on changesets to help track lines of development.\nBookmarks are unversioned and can be moved, renamed and deleted.\nDeleting or moving a bookmark has no effect on the associated changesets.\n\nCreating or updating to a bookmark causes it to be marked as 'active'.\nThe active bookmark is indicated with a '*'.\nWhen a commit is made, the active bookmark will advance to the new commit.\nA plain `sl goto` will also advance an active bookmark, if possible.\nUpdating away from a bookmark will cause it to be deactivated.\n\nBookmarks can be pushed and pulled between repositories (see\n`sl help push` and `sl help pull`). If a shared bookmark has\ndiverged, a new 'divergent bookmark' of the form 'name@path' will\nbe created. Using `sl merge` will resolve the divergence.\n\nSpecifying bookmark as '.' to -m or -d options is equivalent to specifying\nthe active bookmark's name.\n\nA bookmark named '@' has the special property that `sl clone` will\ncheck it out by default if it exists.\n\nExamples:\n\n- create an active bookmark for a new line of development:\n\n```\nsl book new-feature\n```\n\n- create an inactive bookmark as a place marker:\n\n```\nsl book -i reviewed\n```\n\n- create an inactive bookmark on another changeset:\n\n```\nsl book -r .^ tested\n```\n\n- rename bookmark turkey to dinner:\n\n```\nsl book -m turkey dinner\n```\n\n- move the '@' bookmark from another branch:\n\n```\nsl book -f @\n```\n",
+    "doc": "\n**create a new bookmark or list existing bookmarks**\n\nBookmarks are labels on changesets to help track lines of development.\nBookmarks are unversioned and can be moved, renamed and deleted.\nDeleting or moving a bookmark has no effect on the associated changesets.\n\nCreating or updating to a bookmark causes it to be marked as 'active'.\nThe active bookmark is indicated with a '*'.\nWhen a commit is made, the active bookmark will advance to the new commit.\nA plain `sl goto` will also advance an active bookmark, if possible.\nUpdating away from a bookmark will cause it to be deactivated.\n\nBookmarks can be pushed and pulled between repositories (see\n`sl help push` and `sl help pull`). If a shared bookmark has\ndiverged, a new 'divergent bookmark' of the form 'name@path' will\nbe created. Using `sl merge` will resolve the divergence.\n\nSpecifying bookmark as '.' to -m or -d options is equivalent to specifying\nthe active bookmark's name.\n\nExamples:\n\n- create an active bookmark for a new line of development:\n\n```\nsl book new-feature\n```\n\n- create an inactive bookmark as a place marker:\n\n```\nsl book -i reviewed\n```\n\n- create an inactive bookmark on another changeset:\n\n```\nsl book -r .^ tested\n```\n\n- rename bookmark turkey to dinner:\n\n```\nsl book -m turkey dinner\n```\n\n- move the '@' bookmark from another branch:\n\n```\nsl book -f @\n```\n\nIn Git repos, bookmarks correspond to branches. Remote Git branches can be listed using the `--remote` flag.\n\nExamples:\n\n- list remote branches:\n\n```\nsl bookmark --remote\n```\n\n- list remote tags:\n\n```\nsl bookmark --remote tags\n```\n\n- list all refs:\n\n```\nsl bookmark --remote 'refs/*'\n```\n\n- list branches from specified path:\n\n```\nsl bookmark --remote --remote-path my-fork\n```\n",
     "args": [
       {
         "shortname": "f",
@@ -527,7 +527,13 @@
         "shortname": "",
         "fullname": "remote",
         "default": null,
-        "description": "show only remote bookmarks (DEPRECATED)"
+        "description": "fetch remote Git refs"
+      },
+      {
+        "shortname": "",
+        "fullname": "remote-path",
+        "default": "",
+        "description": "remote path from which to fetch bookmarks"
       },
       {
         "shortname": "",
@@ -1839,7 +1845,7 @@
     "args": [],
     "subcommands": [
       {
-        "name": "submit",
+        "name": "s|submit",
         "aliases": [],
         "doc": "\ncreate or update GitHub pull requests from local commits\n",
         "args": [
@@ -1854,6 +1860,26 @@
             "fullname": "message",
             "default": null,
             "description": "message describing changes to updated commits"
+          },
+          {
+            "shortname": "d",
+            "fullname": "draft",
+            "default": false,
+            "description": "mark new pull requests as draft"
+          }
+        ],
+        "subcommands": null
+      },
+      {
+        "name": "pull",
+        "aliases": [],
+        "doc": "\n&#x69;mport a pull request into your working copy\n\nThe PULL_REQUEST can be specified as either a URL:\n\nhttps://github.com/facebook/sapling/pull/321\n\nor just the PR number within the GitHub repository identified by\n`sl config paths.default`.\n",
+        "args": [
+          {
+            "shortname": "g",
+            "fullname": "goto",
+            "default": false,
+            "description": "goto the pull request after importing it"
           }
         ],
         "subcommands": null
@@ -1896,6 +1922,98 @@
             "fullname": "rev",
             "default": [],
             "description": "revisions to follow the next pull request"
+          }
+        ],
+        "subcommands": null
+      },
+      {
+        "name": "list",
+        "aliases": [],
+        "doc": "\ncalls `gh pr list [flags]` with the current repo as the value of --repo\n",
+        "args": [
+          {
+            "shortname": "",
+            "fullname": "app",
+            "default": "",
+            "description": "filter by GitHub App author"
+          },
+          {
+            "shortname": "a",
+            "fullname": "assignee",
+            "default": "",
+            "description": "filter by assignee"
+          },
+          {
+            "shortname": "A",
+            "fullname": "author",
+            "default": "",
+            "description": "filter by author"
+          },
+          {
+            "shortname": "B",
+            "fullname": "base",
+            "default": "",
+            "description": "filter by base branch"
+          },
+          {
+            "shortname": "d",
+            "fullname": "draft",
+            "default": false,
+            "description": "filter by draft state"
+          },
+          {
+            "shortname": "H",
+            "fullname": "head",
+            "default": "",
+            "description": "filter by head branch"
+          },
+          {
+            "shortname": "q",
+            "fullname": "jq",
+            "default": "",
+            "description": "filter JSON output using a jq expression"
+          },
+          {
+            "shortname": "",
+            "fullname": "json",
+            "default": "",
+            "description": "output JSON with the specified fields"
+          },
+          {
+            "shortname": "l",
+            "fullname": "label",
+            "default": "",
+            "description": "filter by label"
+          },
+          {
+            "shortname": "L",
+            "fullname": "limit",
+            "default": 30,
+            "description": "maximum number of items to fetch (default 30)"
+          },
+          {
+            "shortname": "S",
+            "fullname": "search",
+            "default": "",
+            "description": "search pull requests with query"
+          },
+          {
+            "shortname": "s",
+            "fullname": "state",
+            "default": "",
+            "description": "filter by state: {open|closed|merged|all} (default \"open\")"
+          },
+          {
+            "shortname": "t",
+            "fullname": "template",
+            "default": "",
+            "description": "format JSON output using a Go template; see \"gh help formatting\""
+          },
+          {
+            "shortname": "w",
+            "fullname": "web",
+            "default": false,
+            "description": "list pull requests in the web browser"
           }
         ],
         "subcommands": null
