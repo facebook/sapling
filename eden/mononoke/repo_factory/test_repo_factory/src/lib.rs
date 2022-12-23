@@ -35,6 +35,8 @@ use changeset_fetcher::SimpleChangesetFetcher;
 use changeset_info::ChangesetInfo;
 use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
+use commit_graph::ArcCommitGraph;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -113,6 +115,7 @@ use sql::rusqlite::Connection as SqliteConnection;
 use sql::Connection;
 use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
+use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
 use sql_query_config::ArcSqlQueryConfig;
 use sql_query_config::SqlQueryConfig;
@@ -744,5 +747,12 @@ impl TestRepoFactory {
     /// Sql query config
     pub fn sql_query_config(&self) -> ArcSqlQueryConfig {
         Arc::new(SqlQueryConfig { caching: None })
+    }
+
+    /// Commit graph
+    pub fn commit_graph(&self, repo_identity: &RepoIdentity) -> Result<ArcCommitGraph> {
+        let sql_storage = SqlCommitGraphStorageBuilder::with_sqlite_in_memory()?
+            .build(RendezVousOptions::for_test(), repo_identity.id());
+        Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
     }
 }
