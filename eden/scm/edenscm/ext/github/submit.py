@@ -15,7 +15,7 @@ from edenscm.result import Result
 
 from . import gh_submit, github_repo_util
 from .archive_commit import add_commit_to_archives
-from .gh_submit import PullRequestDetails, Repository
+from .gh_submit import PullRequestDetails, PullRequestState, Repository
 from .github_repo_util import check_github_repo, GitHubRepo
 from .none_throws import none_throws
 from .pr_parser import get_pull_request_for_context
@@ -176,7 +176,10 @@ async def update_commits_in_stack(
         pr = commit.pr
         if pr:
             if pr.head_oid == hex(commit.node):
-                ui.status_err(_("#%d is up-to-date\n") % pr.number)
+                if commit.pr.state == PullRequestState.CLOSED:
+                    ui.status_err(_("%s was closed.\n" % commit.pr.url))
+                else:
+                    ui.status_err(_("#%d is up-to-date\n") % pr.number)
             else:
                 refs_to_update.append(
                     f"{hex(commit.node)}:refs/heads/{pr.head_branch_name}"
