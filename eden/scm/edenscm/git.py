@@ -129,7 +129,21 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         if url:
             if pullnames is None:
                 pullnames = bookmod.selectivepullbookmarknames(repo)
-            pull(repo, "default", names=pullnames)
+
+            # Make sure we pull "update". If it looks like a hash, add to
+            # "nodes", otherwise to "names".
+            nodes = []
+            if update and update is not True:
+                if len(update) == 40:
+                    try:
+                        nodes.append(bin(update))
+                    except TypeError:
+                        pass
+
+                if not nodes:
+                    pullnames.append(update)
+
+            pull(repo, "default", names=pullnames, nodes=nodes)
     except (Exception, KeyboardInterrupt):
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
@@ -306,7 +320,7 @@ def pull(repo, source, names=(), nodes=()):
     missing names will be removed.
     nodes, if pulled, will be written to "visibleheads".
     """
-    url, remote = _urlremote(repo.ui, source)
+    url, remote = urlremote(repo.ui, source)
 
     # normalize names for listing
     refnames = [RefName(name) for name in names]
@@ -445,7 +459,7 @@ def _syncfromgit(repo):
     repo.changelog  # trigger updating metalog
 
 
-def _urlremote(ui, source):
+def urlremote(ui, source):
     """normalize source into (url, remotename)"""
     source = source or "default"
     if source in ui.paths:
@@ -500,7 +514,7 @@ def push(repo, dest, pushnode, to, force=False):
     else:
         fromspec = "%s" % hex(pushnode)
 
-    url, remote = _urlremote(repo.ui, dest)
+    url, remote = urlremote(repo.ui, dest)
     refname = RefName(name=to)
     refspec = "%s:%s" % (fromspec, refname)
     ret = rungit(repo, ["push", url, refspec])
@@ -525,7 +539,7 @@ def listremote(repo, url, patterns):
     patterns = [str(p) for p in patterns]
     if not patterns:
         return {}
-    out = callgit(repo, ["ls-remote", "--refs", url] + patterns)
+    out = callgit(repo, ["ls-remote", "--refs", url, *patterns])
     refs = {}
     for line in out.splitlines():
         if b"\t" not in line:
@@ -923,3 +937,17 @@ def submodule_node_from_ctx_path(ctx, path) -> Optional[bytes]:
         return None
     fctx = ctx[path]
     return submodule_node_from_fctx(fctx)
+
+
+def update_extra_with_git_committer(ui, ctx, extra):
+    """process Git committer on local commit creation
+
+    Update the `extra` in place to contain the Git committer and committer date information.
+    """
+    committer = ui.config("git", "committer") or ui.username()
+    extra["committer"] = committer
+
+    date = ui.config("git", "committer-date") or "now"
+    unixtime, offset = util.parsedate(date)
+    committer_date = f"{unixtime} {offset}"
+    extra["committer_date"] = committer_date

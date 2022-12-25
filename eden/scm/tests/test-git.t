@@ -127,19 +127,19 @@ Test bookmarks:
 
   $ hg bookmark -r. foo
   $ hg bookmarks
-     foo                       4899b7b71a9c
+     foo                       57eda5013e06
      master                    3f5848713286
 
 Test changes are readable via git:
 
   $ export GIT_DIR="$TESTTMP/gitrepo/.git"
   $ git log foo --pretty='format:%s %an %d'
-  alpha3 test  (refs/visibleheads/4899b7b71a9c241a7c43171f525cc9d6fcabfd4f, foo)
+  alpha3 test  (refs/visibleheads/57eda5013e068ac543a52ad073cec3d7750113b5, foo)
   beta test  (HEAD -> master)
   alpha test  (no-eol)
   $ git fsck --strict
   $ git show foo
-  commit 4899b7b71a9c241a7c43171f525cc9d6fcabfd4f
+  commit 57eda5013e068ac543a52ad073cec3d7750113b5
   Author: test <>
   Date:   Sat Feb 3 14:56:01 2001 +0800
   
@@ -190,7 +190,7 @@ Test pull:
   $ hg pull origin -B foo
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
   From file:/*/$TESTTMP/gitrepo/ (glob)
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> origin/foo
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> origin/foo
   $ hg log -r origin/foo -T '{desc}\n'
   alpha3
 
@@ -244,26 +244,32 @@ Test clone with flags (--noupdate, --updaterev):
   $ cd gitrepo
   $ hg log -r . -T '{node|short}\n'
   000000000000
-  $ hg bookmarks --remote
+  $ hg bookmarks --list-subscriptions
      remote/master             3f5848713286
   $ cd ..
 
   $ hg clone --git "$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
   From $TESTTMP/gitrepo
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> remote/foo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
-  4899b7b71a9c remote/foo alpha3
-  $ cd ..
+  57eda5013e06 remote/foo alpha3
 
-  $ hg clone --updaterev remote/foo --git "$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
+  $ hg clone --updaterev foo --git "$TESTTMP/gitrepo" cloned2
   From $TESTTMP/gitrepo
-   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
+   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
-  4899b7b71a9c remote/foo alpha3
-  $ cd ..
+  57eda5013e06 remote/foo alpha3
+
+  $ NODE=$(git --git-dir ~/gitrepo/.git for-each-ref | grep visibleheads | sed 's# .*##')
+  $ hg clone --updaterev $NODE --git "$TESTTMP/gitrepo" cloned3
+  From $TESTTMP/gitrepo
+   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> refs/visibleheads/57eda5013e068ac543a52ad073cec3d7750113b5
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test clone using scp-like path:
 
@@ -325,20 +331,25 @@ Test push:
 
 - --to without -r
   $ hg push -q --to book_change_beta
+  $ hg push -q --to remote/book_change_beta1
+  $ hg push -q remote/book_change_beta2
 
 - --to with -r
   $ hg push -r '.^' --to parent_change_beta
   To $TESTTMP/gitrepo
-   * [new branch]      4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> parent_change_beta
+   * [new branch]      57eda5013e068ac543a52ad073cec3d7750113b5 -> parent_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
   alpha3 remote/foo remote/parent_change_beta
-  beta.change remote/book_change_beta
+  beta.change remote/book_change_beta remote/book_change_beta1 remote/book_change_beta2
 
 - delete bookmark
   $ hg push --delete book_change_beta
   To $TESTTMP/gitrepo
    - [deleted]         book_change_beta
+
+  $ hg push -q --delete remote/book_change_beta1
+  $ hg push -q --delete default/book_change_beta2
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
   alpha3 remote/foo remote/parent_change_beta
@@ -457,7 +468,7 @@ Tags are ignored during clone and pull:
   $ hg pull -q
   $ hg bookmarks
   no bookmarks set
-  $ hg bookmarks --remote
+  $ hg bookmarks --list-subscriptions
      remote/main               379d702a285c
   $ git --git-dir=.hg/store/git for-each-ref
   379d702a285c1e34e6365cc347249ec73bcd6b40 commit	refs/remotes/remote/main
@@ -542,3 +553,47 @@ Init with --git works without a reponame:
   $ cd
   $ grep -v reponame $HGRCPATH > $TESTTMP/hgrc-no-reponame
   $ HGRCPATH=$TESTTMP/hgrc-no-reponame hg init --git init-git-no-reponame
+
+Can fetch remote refs:
+
+  $ cd
+  $ git init -b first-branch -q remote-refs
+  $ cd remote-refs
+  $ echo 1 > a
+  $ git add a
+  $ git commit -q -m a
+  $ git tag v1
+  $ git checkout -qb second-branch
+  $ echo 2 >> a
+  $ git commit -aq -m b
+  $ git tag v2
+
+  $ cd
+  $ git clone -q remote-refs remote-refs2
+  $ cd remote-refs2
+  $ git branch other-remote-branch
+
+  $ cd
+  $ hg clone -q git+file://$TESTTMP/remote-refs cloned-remote-refs
+  $ cd cloned-remote-refs
+  $ hg paths --add banana file://$TESTTMP/remote-refs2
+  $ hg bookmarks --remote
+     remote/first-branch              379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote branches
+     remote/first-branch              379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote tags
+     remote/v1                        379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/v2                        c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote branches tags
+     remote/first-branch              379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969
+     remote/v1                        379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/v2                        c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote 'refs/heads/*'
+     remote/refs/heads/first-branch   379d702a285c1e34e6365cc347249ec73bcd6b40
+     remote/refs/heads/second-branch  c828c570a4109d85a6cee02b8bd2bdf355faf969
+  $ hg bookmarks --remote --remote-path banana
+     banana/other-remote-branch       c828c570a4109d85a6cee02b8bd2bdf355faf969
+     banana/second-branch             c828c570a4109d85a6cee02b8bd2bdf355faf969

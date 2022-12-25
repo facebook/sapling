@@ -35,6 +35,7 @@ so that each commit in the stack can be reviewed individually.
         {number: 456, numCommits: 1},
         {number: 789, numCommits: 2},
       ],
+      format: 'prefix',
       currentStackEntry: 1,
       commitMessage: 'This would be the original commit message of this fictitious commit.\n',
     });
@@ -67,6 +68,7 @@ so that each commit in the stack can be reviewed individually.
         {number: 456, numCommits: 1},
         {number: 789, numCommits: 2},
       ],
+      format: 'hr-suffix',
       currentStackEntry: 1,
       commitMessage: 'This would be the original commit message of this fictitious commit.\n',
     });
@@ -87,6 +89,7 @@ Stack created with [Sapling](https://sapling-scm.com/github).
         {number: 1, numCommits: 1},
         {number: 123, numCommits: 1},
       ],
+      format: 'hr-suffix',
       currentStackEntry: 1,
       commitMessage: '',
     });

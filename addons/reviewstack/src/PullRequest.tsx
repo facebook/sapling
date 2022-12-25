@@ -111,7 +111,7 @@ function PullRequestDetails() {
       pullRequestBodyHTML = bodyHTML;
       break;
     case 'sapling':
-      pullRequestBodyHTML = stripStackInfoFromSaplingBodyHTML(bodyHTML);
+      pullRequestBodyHTML = stripStackInfoFromSaplingBodyHTML(bodyHTML, stack.body.format);
       break;
     case 'ghstack':
       pullRequestBodyHTML = stripStackInfoFromBodyHTML(bodyHTML);

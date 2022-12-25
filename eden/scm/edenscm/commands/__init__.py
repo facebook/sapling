@@ -1222,9 +1222,6 @@ def bookmark(ui, repo, *names, **opts):
     Specifying bookmark as '.' to -m or -d options is equivalent to specifying
     the active bookmark's name.
 
-    A bookmark named '@' has the special property that :prog:`clone` will
-    check it out by default if it exists.
-
     .. container:: verbose
 
       Examples:
@@ -1248,6 +1245,29 @@ def bookmark(ui, repo, *names, **opts):
       - move the '@' bookmark from another branch::
 
           @prog@ book -f @
+
+    In Git repos, bookmarks correspond to branches. Remote Git branches can be listed using the ``--remote`` flag.
+
+    .. container:: verbose
+
+      Examples:
+
+      - list remote branches::
+
+          @prog@ bookmark --remote
+
+      - list remote tags::
+
+          @prog@ bookmark --remote tags
+
+      - list all refs::
+
+          @prog@ bookmark --remote 'refs/*'
+
+      - list branches from specified path::
+
+          @prog@ bookmark --remote --remote-path my-fork
+
     """
     force = opts.get(r"force")
     rev = opts.get(r"rev")

@@ -80,7 +80,7 @@ struct RepoIdentity {
 
     /// Config file for the repo; located inside of `dot_dir`.
     ///
-    /// Examples: `.sl/config`, `.hg/hgrc`
+    /// Examples: `config`, `hgrc`
     config_repo_file: &'static str,
 }
 

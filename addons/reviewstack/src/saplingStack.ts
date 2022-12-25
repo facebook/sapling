@@ -5,13 +5,34 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export function stripStackInfoFromSaplingBodyHTML(bodyHTML: string): string {
+const _STACK_SECTION_START = 'Stack created with [Sapling]';
+
+/**
+ * `prefix`: body starts with _STACK_SECTION_START, followed by stack info
+ * `hr-suffix`: body ends with horizontal rule, followed by _STACK_SECTION_START
+ *   and then stack info
+ */
+type SaplingPullRequestBodyFormat = 'prefix' | 'hr-suffix';
+
+export function stripStackInfoFromSaplingBodyHTML(
+  bodyHTML: string,
+  format: SaplingPullRequestBodyFormat,
+): string {
   // This uses the same heuristic as ghstack, though note that it will NOT
   // work in the presence of sub-bullets.
-  const delimiter = '</li>\n</ul>\n';
-  const index = bodyHTML.indexOf(delimiter);
-  // Retain any other lists that may be present as part of the commit message
-  return index !== -1 ? bodyHTML.slice(index + delimiter.length) : bodyHTML;
+  switch (format) {
+    case 'prefix': {
+      const delimiter = '</li>\n</ul>\n';
+      const index = bodyHTML.indexOf(delimiter);
+      // Retain any other lists that may be present as part of the commit message
+      return index !== -1 ? bodyHTML.slice(index + delimiter.length) : bodyHTML;
+    }
+    case 'hr-suffix': {
+      const delimiter = '<hr>';
+      const index = bodyHTML.lastIndexOf(delimiter);
+      return index !== -1 ? bodyHTML.slice(0, index) : bodyHTML;
+    }
+  }
 }
 
 /**
@@ -49,16 +70,16 @@ export type SaplingPullRequestBody = {
    * (from Sapling's perspective).
    */
   stack: Array<{number: number; numCommits: number}>;
+  format: SaplingPullRequestBodyFormat;
   currentStackEntry: number;
   commitMessage: string;
 };
-
-const _STACK_SECTION_START = 'Stack created with [Sapling]';
 
 export function parseSaplingStackBody(body: string): SaplingPullRequestBody | null {
   const lines = body.split(/\r?\n/);
 
   let firstLine: string;
+  let format: SaplingPullRequestBodyFormat;
   let index: number;
   let commitMessage = null;
 
@@ -66,6 +87,7 @@ export function parseSaplingStackBody(body: string): SaplingPullRequestBody | nu
   // a line starting with _STACK_SECTION_START after a horizontal rule.
   if (body.startsWith(_STACK_SECTION_START)) {
     firstLine = lines[0];
+    format = 'prefix';
     index = 1;
   } else {
     const lastHRIndex = lines.lastIndexOf('---');
@@ -74,6 +96,7 @@ export function parseSaplingStackBody(body: string): SaplingPullRequestBody | nu
     }
 
     firstLine = lines[lastHRIndex + 1];
+    format = 'hr-suffix';
     index = lastHRIndex + 2;
     commitMessage = lines.slice(0, lastHRIndex).join('\n');
     if (commitMessage !== '') {
@@ -137,6 +160,7 @@ export function parseSaplingStackBody(body: string): SaplingPullRequestBody | nu
     firstLine,
     introduction: introductionLines.join('\n'),
     stack,
+    format,
     currentStackEntry,
     commitMessage,
   };

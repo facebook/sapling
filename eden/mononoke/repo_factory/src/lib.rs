@@ -57,6 +57,8 @@ use changesets::ArcChangesets;
 use changesets_impl::CachingChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use cloned::cloned;
+use commit_graph::ArcCommitGraph;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use context::SessionContainer;
 use cross_repo_sync::create_commit_syncer_lease;
@@ -112,6 +114,7 @@ use redactedblobstore::ArcRedactionConfigBlobstore;
 use redactedblobstore::RedactedBlobs;
 use redactedblobstore::RedactionConfigBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
+use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::ArcRepoBookmarkAttrs;
@@ -146,6 +149,7 @@ use skiplist::SkiplistIndex;
 use slog::o;
 use sql::SqlConnections;
 use sql::SqlConnectionsWithSchema;
+use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -1487,6 +1491,23 @@ impl RepoFactory {
             None
         };
         Ok(Arc::new(SqlQueryConfig { caching }))
+    }
+
+    pub async fn commit_graph(
+        &self,
+        repo_identity: &RepoIdentity,
+        repo_config: &RepoConfig,
+    ) -> Result<ArcCommitGraph> {
+        let sql_storage = self
+            .open::<SqlCommitGraphStorageBuilder>(&repo_config.storage_config.metadata)
+            .await?
+            .build(
+                RendezVousOptions {
+                    free_connections: 5,
+                },
+                repo_identity.id(),
+            );
+        Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
     }
 }
 
