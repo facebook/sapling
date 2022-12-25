@@ -20,6 +20,7 @@ from ghstack.github_gh_cli import JsonDict
 
 from .consts import query
 from .pullrequest import PullRequestId
+import enum
 
 _Params = Union[str, int, bool]
 
@@ -88,6 +89,10 @@ async def get_repository(
         upstream = None
     return _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
 
+class PullRequestState(enum.Enum):
+    OPEN = enum.auto()
+    CLOSED = enum.auto()
+    ALL = enum.auto()
 
 @dataclass
 class PullRequestDetails:
@@ -103,6 +108,7 @@ class PullRequestDetails:
     #   bodyText: plaintext version of body with Markdown markup removed
     #   bodyHTML: body rendered as "safe" HTML
     body: str
+    state: PullRequestState
 
 
 async def get_pull_request_details(
@@ -129,6 +135,7 @@ async def get_pull_request_details(
             head_oid=data["headRefOid"],
             head_branch_name=data["headRefName"],
             body=data["body"],
+            state=PullRequestState[data['state']]
         )
     )
 
