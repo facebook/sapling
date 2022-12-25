@@ -28,7 +28,7 @@ moveopts = [
 
 
 @command(
-    "previous|prev",
+    "previous|prev|last|down",
     [
         (
             "",
@@ -87,7 +87,7 @@ def previous(ui, repo, *args, **opts):
 
 
 @command(
-    "next",
+    "next|up",
     [
         (
             "",
