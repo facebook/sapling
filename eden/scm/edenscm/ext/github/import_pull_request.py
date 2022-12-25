@@ -20,6 +20,12 @@ from .pullrequeststore import PullRequestStore
 
 
 def get_pr(ui, repo, *args, **opts):
+    if len(args) == 0:
+        raise error.Abort(
+            _(
+                "PR URL or number must be specified. See '@prog@ pr pull -h'."
+            )
+        )
     pr_arg = args[0]
     pr_id = parse_pull_request_arg(pr_arg, repo=repo)
     if pr_id is None:
