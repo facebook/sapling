@@ -434,7 +434,7 @@ def expaths(orig, ui, repo, *args, **opts):
             # Normalize git URL. In particular, converts scp-like path to proper ssh url.
             path = git.maybegiturl(path) or path
             if origpath != path:
-                ui.status_err(_(f"normalized path {origpath} to {path}\n"))
+                ui.status_err(_("normalized path %s to %s\n") % (origpath, path))
 
         rcutil.editconfig(configrepofile, "paths", add, path)
         return
