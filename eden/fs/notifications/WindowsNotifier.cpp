@@ -456,11 +456,12 @@ WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) noexcept {
     XLOG(FATAL, "Unknown exception occurred in E-Menu WndProc");
   }
 }
-int windowsEventLoop(
+
+void windowsEventLoop(
     HINSTANCE hInstance,
     WindowsNotifier* notifier,
     folly::Promise<WindowHandle> promise) {
-  promise.setWith([&hInstance, &notifier] {
+  try {
     registerWindowClass(
         kWinClassNameStr,
         MAKEINTRESOURCEW(IDC_NOTIFICATIONICON),
@@ -481,8 +482,12 @@ int windowsEventLoop(
             reinterpret_cast<LPVOID>(notifier)),
         "Failed to create E-Menu window")};
     addNotificationIcon(windowHandle.get());
-    return windowHandle;
-  });
+
+    promise.setValue(std::move(windowHandle));
+  } catch (const std::exception& ex) {
+    promise.setException(ex);
+    return;
+  }
 
   // Main message loop:
   MSG msg;
@@ -490,7 +495,6 @@ int windowsEventLoop(
     TranslateMessage(&msg);
     DispatchMessage(&msg);
   }
-  return 0;
 }
 
 void cacheIconImages() {
@@ -544,6 +548,9 @@ WindowsNotifier::WindowsNotifier(
   notificationStatus_ = notificationsEnabledInConfig()
       ? (1 << kNotificationsEnabledBit)
       : (0 << kNotificationsEnabledBit);
+}
+
+void WindowsNotifier::initialize() {
   // Avoids race between thread startup and hwnd_ initialization
   auto [promise, hwndFuture] = folly::makePromiseContract<WindowHandle>();
   eventThread_ = std::thread{
@@ -552,19 +559,23 @@ WindowsNotifier::WindowsNotifier(
   XLOGF(
       DBG7,
       "EdenFS Daemon Version: {}\nGuid: {}",
-      version,
+      version_,
       guid_ ? guid_.value().toString() : "No guid, this is a dev build");
 }
 
 WindowsNotifier::~WindowsNotifier() {
-  // We cannot call DestroyWindow directly. A thread cannot use DestroyWindow to
-  // destroy a window created by a different thread.
-  PostMessage(
-      hwnd_.release(),
-      WMAPP_NOTIFYDESTROY,
-      NULL,
-      reinterpret_cast<LPARAM>(this));
-  eventThread_.join();
+  if (hwnd_) {
+    // We cannot call DestroyWindow directly. A thread cannot use DestroyWindow
+    // to destroy a window created by a different thread.
+    PostMessage(
+        hwnd_.release(),
+        WMAPP_NOTIFYDESTROY,
+        NULL,
+        reinterpret_cast<LPARAM>(this));
+  }
+  if (eventThread_.joinable()) {
+    eventThread_.join();
+  }
 }
 
 void WindowsNotifier::signalCheckout(size_t numActive) {

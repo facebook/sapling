@@ -49,6 +49,11 @@ class WindowsNotifier : public Notifier {
   ~WindowsNotifier();
 
   /**
+   * Create the E-Menu windows and start the event loop.
+   */
+  void initialize();
+
+  /**
    * Show a generic network notification to the interactive user. The title is
    * limited to WIN32_MAX_TITLE_LEN characters, and the body + mount is limited
    * to WIN32_MAX_BODY_LEN characters. Any attempt to pass longer strings will
