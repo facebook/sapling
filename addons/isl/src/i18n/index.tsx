@@ -136,7 +136,7 @@ function translate(
   }
   if (!result) {
     result =
-      langs[currentLanguage][i18nKeyOrEnText] ?? langs.en[i18nKeyOrEnText] ?? i18nKeyOrEnText;
+      langs[currentLanguage]?.[i18nKeyOrEnText] ?? langs.en[i18nKeyOrEnText] ?? i18nKeyOrEnText;
   }
   if (options?.replace) {
     // if we split with a regexp match group, the value will stay in the array,
