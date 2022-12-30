@@ -1247,7 +1247,7 @@ def rawsystem(cmd, environ=None, cwd=None, out=None):
     # unix but not Windows.
     if istest():
         parent, _basename = os.path.split(cmd.split()[0])
-        if parent and not os.path.isabs(parent):
+        if parent and not os.path.isabs(parent.strip('"')):
             mainio.write_err(f"command '{cmd}' should use absolute path\n".encode())
 
     env = shellenviron(environ)

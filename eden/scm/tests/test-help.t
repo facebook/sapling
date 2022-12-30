@@ -1420,9 +1420,8 @@ Test keyword search help
   
   Commands:
   
-   bookmark create a new bookmark or list existing bookmarks
-   clone    make a copy of an existing repository
-   paths    show aliases for remote repositories
+   clone make a copy of an existing repository
+   paths show aliases for remote repositories
   
   Extensions:
   

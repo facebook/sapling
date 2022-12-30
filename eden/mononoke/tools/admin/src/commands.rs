@@ -11,6 +11,7 @@ mononoke_app::subcommands! {
     mod bookmarks;
     mod changelog;
     mod commit;
+    mod commit_graph;
     mod convert;
     mod fetch;
     mod filestore;

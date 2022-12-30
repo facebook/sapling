@@ -14,25 +14,6 @@ import array
 import errno
 import fcntl
 import os
-import sys
-
-from . import encoding, pycompat, util
-
-
-def _rcfiles(path):
-    rcs = [os.path.join(path, "hgrc")]
-    rcdir = os.path.join(path, "hgrc.d")
-    try:
-        rcs.extend(
-            [
-                os.path.join(rcdir, f)
-                for f, kind in util.listdir(rcdir)
-                if f.endswith(".rc")
-            ]
-        )
-    except OSError:
-        pass
-    return rcs
 
 
 def termsize(ui):

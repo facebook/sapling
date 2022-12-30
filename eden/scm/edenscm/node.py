@@ -13,25 +13,21 @@
 from __future__ import absolute_import
 
 import binascii
-import sys
 
 
 # This ugly style has a noticeable effect in manifest parsing
 bhex = binascii.hexlify
 bbin = binascii.unhexlify
 
-if sys.version_info.major == 3:
 
-    def bin(node):
-        try:
-            return bbin(node)
-        except binascii.Error as e:
-            raise TypeError(e)
+def bin(node):
+    try:
+        return bbin(node)
+    except binascii.Error as e:
+        raise TypeError(e)
 
-    hex = bytes.hex
-else:
-    bin = bbin
-    hex = bhex
+
+hex = bytes.hex
 nullrev = -1
 nullid = b"\0" * 20
 nullhex = hex(nullid)

@@ -26,15 +26,10 @@ def fetchlatestsnapshot(ml):
 
 @perftrace.tracefunc("Snapshot metalog store")
 def storelatest(repo, snapshot, bubble):
+    """call this inside repo.transaction() to write changes to disk"""
+    assert repo.currenttransaction()
     ml = repo.metalog()
-    try:
-        if snapshot is not None:
-            ml.set(LATESTSNAPSHOT, snapshot)
-        if bubble is not None:
-            ml.set(LATESTBUBBLE, str(bubble).encode("ascii"))
-        ml.commit("Save latest bubble/snapshot")
-    except error.MetaLogError:
-        # Writing bubbles to metalog is of secondary importance, we don't want
-        # to fail everything. Ideally we want to overwrite the metalog entries,
-        # but that's not easy right now.
-        pass
+    if snapshot is not None:
+        ml.set(LATESTSNAPSHOT, snapshot)
+    if bubble is not None:
+        ml.set(LATESTBUBBLE, str(bubble).encode("ascii"))

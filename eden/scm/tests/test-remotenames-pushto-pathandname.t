@@ -24,23 +24,24 @@ Clone original repo
   $ echo somethingelse > something
   $ hg ci -m somethingelse
 
-Try to do the wrong push
+Try to push with "remote/"
 
   $ hg push --to remote/ababagalamaga
-  pushing rev 71b4c8f22183 to destination $TESTTMP/orig bookmark remote/ababagalamaga
-  abort: this remote bookmark name is not allowed
-  (use another bookmark name)
-  [255]
-
-Try to do the right push
-
-  $ hg push --to ababagalamaga
   pushing rev 71b4c8f22183 to destination $TESTTMP/orig bookmark ababagalamaga
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   updating bookmark ababagalamaga
+
+Try to push without "remote/", should push to the same bookmark as above
+
+  $ hg push --to ababagalamaga
+  pushing rev 71b4c8f22183 to destination $TESTTMP/orig bookmark ababagalamaga
+  searching for changes
+  remote bookmark already points at pushed rev
+  no changes found
+  [1]
 
 Set up an svn default push path and test behavior
 
@@ -51,4 +52,3 @@ Set up an svn default push path and test behavior
   abort: not creating new remote bookmark
   (use --create to create a new bookmark)
   [255]
-

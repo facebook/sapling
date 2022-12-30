@@ -17,8 +17,3 @@ maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-
-[dev-dependencies]
-drawdag = { version = "0.1.0", path = "../../../../scm/lib/drawdag" }
-fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

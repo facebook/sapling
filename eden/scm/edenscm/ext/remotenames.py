@@ -41,6 +41,7 @@ from edenscm import (
     localrepo,
     mutation,
     pycompat,
+    rcutil,
     registrar,
     revset,
     scmutil,
@@ -75,7 +76,6 @@ configitem("remotenames", "calculatedistance", default=True)
 configitem("remotenames", "disallowedbookmarks", default=[])
 configitem("remotenames", "disallowedhint", default=None)
 configitem("remotenames", "disallowedto", default=None)
-configitem("remotenames", "forcecompat", default=False)
 configitem("remotenames", "forceto", default=False)
 configitem("remotenames", "hoist", default="default")
 configitem("remotenames", "precachecurrent", default=True)
@@ -417,48 +417,26 @@ def expaths(orig, ui, repo, *args, **opts):
     """
     delete = opts.get("delete")
     add = opts.get("add")
-    configrepofile = ui.identity.configrepofile()
+    configrepofile = repo.localvfs.join(ui.identity.configrepofile())
     if delete:
-        # find the first section and remote path that matches, and delete that
-        foundpaths = False
-        if not repo.localvfs.isfile(configrepofile):
-            raise error.Abort(_("could not find repo config file"))
-        oldrepoconfigfile = repo.localvfs.readutf8(configrepofile).splitlines(True)
-        f = repo.localvfs(configrepofile, "w", atomictemp=True)
-        for line in oldrepoconfigfile:
-            if "[paths]" in line:
-                foundpaths = True
-            if not (foundpaths and line.strip().startswith(delete)):
-                f.writeutf8(line)
-        f.close()
+        rcutil.editconfig(configrepofile, "paths", delete, None)
         saveremotenames(repo, {delete: {}})
         precachedistance(repo)
         return
 
     if add:
-        # find the first section that matches, then look for previous value; if
-        # not found add a new entry
-        foundpaths = False
-        oldrepoconfigfile = []
-        if repo.localvfs.isfile(configrepofile):
-            oldrepoconfigfile = repo.localvfs.readutf8(configrepofile).splitlines(True)
-        f = repo.localvfs(configrepofile, "w", atomictemp=True)
-        done = False
-        for line in oldrepoconfigfile:
-            if "[paths]" in line:
-                foundpaths = True
-            if foundpaths and line.strip().startswith(add):
-                done = True
-                line = "%s = %s\n" % (add, args[0])
-            f.writeutf8(line)
+        if len(args) != 1:
+            raise error.Abort(_("invalid URL - invoke as '@prog@ paths -a NAME URL'"))
 
-        # did we not find an existing path?
-        if not done:
-            done = True
-            f.writeutf8("[paths]\n")
-            f.writeutf8("%s = %s\n" % (add, args[0]))
+        path = args[0]
+        if git.isgitpeer(repo):
+            origpath = path
+            # Normalize git URL. In particular, converts scp-like path to proper ssh url.
+            path = git.maybegiturl(path) or path
+            if origpath != path:
+                ui.status_err(_("normalized path %s to %s\n") % (origpath, path))
 
-        f.close()
+        rcutil.editconfig(configrepofile, "paths", add, path)
         return
 
     return orig(ui, repo, *args)
@@ -557,7 +535,11 @@ def extsetup(ui):
 
     newopts = [
         (bookcmd, ("a", "all", None, "show both remote and local bookmarks")),
-        (bookcmd, ("", "remote", None, _("show only remote bookmarks (DEPRECATED)"))),
+        (bookcmd, ("", "remote", None, _("fetch remote Git refs"))),
+        (
+            bookcmd,
+            ("", "remote-path", "", _("remote path from which to fetch bookmarks")),
+        ),
         (
             bookcmd,
             (
@@ -785,7 +767,90 @@ def _guesspushtobookmark(repo, pushnode, remotename):
     return None
 
 
+def adjust_push_dest_opts(ui, dest, opts):
+    """Adjust (dest, opts) for ease of use. Returns the adjusted (dest, opts).
+
+    When --to matches a remote name:
+
+        push --to remote/foo/bar   => push default --to foo/bar
+        push --to upstream/foo/bar => push upstream --to foo/bar
+
+    With a --to:
+
+        push remote/foo/bar   => push default --to foo/bar
+        push upstream/foo/bar => push upstream --to foo/bar
+
+    Adjust --delete similarly to --to.
+    """
+    renames = _getrenames(ui)
+    paths = {k for k, v in ui.configitems("paths")}
+    return _adjust_push_dest_opts(paths, renames, dest, opts)
+
+
+def _adjust_push_dest_opts(paths, renames, dest, opts):
+    """See 'adjust_push_dest_opts'.
+
+    Do not use 'ui' for easier testing.
+
+    'paths' specifies the path names, ex. {'default'}
+    'renames' specifies the remote name renames, ex. {'default': 'remote'}
+
+    Tests:
+
+        >>> paths = {'default', 'upstream'}
+        >>> renames = {'default': 'remote'}
+
+        >>> import functools
+        >>> test = functools.partial(_adjust_push_dest_opts, paths, renames)
+        >>> test(None, {'to': 'remote/foo/bar'})
+        ('default', {'to': 'foo/bar'})
+        >>> test(None, {'to': 'default/foo/bar'})
+        ('default', {'to': 'foo/bar'})
+        >>> test(None, {'to': 'unknown/foo/bar'})
+        (None, {'to': 'unknown/foo/bar'})
+
+        >>> test('remote/foo/bar', {})
+        ('default', {'to': 'foo/bar'})
+        >>> test('default/foo/bar', {})
+        ('default', {'to': 'foo/bar'})
+        >>> test('unknown/foo/bar', {})
+        ('unknown/foo/bar', {})
+
+        >>> test(None, {'delete': 'remote/foo/bar'})
+        ('default', {'delete': 'foo/bar'})
+        >>> test(None, {'delete': 'default/foo/bar'})
+        ('default', {'delete': 'foo/bar'})
+        >>> test(None, {'delete': 'unknown/foo/bar'})
+        (None, {'delete': 'unknown/foo/bar'})
+
+        >>> test('default', {'to': 'remote/foo/bar'})
+        ('default', {'to': 'remote/foo/bar'})
+    """
+    reverse_renames = {p: p for p in paths}
+    reverse_renames.update((v, k) for k, v in renames.items())
+    if dest:
+        if not opts.get("to") and not opts.get("delete"):
+            remote, to = splitremotename(dest)
+            remote = reverse_renames.get(remote)
+            if remote:
+                opts["to"] = to
+                dest = remote
+    else:
+        for opt_name in "to", "delete":
+            opt = opts.get(opt_name)
+            if not opt:
+                continue
+            remote, to = splitremotename(opt)
+            remote = reverse_renames.get(remote)
+            if remote:
+                opts[opt_name] = to
+                dest = remote
+                break
+    return dest, opts
+
+
 def expushcmd(orig, ui, repo, dest=None, **opts):
+    dest, opts = adjust_push_dest_opts(ui, dest, opts)
     if git.isgitpeer(repo):
         if dest is None:
             dest = "default"
@@ -803,21 +868,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
                 raise error.Abort(_("use '--to' to specify destination bookmark"))
         return git.push(repo, dest, pushnode, to, force=force)
 
-    # during the upgrade from old to new remotenames, tooling that uses --force
-    # will continue working if remotenames.forcecompat is enabled
-    forcecompat = ui.configbool("remotenames", "forcecompat")
-
     # needed for discovery method
     opargs = {
         "delete": opts.get("delete"),
         "to": opts.get("to"),
-        "create": opts.get("create") or (opts.get("force") and forcecompat),
+        "create": opts.get("create"),
         "allowanon": opts.get("allow_anon")
-        or repo.ui.configbool("remotenames", "pushanonheads")
-        or (opts.get("force") and forcecompat),
+        or repo.ui.configbool("remotenames", "pushanonheads"),
         "nonforwardmove": opts.get("non_forward_move")
-        or repo.ui.configbool("remotenames", "allownonfastforward")
-        or (opts.get("force") and forcecompat),
+        or repo.ui.configbool("remotenames", "allownonfastforward"),
     }
 
     if opargs["delete"]:
@@ -1048,7 +1107,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         _removetracking(repo, args)
         return
 
-    if delete or rename or args or inactive:
+    if delete or rename or (args and not remote) or inactive:
         if delete and track:
             msg = _("do not specifiy --track and --delete at the same time")
             raise error.Abort(msg)
@@ -1086,16 +1145,64 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         displaylocalbookmarks(ui, repo, opts, fm)
 
     if _isselectivepull(ui) and remote:
-        other = _getremotepeer(ui, repo, opts)
-        if other is None:
-            displayremotebookmarks(ui, repo, opts, fm)
+        if git.isgitpeer(repo):
+            refs, url = _fetchgitrefs(
+                repo, opts.get("remote_path") or "default", list(args)
+            )
+            _showfetchedbookmarks(repo.ui, url, refs, opts, fm)
         else:
-            remotebookmarks = other.listkeys("bookmarks")
-            _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
+            other = _getremotepeer(ui, repo, opts)
+            if other is None:
+                displayremotebookmarks(ui, repo, opts, fm)
+            else:
+                remotebookmarks = other.listkeys("bookmarks")
+                _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
     elif remote or subscriptions or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
     fm.end()
+
+
+def _fetchgitrefs(repo, source, pats):
+    """Fetch mapping of {name: hash} from Git source.
+
+    pats is a list of ref patterns (e.g. "refs/heads/*") or aliases.
+    Allowed aliases are "branches", "branch", "tags", "tag", "prs" and
+    "pr". If an alias is given, the "refs/*" prefix is trimmed from
+    the result for convenience.
+    """
+
+    if not pats:
+        pats = ["branches"]
+
+    trim = []
+    for i, p in enumerate(pats):
+        if p in {"branches", "branch"}:
+            pats[i] = "refs/heads/*"
+            trim.append("refs/heads/")
+        elif p in {"tags", "tag"}:
+            pats[i] = "refs/tags/*"
+            trim.append("refs/tags/")
+        elif p in {"prs", "pr"}:
+            pats[i] = "refs/pull/*"
+            trim.append("refs/pull/")
+
+    if trim and len(pats) != len(trim):
+        raise error.Abort(_("can't mix ref aliases with patterns"))
+
+    url, remote = git.urlremote(repo.ui, source)
+    remoterefs = git.listremote(repo, url, pats)
+
+    displayrefs = {}
+    for name, node in remoterefs.items():
+        for t in trim:
+            if name.startswith(t):
+                name = name[len(t) :]
+                break
+
+        displayrefs[name] = hex(node)
+
+    return displayrefs, url
 
 
 def displaylocalbookmarks(ui, repo, opts, fm):
@@ -1201,10 +1308,6 @@ def displayremotebookmarks(ui, repo, opts, fm):
 
 
 def _getremotepeer(ui, repo, opts):
-    if git.isgitpeer(repo):
-        # no peer interface for git (bare) repos
-        return None
-
     remotepath = opts.get("remote_path")
     path = ui.paths.getpath(remotepath or None, default="default")
 

@@ -3,6 +3,7 @@
 #inprocess-hg-incompatible
 
   $ enable github
+  $ . $TESTDIR/git.sh
 
 build up a github repo
 

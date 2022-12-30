@@ -76,6 +76,7 @@ testmod("edenscm.url")
 testmod("edenscm.util")
 testmod("edenscm.util", testtarget="platform")
 testmod("edenscm.ext.commitcloud.sync")
+testmod("edenscm.ext.remotenames")
 
 if sys.platform in {"linux", "win32"}:
     testmod("edenscm.testing.sh")

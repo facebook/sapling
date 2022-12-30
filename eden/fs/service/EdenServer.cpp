@@ -174,11 +174,15 @@ std::shared_ptr<Notifier> getPlatformNotifier(
      * showing a slightly incorrect uptime because the E-Menu won't update the
      * uptime until the user re-clicks on the "About EdenFS" menu option
      */
-    return std::make_shared<WindowsNotifier>(
-        config, version, std::chrono::steady_clock::now());
-  } else {
-    return std::make_shared<NullNotifier>(config);
+    try {
+      auto notifier = std::make_shared<WindowsNotifier>(
+          config, version, std::chrono::steady_clock::now());
+      notifier->initialize();
+    } catch (const std::exception& ex) {
+      XLOG(WARN) << "Couldn't start E-Menu: " << folly::exceptionStr(ex);
+    }
   }
+  return std::make_shared<NullNotifier>(config);
 #else
   (void)version;
   return std::make_shared<CommandNotifier>(config);
