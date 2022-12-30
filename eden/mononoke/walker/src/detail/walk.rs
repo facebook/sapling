@@ -111,7 +111,7 @@ use crate::detail::validate::EDGE_TYPE;
 use crate::detail::validate::ERROR_MSG;
 
 /// How frequently to yield the CPU when processing large manifests.
-const MANIFEST_YIELD_EVERY_ENTRY_COUNT: usize = 10_000;
+const MANIFEST_YIELD_EVERY_ENTRY_COUNT: usize = 2_000;
 
 pub trait StepRoute: Debug {
     /// Where we stepped from, useful for immediate reproductions with --walk-root
