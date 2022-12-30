@@ -16,7 +16,6 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 
 use crate::utils::*;
 
-pub mod in_memory_storage;
 mod utils;
 
 pub async fn test_storage_store_and_fetch(

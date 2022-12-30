@@ -20,7 +20,7 @@ use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use parking_lot::RwLock;
 
-/// In-memory commit graph storage, suitable for basic tests.
+/// In-memory commit graph storage.
 pub struct InMemoryCommitGraphStorage {
     repo_id: RepositoryId,
     changesets: RwLock<BTreeMap<ChangesetId, ChangesetEdges>>,
@@ -96,11 +96,13 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use commit_graph_testlib::*;
     use context::CoreContext;
     use fbinit::FacebookInit;
 
     use super::*;
-    use crate::*;
 
     #[fbinit::test]
     pub async fn test_in_memory_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
