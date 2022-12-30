@@ -171,6 +171,10 @@ export function useCurrentLang(): LanguageId {
 
 function getPlural(i18nKeyOrEnText: string, count: number, lang: LanguageId): string | undefined {
   const pluralizer = pluralizers[lang];
+  if (pluralizer == null) {
+    return undefined;
+  }
+
   const key = i18nKeyOrEnText + '_' + pluralizer(count);
-  return langs[lang][key];
+  return langs[lang]?.[key];
 }
