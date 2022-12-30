@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8
+
+- ISL no longer crashes when a language other than English is selected in VS Code: https://github.com/facebook/sapling/issues/362.
+- Added an ISL menu button to the source control panel: https://github.com/facebook/sapling/commit/538c6fba11ddfdae9de93bf77cffa688b13458c0.
+- Updated the Sapling icon: https://github.com/facebook/sapling/commit/2f7873e32208d4cd153b7c1c1e27afe19e815cf0.
+
 ## 0.1.7
 
 - Fixed an issue where we were stripping the trailing newline in the output to `sl cat`, which caused the VS Code extension to constantly report that the user had modified a file by adding a newline to the end: https://github.com/facebook/sapling/commit/f65f499ba95a742444b61cb181adb39d2a3af4c2.
