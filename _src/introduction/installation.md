@@ -73,8 +73,8 @@ xattr -r -d com.apple.quarantine ~/Downloads/{macArmAsset.name}
 Note that to clone larger repositories, you need to change the open files limit. We recommend doing it now so it doesn't bite you in the future:
 
 <CodeBlock>
-echo "ulimit -n 1048576 1048576" >> ~/.bash_profile{'\n'}
-echo "ulimit -n 1048576 1048576" >> ~/.zshrc
+echo "ulimit -n 1048576" >> ~/.bash_profile{'\n'}
+echo "ulimit -n 1048576" >> ~/.zshrc
 </CodeBlock>
 
 ### Windows
@@ -154,7 +154,7 @@ In order to build from source, you need at least the following tools available i
 
 For the full list, find the appropriate `Dockerfile` for your platform that defines the image that is used for Sapling builds in automation to see which tools it installs. For example, <a href={`${gitHubRepo}/blob/main/.github/workflows/sapling-cli-ubuntu-22.04.Dockerfile`}><code>.github/workflows/sapling-cli-ubuntu-22.04.Dockerfile</code></a> reveals all of the packages you need to install via `apt-get` in the host environment in order to build Sapling from source.
 
-Once you have your environment set up, you can do a build as follows:
+Once you have your environment set up, you can do a build on macOS or Linux as follows:
 
 <pre>{`\
 git clone ${gitHubRepo}
@@ -164,7 +164,7 @@ make oss
 `}
 </pre>
 
-Though the Windows build is slightly different:
+The Windows build has some additional dependencies and a separate build script. From the [GitHub Action used to build the Windows release](https://github.com/facebook/sapling/blob/main/.github/workflows/sapling-cli-windows-amd64-release.yml), perform the steps that use [`vcpkg`](https://vcpkg.io/) on your local machine to install the additional dependencies. Then you can build and run Sapling on Windows as follows:
 
 <pre>{`\
 git clone ${gitHubRepo}
