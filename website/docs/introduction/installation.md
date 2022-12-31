@@ -73,8 +73,8 @@ xattr -r -d com.apple.quarantine ~/Downloads/{macArmAsset.name}
 Note that to clone larger repositories, you need to change the open files limit. We recommend doing it now so it doesn't bite you in the future:
 
 <CodeBlock>
-echo "ulimit -n 1048576 1048576" >> ~/.bash_profile{'\n'}
-echo "ulimit -n 1048576 1048576" >> ~/.zshrc
+echo "ulimit -n 1048576" >> ~/.bash_profile{'\n'}
+echo "ulimit -n 1048576" >> ~/.zshrc
 </CodeBlock>
 
 ### Windows
