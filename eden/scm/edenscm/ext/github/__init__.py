@@ -6,11 +6,10 @@
 """utilities for interacting with GitHub (EXPERIMENTAL)
 """
 
-import os
 import shutil
 from typing import Optional
 
-from edenscm import error, registrar
+from edenscm import error, registrar, util
 from edenscm.i18n import _
 
 from . import (
@@ -199,7 +198,7 @@ def follow_cmd(ui, repo, *revs, **opts):
         ("w", "web", False, _("list pull requests in the web browser")),
     ],
 )
-def list_cmd(ui, repo, *args, **opts):
+def list_cmd(ui, repo, *args, **opts) -> int:
     """calls `gh pr list [flags]` with the current repo as the value of --repo"""
     github_repo = find_github_repo(repo).ok()
     if not github_repo:
@@ -222,7 +221,10 @@ def list_cmd(ui, repo, *args, **opts):
             else:
                 raise ValueError(f"unsupported type {val_type} for {value}")
 
-    os.execv(argv0, gh_args)
+    # Once chg supports an execv-style API, call it with `argv0` and `gh_args`.
+    cmd = " ".join([util.shellquote(arg) for arg in gh_args])
+    rc = ui.system(cmd)
+    return rc
 
 
 def _find_gh_cli() -> Optional[str]:
