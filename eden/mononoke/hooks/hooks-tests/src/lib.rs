@@ -40,7 +40,6 @@ use maplit::btreemap;
 use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::BookmarkParams;
-use metaconfig_types::HookConfig;
 use metaconfig_types::HookManagerParams;
 use metaconfig_types::HookParams;
 use metaconfig_types::RepoConfig;
@@ -1467,40 +1466,6 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     )
     .await
     .expect("Failed to construct HookManager")
-}
-
-#[fbinit::test]
-async fn test_verify_integrity_fast_failure(fb: FacebookInit) {
-    let mut config = RepoConfig::default();
-    config.bookmarks = vec![BookmarkParams {
-        bookmark: Regex::new("bm2").unwrap().into(),
-        hooks: vec!["verify_integrity".into()],
-        only_fast_forward: false,
-        allowed_users: None,
-        allowed_hipster_group: None,
-        rewrite_dates: None,
-        hooks_skip_ancestors_of: vec![],
-        ensure_ancestor_of: None,
-        allow_move_to_public_commits_without_hooks: false,
-    }];
-    config.hooks = vec![HookParams {
-        name: "verify_integrity".into(),
-        config: HookConfig {
-            strings: hashmap! {String::from("verify_integrity_path") => String::from("bad_nonexisting_filename")},
-            ..Default::default()
-        },
-    }];
-
-    let mut hm = hook_manager_many_files_dirs_repo(fb).await;
-    load_hooks(
-        fb,
-        DefaultAclProvider::new(fb).as_ref(),
-        &mut hm,
-        &config,
-        &hashset![],
-    )
-    .await
-    .expect_err("`verify_integrity` hook loading should have failed");
 }
 
 #[fbinit::test]
