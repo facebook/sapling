@@ -42,9 +42,16 @@ SubprocessScribeLogger::SubprocessScribeLogger(
     options.nullStdout();
   }
 
-  // Forward stderr to the edenfs log.
-  // Ensure that no cwd directory handles are held open.
-  options.chdir(kRootAbsPath);
+  if (!folly::kIsWindows) {
+    // Forward stderr to the edenfs log.
+    // Ensure that no cwd directory handles are held open.
+    //
+    // TODO: Not enabled on Windows due to SpawnedProcess removing the UNC
+    // prefix, making CWD be "" which CreateProcess on Windows refuses. Once
+    // Mercurial is taught to deal with UNC correctly (D42282703), this can be
+    // enabled on Windows.
+    options.chdir(kRootAbsPath);
+  }
 
   process_ = SpawnedProcess{argv, std::move(options)};
 

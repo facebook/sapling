@@ -9,11 +9,8 @@
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
-
-#ifndef _WIN32
 #include "eden/fs/telemetry/ScubaStructuredLogger.h"
 #include "eden/fs/telemetry/SubprocessScribeLogger.h"
-#endif
 
 namespace facebook::eden {
 
@@ -33,15 +30,10 @@ std::unique_ptr<StructuredLogger> makeDefaultStructuredLogger(
     return std::make_unique<NullStructuredLogger>();
   }
 
-#ifndef _WIN32
   auto logger =
       std::make_unique<SubprocessScribeLogger>(binary.c_str(), category);
   return std::make_unique<ScubaStructuredLogger>(
       std::move(logger), std::move(sessionInfo));
-#else
-  (void)sessionInfo;
-  return std::make_unique<NullStructuredLogger>();
-#endif
 }
 
 } // namespace facebook::eden
