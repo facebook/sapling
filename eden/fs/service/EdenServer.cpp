@@ -160,6 +160,7 @@ using namespace facebook::eden;
 
 std::shared_ptr<Notifier> getPlatformNotifier(
     std::shared_ptr<ReloadableConfig> config,
+    const std::shared_ptr<StructuredLogger>& logger,
     std::string version) {
 #if defined(_WIN32)
   /*
@@ -179,12 +180,15 @@ std::shared_ptr<Notifier> getPlatformNotifier(
           config, version, std::chrono::steady_clock::now());
       notifier->initialize();
     } catch (const std::exception& ex) {
-      XLOG(WARN) << "Couldn't start E-Menu: " << folly::exceptionStr(ex);
+      auto reason = folly::exceptionStr(ex);
+      XLOG(WARN) << "Couldn't start E-Menu: " << reason;
+      logger->logEvent(EMenuStartupFailure{reason.toStdString()});
     }
   }
   return std::make_shared<NullNotifier>(config);
 #else
   (void)version;
+  (void)logger;
   return std::make_shared<CommandNotifier>(config);
 #endif // _WIN32
 }
@@ -360,18 +364,20 @@ EdenServer::EdenServer(
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
       mainEventBase_{folly::EventBaseManager::get()->getEventBase()},
+      structuredLogger_{
+          makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo))},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessNameCache>(),
-          makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo)),
+          structuredLogger_,
           std::move(hiveLogger),
           config_,
           *edenConfig,
           mainEventBase_,
-          getPlatformNotifier(config_, version),
+          getPlatformNotifier(config_, structuredLogger_, version),
           FLAGS_enable_fault_injection)},
       version_{std::move(version)},
       progressManager_{std::make_unique<

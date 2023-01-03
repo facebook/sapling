@@ -312,4 +312,14 @@ struct MetadataSizeMismatch {
   }
 };
 
+struct EMenuStartupFailure {
+  static constexpr const char* type = "emenu_startup_failure";
+
+  std::string reason;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("reason", reason);
+  }
+};
+
 } // namespace facebook::eden

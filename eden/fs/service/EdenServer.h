@@ -693,6 +693,11 @@ class EdenServer : private TakeoverHandler {
   folly::EventBase* mainEventBase_;
 
   /**
+   * Main telemetry logger.
+   */
+  std::shared_ptr<StructuredLogger> structuredLogger_;
+
+  /**
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;

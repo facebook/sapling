@@ -19,7 +19,7 @@ struct SessionInfo;
  * Returns a StructuredLogger appropriate for this platform and Eden
  * configuration.
  */
-std::unique_ptr<StructuredLogger> makeDefaultStructuredLogger(
+std::shared_ptr<StructuredLogger> makeDefaultStructuredLogger(
     const EdenConfig&,
     SessionInfo sessionInfo);
 
