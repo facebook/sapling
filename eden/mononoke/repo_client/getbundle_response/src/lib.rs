@@ -54,6 +54,7 @@ use mercurial_bundles::changegroup::CgVersion;
 use mercurial_bundles::part_encode::PartEncodeBuilder;
 use mercurial_bundles::parts;
 use mercurial_bundles::parts::FilenodeEntry;
+use mercurial_mutation::HgMutationStoreArc;
 use mercurial_revlog::RevlogChangeset;
 use mercurial_types::blobs::fetch_manifest_envelope;
 use mercurial_types::blobs::File;
@@ -153,7 +154,7 @@ pub async fn create_getbundle_response(
         if !draft_commits.is_empty() && tunables().get_mutation_generate_for_draft() {
             let mutations_fut = {
                 cloned!(ctx);
-                let hg_mutation_store = blobrepo.hg_mutation_store().clone();
+                let hg_mutation_store = blobrepo.hg_mutation_store_arc();
                 async move {
                     hg_mutation_store
                         .all_predecessors(&ctx, draft_commits)

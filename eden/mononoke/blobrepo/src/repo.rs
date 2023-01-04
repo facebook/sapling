@@ -23,7 +23,6 @@ use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
-use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
@@ -150,11 +149,6 @@ pub struct BlobRepo {
 }
 
 impl BlobRepo {
-    #[inline]
-    pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
-        &self.inner.hg_mutation_store
-    }
-
     // Returns the generation number of a changeset
     // note: it returns Option because changeset might not exist
     pub async fn get_generation_number(
