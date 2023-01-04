@@ -583,6 +583,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 mod tests {
     use std::str::FromStr;
 
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use borrowed::borrowed;
     use bytes::Bytes;
     use fixtures::Linear;

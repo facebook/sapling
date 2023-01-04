@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use context::CoreContext;
 use futures::future;
 use futures::Stream;

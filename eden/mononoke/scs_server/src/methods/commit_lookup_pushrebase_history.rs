@@ -14,6 +14,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use phases::PhasesRef;
+use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use source_control as thrift;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 

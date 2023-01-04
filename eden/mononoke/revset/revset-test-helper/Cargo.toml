@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

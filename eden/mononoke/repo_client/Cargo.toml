@@ -12,6 +12,8 @@ anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }

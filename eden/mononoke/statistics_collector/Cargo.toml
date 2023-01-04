@@ -37,6 +37,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"

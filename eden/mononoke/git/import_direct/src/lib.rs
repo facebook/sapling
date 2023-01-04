@@ -13,6 +13,7 @@ use std::time::Instant;
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use context::CoreContext;
 use git_hash::ObjectId;
 use import_tools::oid_to_sha1;

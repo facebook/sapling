@@ -24,6 +24,7 @@ use blobrepo::BlobRepo;
 use blobrepo_utils::BonsaiMFVerify;
 use blobrepo_utils::BonsaiMFVerifyResult;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap::Parser;
 use clap::Subcommand;
 use cloned::cloned;

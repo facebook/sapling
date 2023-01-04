@@ -1674,6 +1674,7 @@ mod tests {
     use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreGetData;
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use derived_data::BonsaiDerived;
     use derived_data_manager::BonsaiDerivable;
     use fixtures::Linear;

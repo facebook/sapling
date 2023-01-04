@@ -10,6 +10,8 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;

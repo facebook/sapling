@@ -16,6 +16,7 @@ anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }

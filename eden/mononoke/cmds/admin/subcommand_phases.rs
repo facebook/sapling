@@ -17,6 +17,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;

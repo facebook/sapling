@@ -14,6 +14,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;

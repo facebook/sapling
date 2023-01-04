@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 #[cfg(test)]
 use common::fetch_generation;
 use context::CoreContext;

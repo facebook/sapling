@@ -43,6 +43,7 @@ use anyhow::Result;
 use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;

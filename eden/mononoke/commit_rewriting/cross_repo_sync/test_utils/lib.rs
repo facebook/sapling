@@ -14,6 +14,7 @@ use anyhow::Error;
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;

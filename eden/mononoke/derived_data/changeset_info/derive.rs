@@ -115,6 +115,7 @@ mod test {
     use std::str::FromStr;
 
     use blobstore::Loadable;
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::Linear;

@@ -69,6 +69,9 @@ blobrepo = { version = "0.1.0", path = "blobrepo" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
+bonsai_git_mapping = { version = "0.1.0", path = "bonsai_git_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "bonsai_hg_mapping" }
+bonsai_svnrev_mapping = { version = "0.1.0", path = "bonsai_svnrev_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulkops = { version = "0.1.0", path = "bulkops" }
 bytes = { version = "1.1", features = ["serde"] }

@@ -12,6 +12,7 @@ anyhow = "1.0.65"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }

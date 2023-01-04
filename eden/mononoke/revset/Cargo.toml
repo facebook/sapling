@@ -27,6 +27,7 @@ uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }
 ascii = "1.0"
 async-trait = "0.1.58"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

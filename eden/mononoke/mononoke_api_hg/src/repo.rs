@@ -21,6 +21,7 @@ use blobrepo_hg::ChangesetHandle;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::Freshness;
 use bytes::Bytes;
 use changesets::ChangesetInsert;

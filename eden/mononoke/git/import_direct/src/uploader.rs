@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;

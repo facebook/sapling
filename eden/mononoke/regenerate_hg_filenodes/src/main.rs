@@ -21,6 +21,7 @@ use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cacheblob::MemWritesBlobstore;
 use cmdlib::args;
 use context::CoreContext;

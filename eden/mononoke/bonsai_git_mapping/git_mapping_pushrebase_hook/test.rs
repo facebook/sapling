@@ -8,6 +8,8 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMappingArc;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -33,7 +35,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .with_id(RepositoryId::new(1))
         .build()?;
     borrowed!(ctx, repo);
-    let mapping = repo.bonsai_git_mapping().clone();
+    let mapping = repo.bonsai_git_mapping();
 
     let root = CreateCommitContext::new_root(ctx, repo).commit().await?;
 
@@ -54,9 +56,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
 
     let book = bookmark(ctx, repo, "master").set_to(cs1).await?;
 
-    let hooks = [GitMappingPushrebaseHook::new(
-        repo.bonsai_git_mapping().clone(),
-    )];
+    let hooks = [GitMappingPushrebaseHook::new(repo.bonsai_git_mapping_arc())];
 
     let rebased = do_pushrebase_bonsai(
         ctx,

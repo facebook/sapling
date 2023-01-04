@@ -11,6 +11,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkTransactionError;
 use borrowed::borrowed;
 use context::CoreContext;
@@ -47,7 +48,6 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
-    let mapping = repo.bonsai_globalrev_mapping().clone();
     borrowed!(ctx, repo);
 
     let root = CreateCommitContext::new_root(ctx, repo).commit().await?;
@@ -66,7 +66,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
 
     let hooks = [GlobalrevPushrebaseHook::new(
         ctx.clone(),
-        mapping,
+        repo.bonsai_globalrev_mapping_arc(),
         repo.get_repoid(),
     )];
 
@@ -197,14 +197,17 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     let repo: BlobRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
-    let mapping = repo.bonsai_globalrev_mapping().clone();
     borrowed!(ctx, repo);
 
     let root = CreateCommitContext::new_root(ctx, repo).commit().await?;
     let book = bookmark(ctx, repo, "master").set_to(root).await?;
 
     let hooks = [
-        GlobalrevPushrebaseHook::new(ctx.clone(), mapping, repo.get_repoid()),
+        GlobalrevPushrebaseHook::new(
+            ctx.clone(),
+            repo.bonsai_globalrev_mapping_arc(),
+            repo.get_repoid(),
+        ),
         Box::new(SleepHook) as Box<dyn PushrebaseHook>,
     ];
 

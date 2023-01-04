@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use changesets::ChangesetsRef;
 use context::CoreContext;
 use fbinit::FacebookInit;

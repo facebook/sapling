@@ -9,13 +9,9 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
-use bonsai_git_mapping::ArcBonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMapping;
-use bonsai_globalrev_mapping::ArcBonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
-use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
@@ -40,7 +36,6 @@ use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
-use pushrebase_mutation_mapping::ArcPushrebaseMutationMapping;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -160,11 +155,6 @@ pub struct BlobRepo {
 
 impl BlobRepo {
     #[inline]
-    pub fn bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping {
-        &self.inner.bonsai_hg_mapping
-    }
-
-    #[inline]
     pub fn changeset_fetcher(&self) -> &ArcChangesetFetcher {
         &self.inner.changeset_fetcher
     }
@@ -190,22 +180,6 @@ impl BlobRepo {
             .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
             .parents;
         Ok(parents)
-    }
-
-    pub fn bonsai_git_mapping(&self) -> &ArcBonsaiGitMapping {
-        &self.inner.bonsai_git_mapping
-    }
-
-    pub fn bonsai_globalrev_mapping(&self) -> &ArcBonsaiGlobalrevMapping {
-        &self.inner.bonsai_globalrev_mapping
-    }
-
-    pub fn bonsai_svnrev_mapping(&self) -> &ArcBonsaiSvnrevMapping {
-        &self.inner.bonsai_svnrev_mapping
-    }
-
-    pub fn pushrebase_mutation_mapping(&self) -> &ArcPushrebaseMutationMapping {
-        &self.inner.pushrebase_mutation_mapping
     }
 
     // Returns the generation number of a changeset

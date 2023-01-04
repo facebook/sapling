@@ -8,6 +8,7 @@
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cloned::cloned;
 use context::CoreContext;
 use futures::try_join;

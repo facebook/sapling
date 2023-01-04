@@ -15,6 +15,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;

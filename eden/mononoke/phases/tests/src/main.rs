@@ -11,6 +11,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksMaybeStaleExt;

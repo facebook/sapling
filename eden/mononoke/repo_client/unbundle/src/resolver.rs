@@ -21,6 +21,7 @@ use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;

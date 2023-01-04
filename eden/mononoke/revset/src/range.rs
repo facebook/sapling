@@ -264,6 +264,7 @@ mod test {
     use std::sync::Arc;
 
     use blobrepo::BlobRepo;
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures_ext::StreamExt;

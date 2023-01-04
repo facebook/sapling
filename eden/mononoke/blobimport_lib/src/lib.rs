@@ -22,6 +22,7 @@ use anyhow::Error;
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::bulk_import_globalrevs;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bookmarks::BookmarksMaybeStaleExt;

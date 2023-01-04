@@ -30,6 +30,8 @@ use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::Bookmark;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPrefix;
