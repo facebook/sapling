@@ -8,7 +8,6 @@
 use std::any::Any;
 use std::collections::HashMap;
 
-use anyhow::format_err;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -40,9 +39,10 @@ impl ChangesetFetcher for TestChangesetFetcher {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error> {
-        let genopt = self.repo.get_generation_number(ctx, cs_id).await?;
-        let gen = genopt.ok_or_else(|| format_err!("{} not found", cs_id))?;
-        Ok(gen)
+        self.repo
+            .changeset_fetcher()
+            .get_generation_number(ctx, cs_id)
+            .await
     }
 
     async fn get_parents(

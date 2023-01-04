@@ -21,6 +21,7 @@ use anyhow::Result;
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMappingBuilder;
+use changeset_fetcher::ChangesetFetcherRef;
 use clap_old::Arg;
 use clap_old::ArgGroup;
 use cmdlib::args;
@@ -503,11 +504,12 @@ async fn maybe_update_highest_imported_generation_number(
     let maybe_highest_imported_gen_num = blobrepo
         .mutable_counters()
         .get_counter(ctx, blobimport_lib::HIGHEST_IMPORTED_GEN_NUM);
-    let new_gen_num = blobrepo.get_generation_number(ctx.clone(), latest_imported_cs_id);
+    let new_gen_num = blobrepo
+        .changeset_fetcher()
+        .get_generation_number(ctx.clone(), latest_imported_cs_id);
     let (maybe_highest_imported_gen_num, new_gen_num) =
         try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
 
-    let new_gen_num = new_gen_num.ok_or_else(|| format_err!("generation number is not set"))?;
     let new_gen_num = match maybe_highest_imported_gen_num {
         Some(highest_imported_gen_num) => {
             if new_gen_num.value() as i64 > highest_imported_gen_num {

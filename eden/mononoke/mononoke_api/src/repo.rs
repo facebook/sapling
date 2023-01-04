@@ -17,7 +17,6 @@ use std::time::UNIX_EPOCH;
 use acl_regions::build_disabled_acl_regions;
 use acl_regions::AclRegions;
 use anyhow::anyhow;
-use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
@@ -767,11 +766,10 @@ impl Repo {
         ctx: &CoreContext,
         cs_id: &ChangesetId,
     ) -> Result<Generation, Error> {
-        let maybe_gen_num = self
-            .blob_repo()
+        self.blob_repo()
+            .changeset_fetcher()
             .get_generation_number(ctx.clone(), *cs_id)
-            .await?;
-        maybe_gen_num.ok_or_else(|| format_err!("gen num for {} not found", cs_id))
+            .await
     }
 }
 
@@ -1775,7 +1773,7 @@ mod tests {
         )?;
 
         let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
-        let child = maybe_child.ok_or_else(|| format_err!("didn't find child"))?;
+        let child = maybe_child.ok_or_else(|| anyhow!("didn't find child"))?;
         assert_eq!(
             child,
             ChangesetId::from_str(
@@ -1802,7 +1800,7 @@ mod tests {
         )?;
 
         let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
-        let child = maybe_child.ok_or_else(|| format_err!("didn't find child"))?;
+        let child = maybe_child.ok_or_else(|| anyhow!("didn't find child"))?;
         assert_eq!(child, descendant);
         Ok(())
     }

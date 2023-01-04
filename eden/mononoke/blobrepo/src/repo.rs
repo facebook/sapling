@@ -27,8 +27,6 @@ use mercurial_mutation::HgMutationStore;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -42,12 +40,6 @@ use repo_lock::ArcRepoLock;
 use repo_lock::RepoLock;
 use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::RepoPermissionChecker;
-use stats::prelude::*;
-
-define_stats! {
-    prefix = "mononoke.blobrepo";
-    get_generation_number: timeseries(Rate, Sum),
-}
 
 // NOTE: this structure and its fields are public to enable `DangerousOverride` functionality
 #[facet::container]
@@ -149,18 +141,6 @@ pub struct BlobRepo {
 }
 
 impl BlobRepo {
-    // Returns the generation number of a changeset
-    // note: it returns Option because changeset might not exist
-    pub async fn get_generation_number(
-        &self,
-        ctx: CoreContext,
-        cs: ChangesetId,
-    ) -> Result<Option<Generation>, Error> {
-        STATS::get_generation_number.add_value(1);
-        let result = self.inner.changesets.get(ctx, cs).await?;
-        Ok(result.map(|res| Generation::new(res.gen)))
-    }
-
     pub fn blobstore(&self) -> &RepoBlobstore {
         &self.inner.repo_blobstore
     }

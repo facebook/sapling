@@ -19,6 +19,7 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -498,8 +499,12 @@ async fn validate_if_new_repo_merge(
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let p1gen = repo.get_generation_number(ctx.clone(), p1);
-    let p2gen = repo.get_generation_number(ctx.clone(), p2);
+    let p1gen = repo
+        .changeset_fetcher()
+        .get_generation_number(ctx.clone(), p1);
+    let p2gen = repo
+        .changeset_fetcher()
+        .get_generation_number(ctx.clone(), p2);
     let (p1gen, p2gen) = try_join!(p1gen, p2gen)?;
     // FIXME: this code has an assumption that parent with a smaller generation number is a
     // parent that introduces a new repo. This is usually the case, however it might not be true
