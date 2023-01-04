@@ -11,10 +11,14 @@
 
 #![feature(map_first_last)]
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use async_trait::async_trait;
+use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use maplit::hashset;
 use mononoke_types::ChangesetId;
@@ -22,6 +26,7 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use smallvec::SmallVec;
+use smallvec::ToSmallVec;
 
 use crate::edges::ChangesetEdges;
 use crate::edges::ChangesetFrontier;
@@ -69,6 +74,71 @@ impl CommitGraph {
             .fetch_many_edges_required(ctx, &parents, None)
             .await?;
 
+        self.storage
+            .add(
+                ctx,
+                self.build_edges(ctx, cs_id, parents, &parent_edges).await?,
+            )
+            .await
+    }
+
+    /// Same as add but fetches parent edges using the changeset fetcher
+    /// if not found in the storage, and recursively tries to add them.
+    pub async fn add_recursive(
+        &self,
+        ctx: &CoreContext,
+        changeset_fetcher: ArcChangesetFetcher,
+        cs_id: ChangesetId,
+        parents: ChangesetParents,
+    ) -> Result<usize> {
+        let mut edges_map: HashMap<ChangesetId, ChangesetEdges> = Default::default();
+        let mut search_stack: Vec<(ChangesetId, ChangesetParents)> = vec![(cs_id, parents)];
+        let mut to_add_stack: Vec<(ChangesetId, ChangesetParents)> = Default::default();
+
+        while let Some((cs_id, parents)) = search_stack.pop() {
+            to_add_stack.push((cs_id, parents.clone()));
+
+            edges_map.extend(
+                self.storage
+                    .fetch_many_edges(ctx, &parents, None)
+                    .await?
+                    .into_iter(),
+            );
+
+            for parent in parents {
+                if !edges_map.contains_key(&parent) {
+                    search_stack.push((
+                        parent,
+                        changeset_fetcher
+                            .get_parents(ctx.clone(), parent)
+                            .await?
+                            .to_smallvec(),
+                    ));
+                }
+            }
+        }
+
+        let mut added_edges_num = 0;
+
+        while let Some((cs_id, parents)) = to_add_stack.pop() {
+            let edges = self.build_edges(ctx, cs_id, parents, &edges_map).await?;
+
+            edges_map.insert(cs_id, edges.clone());
+            if self.storage.add(ctx, edges).await? {
+                added_edges_num += 1;
+            }
+        }
+
+        Ok(added_edges_num)
+    }
+
+    pub async fn build_edges(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        parents: ChangesetParents,
+        edges_map: &HashMap<ChangesetId, ChangesetEdges>,
+    ) -> Result<ChangesetEdges> {
         let mut max_parent_gen = 0;
         let mut edge_parents = ChangesetNodeParents::new();
         let mut merge_ancestor = None;
@@ -79,7 +149,7 @@ impl CommitGraph {
         let mut p1_linear_depth = 0;
 
         for parent in &parents {
-            let parent_edge = parent_edges
+            let parent_edge = edges_map
                 .get(parent)
                 .ok_or_else(|| anyhow!("Missing parent: {}", parent))?;
             max_parent_gen = max_parent_gen.max(parent_edge.node.generation.value());
@@ -122,7 +192,7 @@ impl CommitGraph {
 
         let p1_parent = edge_parents.first().copied();
 
-        let edges = ChangesetEdges {
+        Ok(ChangesetEdges {
             node,
             parents: edge_parents,
             merge_ancestor,
@@ -143,9 +213,7 @@ impl CommitGraph {
                     |node| node.p1_linear_depth,
                 )
                 .await?,
-        };
-
-        self.storage.add(ctx, edges).await
+        })
     }
 
     /// Find all changeset ids with a given prefix.
@@ -522,5 +590,25 @@ impl CommitGraph {
         }
 
         Ok(cs_ids_inbetween)
+    }
+}
+
+#[async_trait]
+impl ChangesetFetcher for CommitGraph {
+    async fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Generation> {
+        self.changeset_generation(&ctx, cs_id)
+            .await?
+            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
+    }
+
+    async fn get_parents(&self, ctx: CoreContext, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
+        self.changeset_parents(&ctx, cs_id)
+            .await?
+            .map(SmallVec::into_vec)
+            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
     }
 }

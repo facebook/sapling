@@ -131,7 +131,7 @@ mod tests {
     use super::*;
 
     #[fbinit::test]
-    pub async fn test_in_memory_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
+    async fn test_in_memory_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    pub async fn test_in_memory_skip_tree(fb: FacebookInit) -> Result<()> {
+    async fn test_in_memory_skip_tree(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    pub async fn test_in_memory_p1_linear_tree(fb: FacebookInit) -> Result<()> {
+    async fn test_in_memory_p1_linear_tree(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
@@ -155,7 +155,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    pub async fn test_in_memory_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
+    async fn test_in_memory_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
@@ -163,10 +163,18 @@ mod tests {
     }
 
     #[fbinit::test]
-    pub async fn test_in_memory_find_by_prefix(fb: FacebookInit) -> Result<()> {
+    async fn test_in_memory_find_by_prefix(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
 
         test_find_by_prefix(&ctx, storage).await
+    }
+
+    #[fbinit::test]
+    async fn test_in_memory_add_recursive(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+
+        test_add_recursive(&ctx, storage).await
     }
 }

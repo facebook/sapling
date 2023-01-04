@@ -10,9 +10,13 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use commit_graph::storage::CommitGraphStorage;
+use commit_graph::CommitGraph;
 use context::CoreContext;
+use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::RepositoryId;
+use smallvec::smallvec;
 
 use crate::utils::*;
 
@@ -360,6 +364,87 @@ pub async fn test_find_by_prefix(
             .find_by_prefix(ctx, ChangesetIdPrefix::from_str("5")?, 2)
             .await?,
         ChangesetIdsResolvedFromPrefix::Multiple(vec![name_cs_id("P"), name_cs_id("QQ")])
+    );
+
+    Ok(())
+}
+
+pub async fn test_add_recursive(
+    ctx: &CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+
+    let reference_graph = Arc::new(
+        from_dag(
+            ctx,
+            r##"
+             A-B-C-D-G-H-I
+              \     /
+               E---F---J
+         "##,
+            reference_storage,
+        )
+        .await?,
+    );
+
+    let graph = CommitGraph::new(storage);
+    assert_eq!(
+        graph
+            .add_recursive(
+                ctx,
+                reference_graph.clone(),
+                name_cs_id("I"),
+                smallvec![name_cs_id("H")],
+            )
+            .await?,
+        9
+    );
+    assert_eq!(
+        graph
+            .add_recursive(
+                ctx,
+                reference_graph,
+                name_cs_id("J"),
+                smallvec![name_cs_id("F")],
+            )
+            .await?,
+        1
+    );
+
+    assert!(graph.exists(ctx, name_cs_id("A")).await?);
+
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("E"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("A")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("G"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("D"), name_cs_id("F")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("I"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("H")]
+    );
+    assert_eq!(
+        graph
+            .changeset_parents(ctx, name_cs_id("J"))
+            .await?
+            .unwrap()
+            .as_slice(),
+        &[name_cs_id("F")]
     );
 
     Ok(())

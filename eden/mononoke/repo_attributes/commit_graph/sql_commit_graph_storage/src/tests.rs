@@ -76,3 +76,15 @@ async fn test_sqlite_find_by_prefix(fb: FacebookInit) -> Result<()> {
 
     test_find_by_prefix(&ctx, storage).await
 }
+
+#[fbinit::test]
+async fn test_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let storage = Arc::new(
+        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+    );
+
+    test_add_recursive(&ctx, storage).await
+}
