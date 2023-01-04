@@ -24,6 +24,7 @@ use blobstore::LoadableError;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::Freshness;
 use bytes::Bytes;
+use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
 use context::CoreContext;
@@ -819,7 +820,8 @@ impl HgRepoContext {
             stream::iter(missing_commits.clone().into_iter())
                 .map(move |cs_id| async move {
                     let parents = blob_repo
-                        .get_changeset_parents_by_bonsai(self.ctx().clone(), cs_id)
+                        .changeset_fetcher()
+                        .get_parents(self.ctx().clone(), cs_id)
                         .await?;
                     Ok::<_, Error>((cs_id, parents))
                 })

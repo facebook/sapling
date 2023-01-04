@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
+use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::btreemap;
@@ -145,7 +146,8 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
 
     let parents = test
         .blobrepo
-        .get_changeset_parents_by_bonsai(ctx.clone(), target_cs_id)
+        .changeset_fetcher()
+        .get_parents(ctx.clone(), target_cs_id)
         .await?;
     assert_eq!(parents[0], old_target_cs_id);
 

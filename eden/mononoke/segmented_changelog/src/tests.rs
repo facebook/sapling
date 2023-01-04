@@ -20,6 +20,7 @@ use bulkops::PublicChangesetBulkFetch;
 use caching_ext::CachelibHandler;
 use caching_ext::MemcacheHandler;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::ChangesetEntry;
 use changesets::ChangesetsArc;
@@ -281,7 +282,8 @@ async fn validate_build_idmap(
     while let Some(cs_id) = ancestors.next().await {
         let cs_id = cs_id?;
         let parents = blobrepo
-            .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+            .changeset_fetcher()
+            .get_parents(ctx.clone(), cs_id)
             .await?;
         for parent in parents {
             let parent_dag_id = sc.idmap.get_dag_id(&ctx, parent).await?;

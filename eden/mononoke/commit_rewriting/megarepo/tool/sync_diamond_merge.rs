@@ -25,6 +25,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use commit_transformation::upload_commits;
 use context::CoreContext;
@@ -129,7 +130,8 @@ pub async fn do_sync_diamond_merge(
 
     let parents = small_repo
         .blob_repo
-        .get_changeset_parents_by_bonsai(ctx.clone(), small_merge_cs_id)
+        .changeset_fetcher()
+        .get_parents(ctx.clone(), small_merge_cs_id)
         .await?;
 
     let (p1, p2) = validate_parents(parents)?;

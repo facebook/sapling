@@ -48,6 +48,7 @@ use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
@@ -744,7 +745,8 @@ impl Repo {
             let cs_id = cs_id?;
             let parents = self
                 .blob_repo()
-                .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+                .changeset_fetcher()
+                .get_parents(ctx.clone(), cs_id)
                 .await?;
 
             if parents.contains(&ancestor) {

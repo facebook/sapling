@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
@@ -48,7 +47,6 @@ use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
-    get_changeset_parents_by_bonsai: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
 }
 
@@ -155,19 +153,6 @@ impl BlobRepo {
     #[inline]
     pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         &self.inner.hg_mutation_store
-    }
-
-    pub async fn get_changeset_parents_by_bonsai(
-        &self,
-        ctx: CoreContext,
-        changesetid: ChangesetId,
-    ) -> Result<Vec<ChangesetId>, Error> {
-        STATS::get_changeset_parents_by_bonsai.add_value(1);
-        let changeset = self.changesets().get(ctx, changesetid).await?;
-        let parents = changeset
-            .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
-            .parents;
-        Ok(parents)
     }
 
     // Returns the generation number of a changeset

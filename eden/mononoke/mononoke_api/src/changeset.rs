@@ -22,6 +22,7 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use chrono::DateTime;
@@ -1408,7 +1409,8 @@ impl ChangesetContext {
                         let mut parents = self
                             .repo()
                             .blob_repo()
-                            .get_changeset_parents_by_bonsai(self.ctx().clone(), changeset_id)
+                            .changeset_fetcher()
+                            .get_parents(self.ctx().clone(), changeset_id)
                             .await?;
                         if parents.len() > 1 {
                             if let Some(ancestor) = descendants_of.as_ref() {

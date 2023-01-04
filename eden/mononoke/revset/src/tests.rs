@@ -13,6 +13,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
 use futures_ext::StreamExt;
 use mononoke_types::ChangesetId;
@@ -49,7 +50,7 @@ impl ChangesetFetcher for TestChangesetFetcher {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
-        self.repo.get_changeset_parents_by_bonsai(ctx, cs_id).await
+        self.repo.changeset_fetcher().get_parents(ctx, cs_id).await
     }
 
     fn get_stats(&self) -> HashMap<String, Box<dyn Any>> {

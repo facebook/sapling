@@ -14,6 +14,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use cmdlib::helpers;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
@@ -281,7 +282,8 @@ async fn find_unmerged_commits(
 
         let parents = repo
             .blob_repo
-            .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+            .changeset_fetcher()
+            .get_parents(ctx.clone(), cs_id)
             .await?;
         for p in parents {
             if visited.insert(p) {

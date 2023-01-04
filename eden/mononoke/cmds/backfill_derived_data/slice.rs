@@ -15,6 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
 use derived_data_utils::DerivedUtils;
 use futures::stream;
@@ -59,7 +60,8 @@ async fn parents_with_generations(
     csid: ChangesetId,
 ) -> Result<Vec<(ChangesetId, Generation)>> {
     let parents = repo
-        .get_changeset_parents_by_bonsai(ctx.clone(), csid)
+        .changeset_fetcher()
+        .get_parents(ctx.clone(), csid)
         .await?;
     let parents_with_generations =
         stream::iter(parents.into_iter().map(|parent_csid| async move {

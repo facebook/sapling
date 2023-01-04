@@ -1059,8 +1059,8 @@ async fn find_where_file_was_deleted(
     path: &Option<MPath>,
 ) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
     let parents = repo
-        .as_blob_repo()
-        .get_changeset_parents_by_bonsai(ctx.clone(), commit_no_more_history)
+        .changeset_fetcher()
+        .get_parents(ctx.clone(), commit_no_more_history)
         .await?;
 
     let resolved_path_states = try_join_all(

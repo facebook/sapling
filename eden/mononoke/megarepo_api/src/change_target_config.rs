@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use changeset_fetcher::ChangesetFetcherRef;
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
 use futures::future;
@@ -382,7 +383,8 @@ impl<'a> ChangeTargetConfig<'a> {
         // Check that first parent is a target location
         let parents = repo
             .blob_repo()
-            .get_changeset_parents_by_bonsai(ctx.clone(), actual_target_location)
+            .changeset_fetcher()
+            .get_parents(ctx.clone(), actual_target_location)
             .await?;
         if parents.get(0) != Some(&expected_target_location) {
             return Err(MegarepoError::request(anyhow!(

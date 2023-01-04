@@ -20,6 +20,7 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::get_commit_sync_outcome;
@@ -374,7 +375,8 @@ impl ValidationHelper {
         paths_and_payloads: Vec<(MPath, &FilenodeDiffPayload)>,
     ) -> Result<Vec<MPath>, Error> {
         let maybe_p1 = repo
-            .get_changeset_parents_by_bonsai(ctx.clone(), cs_id.clone())
+            .changeset_fetcher()
+            .get_parents(ctx.clone(), cs_id.clone())
             .await?
             .first()
             .cloned();
@@ -572,7 +574,8 @@ impl ValidationHelpers {
     ) -> Result<FullManifestDiff, Error> {
         let cs_root_mf_id_fut = fetch_root_mf_id(&ctx, repo, cs_id.clone());
         let maybe_p1 = repo
-            .get_changeset_parents_by_bonsai(ctx.clone(), cs_id.clone())
+            .changeset_fetcher()
+            .get_parents(ctx.clone(), cs_id.clone())
             .await?
             .first()
             .cloned();
@@ -973,7 +976,8 @@ async fn validate_topological_order<'a>(
 
     let small_parents = small_repo
         .0
-        .get_changeset_parents_by_bonsai(ctx.clone(), small_cs_id.0.clone())
+        .changeset_fetcher()
+        .get_parents(ctx.clone(), small_cs_id.0.clone())
         .await?;
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =

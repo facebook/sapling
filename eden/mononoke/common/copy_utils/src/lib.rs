@@ -331,6 +331,7 @@ fn create_bonsai_changeset(
 #[cfg(test)]
 mod test {
     use blobstore::StoreLoadable;
+    use changeset_fetcher::ChangesetFetcherRef;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
@@ -988,7 +989,8 @@ mod test {
 
         assert_eq!(
             target_repo
-                .get_changeset_parents_by_bonsai(ctx.clone(), *cs_ids.get(0).unwrap())
+                .changeset_fetcher()
+                .get_parents(ctx.clone(), *cs_ids.get(0).unwrap())
                 .await?,
             vec![target_cs_id],
         );
