@@ -20,6 +20,7 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenMetadata;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::StorageLocation;
+use filestore::FilestoreConfigRef;
 use futures::stream;
 use futures::StreamExt;
 use mercurial_types::HgChangesetId;
@@ -66,7 +67,7 @@ async fn maybe_copy_file(
                 blob_repo.get_repoid(),
                 blob_repo.blobstore().clone(),
                 bubble_id,
-                blob_repo.filestore_config(),
+                *blob_repo.filestore_config(),
                 id.into(),
             )
             .await?

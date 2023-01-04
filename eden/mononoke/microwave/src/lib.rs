@@ -16,6 +16,7 @@ use changesets::ChangesetsRef;
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use filenodes::FilenodeInfo;
+use filenodes::FilenodesRef;
 use filenodes::PreparedFilenode;
 use futures::future;
 use futures::stream::Stream;

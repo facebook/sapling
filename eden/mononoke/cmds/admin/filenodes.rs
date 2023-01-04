@@ -22,6 +22,7 @@ use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
+use filenodes::FilenodesRef;
 use futures::future::try_join_all;
 use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;

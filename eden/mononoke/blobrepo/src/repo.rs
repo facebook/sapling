@@ -23,7 +23,6 @@ use changesets::Changesets;
 use changesets::ChangesetsRef;
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
-use filenodes::ArcFilenodes;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use mercurial_mutation::ArcHgMutationStore;
@@ -160,11 +159,6 @@ impl BlobRepo {
     }
 
     #[inline]
-    pub fn filenodes(&self) -> &ArcFilenodes {
-        &self.inner.filenodes
-    }
-
-    #[inline]
     pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         &self.inner.hg_mutation_store
     }
@@ -204,10 +198,6 @@ impl BlobRepo {
 
     pub fn get_blobstore(&self) -> RepoBlobstore {
         self.inner.repo_blobstore.as_ref().clone()
-    }
-
-    pub fn filestore_config(&self) -> FilestoreConfig {
-        *self.inner.filestore_config
     }
 
     pub fn get_repoid(&self) -> RepositoryId {

@@ -27,6 +27,7 @@ use cmdlib::args;
 use context::CoreContext;
 use derived_data_filenodes::generate_all_filenodes;
 use fbinit::FacebookInit;
+use filenodes::FilenodesRef;
 use futures::future::join_all;
 use futures::future::FutureExt;
 use mercurial_types::HgChangesetId;

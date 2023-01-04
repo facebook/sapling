@@ -22,6 +22,7 @@ use context::PerfCounterType;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRangeResult;
 use filenodes::FilenodeResult;
+use filenodes::FilenodesRef;
 use futures::future;
 use futures::future::try_join;
 use futures::stream;

@@ -18,6 +18,7 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfigRef;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use mercurial_types::HgFileNodeId;
@@ -81,7 +82,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     let content_id = env.content_id();
                     filestore::force_rechunk(
                         &blobrepo.get_blobstore(),
-                        blobrepo.filestore_config().clone(),
+                        *blobrepo.filestore_config(),
                         &ctx,
                         content_id,
                     )

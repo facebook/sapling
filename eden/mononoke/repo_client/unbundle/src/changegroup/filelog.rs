@@ -18,6 +18,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
+use filestore::FilestoreConfigRef;
 use futures::future::BoxFuture;
 use futures::Future;
 use futures::FutureExt;
@@ -85,7 +86,7 @@ impl UploadableHgBlob for Filelog {
         // If LFSMetaData
         let contents = match self.data {
             FilelogData::RawBytes(bytes) => {
-                UploadHgFileContents::RawBytes(bytes, repo.filestore_config())
+                UploadHgFileContents::RawBytes(bytes, *repo.filestore_config())
             }
             FilelogData::LfsMetaData(meta) => UploadHgFileContents::ContentUploaded(meta),
         };

@@ -16,6 +16,7 @@ use blobrepo_hg::CreateChangeset;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfigRef;
 use futures::compat::Future01CompatExt;
 use futures::future::BoxFuture;
 use futures::stream::FuturesUnordered;
@@ -142,7 +143,7 @@ fn upload_hg_file_entry(
 
     let upload = UploadHgFileEntry {
         upload_node_id: UploadHgNodeHash::Checked(node_id),
-        contents: UploadHgFileContents::RawBytes(contents, repo.filestore_config()),
+        contents: UploadHgFileContents::RawBytes(contents, *repo.filestore_config()),
         p1,
         p2,
     };

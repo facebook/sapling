@@ -35,6 +35,7 @@ use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::StorageLocation;
 use filestore::FetchKey;
+use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
@@ -248,7 +249,7 @@ impl HgRepoContext {
     ) -> Result<ContentMetadata, MononokeError> {
         filestore::store(
             &self.bubble_blobstore(bubble_id).await?,
-            self.blob_repo().filestore_config(),
+            *self.blob_repo().filestore_config(),
             self.ctx(),
             &StoreRequest::with_fetch_key(size, key.into()),
             data,

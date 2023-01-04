@@ -23,6 +23,7 @@ use context::CoreContext;
 use failure_ext::Compat;
 use failure_ext::FutureErrorContext;
 use failure_ext::StreamErrorContext;
+use filestore::FilestoreConfigRef;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
 use futures::FutureExt;
@@ -228,7 +229,7 @@ fn upload_entry(
             let (p1, p2) = parents.get_nodes();
             let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
             let blobstore = blobrepo.get_blobstore().boxed();
-            let filestore_config = blobrepo.filestore_config();
+            let filestore_config = *blobrepo.filestore_config();
             match (ty, is_ext) {
                 (Type::Tree, false) => {
                     let upload = UploadHgTreeEntry {

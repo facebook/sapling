@@ -18,6 +18,7 @@ use context::CoreContext;
 use ephemeral_blobstore::Bubble;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
+use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::stream;
 use futures::stream::FuturesOrdered;
@@ -616,7 +617,7 @@ impl RepoContext {
                         let change = change
                             .resolve(
                                 self.ctx(),
-                                self.blob_repo().filestore_config(),
+                                *self.blob_repo().filestore_config(),
                                 match &bubble {
                                     Some(bubble) => bubble
                                         .wrap_repo_blobstore(self.blob_repo().blobstore().clone()),

@@ -15,6 +15,7 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use context::PerfCounterType;
 use derived_data::BonsaiDerived;
+use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -216,8 +217,12 @@ impl CommitRemappingState {
     async fn save(&self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(ContentId, u64), Error> {
         let bytes = self.serialize()?;
 
-        let ((content_id, size), fut) =
-            filestore::store_bytes(repo.blobstore(), repo.filestore_config(), ctx, bytes.into());
+        let ((content_id, size), fut) = filestore::store_bytes(
+            repo.blobstore(),
+            *repo.filestore_config(),
+            ctx,
+            bytes.into(),
+        );
 
         fut.await?;
 

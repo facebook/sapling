@@ -29,6 +29,7 @@ use commit_transformation::DirectoryMultiMover;
 use commit_transformation::MultiMover;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
 use futures::future::try_join_all;
@@ -779,8 +780,12 @@ pub trait MegarepoOp {
         let linkfiles = stream::iter(links.into_iter())
             .map(Ok)
             .map_ok(|(path, content)| async {
-                let ((content_id, size), fut) =
-                    filestore::store_bytes(repo.blobstore(), repo.filestore_config(), ctx, content);
+                let ((content_id, size), fut) = filestore::store_bytes(
+                    repo.blobstore(),
+                    *repo.filestore_config(),
+                    ctx,
+                    content,
+                );
                 fut.await?;
 
                 let fc = FileChange::tracked(content_id, FileType::Symlink, size, None);

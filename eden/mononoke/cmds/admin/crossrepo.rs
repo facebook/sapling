@@ -40,6 +40,7 @@ use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfigRef;
 use futures::stream;
 use futures::try_join;
 use futures::TryFutureExt;
@@ -824,7 +825,7 @@ async fn create_file_changes(
         let size = content.len() as u64;
         let content_metadata = filestore::store(
             large_repo.blobstore(),
-            large_repo.filestore_config(),
+            *large_repo.filestore_config(),
             ctx,
             &filestore::StoreRequest::new(size),
             stream::once(async move { Ok(content) }),

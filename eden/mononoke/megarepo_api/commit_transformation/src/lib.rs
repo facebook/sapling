@@ -19,6 +19,7 @@ use blobsync::copy_content;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use filestore::FilestoreConfigRef;
 use futures::future::try_join_all;
 use futures::stream;
 use futures::StreamExt;

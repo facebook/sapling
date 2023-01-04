@@ -16,6 +16,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::stream;
 use futures::stream::Stream;
@@ -103,7 +104,7 @@ impl GitUploader for DirectUploader {
     ) -> Result<Self::Change, Error> {
         let meta_ret = if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, oid) {
             let blobstore = self.inner.blobstore();
-            let filestore_config = self.inner.filestore_config();
+            let filestore_config = *self.inner.filestore_config();
             cloned!(ctx, lfs, blobstore, path);
             Ok(lfs
                 .with(
@@ -125,7 +126,7 @@ impl GitUploader for DirectUploader {
             let (req, bstream) = git_store_request(ctx, oid, git_bytes)?;
             Ok(filestore::store(
                 self.inner.blobstore(),
-                self.inner.filestore_config(),
+                *self.inner.filestore_config(),
                 ctx,
                 &req,
                 bstream,
