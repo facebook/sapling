@@ -196,7 +196,7 @@ queries! {
         ON DUPLICATE KEY UPDATE
             p1_parent = VALUES(p1_parent),
             merge_ancestor = VALUES(merge_ancestor),
-            skip_tree_parent = VALUES(skip_tree_skew_ancestor),
+            skip_tree_parent = VALUES(skip_tree_parent),
             skip_tree_skew_ancestor = VALUES(skip_tree_skew_ancestor),
             p1_linear_skew_ancestor = VALUES(p1_linear_skew_ancestor)")
         sqlite("INSERT INTO commit_graph_edges
@@ -206,7 +206,7 @@ queries! {
         ON CONFLICT(repo_id, cs_id) DO UPDATE SET
             p1_parent = excluded.p1_parent,
             merge_ancestor = excluded.merge_ancestor,
-            skip_tree_parent = excluded.skip_tree_skew_ancestor,
+            skip_tree_parent = excluded.skip_tree_parent,
             skip_tree_skew_ancestor = excluded.skip_tree_skew_ancestor,
             p1_linear_skew_ancestor = excluded.p1_linear_skew_ancestor")
     }
@@ -486,11 +486,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         self.repo_id
     }
 
-    async fn add_many(
-        &self,
-        _ctx: &CoreContext,
-        many_edges: Vec1<ChangesetEdges>,
-    ) -> Result<usize> {
+    async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
         // We need to be careful because there might be dependencies among the edges
         // Part 1 - Add all nodes without any edges, so we generate ids for them
         let transaction = self.write_connection.start_transaction().await?;
@@ -526,6 +522,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         // using the same transaction
         let mut need_ids = HashSet::new();
         for edges in &many_edges {
+            need_ids.insert(edges.node.cs_id);
             edges.merge_ancestor.map(|u| need_ids.insert(u.cs_id));
             edges.skip_tree_parent.map(|u| need_ids.insert(u.cs_id));
             edges
@@ -551,16 +548,13 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             (transaction, HashMap::new())
         };
         // Part 3 - Fix edges on all changesets we previously inserted
-        let get_id = |maybe_node: Option<&ChangesetNode>| {
-            maybe_node
-                .map(|n| {
-                    cs_to_ids
-                        .get(&n.cs_id)
-                        .copied()
-                        .with_context(|| format!("Failed to find id for changeset {}", n.cs_id))
-                })
-                .transpose()
+        let get_id = |node: &ChangesetNode| {
+            cs_to_ids
+                .get(&node.cs_id)
+                .copied()
+                .with_context(|| format!("Failed to fetch id for changeset {}", node.cs_id))
         };
+        let maybe_get_id = |maybe_node: Option<&ChangesetNode>| maybe_node.map(get_id).transpose();
         let rows = match many_edges
             .iter()
             .map(|e| {
@@ -571,11 +565,11 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     e.node.skip_tree_depth,
                     e.node.p1_linear_depth,
                     e.parents.len(),
-                    get_id(e.parents.first())?,
-                    get_id(e.merge_ancestor.as_ref())?,
-                    get_id(e.skip_tree_parent.as_ref())?,
-                    get_id(e.skip_tree_skew_ancestor.as_ref())?,
-                    get_id(e.p1_linear_skew_ancestor.as_ref())?,
+                    maybe_get_id(e.parents.first())?,
+                    maybe_get_id(e.merge_ancestor.as_ref())?,
+                    maybe_get_id(e.skip_tree_parent.as_ref())?,
+                    maybe_get_id(e.skip_tree_skew_ancestor.as_ref())?,
+                    maybe_get_id(e.p1_linear_skew_ancestor.as_ref())?,
                 ))
             })
             .collect::<Result<Vec<_>>>()
@@ -595,6 +589,29 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 .as_slice(),
         )
         .await?;
+
+        let merge_parent_rows = many_edges
+            .iter()
+            .flat_map(|edges| {
+                edges
+                    .parents
+                    .iter()
+                    .enumerate()
+                    .skip(1)
+                    .map(|(parent_num, node)| Ok((get_id(&edges.node)?, parent_num, get_id(node)?)))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let (transaction, result) = InsertMergeParents::query_with_transaction(
+            transaction,
+            merge_parent_rows
+                .iter()
+                .map(|(a, b, c)| (a, b, c))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+
         // All good, nodes were added and correctly updated, let's commit.
         transaction.commit().await?;
 
@@ -655,14 +672,13 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                let ref_merge_parent_rows = merge_parent_rows
-                    .iter()
-                    .map(|(id, parent_num, parent_id)| (id, parent_num, parent_id))
-                    .collect::<Vec<_>>();
-
                 let (transaction, result) = InsertMergeParents::query_with_transaction(
                     transaction,
-                    ref_merge_parent_rows.as_slice(),
+                    merge_parent_rows
+                        .iter()
+                        .map(|(a, b, c)| (a, b, c))
+                        .collect::<Vec<_>>()
+                        .as_slice(),
                 )
                 .await?;
 
@@ -761,14 +777,9 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         .map(|(cs_id,)| cs_id)
         .collect::<Vec<_>>();
 
-        match fetched_ids.len() {
-            0 => Ok(ChangesetIdsResolvedFromPrefix::NoMatch),
-            1 => Ok(ChangesetIdsResolvedFromPrefix::Single(fetched_ids[0])),
-            l if l <= limit => Ok(ChangesetIdsResolvedFromPrefix::Multiple(fetched_ids)),
-            _ => Ok(ChangesetIdsResolvedFromPrefix::TooMany({
-                fetched_ids.pop();
-                fetched_ids
-            })),
-        }
+        Ok(ChangesetIdsResolvedFromPrefix::from_vec_and_limit(
+            fetched_ids,
+            limit,
+        ))
     }
 }

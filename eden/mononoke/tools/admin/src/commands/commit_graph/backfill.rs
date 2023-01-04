@@ -11,16 +11,15 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use clap::Args;
-use commit_graph::storage::CommitGraphStorage;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
-use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -30,12 +29,25 @@ use rendezvous::RendezVousOptions;
 use repo_identity::RepoIdentityRef;
 use sql_commit_graph_storage::SqlCommitGraphStorage;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
-use vec1::Vec1;
 
 use super::Repo;
 
 #[derive(Args)]
-pub struct BackfillArgs {}
+pub struct BackfillArgs {
+    /// Which id to start backfilling from. Use 0 if nothing is backfilled.
+    #[clap(long)]
+    start_id: u64,
+
+    /// The maximum number of changeset edges allowed to be stored in
+    /// memory in the commit graph.
+    #[clap(long)]
+    max_in_memory_size: usize,
+
+    /// The maximum number of changesets in a chunk fetched from
+    /// the changesets table.
+    #[clap(long)]
+    chunk_size: usize,
+}
 
 // We need to pretend all commits are public because we want to backfill all
 struct FakeAllCommitsPublic;
@@ -86,57 +98,52 @@ impl Phases for FakeAllCommitsPublic {
 
 async fn backfill_impl(
     ctx: &CoreContext,
-    commit_graph_in_memory: &CommitGraph,
-    in_memory_storage: &InMemoryCommitGraphStorage,
-    sql_storage: &SqlCommitGraphStorage,
+    commit_graph: &CommitGraph,
+    buffered_sql_storage: &BufferedCommitGraphStorage<SqlCommitGraphStorage>,
     repo: &Repo,
     args: BackfillArgs,
 ) -> Result<()> {
-    let BackfillArgs {} = args;
     let fetcher =
         PublicChangesetBulkFetch::new(repo.changesets.clone(), Arc::new(FakeAllCommitsPublic))
             .with_read_from_master(true);
+
     fetcher
-        .fetch_bounded(ctx, Direction::OldestFirst, Some((0, u64::MAX)))
-        .try_chunks(5_000)
+        .fetch_bounded_with_id(ctx, Direction::OldestFirst, Some((args.start_id, u64::MAX)))
+        .try_chunks(args.chunk_size)
         .map(|r| r.context("Error chunking"))
         .try_for_each(|entries| async move {
             println!("Doing chunk with {} entries", entries.len());
+
+            if let (Some(first_entry), Some(last_entry)) = (entries.first(), entries.last()) {
+                println!(
+                    "Chunk starts at id {} and ends at id {}",
+                    first_entry.1, last_entry.1
+                );
+            }
+
             let (stats, result) = async move {
-                for entry in &entries {
-                    commit_graph_in_memory
+                for (entry, _) in &entries {
+                    commit_graph
                         .add(ctx, entry.cs_id, entry.parents.clone().into())
                         .await?;
                 }
-                let mut all_edges = in_memory_storage
-                    .fetch_many_edges_required(
-                        ctx,
-                        &entries.iter().map(|e| e.cs_id).collect::<Vec<_>>(),
-                        None,
-                    )
-                    .await?;
-                entries
-                    .into_iter()
-                    .map(|entry| {
-                        all_edges
-                            .remove(&entry.cs_id)
-                            .with_context(|| format!("Missing changeset {}", entry.cs_id))
-                    })
-                    .collect::<Result<Vec<_>>>()
+                Ok::<(), anyhow::Error>(())
             }
             .timed()
             .await;
+
             println!("Done in memory in {:?}", stats);
-            let edges_to_add = result?;
-            if let Ok(edges_to_add) = Vec1::try_from_vec(edges_to_add) {
-                let (stats, result) = sql_storage.add_many(ctx, edges_to_add).timed().await;
-                println!("Written to db in {:?}", stats);
-                result?;
-            }
+            result?;
+
+            let (stats, result) = buffered_sql_storage.flush(ctx).timed().await;
+            println!("Written to db in {:?}", stats);
+            result?;
+
             Ok(())
         })
         .await?;
-    println!("Backfilled everyting starting at id 0");
+
+    println!("Backfilled everyting starting at id {}", args.start_id);
     Ok(())
 }
 
@@ -157,15 +164,10 @@ pub(super) async fn backfill(
             },
             repo.repo_identity().id(),
         );
-    let in_memory_storage = Arc::new(InMemoryCommitGraphStorage::new(repo.repo_identity().id()));
-    let commit_graph = CommitGraph::new(in_memory_storage.clone());
-    backfill_impl(
-        ctx,
-        &commit_graph,
-        &in_memory_storage,
-        &sql_storage,
-        repo,
-        args,
-    )
-    .await
+    let buffered_sql_storage = Arc::new(BufferedCommitGraphStorage::new(
+        sql_storage,
+        args.max_in_memory_size,
+    ));
+    let commit_graph = CommitGraph::new(buffered_sql_storage.clone());
+    backfill_impl(ctx, &commit_graph, &buffered_sql_storage, repo, args).await
 }

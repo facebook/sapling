@@ -98,6 +98,29 @@ pub enum ChangesetIdsResolvedFromPrefix {
     NoMatch,
 }
 
+impl ChangesetIdsResolvedFromPrefix {
+    pub fn from_vec_and_limit(mut cs_ids: Vec<ChangesetId>, limit: usize) -> Self {
+        match cs_ids.len() {
+            0 => Self::NoMatch,
+            1 => Self::Single(cs_ids[0]),
+            l if l <= limit => Self::Multiple(cs_ids),
+            _ => Self::TooMany({
+                cs_ids.truncate(limit);
+                cs_ids
+            }),
+        }
+    }
+
+    pub fn to_vec(self) -> Vec<ChangesetId> {
+        match self {
+            Self::Single(cs_id) => vec![cs_id],
+            Self::Multiple(cs_ids) => cs_ids,
+            Self::TooMany(cs_ids) => cs_ids,
+            Self::NoMatch => vec![],
+        }
+    }
+}
+
 /// An identifier for file contents in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentId(Blake2);

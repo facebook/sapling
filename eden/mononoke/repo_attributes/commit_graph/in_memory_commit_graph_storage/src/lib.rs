@@ -34,6 +34,21 @@ impl InMemoryCommitGraphStorage {
             changesets: Default::default(),
         }
     }
+
+    pub fn drain(&self) -> Vec<ChangesetEdges> {
+        let mut changesets = self.changesets.write();
+        let many_edges = changesets.iter().map(|(_, edges)| edges).cloned().collect();
+        changesets.clear();
+        many_edges
+    }
+
+    pub fn len(&self) -> usize {
+        self.changesets.read().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.changesets.read().is_empty()
+    }
 }
 
 #[async_trait]
@@ -96,17 +111,12 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         let (min, max) = (cs_prefix.min_bound(), cs_prefix.max_bound());
         let matches: Vec<_> = changesets
             .range(min..=max)
-            .take(limit)
+            .take(limit.saturating_add(1))
             .map(|(cs_id, _)| *cs_id)
             .collect();
-        match matches.as_slice() {
-            [] => Ok(ChangesetIdsResolvedFromPrefix::NoMatch),
-            [cs_id] => Ok(ChangesetIdsResolvedFromPrefix::Single(*cs_id)),
-            [.., cs_id] if changesets.range(*cs_id..=max).nth(2).is_none() => {
-                Ok(ChangesetIdsResolvedFromPrefix::Multiple(matches))
-            }
-            _ => Ok(ChangesetIdsResolvedFromPrefix::TooMany(matches)),
-        }
+        Ok(ChangesetIdsResolvedFromPrefix::from_vec_and_limit(
+            matches, limit,
+        ))
     }
 }
 
