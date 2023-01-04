@@ -11,9 +11,11 @@
 #![allow(unused)]
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph::edges::ChangesetEdges;
@@ -36,6 +38,8 @@ use sql::Connection;
 use sql::SqlConnections;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use vec1::vec1;
+use vec1::Vec1;
 
 #[cfg(test)]
 mod tests;
@@ -145,6 +149,66 @@ queries! {
             (SELECT cs.id FROM commit_graph_edges cs WHERE cs.repo_id = {repo_id} AND cs.cs_id = {p1_linear_skew_ancestor})
         )
         "
+    }
+
+    write InsertChangesetsNoEdges(values: (
+        repo_id: RepositoryId,
+        cs_id: ChangesetId,
+        gen: u64,
+        skip_tree_depth: u64,
+        p1_linear_depth: u64,
+        parent_count: usize,
+    )) {
+        insert_or_ignore,
+        "
+        {insert_or_ignore} INTO commit_graph_edges (
+            repo_id,
+            cs_id,
+            gen,
+            skip_tree_depth,
+            p1_linear_depth,
+            parent_count
+        ) VALUES {values}
+        "
+    }
+
+    // Fix edges for changesets previously added with InsertChangesetsNoEdges
+    write FixEdges(values: (
+        repo_id: RepositoryId,
+        cs_id: ChangesetId,
+        // We need the depths otherwise we get an error on sqlite. Though this won't be used because we
+        // always replace the edges only.
+        gen: u64,
+        skip_tree_depth: u64,
+        p1_linear_depth: u64,
+        parent_count: usize,
+        p1_parent: Option<u64>,
+        merge_ancestor: Option<u64>,
+        skip_tree_parent: Option<u64>,
+        skip_tree_skew_ancestor: Option<u64>,
+        p1_linear_skew_ancestor: Option<u64>
+    )) {
+        none,
+        mysql("INSERT INTO commit_graph_edges
+            (repo_id, cs_id, gen, skip_tree_depth, p1_linear_depth, parent_count,
+                p1_parent, merge_ancestor, skip_tree_parent, skip_tree_skew_ancestor, p1_linear_skew_ancestor)
+        VALUES {values}
+        ON DUPLICATE KEY UPDATE
+            p1_parent = VALUES(p1_parent),
+            merge_ancestor = VALUES(merge_ancestor),
+            skip_tree_parent = VALUES(skip_tree_skew_ancestor),
+            skip_tree_skew_ancestor = VALUES(skip_tree_skew_ancestor),
+            p1_linear_skew_ancestor = VALUES(p1_linear_skew_ancestor)")
+        sqlite("INSERT INTO commit_graph_edges
+            (repo_id, cs_id, gen, skip_tree_depth, p1_linear_depth, parent_count,
+                p1_parent, merge_ancestor, skip_tree_parent, skip_tree_skew_ancestor, p1_linear_skew_ancestor)
+        VALUES {values}
+        ON CONFLICT(repo_id, cs_id) DO UPDATE SET
+            p1_parent = excluded.p1_parent,
+            merge_ancestor = excluded.merge_ancestor,
+            skip_tree_parent = excluded.skip_tree_skew_ancestor,
+            skip_tree_skew_ancestor = excluded.skip_tree_skew_ancestor,
+            p1_linear_skew_ancestor = excluded.p1_linear_skew_ancestor")
     }
 
     read SelectManyIds(repo_id: RepositoryId, >list cs_ids: ChangesetId) -> (ChangesetId, u64) {
@@ -422,7 +486,122 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         self.repo_id
     }
 
-    async fn add(&self, _ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
+    async fn add_many(
+        &self,
+        _ctx: &CoreContext,
+        many_edges: Vec1<ChangesetEdges>,
+    ) -> Result<usize> {
+        // We need to be careful because there might be dependencies among the edges
+        // Part 1 - Add all nodes without any edges, so we generate ids for them
+        let transaction = self.write_connection.start_transaction().await?;
+        let cs_no_edges = many_edges
+            .iter()
+            .map(|e| {
+                (
+                    self.repo_id,
+                    e.node.cs_id,
+                    e.node.generation.value(),
+                    e.node.skip_tree_depth,
+                    e.node.p1_linear_depth,
+                    e.parents.len(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let (transaction, result) = InsertChangesetsNoEdges::query_with_transaction(
+            transaction,
+            cs_no_edges
+                .iter()
+                // This does &(TypeA, TypeB, ...) -> (&TypeA, &TypeB, ...)
+                .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+        let modified = result.affected_rows();
+        if modified == 0 {
+            // Early return, everything is already stored
+            return Ok(0);
+        }
+        // Part 2 - Collect all changesets we need the ids from, and query them
+        // using the same transaction
+        let mut need_ids = HashSet::new();
+        for edges in &many_edges {
+            edges.merge_ancestor.map(|u| need_ids.insert(u.cs_id));
+            edges.skip_tree_parent.map(|u| need_ids.insert(u.cs_id));
+            edges
+                .skip_tree_skew_ancestor
+                .map(|u| need_ids.insert(u.cs_id));
+            edges
+                .p1_linear_skew_ancestor
+                .map(|u| need_ids.insert(u.cs_id));
+            for u in &edges.parents {
+                need_ids.insert(u.cs_id);
+            }
+        }
+        let (transaction, cs_to_ids) = if !need_ids.is_empty() {
+            // Use the same transaction to make sure we see the new values
+            let (transaction, result) = SelectManyIds::query_with_transaction(
+                transaction,
+                &self.repo_id,
+                need_ids.into_iter().collect::<Vec<_>>().as_slice(),
+            )
+            .await?;
+            (transaction, result.into_iter().collect())
+        } else {
+            (transaction, HashMap::new())
+        };
+        // Part 3 - Fix edges on all changesets we previously inserted
+        let get_id = |maybe_node: Option<&ChangesetNode>| {
+            maybe_node
+                .map(|n| {
+                    cs_to_ids
+                        .get(&n.cs_id)
+                        .copied()
+                        .with_context(|| format!("Failed to find id for changeset {}", n.cs_id))
+                })
+                .transpose()
+        };
+        let rows = match many_edges
+            .iter()
+            .map(|e| {
+                Ok((
+                    self.repo_id,
+                    e.node.cs_id,
+                    e.node.generation.value(),
+                    e.node.skip_tree_depth,
+                    e.node.p1_linear_depth,
+                    e.parents.len(),
+                    get_id(e.parents.first())?,
+                    get_id(e.merge_ancestor.as_ref())?,
+                    get_id(e.skip_tree_parent.as_ref())?,
+                    get_id(e.skip_tree_skew_ancestor.as_ref())?,
+                    get_id(e.p1_linear_skew_ancestor.as_ref())?,
+                ))
+            })
+            .collect::<Result<Vec<_>>>()
+        {
+            Ok(rows) => rows,
+            Err(err) => {
+                transaction.rollback().await?;
+                return Err(err);
+            }
+        };
+
+        let (transaction, _) = FixEdges::query_with_transaction(
+            transaction,
+            rows.iter()
+                .map(|(a, b, c, d, e, f, g, h, i, j, k)| (a, b, c, d, e, f, g, h, i, j, k))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+        // All good, nodes were added and correctly updated, let's commit.
+        transaction.commit().await?;
+
+        Ok(modified.try_into()?)
+    }
+
+    async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
         let merge_parent_cs_id_to_id: HashMap<ChangesetId, u64> = if edges.parents.len() >= 2 {
             SelectManyIds::query(
                 &self.read_connection.conn,

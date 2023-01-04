@@ -39,7 +39,9 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
+in_memory_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/in_memory_commit_graph_storage" }
 itertools = "0.10.3"
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -74,6 +76,7 @@ strum_macros = "0.21"
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.6", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -19,6 +19,7 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use parking_lot::RwLock;
+use vec1::Vec1;
 
 /// In-memory commit graph storage.
 pub struct InMemoryCommitGraphStorage {
@@ -44,6 +45,21 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
     async fn add(&self, _ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
         let cs_id = edges.node.cs_id;
         Ok(self.changesets.write().insert(cs_id, edges).is_none())
+    }
+
+    async fn add_many(
+        &self,
+        _ctx: &CoreContext,
+        many_edges: Vec1<ChangesetEdges>,
+    ) -> Result<usize> {
+        let mut changesets = self.changesets.write();
+        let mut added = 0;
+        for edges in many_edges {
+            if changesets.insert(edges.node.cs_id, edges).is_none() {
+                added += 1;
+            }
+        }
+        Ok(added)
     }
 
     async fn fetch_edges(

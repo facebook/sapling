@@ -20,6 +20,7 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
+use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;
 
@@ -34,6 +35,9 @@ pub trait CommitGraphStorage: Send + Sync {
     /// Returns true if a new changeset was inserted, or false if the
     /// changeset already existed.
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool>;
+
+    /// Add many changesets at once. Used for low level stuff like backfilling.
+    async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize>;
 
     /// Returns the changeset graph edges for this changeset.
     async fn fetch_edges(
