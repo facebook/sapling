@@ -59,6 +59,7 @@ use changesets_impl::SqlChangesetsBuilder;
 use cloned::cloned;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
+use commit_graph_compat::ChangesetsCommitGraphCompat;
 use context::CoreContext;
 use context::SessionContainer;
 use cross_repo_sync::create_commit_syncer_lease;
@@ -654,21 +655,31 @@ impl RepoFactory {
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
+        commit_graph: &ArcCommitGraph,
     ) -> Result<ArcChangesets> {
         let builder = self
             .open::<SqlChangesetsBuilder>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::Changesets)?;
         let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
-        if let Some(pool) = self.maybe_volatile_pool("changesets")? {
-            Ok(Arc::new(CachingChangesets::new(
-                self.env.fb,
-                Arc::new(changesets),
-                pool,
-            )))
-        } else {
-            Ok(Arc::new(changesets))
-        }
+
+        let possibly_cached_changesets: ArcChangesets =
+            if let Some(pool) = self.maybe_volatile_pool("changesets")? {
+                Arc::new(CachingChangesets::new(
+                    self.env.fb,
+                    Arc::new(changesets),
+                    pool,
+                ))
+            } else {
+                Arc::new(changesets)
+            };
+
+        Ok(Arc::new(ChangesetsCommitGraphCompat::new(
+            self.env.fb,
+            possibly_cached_changesets,
+            commit_graph.clone(),
+            repo_identity.name().to_string(),
+        )?))
     }
 
     pub fn changeset_fetcher(

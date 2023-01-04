@@ -25,6 +25,7 @@ changesets = { version = "0.1.0", path = "../changesets" }
 changesets_impl = { version = "0.1.0", path = "../changesets/changesets_impl" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
+commit_graph_compat = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_compat" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
