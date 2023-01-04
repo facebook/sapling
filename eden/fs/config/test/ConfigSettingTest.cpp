@@ -52,7 +52,7 @@ TEST_F(ConfigSettingTest, configSetStringValue) {
   auto dirKey = "dirKey"sv;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  std::map<std::string, std::string> attrMap;
+  ConfigVariables attrMap;
   auto rslt = testDir.setStringValue(
       systemConfigDir_.view(), attrMap, ConfigSourceType::UserConfig);
   rslt.value();
@@ -84,7 +84,7 @@ TEST_F(ConfigSettingTest, configSetAssign) {
     // Setup the copy source - sufficiently different
     ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-    std::map<std::string, std::string> attrMap;
+    ConfigVariables attrMap;
     auto rslt = testDir.setStringValue(
         systemConfigDir_.view(), attrMap, ConfigSourceType::UserConfig);
     EXPECT_EQ(rslt.hasError(), false);
@@ -109,7 +109,7 @@ TEST_F(ConfigSettingTest, configSetInvalidStringValue) {
   auto dirKey = "dirKey"sv;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  std::map<std::string, std::string> attrMap;
+  ConfigVariables attrMap;
   auto rslt = testDir.setStringValue(
       systemConfigDir_.view(), attrMap, ConfigSourceType::SystemConfig);
   EXPECT_EQ(rslt.hasError(), false);
@@ -133,7 +133,7 @@ TEST_F(ConfigSettingTest, configSetEnvSubTest) {
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
 
   std::string_view userConfigDir{"${HOME}/test_dir"};
-  std::map<std::string, std::string> attrMap;
+  ConfigVariables attrMap;
   attrMap["HOME"] = canonicalPath("/home/bob").asString();
   attrMap["USER"] = "bob";
   auto rslt = testDir.setStringValue(
@@ -287,7 +287,7 @@ void checkSet(
     ExpectedType expected,
     std::string_view str) {
   SCOPED_TRACE(str);
-  std::map<std::string, std::string> attrMap;
+  ConfigVariables attrMap;
   auto setResult =
       setting.setStringValue(str, attrMap, ConfigSourceType::UserConfig);
   ASSERT_FALSE(setResult.hasError()) << setResult.error();
@@ -304,7 +304,7 @@ void checkSetError(
     std::string_view expectedError,
     std::string_view str) {
   SCOPED_TRACE(str);
-  std::map<std::string, std::string> attrMap;
+  ConfigVariables attrMap;
   auto setResult =
       setting.setStringValue(str, attrMap, ConfigSourceType::UserConfig);
   ASSERT_TRUE(setResult.hasError());

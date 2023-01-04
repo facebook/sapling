@@ -23,6 +23,7 @@
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/config/MountProtocol.h"
+#include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -48,10 +49,10 @@ class EdenConfig : private ConfigSettingManager {
    */
   explicit EdenConfig(
       ConfigVariables substitutions,
-      AbsolutePath userHomePath,
-      AbsolutePath userConfigPath,
-      AbsolutePath systemConfigDir,
-      AbsolutePath systemConfigPath);
+      AbsolutePathPiece userHomePath,
+      AbsolutePathPiece systemConfigDir,
+      std::shared_ptr<ConfigSource> systemConfigSource,
+      std::shared_ptr<ConfigSource> userConfigSource);
 
   /**
    * EdenConfig is heap-allocated and not copyable or moveable in general. This
@@ -70,43 +71,10 @@ class EdenConfig : private ConfigSettingManager {
   static std::shared_ptr<EdenConfig> createTestEdenConfig();
 
   /**
-   * Update EdenConfig by loading the system configuration.
-   */
-  void loadSystemConfig();
-
-  /**
-   * Update EdenConfig by loading the user configuration.
-   */
-  void loadUserConfig();
-
-  /**
-   * Load the configuration based on the passed path. The configuation source
-   * identifies whether the config file is a system or user config file and
-   * apply setting over-rides appropriately. The passed configFile stat is
-   * updated with the config files fstat results.
-   */
-  void loadConfig(
-      AbsolutePathPiece path,
-      ConfigSourceType configSourceType,
-      std::optional<FileStat>& configFileStat);
-
-  /**
    * Return the config data as a EdenConfigData structure that can be
    * thrift-serialized.
    */
   EdenConfigData toThriftConfigData() const;
-
-  /** Determine if user config has changed, fstat userConfigFile.*/
-  FileChangeReason hasUserConfigFileChanged() const;
-
-  /** Determine if user config has changed, fstat systemConfigFile.*/
-  FileChangeReason hasSystemConfigFileChanged() const;
-
-  /** Get the user config path. Default "userHomePath/.edenrc" */
-  const AbsolutePath& getUserConfigPath() const;
-
-  /** Get the system config path. Default "/etc/eden/edenfs.rc" */
-  const AbsolutePath& getSystemConfigPath() const;
 
   /** Get the path to client certificate. */
   const std::optional<AbsolutePath> getClientCertificate() const;
@@ -128,6 +96,19 @@ class EdenConfig : private ConfigSettingManager {
    */
   std::optional<std::string> getValueByFullKey(
       std::string_view configKey) const;
+
+  /**
+   * Unconditionally apply all ConfigSources to the ConfigSettings.
+   */
+  void reload();
+
+  /**
+   * If any ConfigSources are stale, clones this EdenConfig and applies the
+   * updated sources to the ConfigSettings.
+   *
+   * If no sources have changed, returns nullptr.
+   */
+  std::shared_ptr<const EdenConfig> maybeReload() const;
 
  private:
   /**
@@ -154,11 +135,9 @@ class EdenConfig : private ConfigSettingManager {
   std::map<std::string, std::map<std::string, ConfigSettingBase*>> configMap_;
 
   std::shared_ptr<ConfigVariables> substitutions_;
-  AbsolutePath userConfigPath_;
-  AbsolutePath systemConfigPath_;
 
-  std::optional<FileStat> systemConfigFileStat_;
-  std::optional<FileStat> userConfigFileStat_;
+  std::shared_ptr<ConfigSource> systemConfigSource_;
+  std::shared_ptr<ConfigSource> userConfigSource_;
 
   /*
    * Settings follow. Their initialization registers themselves with the

@@ -132,13 +132,11 @@ TEST_F(EdenConfigTest, defaultTest) {
   auto edenConfig = std::make_shared<EdenConfig>(
       ConfigVariables{},
       testHomeDir_,
-      defaultUserConfigPath_,
       systemConfigDir,
-      defaultSystemConfigPath_);
-
-  // Config path
-  EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
-  EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
+      std::make_shared<TomlFileConfigSource>(
+          defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
   // Configuration
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
@@ -161,9 +159,11 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   auto edenConfig = std::make_shared<EdenConfig>(
       std::move(substitutions),
       testHomeDir_,
-      userConfigPath,
       systemConfigDir,
-      systemConfigPath);
+      std::make_shared<TomlFileConfigSource>(
+          systemConfigPath, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          userConfigPath, ConfigSourceType::UserConfig));
 
   AbsolutePath ignoreFile = canonicalPath("/home/bob/alternativeIgnore");
   AbsolutePath systemIgnoreFile = canonicalPath("/etc/eden/fix/systemIgnore");
@@ -209,9 +209,11 @@ TEST_F(EdenConfigTest, cloneTest) {
     auto edenConfig = std::make_shared<EdenConfig>(
         std::move(substitutions),
         testHomeDir_,
-        defaultUserConfigPath_,
         systemConfigDir,
-        defaultSystemConfigPath_);
+        std::make_shared<TomlFileConfigSource>(
+            defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+        std::make_shared<TomlFileConfigSource>(
+            defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
     // Configuration
     edenConfig->userIgnoreFile.setValue(
@@ -223,9 +225,6 @@ TEST_F(EdenConfigTest, cloneTest) {
         {clientCertificate}, ConfigSourceType::UserConfig);
     edenConfig->useMononoke.setValue(useMononoke, ConfigSourceType::UserConfig);
 
-    EXPECT_EQ(edenConfig->getUserConfigPath(), defaultUserConfigPath_);
-    EXPECT_EQ(edenConfig->getSystemConfigPath(), defaultSystemConfigPath_);
-
     EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), ignoreFile);
     EXPECT_EQ(edenConfig->systemIgnoreFile.getValue(), systemIgnoreFile);
     EXPECT_EQ(edenConfig->edenDir.getValue(), edenDir);
@@ -234,9 +233,6 @@ TEST_F(EdenConfigTest, cloneTest) {
 
     configCopy = std::make_shared<EdenConfig>(*edenConfig);
   }
-
-  EXPECT_EQ(configCopy->getUserConfigPath(), defaultUserConfigPath_);
-  EXPECT_EQ(configCopy->getSystemConfigPath(), defaultSystemConfigPath_);
 
   EXPECT_EQ(configCopy->userIgnoreFile.getValue(), ignoreFile);
   EXPECT_EQ(configCopy->systemIgnoreFile.getValue(), systemIgnoreFile);
@@ -262,9 +258,11 @@ TEST_F(EdenConfigTest, clearAllTest) {
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      defaultUserConfigPath_,
       systemConfigDir,
-      defaultSystemConfigPath_);
+      std::make_shared<TomlFileConfigSource>(
+          defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
   AbsolutePath fromUserConfigPath =
       defaultUserConfigPath_ + "FROM_USER_CONFIG"_pc;
@@ -316,9 +314,11 @@ TEST_F(EdenConfigTest, overRideNotAllowedTest) {
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      defaultUserConfigPath_,
       systemConfigDir,
-      defaultSystemConfigPath_);
+      std::make_shared<TomlFileConfigSource>(
+          defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
   // Check default (starting point)
   EXPECT_EQ(
@@ -348,28 +348,19 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       getDefaultVariables(),
       testHomeDir_,
       testPathMap_[simpleOverRideTest_].second,
-      testPathMap_[simpleOverRideTest_].first,
-      testPathMap_[simpleOverRideTest_].first);
+      std::make_shared<TomlFileConfigSource>(
+          testPathMap_[simpleOverRideTest_].first,
+          ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          testPathMap_[simpleOverRideTest_].second,
+          ConfigSourceType::UserConfig));
 
-  edenConfig->loadSystemConfig();
+  edenConfig->reload();
 
   auto clientConfigPath = rootTestDir_ + clientCertificatePath_;
 
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(
-      edenConfig->userIgnoreFile.getValue(),
-      canonicalPath("/should_be_over_ridden"));
-  EXPECT_EQ(
-      edenConfig->systemIgnoreFile.getValue(),
-      canonicalPath("/etc/eden/systemCustomIgnore"));
-  EXPECT_EQ(
-      edenConfig->getClientCertificate(),
-      normalizeBestEffort(clientConfigPath.view()));
-  EXPECT_EQ(edenConfig->useMononoke.getValue(), true);
 
-  edenConfig->loadUserConfig();
-
-  EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
   EXPECT_EQ(
       edenConfig->userIgnoreFile.getValue(),
       canonicalPath("/home/bob/bob/userCustomIgnore"));
@@ -390,12 +381,13 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      userConfigPath,
       systemConfigDir,
-      systemConfigPath);
+      std::make_shared<TomlFileConfigSource>(
+          systemConfigPath, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          userConfigPath, ConfigSourceType::UserConfig));
 
-  edenConfig->loadSystemConfig();
-  edenConfig->loadUserConfig();
+  edenConfig->reload();
 
   // Check default configuration is set
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
@@ -421,10 +413,13 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
     auto config = EdenConfig{
         std::move(substitutions),
         canonicalPath("/testhomedir"),
-        userConfigPath,
         systemConfigDir,
-        systemConfigDir + "system-edenrc"_pc};
-    config.loadUserConfig();
+        std::make_shared<TomlFileConfigSource>(
+            systemConfigDir + "system-edenrc"_pc,
+            ConfigSourceType::SystemConfig),
+        std::make_shared<TomlFileConfigSource>(
+            userConfigPath, ConfigSourceType::UserConfig)};
+    config.reload();
     return EdenConfig{config};
   };
 
@@ -479,20 +474,13 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
 
 TEST_F(EdenConfigTest, missing_config_files_never_change) {
   auto userConfigDir = rootTestDir_ + "user-home"_pc;
-  auto systemConfigDir = rootTestDir_ + "etc-eden"_pc;
   auto userConfigPath = userConfigDir + ".edenrc"_pc;
-  auto systemConfigPath = systemConfigDir + "edenrc.toml"_pc;
 
-  ensureDirectoryExists(systemConfigDir);
-
-  EdenConfig config{
-      ConfigVariables{},
-      userConfigDir,
-      userConfigPath,
-      systemConfigDir,
-      systemConfigPath};
-  config.loadUserConfig();
-  EXPECT_EQ(FileChangeReason::NONE, config.hasUserConfigFileChanged().reason);
+  TomlFileConfigSource source{userConfigPath, ConfigSourceType::UserConfig};
+  EXPECT_EQ(FileChangeReason::NONE, source.shouldReload());
+  // shouldReload updates its internal state, so check that it hasn't changed
+  // its mind.
+  EXPECT_EQ(FileChangeReason::NONE, source.shouldReload());
 }
 
 TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
@@ -509,9 +497,11 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
   auto edenConfig = std::make_shared<EdenConfig>(
       ConfigVariables{},
       testHomeDir_,
-      defaultUserConfigPath_,
       systemConfigDir,
-      defaultSystemConfigPath_);
+      std::make_shared<TomlFileConfigSource>(
+          defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
   edenConfig->clientCertificateLocations.setValue(
       {clientCertificate1, clientCertificate2}, ConfigSourceType::UserConfig);
@@ -546,9 +536,11 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   auto edenConfig = std::make_shared<EdenConfig>(
       getDefaultVariables(),
       testHomeDir_,
-      defaultUserConfigPath_,
       systemConfigDir,
-      defaultSystemConfigPath_);
+      std::make_shared<TomlFileConfigSource>(
+          defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
   // Without clientCertificateLocations set clientCertificate should be used.
   edenConfig->clientCertificate.setValue(
@@ -571,9 +563,11 @@ TEST_F(EdenConfigTest, getValueByFullKey) {
   auto edenConfig = std::make_shared<EdenConfig>(
       ConfigVariables{},
       testHomeDir_,
-      defaultUserConfigPath_,
       canonicalPath("/etc/eden"),
-      defaultSystemConfigPath_);
+      std::make_shared<TomlFileConfigSource>(
+          defaultSystemConfigPath_, ConfigSourceType::SystemConfig),
+      std::make_shared<TomlFileConfigSource>(
+          defaultUserConfigPath_, ConfigSourceType::UserConfig));
 
   EXPECT_EQ(edenConfig->getValueByFullKey("mononoke:use-mononoke"), "false");
   edenConfig->useMononoke.setValue(true, ConfigSourceType::CommandLine);

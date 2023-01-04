@@ -93,6 +93,7 @@ class FieldConverter<std::vector<T>> {
       cpptoml::parser parser{valueStream};
       auto table = parser.parse();
       elements = table->get_array(kArrayKeyName);
+      assert(elements);
     } catch (cpptoml::parse_exception& err) {
       return folly::Unexpected(
           fmt::format("Error parsing an array of strings: {}", err.what()));

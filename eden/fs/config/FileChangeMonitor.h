@@ -42,6 +42,14 @@ class FileChangeReason {
     return reason != NONE;
   }
 
+  friend bool operator==(FileChangeReason lhs, FileChangeReason rhs) {
+    return lhs.reason == rhs.reason;
+  }
+
+  friend bool operator!=(FileChangeReason lhs, FileChangeReason rhs) {
+    return lhs.reason != rhs.reason;
+  }
+
   /**
    * Return a human-readable string for why a file changed.
    */

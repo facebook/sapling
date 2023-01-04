@@ -21,6 +21,7 @@
 namespace facebook::eden {
 
 class ConfigSettingBase;
+class ConfigVariables;
 
 /**
  * ConfigSettingManager is an interface to allow ConfigSettings to be
@@ -34,11 +35,10 @@ class ConfigSettingManager {
 };
 
 /**
- *  ConfigSettingBase defines an interface that allows us to treat
- *  configuration settings generically. A ConfigSetting can have multiple
- *  values, one for each configuration source. ConfigSettingBase provides
- *  accessors (setters/getters) that take/return string values. Subclasses,
- *  can provide type based accessors.
+ * ConfigSettingBase defines an interface that allows us to treat configuration
+ * settings generically. A ConfigSetting can have multiple values, one for each
+ * configuration source. ConfigSettingBase provides accessors (setters/getters)
+ * that take/return string values. Subclasses, can provide type based accessors.
  */
 class ConfigSettingBase {
  public:
@@ -68,7 +68,7 @@ class ConfigSettingBase {
    */
   virtual void copyFrom(const ConfigSettingBase& rhs) = 0;
 
-  virtual ~ConfigSettingBase() {}
+  virtual ~ConfigSettingBase() = default;
 
   /**
    * Parse and set the value for the provided ConfigSourceType.
@@ -77,7 +77,7 @@ class ConfigSettingBase {
   FOLLY_NODISCARD virtual folly::Expected<folly::Unit, std::string>
   setStringValue(
       std::string_view stringValue,
-      const std::map<std::string, std::string>& attrMap,
+      const ConfigVariables& substitutions,
       ConfigSourceType newSourceType) = 0;
 
   /**
@@ -164,16 +164,17 @@ class ConfigSetting final : private ConfigSettingBase {
    */
   folly::Expected<folly::Unit, std::string> setStringValue(
       std::string_view stringValue,
-      const std::map<std::string, std::string>& attrMap,
+      const ConfigVariables& substitutions,
       ConfigSourceType newSourceType) override {
     if (newSourceType == ConfigSourceType::Default) {
       return folly::makeUnexpected<std::string>(
           "Convert ignored for default value");
     }
     Converter c;
-    return c.fromString(stringValue, attrMap).then([&](T&& convertResult) {
-      getSlot(newSourceType).emplace(std::move(convertResult));
-    });
+    return c.fromString(stringValue, substitutions)
+        .then([&](T&& convertResult) {
+          getSlot(newSourceType).emplace(std::move(convertResult));
+        });
   }
 
   /**

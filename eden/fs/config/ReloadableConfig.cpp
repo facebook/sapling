@@ -39,7 +39,6 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
     reload = reloadBehavior_.value();
   }
 
-  // TODO: Update this monitoring code to use FileChangeMonitor.
   bool shouldReload;
   switch (reload) {
     case ConfigReloadBehavior::NoReload:
@@ -67,27 +66,7 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
   lastCheck_.store(now, std::memory_order_release);
 
   auto& config = state->config;
-
-  auto userConfigChanged = config->hasUserConfigFileChanged();
-  auto systemConfigChanged = config->hasSystemConfigFileChanged();
-  if (userConfigChanged || systemConfigChanged) {
-    auto newConfig = std::make_shared<EdenConfig>(*config);
-    if (userConfigChanged) {
-      XLOGF(
-          DBG3,
-          "Reloading {} because {}",
-          config->getUserConfigPath(),
-          userConfigChanged);
-      newConfig->loadUserConfig();
-    }
-    if (systemConfigChanged) {
-      XLOGF(
-          DBG3,
-          "Reloading {} because {}",
-          config->getSystemConfigPath(),
-          systemConfigChanged);
-      newConfig->loadSystemConfig();
-    }
+  if (auto newConfig = config->maybeReload()) {
     state->config = std::move(newConfig);
   }
   return state->config;

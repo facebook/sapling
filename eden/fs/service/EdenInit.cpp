@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -125,18 +126,26 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
           folly::exceptionStr(ex).c_str()));
     }
   }
+
+  auto systemConfigSource = std::make_shared<TomlFileConfigSource>(
+      systemConfigPath, ConfigSourceType::SystemConfig);
+
+  auto userConfigSource = std::make_shared<TomlFileConfigSource>(
+      userConfigPath, ConfigSourceType::UserConfig);
+
   // Create the default EdenConfig. Next, update with command line arguments.
   // Command line arguments will take precedence over config file settings.
+  //
+  // TODO: The command line should have its own ConfigSource and they can all be
+  // applied in order of precedence.
   auto edenConfig = std::make_unique<EdenConfig>(
       getUserConfigVariables(identity),
       identity.getHomeDirectory(),
-      userConfigPath,
       systemConfigDir,
-      systemConfigPath);
+      std::move(systemConfigSource),
+      std::move(userConfigSource));
 
-  // Load system and user configurations
-  edenConfig->loadSystemConfig();
-  edenConfig->loadUserConfig();
+  edenConfig->reload();
 
   // Determine the location of the Eden state directory, and update this value
   // in the EdenConfig object.  This also creates the directory if it does not
