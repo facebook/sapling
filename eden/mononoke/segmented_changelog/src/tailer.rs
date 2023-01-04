@@ -18,6 +18,7 @@ use blobstore_factory::ReadOnlyStorage;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::Bookmarks;
+use bookmarks::BookmarksArc;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
@@ -203,7 +204,7 @@ impl SegmentedChangelogTailer {
             bulk_fetcher,
             bonsai_hg_mapping,
             Arc::new(blobrepo.get_blobstore()),
-            Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+            blobrepo.bookmarks_arc(),
             seed_heads,
             caching,
         ))

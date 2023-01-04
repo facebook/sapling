@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;

@@ -20,7 +20,9 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
@@ -115,7 +117,7 @@ async fn run_in_tailing_mode(
         start_id,
         skip_bookmarks,
         blobrepo.get_repoid(),
-        blobrepo.bookmark_update_log().clone(),
+        blobrepo.bookmark_update_log_arc(),
         scuba_sample,
     );
 

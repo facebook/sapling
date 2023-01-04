@@ -34,8 +34,10 @@ use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
+use bookmarks::BookmarksRef;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
 use cacheblob::InProcessLease;
@@ -473,8 +475,8 @@ impl Repo {
             &Arc::new(config.clone()),
             &repo_cross_repo,
             &blob_repo.repo_identity_arc(),
-            blob_repo.bookmarks(),
-            blob_repo.bookmark_update_log(),
+            &blob_repo.bookmarks_arc(),
+            &blob_repo.bookmark_update_log_arc(),
             &mutable_counters,
         )?;
 

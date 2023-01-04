@@ -33,6 +33,7 @@ use blobstore::StoreLoadable;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksRef;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
 use borrowed::borrowed;

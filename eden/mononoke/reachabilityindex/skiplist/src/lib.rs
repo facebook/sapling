@@ -1141,6 +1141,7 @@ mod test {
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use bookmarks::BookmarksMaybeStaleExt;
+    use bookmarks::BookmarksRef;
     use changeset_fetcher::ChangesetFetcher;
     use cloned::cloned;
     use context::CoreContext;
@@ -1565,7 +1566,6 @@ mod test {
                     {
                         let heads = repo
                             .bookmarks()
-                            .as_ref()
                             .get_heads_maybe_stale(ctx.clone())
                             .try_collect::<Vec<_>>()
                             .await

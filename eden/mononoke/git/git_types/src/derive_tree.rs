@@ -198,6 +198,7 @@ mod test {
 
     use anyhow::format_err;
     use blobrepo::BlobRepo;
+    use bookmarks::BookmarksRef;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use filestore::Alias;

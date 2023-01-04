@@ -16,6 +16,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;

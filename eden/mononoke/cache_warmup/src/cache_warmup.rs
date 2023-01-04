@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;

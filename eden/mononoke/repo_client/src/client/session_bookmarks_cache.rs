@@ -19,6 +19,7 @@ use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;

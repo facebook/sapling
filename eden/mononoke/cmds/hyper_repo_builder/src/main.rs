@@ -25,6 +25,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use clap_old::Arg;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;

@@ -15,6 +15,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use cloned::cloned;
 use context::CoreContext;
 use futures::FutureExt;

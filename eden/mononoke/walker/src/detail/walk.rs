@@ -28,6 +28,7 @@ use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
 use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;

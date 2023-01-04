@@ -27,6 +27,7 @@ thiserror = "1.0.36"
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-util = "0.3.7"

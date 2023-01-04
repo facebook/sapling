@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use bookmarks::BookmarksRef;
 use changesets::ChangesetsRef;
 use context::CoreContext;
 use fbinit::FacebookInit;

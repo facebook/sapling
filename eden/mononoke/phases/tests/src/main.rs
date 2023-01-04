@@ -14,6 +14,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksMaybeStaleExt;
+use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;

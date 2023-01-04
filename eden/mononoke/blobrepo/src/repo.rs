@@ -17,8 +17,6 @@ use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::ArcBonsaiSvnrevMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
-use bookmarks::ArcBookmarkUpdateLog;
-use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use cacheblob::LeaseOps;
@@ -161,16 +159,6 @@ pub struct BlobRepo {
 }
 
 impl BlobRepo {
-    #[inline]
-    pub fn bookmarks(&self) -> &ArcBookmarks {
-        &self.inner.bookmarks
-    }
-
-    #[inline]
-    pub fn bookmark_update_log(&self) -> &ArcBookmarkUpdateLog {
-        &self.inner.bookmark_update_log
-    }
-
     #[inline]
     pub fn bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping {
         &self.inner.bonsai_hg_mapping

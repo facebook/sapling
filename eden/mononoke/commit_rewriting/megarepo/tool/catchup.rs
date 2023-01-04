@@ -12,6 +12,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::future;

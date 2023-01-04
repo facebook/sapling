@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use bookmarks_movement::BookmarkUpdatePolicy;
 use bookmarks_movement::BookmarkUpdateTargets;
 use bookmarks_movement::UpdateBookmarkOp;

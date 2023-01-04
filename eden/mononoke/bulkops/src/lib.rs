@@ -270,6 +270,7 @@ mod tests {
 
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
+    use bookmarks::BookmarksRef;
     use changesets::ChangesetsArc;
     use fbinit::FacebookInit;
     use fixtures::BranchWide;

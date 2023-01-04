@@ -15,6 +15,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksMaybeStaleExt;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;

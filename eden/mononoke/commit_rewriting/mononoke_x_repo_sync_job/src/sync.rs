@@ -17,6 +17,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -641,6 +642,7 @@ async fn move_or_create_bookmark(
 
 #[cfg(test)]
 mod test {
+    use bookmarks::BookmarkUpdateLogRef;
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::Freshness;
     use cross_repo_sync::validation;
@@ -1037,7 +1039,6 @@ mod test {
 
         let heads: Vec<_> = smallrepo
             .bookmarks()
-            .as_ref()
             .get_heads_maybe_stale(ctx.clone())
             .try_collect()
             .await?;

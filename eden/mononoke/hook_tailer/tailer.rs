@@ -13,6 +13,7 @@ use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;

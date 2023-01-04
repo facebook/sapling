@@ -15,7 +15,6 @@ use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkName;
-use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bulkops::PublicChangesetBulkFetch;
 use caching_ext::CachelibHandler;
@@ -258,7 +257,7 @@ async fn get_manager(
         iddag_save_store,
         idmap_factory,
         blobrepo.get_changeset_fetcher(),
-        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        blobrepo.bookmarks_arc(),
         seed_heads,
         segmented_changelog_type,
         Some(clone_hints),
@@ -814,7 +813,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             InProcessIdDag::new_in_process(),
             Arc::clone(&idmap),
             blobrepo.get_changeset_fetcher(),
-            Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+            blobrepo.bookmarks_arc(),
             vec![Some(BOOKMARK_NAME.clone()).into()],
             None,
         )
@@ -965,7 +964,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
         InProcessIdDag::new_in_process(),
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.get_changeset_fetcher(),
-        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        blobrepo.bookmarks_arc(),
         vec![Some(bookmark_name.clone()).into()],
         None,
     )?;

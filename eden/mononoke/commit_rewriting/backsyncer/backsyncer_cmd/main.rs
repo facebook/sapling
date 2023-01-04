@@ -24,6 +24,7 @@ use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::BacksyncLimit;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Arg;
 use clap::SubCommand;

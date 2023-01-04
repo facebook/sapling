@@ -11,6 +11,7 @@ use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;

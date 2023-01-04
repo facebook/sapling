@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use bookmarks::BookmarkName;
+use bookmarks::BookmarksRef;
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
 use futures::future;

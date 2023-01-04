@@ -51,6 +51,7 @@ use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
 use clap_old::ArgMatches;

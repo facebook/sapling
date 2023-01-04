@@ -35,8 +35,11 @@ use blobrepo::BlobRepo;
 use blobstore_factory::make_metadata_sql_factory;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkTransactionError;
+use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksArc;
 use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
@@ -445,8 +448,8 @@ pub async fn open_backsyncer_dbs(
 
     Ok(TargetRepoDbs {
         connections,
-        bookmarks: blobrepo.bookmarks().clone(),
-        bookmark_update_log: blobrepo.bookmark_update_log().clone(),
+        bookmarks: blobrepo.bookmarks_arc().clone(),
+        bookmark_update_log: blobrepo.bookmark_update_log_arc().clone(),
         counters: blobrepo.mutable_counters_arc(),
     })
 }

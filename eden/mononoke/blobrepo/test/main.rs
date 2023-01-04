@@ -26,6 +26,7 @@ use blobrepo_hg::repo_commit::compute_changed_files;
 use blobrepo_hg::repo_commit::UploadEntries;
 use blobstore::Loadable;
 use blobstore::Storable;
+use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;

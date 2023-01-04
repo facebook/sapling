@@ -16,6 +16,7 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
 use cmdlib::args;

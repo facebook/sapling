@@ -22,6 +22,7 @@ use blobstore::Loadable;
 use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cloned::cloned;

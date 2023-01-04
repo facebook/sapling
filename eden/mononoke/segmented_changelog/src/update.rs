@@ -173,6 +173,7 @@ async fn bookmark_with_options(
 #[cfg(test)]
 mod tests {
     use blobrepo::BlobRepo;
+    use bookmarks::BookmarksRef;
     use fbinit::FacebookInit;
     use fixtures::set_bookmark;
     use fixtures::BranchWide;
@@ -207,7 +208,7 @@ mod tests {
         let repo = prep_branch_wide_repo(fb).await?;
         let second = BookmarkName::new("second")?;
 
-        let res = bookmark_with_options(&ctx, &second, repo.bookmarks().as_ref()).await?;
+        let res = bookmark_with_options(&ctx, &second, repo.bookmarks()).await?;
         assert_eq!(
             res.vertexes(),
             vec![VertexName::from_hex(
@@ -223,8 +224,7 @@ mod tests {
         let repo = prep_branch_wide_repo(fb).await?;
 
         let res =
-            all_bookmarks_except_with_options(&ctx, vec![].as_slice(), repo.bookmarks().as_ref())
-                .await?;
+            all_bookmarks_except_with_options(&ctx, vec![].as_slice(), repo.bookmarks()).await?;
         assert_eq!(
             res.vertexes(),
             vec![
@@ -243,7 +243,7 @@ mod tests {
         let res = all_bookmarks_except_with_options(
             &ctx,
             vec![BookmarkName::new("second")?].as_slice(),
-            repo.bookmarks().as_ref(),
+            repo.bookmarks(),
         )
         .await?;
         assert_eq!(

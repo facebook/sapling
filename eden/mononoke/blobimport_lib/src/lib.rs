@@ -25,6 +25,7 @@ use blobrepo_hg::BlobRepoHg;
 use bonsai_globalrev_mapping::bulk_import_globalrevs;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bookmarks::BookmarksMaybeStaleExt;
+use bookmarks::BookmarksRef;
 pub use consts::HIGHEST_IMPORTED_GEN_NUM;
 use context::CoreContext;
 use derived_data_utils::derive_data_for_csids;

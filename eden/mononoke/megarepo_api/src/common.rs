@@ -19,6 +19,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use bytes::Bytes;
 use changesets::Changesets;
 use changesets::ChangesetsRef;

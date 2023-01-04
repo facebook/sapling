@@ -18,6 +18,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarksRef;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::get_commit_sync_outcome;

@@ -15,6 +15,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use bookmarks::BookmarksRef;
 #[cfg(fbcode_build)]
 use clientinfo::ClientInfo;
 #[cfg(fbcode_build)]

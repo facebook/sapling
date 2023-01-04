@@ -45,6 +45,7 @@ use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use changeset_info::ChangesetInfo;
 use clap::Parser;
 use context::CoreContext;

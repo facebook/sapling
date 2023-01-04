@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::Context;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::BookmarksRef;
 use bookmarks_movement::DeleteBookmarkOp;
 use bytes::Bytes;
 use mononoke_types::ChangesetId;
