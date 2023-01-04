@@ -15,6 +15,7 @@ use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use cacheblob::dummy::DummyLease;
 use cacheblob::LeaseOps;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -214,7 +215,7 @@ async fn topo_sort(
     csids: Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetId>, Error> {
     debug!(ctx.logger(), "Toposorting");
-    let cs_fetcher = &repo.get_changeset_fetcher();
+    let cs_fetcher = &repo.changeset_fetcher_arc();
     let mut csids_with_gen_num = stream::iter(csids)
         .map(|cs_id| async move {
             let gen_num = cs_fetcher.get_generation_number(ctx.clone(), cs_id).await?;

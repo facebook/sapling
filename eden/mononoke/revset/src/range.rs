@@ -265,6 +265,7 @@ mod test {
 
     use blobrepo::BlobRepo;
     use bonsai_hg_mapping::BonsaiHgMappingRef;
+    use changeset_fetcher::ChangesetFetcherArc;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures_ext::StreamExt;
@@ -297,7 +298,7 @@ mod test {
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
         )
@@ -325,7 +326,7 @@ mod test {
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             string_to_bonsai(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
         )
@@ -350,7 +351,7 @@ mod test {
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
             string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
         )
@@ -373,7 +374,7 @@ mod test {
         // These are swapped, so won't find anything
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
             string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
         )
@@ -389,7 +390,7 @@ mod test {
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             string_to_bonsai(&ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
             string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
         )
@@ -415,7 +416,7 @@ mod test {
 
         let nodestream = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             string_to_bonsai(&ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await,
             string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
         )

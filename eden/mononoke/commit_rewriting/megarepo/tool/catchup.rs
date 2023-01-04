@@ -214,6 +214,7 @@ async fn find_files_that_need_to_be_deleted(
 
 #[cfg(test)]
 mod test {
+    use changeset_fetcher::ChangesetFetcherArc;
     use fbinit::FacebookInit;
     use futures::compat::Stream01CompatExt;
     use megarepolib::common::ChangesetArgs;
@@ -339,7 +340,7 @@ mod test {
 
         let range: Vec<_> = RangeNodeStream::new(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             commit_before_push,
             commit_after_push,
         )

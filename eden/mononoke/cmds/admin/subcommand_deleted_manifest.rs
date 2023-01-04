@@ -13,6 +13,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -166,7 +167,7 @@ async fn subcommand_verify(
     cs_id: ChangesetId,
     limit: u64,
 ) -> Result<(), Error> {
-    let mut csids = AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), cs_id)
+    let mut csids = AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), cs_id)
         .compat()
         .take(limit as usize);
     while let Some(cs_id) = csids.try_next().await? {

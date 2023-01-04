@@ -13,6 +13,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use changeset_fetcher::ChangesetFetcherArc;
 use cmdlib::helpers;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
@@ -191,7 +192,7 @@ async fn find_all_commits_to_merge(
     info!(ctx.logger(), "Finding all commits to merge...");
     let commits_to_merge = RangeNodeStream::new(
         ctx.clone(),
-        repo.get_changeset_fetcher(),
+        repo.changeset_fetcher_arc(),
         pre_deletion_commit,
         last_deletion_commit,
     )
@@ -230,7 +231,7 @@ async fn find_unmerged_commits(
         .skiplist_index
         .is_ancestor(
             ctx,
-            &repo.blob_repo.get_changeset_fetcher(),
+            &repo.blob_repo.changeset_fetcher_arc(),
             first.0,
             bookmark_value,
         )

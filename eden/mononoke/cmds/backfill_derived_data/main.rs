@@ -41,6 +41,7 @@ use bytes::Bytes;
 use cacheblob::dummy::DummyLease;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
+use changeset_fetcher::ChangesetFetcherArc;
 use changesets::deserialize_cs_entries;
 use changesets::ChangesetEntry;
 use clap_old::Arg;
@@ -1417,7 +1418,7 @@ async fn tail_batch_iteration<'a>(
         // Find all the commits that we need to derive, and fetch gen number
         // so that we can sort them lexicographically
         let commits = derive_graph.commits();
-        let cs_fetcher = &repo.get_changeset_fetcher();
+        let cs_fetcher = &repo.changeset_fetcher_arc();
 
         let mut commits = stream::iter(commits.into_iter().map(|cs_id| async move {
             let gen_num = cs_fetcher.get_generation_number(ctx.clone(), cs_id).await?;

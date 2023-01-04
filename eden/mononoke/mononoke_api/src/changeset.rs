@@ -21,6 +21,7 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use chrono::DateTime;
@@ -680,7 +681,7 @@ impl ChangesetContext {
             .skiplist_index_arc()
             .query_reachability(
                 self.ctx(),
-                &self.repo().blob_repo().get_changeset_fetcher(),
+                &self.repo().blob_repo().changeset_fetcher_arc(),
                 other_commit,
                 self.id,
             )
@@ -701,7 +702,7 @@ impl ChangesetContext {
             .skiplist_index_arc()
             .lca(
                 self.ctx().clone(),
-                self.repo().blob_repo().get_changeset_fetcher(),
+                self.repo().blob_repo().changeset_fetcher_arc(),
                 self.id,
                 other_commit,
             )

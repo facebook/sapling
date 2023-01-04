@@ -7,6 +7,7 @@
 
 use anyhow::anyhow;
 use blobrepo::BlobRepo;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -63,7 +64,7 @@ pub async fn list_ancestors<'a>(
 
     let cs_id = helpers::csid_resolve(&ctx, &repo, rev).await?;
 
-    let ancestors = AncestorsNodeStream::new(ctx, &repo.get_changeset_fetcher(), cs_id)
+    let ancestors = AncestorsNodeStream::new(ctx, &repo.changeset_fetcher_arc(), cs_id)
         .compat()
         .take(limit)
         .try_collect::<Vec<_>>()

@@ -26,6 +26,7 @@ use bookmarks::BookmarkName;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
+use changeset_fetcher::ChangesetFetcherRef;
 use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
@@ -699,7 +700,7 @@ where
             let sync = || async {
                 let parents = self
                     .get_source_repo()
-                    .get_changeset_fetcher()
+                    .changeset_fetcher()
                     .get_parents(ctx.clone(), ancestor)
                     .await?;
                 if parents.is_empty() {

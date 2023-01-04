@@ -15,6 +15,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::ArgMatches;
 use clap_old::SubCommand;
@@ -104,7 +105,7 @@ pub async fn subcommand_hg_changeset<'a>(
             let start_cs = start_cs_opt.ok_or_else(|| Error::msg("failed to resolve changeset"))?;
             let stop_cs = stop_cs_opt.ok_or_else(|| Error::msg("failed to resovle changeset"))?;
             let css: Vec<_> =
-                RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), start_cs, stop_cs)
+                RangeNodeStream::new(ctx.clone(), repo.changeset_fetcher_arc(), start_cs, stop_cs)
                     .compat()
                     .map_ok(|cs| repo.derive_hg_changeset(&ctx, cs))
                     .try_buffer_unordered(100)

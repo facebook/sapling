@@ -19,6 +19,7 @@ use bookmarks::BookmarksArc;
 use bulkops::PublicChangesetBulkFetch;
 use caching_ext::CachelibHandler;
 use caching_ext::MemcacheHandler;
+use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::ChangesetEntry;
 use changesets::ChangesetsArc;
@@ -256,7 +257,7 @@ async fn get_manager(
         sc_version_store,
         iddag_save_store,
         idmap_factory,
-        blobrepo.get_changeset_fetcher(),
+        blobrepo.changeset_fetcher_arc(),
         blobrepo.bookmarks_arc(),
         seed_heads,
         segmented_changelog_type,
@@ -276,7 +277,7 @@ async fn validate_build_idmap(
     let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let mut ancestors =
-        AncestorsNodeStream::new(ctx.clone(), &blobrepo.get_changeset_fetcher(), head).compat();
+        AncestorsNodeStream::new(ctx.clone(), &blobrepo.changeset_fetcher_arc(), head).compat();
     while let Some(cs_id) = ancestors.next().await {
         let cs_id = cs_id?;
         let parents = blobrepo
@@ -812,7 +813,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             blobrepo.get_repoid(),
             InProcessIdDag::new_in_process(),
             Arc::clone(&idmap),
-            blobrepo.get_changeset_fetcher(),
+            blobrepo.changeset_fetcher_arc(),
             blobrepo.bookmarks_arc(),
             vec![Some(BOOKMARK_NAME.clone()).into()],
             None,
@@ -963,7 +964,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
         blobrepo.get_repoid(),
         InProcessIdDag::new_in_process(),
         Arc::new(ConcurrentMemIdMap::new()),
-        blobrepo.get_changeset_fetcher(),
+        blobrepo.changeset_fetcher_arc(),
         blobrepo.bookmarks_arc(),
         vec![Some(bookmark_name.clone()).into()],
         None,

@@ -116,6 +116,7 @@ mod test {
 
     use blobstore::Loadable;
     use bonsai_hg_mapping::BonsaiHgMappingRef;
+    use changeset_fetcher::ChangesetFetcherArc;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::Linear;
@@ -175,7 +176,7 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         let mut cs_ids =
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
                 .compat()
                 .try_collect::<Vec<_>>()
                 .await?;

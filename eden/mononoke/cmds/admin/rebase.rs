@@ -10,6 +10,7 @@ use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -142,7 +143,7 @@ pub async fn subcommand_rebase<'a>(
     .await?;
 
     let ctx = &ctx;
-    let cs_fetcher = &repo.get_changeset_fetcher();
+    let cs_fetcher = &repo.changeset_fetcher_arc();
     let csids = revset::RangeNodeStream::new(ctx.clone(), cs_fetcher.clone(), ancestor, descendant)
         .compat()
         .map_ok(|csid| async move {

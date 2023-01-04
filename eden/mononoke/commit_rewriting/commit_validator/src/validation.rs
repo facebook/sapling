@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarksRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::get_commit_sync_outcome;
@@ -717,7 +718,7 @@ pub async fn unfold_bookmarks_update_log_entry(
         .large_repo
         .0
         .blob_repo
-        .get_changeset_fetcher();
+        .changeset_fetcher_arc();
     let lca_hint = validation_helpers.large_repo.0.skiplist_index.clone();
     let is_master_entry = entry.bookmark_name == validation_helpers.large_repo_master_bookmark;
     let master_cs_id = validation_helpers
@@ -1016,7 +1017,7 @@ async fn validate_topological_order<'a>(
         }))
         .await?;
 
-    let large_repo_fetcher = large_repo.0.get_changeset_fetcher();
+    let large_repo_fetcher = large_repo.0.changeset_fetcher_arc();
     try_join_all(remapped_small_parents.into_iter().map(
         |(small_parent, remapping_of_small_parent)| {
             cloned!(ctx, large_repo_lca_hint, large_repo_fetcher);

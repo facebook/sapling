@@ -24,6 +24,7 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::LeaseOps;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use commit_transformation::upload_commits;
 use context::CoreContext;
@@ -392,7 +393,7 @@ async fn find_new_branch_oldest_first(
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
-    let fetcher = small_repo.blob_repo.get_changeset_fetcher();
+    let fetcher = small_repo.blob_repo.changeset_fetcher_arc();
 
     let new_branch = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),

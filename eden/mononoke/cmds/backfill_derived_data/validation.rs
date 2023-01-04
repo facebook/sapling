@@ -19,6 +19,7 @@ use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use borrowed::borrowed;
 use cacheblob::MemWritesBlobstore;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::ArgMatches;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
@@ -353,7 +354,7 @@ async fn find_cs_and_parents_derived_data<D: BonsaiDerived>(
     cs_id: ChangesetId,
 ) -> Result<(D, Vec<D>), Error> {
     let parents = repo
-        .get_changeset_fetcher()
+        .changeset_fetcher_arc()
         .get_parents(ctx.clone(), cs_id)
         .await?;
 

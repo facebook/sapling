@@ -14,6 +14,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
@@ -534,7 +535,7 @@ impl DesiredRelationship {
         match self {
             Self::EqualTo(expected_cs_id) => Ok(target_cs_id == *expected_cs_id),
             Self::AncestorOf(comparison_cs_id, target_repo, target_repo_lca_hint) => {
-                let target_repo_fetcher = target_repo.0.get_changeset_fetcher();
+                let target_repo_fetcher = target_repo.changeset_fetcher_arc();
                 target_repo_lca_hint
                     .0
                     .is_ancestor(
@@ -546,7 +547,7 @@ impl DesiredRelationship {
                     .await
             }
             Self::DescendantOf(comparison_cs_id, target_repo, target_repo_lca_hint) => {
-                let target_repo_fetcher = target_repo.0.get_changeset_fetcher();
+                let target_repo_fetcher = target_repo.changeset_fetcher_arc();
                 target_repo_lca_hint
                     .0
                     .is_ancestor(

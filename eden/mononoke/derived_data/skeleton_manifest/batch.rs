@@ -211,7 +211,7 @@ mod test {
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
             let mut cs_ids =
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+                AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
                     .compat()
                     .try_collect::<Vec<_>>()
                     .await?;
@@ -346,7 +346,7 @@ mod test {
         let master_cs_id = resolve_cs_id(ctx, &repo, "master").await?;
 
         let mut cs_ids =
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), master_cs_id)
                 .compat()
                 .try_collect::<Vec<_>>()
                 .await?;

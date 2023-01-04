@@ -1143,6 +1143,7 @@ mod test {
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::BookmarksRef;
     use changeset_fetcher::ChangesetFetcher;
+    use changeset_fetcher::ChangesetFetcherArc;
     use cloned::cloned;
     use context::CoreContext;
     use dashmap::DashMap;
@@ -1199,7 +1200,7 @@ mod test {
         let sli = SkiplistIndex::new();
         let master_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), master_node, 100)
             .await
             .unwrap();
         let ordered_hashes = vec![
@@ -1225,7 +1226,7 @@ mod test {
         let sli = SkiplistIndex::new();
         let master_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), master_node, 100)
             .await
             .unwrap();
         let ordered_hashes = vec![
@@ -1267,7 +1268,7 @@ mod test {
         let sli = SkiplistIndex::new();
         let master_node =
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), master_node, 100)
             .await
             .unwrap();
         // hashes in order from newest to oldest are:
@@ -1330,7 +1331,7 @@ mod test {
         let merge_node =
             string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await;
         let sli = SkiplistIndex::new();
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), merge_node, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), merge_node, 100)
             .await
             .unwrap();
         for node in branch_1.into_iter() {
@@ -1392,7 +1393,7 @@ mod test {
         let sli = SkiplistIndex::new();
 
         // index just one branch first
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), branch_1_head, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), branch_1_head, 100)
             .await
             .unwrap();
         for node in branch_1.into_iter() {
@@ -1408,7 +1409,7 @@ mod test {
             assert!(!sli.is_node_indexed(node));
         }
         // index second branch
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), branch_2_head, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), branch_2_head, 100)
             .await
             .unwrap();
         for node in branch_2.into_iter() {
@@ -1438,7 +1439,7 @@ mod test {
         let b2_2 = string_to_bonsai(&ctx, &repo, "49f53ab171171b3180e125b918bd1cf0af7e5449").await;
 
         let sli = SkiplistIndex::new();
-        let changeset_fetcher = repo.get_changeset_fetcher();
+        let changeset_fetcher = repo.changeset_fetcher_arc();
         iter(vec![b1_1, b1_2, b2_1, b2_2].into_iter())
             .map(|branch_tip| Ok(sli.add_node(&ctx, &changeset_fetcher, branch_tip, 100)))
             .try_buffer_unordered(4)
@@ -1539,7 +1540,7 @@ mod test {
 
         for (_, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
             assert!(
-                sli.query_reachability(&ctx, &repo.get_changeset_fetcher(), node, node)
+                sli.query_reachability(&ctx, &repo.changeset_fetcher_arc(), node, node)
                     .await
                     .unwrap()
             );
@@ -1571,7 +1572,7 @@ mod test {
                             .await
                             .unwrap();
                         for head in heads {
-                            sli.add_node(&ctx, &repo.get_changeset_fetcher(), head, 100)
+                            sli.add_node(&ctx, &repo.changeset_fetcher_arc(), head, 100)
                                 .await
                                 .unwrap();
                         }
@@ -1604,7 +1605,7 @@ mod test {
             let src_node = ordered_hashes_oldest_to_newest.get(i).unwrap();
             for j in i + 1..ordered_hashes_oldest_to_newest.len() {
                 let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
-                sli.query_reachability(&ctx, &repo.get_changeset_fetcher(), *src_node, *dst_node)
+                sli.query_reachability(&ctx, &repo.changeset_fetcher_arc(), *src_node, *dst_node)
                     .await
                     .unwrap();
             }
@@ -1619,7 +1620,7 @@ mod test {
         let get_parents_count = Arc::new(AtomicUsize::new(0));
         let get_gen_number_count = Arc::new(AtomicUsize::new(0));
         let cs_fetcher: ArcChangesetFetcher = Arc::new(CountingChangesetFetcher::new(
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             get_parents_count.clone(),
             get_gen_number_count,
         ));
@@ -1651,7 +1652,7 @@ mod test {
         assert!(parents_count_before_indexing > 0);
 
         // Index
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), src_node, 10)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), src_node, 10)
             .await
             .unwrap();
         assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
@@ -1676,9 +1677,9 @@ mod test {
             string_to_bonsai(&ctx, &repo, "d592490c4386cdb3373dd93af04d563de199b2fb").await;
         let commit_after_merge =
             string_to_bonsai(&ctx, &repo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await;
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         // Indexing starting from a merge node
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), commit_after_merge, 10)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), commit_after_merge, 10)
             .await
             .unwrap();
         let f = sli.query_reachability(&ctx, &cs_fetcher, commit_after_merge, merge_node);
@@ -1752,7 +1753,7 @@ mod test {
                 );
                 let f = advance_node_forward(
                     ctx.clone(),
-                    repo.get_changeset_fetcher(),
+                    repo.changeset_fetcher_arc(),
                     sli.skip_list_edges.load_full(),
                     (node, Generation::new(gen as u64 + 1)),
                     Generation::new(gen_earlier as u64 + 1),
@@ -1778,7 +1779,7 @@ mod test {
                 );
                 let f = advance_node_forward(
                     ctx.clone(),
-                    repo.get_changeset_fetcher(),
+                    repo.changeset_fetcher_arc(),
                     sli.skip_list_edges.load_full(),
                     (node, Generation::new(gen as u64 + 1)),
                     Generation::new(gen_later as u64 + 1),
@@ -1836,7 +1837,7 @@ mod test {
             );
             let f = advance_node_forward(
                 ctx.clone(),
-                repo.get_changeset_fetcher(),
+                repo.changeset_fetcher_arc(),
                 sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
@@ -1868,7 +1869,7 @@ mod test {
             );
             let f = advance_node_forward(
                 ctx.clone(),
-                repo.get_changeset_fetcher(),
+                repo.changeset_fetcher_arc(),
                 sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
@@ -1885,7 +1886,7 @@ mod test {
             .insert(Generation::new(1), vec![root_node].into_iter().collect());
         let f = advance_node_forward(
             ctx,
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             sli.skip_list_edges.load_full(),
             (merge_node, Generation::new(10)),
             Generation::new(1),
@@ -1924,7 +1925,7 @@ mod test {
 
         // This test partially indexes the top few of the graph.
         // Then it does a query that traverses from indexed to unindexed nodes.
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), merge_node, 2)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), merge_node, 2)
             .await
             .unwrap();
 
@@ -1938,7 +1939,7 @@ mod test {
             .insert(Generation::new(1), vec![root_node].into_iter().collect());
         let f = advance_node_forward(
             ctx.clone(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
             sli.skip_list_edges.load_full(),
             (merge_node, Generation::new(10)),
             Generation::new(1),
@@ -1964,7 +1965,7 @@ mod test {
             );
             let f = advance_node_forward(
                 ctx.clone(),
-                repo.get_changeset_fetcher(),
+                repo.changeset_fetcher_arc(),
                 sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
@@ -1996,7 +1997,7 @@ mod test {
             );
             let f = advance_node_forward(
                 ctx.clone(),
-                repo.get_changeset_fetcher(),
+                repo.changeset_fetcher_arc(),
                 sli.skip_list_edges.load_full(),
                 (merge_node, Generation::new(10)),
                 frontier_generation,
@@ -2029,7 +2030,7 @@ mod test {
                 .map(move |branch_tip| {
                     advance_node_forward(
                         ctx.clone(),
-                        repo.get_changeset_fetcher(),
+                        repo.changeset_fetcher_arc(),
                         sli.skip_list_edges.load_full(),
                         (branch_tip, Generation::new(3)),
                         Generation::new(1),
@@ -2068,7 +2069,7 @@ mod test {
         expected_gen_2_frontier_map.insert(Generation::new(2), vec![b1, b2].into_iter().collect());
         let f = process_frontier(
             &ctx,
-            &repo.get_changeset_fetcher(),
+            &repo.changeset_fetcher_arc(),
             &sli.skip_list_edges.load(),
             NodeFrontier::new(starting_frontier_map.clone()),
             Generation::new(2),
@@ -2083,7 +2084,7 @@ mod test {
         let trace = SkiplistTraversalTrace::new();
         let f = process_frontier(
             &ctx,
-            &repo.get_changeset_fetcher(),
+            &repo.changeset_fetcher_arc(),
             &sli.skip_list_edges.load(),
             NodeFrontier::new(starting_frontier_map),
             Generation::new(1),
@@ -2125,7 +2126,7 @@ mod test {
             None
         };
         let lca = sli
-            .lca(ctx, repo.get_changeset_fetcher(), b1.clone(), b2.clone())
+            .lca(ctx, repo.changeset_fetcher_arc(), b1.clone(), b2.clone())
             .await
             .unwrap();
 
@@ -2148,7 +2149,7 @@ mod test {
             None
         };
         let merges = sli
-            .find_merges_between(&ctx, &repo.get_changeset_fetcher(), ba.clone(), bd.clone())
+            .find_merges_between(&ctx, &repo.changeset_fetcher_arc(), ba.clone(), bd.clone())
             .await
             .unwrap();
 
@@ -2165,7 +2166,7 @@ mod test {
                 move |maybe_cs_id| {
                     AncestorsNodeStream::new(
                         ctx,
-                        &repo.get_changeset_fetcher(),
+                        &repo.changeset_fetcher_arc(),
                         maybe_cs_id.unwrap(),
                     )
                     .collect()
@@ -2178,7 +2179,7 @@ mod test {
                         move |cs| {
                             AncestorsNodeStream::new(
                                 ctx.clone(),
-                                &repo.get_changeset_fetcher(),
+                                &repo.changeset_fetcher_arc(),
                                 cs.clone(),
                             )
                             .collect()
@@ -2208,7 +2209,7 @@ mod test {
                         res.push(
                             async move {
                                 Ok((
-                                    sli.is_ancestor(&ctx, &repo.get_changeset_fetcher(), anc, desc)
+                                    sli.is_ancestor(&ctx, &repo.changeset_fetcher_arc(), anc, desc)
                                         .await?,
                                     expected_and_params,
                                 ))
@@ -2394,13 +2395,13 @@ mod test {
 
         // This test simulates incremental index update by indexing up to the old_head first and
         // then updating to a new_head
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), old_head, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), old_head, 100)
             .await
             .unwrap();
 
         sli.trim_to_single_entry_per_changeset();
 
-        sli.add_node(&ctx, &repo.get_changeset_fetcher(), new_head, 100)
+        sli.add_node(&ctx, &repo.changeset_fetcher_arc(), new_head, 100)
             .await
             .unwrap();
 
@@ -2423,7 +2424,7 @@ mod test {
             string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
         let dst_node =
             string_to_bonsai(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await;
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         sli.add_node(&ctx, &cs_fetcher, src_node, 10).await?;
 
         let f = sli.query_reachability(&ctx, &cs_fetcher, src_node, dst_node);

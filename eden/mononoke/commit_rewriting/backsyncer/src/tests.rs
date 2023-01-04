@@ -28,6 +28,7 @@ use bookmarks::BookmarksArc;
 use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use commit_transformation::upload_commits;
 use context::CoreContext;
@@ -952,7 +953,7 @@ async fn verify_mapping_and_all_wc(
     println!("checking all source commits");
     let all_source_commits = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
         ctx.clone(),
-        &source_repo.get_changeset_fetcher(),
+        &source_repo.changeset_fetcher_arc(),
         Arc::new(SkiplistIndex::new()),
         heads,
     )

@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use changeset_fetcher::ChangesetFetcherArc;
 use context::CoreContext;
 use derived_data_utils::DerivedUtils;
 use futures::stream;
@@ -143,7 +144,7 @@ pub(crate) async fn slice_repository(
     }
 
     // Add any unindexed heads to the skiplist index.
-    let changeset_fetcher = repo.get_changeset_fetcher();
+    let changeset_fetcher = repo.changeset_fetcher_arc();
     for head in heads.iter() {
         skiplist_index
             .add_node(ctx, &changeset_fetcher, *head, std::u64::MAX)

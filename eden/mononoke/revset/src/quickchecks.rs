@@ -17,6 +17,7 @@ mod test {
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::BookmarksRef;
     use changeset_fetcher::ArcChangesetFetcher;
+    use changeset_fetcher::ChangesetFetcherArc;
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -70,14 +71,15 @@ mod test {
     }
 
     async fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<ChangesetId> {
-        let changeset_fetcher = repo.get_changeset_fetcher();
         let mut all_changesets_stream = repo
             .bookmarks()
             .get_heads_maybe_stale(ctx.clone())
             .compat() // conversion is needed as AncestorsNodeStream is an OldStream
             .map({
                 cloned!(ctx);
-                move |head| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, head)
+                move |head| {
+                    AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), head)
+                }
             })
             .flatten()
             .compat();
@@ -180,13 +182,13 @@ mod test {
                             let inputs = output.split_off(idx);
                             IntersectNodeStream::new(
                                 ctx.clone(),
-                                &repo.get_changeset_fetcher(),
+                                &repo.changeset_fetcher_arc(),
                                 inputs,
                             )
                             .boxify()
                         }
                     },
-                    &repo.get_changeset_fetcher().clone(),
+                    &repo.changeset_fetcher_arc(),
                 )
                 .boxify();
                 output.push(next_node);
@@ -510,7 +512,7 @@ mod test {
             ctx: CoreContext,
             repo: &BlobRepo,
         ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
-            let changeset_fetcher = repo.get_changeset_fetcher();
+            let changeset_fetcher = repo.changeset_fetcher_arc();
             let skiplist_index = Arc::new(SkiplistIndex::new());
             let max_index_depth = 100;
 

@@ -19,6 +19,8 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
+use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
@@ -197,8 +199,6 @@ pub async fn find_commits_to_send(
     heads: &[HgChangesetId],
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let changeset_fetcher = blobrepo.get_changeset_fetcher();
-
     let heads = hg_to_bonsai_stream(
         ctx,
         blobrepo,
@@ -229,7 +229,7 @@ pub async fn find_commits_to_send(
     let low_gen_num_checker = LowGenNumChecker::new_from_tunables(highest_head_gen_num);
     let partial_result = compute_partial_getbundle(
         ctx,
-        &changeset_fetcher,
+        blobrepo.changeset_fetcher(),
         heads,
         excludes,
         &low_gen_num_checker,
@@ -251,7 +251,7 @@ pub async fn find_commits_to_send(
     {
         call_difference_of_union_of_ancestors_revset(
             ctx,
-            &changeset_fetcher,
+            &blobrepo.changeset_fetcher_arc(),
             params,
             lca_hint,
             None,
@@ -264,7 +264,7 @@ pub async fn find_commits_to_send(
             .log_with_msg("Using low generation getbundle optimization", None);
         let maybe_result = low_gen_num_optimization(
             ctx,
-            &changeset_fetcher,
+            &blobrepo.changeset_fetcher_arc(),
             params.clone(),
             lca_hint,
             &low_gen_num_checker,
@@ -278,7 +278,7 @@ pub async fn find_commits_to_send(
                 .log_with_msg("Skipped low generation getbundle optimization", None);
             call_difference_of_union_of_ancestors_revset(
                 ctx,
-                &changeset_fetcher,
+                &blobrepo.changeset_fetcher_arc(),
                 params,
                 lca_hint,
                 None,
@@ -546,8 +546,8 @@ async fn hg_to_bonsai_stream(
                     .await?
                     .ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node))?;
 
-                let cs_fetcher = repo.get_changeset_fetcher();
-                let gen_num = cs_fetcher
+                let gen_num = repo
+                    .changeset_fetcher()
                     .get_generation_number(ctx.clone(), bcs_id)
                     .await?;
                 Ok((bcs_id, gen_num))

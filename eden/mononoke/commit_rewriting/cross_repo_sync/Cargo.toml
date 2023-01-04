@@ -19,6 +19,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }

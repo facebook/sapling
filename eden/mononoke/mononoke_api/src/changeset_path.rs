@@ -16,6 +16,7 @@ use blame::CompatBlame;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
+use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -545,7 +546,7 @@ impl ChangesetPathHistoryContext {
         let descendants_of = match opts.descendants_of {
             Some(descendants_of) => Some((
                 descendants_of,
-                repo.get_changeset_fetcher()
+                repo.changeset_fetcher_arc()
                     .get_generation_number(ctx.clone(), descendants_of)
                     .await?,
             )),
@@ -555,7 +556,7 @@ impl ChangesetPathHistoryContext {
         let exclude_changeset_and_ancestors = match opts.exclude_changeset_and_ancestors {
             Some(exclude_changeset_and_ancestors) => Some((
                 exclude_changeset_and_ancestors,
-                repo.get_changeset_fetcher()
+                repo.changeset_fetcher_arc()
                     .get_generation_number(ctx.clone(), exclude_changeset_and_ancestors)
                     .await?,
             )),
@@ -775,7 +776,7 @@ impl ChangesetPathHistoryContext {
                 FollowMutableFileHistory::ImmutableCommitParents
             },
             self.repo().mutable_renames().clone(),
-            TraversalOrder::new_gen_num_order(ctx.clone(), repo.get_changeset_fetcher()),
+            TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
         )
         .await
         .map_err(|error| match error {

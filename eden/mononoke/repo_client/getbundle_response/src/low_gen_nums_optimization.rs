@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use changeset_fetcher::ArcChangesetFetcher;
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use context::PerfCounterType;
 use futures::future::try_join_all;
@@ -119,7 +120,7 @@ impl PartialGetBundle {
 /// ```
 pub(crate) async fn compute_partial_getbundle(
     ctx: &CoreContext,
-    changeset_fetcher: &ArcChangesetFetcher,
+    changeset_fetcher: &dyn ChangesetFetcher,
     heads: Vec<(ChangesetId, Generation)>,
     excludes: Vec<(ChangesetId, Generation)>,
     low_gen_num_checker: &LowGenNumChecker,
@@ -410,6 +411,8 @@ mod test {
     use std::collections::BTreeMap;
 
     use blobrepo::BlobRepo;
+    use changeset_fetcher::ChangesetFetcherArc;
+    use changeset_fetcher::ChangesetFetcherRef;
     use fbinit::FacebookInit;
     use futures::compat::Stream01CompatExt;
     use futures::FutureExt;
@@ -497,7 +500,7 @@ mod test {
         // Tunable is disabled, so optimization does not kick in
         let maybe_res = low_gen_num_optimization(
             &ctx,
-            &repo.get_changeset_fetcher(),
+            &repo.changeset_fetcher_arc(),
             params.clone(),
             &skiplist,
             &low_gen_num_checker,
@@ -522,7 +525,7 @@ mod test {
             async {
                 let maybe_res = low_gen_num_optimization(
                     &ctx,
-                    &repo.get_changeset_fetcher(),
+                    &repo.changeset_fetcher_arc(),
                     params.clone(),
                     &skiplist,
                     &low_gen_num_checker,
@@ -558,7 +561,7 @@ mod test {
             async {
                 let maybe_res = low_gen_num_optimization(
                     &ctx,
-                    &repo.get_changeset_fetcher(),
+                    &repo.changeset_fetcher_arc(),
                     params,
                     &skiplist,
                     &low_gen_num_checker,
@@ -603,7 +606,7 @@ mod test {
             async {
                 let maybe_res = low_gen_num_optimization(
                     &ctx,
-                    &repo.get_changeset_fetcher(),
+                    &repo.changeset_fetcher_arc(),
                     params.clone(),
                     &skiplist,
                     &low_gen_num_checker,
@@ -924,7 +927,7 @@ mod test {
             async {
                 let maybe_res = low_gen_num_optimization(
                     &ctx,
-                    &repo.get_changeset_fetcher(),
+                    &repo.changeset_fetcher_arc(),
                     params.clone(),
                     &skiplist,
                     &low_gen_num_checker,
@@ -958,7 +961,7 @@ mod test {
             async {
                 let res = compute_partial_getbundle(
                     ctx,
-                    &repo.get_changeset_fetcher(),
+                    repo.changeset_fetcher(),
                     params.heads.clone(),
                     params.excludes.clone(),
                     low_gen_num_checker,
@@ -987,7 +990,7 @@ mod test {
         let heads = add_generations_by_bonsai(
             ctx.clone(),
             old_stream::iter_ok(heads.into_iter()).boxify(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
         )
         .compat()
         .try_collect::<Vec<_>>()
@@ -1000,7 +1003,7 @@ mod test {
         let excludes = add_generations_by_bonsai(
             ctx.clone(),
             old_stream::iter_ok(excludes.into_iter()).boxify(),
-            repo.get_changeset_fetcher(),
+            repo.changeset_fetcher_arc(),
         )
         .compat()
         .try_collect::<Vec<_>>()

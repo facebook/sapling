@@ -14,6 +14,7 @@ use bookmarks::BookmarkName;
 use bookmarks_movement::BookmarkKindRestrictions;
 pub use bookmarks_movement::PushrebaseOutcome;
 use bytes::Bytes;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use cross_repo_sync::types::Large;
 use cross_repo_sync::types::Small;
@@ -124,7 +125,7 @@ impl RepoContext {
         if !lca_hint
             .is_ancestor(
                 self.ctx(),
-                &self.blob_repo().get_changeset_fetcher(),
+                &self.blob_repo().changeset_fetcher_arc(),
                 base,
                 head,
             )
@@ -143,7 +144,7 @@ impl RepoContext {
         let blobstore = self.blob_repo().blobstore();
         let changesets: HashSet<_> = RangeNodeStream::new(
             ctx.clone(),
-            self.blob_repo().get_changeset_fetcher(),
+            self.blob_repo().changeset_fetcher_arc(),
             base,
             head,
         )

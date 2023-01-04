@@ -47,6 +47,7 @@ use bookmarks::Freshness;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
 use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
@@ -728,7 +729,7 @@ impl Repo {
 
         let mut ancestors = AncestorsNodeStream::new(
             ctx.clone(),
-            &self.blob_repo().get_changeset_fetcher(),
+            &self.blob_repo().changeset_fetcher_arc(),
             descendant,
         )
         .compat();
@@ -1100,7 +1101,7 @@ impl RepoContext {
         let repo = self.clone();
         DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
             self.ctx.clone(),
-            self.blob_repo().changeset_fetcher(),
+            &self.blob_repo().changeset_fetcher_arc(),
             self.skiplist_index_arc(),
             includes,
             excludes,

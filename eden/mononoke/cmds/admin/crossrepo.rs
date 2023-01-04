@@ -1411,6 +1411,7 @@ mod test {
 
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
+    use changeset_fetcher::ChangesetFetcherArc;
     use cross_repo_sync::validation::find_bookmark_diff;
     use cross_repo_sync::CommitSyncDataProvider;
     use fixtures::set_bookmark;
@@ -1564,7 +1565,7 @@ mod test {
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
         let changesets: Vec<_> =
-            AncestorsNodeStream::new(ctx.clone(), &small_repo.get_changeset_fetcher(), master_val)
+            AncestorsNodeStream::new(ctx.clone(), &small_repo.changeset_fetcher_arc(), master_val)
                 .compat()
                 .try_collect()
                 .await?;

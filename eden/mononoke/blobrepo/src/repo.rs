@@ -16,7 +16,6 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use cacheblob::LeaseOps;
-use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::Changesets;
@@ -154,11 +153,6 @@ pub struct BlobRepo {
 
 impl BlobRepo {
     #[inline]
-    pub fn changeset_fetcher(&self) -> &ArcChangesetFetcher {
-        &self.inner.changeset_fetcher
-    }
-
-    #[inline]
     pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         &self.inner.hg_mutation_store
     }
@@ -186,10 +180,6 @@ impl BlobRepo {
         STATS::get_generation_number.add_value(1);
         let result = self.inner.changesets.get(ctx, cs).await?;
         Ok(result.map(|res| Generation::new(res.gen)))
-    }
-
-    pub fn get_changeset_fetcher(&self) -> ArcChangesetFetcher {
-        self.changeset_fetcher().clone()
     }
 
     pub fn blobstore(&self) -> &RepoBlobstore {

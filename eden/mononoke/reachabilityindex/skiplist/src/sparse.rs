@@ -215,6 +215,7 @@ mod test {
     use std::collections::VecDeque;
 
     use blobrepo::BlobRepo;
+    use changeset_fetcher::ChangesetFetcherArc;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -228,7 +229,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = Linear::getrepo(fb).await;
 
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
@@ -303,7 +304,7 @@ mod test {
         let c = *dag.get("C").unwrap();
         let d = *dag.get("D").unwrap();
         let f = *dag.get("F").unwrap();
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let f_gen_num = cs_fetcher.get_generation_number(ctx.clone(), f).await?;
@@ -339,7 +340,7 @@ mod test {
         // These are three changesets that will have entries in index
         let g = *dag.get("G").unwrap();
 
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let g_gen_num = cs_fetcher.get_generation_number(ctx.clone(), g).await?;
@@ -380,7 +381,7 @@ mod test {
         // These are three changesets that will have entries in index
         let d = *dag.get("D").unwrap();
 
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let d_gen_num = cs_fetcher.get_generation_number(ctx.clone(), d).await?;
@@ -424,7 +425,7 @@ mod test {
 
         // These are three changesets that will have entries in index
         let g = *dag.get("G").unwrap();
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let g_gen_num = cs_fetcher.get_generation_number(ctx.clone(), g).await?;
@@ -475,7 +476,7 @@ mod test {
         let l = *dag.get("L").unwrap();
         let m = *dag.get("M").unwrap();
         let n = *dag.get("N").unwrap();
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let max_skip = NonZeroU64::new(5).unwrap();
@@ -532,7 +533,7 @@ mod test {
         let g = *dag.get("G").unwrap();
         let h = *dag.get("H").unwrap();
         let l = *dag.get("L").unwrap();
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let max_skip = NonZeroU64::new(5).unwrap();
@@ -579,7 +580,7 @@ mod test {
         let c = *dag.get("C").unwrap();
         let d = *dag.get("D").unwrap();
         let e = *dag.get("E").unwrap();
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let d_gen_num = cs_fetcher.get_generation_number(ctx.clone(), d).await?;
@@ -618,7 +619,7 @@ mod test {
         )
         .await?;
 
-        let cs_fetcher = repo.get_changeset_fetcher();
+        let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
         let max_skip = NonZeroU64::new(2).unwrap();

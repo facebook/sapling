@@ -20,6 +20,7 @@ use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetEntry;
 use changesets::ChangesetsArc;
 use clap_old::App;
@@ -166,7 +167,7 @@ async fn build_skiplist_index<'a, S: ToString>(
         read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone()).await?
     };
 
-    let changeset_fetcher = repo.get_changeset_fetcher();
+    let changeset_fetcher = repo.changeset_fetcher_arc();
     let cs_fetcher_skiplist_func = async {
         match maybe_skiplist {
             Some(skiplist) => {
@@ -241,7 +242,7 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
         .collect();
     let cs_fetcher: ArcChangesetFetcher = Arc::new(InMemoryChangesetFetcher {
         fetched_changesets: Arc::new(fetched_changesets),
-        inner: repo.get_changeset_fetcher(),
+        inner: repo.changeset_fetcher_arc(),
     });
 
     Ok(cs_fetcher)

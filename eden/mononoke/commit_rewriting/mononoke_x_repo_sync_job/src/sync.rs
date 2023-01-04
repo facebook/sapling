@@ -18,6 +18,7 @@ use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -425,7 +426,7 @@ async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static>(
     if !skiplist_index
         .query_reachability(
             ctx,
-            &commit_syncer.get_source_repo().get_changeset_fetcher(),
+            &commit_syncer.get_source_repo().changeset_fetcher_arc(),
             to_cs_id,
             from_cs_id,
         )
@@ -533,7 +534,7 @@ async fn check_if_independent_branch_and_return(
     branch_tips: Vec<ChangesetId>,
     other_branches: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
-    let fetcher = repo.get_changeset_fetcher();
+    let fetcher = repo.changeset_fetcher_arc();
     let bcss = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),
         &fetcher,

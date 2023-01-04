@@ -14,6 +14,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
@@ -136,7 +137,7 @@ impl Tailer {
 
             let stream = AncestorsNodeStream::new(
                 self.ctx.clone(),
-                &self.repo.get_changeset_fetcher(),
+                &self.repo.changeset_fetcher_arc(),
                 bm_rev,
             )
             .compat()

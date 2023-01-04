@@ -11,6 +11,7 @@ use anyhow::bail;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -154,7 +155,7 @@ async fn subcommand_verify(
     csid: ChangesetId,
     limit: u64,
 ) -> Result<(), Error> {
-    AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
+    AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), csid)
         .compat()
         .take(limit as usize)
         .try_for_each(|csid| single_verify(ctx, &repo, csid))

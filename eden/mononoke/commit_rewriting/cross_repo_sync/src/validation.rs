@@ -790,6 +790,7 @@ mod test {
 
     use ascii::AsciiString;
     use bookmarks::BookmarkName;
+    use changeset_fetcher::ChangesetFetcherArc;
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use fbinit::FacebookInit;
@@ -1139,7 +1140,7 @@ mod test {
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
         let changesets =
-            AncestorsNodeStream::new(ctx.clone(), &small_repo.get_changeset_fetcher(), master_val)
+            AncestorsNodeStream::new(ctx.clone(), &small_repo.changeset_fetcher_arc(), master_val)
                 .collect()
                 .compat()
                 .await?;

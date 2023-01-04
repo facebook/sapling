@@ -12,6 +12,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -167,7 +168,7 @@ async fn changesets_warmup(
 ) -> Result<(), Error> {
     info!(ctx.logger(), "about to start warming up changesets cache");
 
-    AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id)
+    AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), bcs_id)
         .compat()
         .take(cs_limit)
         .try_for_each({

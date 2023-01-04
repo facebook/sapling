@@ -9,8 +9,7 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-#[cfg(test)]
-use common::fetch_generation;
+use changeset_fetcher::ChangesetFetcherArc;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::BranchWide;
@@ -62,11 +61,11 @@ pub async fn test_linear_reachability<T: ReachabilityIndex + 'static>(
             let src = ordered_hashes.get(i).unwrap();
             let dst = ordered_hashes.get(j).unwrap();
             let result_src_to_dst = index
-                .query_reachability(&ctx, &repo.get_changeset_fetcher(), *src, *dst)
+                .query_reachability(&ctx, &repo.changeset_fetcher_arc(), *src, *dst)
                 .await;
             assert!(result_src_to_dst.unwrap());
             let result_dst_to_src = index
-                .query_reachability(&ctx, &repo.get_changeset_fetcher(), *dst, *src)
+                .query_reachability(&ctx, &repo.changeset_fetcher_arc(), *dst, *src)
                 .await;
             assert_eq!(result_dst_to_src.unwrap(), src == dst);
         }
@@ -108,25 +107,25 @@ pub async fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(
         for right_node in branch_2.iter() {
             assert!(
                 index
-                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), left_node, root_node)
+                    .query_reachability(&ctx, &repo.changeset_fetcher_arc(), left_node, root_node)
                     .await
                     .unwrap()
             );
             assert!(
                 index
-                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *right_node, root_node)
+                    .query_reachability(&ctx, &repo.changeset_fetcher_arc(), *right_node, root_node)
                     .await
                     .unwrap()
             );
             assert!(
                 !index
-                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), root_node, left_node)
+                    .query_reachability(&ctx, &repo.changeset_fetcher_arc(), root_node, left_node)
                     .await
                     .unwrap()
             );
             assert!(
                 !index
-                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), root_node, *right_node)
+                    .query_reachability(&ctx, &repo.changeset_fetcher_arc(), root_node, *right_node)
                     .await
                     .unwrap()
             );
@@ -155,13 +154,13 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
     for above_root in vec![b1, b2, b1_1, b1_2, b2_1, b2_2].iter() {
         assert!(
             index
-                .query_reachability(&ctx, &repo.get_changeset_fetcher(), *above_root, root_node)
+                .query_reachability(&ctx, &repo.changeset_fetcher_arc(), *above_root, root_node)
                 .await
                 .unwrap()
         );
         assert!(
             !index
-                .query_reachability(&ctx, &repo.get_changeset_fetcher(), root_node, *above_root)
+                .query_reachability(&ctx, &repo.changeset_fetcher_arc(), root_node, *above_root)
                 .await
                 .unwrap()
         );
@@ -172,13 +171,13 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
         for b2_node in vec![b2, b2_1, b2_2].iter() {
             assert!(
                 !index
-                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *b1_node, *b2_node)
+                    .query_reachability(&ctx, &repo.changeset_fetcher_arc(), *b1_node, *b2_node)
                     .await
                     .unwrap()
             );
             assert!(
                 !index
-                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *b2_node, *b1_node)
+                    .query_reachability(&ctx, &repo.changeset_fetcher_arc(), *b2_node, *b1_node)
                     .await
                     .unwrap()
             );
@@ -189,25 +188,25 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
     // - branch 1
     assert!(
         index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_1, b1)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b1_1, b1)
             .await
             .unwrap()
     );
     assert!(
         index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_2, b1)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b1_2, b1)
             .await
             .unwrap()
     );
     assert!(
         !index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_1, b1_2)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b1_1, b1_2)
             .await
             .unwrap()
     );
     assert!(
         !index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_2, b1_1)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b1_2, b1_1)
             .await
             .unwrap()
     );
@@ -215,25 +214,25 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
     // - branch 2
     assert!(
         index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_1, b2)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b2_1, b2)
             .await
             .unwrap()
     );
     assert!(
         index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_2, b2)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b2_2, b2)
             .await
             .unwrap()
     );
     assert!(
         !index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_1, b2_2)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b2_1, b2_2)
             .await
             .unwrap()
     );
     assert!(
         !index
-            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_2, b2_1)
+            .query_reachability(&ctx, &repo.changeset_fetcher_arc(), b2_2, b2_1)
             .await
             .unwrap()
     );
@@ -243,6 +242,8 @@ pub async fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
 mod test {
     use std::sync::Arc;
 
+    use changeset_fetcher::ChangesetFetcherArc;
+    use common::fetch_generation;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use fixtures::Linear;
@@ -271,7 +272,7 @@ mod test {
             assert_eq!(
                 (
                     node,
-                    fetch_generation(&ctx, &repo.get_changeset_fetcher(), node)
+                    fetch_generation(&ctx, &repo.changeset_fetcher_arc(), node)
                         .await
                         .unwrap()
                 ),

@@ -25,6 +25,7 @@ use blobrepo_utils::BonsaiMFVerify;
 use blobrepo_utils::BonsaiMFVerifyResult;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use changeset_fetcher::ChangesetFetcherArc;
 use clap::Parser;
 use clap::Subcommand;
 use cloned::cloned;
@@ -318,7 +319,7 @@ fn subcommmand_hg_manifest_verify(
             .await?
             .ok_or_else(|| format_err!("failed to fetch bonsai changeset"))?;
 
-        AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
+        AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), csid)
             .compat()
             .take(count)
             .map(|res| async move {
