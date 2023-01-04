@@ -6,6 +6,7 @@
  */
 
 mod backfill;
+mod checkpoints;
 
 use anyhow::Result;
 use backfill::BackfillArgs;

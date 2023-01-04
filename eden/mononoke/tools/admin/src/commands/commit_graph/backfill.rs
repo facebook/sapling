@@ -30,13 +30,16 @@ use repo_identity::RepoIdentityRef;
 use sql_commit_graph_storage::SqlCommitGraphStorage;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 
+use super::checkpoints::CommitGraphBackfillerCheckpoints;
 use super::Repo;
 
 #[derive(Args)]
 pub struct BackfillArgs {
     /// Which id to start backfilling from. Use 0 if nothing is backfilled.
+    /// If not provided loads it from commit_graph_backfiller_checkpoints
+    /// (0 if not found).
     #[clap(long)]
-    start_id: u64,
+    start_id: Option<u64>,
 
     /// The maximum number of changeset edges allowed to be stored in
     /// memory in the commit graph.
@@ -100,6 +103,7 @@ async fn backfill_impl(
     ctx: &CoreContext,
     commit_graph: &CommitGraph,
     buffered_sql_storage: &BufferedCommitGraphStorage<SqlCommitGraphStorage>,
+    checkpoints: &CommitGraphBackfillerCheckpoints,
     repo: &Repo,
     args: BackfillArgs,
 ) -> Result<()> {
@@ -107,19 +111,31 @@ async fn backfill_impl(
         PublicChangesetBulkFetch::new(repo.changesets.clone(), Arc::new(FakeAllCommitsPublic))
             .with_read_from_master(true);
 
+    let start_id = match args.start_id {
+        Some(start_id) => start_id,
+        None => checkpoints
+            .load_checkpoint(repo.repo_identity().id())
+            .await?
+            .map_or(0, |id| id.saturating_add(1)),
+    };
+
     fetcher
-        .fetch_bounded_with_id(ctx, Direction::OldestFirst, Some((args.start_id, u64::MAX)))
+        .fetch_bounded_with_id(ctx, Direction::OldestFirst, Some((start_id, u64::MAX)))
         .try_chunks(args.chunk_size)
         .map(|r| r.context("Error chunking"))
         .try_for_each(|entries| async move {
             println!("Doing chunk with {} entries", entries.len());
 
-            if let (Some(first_entry), Some(last_entry)) = (entries.first(), entries.last()) {
-                println!(
-                    "Chunk starts at id {} and ends at id {}",
-                    first_entry.1, last_entry.1
-                );
-            }
+            let last_finished_id = match (entries.first(), entries.last()) {
+                (Some(first_entry), Some(last_entry)) => {
+                    println!(
+                        "Chunk starts at id {} and ends at id {}",
+                        first_entry.1, last_entry.1
+                    );
+                    Some(last_entry.1)
+                }
+                _ => None,
+            };
 
             let (stats, result) = async move {
                 for (entry, _) in &entries {
@@ -139,11 +155,17 @@ async fn backfill_impl(
             println!("Written to db in {:?}", stats);
             result?;
 
+            if let Some(last_finished_id) = last_finished_id {
+                checkpoints
+                    .update_checkpoint(repo.repo_identity().id(), last_finished_id)
+                    .await?;
+            }
+
             Ok(())
         })
         .await?;
 
-    println!("Backfilled everyting starting at id {}", args.start_id);
+    println!("Backfilled everything starting at id {}", start_id);
     Ok(())
 }
 
@@ -169,5 +191,18 @@ pub(super) async fn backfill(
         args.max_in_memory_size,
     ));
     let commit_graph = CommitGraph::new(buffered_sql_storage.clone());
-    backfill_impl(ctx, &commit_graph, &buffered_sql_storage, repo, args).await
+    let checkpoints: CommitGraphBackfillerCheckpoints = app
+        .repo_factory()
+        .sql_factory(&repo.repo_config().storage_config.metadata)
+        .await?
+        .open()?;
+    backfill_impl(
+        ctx,
+        &commit_graph,
+        &buffered_sql_storage,
+        &checkpoints,
+        repo,
+        args,
+    )
+    .await
 }
