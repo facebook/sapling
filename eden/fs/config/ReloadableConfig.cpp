@@ -49,9 +49,7 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
       shouldReload = true;
       break;
     case ConfigReloadBehavior::AutoReload: {
-      auto lastCheck = std::chrono::steady_clock::time_point{
-          std::chrono::steady_clock::duration{
-              lastCheck_.load(std::memory_order_acquire)}};
+      auto lastCheck = lastCheck_.load(std::memory_order_acquire);
       shouldReload = now - lastCheck >= kEdenConfigMinimumPollDuration;
       break;
     }
@@ -66,7 +64,7 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
   auto state = state_.wlock();
 
   // Throttle the updates when using ConfigReloadBehavior::AutoReload
-  lastCheck_.store(now.time_since_epoch().count(), std::memory_order_release);
+  lastCheck_.store(now, std::memory_order_release);
 
   auto& config = state->config;
 
