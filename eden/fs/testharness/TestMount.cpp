@@ -110,7 +110,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
   treeCache_ = TreeCache::create(edenConfig);
   auto reloadableConfig = make_shared<ReloadableConfig>(edenConfig_);
   auto userInfo = UserInfo::lookup();
-  serverState_ = {make_shared<ServerState>(
+  serverState_ = make_shared<ServerState>(
       userInfo,
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
@@ -122,7 +122,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       *edenConfig_,
       nullptr,
       make_shared<CommandNotifier>(reloadableConfig),
-      /*enableFaultInjection=*/true)};
+      /*enableFaultInjection=*/true);
 }
 
 TestMount::TestMount(

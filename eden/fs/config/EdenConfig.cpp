@@ -155,7 +155,19 @@ EdenConfig::EdenConfig(
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
-  doCopy(source);
+  substitutions_ = source.substitutions_;
+  userConfigPath_ = source.userConfigPath_;
+  systemConfigPath_ = source.systemConfigPath_;
+
+  systemConfigFileStat_ = source.systemConfigFileStat_;
+  userConfigFileStat_ = source.userConfigFileStat_;
+
+  // Copy each ConfigSetting from source.
+  for (const auto& [section, sectionMap] : source.configMap_) {
+    for (const auto& [key, value] : sectionMap) {
+      configMap_[section][key]->copyFrom(*value);
+    }
+  }
 }
 
 std::optional<std::string> EdenConfig::getValueByFullKey(
@@ -169,31 +181,6 @@ std::optional<std::string> EdenConfig::getValueByFullKey(
   }
 
   return std::nullopt;
-}
-
-EdenConfig& EdenConfig::operator=(const EdenConfig& source) {
-  doCopy(source);
-  return *this;
-}
-
-void EdenConfig::doCopy(const EdenConfig& source) {
-  substitutions_ = source.substitutions_;
-  userConfigPath_ = source.userConfigPath_;
-  systemConfigPath_ = source.systemConfigPath_;
-
-  systemConfigFileStat_ = source.systemConfigFileStat_;
-  userConfigFileStat_ = source.userConfigFileStat_;
-
-  // Copy each ConfigSettings from source.
-  for (const auto& sectionEntry : source.configMap_) {
-    auto& section = sectionEntry.first;
-    auto& keyMap = sectionEntry.second;
-    for (const auto& kvEntry : keyMap) {
-      // Here we are using the assignment operator to copy the configSetting.
-      // We are using the base pointer to do the assignment.
-      configMap_[section][kvEntry.first]->copyFrom(*kvEntry.second);
-    }
-  }
 }
 
 void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {

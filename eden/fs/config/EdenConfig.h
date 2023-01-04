@@ -53,12 +53,15 @@ class EdenConfig : private ConfigSettingManager {
       AbsolutePath systemConfigDir,
       AbsolutePath systemConfigPath);
 
+  /**
+   * EdenConfig is heap-allocated and not copyable or moveable in general. This
+   * constructor clones an existing EdenConfig and is called when a config file
+   * is reloaded.
+   */
   explicit EdenConfig(const EdenConfig& source);
-
   explicit EdenConfig(EdenConfig&& source) = delete;
 
-  EdenConfig& operator=(const EdenConfig& source);
-
+  EdenConfig& operator=(const EdenConfig& source) = delete;
   EdenConfig& operator=(EdenConfig&& source) = delete;
 
   /**
@@ -138,10 +141,6 @@ class EdenConfig : private ConfigSettingManager {
    * file.
    */
   std::string toSourcePath(ConfigSourceType cs) const;
-
-  void doCopy(const EdenConfig& source);
-
-  void initConfigMap();
 
   void parseAndApplyConfigFile(
       int configFd,
