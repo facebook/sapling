@@ -333,6 +333,8 @@ pub struct MononokeTunables {
 
     // Enable usage of basename_suffix_skeleton_manifest in commit_find_files
     disable_basename_suffix_skeleton_manifest: AtomicBool,
+    // Enable using BSSM for suffix queries. Might be inneficient for broad suffixes (like .php)
+    enable_bssm_suffix_query: AtomicBool,
 
     // List of targets in AOSP megarepo to apply squashing config overrides
     megarepo_squashing_config_override_targets: TunableVecOfStringsByRepo,

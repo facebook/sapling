@@ -769,8 +769,14 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn commit_find_files(fb: FacebookInit) {
-    commit_find_files_impl(fb).await.unwrap();
+async fn commit_find_files_with_bssm(fb: FacebookInit) {
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {
+        "enable_bssm_suffix_query".to_string() => true
+    });
+    with_tunables_async(tunables, commit_find_files_impl(fb).boxed())
+        .await
+        .unwrap();
 }
 
 #[fbinit::test]

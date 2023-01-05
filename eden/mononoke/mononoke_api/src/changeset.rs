@@ -1192,7 +1192,9 @@ impl ChangesetContext {
         };
         Ok(match basenames_and_suffixes {
             Some(basenames_and_suffixes)
-                if !tunables().get_disable_basename_suffix_skeleton_manifest() =>
+                if !tunables().get_disable_basename_suffix_skeleton_manifest()
+                    && (!basenames_and_suffixes.has_right()
+                        || tunables().get_enable_bssm_suffix_query()) =>
             {
                 self.find_files_with_bssm(prefixes, basenames_and_suffixes, ordering)
                     .await?
