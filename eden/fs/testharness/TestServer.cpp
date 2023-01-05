@@ -78,8 +78,9 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       getUserConfigVariables(userInfo),
       userInfo.getHomeDirectory(),
       tmpDir + "etc"_pc,
-      std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
-      std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig));
+      EdenConfig::SourceVector{
+          std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
+          std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
   auto privHelper = make_unique<FakePrivHelper>();
   config->edenDir.setValue(edenDir, ConfigSourceType::CommandLine);
 

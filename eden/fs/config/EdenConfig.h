@@ -43,16 +43,18 @@ extern const AbsolutePath kUnspecifiedDefault;
  */
 class EdenConfig : private ConfigSettingManager {
  public:
+  using SourceVector = std::vector<std::shared_ptr<ConfigSource>>;
+
   /**
-   * Manually construct a EdenConfig object. Users can subsequently use the
-   * load methods to populate the EdenConfig.
+   * Manually construct a EdenConfig object with some default values and
+   * ConfigSources. Duplicate ConfigSources for the same ConfigSourceType are
+   * disallowed. ConfigSources are immediately applied to the ConfigSettings.
    */
   explicit EdenConfig(
       ConfigVariables substitutions,
       AbsolutePathPiece userHomePath,
       AbsolutePathPiece systemConfigDir,
-      std::shared_ptr<ConfigSource> systemConfigSource,
-      std::shared_ptr<ConfigSource> userConfigSource);
+      SourceVector configSources);
 
   /**
    * EdenConfig is heap-allocated and not copyable or moveable in general. This
@@ -136,8 +138,15 @@ class EdenConfig : private ConfigSettingManager {
 
   std::shared_ptr<ConfigVariables> substitutions_;
 
-  std::shared_ptr<ConfigSource> systemConfigSource_;
-  std::shared_ptr<ConfigSource> userConfigSource_;
+  static constexpr size_t kConfigSourceLastIndex =
+      static_cast<size_t>(apache::thrift::TEnumTraits<ConfigSourceType>::max());
+
+  /**
+   * Each ConfigSourceType has exactly zero or one ConfigSource. These slots are
+   * iterated in order during reload to populate EdenConfig.
+   */
+  std::array<std::shared_ptr<ConfigSource>, kConfigSourceLastIndex + 1>
+      configSources_;
 
   /*
    * Settings follow. Their initialization registers themselves with the

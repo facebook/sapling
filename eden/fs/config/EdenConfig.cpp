@@ -14,6 +14,7 @@
 #include <folly/MapUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include <thrift/lib/cpp/util/EnumUtils.h>
 
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
@@ -67,10 +68,9 @@ std::shared_ptr<EdenConfig> EdenConfig::createTestEdenConfig() {
       std::move(subst),
       /*userHomePath=*/canonicalPath("/tmp"),
       /*systemConfigDir=*/canonicalPath("/tmp"),
-      /*systemConfigSource=*/
-      std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
-      /*userConfigSource=*/
-      std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig));
+      SourceVector{
+          std::make_shared<NullConfigSource>(ConfigSourceType::SystemConfig),
+          std::make_shared<NullConfigSource>(ConfigSourceType::UserConfig)});
 }
 
 std::string EdenConfig::toString(ConfigSourceType cs) const {
@@ -78,9 +78,12 @@ std::string EdenConfig::toString(ConfigSourceType cs) const {
     case ConfigSourceType::Default:
       return "default";
     case ConfigSourceType::SystemConfig:
-      return systemConfigSource_->getSourcePath();
     case ConfigSourceType::UserConfig:
-      return userConfigSource_->getSourcePath();
+      if (const auto& source = configSources_[folly::to_underlying(cs)]) {
+        return source->getSourcePath();
+      } else {
+        return "";
+      }
     case ConfigSourceType::CommandLine:
       return "command-line";
   }
@@ -103,29 +106,20 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
 }
 
 std::string EdenConfig::toSourcePath(ConfigSourceType cs) const {
-  switch (cs) {
-    case ConfigSourceType::Default:
-      return {};
-    case ConfigSourceType::SystemConfig:
-      return systemConfigSource_->getSourcePath();
-    case ConfigSourceType::UserConfig:
-      return userConfigSource_->getSourcePath();
-    case ConfigSourceType::CommandLine:
-      return {};
+  if (const auto& source = configSources_[folly::to_underlying(cs)]) {
+    return source->getSourcePath();
+  } else {
+    return {};
   }
-  return {};
 }
 
 EdenConfig::EdenConfig(
     ConfigVariables substitutions,
     AbsolutePathPiece userHomePath,
     AbsolutePathPiece systemConfigDir,
-    std::shared_ptr<ConfigSource> systemConfigSource,
-    std::shared_ptr<ConfigSource> userConfigSource)
-    : substitutions_{std::make_shared<ConfigVariables>(
-          std::move(substitutions))},
-      systemConfigSource_{std::move(systemConfigSource)},
-      userConfigSource_{std::move(userConfigSource)} {
+    SourceVector configSources)
+    : substitutions_{
+          std::make_shared<ConfigVariables>(std::move(substitutions))} {
   // Force set defaults that require passed arguments
   edenDir.setValue(
       userHomePath + kDefaultEdenDirectory, ConfigSourceType::Default, true);
@@ -136,13 +130,23 @@ EdenConfig::EdenConfig(
       ConfigSourceType::Default,
       true);
 
+  for (auto& source : configSources) {
+    auto type = source->getSourceType();
+    auto index = folly::to_underlying(type);
+    XCHECK_NE(ConfigSourceType::Default, type)
+        << "May not provide a ConfigSource of type Default. Default is prepopulated.";
+    XCHECK(!configSources_[index])
+        << "Multiple ConfigSources of the same type ("
+        << apache::thrift::util::enumNameSafe(type) << ") are disallowed.";
+    configSources_[index] = std::move(source);
+  }
+
   reload();
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
   substitutions_ = source.substitutions_;
-  systemConfigSource_ = source.systemConfigSource_;
-  userConfigSource_ = source.userConfigSource_;
+  configSources_ = source.configSources_;
 
   // Copy each ConfigSetting from source.
   for (const auto& [section, sectionMap] : source.configMap_) {
@@ -166,33 +170,27 @@ std::optional<std::string> EdenConfig::getValueByFullKey(
 }
 
 void EdenConfig::reload() {
-  ConfigSource* sources[] = {
-      systemConfigSource_.get(),
-      userConfigSource_.get(),
-  };
-
-  for (auto& source : sources) {
-    source->reload(*substitutions_, configMap_);
+  for (const auto& source : configSources_) {
+    if (source) {
+      source->reload(*substitutions_, configMap_);
+    }
   }
 }
 
 std::shared_ptr<const EdenConfig> EdenConfig::maybeReload() const {
-  ConfigSource* sources[] = {
-      systemConfigSource_.get(),
-      userConfigSource_.get(),
-  };
-
   std::shared_ptr<EdenConfig> newConfig;
 
-  for (auto& source : sources) {
-    if (auto reason = source->shouldReload()) {
-      XLOGF(DBG3, "Reloading {} because {}", source->getSourcePath(), reason);
+  for (const auto& source : configSources_) {
+    if (source) {
+      if (auto reason = source->shouldReload()) {
+        XLOGF(DBG3, "Reloading {} because {}", source->getSourcePath(), reason);
 
-      if (!newConfig) {
-        newConfig = std::make_shared<EdenConfig>(*this);
+        if (!newConfig) {
+          newConfig = std::make_shared<EdenConfig>(*this);
+        }
+        newConfig->clearAll(source->getSourceType());
+        source->reload(*newConfig->substitutions_, newConfig->configMap_);
       }
-      newConfig->clearAll(source->getSourceType());
-      source->reload(*newConfig->substitutions_, newConfig->configMap_);
     }
   }
 

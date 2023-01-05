@@ -97,12 +97,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
       ConfigVariables{},
       /*userHomePath=*/canonicalPath(testDir_->path().string()),
       /*systemConfigDir=*/canonicalPath(testDir_->path().string()),
-      std::make_shared<TomlFileConfigSource>(
-          canonicalPath(testDir_->path().string() + "edenfs.rc"),
-          ConfigSourceType::SystemConfig),
-      std::make_shared<TomlFileConfigSource>(
-          canonicalPath(testDir_->path().string() + ".edenrc"),
-          ConfigSourceType::UserConfig));
+      EdenConfig::SourceVector{});
 
   edenConfig_->enableActivityBuffer.setValue(
       enableActivityBuffer, ConfigSourceType::Default, true);
