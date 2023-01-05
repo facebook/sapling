@@ -2234,9 +2234,9 @@ bool TreeInode::readdirImpl(
    * value, given seekdir and telldir).
    *
    * POSIX compliance requires that, given a sequence of readdir calls across
-   * the an entire directory stream, all entries that are not modified are
-   * returned exactly once. Entries that are added or removed between readdir
-   * calls may be returned, but don't have to be.
+   * an entire directory stream, each unmodified entry is returned exactly
+   * once. Entries that are added or removed between readdir calls may be
+   * returned, but don't have to be.
    *
    * Thus, off_t as an index into an ordered list of entries is not sufficient.
    * If an entry is unlinked, the next readdir will skip entries.
