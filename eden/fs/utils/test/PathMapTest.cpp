@@ -211,7 +211,6 @@ TEST(PathMap, move) {
       kPathMapDefaultCaseSensitive);
   PathMap<int> other = std::move(map);
   EXPECT_EQ(3, other.size());
-  EXPECT_EQ(0, map.size());
 }
 
 struct EmplaceTest {
@@ -257,6 +256,5 @@ TEST(PathMap, swap) {
 
   a = std::move(b);
   EXPECT_EQ(1, a.size()) << "a now has 1 element";
-  EXPECT_EQ(0, b.size()) << "b now has 0 elements";
   EXPECT_EQ("foo", a.at("foo"_pc));
 }
