@@ -24,6 +24,7 @@ use commit_graph::edges::ChangesetNodeParents;
 use commit_graph::storage::CommitGraphStorage;
 use commit_graph::ChangesetParents;
 use context::CoreContext;
+use context::PerfCounterType;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -614,12 +615,16 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
 
         // All good, nodes were added and correctly updated, let's commit.
         transaction.commit().await?;
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
 
         Ok(modified.try_into()?)
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
         let merge_parent_cs_id_to_id: HashMap<ChangesetId, u64> = if edges.parents.len() >= 2 {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
             SelectManyIds::query(
                 &self.read_connection.conn,
                 &self.repo_id,
@@ -683,6 +688,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 .await?;
 
                 transaction.commit().await?;
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlWrites);
 
                 Ok(true)
             }
@@ -710,6 +717,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         cs_ids: &[ChangesetId],
         prefetch_hint: Option<Generation>,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         self.fetch_many_edges_impl(ctx, cs_ids, prefetch_hint, &self.read_connection)
             .await
     }
@@ -720,6 +729,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         cs_ids: &[ChangesetId],
         prefetch_hint: Option<Generation>,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut edges = self
             .fetch_many_edges_impl(ctx, cs_ids, prefetch_hint, &self.read_connection)
             .await?;
@@ -730,6 +741,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .collect();
         let unfetched_ids = if !unfetched_ids.is_empty() {
             // Let's go to master with the remaining edges
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             let extra_edges = self
                 .fetch_many_edges_impl(
                     ctx,
@@ -765,6 +778,8 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut fetched_ids = SelectChangesetsInRange::query(
             &self.read_connection.conn,
             &self.repo_id,
