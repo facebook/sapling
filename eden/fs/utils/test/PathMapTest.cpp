@@ -222,7 +222,7 @@ struct EmplaceTest {
   // forwarding multiple arguments.
   EmplaceTest(bool value, int secondArg) : dummy(value) {
     ++counter;
-    ++secondArg; // Suppress lint about secondArg being unused
+    (void)secondArg; // Suppress lint about secondArg being unused
   }
 };
 int EmplaceTest::counter = 0;
