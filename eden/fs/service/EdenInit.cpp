@@ -145,8 +145,6 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
       std::move(systemConfigSource),
       std::move(userConfigSource));
 
-  edenConfig->reload();
-
   // Determine the location of the Eden state directory, and update this value
   // in the EdenConfig object.  This also creates the directory if it does not
   // exist.

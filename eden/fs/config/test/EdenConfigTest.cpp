@@ -355,8 +355,6 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
           testPathMap_[simpleOverRideTest_].second,
           ConfigSourceType::UserConfig));
 
-  edenConfig->reload();
-
   auto clientConfigPath = rootTestDir_ + clientCertificatePath_;
 
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
@@ -387,8 +385,6 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
       std::make_shared<TomlFileConfigSource>(
           userConfigPath, ConfigSourceType::UserConfig));
 
-  edenConfig->reload();
-
   // Check default configuration is set
   EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), defaultUserIgnoreFilePath_);
   EXPECT_EQ(
@@ -410,7 +406,7 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
     substitutions["USER_ID"] = "42";
     substitutions["THRIFT_TLS_CL_CERT_PATH"] = "edenTest";
 
-    auto config = EdenConfig{
+    return EdenConfig{
         std::move(substitutions),
         canonicalPath("/testhomedir"),
         systemConfigDir,
@@ -419,8 +415,6 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
             ConfigSourceType::SystemConfig),
         std::make_shared<TomlFileConfigSource>(
             userConfigPath, ConfigSourceType::UserConfig)};
-    config.reload();
-    return EdenConfig{config};
   };
 
   writeFile(

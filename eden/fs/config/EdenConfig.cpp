@@ -135,6 +135,8 @@ EdenConfig::EdenConfig(
       systemConfigDir + kDefaultSystemIgnoreFile,
       ConfigSourceType::Default,
       true);
+
+  reload();
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
