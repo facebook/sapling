@@ -641,10 +641,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let is_logged = scuba.sampling().is_logged();
         let blobstores_count = self.blobstores.len() + self.write_only_blobstores.len();
         let mut needed_not_present: usize = self.not_present_read_quorum.get();
-        let comprehensive_lookup = matches!(
-            ctx.session().session_class(),
-            SessionClass::ComprehensiveLookup
-        );
 
         let main_requests: FuturesUnordered<_> = multiplexed_is_present(
             ctx.clone(),
@@ -662,12 +658,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
         )
         .collect();
 
-        // Lookup algorithm supports two strategies:
-        // "comprehensive" and "regular"
-        //
-        // Comprehensive lookup requires presence in all the blobstores.
-        // Regular lookup requires presence in at least one main or write only blobstore.
-
         // `chain` here guarantees that `main_requests` is empty before it starts
         // polling anything in `write_only_requests`
         let mut requests = main_requests
@@ -678,26 +668,22 @@ impl Blobstore for MultiplexedBlobstoreBase {
             async move {
                 let mut main_errors = HashMap::new();
                 let mut write_only_errors = HashMap::new();
-                let mut present_counter = 0;
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPresenceChecks);
                 while let Some((is_write_only, result)) = requests.next().await {
                     match result {
                         (_, Ok(BlobstoreIsPresent::Present)) => {
-                            if !comprehensive_lookup {
-                                if is_logged {
-                                    // Allow the other requests to complete so that we can record some
-                                    // metrics for the blobstore. This will also log metrics for write-only
-                                    // blobstores, which helps us decide whether they're good
-                                    spawn_stream_completion(requests);
-                                }
-                                return Ok(BlobstoreIsPresent::Present);
+                            if is_logged {
+                                // Allow the other requests to complete so that we can record some
+                                // metrics for the blobstore. This will also log metrics for write-only
+                                // blobstores, which helps us decide whether they're good
+                                spawn_stream_completion(requests);
                             }
-                            present_counter += 1;
+                            return Ok(BlobstoreIsPresent::Present);
                         }
                         (_, Ok(BlobstoreIsPresent::Absent)) => {
                             needed_not_present = needed_not_present.saturating_sub(1);
-                            if comprehensive_lookup || needed_not_present == 0 {
+                            if needed_not_present == 0 {
                                 if is_logged {
                                     spawn_stream_completion(requests);
                                 }
@@ -726,51 +712,29 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                 }
 
-                if comprehensive_lookup {
-                    // all blobstores reported the blob is present
-                    if main_errors.is_empty() && write_only_errors.is_empty() {
-                        Ok(BlobstoreIsPresent::Present)
-                    }
-                    // some blobstores reported the blob is present, others failed
-                    else if present_counter > 0 {
-                        let err = Error::from(ErrorKind::SomeFailedOthersNone {
-                            main_errors: Arc::new(main_errors),
-                            write_only_errors: Arc::new(write_only_errors),
-                        });
+                // all blobstores reported the blob is missing
+                if main_errors.is_empty() && write_only_errors.is_empty() {
+                    Ok(BlobstoreIsPresent::Absent)
+                }
+                // all blobstores failed
+                else if main_errors.len() + write_only_errors.len() == blobstores_count {
+                    Err(ErrorKind::AllFailed {
+                        main_errors: Arc::new(main_errors),
+                        write_only_errors: Arc::new(write_only_errors),
+                    })
+                }
+                // some blobstores reported the blob is missing, others failed
+                else {
+                    let write_only_err = blobstores_failed_error(
+                        blobstores.iter().map(|(id, _)| *id),
+                        main_errors,
+                        write_only_errors,
+                    );
+                    if matches!(write_only_err, ErrorKind::SomeFailedOthersNone { .. }) {
+                        let err = Error::from(write_only_err);
                         Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
-                    }
-                    // all blobstores failed
-                    else {
-                        Err(ErrorKind::AllFailed {
-                            main_errors: Arc::new(main_errors),
-                            write_only_errors: Arc::new(write_only_errors),
-                        })
-                    }
-                } else {
-                    // all blobstores reported the blob is missing
-                    if main_errors.is_empty() && write_only_errors.is_empty() {
-                        Ok(BlobstoreIsPresent::Absent)
-                    }
-                    // all blobstores failed
-                    else if main_errors.len() + write_only_errors.len() == blobstores_count {
-                        Err(ErrorKind::AllFailed {
-                            main_errors: Arc::new(main_errors),
-                            write_only_errors: Arc::new(write_only_errors),
-                        })
-                    }
-                    // some blobstores reported the blob is missing, others failed
-                    else {
-                        let write_only_err = blobstores_failed_error(
-                            blobstores.iter().map(|(id, _)| *id),
-                            main_errors,
-                            write_only_errors,
-                        );
-                        if matches!(write_only_err, ErrorKind::SomeFailedOthersNone { .. }) {
-                            let err = Error::from(write_only_err);
-                            Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
-                        } else {
-                            Err(write_only_err)
-                        }
+                    } else {
+                        Err(write_only_err)
                     }
                 }
             }

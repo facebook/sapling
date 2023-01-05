@@ -28,7 +28,6 @@ use changeset_fetcher::ChangesetFetcherRef;
 use changesets::ChangesetInsert;
 use changesets::ChangesetsRef;
 use context::CoreContext;
-use context::SessionClass;
 use edenapi_types::AnyId;
 use edenapi_types::UploadToken;
 use ephemeral_blobstore::Bubble;
@@ -79,7 +78,6 @@ use repo_update_logger::log_new_commits;
 use repo_update_logger::CommitInfo;
 use segmented_changelog::CloneData;
 use segmented_changelog::Location;
-use tunables::tunables;
 use unbundle::upload_changeset;
 
 use super::HgFileContext;
@@ -192,15 +190,9 @@ impl HgRepoContext {
         bubble_id: Option<BubbleId>,
     ) -> Result<bool, MononokeError> {
         async move {
-            let mut ctx = self.ctx().clone();
-            let is_comprehensive = tunables().get_edenapi_lookup_use_comprehensive_mode();
-            if is_comprehensive {
-                ctx.session_mut()
-                    .override_session_class(SessionClass::ComprehensiveLookup);
-            }
             self.bubble_blobstore(bubble_id)
                 .await?
-                .is_present(&ctx, key)
+                .is_present(self.ctx(), key)
                 .await
                 .map(|is_present| {
                     // if we can't resolve the presence (some blobstores failed, some returned None)

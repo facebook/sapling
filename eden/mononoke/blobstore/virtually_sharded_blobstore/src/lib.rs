@@ -31,7 +31,6 @@ use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
-use context::SessionClass;
 use mononoke_types::BlobstoreBytes;
 use shard::SemaphoreAcquisition;
 use shard::Shards;
@@ -502,18 +501,11 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
     ) -> Result<BlobstoreIsPresent> {
         cloned!(self.inner);
 
-        let comprehensive_lookup = matches!(
-            ctx.session().session_class(),
-            SessionClass::ComprehensiveLookup
-        );
-
         let cache_key = CacheKey::from_key(key);
         let presence = PresenceData::Get;
 
-        if !comprehensive_lookup {
-            if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
-                return Ok(BlobstoreIsPresent::Present);
-            }
+        if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
+            return Ok(BlobstoreIsPresent::Present);
         }
 
         Ticket::new(ctx, AccessReason::Read).finish().await?;

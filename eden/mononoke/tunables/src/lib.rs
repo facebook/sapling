@@ -246,9 +246,6 @@ pub struct MononokeTunables {
     // How many commits to walk back from the client heads before failing to rebuild SC
     segmented_changelog_client_max_commits_to_traverse: AtomicI64,
 
-    // Use comprehensive mode for is_present method in multiplexed blobstore for edenapi lookup api.
-    edenapi_lookup_use_comprehensive_mode: AtomicBool,
-
     // Timeout for is_present call for multiplexed blobstore
     is_present_timeout_ms: AtomicI64,
 
