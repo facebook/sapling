@@ -248,6 +248,17 @@ impl CommitGraph {
         }))
     }
 
+    /// Returns the parents of a single changeset that must exist.
+    pub async fn changeset_parents_required(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetParents> {
+        self.changeset_parents(ctx, cs_id)
+            .await?
+            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
+    }
+
     /// Returns the generation number of a single changeset.
     pub async fn changeset_generation(
         &self,
@@ -256,6 +267,17 @@ impl CommitGraph {
     ) -> Result<Option<Generation>> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges.map(|edges| edges.node.generation))
+    }
+
+    /// Returns the generation number of a single changeset that must exist.
+    pub async fn changeset_generation_required(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Generation> {
+        self.changeset_generation(ctx, cs_id)
+            .await?
+            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
     }
 
     /// Calculates the skew binary ancestor of a changeset
@@ -433,22 +455,21 @@ impl CommitGraph {
         Ok(Some(u))
     }
 
-    /// Obtain a frontier of changesets from a single changeset id.
-    ///
-    /// If the changeset does not exist, the frontier is empty.
+    /// Obtain a frontier of changesets from a single changeset id, which must
+    /// exist.
     async fn single_frontier(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<ChangesetFrontier> {
+        let generation = self.changeset_generation_required(ctx, cs_id).await?;
         let mut frontier = ChangesetFrontier::new();
-        if let Some(generation) = self.changeset_generation(ctx, cs_id).await? {
-            frontier.insert(generation, hashset! { cs_id });
-        }
+        frontier.insert(generation, hashset! { cs_id });
         Ok(frontier)
     }
 
-    /// Obtain a frontier of changesets from a list of changeset ids.
+    /// Obtain a frontier of changesets from a list of changeset ids, which
+    /// must all exist.
     async fn frontier(
         &self,
         ctx: &CoreContext,
@@ -457,7 +478,10 @@ impl CommitGraph {
         let all_edges = self.storage.fetch_many_edges(ctx, &cs_ids, None).await?;
 
         let mut frontier = ChangesetFrontier::new();
-        for (cs_id, edges) in all_edges.into_iter() {
+        for cs_id in cs_ids {
+            let edges = all_edges
+                .get(&cs_id)
+                .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
             frontier
                 .entry(edges.node.generation)
                 .or_default()
@@ -533,14 +557,13 @@ impl CommitGraph {
     ) -> Result<bool> {
         let (frontier, target_gen) = futures::try_join!(
             self.single_frontier(ctx, descendant),
-            self.changeset_generation(ctx, ancestor)
+            self.changeset_generation_required(ctx, ancestor)
         )?;
-        if let Some(target_gen) = target_gen {
-            let frontier = self.lower_frontier(ctx, frontier, target_gen).await?;
-            if let Some((frontier_gen, cs_ids)) = frontier.last_key_value() {
-                if *frontier_gen == target_gen && cs_ids.contains(&ancestor) {
-                    return Ok(true);
-                }
+        debug_assert!(!frontier.is_empty(), "frontier should contain descendant");
+        let frontier = self.lower_frontier(ctx, frontier, target_gen).await?;
+        if let Some((frontier_gen, cs_ids)) = frontier.last_key_value() {
+            if *frontier_gen == target_gen && cs_ids.contains(&ancestor) {
+                return Ok(true);
             }
         }
         Ok(false)
@@ -600,15 +623,12 @@ impl ChangesetFetcher for CommitGraph {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation> {
-        self.changeset_generation(&ctx, cs_id)
-            .await?
-            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
+        self.changeset_generation_required(&ctx, cs_id).await
     }
 
     async fn get_parents(&self, ctx: CoreContext, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
-        self.changeset_parents(&ctx, cs_id)
-            .await?
+        self.changeset_parents_required(&ctx, cs_id)
+            .await
             .map(SmallVec::into_vec)
-            .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))
     }
 }
