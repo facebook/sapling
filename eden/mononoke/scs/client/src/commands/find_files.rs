@@ -33,6 +33,9 @@ pub(super) struct CommandArgs {
     #[clap(long, short)]
     /// Filename to filter on
     filename: Option<Vec<String>>,
+    #[clap(long, short)]
+    /// Suffix of the basenames to filter on,
+    suffix: Option<Vec<String>>,
     #[clap(long)]
     /// If provided (even empty), response is sorted and starts from the given name
     after: Option<String>,
@@ -64,6 +67,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
     let prefixes = args.prefix.clone();
     let basenames = args.filename.clone();
+    let basename_suffixes = args.suffix.clone();
     let after = args.after.clone();
     let limit: i64 = args.limit.try_into().context("limit too large")?;
 
@@ -76,6 +80,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         limit,
         after,
         basenames,
+        basename_suffixes,
         prefixes,
         ..Default::default()
     };
