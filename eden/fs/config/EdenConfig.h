@@ -19,11 +19,12 @@
 
 #include "common/rust/shed/hostcaps/hostcaps.h"
 #include "eden/fs/config/ConfigSetting.h"
+#include "eden/fs/config/ConfigSource.h"
 #include "eden/fs/config/ConfigVariables.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/config/MountProtocol.h"
-#include "eden/fs/config/TomlFileConfigSource.h"
+#include "eden/fs/config/ReaddirPrefetch.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -300,6 +301,14 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::hours(24),
       this};
 
+  /**
+   * Specifies which directory children will be prefetched upon readdir.
+   */
+  ConfigSetting<ReaddirPrefetch> readdirPrefetch{
+      "mount:readdir-prefetch",
+      ReaddirPrefetch::None,
+      this};
+
   // [store]
 
   /**
@@ -556,6 +565,8 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Controls whether EdenFS reads blob metadata directly from hg
+   *
+   * TODO: Delete once this config is no longer written.
    */
   ConfigSetting<bool> useAuxMetadata{"hg:use-aux-metadata", true, this};
 

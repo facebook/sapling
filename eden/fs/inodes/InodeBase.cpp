@@ -370,11 +370,23 @@ ObjectStore& InodeBase::getObjectStore() const {
   return *getMount()->getObjectStore();
 }
 
-// Helper function to update Journal used by FileInode and TreeInode.
 void InodeBase::updateJournal() {
   auto path = getPath();
   if (path.has_value()) {
     getMount()->getJournal().recordChanged(std::move(path.value()));
   }
 }
+
+void InodeBase::notifyParentOfStat(
+    bool isFile,
+    const ObjectFetchContext& context) {
+  // This is called from a hot function, so it would be nice to avoid needing to
+  // increment the parent's reference count, but the location lock is the bottom
+  // of the lock hierarchy. Therefore, it is not safe to acquire the parent's
+  // contents lock, which is necessary for prefetching.
+  if (auto parent = location_.rlock()->parent) {
+    parent->childWasStat(isFile, context);
+  }
+}
+
 } // namespace facebook::eden

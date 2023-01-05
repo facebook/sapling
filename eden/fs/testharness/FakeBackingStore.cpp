@@ -130,6 +130,14 @@ SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
   });
 }
 
+std::unique_ptr<BlobMetadata> FakeBackingStore::getLocalBlobMetadata(
+    const ObjectId& id,
+    const ObjectFetchContextPtr&) {
+  auto data = data_.wlock();
+  data->metadataLookups.push_back(id);
+  return nullptr;
+}
+
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
   return makeBlob(ObjectId::sha1(contents), contents);
 }

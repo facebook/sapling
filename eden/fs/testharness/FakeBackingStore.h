@@ -67,10 +67,8 @@ class FakeBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
 
   std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
-      const ObjectId& /*id*/,
-      const ObjectFetchContextPtr& /*context*/) override {
-    return nullptr;
-  }
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
 
   /**
    * Add a Blob to the backing store
@@ -173,6 +171,10 @@ class FakeBackingStore final : public BackingStore {
     return 0;
   }
 
+  std::vector<ObjectId> getMetadataLookups() const {
+    return data_.rlock()->metadataLookups;
+  }
+
  private:
   struct Data {
     std::unordered_map<RootId, std::unique_ptr<StoredHash>> commits;
@@ -181,6 +183,7 @@ class FakeBackingStore final : public BackingStore {
 
     std::unordered_map<RootId, size_t> commitAccessCounts;
     std::unordered_map<ObjectId, size_t> accessCounts;
+    std::vector<ObjectId> metadataLookups;
   };
 
   static Tree::container buildTreeEntries(

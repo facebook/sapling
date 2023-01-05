@@ -14,6 +14,7 @@
 #include <folly/test/TestUtils.h>
 #include <optional>
 
+#include "eden/fs/config/TomlFileConfigSource.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"

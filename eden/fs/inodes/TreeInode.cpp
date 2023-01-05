@@ -184,7 +184,9 @@ TreeInode::TreeInode(
 TreeInode::~TreeInode() {}
 
 ImmediateFuture<struct stat> TreeInode::stat(
-    const ObjectFetchContextPtr& /*context*/) {
+    const ObjectFetchContextPtr& context) {
+  notifyParentOfStat(/*isFile=*/false, *context);
+
   auto st = getMount()->initStatData();
   st.st_ino = folly::to_narrow(getNodeId().get());
   auto contents = contents_.rlock();
@@ -2268,11 +2270,9 @@ bool TreeInode::readdirImpl(
 
   // It's very common for userspace to readdir() a directory to completion and
   // serially stat() every entry. Since stat() returns a file's size and a
-  // directory's entry count in the st_nlink field, upon the first readdir for a
-  // given inode, fetch metadata for each entry in parallel. prefetch() may
-  // return early if the metadata for this inode's children has already been
-  // prefetched.
-  prefetch(context);
+  // directory's entry count in the st_nlink field, treat readdir() as a signal
+  // that we may want to prefetch metadata for all children.
+  considerReaddirPrefetch(context);
 
   // Possible offset values are:
   //   0: start at the beginning
@@ -4407,40 +4407,124 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 
-void TreeInode::prefetch(const ObjectFetchContextPtr& context) {
-  bool expected = false;
-  if (!prefetched_.compare_exchange_strong(expected, true)) {
+#endif
+
+void TreeInode::childWasStat(bool isFile, const ObjectFetchContext& context) {
+  auto currentState = prefetchState_.load(std::memory_order_relaxed);
+  PrefetchState desiredState;
+  PrefetchSet prefetchSet = 0;
+
+  do {
+    switch (currentState) {
+      case NeverEnumerated:
+        // The parent hasn't been readdir, so assume this is a one-off lookup of
+        // a known path.
+        return;
+      case Enumerated:
+        desiredState = isFile ? PrefetchedAll : PrefetchedTrees;
+        prefetchSet = isFile ? (PrefetchFiles | PrefetchTrees) : PrefetchTrees;
+        break;
+      case PrefetchedTrees:
+        if (isFile) {
+          desiredState = PrefetchedAll;
+          prefetchSet = PrefetchFiles;
+          break;
+        } else {
+          // Already prefetched trees.
+          return;
+        }
+      case PrefetchedAll:
+        // Readdir must have happened prior to a child's stat(). Ignore.
+        return;
+    }
+  } while (!prefetchState_.compare_exchange_weak(
+      currentState,
+      desiredState,
+      std::memory_order_acq_rel,
+      std::memory_order_acquire));
+
+  doPrefetch(prefetchSet, context);
+}
+
+void TreeInode::considerReaddirPrefetch(
+    const ObjectFetchContextPtr& /*context*/) {
+  auto currentState = prefetchState_.load(std::memory_order_relaxed);
+  switch (currentState) {
+    case NeverEnumerated:
+      // Attempt transition to Enumerated.
+      break;
+    case Enumerated:
+      // Second readdir. Ignore.
+      return;
+    case PrefetchedTrees:
+    case PrefetchedAll:
+      // Readdir must have happened prior to a child's stat(). Ignore.
+      return;
+  }
+
+  if (!prefetchState_.compare_exchange_strong(
+          currentState,
+          Enumerated,
+          std::memory_order_acq_rel,
+          std::memory_order_acquire)) {
+    // Someone beat us to the punch. No need to retry, because any
+    // state transition means there's nothing to do.
     return;
   }
-  // Blob metadata will already be prefetched when this
-  // tree is first fetched. This could beat the metadata
-  // prefetch to the punch and cause a full blob fetch.
-  // So when metadata prefetching is turned on we can
-  // just skip this.
+}
+
+void TreeInode::doPrefetch(
+    PrefetchSet prefetchSet,
+    const ObjectFetchContext& context) {
+  XCHECK_NE(0, prefetchSet)
+      << "The caller should never pass an empty prefetch set";
+
   auto config = getMount()->getServerState()->getEdenConfig();
-  if (config->useAuxMetadata.getValue()) {
+  switch (config->readdirPrefetch.getValue()) {
+    case ReaddirPrefetch::None:
+      prefetchSet = 0;
+      break;
+    case ReaddirPrefetch::Files:
+      prefetchSet &= PrefetchFiles;
+      break;
+    case ReaddirPrefetch::Trees:
+      prefetchSet &= PrefetchTrees;
+      break;
+    case ReaddirPrefetch::Both:
+      break;
+  }
+  if (!prefetchSet) {
     XLOG(DBG4) << "skipping prefetch for " << getLogPath()
-               << ": metadata prefetching is turned on in the backing store";
+               << ": filtered out by configuration";
     return;
   }
+
+  // doPrefetch() is called by stat(), under the assumption that a readdir()
+  // followed by stat() on a child will precede stat() calls on the remainder of
+  // the children. For example, `ls -l` or `find -ls`. To optimize that common
+  // situation, load trees and blob metadata in parallel here.
+
   auto prefetchLease =
-      getMount()->tryStartTreePrefetch(inodePtrFromThis(), *context);
+      getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);
   if (!prefetchLease) {
     XLOG(DBG3) << "skipping prefetch for " << getLogPath()
                << ": too many prefetches already in progress";
-    prefetched_.store(false);
+    // TODO(chadaustin): Ideally, we'd roll back the prefetchState, but I intend
+    // to remove TreePrefetchLease entirely.
     return;
   }
-  XLOG(DBG4) << "starting prefetch for " << getLogPath();
+  XLOG(DBG4) << "starting prefetch for " << getLogPath() << " of "
+             << ((prefetchSet & (PrefetchFiles | PrefetchTrees)) ==
+                         (PrefetchFiles | PrefetchTrees)
+                     ? "files and trees"
+                     : (prefetchSet & PrefetchFiles) == PrefetchFiles ? "files"
+                     : (prefetchSet & PrefetchTrees) == PrefetchTrees
+                     ? "trees"
+                     : "nothing");
 
   folly::via(
       getMount()->getServerThreadPool().get(),
-      [lease = std::move(*prefetchLease)]() mutable {
-        // prefetch() is called by readdir, under the assumption that a series
-        // of stat calls on its entries will follow. (e.g. `ls -l` or `find
-        // -ls`). To optimize that common situation, load trees and blob
-        // metadata in parallel here.
-
+      [prefetchSet, lease = std::move(*prefetchLease)]() mutable {
         std::vector<IncompleteInodeLoad> pendingLoads;
         std::vector<Future<Unit>> inodeFutures;
         // The aliveness of this context is guaranteed by the `.thenTry`
@@ -4454,6 +4538,16 @@ void TreeInode::prefetch(const ObjectFetchContextPtr& context) {
             if (entry.getInode()) {
               // Already loaded
               continue;
+            }
+
+            if (entry.isDirectory()) {
+              if (0 == (prefetchSet & PrefetchTrees)) {
+                continue;
+              }
+            } else {
+              if (0 == (prefetchSet & PrefetchFiles)) {
+                continue;
+              }
             }
 
             // Userspace will commonly issue a readdir() followed by a series
@@ -4487,6 +4581,8 @@ void TreeInode::prefetch(const ObjectFetchContextPtr& context) {
             });
       });
 }
+
+#ifndef _WIN32
 
 ImmediateFuture<struct stat> TreeInode::setattr(
     const DesiredMetadata& desired,

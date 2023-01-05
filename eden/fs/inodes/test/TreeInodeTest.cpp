@@ -22,6 +22,7 @@
 #include "eden/fs/nfs/DirList.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -706,4 +707,157 @@ TEST(TreeInode, getOrFindChildrenRemovedChild) {
   collectResults(mount, std::move(result));
 }
 
-#endif
+TEST(TreeInode, if_readdir_prefetching_is_disabled_metadata_is_not_fetched) {
+  FakeTreeBuilder builder;
+  builder.setFile("foo/bar.txt", "bar");
+  builder.setFile("foo/baz.txt", "baz");
+  TestMount mount{builder};
+  mount.updateEdenConfig({
+      {"mount:readdir-prefetch", "none"},
+  });
+
+  auto foo = mount.getTreeInode("foo"_relpath);
+  auto result =
+      foo->fuseReaddir(
+             FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+
+  ASSERT_EQ(4, result.size());
+  EXPECT_EQ(".", result[0].name);
+  EXPECT_EQ("..", result[1].name);
+  EXPECT_EQ("bar.txt", result[2].name);
+  EXPECT_EQ("baz.txt", result[3].name);
+
+  auto bar = mount.getFileInode("foo/bar.txt"_relpath);
+  bar->stat(ObjectFetchContext::getNullContext()).get();
+  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+
+  // Pump the prefetch operation here.
+  mount.drainServerExecutor();
+
+  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+}
+
+TEST(TreeInode, readdir_does_not_prefetch) {
+  FakeTreeBuilder builder;
+  builder.setFile("foo/bar.txt", "bar");
+  builder.setFile("foo/baz.txt", "baz");
+  TestMount mount{builder};
+  mount.updateEdenConfig({
+      {"mount:readdir-prefetch", "both"},
+  });
+
+  auto foo = mount.getTreeInode("foo"_relpath);
+  auto result =
+      foo->fuseReaddir(
+             FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+
+  ASSERT_EQ(4, result.size());
+  EXPECT_EQ(".", result[0].name);
+  EXPECT_EQ("..", result[1].name);
+  EXPECT_EQ("bar.txt", result[2].name);
+  EXPECT_EQ("baz.txt", result[3].name);
+
+  mount.drainServerExecutor();
+
+  auto metadata = mount.getBackingStore()->getMetadataLookups();
+  EXPECT_EQ(0, metadata.size());
+}
+
+TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
+  FakeTreeBuilder builder;
+  builder.setFile("foo/bar.txt", "bar");
+  builder.setFile("foo/baz.txt", "baz");
+  TestMount mount{builder};
+  mount.updateEdenConfig({
+      {"mount:readdir-prefetch", "both"},
+  });
+
+  auto bar = mount.getFileInode("foo/bar.txt"_relpath);
+
+  // Intentionally drop the result future because we want to trigger the
+  // prefetch logic without actually fetching the metadata for `bar`.
+  (void)bar->stat(ObjectFetchContext::getNullContext());
+
+  mount.drainServerExecutor();
+
+  auto metadata = mount.getBackingStore()->getMetadataLookups();
+  EXPECT_EQ(0, metadata.size());
+}
+
+TEST(TreeInode, readdir_followed_by_stat_on_child_prefetches_parents_children) {
+  FakeTreeBuilder builder;
+  builder.setFile("foo/bar.txt", "bar");
+  builder.setFile("foo/baz.txt", "baz");
+  TestMount mount{builder};
+  mount.updateEdenConfig({
+      {"mount:readdir-prefetch", "both"},
+  });
+
+  auto foo = mount.getTreeInode("foo"_relpath);
+  auto result =
+      foo->fuseReaddir(
+             FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+
+  ASSERT_EQ(4, result.size());
+  EXPECT_EQ(".", result[0].name);
+  EXPECT_EQ("..", result[1].name);
+  EXPECT_EQ("bar.txt", result[2].name);
+  EXPECT_EQ("baz.txt", result[3].name);
+
+  auto bar = mount.getFileInode("foo/bar.txt"_relpath);
+  bar->stat(ObjectFetchContext::getNullContext()).get();
+  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+
+  // Pump the prefetch operation here.
+  mount.drainServerExecutor();
+
+  EXPECT_EQ(2, mount.getBackingStore()->getMetadataLookups().size());
+}
+
+TEST(TreeInode, stat_on_directories_only_prefetches_subdirectories) {
+  FakeTreeBuilder builder;
+  builder.setFile("foo/bar/internal.txt", "internal");
+  builder.setFile("foo/baz.txt", "baz");
+  builder.setFile("foo/qux/another.txt", "another");
+  builder.setFile("foo/dingo.txt", "dingo");
+  TestMount mount{builder};
+  mount.updateEdenConfig({
+      {"mount:readdir-prefetch", "both"},
+  });
+
+  auto foo = mount.getTreeInode("foo"_relpath);
+  auto result =
+      foo->fuseReaddir(
+             FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
+
+  // stat() a directory. This looks like a `find .` operation where the
+  // traversal itself will lookup() any child directories, but will not stat()
+  // blobs. Therefore, it's best to only prefetch tree metadata.
+  auto bar = mount.getTreeInode("foo/bar"_relpath);
+  bar->stat(ObjectFetchContext::getNullContext()).get();
+  EXPECT_EQ(0, mount.getBackingStore()->getMetadataLookups().size());
+
+  // Pump the prefetch operation here.
+  mount.drainServerExecutor();
+
+  // Trees don't have blob metadata.
+  EXPECT_EQ(0, mount.getBackingStore()->getMetadataLookups().size());
+
+  // Now stat() a file. We already prefetched directories, so if a file is
+  // stat()'d, that's a clue that the rest of the files should be prefetched.
+
+  auto baz = mount.getFileInode("foo/baz.txt"_relpath);
+  baz->stat(ObjectFetchContext::getNullContext()).get();
+  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+
+  // Pump the prefetch operation here.
+  mount.drainServerExecutor();
+
+  EXPECT_EQ(2, mount.getBackingStore()->getMetadataLookups().size());
+}
+
+#endif // _WIN32

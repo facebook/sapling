@@ -460,10 +460,17 @@ class InodeBase {
    */
   void updateJournal();
 
+  /**
+   * Our prefetch heuristics (detection of recursive crawls) kick in when a
+   * child has been stat(). The parent inode must be notified by the children.
+   */
+  void notifyParentOfStat(bool isFile, const ObjectFetchContext& context);
+
  private:
 #ifndef _WIN32
-  // The caller (which is always InodeBaseMetadata) must be holding the inode
-  // state lock for this type of inode when calling getMetadataLocked().
+  // The caller (which is always InodeBaseMetadata) must be holding the
+  // inode state lock for this type of inode when calling
+  // getMetadataLocked().
   InodeMetadata getMetadataLocked() const;
 #endif
 
