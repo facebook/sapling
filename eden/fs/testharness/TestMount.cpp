@@ -71,12 +71,67 @@ DEFINE_int32(
     2,
     "the number of eden CPU worker threads to create during unit tests");
 
+namespace facebook::eden {
+
 namespace {
 constexpr size_t kBlobCacheMaximumSize = 1000; // bytes
 constexpr size_t kBlobCacheMinimumEntries = 0;
 } // namespace
 
-namespace facebook::eden {
+class TestConfigSource final : public ConfigSource {
+ public:
+  using Values = std::map<std::string, std::map<std::string, std::string>>;
+
+  explicit TestConfigSource(ConfigSourceType sourceType)
+      : sourceType_{sourceType} {}
+
+  void setValues(Values values) {
+    auto state = state_.wlock();
+    state->values = std::move(values);
+    state->shouldReload = true;
+  }
+
+  // ConfigSource methods:
+
+  ConfigSourceType getSourceType() override {
+    return sourceType_;
+  }
+  std::string getSourcePath() override {
+    return "test";
+  }
+  FileChangeReason shouldReload() override {
+    return state_.rlock()->shouldReload ? FileChangeReason::MTIME
+                                        : FileChangeReason::NONE;
+  }
+  void reload(const ConfigVariables& substitutions, ConfigSettingMap& map)
+      override {
+    auto state = state_.rlock();
+    for (const auto& [sectionName, section] : state->values) {
+      auto* configMapEntry = folly::get_ptr(map, sectionName);
+      XCHECK(configMapEntry)
+          << "EdenConfig does not have section named " << sectionName;
+
+      for (const auto& [entryKey, entryValue] : section) {
+        auto* configMapKeyEntry = folly::get_ptr(*configMapEntry, entryKey);
+        XCHECK(configMapKeyEntry) << "EdenConfig does not have setting named "
+                                  << sectionName << ":" << entryKey;
+        auto rslt =
+            (*configMapKeyEntry)
+                ->setStringValue(entryValue, substitutions, sourceType_);
+        XCHECK(rslt) << "invalid config value for " << sectionName << ":"
+                     << entryKey << " = " << entryValue << ", " << rslt.error();
+      }
+    }
+  }
+
+ private:
+  ConfigSourceType sourceType_;
+  struct State {
+    bool shouldReload = false;
+    Values values;
+  };
+  folly::Synchronized<State> state_;
+};
 
 bool TestMountFile::operator==(const TestMountFile& other) const {
   return path == other.path && contents == other.contents && rwx == other.rwx &&
@@ -93,29 +148,31 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory(caseSensitivity);
 
+  testConfigSource_ =
+      std::make_shared<TestConfigSource>(ConfigSourceType::SystemConfig);
+
   edenConfig_ = make_shared<EdenConfig>(
       ConfigVariables{},
       /*userHomePath=*/canonicalPath(testDir_->path().string()),
       /*systemConfigDir=*/canonicalPath(testDir_->path().string()),
-      EdenConfig::SourceVector{});
-
+      EdenConfig::SourceVector{testConfigSource_});
   edenConfig_->enableActivityBuffer.setValue(
       enableActivityBuffer, ConfigSourceType::Default, true);
+
+  auto reloadableConfig = std::make_shared<ReloadableConfig>(edenConfig_);
+
   // Create treeCache
-  auto edenConfig = std::make_shared<ReloadableConfig>(
-      edenConfig_, ConfigReloadBehavior::NoReload);
-  treeCache_ = TreeCache::create(edenConfig);
-  auto reloadableConfig = make_shared<ReloadableConfig>(edenConfig_);
-  auto userInfo = UserInfo::lookup();
+  treeCache_ = TreeCache::create(reloadableConfig);
+
   serverState_ = make_shared<ServerState>(
-      userInfo,
+      UserInfo::lookup(),
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
       make_shared<ProcessNameCache>(),
       make_shared<NullStructuredLogger>(),
       make_shared<NullHiveLogger>(),
-      make_shared<ReloadableConfig>(edenConfig_),
+      reloadableConfig,
       *edenConfig_,
       nullptr,
       make_shared<CommandNotifier>(reloadableConfig),
@@ -336,6 +393,31 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
   std::move(startChannelFuture).get(kTimeout);
 }
 #endif
+
+namespace {
+std::pair<std::string_view, std::string_view> splitKey(
+    std::string_view keypair) {
+  auto idx = keypair.find(':');
+  if (idx == std::string_view::npos) {
+    throwf<std::domain_error>("config name {} must have a colon", keypair);
+  }
+  return {keypair.substr(0, idx), keypair.substr(idx + 1)};
+}
+} // namespace
+
+void TestMount::updateEdenConfig(
+    const std::map<std::string, std::string>& values) {
+  std::map<std::string, std::map<std::string, std::string>> nested;
+
+  for (auto& [key, value] : values) {
+    auto [sectionName, configName] = splitKey(key);
+    nested[std::string(sectionName)][std::string(configName)] = value;
+  }
+
+  testConfigSource_->setValues(nested);
+  (void)serverState_->getReloadableConfig()->getEdenConfig(
+      ConfigReloadBehavior::ForceReload);
+}
 
 void TestMount::remount() {
   // Create a new copy of the CheckoutConfig

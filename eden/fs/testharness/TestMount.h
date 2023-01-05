@@ -35,6 +35,7 @@ class TemporaryDirectory;
 } // namespace folly
 
 namespace facebook::eden {
+
 class BlobCache;
 class TreeCache;
 class CheckoutConfig;
@@ -44,6 +45,7 @@ class FakePrivHelper;
 class FakeTreeBuilder;
 class FileInode;
 class LocalStore;
+class TestConfigSource;
 class TreeInode;
 template <typename T>
 class StoredObject;
@@ -203,6 +205,12 @@ class TestMount {
     // edenMount_.
     return edenMount_ ? edenMount_->getCheckoutConfig() : config_.get();
   }
+
+  /**
+   * Updates the EdenConfig. Keys are of the form section:setting and values
+   * must be parseable by the ConfigSetting.
+   */
+  void updateEdenConfig(const std::map<std::string, std::string>& values);
 
   /**
    * Callers can use this to populate the LocalStore before calling build().
@@ -407,6 +415,7 @@ class TestMount {
   std::shared_ptr<EdenStats> stats_;
   std::shared_ptr<BlobCache> blobCache_;
   std::shared_ptr<TreeCache> treeCache_;
+  std::shared_ptr<TestConfigSource> testConfigSource_;
   std::shared_ptr<EdenConfig> edenConfig_;
 
   /*

@@ -201,3 +201,17 @@ TEST(TestMount, mkdirDoesNotLeakFuseRefcount) {
   auto d = testMount.getTreeInode("d");
   EXPECT_EQ(0, d->debugGetFsRefcount());
 }
+
+TEST(TestMount, can_update_EdenConfig) {
+  FakeTreeBuilder builder;
+  TestMount testMount{builder};
+  testMount.updateEdenConfig({
+      {"fuse:max-concurrent-requests", "52"},
+  });
+
+  EXPECT_EQ(
+      52,
+      testMount.getServerState()
+          ->getEdenConfig()
+          ->fuseMaximumRequests.getValue());
+}
