@@ -236,9 +236,6 @@ pub struct MononokeTunables {
     segmented_changelog_force_reload: TunableI64ByRepo,
     segmented_changelog_force_reload_jitter_secs: AtomicI64,
 
-    // Usage of segmented changelog for speeding up server-side operations
-    segmented_changelog_is_ancestor_percentage: AtomicI64,
-
     // Override default progress logging sampling rate for segmented changelog parts
     segmented_changelog_idmap_log_sampling_rate: AtomicI64,
     segmented_changelog_tailer_log_sampling_rate: AtomicI64,
@@ -361,6 +358,9 @@ pub struct MononokeTunables {
     enable_writing_to_new_commit_graph: TunableBoolByRepo,
     // Timeout for writing to the new commit graph
     commit_graph_writes_timeout_ms: AtomicI64,
+
+    // Usage of new commit graph for speeding up server-side operations
+    new_commit_graph_is_ancestor_percentage: TunableI64ByRepo,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

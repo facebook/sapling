@@ -2144,7 +2144,11 @@ function merge_tunables() {
 function init_tunables() {
   if [[ ! -f "$MONONOKE_TUNABLES_PATH" ]]; then
     cat >> "$MONONOKE_TUNABLES_PATH" <<EOF
-{}
+{
+  "ints": {
+    "commit_graph_writes_timeout_ms": 10000
+  }
+}
 EOF
   fi
 }

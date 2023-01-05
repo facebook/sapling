@@ -52,6 +52,7 @@ use changeset_info::ChangesetInfo;
 use changesets::Changesets;
 use changesets::ChangesetsArc;
 use changesets::ChangesetsRef;
+use commit_graph::CommitGraph;
 use context::CoreContext;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CandidateSelectionHint;
@@ -233,6 +234,9 @@ pub struct Repo {
 
     #[facet]
     pub repo_handler_base: RepoHandlerBase,
+
+    #[facet]
+    pub commit_graph: CommitGraph,
 }
 
 impl AsBlobRepo for Repo {
@@ -380,6 +384,7 @@ impl Repo {
             warm_bookmarks_cache: self.warm_bookmarks_cache.clone(),
             hook_manager: self.hook_manager.clone(),
             repo_handler_base: self.repo_handler_base.clone(),
+            commit_graph: self.commit_graph.clone(),
         }
     }
 
@@ -484,6 +489,7 @@ impl Repo {
             &blob_repo.bookmark_update_log_arc(),
             &mutable_counters,
         )?;
+        let commit_graph = repo_factory.commit_graph(&blob_repo.repo_identity_arc())?;
 
         let inner = InnerRepo {
             blob_repo,
@@ -522,6 +528,7 @@ impl Repo {
             warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             hook_manager,
             repo_handler_base,
+            commit_graph,
         })
     }
 
@@ -844,8 +851,8 @@ impl RepoContext {
         &self.authz
     }
 
-    pub fn mononoke_api_repo(&self) -> Arc<Repo> {
-        self.repo.clone()
+    pub fn repo(&self) -> &Repo {
+        self.repo.as_ref()
     }
 
     /// The underlying `InnerRepo`.

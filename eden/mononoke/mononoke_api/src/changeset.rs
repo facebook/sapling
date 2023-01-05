@@ -28,8 +28,8 @@ use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::FixedOffset;
 use cloned::cloned;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
-use context::PerfCounterType;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
@@ -44,6 +44,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_lazy_shared::LazyShared;
+use futures_stats::TimedFutureExt;
 use hooks::CrossRepoPushSource;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
@@ -652,28 +653,33 @@ impl ChangesetContext {
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
-        let segmented_changelog_rollout_pct =
-            tunables().get_segmented_changelog_is_ancestor_percentage();
-        let use_segmented_changelog =
-            ((rand::random::<usize>() % 100) as i64) < segmented_changelog_rollout_pct;
-        if use_segmented_changelog {
-            let segmented_changelog = self.repo().segmented_changelog();
-            // If we have segmeneted changelog enabled...
-            if !segmented_changelog.disabled(self.ctx()).await? {
-                // ... and it has the answer for us ...
-                if let Some(result) = segmented_changelog
-                    .is_ancestor(self.ctx(), self.id, other_commit)
-                    .await?
-                {
-                    self.ctx()
-                        .perf_counters()
-                        .increment_counter(PerfCounterType::SegmentedChangelogServerSideOpsHits);
-                    // ... it's cheaper to return it.
-                    return Ok(result);
+        let new_commit_graph_rollout_pct = tunables()
+            .get_by_repo_new_commit_graph_is_ancestor_percentage(self.repo().name())
+            .unwrap_or(0);
+        let use_new_commit_graph =
+            ((rand::random::<usize>() % 100) as i64) < new_commit_graph_rollout_pct;
+        if use_new_commit_graph {
+            let (stats, result) = self
+                .repo()
+                .repo()
+                .commit_graph()
+                .is_ancestor(self.ctx(), self.id, other_commit)
+                .timed()
+                .await;
+            let mut scuba = self.ctx().scuba().clone();
+            scuba.add_future_stats(&stats);
+            match result {
+                Ok(is_ancestor) => {
+                    scuba.log_with_msg(
+                        "New commit graph is_ancestor succeeded",
+                        is_ancestor.to_string(),
+                    );
+                    return Ok(is_ancestor);
                 }
-                self.ctx()
-                    .perf_counters()
-                    .increment_counter(PerfCounterType::SegmentedChangelogServerSideOpsFallbacks);
+                Err(err) => {
+                    let mut scuba = self.ctx().scuba().clone();
+                    scuba.log_with_msg("New commit graph is_ancestor failed", err.to_string());
+                }
             }
         }
 

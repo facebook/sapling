@@ -31,6 +31,7 @@ changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 changesets = { version = "0.1.0", path = "../changesets" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
