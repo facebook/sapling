@@ -18,6 +18,7 @@ use metaconfig_types::BlameVersion;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::BookmarkParams;
 use metaconfig_types::CacheWarmupParams;
+use metaconfig_types::CommitGraphConfig;
 use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
@@ -54,6 +55,7 @@ use mononoke_types::PrefixTrie;
 use regex::Regex;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
+use repos::RawCommitGraphConfig;
 use repos::RawCommitIdentityScheme;
 use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivedDataConfig;
@@ -680,6 +682,16 @@ impl Convert for RawUpdateLoggingConfig {
         Ok(UpdateLoggingConfig {
             bookmark_logging_destination: self.bookmark_logging_destination.convert()?,
             new_commit_logging_destination: self.new_commit_logging_destination.convert()?,
+        })
+    }
+}
+
+impl Convert for RawCommitGraphConfig {
+    type Output = CommitGraphConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(CommitGraphConfig {
+            scuba_table: self.scuba_table,
         })
     }
 }

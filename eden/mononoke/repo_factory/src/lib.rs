@@ -679,6 +679,7 @@ impl RepoFactory {
             possibly_cached_changesets,
             commit_graph.clone(),
             repo_identity.name().to_string(),
+            repo_config.commit_graph_config.scuba_table.as_deref(),
         )?))
     }
 

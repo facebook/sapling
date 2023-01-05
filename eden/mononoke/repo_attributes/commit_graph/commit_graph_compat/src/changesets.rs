@@ -45,15 +45,19 @@ impl ChangesetsCommitGraphCompat {
         changesets: ArcChangesets,
         commit_graph: ArcCommitGraph,
         repo_name: String,
+        scuba_table: Option<&str>,
     ) -> Result<Self> {
         let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(
             changesets.clone(),
             changesets.repo_id(),
         ));
 
-        let scuba = MononokeScubaSampleBuilder::new(fb, "mononoke_commit_graph").with_context(
-            || "Couldn't create scuba sample builder for table mononoke_commit_graph",
-        )?;
+        let scuba = match scuba_table {
+            Some(scuba_table) => MononokeScubaSampleBuilder::new(fb, scuba_table).with_context(
+                || "Couldn't create scuba sample builder for table mononoke_commit_graph",
+            )?,
+            None => MononokeScubaSampleBuilder::with_discard(),
+        };
 
         Ok(Self {
             changesets,

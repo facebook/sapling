@@ -223,6 +223,7 @@ fn parse_with_repo_definition(
         backup_hg_sync_config,
         deep_sharded,
         update_logging_config,
+        commit_graph_config,
         ..
     } = named_repo_config;
 
@@ -337,6 +338,8 @@ fn parse_with_repo_definition(
 
     let update_logging_config = update_logging_config.convert()?.unwrap_or_default();
 
+    let commit_graph_config = commit_graph_config.convert()?.unwrap_or_default();
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -377,6 +380,7 @@ fn parse_with_repo_definition(
         backup_hg_sync_config,
         deep_sharded,
         update_logging_config,
+        commit_graph_config,
         default_commit_identity_scheme,
     })
 }
@@ -496,6 +500,7 @@ mod test {
     use metaconfig_types::BookmarkParams;
     use metaconfig_types::BubbleDeletionMode;
     use metaconfig_types::CacheWarmupParams;
+    use metaconfig_types::CommitGraphConfig;
     use metaconfig_types::CommitIdentityScheme;
     use metaconfig_types::CommitSyncConfig;
     use metaconfig_types::CommitSyncConfigVersion;
@@ -898,6 +903,9 @@ mod test {
 
             [update_logging_config]
             new_commit_logging_destination = { scribe = { scribe_category = "cat" } }
+
+            [commit_graph_config]
+            scuba_table = "commit_graph"
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1268,6 +1276,9 @@ mod test {
                         scribe_category: "cat".to_string(),
                     }),
                 },
+                commit_graph_config: CommitGraphConfig {
+                    scuba_table: Some("commit_graph".to_string()),
+                },
             },
         );
 
@@ -1342,6 +1353,7 @@ mod test {
                 backup_hg_sync_config: None,
                 deep_sharded: false,
                 update_logging_config: UpdateLoggingConfig::default(),
+                commit_graph_config: CommitGraphConfig::default(),
             },
         );
         assert_eq!(

@@ -224,6 +224,8 @@ pub struct RepoConfig {
     pub deep_sharded: bool,
     /// Configuration for update logging.
     pub update_logging_config: UpdateLoggingConfig,
+    /// Configuration for the commit graph.
+    pub commit_graph_config: CommitGraphConfig,
     /// Default commit identity scheme. Some repos can be hg-mirrored git repos.
     pub default_commit_identity_scheme: CommitIdentityScheme,
 }
@@ -1726,4 +1728,11 @@ pub struct UpdateLoggingConfig {
     pub bookmark_logging_destination: Option<LoggingDestination>,
     /// Destination where new commits are logged to
     pub new_commit_logging_destination: Option<LoggingDestination>,
+}
+
+/// Configuration for the commit graph
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct CommitGraphConfig {
+    /// Scuba table to log commit graph operations to
+    pub scuba_table: Option<String>,
 }
