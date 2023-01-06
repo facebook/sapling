@@ -18,7 +18,6 @@ use futures::try_join;
 use metaconfig_types::BlobConfig;
 #[cfg(fbcode_build)]
 use metaconfig_types::BlobstoreId;
-use metaconfig_types::DatabaseConfig;
 #[cfg(fbcode_build)]
 use metaconfig_types::MultiplexedStoreType;
 #[cfg(fbcode_build)]
@@ -84,25 +83,6 @@ impl WaitForReplication {
         let config_handle =
             config_store.get_config_handle(format!("{}/{}", CONFIGS_PATH, config_name))?;
         let (sync_queue_monitor, xdb_blobstore_monitor) = match storage_config.blobstore {
-            BlobConfig::Multiplexed {
-                blobstores,
-                queue_db: DatabaseConfig::Remote(remote),
-                ..
-            } => {
-                #[cfg(fbcode_build)]
-                {
-                    let my_admin = MyAdmin::new(fb)?;
-                    let sync_queue = Arc::new(my_admin.single_shard_lag_monitor(remote.db_address))
-                        as Arc<dyn ReplicaLagMonitor>;
-                    let xdb_blobstore = blobstore_monitor(&my_admin, blobstores);
-                    (sync_queue, xdb_blobstore)
-                }
-                #[cfg(not(fbcode_build))]
-                {
-                    let _ = (fb, remote, blobstores);
-                    unimplemented!()
-                }
-            }
             BlobConfig::MultiplexedWal {
                 blobstores,
                 queue_db: ShardedDatabaseConfig::Remote(remote),

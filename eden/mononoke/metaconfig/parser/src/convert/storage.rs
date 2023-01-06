@@ -125,60 +125,7 @@ impl Convert for RawBlobstoreConfig {
             RawBlobstoreConfig::mysql(raw) => BlobConfig::Mysql {
                 remote: raw.remote.convert()?,
             },
-            RawBlobstoreConfig::multiplexed(raw) => {
-                let parse_quorum = |raw_value: i64, name: &'static str| {
-                    let unchecked: usize = raw_value.try_into()?;
-
-                    if unchecked > raw.components.len() {
-                        return Err(anyhow!(
-                            "Not enough blobstores for {} {} (have {})",
-                            unchecked,
-                            name,
-                            raw.components.len()
-                        ));
-                    }
-
-                    NonZeroUsize::new(unchecked)
-                        .with_context(|| format!("Must require at least 1 {}", name))
-                };
-
-                let minimum_successful_writes =
-                    parse_quorum(raw.minimum_successful_writes.unwrap_or(1), "minimum writes")?;
-                let not_present_read_quorum = parse_quorum(
-                    raw.not_present_read_quorum
-                        .unwrap_or(raw.components.len().try_into()?),
-                    "read quorum",
-                )?;
-
-                BlobConfig::Multiplexed {
-                    multiplex_id: raw
-                        .multiplex_id
-                        .map(MultiplexId::new)
-                        .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
-                    scuba_table: raw.scuba_table,
-                    multiplex_scuba_table: raw.multiplex_scuba_table,
-                    scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
-                    blobstores: raw
-                        .components
-                        .into_iter()
-                        .map(|comp| {
-                            Ok((
-                                BlobstoreId::new(comp.blobstore_id.try_into()?),
-                                comp.store_type
-                                    .convert()?
-                                    .unwrap_or(MultiplexedStoreType::Normal),
-                                comp.blobstore.convert()?,
-                            ))
-                        })
-                        .collect::<Result<Vec<_>>>()?,
-                    minimum_successful_writes,
-                    not_present_read_quorum,
-                    queue_db: raw
-                        .queue_db
-                        .ok_or_else(|| anyhow!("missing queue_db from configuration"))?
-                        .convert()?,
-                }
-            }
+            RawBlobstoreConfig::multiplexed(..) => anyhow::bail!("Multiplex unsupported"),
             RawBlobstoreConfig::multiplexed_wal(RawBlobstoreMultiplexedWal {
                 write_quorum,
                 components,

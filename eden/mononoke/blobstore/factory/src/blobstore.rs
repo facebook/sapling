@@ -21,7 +21,6 @@ use blobstore::DisabledBlob;
 use blobstore::ErrorKind;
 use blobstore::PutBehaviour;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
-use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use blobstore_sync_queue::SqlBlobstoreWal;
 use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
@@ -38,15 +37,12 @@ use futures_watchdog::WatchdogExt;
 use logblob::LogBlob;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use metaconfig_types::DatabaseConfig;
 use metaconfig_types::MultiplexId;
 use metaconfig_types::MultiplexedStoreType;
 use metaconfig_types::PackConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use metaconfig_types::ShardedDatabaseConfig;
-use multiplexedblob::MultiplexedBlobstore;
 use multiplexedblob::ScrubAction;
-use multiplexedblob::ScrubBlobstore;
 use multiplexedblob::ScrubHandler;
 use multiplexedblob::ScrubOptions;
 use multiplexedblob::SrubWriteOnly;
@@ -60,7 +56,6 @@ use samplingblob::ComponentSamplingHandler;
 use samplingblob::SamplingBlobstorePutOps;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromShardedDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::CountedSqlblob;
@@ -542,38 +537,6 @@ fn make_blobstore_put_ops<'a>(
             }
 
             // Wrapper blobstores
-            Multiplexed {
-                multiplex_id,
-                scuba_table,
-                multiplex_scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                not_present_read_quorum,
-                queue_db,
-            } => {
-                needs_wrappers = false;
-                make_blobstore_multiplexed(
-                    fb,
-                    multiplex_id,
-                    queue_db,
-                    scuba_table,
-                    multiplex_scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                    minimum_successful_writes,
-                    not_present_read_quorum,
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                    logger,
-                    config_store,
-                    scrub_handler,
-                    component_sampler,
-                )
-                .watched(logger)
-                .await?
-            }
             MultiplexedWal {
                 multiplex_id,
                 blobstores,
@@ -701,83 +664,6 @@ fn make_blobstore_put_ops<'a>(
         Ok(store)
     }
     .boxed()
-}
-
-async fn make_blobstore_multiplexed<'a>(
-    fb: FacebookInit,
-    multiplex_id: MultiplexId,
-    queue_db: DatabaseConfig,
-    scuba_table: Option<String>,
-    multiplex_scuba_table: Option<String>,
-    scuba_sample_rate: NonZeroU64,
-    inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
-    minimum_successful_writes: NonZeroUsize,
-    not_present_read_quorum: NonZeroUsize,
-    mysql_options: &'a MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
-    config_store: &'a ConfigStore,
-    scrub_handler: &'a Arc<dyn ScrubHandler>,
-    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
-) -> Result<Arc<dyn BlobstorePutOps>, Error> {
-    let (normal_components, write_only_components) = setup_inner_blobstores(
-        fb,
-        inner_config,
-        mysql_options,
-        blobstore_options,
-        logger,
-        config_store,
-        scrub_handler,
-        component_sampler,
-    )
-    .await?;
-
-    let queue = SqlBlobstoreSyncQueue::with_database_config(
-        fb,
-        &queue_db,
-        mysql_options,
-        readonly_storage.0,
-    )?;
-
-    let blobstore = match &blobstore_options.scrub_options {
-        Some(scrub_options) => Arc::new(ScrubBlobstore::new(
-            multiplex_id,
-            normal_components,
-            write_only_components,
-            minimum_successful_writes,
-            not_present_read_quorum,
-            Arc::new(queue),
-            scuba_table.map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
-                MononokeScubaSampleBuilder::new(fb, &table)
-            })?,
-            multiplex_scuba_table
-                .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
-                    MononokeScubaSampleBuilder::new(fb, &table)
-                })?,
-            scuba_sample_rate,
-            scrub_options.clone(),
-            scrub_handler.clone(),
-        )) as Arc<dyn BlobstorePutOps>,
-        None => Arc::new(MultiplexedBlobstore::new(
-            multiplex_id,
-            normal_components,
-            write_only_components,
-            minimum_successful_writes,
-            not_present_read_quorum,
-            Arc::new(queue),
-            scuba_table.map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
-                MononokeScubaSampleBuilder::new(fb, &table)
-            })?,
-            multiplex_scuba_table
-                .map_or(Ok(MononokeScubaSampleBuilder::with_discard()), |table| {
-                    MononokeScubaSampleBuilder::new(fb, &table)
-                })?,
-            scuba_sample_rate,
-        )) as Arc<dyn BlobstorePutOps>,
-    };
-
-    Ok(blobstore)
 }
 
 async fn make_multiplexed_wal<'a>(

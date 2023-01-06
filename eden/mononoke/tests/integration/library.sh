@@ -689,7 +689,7 @@ function ephemeral_db_config() {
 
 function blobstore_db_config() {
   if [[ -n "$DB_SHARD_NAME" ]]; then
-    echo "queue_db = { remote = { db_address = \"$DB_SHARD_NAME\" } }"
+    echo "queue_db = { remote = { shard_map = \"$DB_SHARD_NAME\", shard_num = 1 } }"
   else
     local blobstore_db_path="$TESTTMP/blobstore_sync_queue"
     mkdir -p "$blobstore_db_path"
@@ -718,15 +718,9 @@ function setup_mononoke_storage_config {
     local quorum
     local btype
     local scuba
-    if [[ "$WAL" != "" ]]; then
-      quorum="write_quorum"
-      btype="multiplexed_wal"
-      scuba="multiplex_scuba_table = \"file://$TESTTMP/blobstore_trace_scuba.json\""
-    else
-      quorum="minimum_successful_writes"
-      btype="multiplexed"
-      scuba=""
-    fi
+    quorum="write_quorum"
+    btype="multiplexed_wal"
+    scuba="multiplex_scuba_table = \"file://$TESTTMP/blobstore_trace_scuba.json\""
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
@@ -1840,26 +1834,6 @@ function add_synced_commit_mapping_entry() {
     --version-name "$version" 2>/dev/null
 }
 
-function read_blobstore_sync_queue_size() {
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    echo "SELECT COUNT(*) FROM blobstore_sync_queue;" | db "$DB_SHARD_NAME" 2> /dev/null | grep -v COUNT
-  else
-    local attempts timeout ret
-    timeout="100"
-    attempts="$((timeout * 10))"
-    for _ in $(seq 1 $attempts); do
-      ret="$(sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
-      if [[ -n "$ret" ]]; then
-        echo "$ret"
-        return 0
-      fi
-      sleep 0.1
-    done
-    return 1
-  fi
-
-}
-
 function read_blobstore_wal_queue_size() {
   if [[ -n "$DB_SHARD_NAME" ]]; then
     echo "SELECT COUNT(*) FROM blobstore_write_ahead_log;" | db "$DB_SHARD_NAME" 2> /dev/null | grep -v COUNT
@@ -1878,17 +1852,6 @@ function read_blobstore_wal_queue_size() {
     return 1
   fi
 
-}
-
-function erase_blobstore_sync_queue() {
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    # See above for why we have to redirect this output to /dev/null
-    db -wu "$DB_SHARD_NAME" 2> /dev/null <<EOF
-      DELETE FROM blobstore_sync_queue;
-EOF
-  else
-    rm -rf "$TESTTMP/blobstore_sync_queue/sqlite_dbs"
-fi
 }
 
 function log() {

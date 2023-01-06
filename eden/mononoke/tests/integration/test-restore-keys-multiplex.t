@@ -29,9 +29,6 @@ Write one blob with corrupt content
   8fda2dd669bdf86062db431a0f04b63b7ecc8e0b56006ca257f1eade0bec82c8  $TESTTMP/blobstore/1/blobs/blob-repo0000.hgfilenode.sha1.005d992c5dcf32993668f7cede29d296c494a5d9
 
 
-Drain the healer queue
-  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
-
 Check that walker fails on the corrupted blobstore
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
   Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo

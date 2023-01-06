@@ -27,9 +27,6 @@ setup repo2 so we can try multi-repo
   $ cd ..
   $ REPOID=2 blobimport repo2-hg/.hg repo2 --exclude-derived-data-type=filenodes
 
-Drain the healer queue
-  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
-
 Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types * (glob)

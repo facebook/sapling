@@ -17,9 +17,6 @@ setup configuration
   $
   blobimporting
 
-Drain the healer queue
-  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
-
 Base case, check can walk fine
   $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40

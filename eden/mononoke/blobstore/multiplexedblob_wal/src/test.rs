@@ -24,8 +24,6 @@ use blobstore_test_utils::Tickable;
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
-use context::SessionClass;
-use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use futures::task::Poll;

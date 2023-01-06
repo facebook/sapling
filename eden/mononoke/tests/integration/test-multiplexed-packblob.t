@@ -29,7 +29,7 @@ Check that the packed sizes are larger due to the packblob wrappers on store 0
 
 Move the uncompressed packed store aside
   $ mv "$TESTTMP/blobstore/0" "$TESTTMP/blobstore.raw"
-  $ rm -rf "$TESTTMP/monsql/sqlite_dbs" "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore"
+  $ rm -rf "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore"
 
 Blobimport again, but this time enable zstd compression
   $ blobimport repo-hg/.hg repo --blobstore-write-zstd=true --blobstore-write-zstd-level=0

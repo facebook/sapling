@@ -28,7 +28,6 @@ use blobstore_sync_queue::BlobstoreWalEntry;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
-use context::SessionClass;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::stream::FuturesUnordered;

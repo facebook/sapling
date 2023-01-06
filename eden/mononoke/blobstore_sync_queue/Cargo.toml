@@ -15,7 +15,6 @@ path = "test/main.rs"
 anyhow = "1.0.65"
 async-trait = "0.1.58"
 auto_impl = "0.4"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
@@ -26,7 +25,6 @@ shared_error = { version = "0.1.0", git = "https://github.com/facebookexperiment
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }

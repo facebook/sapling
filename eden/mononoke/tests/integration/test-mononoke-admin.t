@@ -18,13 +18,10 @@ setup configuration
   $
   blobimporting
 
-Drain the healer queue
+Everything should already be healed, and out of the queue due to optimisations
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | sed -re '/^(Could not connect to a replica in)|(Monitoring regions:)|(Discovered regions:)/d'
-  Fetched 60 queue entires (before building healing futures)
-  Out of them 30 distinct blobstore keys, 30 distinct operation keys
-  Found 30 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
-  For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 0, put_failure: 0 }
-  Deleting 60 actioned queue entries
+  Fetched 0 distinct put operations
+  All caught up, nothing to do
   Iteration rows processed: * rows, *s; total: * rows, *s (glob)
   The last batch was not full size, waiting...
 

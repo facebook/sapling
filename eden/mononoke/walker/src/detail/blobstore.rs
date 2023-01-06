@@ -149,8 +149,7 @@ pub fn replace_blobconfig(
     is_scrubbing: bool,
 ) -> Result<(), Error> {
     match blob_config {
-        BlobConfig::Multiplexed { ref blobstores, .. }
-        | BlobConfig::MultiplexedWal { ref blobstores, .. } => {
+        BlobConfig::MultiplexedWal { ref blobstores, .. } => {
             if is_scrubbing {
                 // Make sure the repair stats are set to zero for each store.
                 // Without this the new stats only show up when a repair is

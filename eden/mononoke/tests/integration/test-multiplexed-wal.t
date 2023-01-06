@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ MULTIPLEXED=3 WAL=1 REPOTYPE=blob_files setup_common_config
+  $ MULTIPLEXED=3 REPOTYPE=blob_files setup_common_config
   $ cd $TESTTMP
   $ configure modernclient
 

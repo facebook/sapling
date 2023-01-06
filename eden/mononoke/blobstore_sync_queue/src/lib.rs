@@ -7,7 +7,6 @@
 
 #![feature(slice_group_by)]
 
-mod sync_queue;
 mod write_ahead_log;
 
 use sql::mysql;
@@ -15,9 +14,6 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::prelude::FromValue;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
-pub use sync_queue::BlobstoreSyncQueue;
-pub use sync_queue::BlobstoreSyncQueueEntry;
-pub use sync_queue::SqlBlobstoreSyncQueue;
 use uuid::Uuid;
 pub use write_ahead_log::BlobstoreWal;
 pub use write_ahead_log::BlobstoreWalEntry;

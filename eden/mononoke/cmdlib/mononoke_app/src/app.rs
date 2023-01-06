@@ -647,8 +647,7 @@ impl MononokeApp {
         let blob_config = match repo_blobstore_args.inner_blobstore_id {
             None => storage_config.blobstore,
             Some(id) => match storage_config.blobstore {
-                BlobConfig::Multiplexed { blobstores, .. }
-                | BlobConfig::MultiplexedWal { blobstores, .. } => {
+                BlobConfig::MultiplexedWal { blobstores, .. } => {
                     let sought_id = BlobstoreId::new(id);
                     blobstores
                         .into_iter()

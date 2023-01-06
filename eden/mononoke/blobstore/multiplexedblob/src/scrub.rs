@@ -9,22 +9,15 @@ use std::cmp::max;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
-use std::num::NonZeroU64;
-use std::num::NonZeroUsize;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
-use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreMetadata;
 use blobstore::BlobstorePutOps;
-use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
-use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use clap::ArgEnum;
 use context::CoreContext;
@@ -32,8 +25,6 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use futures::Future;
 use metaconfig_types::BlobstoreId;
-use metaconfig_types::MultiplexId;
-use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
 use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -44,9 +35,6 @@ use strum_macros::EnumVariantNames;
 use strum_macros::IntoStaticStr;
 
 use crate::base::inner_put;
-use crate::base::ErrorKind;
-use crate::base::MultiplexedBlobstoreBase;
-use crate::queue::MultiplexedBlobstore;
 
 static HEAL_MAX_BACKLOG: Lazy<Duration> =
     Lazy::new(|| Duration::from_secs(ChronoDuration::days(7).num_seconds() as u64));
@@ -166,72 +154,6 @@ impl ScrubHandler for LoggingScrubHandler {
                 );
             }
         }
-    }
-}
-
-#[derive(Clone)]
-pub struct ScrubBlobstore {
-    inner: MultiplexedBlobstore,
-    scrub_options: ScrubOptions,
-    scuba: MononokeScubaSampleBuilder,
-    scrub_stores: Arc<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>,
-    queue: Arc<dyn BlobstoreSyncQueue>,
-    scrub_handler: Arc<dyn ScrubHandler>,
-}
-
-impl fmt::Display for ScrubBlobstore {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ScrubBlobstore[{}]", self.inner.blobstore.as_ref())
-    }
-}
-
-impl ScrubBlobstore {
-    pub fn new(
-        multiplex_id: MultiplexId,
-        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        minimum_successful_writes: NonZeroUsize,
-        not_present_read_quorum: NonZeroUsize,
-        queue: Arc<dyn BlobstoreSyncQueue>,
-        mut scuba: MononokeScubaSampleBuilder,
-        multiplex_scuba: MononokeScubaSampleBuilder,
-        scuba_sample_rate: NonZeroU64,
-        scrub_options: ScrubOptions,
-        scrub_handler: Arc<dyn ScrubHandler>,
-    ) -> Self {
-        scuba.add_common_server_data();
-        let inner = MultiplexedBlobstore::new(
-            multiplex_id,
-            blobstores.clone(),
-            write_only_blobstores.clone(),
-            minimum_successful_writes,
-            not_present_read_quorum,
-            queue.clone(),
-            scuba.clone(),
-            multiplex_scuba,
-            scuba_sample_rate,
-        );
-        Self {
-            inner,
-            scrub_options,
-            scuba,
-            scrub_stores: Arc::new(
-                blobstores
-                    .into_iter()
-                    .chain(write_only_blobstores.into_iter())
-                    .collect(),
-            ),
-            queue,
-            scrub_handler,
-        }
-    }
-}
-
-impl fmt::Debug for ScrubBlobstore {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ScrubBlobstore")
-            .field("inner", &self.inner)
-            .finish()
     }
 }
 
@@ -357,120 +279,4 @@ pub async fn maybe_repair<F: Future<Output = Result<bool>>>(
         repair_puts.try_for_each(|_| async { Ok(()) }).await?;
     }
     Ok(Some(value))
-}
-
-// Workaround for Blobstore returning a static lifetime future
-async fn blobstore_get(
-    inner_blobstore: &MultiplexedBlobstoreBase,
-    ctx: &CoreContext,
-    key: &str,
-    queue: &dyn BlobstoreSyncQueue,
-    scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
-    scrub_options: &ScrubOptions,
-    scrub_handler: &dyn ScrubHandler,
-    scuba: &MononokeScubaSampleBuilder,
-) -> Result<Option<BlobstoreGetData>> {
-    match inner_blobstore
-        .scrub_get(ctx, key, scrub_options.scrub_action_on_missing_write_only)
-        .await
-    {
-        Ok(value) => Ok(value),
-        Err(error) => match error {
-            ErrorKind::SomeFailedOthersNone { .. } => {
-                // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
-                // and Error otherwise. Scrub does likewise.
-                let entries = queue.get(ctx, key).await?;
-                if entries.is_empty() {
-                    // No pending write for the key, it really is None
-                    Ok(None)
-                } else {
-                    // Pending write, we don't know what the value is.
-                    Err(error.into())
-                }
-            }
-            ErrorKind::SomeMissingItem {
-                missing_main,
-                missing_write_only,
-                value,
-            } => {
-                maybe_repair(
-                    ctx,
-                    key,
-                    value,
-                    missing_main,
-                    missing_write_only,
-                    scrub_stores,
-                    scrub_handler,
-                    scrub_options,
-                    scuba,
-                    || async { Ok(queue.get(ctx, key).await?.is_empty()) },
-                )
-                .await
-            }
-            _ => Err(error.into()),
-        },
-    }
-}
-
-#[async_trait]
-impl Blobstore for ScrubBlobstore {
-    async fn get<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreGetData>> {
-        blobstore_get(
-            self.inner.blobstore.as_ref(),
-            ctx,
-            key,
-            self.queue.as_ref(),
-            self.scrub_stores.as_ref(),
-            &self.scrub_options,
-            self.scrub_handler.as_ref(),
-            &self.scuba,
-        )
-        .await
-    }
-
-    async fn is_present<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<BlobstoreIsPresent> {
-        self.inner.is_present(ctx, key).await
-    }
-
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl BlobstorePutOps for ScrubBlobstore {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.inner
-            .put_explicit(ctx, key, value, put_behaviour)
-            .await
-    }
-
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus> {
-        self.inner.put_with_status(ctx, key, value).await
-    }
 }
