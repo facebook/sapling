@@ -26,4 +26,3 @@ regex = "1.6.0"
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
-serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
