@@ -16,6 +16,7 @@ def create_pull_request_title_and_body(
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     pr_numbers_index: int,
     repository: Repository,
+    skip_reviewstack_tag: False,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
 
@@ -55,9 +56,15 @@ def create_pull_request_title_and_body(
         ]
     )
     title = firstline(commit_msg)
-    body = f"""{commit_msg}
+    if skip_reviewstack_tag == False:
+        body = f"""{commit_msg}
 {_HORIZONTAL_RULE}
 Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
+{bulleted_list}
+"""
+    else:
+        body = f"""{commit_msg}
+{_HORIZONTAL_RULE}
 {bulleted_list}
 """
     return title, body

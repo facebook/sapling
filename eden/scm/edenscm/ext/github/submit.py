@@ -288,6 +288,7 @@ async def rewrite_pull_request_body(
         pr_numbers_and_num_commits,
         index,
         repository,
+        skip_reviewstack_tag=(ui.configbool("ui", "skip_reviewstack_tag"))
     )
     pr = head_commit_data.pr
     assert pr
