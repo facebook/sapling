@@ -999,12 +999,6 @@ fi
 forbid_p2_root_rebases=false
 CONFIG
 
-if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
-CONFIG
-fi
-
 if [[ -n "${ALLOW_CASEFOLDING:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 casefolding_check=false
@@ -1066,12 +1060,6 @@ else
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [push]
 pure_push_allowed = true
-CONFIG
-fi
-
-if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
 
@@ -1164,12 +1152,23 @@ sparse_profiles_location="$SPARSE_PROFILES_LOCATION"
 CONFIG
 fi
 
-if [[ -n "${BOOKMARK_SCRIBE_CATEGORY:-}" ]]; then
+if [[ -n "${COMMIT_SCRIBE_CATEGORY:-${BOOKMARK_SCRIBE_CATEGORY:-}}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [update_logging_config]
+CONFIG
+fi
+
+if [[ -n "${BOOKMARK_SCRIBE_CATEGORY:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
 bookmark_logging_destination = { scribe = { scribe_category = "$BOOKMARK_SCRIBE_CATEGORY" } }
 CONFIG
 fi
+if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
+    cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+new_commit_logging_destination = { scribe = { scribe_category = "$COMMIT_SCRIBE_CATEGORY" } }
+CONFIG
+fi
+
 }
 
 function write_infinitepush_config {
@@ -1194,12 +1193,6 @@ CONFIG
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
 ${namespace}
-CONFIG
-  fi
-
-  if [[ -n "${DRAFT_COMMIT_SCRIBE_CATEGORY:-}" ]]; then
-    cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-  commit_scribe_category = "$DRAFT_COMMIT_SCRIBE_CATEGORY"
 CONFIG
   fi
 }

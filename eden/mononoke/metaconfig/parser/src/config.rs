@@ -833,7 +833,6 @@ mod test {
 
             [push]
             pure_push_allowed = false
-            commit_scribe_category = "cat"
 
             [pushrebase]
             rewritedates = false
@@ -1140,7 +1139,6 @@ mod test {
                 ],
                 push: PushParams {
                     pure_push_allowed: false,
-                    commit_scribe_category: Some("cat".to_string()),
                 },
                 pushrebase: PushrebaseParams {
                     flags: PushrebaseFlags {
@@ -1153,7 +1151,6 @@ mod test {
                     },
                     block_merges: false,
                     emit_obsmarkers: false,
-                    commit_scribe_category: None,
                     globalrevs_publishing_bookmark: None,
                     populate_git_mapping: false,
                     allow_change_xrepo_mapping_extra: true,
@@ -1174,7 +1171,6 @@ mod test {
                     allow_writes: true,
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
                     hydrate_getbundle_response: false,
-                    commit_scribe_category: None,
                 },
                 list_keys_patterns_max: 123,
                 hook_max_file_size: 456,

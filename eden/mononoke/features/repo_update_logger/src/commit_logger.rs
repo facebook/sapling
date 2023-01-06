@@ -228,20 +228,6 @@ pub async fn log_new_commits(
     bookmark: Option<(&BookmarkName, BookmarkKind)>,
     commit_infos: Vec<CommitInfo>,
 ) {
-    let is_public = bookmark.map_or(false, |(_, kind)| kind.is_public());
-    let legacy_category = if is_public {
-        repo.repo_config()
-            .pushrebase
-            .commit_scribe_category
-            .as_deref()
-    } else {
-        repo.repo_config()
-            .infinitepush
-            .commit_scribe_category
-            .as_deref()
-    };
-    let scribe = ctx.scribe();
-
     let new_commit_logging_destination = repo
         .repo_config()
         .update_logging_config
@@ -249,7 +235,7 @@ pub async fn log_new_commits(
         .as_ref();
 
     // If nothing is going to be logged, we can exit early.
-    if legacy_category.is_none() && new_commit_logging_destination.is_none() {
+    if new_commit_logging_destination.is_none() {
         return;
     }
 
@@ -260,9 +246,6 @@ pub async fn log_new_commits(
         .try_for_each_concurrent(100, |commit_info| async move {
             let plain_commit_info =
                 PlainCommitInfo::new(ctx, repo, received_timestamp, bookmark, commit_info).await?;
-            if let Some(category) = legacy_category {
-                scribe.offer(category, &serde_json::to_string(&plain_commit_info)?)?;
-            }
             if let Some(new_commit_logging_destination) = new_commit_logging_destination {
                 plain_commit_info
                     .log(ctx, new_commit_logging_destination)

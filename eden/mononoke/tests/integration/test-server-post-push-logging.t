@@ -6,7 +6,6 @@
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
-  $ export DRAFT_COMMIT_SCRIBE_CATEGORY=draft_mononoke_commits
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
@@ -150,11 +149,11 @@ Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
 
-  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
   null
-  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
   "f76800ae3d688512180e7a0805ff18d39f7ea81617bce1aea4e11364584b007a"
-  $ rm "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY"
+  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
 Use infinitepush push
   $ cat >> .hg/hgrc <<EOF
@@ -176,11 +175,11 @@ Stop tracking master_bookmark
   $ hgmn pushbackup -r .
   backing up stack rooted at 0ed0fbff8a24
   commitcloud: backed up 1 commit
-  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
   null
-  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
   "29259d73c8207a083a44f2635df387b194f76c41d2ccb71e7529ec0f70a4af28"
-  $ rm "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY"
+  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
 
 
   $ hgmn up -q master_bookmark
@@ -190,9 +189,9 @@ Stop tracking master_bookmark
   $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
   "scratch/123"
-  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
   "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
 
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name

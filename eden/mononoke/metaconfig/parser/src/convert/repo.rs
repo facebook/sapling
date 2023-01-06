@@ -222,7 +222,6 @@ impl Convert for RawPushParams {
         let default = PushParams::default();
         Ok(PushParams {
             pure_push_allowed: self.pure_push_allowed.unwrap_or(default.pure_push_allowed),
-            commit_scribe_category: self.commit_scribe_category,
         })
     }
 }
@@ -293,7 +292,6 @@ impl Convert for RawPushrebaseParams {
                 not_generated_filenodes_limit: 500,
                 monitoring_bookmark: self.monitoring_bookmark,
             },
-            commit_scribe_category: self.commit_scribe_category,
             block_merges: self.block_merges.unwrap_or(default.block_merges),
             emit_obsmarkers: self.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
             globalrevs_publishing_bookmark: self
@@ -337,7 +335,6 @@ impl Convert for RawInfinitepushParams {
                 .namespace_pattern
                 .and_then(|ns| Regex::new(&ns).ok().map(InfinitepushNamespace::new)),
             hydrate_getbundle_response: self.hydrate_getbundle_response.unwrap_or(false),
-            commit_scribe_category: self.commit_scribe_category,
         })
     }
 }

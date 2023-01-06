@@ -595,15 +595,12 @@ pub struct HookParams {
 pub struct PushParams {
     /// Whether normal non-pushrebase pushes are allowed
     pub pure_push_allowed: bool,
-    /// Scribe category we log new commits to
-    pub commit_scribe_category: Option<String>,
 }
 
 impl Default for PushParams {
     fn default() -> Self {
         PushParams {
             pure_push_allowed: true,
-            commit_scribe_category: None,
         }
     }
 }
@@ -667,8 +664,6 @@ pub struct PushrebaseParams {
     pub block_merges: bool,
     /// Whether to do emit obsmarkers after pushrebase
     pub emit_obsmarkers: bool,
-    /// Scribe category we log new commits to
-    pub commit_scribe_category: Option<String>,
     /// Whether Globalrevs should be assigned
     pub globalrevs_publishing_bookmark: Option<BookmarkName>,
     /// Whether Git Mapping should be populated from extras (affects also blobimport)
@@ -689,7 +684,6 @@ impl Default for PushrebaseParams {
             flags: PushrebaseFlags::default(),
             block_merges: false,
             emit_obsmarkers: false,
-            commit_scribe_category: None,
             globalrevs_publishing_bookmark: None,
             populate_git_mapping: false,
             allow_change_xrepo_mapping_extra: false,
@@ -1151,9 +1145,6 @@ pub struct InfinitepushParams {
 
     /// Whether to put trees/files in the getbundle response for infinitepush commits
     pub hydrate_getbundle_response: bool,
-
-    /// Scribe category we log new commits to
-    pub commit_scribe_category: Option<String>,
 }
 
 /// Filestore configuration.
