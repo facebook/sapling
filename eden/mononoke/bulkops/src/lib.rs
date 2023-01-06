@@ -5,13 +5,10 @@
  * GNU General Public License version 2.
  */
 
-///! bulkops
-///!
-///! Utiltities for handling data in bulk.
+//! bulkops
+//!
+//! Utiltities for handling data in bulk.
 use std::cmp::max;
-///! bulkops
-///!
-///! Utiltities for handling data in bulk.
 use std::cmp::min;
 use std::collections::HashMap;
 use std::sync::Arc;
