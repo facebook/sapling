@@ -296,7 +296,7 @@ impl ConfigSetHgExt for ConfigSet {
             opts = opts.readonly_items(readonly_items);
         }
 
-        let static_system = crate::builtin_static::builtin_system(&ident);
+        let static_system = crate::builtin_static::builtin_system(opts.clone(), &ident);
         self.secondary(Arc::new(static_system));
 
         errors.append(
@@ -954,6 +954,29 @@ mod tests {
         assert_eq!(cfg.get("ui", "verbose"), None);
         assert_eq!(cfg.get("ui", "username"), Some("test".into()));
         assert_eq!(cfg.get("alias", "l"), None);
+    }
+
+    #[test]
+    fn test_static_config_hgplain() {
+        let mut env = lock_env();
+
+        env.set("TESTTMP", Some("1"));
+
+        let cfg = load(None, &[], &[]).unwrap();
+
+        // Sanity that we have a test value from static config.
+        assert_eq!(
+            cfg.get("alias", "some-command"),
+            Some("some-command --some-flag".into())
+        );
+        let sources = cfg.get_sources("alias", "some-command");
+        assert_eq!(sources.len(), 1);
+        assert_eq!(sources[0].source(), &"builtin:test_config");
+
+        // With HGPLAIN=1, aliases should get dropped.
+        env.set(*HGPLAIN, Some("1"));
+        let cfg = load(None, &[], &[]).unwrap();
+        assert_eq!(cfg.get("alias", "some-command"), None);
     }
 
     #[test]

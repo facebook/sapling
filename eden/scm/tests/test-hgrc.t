@@ -115,6 +115,7 @@ showconfig with multiple arguments
   $ echo "[defaults]" >> $HGRC
   $ echo "identify = -n" >> $HGRC
   $ hg showconfig alias defaults
+  alias.some-command=some-command --some-flag
   alias.log=log -g
   defaults.identify=-n
   $ hg showconfig alias defaults.identify
