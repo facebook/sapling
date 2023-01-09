@@ -125,7 +125,6 @@ impl Convert for RawBlobstoreConfig {
             RawBlobstoreConfig::mysql(raw) => BlobConfig::Mysql {
                 remote: raw.remote.convert()?,
             },
-            RawBlobstoreConfig::multiplexed(..) => anyhow::bail!("Multiplex unsupported"),
             RawBlobstoreConfig::multiplexed_wal(RawBlobstoreMultiplexedWal {
                 write_quorum,
                 components,
