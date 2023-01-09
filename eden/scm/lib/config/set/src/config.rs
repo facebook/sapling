@@ -271,13 +271,7 @@ impl ConfigSet {
         location: Option<ValueLocation>,
         opts: &Options,
     ) {
-        let filtered = opts
-            .filters
-            .iter()
-            .fold(Some((section, name, value)), move |acc, func| {
-                acc.and_then(|(section, name, value)| func(section, name, value))
-            });
-        if let Some((section, name, value)) = filtered {
+        if let Some((section, name, value)) = opts.filter(section, name, value) {
             self.sections
                 .entry(section)
                 .or_insert_with(Default::default)
@@ -573,6 +567,21 @@ impl Options {
     pub fn source<B: Into<Text>>(mut self, source: B) -> Self {
         self.source = source.into();
         self
+    }
+
+    /// Pass `(section, name, value)` through chain of filters, yielding mutated
+    /// result or `None`, if any filter returned `None`.
+    pub fn filter(
+        &self,
+        section: Text,
+        name: Text,
+        value: Option<Text>,
+    ) -> Option<(Text, Text, Option<Text>)> {
+        self.filters
+            .iter()
+            .fold(Some((section, name, value)), move |acc, func| {
+                acc.and_then(|(s, n, v)| func(s, n, v))
+            })
     }
 }
 
