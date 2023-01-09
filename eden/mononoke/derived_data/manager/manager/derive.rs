@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::future;
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -486,11 +487,30 @@ impl DerivedDataManager {
     {
         const RETRY_DELAY_MS: u64 = 100;
         const RETRY_ATTEMPTS_LIMIT: u8 = 10;
+        const FALLBACK_TIMEOUT_SECS: u64 = 15;
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
+            let started = Instant::now();
+            let fallback_timeout = {
+                let timeout = tunables().get_remote_derivation_fallback_timeout_secs();
+                Duration::from_secs(if timeout > 0 {
+                    timeout as u64
+                } else {
+                    FALLBACK_TIMEOUT_SECS
+                })
+            };
             while let Some(true) =
                 tunables::tunables().get_by_repo_enable_remote_derivation(self.repo_name())
             {
+                if started.elapsed() >= fallback_timeout {
+                    self.derived_data_scuba::<Derivable>(&None)
+                        .add("changeset", csid.to_string())
+                        .log_with_msg(
+                            "Derived data service failed",
+                            "Fallback to local derivation after timeout".to_string(),
+                        );
+                    break;
+                }
                 match client
                     .derive_remotely(
                         self.repo_name().to_string(),

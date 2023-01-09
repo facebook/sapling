@@ -131,6 +131,10 @@ function land_service_address {
   echo -n "$(mononoke_host):$LAND_SERVICE_PORT"
 }
 
+function dds_address {
+  echo -n "$(mononoke_host):$DDS_PORT"
+}
+
 # return random value from [1, max_value]
 function random_int() {
   max_value=$1
@@ -1290,6 +1294,8 @@ function scs {
     THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
     THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
     THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+    THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/proxy.crt" \
+    THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/proxy.key" \
     THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
     "$SCS_SERVER" "$@" \
     --host "$LOCALIP" \
@@ -2130,10 +2136,14 @@ function check_git_wc() {
 }
 
 function derived_data_service() {
-  export PORT_2DS
+  export DDS_PORT
   local DDS_SERVER_ADDR_FILE
   DDS_SERVER_ADDR_FILE="$TESTTMP/dds_server_addr.txt"
-  GLOG_minloglevel=5 "$DERIVED_DATA_SERVICE" "$@" \
+  THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
+  THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
+  THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
+  THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
+  GLOG_minloglevel=1 "$DERIVED_DATA_SERVICE" "$@" \
     -p 0 \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --bound-address-file "$DDS_SERVER_ADDR_FILE" \
@@ -2142,14 +2152,18 @@ function derived_data_service() {
   pid=$!
   echo "$pid" >> "$DAEMON_PIDS"
 
-  wait_for_server "Derived data service" PORT_2DS "$TESTTMP/derived_data_service.out" \
+  wait_for_server "Derived data service" DDS_PORT "$TESTTMP/derived_data_service.out" \
     "${MONONOKE_DDS_START_TIMEOUT:-"$MONONOKE_DDS_DEFAULT_START_TIMEOUT"}" "$DDS_SERVER_ADDR_FILE" \
     derived_data_client get-status
 }
 
 function derived_data_client() {
+  GLOG_minloglevel=5 \
+  THRIFT_TLS_CL_CERT_PATH="$TEST_CERTDIR/client0.crt" \
+  THRIFT_TLS_CL_KEY_PATH="$TEST_CERTDIR/client0.key" \
+  THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   GLOG_minloglevel=5 "$DERIVED_DATA_CLIENT" \
-  -h "localhost:$PORT_2DS" \
+  -h "localhost:$DDS_PORT" \
   "$@"
 }
 

@@ -213,6 +213,10 @@ pub struct MononokeTunables {
     // Sets the size of the batch for derivaiton.
     derivation_batch_size: AtomicI64,
 
+    // Maximum time to wait for remote derivation request to finish in secs
+    // before falling back to local derivation
+    remote_derivation_fallback_timeout_secs: AtomicI64,
+
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: AtomicBool,
 
