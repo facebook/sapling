@@ -711,6 +711,17 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .remove(&cs_id))
     }
 
+    async fn fetch_edges_required(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetEdges> {
+        self.fetch_many_edges_required(ctx, &[cs_id], None)
+            .await?
+            .remove(&cs_id)
+            .ok_or_else(|| anyhow!("Missing changeset from sql commit graph storage: {}", cs_id))
+    }
+
     async fn fetch_many_edges(
         &self,
         ctx: &CoreContext,
@@ -762,7 +773,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         };
         if !unfetched_ids.is_empty() {
             anyhow::bail!(
-                "Missing changesets in commit graph: {}",
+                "Missing changesets from sql commit graph storage: {}",
                 unfetched_ids
                     .into_iter()
                     .map(|id| format!("{}, ", id))

@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph::edges::ChangesetEdges;
@@ -85,6 +86,19 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         Ok(self.changesets.read().get(&cs_id).cloned())
     }
 
+    async fn fetch_edges_required(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetEdges> {
+        self.fetch_edges(ctx, cs_id).await?.ok_or_else(|| {
+            anyhow!(
+                "Missing changeset from in-memory commit graph storage: {}",
+                cs_id
+            )
+        })
+    }
+
     async fn fetch_many_edges(
         &self,
         _ctx: &CoreContext,
@@ -99,6 +113,31 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
             }
         }
         Ok(result)
+    }
+
+    async fn fetch_many_edges_required(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        prefetch_hint: Option<Generation>,
+    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch_hint).await?;
+        let missing_changesets: Vec<_> = cs_ids
+            .iter()
+            .filter(|cs_id| !edges.contains_key(cs_id))
+            .collect();
+
+        if !missing_changesets.is_empty() {
+            Err(anyhow!(
+                "Missing changesets from in-memory commit graph storage: {}",
+                missing_changesets
+                    .into_iter()
+                    .map(|cs_id| format!("{}, ", cs_id))
+                    .collect::<String>()
+            ))
+        } else {
+            Ok(edges)
+        }
     }
 
     async fn find_by_prefix(
