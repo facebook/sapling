@@ -26,10 +26,16 @@ use repos::RawRepoConfigs;
 use slog::error;
 use slog::info;
 use slog::Logger;
+use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 type Swappable<T> = Arc<ArcSwap<T>>;
+
+define_stats! {
+    prefix = "mononoke.config_refresh";
+    refresh_failure_count: timeseries(Average, Sum, Count),
+}
 
 /// Configuration provider and update notifier for all of Mononoke services
 /// and jobs. The configurations provided by this struct are always up-to-date
@@ -168,9 +174,11 @@ async fn watch_and_update(
                                 logger,
                                 "Failure in sending config update to receivers. Error: {:?}", e
                             );
-                            // TODO: Add ODS metric to capture failure
+                            STATS::refresh_failure_count.add_value(1);
                         } else {
                             info!(logger, "Successfully applied config update");
+                            // Need to publish a value of 0 to keep the counter alive
+                            STATS::refresh_failure_count.add_value(0);
                         }
                     }
                     Err(e) => {
@@ -178,7 +186,7 @@ async fn watch_and_update(
                             logger,
                             "Failure in parsing config from raw config. Error: {:?}", e
                         );
-                        // TODO: Add ODS metric to capture failures
+                        STATS::refresh_failure_count.add_value(1);
                     }
                 }
             }
@@ -187,7 +195,7 @@ async fn watch_and_update(
                     logger,
                     "Failure in fetching latest config change. Error: {:?}", e
                 );
-                // TODO: Add ODS metric to capture failures
+                STATS::refresh_failure_count.add_value(1);
             }
         }
     }
