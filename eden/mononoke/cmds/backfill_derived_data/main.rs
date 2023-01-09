@@ -26,7 +26,6 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blame::BlameRoot;
-use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::StoreLoadable;
@@ -683,14 +682,15 @@ async fn run_subcmd<'a>(
 
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
-                    let enabled_types = repo.as_blob_repo().get_active_derived_data_types_config();
+                    let active_config = repo.repo_derived_data().active_config();
                     if let Some(backfill_config) = repo
-                        .blob_repo
-                        .get_derived_data_types_config(backfill_config_name)
+                        .repo_derived_data()
+                        .config()
+                        .get_config(backfill_config_name)
                     {
-                        &enabled_types.types | &backfill_config.types
+                        &active_config.types | &backfill_config.types
                     } else {
-                        enabled_types.types.clone()
+                        active_config.types.clone()
                     }
                 },
                 |names| names.map(ToString::to_string).collect(),
@@ -920,7 +920,8 @@ async fn parse_repo_and_derived_data_types(
                 args::not_shardmanager_compatible::open_repo_unredacted(fb, logger, matches)
                     .await?;
             let types = repo
-                .get_active_derived_data_types_config()
+                .repo_derived_data()
+                .active_config()
                 .types
                 .iter()
                 .cloned()
@@ -1206,7 +1207,7 @@ async fn subcommand_tail(
     };
     let repo = &repo;
 
-    let active_derived_data_config = repo.get_active_derived_data_types_config();
+    let active_derived_data_config = repo.repo_derived_data().active_config();
 
     let tail_derivers: Vec<Arc<dyn DerivedUtils>> = active_derived_data_config
         .types
@@ -1229,28 +1230,29 @@ async fn subcommand_tail(
         .await
         .context("Error creating bookmarks subscription")?;
 
-    let backfill_derivers: Vec<Arc<dyn DerivedUtils>> =
-        if let Some(named_derived_data_config) = repo.get_derived_data_types_config(config_name) {
-            if backfill {
-                // Some backfilling types may depend on enabled types for their
-                // derivation.  This means we need to include the appropriate
-                // derivers for all types (enabled and backfilling).  Since the
-                // enabled type will already have been derived, the deriver for
-                // those types will just be used for mapping look-ups.  The
-                // `derived_data_utils_for_config` function takes care of giving
-                // us the right deriver type for the config.
-                active_derived_data_config
-                    .types
-                    .union(&named_derived_data_config.types)
-                    .map(|name| derived_data_utils_for_config(ctx.fb, repo, name, config_name))
-                    .collect::<Result<_>>()?
-            } else {
-                Vec::new()
-            }
+    let backfill_derivers: Vec<Arc<dyn DerivedUtils>> = if let Some(named_derived_data_config) =
+        repo.repo_derived_data().config().get_config(config_name)
+    {
+        if backfill {
+            // Some backfilling types may depend on enabled types for their
+            // derivation.  This means we need to include the appropriate
+            // derivers for all types (enabled and backfilling).  Since the
+            // enabled type will already have been derived, the deriver for
+            // those types will just be used for mapping look-ups.  The
+            // `derived_data_utils_for_config` function takes care of giving
+            // us the right deriver type for the config.
+            active_derived_data_config
+                .types
+                .union(&named_derived_data_config.types)
+                .map(|name| derived_data_utils_for_config(ctx.fb, repo, name, config_name))
+                .collect::<Result<_>>()?
         } else {
-            backfill = false;
             Vec::new()
-        };
+        }
+    } else {
+        backfill = false;
+        Vec::new()
+    };
     if backfill {
         slog::info!(
             ctx.logger(),

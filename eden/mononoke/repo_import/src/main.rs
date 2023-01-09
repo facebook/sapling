@@ -80,6 +80,7 @@ use question::Answer;
 use question::Question;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
@@ -379,10 +380,7 @@ async fn derive_bonsais_single_repo(
     repo: &Repo,
     bcs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derived_data_types = &repo
-        .as_blob_repo()
-        .get_active_derived_data_types_config()
-        .types;
+    let derived_data_types = &repo.repo_derived_data().active_config().types;
 
     let derived_utils: Vec<_> = derived_data_types
         .iter()

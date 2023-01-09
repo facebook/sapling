@@ -31,6 +31,7 @@ use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
@@ -287,7 +288,8 @@ impl<'a> ChangeTargetConfig<'a> {
         // Derrive all the necessary data before moving the bookmark
         let derived_data_types = target_repo
             .blob_repo()
-            .get_active_derived_data_types_config()
+            .repo_derived_data()
+            .active_config()
             .types
             .iter();
 

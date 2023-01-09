@@ -63,6 +63,7 @@ mod tests {
     use mutable_counters::MutableCountersRef;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataArc;
+    use repo_derived_data::RepoDerivedDataRef;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SqlSyncedCommitMapping;
     use test_repo_factory::TestRepoFactory;
@@ -781,8 +782,8 @@ mod tests {
         repo: &Repo,
         cs_ids: &[ChangesetId],
     ) -> Result<()> {
+        let derived_data_types = &repo.repo_derived_data().active_config().types;
         let blob_repo = repo.as_blob_repo();
-        let derived_data_types = &blob_repo.get_active_derived_data_types_config().types;
 
         for derived_data_type in derived_data_types {
             let derived_utils = derived_data_utils(ctx.fb, blob_repo, derived_data_type)?;

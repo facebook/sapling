@@ -118,6 +118,7 @@ use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
@@ -924,13 +925,15 @@ impl RepoContext {
 
     pub fn derive_changeset_info_enabled(&self) -> bool {
         self.blob_repo()
-            .get_derived_data_config()
+            .repo_derived_data()
+            .config()
             .is_enabled(ChangesetInfo::NAME)
     }
 
     pub fn derive_hgchangesets_enabled(&self) -> bool {
         self.blob_repo()
-            .get_derived_data_config()
+            .repo_derived_data()
+            .config()
             .is_enabled(MappedHgChangesetId::NAME)
     }
 

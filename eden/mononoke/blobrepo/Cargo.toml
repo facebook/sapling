@@ -18,7 +18,6 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapp
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../bonsai_svnrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 changeset_fetcher = { version = "0.1.0", path = "changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
 changesets_creation = { version = "0.1.0", path = "../changesets/changesets_creation" }
@@ -28,7 +27,6 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
-metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 phases = { version = "0.1.0", path = "../phases" }

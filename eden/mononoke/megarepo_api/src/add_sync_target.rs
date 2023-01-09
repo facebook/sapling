@@ -26,6 +26,7 @@ use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::common::MegarepoOp;
 
@@ -141,7 +142,8 @@ impl<'a> AddSyncTarget<'a> {
             i += 1;
             let derived_data_types = repo
                 .blob_repo()
-                .get_active_derived_data_types_config()
+                .repo_derived_data()
+                .active_config()
                 .types
                 .iter();
             let derivers = FuturesUnordered::new();
