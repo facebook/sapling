@@ -40,6 +40,7 @@ use cached_config::ConfigStore;
 use clap_old::ArgMatches;
 use clap_old::OsValues;
 use clap_old::Values;
+use derived_data_remote::Address;
 use derived_data_remote::RemoteDerivationOptions;
 use environment::Caching;
 use environment::MononokeEnvironment;
@@ -1039,12 +1040,16 @@ fn parse_remote_derivation_options(
     matches: &ArgMatches<'_>,
 ) -> Result<RemoteDerivationOptions, Error> {
     let derive_remotely = matches.is_present(DERIVE_REMOTELY);
-    let smc_tier = matches
+    let address = match matches
         .value_of(DERIVE_REMOTELY_TIER)
-        .map(|s| s.to_string());
+        .map(|s| s.to_string())
+    {
+        Some(tier) => Address::SmcTier(tier),
+        None => Address::Empty,
+    };
     Ok(RemoteDerivationOptions {
         derive_remotely,
-        smc_tier,
+        address,
     })
 }
 

@@ -15,7 +15,14 @@ use mononoke_types::ChangesetId;
 #[derive(Clone, Debug)]
 pub struct RemoteDerivationOptions {
     pub derive_remotely: bool,
-    pub smc_tier: Option<String>,
+    pub address: Address,
+}
+
+#[derive(Clone, Debug)]
+pub enum Address {
+    SmcTier(String),
+    HostPort(String),
+    Empty,
 }
 
 /// Command line arguments for controlling remote derivation
@@ -26,15 +33,24 @@ pub struct RemoteDerivationArgs {
     pub derive_remotely: bool,
 
     /// Specify SMC tier for the derived data service
-    #[clap(long, value_name = "SMC")]
+    #[clap(long, value_name = "SMC", group = "Address")]
     pub derive_remotely_tier: Option<String>,
+
+    /// Specify Host:Port pair to connect to derived data service
+    #[clap(long, value_name = "HOST:PORT", group = "Address")]
+    pub derive_remotely_hostport: Option<String>,
 }
 
 impl From<RemoteDerivationArgs> for RemoteDerivationOptions {
     fn from(args: RemoteDerivationArgs) -> Self {
+        let address = match (args.derive_remotely_tier, args.derive_remotely_hostport) {
+            (Some(tier), _) => Address::SmcTier(tier),
+            (_, Some(host_port)) => Address::HostPort(host_port),
+            (_, _) => Address::Empty,
+        };
         RemoteDerivationOptions {
             derive_remotely: args.derive_remotely,
-            smc_tier: args.derive_remotely_tier,
+            address,
         }
     }
 }

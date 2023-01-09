@@ -67,6 +67,7 @@ use dbbookmarks::ArcSqlBookmarks;
 use dbbookmarks::SqlBookmarksBuilder;
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
+use derived_data_remote::Address;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
 use environment::Caching;
@@ -1556,9 +1557,14 @@ fn get_derivation_client(
         if remote_derivation_options.derive_remotely {
             #[cfg(fbcode_build)]
             {
-                let client = match remote_derivation_options.smc_tier {
-                    Some(smc_tier) => DerivationServiceClient::from_tier_name(fb, smc_tier)?,
-                    None => DerivationServiceClient::new(fb)?,
+                let client = match remote_derivation_options.address {
+                    Address::SmcTier(smc_tier) => {
+                        DerivationServiceClient::from_tier_name(fb, smc_tier)?
+                    }
+                    Address::HostPort(host_port) => {
+                        DerivationServiceClient::from_host_port(fb, host_port)?
+                    }
+                    Address::Empty => DerivationServiceClient::new(fb)?,
                 };
                 Some(Arc::new(client))
             }
