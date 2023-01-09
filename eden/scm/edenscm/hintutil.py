@@ -33,7 +33,7 @@ hinttable = {
     )
     % rev,
     "old-version": lambda agedays: _(
-        f"WARNING! You version of @Product@ is {agedays} days old. Please upgrade your installation."
+        f"WARNING! Your version of @Product@ is {agedays} days old. Please upgrade your installation."
     ),
     "date-revset": lambda ds, top: _(
         'date("%s") performs a slow scan. Consider bsearch(date(">%s"),%s) instead.'
