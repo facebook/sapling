@@ -33,9 +33,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use repo_lock::ArcRepoLock;
 use repo_lock::RepoLock;
-use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::RepoPermissionChecker;
 
 // NOTE: this structure and its fields are public to enable `DangerousOverride` functionality
@@ -185,16 +183,6 @@ impl BlobRepo {
         Self {
             inner: Arc::new(inner),
         }
-    }
-
-    #[inline]
-    pub fn permission_checker(&self) -> ArcRepoPermissionChecker {
-        self.inner.permission_checker.clone()
-    }
-
-    #[inline]
-    pub fn repo_lock(&self) -> ArcRepoLock {
-        self.inner.repo_lock.clone()
     }
 }
 

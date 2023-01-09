@@ -33,6 +33,7 @@ use qps::Qps;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
 use repo_client::RepoClient;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use scribe_ext::Scribe;
 use slog::error;
 use slog::o;
@@ -120,8 +121,7 @@ pub async fn request_handler(
     }
 
     let is_allowed_to_repo = repo
-        .blob_repo()
-        .permission_checker()
+        .repo_permission_checker()
         .check_if_read_access_allowed(metadata.identities())
         .await;
 
