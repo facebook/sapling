@@ -325,3 +325,8 @@ system config (make sure it tries the right file)
   opening C:\ProgramData\Facebook\Mercurial\Facebook\Mercurial\system.rc for editing... (windows !)
   abort: edit failed: false exited with status 1
   [255]
+
+Show builtin configs with --verbose (filtersuspectsymlink is merely a sample item from builtin:core):
+  $ hg config | grep filtersuspectsymlink || true
+  $ hg config --verbose | grep filtersuspectsymlink
+  unsafe.filtersuspectsymlink=true

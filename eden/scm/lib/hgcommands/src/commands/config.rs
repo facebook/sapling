@@ -89,7 +89,8 @@ pub fn run(ctx: ReqCtx<ConfigOpts>, repo: &mut OptionalRepo) -> Result<u8> {
     ctx.maybe_start_pager(repo.config())?;
 
     formatter.begin_list()?;
-    let exit_code = show_configs(ctx.opts.args, config, formatter.as_mut())?;
+    let verbose = ctx.global_opts().verbose;
+    let exit_code = show_configs(ctx.opts.args, config, formatter.as_mut(), verbose)?;
     formatter.end_list()?;
 
     Ok(exit_code)
@@ -199,6 +200,7 @@ fn show_configs(
     requested_configs: Vec<String>,
     config: &ConfigSet,
     formatter: &mut dyn ListFormatter,
+    verbose: bool,
 ) -> Result<u8> {
     let requested_items: Vec<_> = requested_configs
         .iter()
@@ -252,7 +254,7 @@ fn show_configs(
         keys.sort();
         for key in keys {
             if let Some(item) = get_config_item(config, section, &key, false) {
-                if empty_selection && item.builtin {
+                if empty_selection && item.builtin && !verbose {
                     continue;
                 }
                 formatter.format_item(&item)?;
