@@ -7,6 +7,7 @@ import re
 
 from edenscm import cmdutil, commands, extensions, registrar, templatekw
 from edenscm.node import hex
+from edenscm.templatekw import _hybrid
 
 from .extlib.phabricator import diffprops
 
@@ -15,7 +16,7 @@ templatekeyword = registrar.templatekeyword()
 
 
 @templatekeyword("phabdiff")
-def showphabdiff(repo, ctx, templ, **args):
+def showphabdiff(repo, ctx, templ, **args) -> str:
     """String. Return the phabricator diff id for a given @prog@ rev."""
     descr = ctx.description()
     revision = diffprops.parserevfromcommitmsg(descr)
@@ -23,7 +24,7 @@ def showphabdiff(repo, ctx, templ, **args):
 
 
 @templatekeyword("tasks")
-def showtasks(**args):
+def showtasks(**args) -> _hybrid:
     """String. Return the tasks associated with given @prog@ rev."""
     tasks = []
     descr = args["ctx"].description()
@@ -65,7 +66,7 @@ def showreviewers(repo, ctx, templ, **args):
         return templatekw.showlist("reviewer", reviewers, args)
 
 
-def makebackoutmessage(orig, repo, message, node):
+def makebackoutmessage(orig, repo, message: str, node):
     message = orig(repo, message, node)
     olddescription = repo.changelog.changelogrevision(node).description
     revision = diffprops.parserevfromcommitmsg(olddescription)
@@ -74,5 +75,5 @@ def makebackoutmessage(orig, repo, message, node):
     return message
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     extensions.wrapfunction(commands, "_makebackoutmessage", makebackoutmessage)
