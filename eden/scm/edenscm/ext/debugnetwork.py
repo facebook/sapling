@@ -120,7 +120,7 @@ def checkmononokehost(ui, url, opts) -> bool:
     return True
 
 
-def checkspeedhttp(ui, url, opts):
+def checkspeedhttp(ui, url, opts) -> bool:
     ui.status(_("Testing connection speed to the server\n"), component="debugnetwork")
     download = ui.configbytes("debugnetwork", "speed-test-download-size", 10000000)
     upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
