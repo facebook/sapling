@@ -40,6 +40,7 @@ import collections
 import os
 import sys
 import time
+from typing import Optional, Tuple, Type
 
 from edenscm import (
     cmdutil,
@@ -74,7 +75,7 @@ configitem("copytrace", "enableamendcopytrace", default=True)
 configitem("copytrace", "amendcopytracecommitlimit", default=100)
 
 defaultdict = collections.defaultdict
-_copytracinghint = (
+_copytracinghint: str = (
     "hint: if this message is due to a moved file, you can "
     + "ask mercurial to attempt to automatically resolve this "
     + "change by re-running with the --config=experimental.copytrace=on flag, but "
@@ -84,11 +85,11 @@ _copytracinghint = (
 )
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     extensions.wrapfunction(dispatch, "runcommand", _runcommand)
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     # With experimental.copytrace=off there can be cryptic merge errors.
     # Let's change error message to suggest re-running the command with
     # enabled copytracing
@@ -163,7 +164,9 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
 
 
-def opendbm(repo, flag):
+def opendbm(
+    repo, flag
+) -> Tuple[Optional[dbm._Database], Optional[Tuple[Type[dbm._error], Type[OSError]]]]:
     """Open the dbm of choice.
 
     On some platforms, dbm is available, on others it's not,
@@ -566,7 +569,7 @@ def _gethex(ctx):
     return ctx.hex() if ctx.hex() != node.wdirhex else ctx.p1().hex()
 
 
-def _isfullcopytraceable(ui, cdst, base):
+def _isfullcopytraceable(ui, cdst, base) -> Optional[bool]:
     if not ui.configbool("copytrace", "draftusefullcopytrace", False):
         return False
     if cdst.phase() == phases.draft and base.phase() == phases.draft:
