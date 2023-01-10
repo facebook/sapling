@@ -74,7 +74,7 @@ subcmd = snapshot.subcommand(
         ),
     ],
 )
-def createremotecmd(*args, **kwargs):
+def createremotecmd(*args, **kwargs) -> None:
     """
     upload to the server a snapshot of the current uncommitted changes.
 
@@ -95,7 +95,7 @@ def createremotecmd(*args, **kwargs):
     ],
     _("ID"),
 )
-def updatecmd(*args, **kwargs):
+def updatecmd(*args, **kwargs) -> None:
     """download a previously created snapshot and update working copy to its state"""
     update.update(*args, **kwargs)
 
@@ -108,7 +108,7 @@ def updatecmd(*args, **kwargs):
     ],
     _("ID"),
 )
-def showcmd(*args, **kwargs):
+def showcmd(*args, **kwargs) -> None:
     """gather information about the snapshot"""
     show.show(*args, **kwargs)
 
@@ -126,7 +126,7 @@ def showcmd(*args, **kwargs):
     ],
     _("ID"),
 )
-def isworkingcopycmd(*args, **kwargs):
+def isworkingcopycmd(*args, **kwargs) -> None:
     """test if a given snapshot is the working copy"""
     isworkingcopy.cmd(*args, **kwargs)
 
@@ -149,7 +149,7 @@ def isworkingcopycmd(*args, **kwargs):
         ),
     ],
 )
-def latestcmd(*args, **kwargs):
+def latestcmd(*args, **kwargs) -> None:
     """information regarding the latest created/restored snapshot"""
     latest.latest(*args, **kwargs)
 
@@ -166,7 +166,7 @@ def latestcmd(*args, **kwargs):
     ],
     _("ID"),
 )
-def add_labels(*args, **kwargs):
+def add_labels(*args, **kwargs) -> None:
     """Associate new labels with an existing snapshot"""
     labels.add_labels(*args, **kwargs)
 
@@ -193,6 +193,6 @@ def add_labels(*args, **kwargs):
     ],
     _("ID"),
 )
-def remove_labels(*args, **kwargs):
+def remove_labels(*args, **kwargs) -> None:
     """Remove associated labels from an existing snapshot"""
     labels.remove_labels(*args, **kwargs)
