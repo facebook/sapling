@@ -23,7 +23,7 @@ profiler_entry = getattr(_lsprof, "profiler_entry", None)
 __all__ = ["profile", "Stats"]
 
 
-def profile(f, *args, **kwds):
+def profile(f, *args, **kwds) -> "Stats":
     """XXX docstring"""
     p = Profiler()
     p.enable(subcalls=True, builtins=True)
@@ -127,7 +127,7 @@ class Stats(object):
 _fn2mod = {}
 
 
-def label(code):
+def label(code) -> str:
     if isinstance(code, str):
         return code
     try:
@@ -138,12 +138,14 @@ def label(code):
                 continue
             if not isinstance(getattr(v, "__file__", None), str):
                 continue
+            # pyre-fixme[16]: Optional type has no attribute `startswith`.
             if v.__file__.startswith(code.co_filename):
                 mname = _fn2mod[code.co_filename] = k
                 break
         else:
             mname = _fn2mod[code.co_filename] = "<%s>" % code.co_filename
 
+    # pyre-fixme[61]: `mname` is undefined, or not always defined.
     return "%s:%d(%s)" % (mname, code.co_firstlineno, code.co_name)
 
 
