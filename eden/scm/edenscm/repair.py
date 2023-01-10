@@ -188,7 +188,7 @@ class stripcallback(object):
             strip(self.ui, self.repo, roots, self.backup, self.topic)
 
 
-def delayedstrip(ui, repo, nodelist, topic: Optional[str] = None):
+def delayedstrip(ui, repo, nodelist, topic: Optional[str] = None) -> None:
     """like strip, but works inside transaction and won't strip irreverent revs
 
     nodelist must explicitly contain all descendants. Otherwise a warning will
