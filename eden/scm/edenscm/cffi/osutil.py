@@ -17,6 +17,7 @@ import stat as statmod
 
 from .. import pycompat
 from ..pure.osutil import *  # noqa: F401, F403
+from typing import List
 
 
 if pycompat.isdarwin:
@@ -32,7 +33,9 @@ if pycompat.isdarwin:
     # tweakable number, only affects performance, which chunks
     # of bytes do we get back from getattrlistbulk
 
-    attrkinds = [None] * 20  # we need the max no for enum VXXX, 20 is plenty
+    attrkinds: List[None] = [
+        None
+    ] * 20  # we need the max no for enum VXXX, 20 is plenty
 
     # pyre-fixme[6]: For 2nd param expected `None` but got `int`.
     attrkinds[lib.VREG] = statmod.S_IFREG
@@ -98,7 +101,7 @@ if pycompat.isdarwin:
                 cur = ffi.cast("val_attrs_t*", int(ffi.cast("intptr_t", cur)) + lgt)
         return ret
 
-    def listdir(path, stat=False, skip=None):
+    def listdir(path, stat: bool = False, skip=None):
         req = ffi.new("struct attrlist*")
         req.bitmapcount = lib.ATTR_BIT_MAP_COUNT
         req.commonattr = (
