@@ -693,7 +693,7 @@ function ephemeral_db_config() {
 
 function blobstore_db_config() {
   if [[ -n "$DB_SHARD_NAME" ]]; then
-    echo "queue_db = { remote = { shard_map = \"$DB_SHARD_NAME\", shard_num = 1 } }"
+    echo "queue_db = { unsharded = { db_address = \"$DB_SHARD_NAME\" } }"
   else
     local blobstore_db_path="$TESTTMP/blobstore_sync_queue"
     mkdir -p "$blobstore_db_path"

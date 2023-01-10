@@ -992,7 +992,9 @@ pub enum ShardedDatabaseConfig {
     /// Local SQLite database
     Local(LocalDatabaseConfig),
     /// Remote MySQL sharded database
-    Remote(ShardedRemoteDatabaseConfig),
+    Sharded(ShardedRemoteDatabaseConfig),
+    /// Remote MySQL unsharded database (only for testing purposes)
+    Unsharded(RemoteDatabaseConfig),
 }
 
 /// Configuration for the Metadata database when it is remote.

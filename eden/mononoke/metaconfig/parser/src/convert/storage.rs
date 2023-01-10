@@ -309,7 +309,10 @@ impl Convert for RawShardedDbConfig {
     fn convert(self) -> Result<Self::Output> {
         match self {
             RawShardedDbConfig::local(raw) => Ok(ShardedDatabaseConfig::Local(raw.convert()?)),
-            RawShardedDbConfig::remote(raw) => Ok(ShardedDatabaseConfig::Remote(raw.convert()?)),
+            RawShardedDbConfig::remote(raw) => Ok(ShardedDatabaseConfig::Sharded(raw.convert()?)),
+            RawShardedDbConfig::unsharded(raw) => {
+                Ok(ShardedDatabaseConfig::Unsharded(raw.convert()?))
+            }
             RawShardedDbConfig::UnknownField(f) => {
                 Err(anyhow!("unsupported database configuration ({})", f))
             }

@@ -1035,7 +1035,7 @@ mod test {
                 ),
             ],
             write_quorum: 1,
-            queue_db: ShardedDatabaseConfig::Remote(ShardedRemoteDatabaseConfig {
+            queue_db: ShardedDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig {
                 shard_map: "queue_db_address".into(),
                 shard_num: nonzero!(13usize),
             }),
@@ -1573,7 +1573,7 @@ mod test {
                             })
                         ],
                         write_quorum: 1,
-                        queue_db: ShardedDatabaseConfig::Remote(
+                        queue_db: ShardedDatabaseConfig::Sharded(
                             ShardedRemoteDatabaseConfig {
                                 shard_map: "queue_db_address".into(),
                                 shard_num: nonzero!(1usize),

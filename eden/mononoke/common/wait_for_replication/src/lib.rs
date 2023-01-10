@@ -85,7 +85,7 @@ impl WaitForReplication {
         let (sync_queue_monitor, xdb_blobstore_monitor) = match storage_config.blobstore {
             BlobConfig::MultiplexedWal {
                 blobstores,
-                queue_db: ShardedDatabaseConfig::Remote(remote),
+                queue_db: ShardedDatabaseConfig::Sharded(remote),
                 ..
             } => {
                 #[cfg(fbcode_build)]

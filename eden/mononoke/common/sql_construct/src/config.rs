@@ -61,13 +61,16 @@ pub trait SqlConstructFromShardedDatabaseConfig: FbSqlShardedConstruct {
             ShardedDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
                 Self::with_sqlite_path(path.join("sqlite_dbs"), readonly)
             }
-            ShardedDatabaseConfig::Remote(config) => Self::with_sharded_mysql(
+            ShardedDatabaseConfig::Sharded(config) => Self::with_sharded_mysql(
                 fb,
                 config.shard_map.clone(),
                 config.shard_num,
                 mysql_options,
                 readonly,
             ),
+            ShardedDatabaseConfig::Unsharded(config) => {
+                Self::with_mysql(fb, config.db_address.clone(), mysql_options, readonly)
+            }
         }
         .with_context(|| {
             format!(
