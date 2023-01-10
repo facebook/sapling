@@ -22,13 +22,13 @@ class RepackAlreadyRunning(error.Abort):
     pass
 
 
-def domaintenancerepack(repo):
+def domaintenancerepack(repo) -> None:
     """Perform a background repack if necessary."""
 
     backgroundrepack(repo, incremental=True)
 
 
-def backgroundrepack(repo, incremental=True):
+def backgroundrepack(repo, incremental: bool = True) -> None:
     cmd = [util.hgexecutable(), "-R", repo.origroot, "repack"]
     msg = _("(running background repack)\n")
     if incremental:
@@ -40,7 +40,7 @@ def backgroundrepack(repo, incremental=True):
     util.spawndetached(cmd)
 
 
-def _runrustrepack(ui, packpath, stores, incremental, shared):
+def _runrustrepack(ui, packpath, stores, incremental, shared) -> None:
     if not os.path.isdir(packpath):
         return
 
@@ -52,7 +52,7 @@ def _runrustrepack(ui, packpath, stores, incremental, shared):
             raise
 
 
-def runrepacklegacy(ui, packpath, incremental, shared):
+def runrepacklegacy(ui, packpath, incremental, shared) -> None:
     _runrustrepack(ui, packpath, None, incremental, shared)
 
 
@@ -64,7 +64,7 @@ def _getstores(repo, category):
     raise error.ProgrammingError("invalid pack category")
 
 
-def _shareddatastoresrepack(repo, incremental, category):
+def _shareddatastoresrepack(repo, incremental, category) -> None:
     packpath = shallowutil.getcachepackpath(repo, category)
     limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
     _cleanuppacks(repo.ui, packpath, limit)
@@ -72,7 +72,7 @@ def _shareddatastoresrepack(repo, incremental, category):
     _runrustrepack(repo.ui, packpath, _getstores(repo, category), incremental, True)
 
 
-def _localdatarepack(repo, incremental, category):
+def _localdatarepack(repo, incremental, category) -> None:
     if repo.ui.configbool("remotefilelog", "localdatarepack"):
         packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, category)
         _cleanuppacks(repo.ui, packpath, 0)
@@ -82,7 +82,7 @@ def _localdatarepack(repo, incremental, category):
         )
 
 
-def fulllocaldatarepack(repo, stores):
+def fulllocaldatarepack(repo, stores) -> None:
     if repo.ui.configbool("remotefilelog", "localdatarepack"):
         packpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
@@ -92,7 +92,7 @@ def fulllocaldatarepack(repo, stores):
         _runrustrepack(repo.ui, packpath, stores, False, False)
 
 
-def _manifestrepack(repo, incremental):
+def _manifestrepack(repo, incremental) -> None:
     if repo.ui.configbool("treemanifest", "server"):
         # This code path is no longer used. Will be deleted soon.
         pass
@@ -124,7 +124,7 @@ def _manifestrepack(repo, incremental):
             _domanifestrepack(lpackpath, ldstores, lhstores, False)
 
 
-def _dorepack(repo, incremental):
+def _dorepack(repo, incremental) -> None:
     try:
         mask = os.umask(0o002)
         with flock(
@@ -145,11 +145,11 @@ def _dorepack(repo, incremental):
         os.umask(mask)
 
 
-def fullrepack(repo):
+def fullrepack(repo) -> None:
     _dorepack(repo, False)
 
 
-def incrementalrepack(repo):
+def incrementalrepack(repo) -> None:
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
@@ -173,7 +173,7 @@ def _getmanifeststores(repo):
     )
 
 
-def _cleanuptemppacks(ui, packpath):
+def _cleanuptemppacks(ui, packpath) -> None:
     """In some situations, temporary pack files are left around unecessarily
     using disk space. We've even seen cases where some users had 170GB+ worth
     of these. Let's remove these.
@@ -221,7 +221,7 @@ def _cleanuptemppacks(ui, packpath):
                 raise
 
 
-def _cleanupoldpacks(ui, packpath, limit):
+def _cleanupoldpacks(ui, packpath, limit) -> None:
     """Enforce a size limit on the cache. Packfiles will be removed oldest
     first, with the asumption that old packfiles contains less useful data than new ones.
     """
@@ -260,6 +260,8 @@ def _cleanupoldpacks(ui, packpath, limit):
             # network and expect these to be present on disk. If the 'limit' is
             # properly set, we should have removed enough files that this
             # condition won't matter.
+            # pyre-fixme[58]: `<` is not supported for operand types `struct_time`
+            #  and `struct_time`.
             if time.gmtime(stat.st_mtime + 10 * 60) > time.gmtime():
                 return
 
@@ -282,7 +284,7 @@ def _cleanupoldpacks(ui, packpath, limit):
             cachesize -= stat.st_size
 
 
-def _cleanuppacks(ui, packpath, limit):
+def _cleanuppacks(ui, packpath, limit) -> None:
     _cleanuptemppacks(ui, packpath)
     if ui.configbool("remotefilelog", "cleanoldpacks"):
         if limit != 0:
