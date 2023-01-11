@@ -1656,7 +1656,7 @@ def commit(ui, repo, *pats, **opts):
 
     - Use the ``-I`` or ``-X`` flags to match or exclude file names
       using a pattern or fileset. See :prog:`help patterns` and
-      :prog:`help filesets` fot details.
+      :prog:`help filesets` for details.
 
     - Specify the ``--interactive`` flag to open a UI to select
       individual files, hunks, or lines.
