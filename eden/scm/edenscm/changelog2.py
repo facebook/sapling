@@ -819,6 +819,12 @@ def migratetolazytext(repo):
 
     The migration can only be done from hybrid or doublewrite.
     """
+
+    if repo.nullableedenapi is None:
+        # Require EdenAPI to migrate.
+        repo.ui.note_err(_("cannot migrate to lazytext backend without edenapi\n"))
+        return
+
     # Migrate revlog to segments on demand.
     if repo.changelog.algorithmbackend == "revlog":
         migratetodoublewrite(repo)
@@ -843,11 +849,11 @@ def migratetolazy(repo):
 
     if repo.nullableedenapi is None:
         # Require EdenAPI to migrate.
-        repo.ui.note(_("cannot migrate to lazy backend without edenapi\n"))
+        repo.ui.note_err(_("cannot migrate to lazy backend without edenapi\n"))
         return
 
     if pycompat.iswindows and repo.svfs.exists(SEGMENTS_DIR_NEXT):
-        repo.ui.note(_("cannot migrate to lazy backend with pending migration\n"))
+        repo.ui.note_err(_("cannot migrate to lazy backend with pending migration\n"))
         return
 
     # Migrate revlog to segments on demand.
