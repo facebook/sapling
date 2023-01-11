@@ -7,10 +7,14 @@
 """
 
 import shutil
-from typing import Optional
+import asyncio
+from typing import Optional, List, Dict
 
-from edenscm import error, registrar, util
+from edenscm import error, registrar, util, cmdutil
 from edenscm.i18n import _
+from .pullrequeststore import PullRequestStore
+from edenscm.ext.github.submit import get_partitions, CommitData
+from edenscm.ext.smartlog import getdag, getrevs
 
 from . import (
     follow,
@@ -35,7 +39,7 @@ def extsetup(ui):
 @command(
     "pr",
     [],
-    _("<submit|get|link|unlink|...>"),
+    _("<submit|get|link|unlink|land|...>"),
 )
 def pull_request_command(ui, repo, *args, **opts):
     """exchange local commit data with GitHub pull requests"""
@@ -50,7 +54,7 @@ subcmd = pull_request_command.subcommand(
     categories=[
         (
             "Create or update pull requests, using `pull` to import a PR, if necessary",
-            ["submit", "pull"],
+            ["submit", "pull", "land"],
         ),
         (
             "Manually manage associations with pull requests",
@@ -78,6 +82,57 @@ def submit_cmd(ui, repo, *args, **opts):
     """create or update GitHub pull requests from local commits"""
     return submit.submit(ui, repo, *args, **opts)
 
+@subcmd(
+    "l|land",
+    [
+        (
+            "n",
+            "number",
+            0,
+            _("PR to land"),
+        )
+    ],
+)
+def land_cmd(ui, repo, *args, **opts):
+    """Land a pull request from the commandline"""
+    cd = asyncio.run(
+        get_partitions(ui, repo, *args, **opts)
+    )
+    """
+    [[CommitData(node=b'(T!\xae\x83Y\x8c\x83p\x81\x97\x84\xb1\xfa\xb4o\x04\x81\x10K', head_branch_name='pr15', pr=PullRequestDetails(node_id='PR_kwDOIsewis5G8yRN', number=15, url='https://github.com/discentem/arborlocker/pull/15', base_oid='e9a18602ec38bb9a1d6c146ae182c5c070da1a84', base_branch_name='main', head_oid='285421ae83598c8370819784b1fab46f0481104b', head_branch_name='pr15', body='fmt.print\n\n---\nStack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack](https://reviewstack.dev/discentem/arborlocker/pull/15).\n* #16\n* __->__ #15\n'), ctx=<changectx 285421ae8359>, is_dep=False, msg=None)], 
+     [CommitData(node=b'~\xb7\xd8\xff\xa1\x81DC\xa3K\xaf\x81\xf9~\xb1\xd6\xb8\x9fI\xbf', head_branch_name='pr16', pr=PullRequestDetails(node_id='PR_kwDOIsewis5G8yoB', number=16, url='https://github.com/discentem/arborlocker/pull/16', base_oid='285421ae83598c8370819784b1fab46f0481104b', base_branch_name='pr15', head_oid='7eb7d8ffa1814443a34baf81f97eb1d6b89f49bf', head_branch_name='pr16', body='moar printing\n\n---\nStack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack](https://reviewstack.dev/discentem/arborlocker/pull/16).\n* __->__ #16\n* #15\n'), ctx=<changectx 7eb7d8ffa181>, is_dep=False, msg=None)]]
+    """
+
+    '''
+    def inner():
+        for j in ...:
+            for k in ...:
+                if something:
+                    return
+    for i in ...:
+        inner()
+    
+    '''
+    # https://stackoverflow.com/questions/34964878/python-generate-a-dictionarytree-from-a-list-of-tuples
+    stacks = []
+    def parseCommitList(commitList):
+        for commit in commitList:
+            if commit.pr == None:
+                continue
+            stacks.append({commit.head_branch_name: commit.pr.base_branch_name})
+        return
+    for commitList in cd:
+        parseCommitList(commitList)
+    breakpoint()
+    raise error.Abort(_("pr land is not implemented yet"))
+
+    # Check if pr.land.mergestrategy == top, if not abort (only supported strategy for now)
+    # Get list of PRs (1,2, 3)
+    # Leave comment on each of the PRs, except top. For (1,2,3) leave comments on 1 & 2.
+     # Comment mentions this are closed and folded into #3
+     # if any comment fails, undo previous comments
+    # Close 1,2
+    # merge 3
 
 @subcmd(
     "pull",
