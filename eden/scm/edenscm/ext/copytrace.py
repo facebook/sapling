@@ -164,9 +164,8 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
 
 
-def opendbm(
-    repo, flag
-) -> Tuple[Optional[dbm._Database], Optional[Tuple[Type[dbm._error], Type[OSError]]]]:
+# Note: dbm._Database does not exist.
+def opendbm(repo, flag):
     """Open the dbm of choice.
 
     On some platforms, dbm is available, on others it's not,
