@@ -118,28 +118,16 @@ class PullRequestParams:
     parent: Optional[CommitData]
     number: int
 
-
-async def update_commits_in_stack(
-    ui, repo, github_repo: GitHubRepo, is_draft: bool
-) -> int:
-    parents = repo.dirstate.parents()
-    if parents[0] == nullid:
-        ui.status_err(_("commit has no parent: currently unsupported\n"))
-        return 1
-
-    store = PullRequestStore(repo)
+async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
     commits_to_process = await asyncio.gather(
         *[
             derive_commit_data(node, repo, store)
-            for node in repo.nodes("sort(. %% public(), -rev)")
+            for node in repo.nodes(filter)
         ]
     )
-
     if not commits_to_process:
         ui.status_err(_("no commits to submit\n"))
         return 0
-
-    workflow = SubmitWorkflow.from_config(ui)
 
     # Partition the chain.
     partitions: List[List[CommitData]] = []
@@ -153,13 +141,28 @@ async def update_commits_in_stack(
                 continue
         else:
             partitions.append([commit])
-
     if not partitions:
         # It is possible that all of the commits_to_process were marked as
         # followers.
         ui.status_err(_("no commits to submit\n"))
         return 0
+    return partitions
 
+async def update_commits_in_stack(
+    ui, repo, github_repo: GitHubRepo, is_draft: bool
+) -> int:
+    parents = repo.dirstate.parents()
+    if parents[0] == nullid:
+        ui.status_err(_("commit has no parent: currently unsupported\n"))
+        return 1
+
+    store = PullRequestStore(repo)
+
+    workflow = SubmitWorkflow.from_config(ui)
+
+    partitions = get_partitions(ui, repo, store, "sort(. %% public(), -rev)")
+    if partitions == 0:
+        return 0
     origin = get_origin(ui)
 
     # git push --force any heads that need updating, creating new branch names,
