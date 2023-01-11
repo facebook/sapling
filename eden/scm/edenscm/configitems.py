@@ -435,6 +435,7 @@ coreconfigitem("pull", "buffer-commit-count", default=(util.istest() and 5 or 10
 coreconfigitem("pull", "httpbookmarks", default=True)
 coreconfigitem("pull", "httphashprefix", default=False)
 coreconfigitem("pull", "httpcommitgraph", default=False)
+coreconfigitem("pull", "httpcommitgraph2", default=False)
 coreconfigitem("pull", "httpmutation", default=True)
 coreconfigitem("pull", "master-fastpath", default=True)
 coreconfigitem("exchange", "httpcommitlookup", default=True)

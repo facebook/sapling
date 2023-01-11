@@ -1500,17 +1500,21 @@ pulldiscoverymapping = {}
 
 
 def _httpcommitgraphenabled(repo, remote):
-    return (
-        repo.nullableedenapi is not None
-        and (
-            "lazychangelog" in repo.storerequirements
-            or "lazytextchangelog" in repo.storerequirements
-        )
-        and (
-            remote.capable("commitgraph")
-            or repo.ui.configbool("pull", "httpcommitgraph")
-        )
-    )
+    if repo.nullableedenapi is None:
+        return None
+
+    if (
+        "lazychangelog" not in repo.storerequirements
+        and "lazytextchangelog" not in repo.storerequirements
+    ):
+        return None
+
+    # TODO(liubovd) check if "and" condition is more correct here
+    if remote.capable("commitgraph") or repo.ui.configbool("pull", "httpcommitgraph"):
+        return "v1"
+
+    if remote.capable("commitgraph2") or repo.ui.configbool("pull", "httpcommitgraph2"):
+        return "v2"
 
 
 def pulldiscovery(stepname):
@@ -1730,8 +1734,9 @@ def _pullchangeset(pullop):
         pullop.heads = pullop.rheads
 
     repo = pullop.repo
-    if _httpcommitgraphenabled(repo, pullop.remote):
-        return _pullcommitgraph(pullop)
+    version = _httpcommitgraphenabled(repo, pullop.remote)
+    if version:
+        return _pullcommitgraph(pullop, version=version)
 
     if pullop.remote.capable("getbundle"):
         # TODO: get bundlecaps from remote
@@ -1754,7 +1759,7 @@ def _pullchangeset(pullop):
     pullop.cgresult = bundle2.combinechangegroupresults(bundleop)
 
 
-def _pullcommitgraph(pullop):
+def _pullcommitgraph(pullop, version):
     """pull commits from commitgraph endpoint
 
     This requires a lazy repo but avoids changegroup and bundle2 tech-debt.
@@ -1768,7 +1773,10 @@ def _pullcommitgraph(pullop):
     assert heads is not None
 
     commits = repo.changelog.inner
-    items = repo.edenapi.commitgraph(heads, pullop.common)
+    if version == "v2":
+        items = repo.edenapi.commitgraph2(heads, pullop.common)
+    else:
+        items = repo.edenapi.commitgraph(heads, pullop.common)
     traceenabled = tracing.isenabled(tracing.LEVEL_DEBUG, target="pull::httpgraph")
     graphnodes = []
     for item in items:

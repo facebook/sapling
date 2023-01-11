@@ -274,6 +274,13 @@ py_class!(pub class client |py| {
         self.inner(py).as_ref().commit_graph_py(py, heads.0, common.0)
     }
 
+    /// commitgraph2(heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes]}]
+    def commitgraph2(&self, heads: Serde<Vec<HgId>>, common: Serde<Vec<HgId>>)
+        -> PyResult<Serde<Vec<CommitGraphEntry>>>
+    {
+        self.inner(py).as_ref().commit_graph2_py(py, heads.0, common.0)
+    }
+
     /// clonedata() -> PyCell
     def clonedata(&self) -> PyResult<PyCell> {
         self.inner(py).as_ref().clone_data_py(py)

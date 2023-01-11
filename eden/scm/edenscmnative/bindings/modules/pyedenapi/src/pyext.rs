@@ -315,7 +315,21 @@ pub trait EdenApiPyExt: EdenApi {
         common: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitGraphEntry>>> {
         let responses = py
-            .allow_threads(|| block_unless_interrupted(self.commit_graph(heads, common)))
+            .allow_threads(|| block_unless_interrupted(self.commit_graph(heads, common, false)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        Ok(Serde(responses))
+    }
+
+    fn commit_graph2_py(
+        &self,
+        py: Python,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
+    ) -> PyResult<Serde<Vec<CommitGraphEntry>>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.commit_graph(heads, common, true)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
