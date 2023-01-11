@@ -216,6 +216,7 @@ impl Loggable for PlainCommitInfo {
             logger.set_source_hostname(source_hostname.clone());
         }
 
+        logger.attach_raw_scribe_write_cat()?;
         logger.log_async()?;
 
         Ok(())
