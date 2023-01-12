@@ -305,6 +305,8 @@ macro_rules! mononoke_queries {
 /// See https://fburl.com/sv/uk8w71td for error descriptions
 fn retryable_mysql_errno(errno: u32) -> bool {
     match errno {
+        // Deadlock error, advice is restarting transaction, so it's retryable
+        1213 => true,
         // Admission control errors
         // Safe to retry on writes as well as the query didn't even start
         1914..=1916 => true,
