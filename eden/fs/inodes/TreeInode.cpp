@@ -4217,24 +4217,29 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
             }
 
 #ifdef _WIN32
-            // Let's focus only on files as directories will get their atime
-            // updated when we query the atime of the files contained in it.
-            if (!entry.second.isDirectory()) {
-              auto entryPath = selfPath + entry.first;
-              auto wEntryPath = entryPath.wide();
-              struct __stat64 buf;
+            // If we're attempting to invalidate everything, don't bother
+            // checking the disk.
+            if (cutoff != std::chrono::system_clock::time_point::max()) {
+              // Let's focus only on files as directories will get their atime
+              // updated when we query the atime of the files contained in it.
+              if (!entry.second.isDirectory()) {
+                auto entryPath = selfPath + entry.first;
+                auto wEntryPath = entryPath.wide();
+                struct __stat64 buf;
 
-              // TODO: If the file isn't on disk this will lay a placeholder on
-              // disk and at the same time force it to not be invalidated due
-              // to its atime being newer than the cutoff.
-              if (_wstat64(wEntryPath.c_str(), &buf) < 0) {
-                continue;
-              }
+                // TODO: If the file isn't on disk this will lay a placeholder
+                // on disk and at the same time force it to not be invalidated
+                // due to its atime being newer than the cutoff.
+                if (_wstat64(wEntryPath.c_str(), &buf) < 0) {
+                  continue;
+                }
 
-              auto atime = std::chrono::system_clock::from_time_t(buf.st_atime);
-              if (atime > cutoff) {
-                // That file has been touched too recently, continue.
-                continue;
+                auto atime =
+                    std::chrono::system_clock::from_time_t(buf.st_atime);
+                if (atime > cutoff) {
+                  // That file has been touched too recently, continue.
+                  continue;
+                }
               }
             }
 #else
