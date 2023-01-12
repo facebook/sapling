@@ -132,6 +132,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
 
             # Make sure we pull "update". If it looks like a hash, add to
             # "nodes", otherwise to "names".
+
             nodes = []
             if update and update is not True:
                 if len(update) == 40:
@@ -142,7 +143,25 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
 
                 if not nodes:
                     pullnames.append(update)
-
+            else:
+                b = callgitnorepo(ui, ["ls-remote", "--symref", url, "HEAD"])
+                b.check_returncode()
+                def parse_symref_head(b) -> str:
+                    out = b.stdout.decode('utf-8')
+                    """
+                    ref: refs/heads/trunk   HEAD
+                    82156f7fd2719f5cca9f8a8738ff4e61561d04aa        HEAD
+                    """
+                    symrefhead = out.split("\n")[0]
+                    """
+                    ref: refs/heads/trunk   HEAD
+                    """
+                    headref = symrefhead.split(" ")[1].split("\t")[0]
+                    """
+                    refs/heads/trunk
+                    """
+                    return headref.split("/")[-1] # trunk
+                pullnames = [parse_symref_head(b)]
             pull(repo, "default", names=pullnames, nodes=nodes)
     except (Exception, KeyboardInterrupt):
         repo = None
