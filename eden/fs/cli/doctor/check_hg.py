@@ -87,8 +87,8 @@ class DirstateChecker(HgFileChecker):
 
     _old_snapshot: Optional[bytes] = None
     _old_dirstate_parents: Optional[Tuple[bytes, bytes]] = None
-    _tuples_dict: Dict[bytes, Tuple[str, int, int]] = {}
-    _copymap: Dict[bytes, bytes] = {}
+    _tuples_dict: Dict[str, Tuple[str, int, int]] = {}
+    _copymap: Dict[str, str] = {}
     _new_parents: Optional[Tuple[bytes, bytes]] = None
     _in_progress_checkout: bool = False
 
@@ -118,8 +118,8 @@ class DirstateChecker(HgFileChecker):
             with self.path.open("rb") as f:
                 parents, tuples_dict, copymap = eden.dirstate.read(f, str(self.path))
             self._old_dirstate_parents = parents
-            self._tuples_dict = {os.fsencode(k): v for k, v in tuples_dict.items()}
-            self._copymap = {os.fsencode(k): os.fsencode(v) for k, v in copymap.items()}
+            self._tuples_dict = {k: v for k, v in tuples_dict.items()}
+            self._copymap = {k: v for k, v in copymap.items()}
         except IOError as ex:
             errors.append(f"error reading {self.short_path}: {ex}")
             return
@@ -199,16 +199,11 @@ class DirstateChecker(HgFileChecker):
 
         if self._new_parents != self._old_dirstate_parents:
             with self.path.open("wb") as f:
+                assert self._new_parents is not None
                 eden.dirstate.write(
                     f,
-                    # pyre-fixme[6]: Expected `Tuple[bytes, bytes]` for 2nd param
-                    #  but got `Optional[Tuple[bytes, bytes]]`.
                     self._new_parents,
-                    # pyre-fixme[6]: Expected `Dict[str, Tuple[str, int, int]]` for
-                    #  3rd param but got `Dict[bytes, Tuple[str, int, int]]`.
                     self._tuples_dict,
-                    # pyre-fixme[6]: Expected `Dict[str, str]` for 4th param but got
-                    #  `Dict[bytes, bytes]`.
                     self._copymap,
                 )
 
