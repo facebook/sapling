@@ -15,13 +15,13 @@ from . import basepack
 
 # (filename hash, offset, size)
 INDEXFORMAT0 = "!20sQQ"
-INDEXENTRYLENGTH0 = struct.calcsize(INDEXFORMAT0)
+INDEXENTRYLENGTH0: int = struct.calcsize(INDEXFORMAT0)
 INDEXFORMAT1 = "!20sQQII"
-INDEXENTRYLENGTH1 = struct.calcsize(INDEXFORMAT1)
+INDEXENTRYLENGTH1: int = struct.calcsize(INDEXFORMAT1)
 NODELENGTH = 20
 
 NODEINDEXFORMAT = "!20sQ"
-NODEINDEXENTRYLENGTH = struct.calcsize(NODEINDEXFORMAT)
+NODEINDEXENTRYLENGTH: int = struct.calcsize(NODEINDEXFORMAT)
 
 # (node, p1, p2, linknode)
 PACKFORMAT = "!20s20s20s20sH"
@@ -66,7 +66,7 @@ class historypackstore(basepack.basepackstore):
         )
 
 
-def makehistorypackstore(ui, path, shared, deletecorruptpacks=False):
+def makehistorypackstore(ui, path, shared, deletecorruptpacks: bool = False):
     if ui.configbool("remotefilelog", "userustpackstore", False):
         return revisionstore.historypackstore(path, deletecorruptpacks)
     else:
