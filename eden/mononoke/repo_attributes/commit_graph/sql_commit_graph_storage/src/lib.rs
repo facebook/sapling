@@ -34,11 +34,11 @@ use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
 use rendezvous::TunablesRendezVousController;
-use sql::queries;
 use sql::Connection;
 use sql::SqlConnections;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::mononoke_queries;
 use vec1::vec1;
 use vec1::Vec1;
 
@@ -108,7 +108,7 @@ pub struct SqlCommitGraphStorage {
     read_master_connection: RendezVousConnection,
 }
 
-queries! {
+mononoke_queries! {
     write InsertChangeset(
         repo_id: RepositoryId,
         cs_id: ChangesetId,
