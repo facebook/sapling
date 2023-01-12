@@ -824,7 +824,7 @@ def undo(ui, repo, *args, **opts):
 
        For hybrid commands that result in both local and remote changes,
        :prog:`undo` will undo the local changes, but not the remote changes.
-       For example, `@prog pull --rebase` might move remote/master and also
+       For example, `@prog@ pull --rebase` might move remote/master and also
        rebase local commits. In this situation, :prog:`undo` will revert the
        rebase, but not the change to remote/master.
 

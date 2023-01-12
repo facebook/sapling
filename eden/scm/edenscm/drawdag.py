@@ -42,7 +42,7 @@ following ASCII graph as input::
      |     /          |    |
     ancestor(c,d)     a   baz
 
-The result (`@prog log -G -T "{desc}"`) will look like::
+The result (`@prog@ log -G -T "{desc}"`) will look like::
 
     o    foo
     |\

@@ -3141,7 +3141,7 @@ def help_(ui, *names, **opts):
 def hint(ui, *names, **opts):
     """acknowledge hints
 
-    ``@prog hint --ack NAME`` modifies hgrc to silence hints starting with
+    ``@prog@ hint --ack NAME`` modifies hgrc to silence hints starting with
     ``hint[NAME]``.
     """
     if opts.get("ack") and names:
