@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import shlex
 import sys
 import time
+from typing import Any, Dict, List, Optional
 
 import bindings
 import edenscm
@@ -30,7 +31,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
-def _assignobjects(objects, repo):
+def _assignobjects(objects, repo) -> None:
     objects.update(
         {
             # Shortcuts
@@ -62,8 +63,10 @@ def _assignobjects(objects, repo):
         # Commit cloud service.
         ui = repo.ui
         try:
+            # pyre-fixme[16]: Module `commitcloud` has no attribute `token`.
             token = cc.token.TokenLocator(ui).token
             if token is not None:
+                # pyre-fixme[19]: Expected 1 positional argument.
                 objects["serv"] = cc.service.get(ui, token)
         except Exception:
             pass
@@ -112,8 +115,9 @@ def debugshell(ui, repo, *args, **opts):
         _startipython(ui, repo, env)
 
 
-def _startipython(ui, repo, env):
+def _startipython(ui, repo, env) -> None:
     # IPython requires time.clock. It is missing on Windows. Polyfill it.
+    # pyre-fixme[16]: Module `time` has no attribute `clock`.
     if getattr(time, "clock", None) is None:
         time.clock = time.time
 
@@ -162,7 +166,7 @@ Available IPython magics (auto magic is on, `%` is optional):
     shell()
 
 
-def c(args):
+def c(args: List[str]) -> bytes:
     """Run command with args and take its output.
 
     Example::
@@ -180,7 +184,7 @@ def c(args):
     return fout.getvalue()
 
 
-def _configipython(ui, ipython):
+def _configipython(ui, ipython) -> None:
     """Set up IPython features like magics"""
     from IPython.core.magic import register_line_magic
 
@@ -211,6 +215,6 @@ def _configipython(ui, ipython):
         return td
 
 
-def _execwith(td, code, ns):
+def _execwith(td, code, ns: Optional[Dict[str, Any]]) -> None:
     with td:
         exec(code, ns)
