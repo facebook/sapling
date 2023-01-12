@@ -6,32 +6,67 @@
  */
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use borrowed::borrowed;
+use changeset_fetcher::ChangesetFetcher;
+use changesets::Changesets;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use maplit::hashset;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;
 use pushrebase::do_pushrebase_bonsai;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
 
 use crate::GitMappingPushrebaseHook;
 
-#[fbinit::test]
-fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(pushrebase_populates_git_mapping_impl(fb))
+#[facet::container]
+#[derive(Clone)]
+struct Repo {
+    #[facet]
+    bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    changesets: dyn Changesets,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
-async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), Error> {
+#[fbinit::test]
+async fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo: BlobRepo = TestRepoFactory::new(fb)?
+    let repo: Repo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
     borrowed!(ctx, repo);
@@ -51,7 +86,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         )
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let book = bookmark(ctx, repo, "master").set_to(cs1).await?;
@@ -74,7 +109,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .find(|e| e.id_old == cs2.get_changeset_id())
         .ok_or_else(|| Error::msg("missing cs2"))?
         .id_new
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let cs3 = CreateCommitContext::new(ctx, repo, vec![root])
@@ -85,7 +120,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         )
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let cs4 = CreateCommitContext::new(ctx, repo, vec![cs3.get_changeset_id()])
@@ -96,7 +131,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         )
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let rebased = do_pushrebase_bonsai(
@@ -115,7 +150,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .find(|e| e.id_old == cs3.get_changeset_id())
         .ok_or_else(|| Error::msg("missing cs3"))?
         .id_new
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let cs4_rebased = rebased
@@ -123,7 +158,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .find(|e| e.id_old == cs4.get_changeset_id())
         .ok_or_else(|| Error::msg("missing cs4"))?
         .id_new
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     assert_eq!(
