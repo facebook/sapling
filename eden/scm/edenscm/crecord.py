@@ -1836,7 +1836,12 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.updatescreen()
             try:
                 with self.ui.timeblockedsection("crecord"):
-                    keypressed = curses.keyname(self.statuswin.getch()).decode("utf-8")
+                    char = self.statuswin.getch()
+                    if char == -1:
+                        # happens when resizing window, and it will cause
+                        # "ValueError: invalid key number" in `keyname()`
+                        continue
+                    keypressed = curses.keyname(char).decode("utf-8")
                 if self.errorstr is not None:
                     self.errorstr = None
                     continue
