@@ -23,21 +23,6 @@ export function assert(shouldBeTrue: boolean, error: string): void {
   }
 }
 
-export function findParentWithClassName(
-  start: HTMLElement,
-  className: string,
-): HTMLElement | undefined {
-  let el = start as HTMLElement | null;
-  while (el) {
-    if (el.classList?.contains(className)) {
-      return el;
-    } else {
-      el = el.parentElement;
-    }
-  }
-  return undefined;
-}
-
 export type NonNullReactElement = React.ReactElement | React.ReactFragment;
 
 /**

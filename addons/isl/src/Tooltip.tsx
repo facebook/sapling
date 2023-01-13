@@ -8,10 +8,9 @@
 import type {MouseEvent, ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
-import {findParentWithClassName} from './utils';
 import React, {useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
-import {unwrap} from 'shared/utils';
+import {findParentWithClassName, unwrap} from 'shared/utils';
 
 import './Tooltip.css';
 

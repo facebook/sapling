@@ -15,6 +15,8 @@
   --tooltip-background: var(--vscode-editorWidget-background, #252526);
   --tooltip-border: var(--vscode-editorWidget-border, #454545);
 
+  --hover-darken: rgba(255, 255, 255, 0.1);
+
   /* github PR colors */
   --github-badge-fg: white;
   --github-open-bg: #238636;

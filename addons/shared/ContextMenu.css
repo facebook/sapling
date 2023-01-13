@@ -1,0 +1,105 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.context-menu-container {
+  position: absolute;
+  padding: var(--halfpad);
+  background-color: var(--tooltip-background);
+  color: var(--foreground);
+  border: 1px solid var(--tooltip-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 2000;
+  min-width: 180px;
+  animation: fadein 50ms linear;
+}
+
+.context-menu-fadeout {
+  animation: fadeout 0.3s;
+}
+
+@keyframes fadein {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeout {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.context-menu-divider {
+  border-top: 1px solid var(--tooltip-border);
+  height: 0;
+  margin: var(--halfpad);
+}
+
+.context-menu-item {
+  padding: var(--halfpad);
+  border-radius: var(--halfpad);
+  cursor: pointer;
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus {
+  background-color: var(--hover-darken);
+}
+
+@keyframes flash {
+  0% {
+    background-color: unset;
+  }
+  100% {
+    background-color: var(--hover-darken);
+  }
+}
+
+.context-menu-item-selected {
+  animation: flash 0.1s steps(1);
+}
+
+.context-menu-arrow-top,
+.context-menu-arrow-bottom {
+  --arrow-height: var(--pad);
+  --arrow-half-width: var(--halfpad);
+  content: ' ';
+  border: var(--arrow-half-width) solid transparent;
+  width: 0px;
+  height: 0px;
+  position: absolute;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.context-menu-arrow-top {
+  border-bottom: var(--arrow-half-width) solid var(--tooltip-border);
+  top: calc(-1 * var(--arrow-height));
+}
+
+.context-menu-arrow-bottom {
+  border-top: var(--arrow-half-width) solid var(--tooltip-border);
+  bottom: calc(-1 * var(--arrow-height));
+}
+
+.context-menu-arrow-left {
+  left: 0;
+}
+
+.context-menu-arrow-right {
+  right: 0;
+}

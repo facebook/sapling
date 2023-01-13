@@ -67,3 +67,18 @@ export function basename(s: string, delimiter = '/') {
   }
   return s.slice(foundIndex + 1);
 }
+
+export function findParentWithClassName(
+  start: HTMLElement,
+  className: string,
+): HTMLElement | undefined {
+  let el = start as HTMLElement | null;
+  while (el) {
+    if (el.classList?.contains(className)) {
+      return el;
+    } else {
+      el = el.parentElement;
+    }
+  }
+  return undefined;
+}

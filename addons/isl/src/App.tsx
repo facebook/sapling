@@ -26,6 +26,7 @@ import {ThemeRoot} from './theme';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
 import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
+import {ContextMenus} from 'shared/ContextMenu';
 import {Drawers} from 'shared/Drawers';
 
 import './index.css';
@@ -42,6 +43,7 @@ export default function App() {
                 <div className="tooltip-root-container" data-testid="tooltip-root-container" />
                 <ComparisonViewModal />
                 <OptionsModal />
+                <ContextMenus />
               </ErrorBoundary>
             </ISLCommandContext>
           </ThemeRoot>
