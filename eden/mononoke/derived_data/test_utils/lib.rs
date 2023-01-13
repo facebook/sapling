@@ -41,7 +41,7 @@ pub async fn bonsai_changeset_from_hg(
 
 pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     ctx: &'a CoreContext,
-    repo: impl RepoBlobstoreRef + Copy + Send + Sync + 'a,
+    repo: &'a (impl RepoBlobstoreRef + Send + Sync),
     entry: Entry<MfId, LId>,
 ) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'a
 where

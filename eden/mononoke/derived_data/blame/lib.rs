@@ -85,11 +85,11 @@ pub async fn fetch_blame_compat(
     let blame_version = repo.repo_derived_data().manager().config().blame_version;
     let root_unode = match blame_version {
         BlameVersion::V1 => {
-            BlameRoot::derive(ctx, repo, csid).await?;
-            RootUnodeManifestId::derive(ctx, repo, csid).await?
+            BlameRoot::derive(ctx, &repo, csid).await?;
+            RootUnodeManifestId::derive(ctx, &repo, csid).await?
         }
         BlameVersion::V2 => {
-            let root_blame = RootBlameV2::derive(ctx, repo, csid).await?;
+            let root_blame = RootBlameV2::derive(ctx, &repo, csid).await?;
             root_blame.root_manifest()
         }
     };

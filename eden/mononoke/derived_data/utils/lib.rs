@@ -1437,7 +1437,7 @@ mod tests {
 
         // Derive B directly, which should use the V2 mapping, as that is the
         // version configured on the repo.  V1 of B should still be underived.
-        RootUnodeManifestId::derive(&ctx, repo.clone(), b).await?;
+        RootUnodeManifestId::derive(&ctx, &repo, b).await?;
         assert_eq!(
             utils_v1
                 .pending(ctx.clone(), repo.repo_derived_data_arc(), vec![a, b, c])

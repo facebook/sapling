@@ -210,7 +210,7 @@ mod test {
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,
-        repo: impl RepoBlobstoreRef,
+        repo: &impl RepoBlobstoreRef,
         hg_cs_id: HgChangesetId,
     ) -> Result<HgManifestId> {
         Ok(hg_cs_id
@@ -221,7 +221,7 @@ mod test {
 
     async fn verify_fsnode(
         ctx: &CoreContext,
-        repo: impl RepoBlobstoreRef + RepoDerivedDataRef + Copy + Send + Sync,
+        repo: &(impl RepoBlobstoreRef + RepoDerivedDataRef + Send + Sync),
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
@@ -249,7 +249,7 @@ mod test {
 
     async fn all_commits<'a>(
         ctx: &'a CoreContext,
-        repo: impl BookmarksRef + ChangesetFetcherArc + RepoDerivedDataRef + Copy + Send + Sync + 'a,
+        repo: &'a (impl BookmarksRef + ChangesetFetcherArc + RepoDerivedDataRef + Send + Sync),
     ) -> Result<impl Stream<Item = Result<(ChangesetId, HgChangesetId)>> + 'a> {
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = repo
@@ -271,12 +271,7 @@ mod test {
     fn verify_repo<F, R>(fb: FacebookInit, repo: F, runtime: &Runtime)
     where
         F: Future<Output = R>,
-        for<'a> &'a R: BookmarksRef
-            + RepoBlobstoreRef
-            + RepoDerivedDataRef
-            + ChangesetFetcherArc
-            + Send
-            + Sync,
+        R: BookmarksRef + RepoBlobstoreRef + RepoDerivedDataRef + ChangesetFetcherArc + Send + Sync,
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = runtime.block_on(repo);

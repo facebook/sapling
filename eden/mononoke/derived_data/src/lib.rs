@@ -95,7 +95,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// enabled for this repo.
     async fn derive(
         ctx: &CoreContext,
-        repo: impl RepoDerivedDataRef + Send + Sync,
+        repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: ChangesetId,
     ) -> Result<Self, DeriveError>;
 
@@ -103,7 +103,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// derivation, e.g. when scrubbing.
     async fn fetch_derived(
         ctx: &CoreContext,
-        repo: impl RepoDerivedDataRef + Send + Sync,
+        repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: &ChangesetId,
     ) -> Result<Option<Self>, Error>;
 
@@ -111,7 +111,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// changeset.
     async fn is_derived(
         ctx: &CoreContext,
-        repo: impl RepoDerivedDataRef + Send + Sync,
+        repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: &ChangesetId,
     ) -> Result<bool, DeriveError> {
         Ok(Self::fetch_derived(ctx, repo, csid).await?.is_some())
@@ -124,7 +124,7 @@ pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
     /// this repo.
     async fn count_underived(
         ctx: &CoreContext,
-        repo: impl RepoDerivedDataRef + Send + Sync,
+        repo: &(impl RepoDerivedDataRef + Send + Sync),
         csid: &ChangesetId,
         limit: u64,
     ) -> Result<u64, DeriveError>;
@@ -140,7 +140,7 @@ macro_rules! impl_bonsai_derived_via_manager {
 
             async fn derive(
                 ctx: &$crate::macro_export::CoreContext,
-                repo: impl $crate::macro_export::RepoDerivedDataRef + Send + Sync,
+                repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
                 csid: $crate::macro_export::ChangesetId,
             ) -> Result<Self, $crate::macro_export::DeriveError> {
                 repo.repo_derived_data().derive::<Self>(ctx, csid).await
@@ -148,7 +148,7 @@ macro_rules! impl_bonsai_derived_via_manager {
 
             async fn fetch_derived(
                 ctx: &$crate::macro_export::CoreContext,
-                repo: impl $crate::macro_export::RepoDerivedDataRef + Send + Sync,
+                repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
                 csid: &$crate::macro_export::ChangesetId,
             ) -> Result<Option<Self>, $crate::macro_export::Error> {
                 Ok(repo
@@ -159,7 +159,7 @@ macro_rules! impl_bonsai_derived_via_manager {
 
             async fn count_underived(
                 ctx: &$crate::macro_export::CoreContext,
-                repo: impl $crate::macro_export::RepoDerivedDataRef + Send + Sync,
+                repo: &(impl $crate::macro_export::RepoDerivedDataRef + Send + Sync),
                 csid: &$crate::macro_export::ChangesetId,
                 limit: u64,
             ) -> Result<u64, $crate::macro_export::DeriveError> {
