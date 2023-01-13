@@ -18,6 +18,7 @@ import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddOperation} from './operations/AddOperation';
+import {AddRemoveOperation} from './operations/AddRemoveOperation';
 import {AmendOperation} from './operations/AmendOperation';
 import {CommitOperation} from './operations/CommitOperation';
 import {ContinueOperation} from './operations/ContinueMergeOperation';
@@ -146,6 +147,35 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
 
   const allConflictsResolved =
     conflicts?.files?.every(conflict => conflict.status === 'Resolved') ?? false;
+
+  // only show addremove button if some files are untracked/missing
+  const UNTRACKED_OR_MISSING = ['?', '!'];
+  const addremoveButton = uncommittedChanges.some(file =>
+    UNTRACKED_OR_MISSING.includes(file.status),
+  ) ? (
+    <Tooltip
+      delayMs={DOCUMENTATION_DELAY}
+      title={t('Add all untracked files and remove all missing files.')}>
+      <VSCodeButton
+        appearance="icon"
+        key="addremove"
+        data-testid="addremove-button"
+        onClick={() => {
+          // If all files are selected, no need to pass specific files to addremove.
+          const filesToAddRemove = allFilesSelected
+            ? []
+            : uncommittedChanges
+                .filter(file => UNTRACKED_OR_MISSING.includes(file.status))
+                .filter(file => !deselectedFiles.has(file.path))
+                .map(file => file.path);
+          runOperation(new AddRemoveOperation(filesToAddRemove));
+        }}>
+        <Icon slot="start" icon="expand-all" />
+        <T>Add/Remove</T>
+      </VSCodeButton>
+    </Tooltip>
+  ) : null;
+
   return (
     <div className="uncommitted-changes">
       {conflicts != null ? (
@@ -221,6 +251,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
               <Icon slot="start" icon="close-all" />
               <T>Deselect All</T>
             </VSCodeButton>
+            {addremoveButton}
             <Tooltip
               delayMs={DOCUMENTATION_DELAY}
               title={t('discardTooltip', {
