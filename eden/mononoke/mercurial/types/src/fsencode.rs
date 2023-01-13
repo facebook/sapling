@@ -10,7 +10,7 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 
-use crate::hash::Sha1;
+use mononoke_types::sha1_hash::Sha1;
 
 fn fsencode_filter<P: AsRef<[u8]>>(p: P, dotencode: bool) -> String {
     let p = p.as_ref();

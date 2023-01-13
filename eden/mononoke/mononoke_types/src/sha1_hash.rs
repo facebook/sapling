@@ -82,7 +82,7 @@ impl Sha1 {
 
     /// Extract this hash's underlying byte array.
     #[inline]
-    pub(crate) fn into_byte_array(self) -> [u8; SHA1_HASH_LENGTH_BYTES] {
+    pub fn into_byte_array(self) -> [u8; SHA1_HASH_LENGTH_BYTES] {
         self.0
     }
 
@@ -186,7 +186,7 @@ impl Arbitrary for Sha1 {
 /// Internal implementation is the inclusive range of Sha1 objects.
 /// If can be build from a from a hex-encoded string (len <= SHA1_HASH_LENGTH_HEX (40))
 /// or from an array of bytes (len <= SHA1_HASH_LENGTH_BYTES (20)).
-pub struct Sha1Prefix(pub(crate) Sha1, pub(crate) Sha1);
+pub struct Sha1Prefix(Sha1, Sha1);
 
 impl Sha1Prefix {
     /// Construct a `Sha1Prefix` from an array of bytes.

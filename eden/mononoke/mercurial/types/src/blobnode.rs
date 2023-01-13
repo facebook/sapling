@@ -8,6 +8,8 @@
 use bytes::Bytes;
 use futures_old::Future;
 use futures_old::Stream;
+use mononoke_types::sha1_hash;
+use mononoke_types::sha1_hash::Context;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use serde_derive::Deserialize;
@@ -16,8 +18,6 @@ use serde_derive::Serialize;
 use types::Parents as HgTypesParents;
 
 use crate::blob::HgBlob;
-use crate::hash;
-use crate::hash::Context;
 use crate::nodehash::HgNodeHash;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -145,7 +145,7 @@ impl HgBlobNode {
 }
 
 fn hg_node_id_hash_context(parents: &HgParents) -> Context {
-    let null = hash::NULL;
+    let null = sha1_hash::NULL;
 
     let (h1, h2) = match parents {
         HgParents::None => (&null, &null),

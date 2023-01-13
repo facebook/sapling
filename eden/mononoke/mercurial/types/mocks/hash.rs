@@ -10,8 +10,8 @@ use std::cmp::min;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 // NULL is exported for convenience.
-use mercurial_types::hash::Sha1;
-pub use mercurial_types::hash::NULL;
+use mononoke_types::sha1_hash::Sha1;
+pub use mononoke_types::sha1_hash::NULL;
 
 // Definitions for hashes 1111...1111 to ffff...ffff.
 

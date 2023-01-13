@@ -41,6 +41,7 @@ quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/fac
 regex = "1.6.0"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_derive = "1.0"
+sha-1 = "0.10"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

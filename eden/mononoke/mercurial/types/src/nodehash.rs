@@ -16,6 +16,9 @@ use abomonation_derive::Abomonation;
 use anyhow::Result;
 use ascii::AsciiStr;
 use ascii::AsciiString;
+use mononoke_types::sha1_hash;
+use mononoke_types::sha1_hash::Sha1;
+use mononoke_types::sha1_hash::Sha1Prefix;
 use mononoke_types::FileType;
 use quickcheck_arbitrary_derive::Arbitrary;
 use sql::mysql;
@@ -23,14 +26,11 @@ use sql::mysql;
 /// Equivalent to HgNodeHash;
 use types::HgId;
 
-use crate::hash;
-use crate::hash::Sha1;
-use crate::hash::Sha1Prefix;
 use crate::manifest::Type;
 use crate::thrift;
 use crate::RepoPath;
 
-pub const NULL_HASH: HgNodeHash = HgNodeHash(hash::NULL);
+pub const NULL_HASH: HgNodeHash = HgNodeHash(sha1_hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 
 /// This structure represents Sha1 based hashes that are used in Mercurial, but the Sha1
@@ -343,12 +343,16 @@ impl HgChangesetIdPrefix {
 
     #[inline]
     pub fn min_cs(&self) -> HgChangesetId {
-        HgChangesetId::new(HgNodeHash::new(self.0.0))
+        HgChangesetId::new(
+            HgNodeHash::from_bytes(self.0.min_as_ref()).expect("Min sha1 is a valid sha1"),
+        )
     }
 
     #[inline]
     pub fn max_cs(&self) -> HgChangesetId {
-        HgChangesetId::new(HgNodeHash::new(self.0.1))
+        HgChangesetId::new(
+            HgNodeHash::from_bytes(self.0.max_as_ref()).expect("Max sha1 is a valid sha1"),
+        )
     }
 
     #[inline]

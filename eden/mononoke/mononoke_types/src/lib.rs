@@ -30,6 +30,7 @@ pub mod path;
 pub mod rawbundle2;
 pub mod redaction_key_list;
 pub mod repo;
+pub mod sha1_hash;
 pub mod sharded_map;
 pub mod skeleton_manifest;
 pub mod sql_types;

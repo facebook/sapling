@@ -470,10 +470,10 @@ pub fn serialize_extras<W: Write>(extras: &Extra, out: &mut W) -> io::Result<()>
 
 #[cfg(test)]
 mod tests {
+    use mononoke_types::sha1_hash;
     use quickcheck::quickcheck;
 
     use super::*;
-    use crate::hash;
 
     quickcheck! {
         fn escape_roundtrip(input: Vec<u8>) -> bool {
@@ -528,7 +528,7 @@ mod tests {
             .map(|c| {
                 let mut buf = Vec::new();
                 c.generate_for_hash_verification(&mut buf).unwrap();
-                let mut hash_context = hash::Context::new();
+                let mut hash_context = sha1_hash::Context::new();
                 hash_context.update(buf);
                 let sha1 = hash_context.finish();
                 HgNodeHash::new(sha1)
