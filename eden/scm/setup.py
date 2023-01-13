@@ -50,6 +50,7 @@ if PY_VERSION is None:
         PY_VERSION = "38"
 
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
+fetchassets = not os.environ.get("SAPLING_NO_FETCH")
 
 
 def ensureenv():
@@ -563,6 +564,8 @@ class asset(object):
         """Download and extract the asset to self.destdir. Return full path of
         the directory containing extracted files.
         """
+        if not fetchassets:
+            return None
         if not self._isready():
             self._download()
             self._extract()
@@ -592,6 +595,7 @@ class asset(object):
         subprocess.check_call(args)
 
     def _extract(self):
+        assert fetchassets
         destdir = self.destdir
         srcpath = pjoin(builddir, self.name)
         destpath = pjoin(builddir, destdir)
@@ -1560,11 +1564,12 @@ extmodules = [
 
 def cythonize(*args, **kwargs):
     """Proxy to Cython.Build.cythonize. Download Cython on demand."""
-    cythonsrc = asset(
-        url="https://files.pythonhosted.org/packages/4c/76/1e41fbb365ad20b6efab2e61b0f4751518444c953b390f9b2d36cf97eea0/Cython-0.29.32.tar.gz"
-    )
-    path = cythonsrc.ensureready()
-    sys.path.insert(0, path)
+    if fetchassets:
+        cythonsrc = asset(
+            url="https://files.pythonhosted.org/packages/4c/76/1e41fbb365ad20b6efab2e61b0f4751518444c953b390f9b2d36cf97eea0/Cython-0.29.32.tar.gz"
+        )
+        path = cythonsrc.ensureready()
+        sys.path.insert(0, path)
 
     from Cython.Build import cythonize
 
