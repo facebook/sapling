@@ -8,7 +8,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-# This is the mercurial setup script.
+# This is the Sapling setup script.
 #
 # 'python3 setup.py install', or
 # 'python3 setup.py --help' for more options
@@ -1848,31 +1848,21 @@ setup(
     name="edenscm",
     version=setupversion,
     author="Olivia Mackall and many others",
-    author_email="mercurial@mercurial-scm.org",
-    url="https://mercurial-scm.org/",
-    download_url="https://mercurial-scm.org/release/",
+    url="https://sapling-scm.com/",
     description=(
-        "Fast scalable distributed SCM (revision control, version " "control) system"
+        "Sapling SCM is a cross-platform, highly scalable, Git-compatible source control system."
     ),
     long_description=(
-        "Mercurial is a distributed SCM tool written in Python."
-        " It is used by a number of large projects that require"
-        " fast, reliable distributed revision control, such as "
-        "Mozilla."
+        "It aims to provide both user-friendly and powerful interfaces for users, as "
+        "well as extreme scalability to deal with repositories containing many millions "
+        "of files and many millions of commits."
     ),
     license="GNU GPLv2 or any later version",
     classifiers=[
-        "Development Status :: 6 - Mature",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
         "License :: OSI Approved :: GNU General Public License (GPL)",
-        "Natural Language :: Danish",
-        "Natural Language :: English",
-        "Natural Language :: German",
-        "Natural Language :: Italian",
-        "Natural Language :: Japanese",
-        "Natural Language :: Portuguese (Brazilian)",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: OS Independent",
         "Operating System :: POSIX",
