@@ -349,8 +349,8 @@ impl Request {
     }
 
     /// Set transfer speed options for this request.
-    pub fn min_transfer_speed(mut self, min_transfer_speed: MinTransferSpeed) -> Self {
-        self.set_min_transfer_speed(min_transfer_speed);
+    pub fn min_transfer_speed(mut self, min_transfer_speed: Option<MinTransferSpeed>) -> Self {
+        self.min_transfer_speed = min_transfer_speed;
         self
     }
 

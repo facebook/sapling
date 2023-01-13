@@ -943,8 +943,12 @@ impl EdenApi for Client {
         self.log_request(&graph_req, "commit_graph");
         let wire_graph_req = graph_req.to_wire();
 
+        // In the current implementation, server sends CommitGraph
+        // once it is fully ready, not streaming it.
+        // min speed transfer check must be disabled
         let req = self
             .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
