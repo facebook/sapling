@@ -1071,8 +1071,6 @@ class hgbuildpy(build_py):
 
         build_py.run(self)
 
-        buildpyzip(self.distribution).run()
-
 
 class buildpyzip(Command):
     description = "generate zip for bundled dependent Python modules (ex. IPython)"
