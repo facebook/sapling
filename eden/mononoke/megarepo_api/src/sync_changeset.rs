@@ -510,7 +510,7 @@ async fn sync_changeset_to_target(
                 source_cs_mut,
                 &remapped_parents,
                 mover,
-                source_repo.clone(), // this doesn't need to be clone
+                source_repo,
                 // In case of octopus merges only first two parent get preserved during
                 // hg derivation. This ensures that mainline is within those two so is
                 // represented in the commit graph and the sync is a fast-forward move.

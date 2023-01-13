@@ -24,18 +24,19 @@ use tunables::tunables;
 use crate::create_synced_commit_mapping_entry;
 use crate::CommitSyncRepos;
 use crate::ErrorKind;
+use crate::Repo;
 
 #[derive(Clone)]
-pub struct CrossRepoSyncPushrebaseHook {
+pub struct CrossRepoSyncPushrebaseHook<R> {
     cs_id: ChangesetId,
-    repos: CommitSyncRepos,
+    repos: CommitSyncRepos<R>,
     version_name: CommitSyncConfigVersion,
 }
 
-impl CrossRepoSyncPushrebaseHook {
+impl<R: Repo + 'static> CrossRepoSyncPushrebaseHook<R> {
     pub fn new(
         cs_id: ChangesetId,
-        repos: CommitSyncRepos,
+        repos: CommitSyncRepos<R>,
         version_name: CommitSyncConfigVersion,
     ) -> Box<dyn PushrebaseHook> {
         Box::new(Self {
@@ -47,7 +48,7 @@ impl CrossRepoSyncPushrebaseHook {
 }
 
 #[async_trait]
-impl PushrebaseHook for CrossRepoSyncPushrebaseHook {
+impl<R: Repo + 'static> PushrebaseHook for CrossRepoSyncPushrebaseHook<R> {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let hook = Box::new(self.clone()) as Box<dyn PushrebaseCommitHook>;
         Ok(hook)
@@ -55,7 +56,7 @@ impl PushrebaseHook for CrossRepoSyncPushrebaseHook {
 }
 
 #[async_trait]
-impl PushrebaseCommitHook for CrossRepoSyncPushrebaseHook {
+impl<R: Repo + 'static> PushrebaseCommitHook for CrossRepoSyncPushrebaseHook<R> {
     async fn into_transaction_hook(
         self: Box<Self>,
         _ctx: &CoreContext,

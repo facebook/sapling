@@ -12,17 +12,19 @@ anyhow = "1.0.65"
 backsyncer = { version = "0.1.0", path = "../backsyncer" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 clap-old = { package = "clap", version = "2.33" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_x_repo = { version = "0.1.0", path = "../../cmdlib/x_repo" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
 derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -34,6 +36,8 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 regex = "1.6.0"
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }

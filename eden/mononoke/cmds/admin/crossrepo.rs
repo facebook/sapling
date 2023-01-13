@@ -104,6 +104,8 @@ const SUBCOMMAND_LIST: &str = "list";
 const ARG_VERSION_NAME: &str = "version-name";
 const ARG_WITH_CONTENTS: &str = "with-contents";
 
+type CrossRepo = BlobRepo;
+
 pub async fn subcommand_crossrepo<'a>(
     fb: FacebookInit,
     logger: Logger,
@@ -428,7 +430,7 @@ async fn change_mapping_via_extras<'a>(
     ctx: &CoreContext,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-    commit_syncer: &'a CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: &'a CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
     config_store: &ConfigStore,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
@@ -659,7 +661,7 @@ async fn run_insert_subcommand<'a>(
 async fn get_source_target_cs_ids_and_version(
     ctx: &CoreContext,
     sub_m: &ArgMatches<'_>,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
 ) -> Result<(ChangesetId, ChangesetId, CommitSyncConfigVersion), Error> {
     async fn fetch_cs_id(
         ctx: &CoreContext,
@@ -702,7 +704,7 @@ async fn create_commit_for_mapping_change(
     parent: &Large<ChangesetId>,
     mapping_version: &CommitSyncConfigVersion,
     options: MappingCommitOptions,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Large<ChangesetId>, Error> {
     let author = sub_m
@@ -767,7 +769,7 @@ async fn create_file_changes(
     large_repo: &Large<&BlobRepo>,
     mapping_version: &CommitSyncConfigVersion,
     options: MappingCommitOptions,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<BTreeMap<MPath, FileChange>, Error> {
     let mut file_changes = btreemap! {};
@@ -958,7 +960,7 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
 
 async fn subcommand_map(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, CrossRepo>,
     hash: String,
 ) -> Result<(), SubcommandError> {
     let source_repo = commit_syncer.get_source_repo();
@@ -1364,7 +1366,7 @@ async fn get_large_to_small_commit_syncer<'a>(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     mapping: SqlSyncedCommitMapping,
     matches: &'a MononokeMatches<'a>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<CommitSyncer<SqlSyncedCommitMapping, CrossRepo>, Error> {
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
@@ -1555,7 +1557,7 @@ mod test {
     async fn init(
         fb: FacebookInit,
         direction: CommitSyncDirection,
-    ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    ) -> Result<CommitSyncer<SqlSyncedCommitMapping, CrossRepo>, Error> {
         let ctx = CoreContext::test_mock(fb);
         let small_repo = Linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
         let large_repo = Linear::getrepo_with_id(fb, RepositoryId::new(1)).await;

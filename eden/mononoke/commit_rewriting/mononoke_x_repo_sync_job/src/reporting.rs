@@ -8,6 +8,7 @@
 use anyhow::Error;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Repo as CrossRepo;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -32,9 +33,9 @@ const SUCCESS: &str = "success";
 
 /// Populate the `scuba_sample` with fields, common for
 /// this tailer run
-pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static>(
+pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     scuba_sample: &mut MononokeScubaSampleBuilder,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
 ) {
     scuba_sample
         .add(SOURCE_REPO, commit_syncer.get_source_repo_id().id())

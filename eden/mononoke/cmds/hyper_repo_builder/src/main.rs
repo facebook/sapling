@@ -173,8 +173,8 @@ async fn subcommand_validate<'a>(
         let (mover, reverse_mover) = get_mover_and_reverse_mover(&source_repo.blob_repo)?;
         verify_working_copy_inner(
             &ctx,
-            &Source(source_repo.blob_repo),
-            &Target(hyper_repo.clone()),
+            Source(&source_repo.blob_repo),
+            Target(&hyper_repo),
             source_cs_id,
             Target(hyper_cs_id),
             &mover,

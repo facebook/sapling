@@ -1244,8 +1244,8 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
-    let small_name = validation_helper.small_repo.0.name();
-    let large_name = validation_helper.large_repo.0.name();
+    let small_name = validation_helper.small_repo.0.name().as_str();
+    let large_name = validation_helper.large_repo.0.name().as_str();
 
     report_missing(
         ctx,

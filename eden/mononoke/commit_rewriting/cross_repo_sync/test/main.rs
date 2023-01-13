@@ -87,11 +87,13 @@ use tests_utils::CreateCommitContext;
 use tunables::with_tunables_async;
 use tunables::MononokeTunables;
 
+type TestRepo = BlobRepo;
+
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
 }
 
-async fn move_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str, cs_id: ChangesetId) {
+async fn move_bookmark(ctx: &CoreContext, repo: &TestRepo, bookmark: &str, cs_id: ChangesetId) {
     let bookmark = BookmarkName::new(bookmark).unwrap();
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove)
@@ -99,7 +101,7 @@ async fn move_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str, cs_id
     txn.commit().await.unwrap();
 }
 
-async fn get_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str) -> ChangesetId {
+async fn get_bookmark(ctx: &CoreContext, repo: &TestRepo, bookmark: &str) -> ChangesetId {
     let bookmark = BookmarkName::new(bookmark).unwrap();
     repo.bookmarks()
         .get(ctx.clone(), &bookmark)
@@ -108,7 +110,7 @@ async fn get_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str) -> Cha
         .unwrap()
 }
 
-async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
+async fn create_initial_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     create_initial_commit_with_contents(
         ctx,
         repo,
@@ -119,7 +121,7 @@ async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId
 
 async fn create_initial_commit_with_contents<'a>(
     ctx: CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a TestRepo,
     file_changes: BTreeMap<&'static str, Option<impl Into<Bytes>>>,
 ) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
@@ -172,7 +174,7 @@ async fn create_initial_commit_with_contents<'a>(
     bcs_id
 }
 
-async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
+async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .bookmarks()
@@ -209,7 +211,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
 
 async fn sync_to_master<M>(
     ctx: CoreContext,
-    config: &CommitSyncer<M>,
+    config: &CommitSyncer<M, TestRepo>,
     source_bcs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error>
 where
@@ -234,7 +236,7 @@ where
 
 async fn get_bcs_id<M>(
     ctx: &CoreContext,
-    config: &CommitSyncer<M>,
+    config: &CommitSyncer<M, TestRepo>,
     source_hg_cs: HgChangesetId,
 ) -> ChangesetId
 where
@@ -251,7 +253,7 @@ where
 
 async fn check_mapping<M>(
     ctx: CoreContext,
-    config: &CommitSyncer<M>,
+    config: &CommitSyncer<M, TestRepo>,
     source_bcs_id: ChangesetId,
     expected_bcs_id: Option<ChangesetId>,
 ) where
@@ -311,11 +313,11 @@ fn create_commit_sync_config(
 
 fn create_small_to_large_commit_syncer(
     ctx: &CoreContext,
-    small_repo: BlobRepo,
-    large_repo: BlobRepo,
+    small_repo: TestRepo,
+    large_repo: TestRepo,
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
     let small_repo_id = small_repo.get_repoid();
     let large_repo_id = large_repo.get_repoid();
 
@@ -348,13 +350,13 @@ fn create_small_to_large_commit_syncer(
 
 fn create_large_to_small_commit_syncer_and_config_source(
     ctx: &CoreContext,
-    small_repo: BlobRepo,
-    large_repo: BlobRepo,
+    small_repo: TestRepo,
+    large_repo: TestRepo,
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<
     (
-        CommitSyncer<SqlSyncedCommitMapping>,
+        CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
         TestLiveCommitSyncConfigSource,
     ),
     Error,
@@ -388,11 +390,11 @@ fn create_large_to_small_commit_syncer_and_config_source(
 
 fn create_large_to_small_commit_syncer(
     ctx: &CoreContext,
-    small_repo: BlobRepo,
-    large_repo: BlobRepo,
+    small_repo: TestRepo,
+    large_repo: TestRepo,
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
     let (syncer, _) = create_large_to_small_commit_syncer_and_config_source(
         ctx, small_repo, large_repo, prefix, mapping,
     )?;
@@ -452,7 +454,7 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
 
 async fn create_commit_from_parent_and_changes<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a TestRepo,
     p1: ChangesetId,
     changes: BTreeMap<&'static str, Option<&'static str>>,
 ) -> ChangesetId {
@@ -500,7 +502,7 @@ async fn create_commit_from_parent_and_changes<'a>(
     bcs_id
 }
 
-async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
+async fn update_master_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .bookmarks()
@@ -546,7 +548,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
 #[fbinit::test]
 async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo: BlobRepo = TestRepoFactory::new(fb)?
+    let megarepo: TestRepo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
         .build()?;
 
@@ -600,7 +602,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
 
 fn prepare_repos_and_mapping(
     fb: FacebookInit,
-) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
+) -> Result<(TestRepo, TestRepo, SqlSyncedCommitMapping), Error> {
     let metadata_con = SqliteConnection::open_in_memory()?;
     metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let hg_mutation_con = SqliteConnection::open_in_memory()?;
@@ -668,7 +670,7 @@ async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
 
 async fn megarepo_copy_file(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &TestRepo,
     linear_bcs_id: ChangesetId,
 ) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
@@ -927,7 +929,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
+async fn update_linear_1_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .bookmarks()
@@ -1040,7 +1042,7 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
 
 async fn check_rewritten_multiple<M>(
     ctx: &CoreContext,
-    syncer: &CommitSyncer<M>,
+    syncer: &CommitSyncer<M, TestRepo>,
     cs_id: ChangesetId,
     expected_rewrite_count: usize,
 ) -> Result<(), Error>
@@ -1085,11 +1087,11 @@ async fn get_multiple_master_mapping_setup(
 ) -> Result<
     (
         CoreContext,
-        BlobRepo,
-        BlobRepo,
+        TestRepo,
+        TestRepo,
         ChangesetId,
         ChangesetId,
-        CommitSyncer<SqlSyncedCommitMapping>,
+        CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
     ),
     Error,
 > {
@@ -1734,7 +1736,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     (
         CommitSyncConfigVersion,
         CommitSyncConfigVersion,
-        CommitSyncer<SqlSyncedCommitMapping>,
+        CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
     ),
     Error,
 > {
@@ -1921,7 +1923,7 @@ async fn merge_test_setup(
 ) -> Result<
     (
         CoreContext,
-        CommitSyncer<SqlSyncedCommitMapping>,
+        CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
         HashMap<Option<CommitSyncConfigVersion>, Vec<ChangesetId>>,
     ),
     Error,
@@ -1929,8 +1931,8 @@ async fn merge_test_setup(
     let ctx = CoreContext::test_mock(fb);
     // Set up various structures
     let mut factory = TestRepoFactory::new(fb)?;
-    let large_repo: BlobRepo = factory.with_id(RepositoryId::new(0)).build()?;
-    let small_repo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
+    let large_repo: TestRepo = factory.with_id(RepositoryId::new(0)).build()?;
+    let small_repo: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
@@ -2025,7 +2027,7 @@ async fn merge_test_setup(
 
 async fn create_merge(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &TestRepo,
     parents: Vec<ChangesetId>,
 ) -> ChangesetId {
     let bcs = BonsaiChangesetMut {
@@ -2141,7 +2143,7 @@ async fn test_sync_merge_fails_when_parents_have_different_versions(
 
 async fn assert_working_copy(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &TestRepo,
     cs_id: ChangesetId,
     expected_files: Vec<&str>,
 ) -> Result<(), Error> {
@@ -2167,7 +2169,7 @@ async fn assert_working_copy(
 
 async fn test_no_accidental_preserved_roots(
     ctx: CoreContext,
-    commit_sync_repos: CommitSyncRepos,
+    commit_sync_repos: CommitSyncRepos<TestRepo>,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
     let version = version_name_with_small_repo();
@@ -2282,11 +2284,11 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
 
     let large_repo_id = RepositoryId::new(0);
-    let large_repo: BlobRepo = factory.with_id(large_repo_id).build()?;
+    let large_repo: TestRepo = factory.with_id(large_repo_id).build()?;
     let first_small_repo_id = RepositoryId::new(1);
-    let first_smallrepo: BlobRepo = factory.with_id(first_small_repo_id).build()?;
+    let first_smallrepo: TestRepo = factory.with_id(first_small_repo_id).build()?;
     let second_small_repo_id = RepositoryId::new(2);
-    let second_smallrepo: BlobRepo = factory.with_id(second_small_repo_id).build()?;
+    let second_smallrepo: TestRepo = factory.with_id(second_small_repo_id).build()?;
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 

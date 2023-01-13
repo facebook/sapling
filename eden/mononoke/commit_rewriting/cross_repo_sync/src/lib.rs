@@ -6,6 +6,7 @@
  */
 
 #![feature(trait_alias)]
+#![feature(never_type)]
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -19,14 +20,18 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::BookmarksRef;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
+use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
+use changesets::ChangesetsRef;
 use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
@@ -34,6 +39,7 @@ use commit_transformation::MultiMover;
 use context::CoreContext;
 use environment::Caching;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfigRef;
 use futures::channel::oneshot;
 use futures::future;
 use futures::future::try_join;
@@ -60,6 +66,10 @@ use phases::PhasesRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use reporting::log_rewrite;
 pub use reporting::CommitSyncContext;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -145,7 +155,7 @@ pub async fn rewrite_commit<'a>(
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
-    source_repo: BlobRepo,
+    source_repo: &impl Repo,
     commit_rewritten_to_empty: CommitRewrittenToEmpty,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     multi_mover_rewrite_commit(
@@ -168,11 +178,11 @@ pub fn mover_to_multi_mover(mover: Mover) -> MultiMover {
     })
 }
 
-async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
+async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     cs: &BonsaiChangesetMut,
-    commit_syncer: &'a CommitSyncer<M>,
-    hint: CandidateSelectionHint,
+    commit_syncer: &'a CommitSyncer<M, R>,
+    hint: CandidateSelectionHint<R>,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error> {
     let mut remapped_parents = HashMap::new();
     for commit in &cs.parents {
@@ -234,13 +244,14 @@ impl SyncedAncestorsVersions {
 /// ```
 ///
 /// In this case we'll return [U1, U2] and \[V1\]
-pub async fn find_toposorted_unsynced_ancestors<M>(
+pub async fn find_toposorted_unsynced_ancestors<M, R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     start_cs_id: ChangesetId,
 ) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
 {
     let mut synced_ancestors_versions = SyncedAncestorsVersions::default();
     let source_repo = commit_syncer.get_source_repo();
@@ -318,48 +329,60 @@ where
     ))
 }
 
+pub trait Repo = BookmarksRef
+    + BookmarkUpdateLogRef
+    + RepoBlobstoreArc
+    + BonsaiHgMappingRef
+    + FilestoreConfigRef
+    + ChangesetsRef
+    + RepoIdentityRef
+    + PhasesRef
+    + ChangesetFetcherArc
+    + ChangesetFetcherRef
+    + RepoBlobstoreRef
+    + RepoDerivedDataRef
+    + Send
+    + Sync
+    + Clone
+    + 'static;
+
 #[derive(Clone)]
-pub enum CommitSyncRepos {
-    LargeToSmall {
-        large_repo: BlobRepo,
-        small_repo: BlobRepo,
-    },
-    SmallToLarge {
-        small_repo: BlobRepo,
-        large_repo: BlobRepo,
-    },
+pub enum CommitSyncRepos<R> {
+    LargeToSmall { large_repo: R, small_repo: R },
+    SmallToLarge { small_repo: R, large_repo: R },
 }
 
-impl CommitSyncRepos {
+impl<R: Repo> CommitSyncRepos<R> {
     /// Create a new instance of `CommitSyncRepos`
     /// Whether it's SmallToLarge or LargeToSmall is determined by
     /// source_repo/target_repo and common_commit_sync_config.
     pub fn new(
-        source_repo: BlobRepo,
-        target_repo: BlobRepo,
+        source_repo: R,
+        target_repo: R,
         common_commit_sync_config: &CommonCommitSyncConfig,
     ) -> Result<Self, Error> {
-        let small_repo_id = if common_commit_sync_config.large_repo_id == source_repo.get_repoid()
+        let small_repo_id = if common_commit_sync_config.large_repo_id
+            == source_repo.repo_identity().id()
             && common_commit_sync_config
                 .small_repos
-                .contains_key(&target_repo.get_repoid())
+                .contains_key(&target_repo.repo_identity().id())
         {
-            target_repo.get_repoid()
-        } else if common_commit_sync_config.large_repo_id == target_repo.get_repoid()
+            target_repo.repo_identity().id()
+        } else if common_commit_sync_config.large_repo_id == target_repo.repo_identity().id()
             && common_commit_sync_config
                 .small_repos
-                .contains_key(&source_repo.get_repoid())
+                .contains_key(&source_repo.repo_identity().id())
         {
-            source_repo.get_repoid()
+            source_repo.repo_identity().id()
         } else {
             return Err(format_err!(
                 "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
-                source_repo.get_repoid(),
-                target_repo.get_repoid()
+                source_repo.repo_identity().id(),
+                target_repo.repo_identity().id()
             ));
         };
 
-        if source_repo.get_repoid() == small_repo_id {
+        if source_repo.repo_identity().id() == small_repo_id {
             Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo,
                 small_repo: source_repo,
@@ -385,18 +408,19 @@ pub fn create_commit_syncer_lease(
 }
 
 #[derive(Clone)]
-pub struct CommitSyncer<M> {
+pub struct CommitSyncer<M, R> {
     // TODO: Finish refactor and remove pub
     pub mapping: M,
-    pub repos: CommitSyncRepos,
+    pub repos: CommitSyncRepos<R>,
     pub commit_sync_data_provider: CommitSyncDataProvider,
     pub scuba_sample: MononokeScubaSampleBuilder,
     pub x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
 
-impl<M> fmt::Debug for CommitSyncer<M>
+impl<M, R> fmt::Debug for CommitSyncer<M, R>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let source_repo_id = self.get_source_repo_id();
@@ -405,14 +429,15 @@ where
     }
 }
 
-impl<M> CommitSyncer<M>
+impl<M, R> CommitSyncer<M, R>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
 {
     pub fn new(
         ctx: &CoreContext,
         mapping: M,
-        repos: CommitSyncRepos,
+        repos: CommitSyncRepos<R>,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         lease: Arc<dyn LeaseOps>,
     ) -> Self {
@@ -423,7 +448,7 @@ where
     pub fn new_with_provider(
         ctx: &CoreContext,
         mapping: M,
-        repos: CommitSyncRepos,
+        repos: CommitSyncRepos<R>,
         commit_sync_data_provider: CommitSyncDataProvider,
     ) -> Self {
         Self::new_with_provider_impl(
@@ -438,14 +463,14 @@ where
     fn new_with_provider_impl(
         ctx: &CoreContext,
         mapping: M,
-        repos: CommitSyncRepos,
+        repos: CommitSyncRepos<R>,
         commit_sync_data_provider: CommitSyncDataProvider,
         x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(
             ctx,
-            repos.get_source_repo().name(),
-            repos.get_target_repo().name(),
+            repos.get_source_repo().repo_identity().name(),
+            repos.get_target_repo().repo_identity().name(),
         );
         Self {
             mapping,
@@ -456,39 +481,39 @@ where
         }
     }
 
-    pub fn get_source_repo(&self) -> &BlobRepo {
+    pub fn get_source_repo(&self) -> &R {
         self.repos.get_source_repo()
     }
 
     pub fn get_source_repo_id(&self) -> RepositoryId {
-        self.get_source_repo().get_repoid()
+        self.get_source_repo().repo_identity().id()
     }
 
-    pub fn get_target_repo(&self) -> &BlobRepo {
+    pub fn get_target_repo(&self) -> &R {
         self.repos.get_target_repo()
     }
 
     pub fn get_target_repo_id(&self) -> RepositoryId {
-        self.get_target_repo().get_repoid()
+        self.get_target_repo().repo_identity().id()
     }
 
     pub fn get_source_repo_type(&self) -> SyncedCommitSourceRepo {
         self.repos.get_source_repo_type()
     }
 
-    pub fn get_large_repo(&self) -> &BlobRepo {
+    pub fn get_large_repo(&self) -> &R {
         use CommitSyncRepos::*;
-        match self.repos {
-            LargeToSmall { ref large_repo, .. } => large_repo,
-            SmallToLarge { ref large_repo, .. } => large_repo,
+        match &self.repos {
+            LargeToSmall { large_repo, .. } => large_repo,
+            SmallToLarge { large_repo, .. } => large_repo,
         }
     }
 
-    pub fn get_small_repo(&self) -> &BlobRepo {
+    pub fn get_small_repo(&self) -> &R {
         use CommitSyncRepos::*;
-        match self.repos {
-            LargeToSmall { ref small_repo, .. } => small_repo,
-            SmallToLarge { ref small_repo, .. } => small_repo,
+        match &self.repos {
+            LargeToSmall { small_repo, .. } => small_repo,
+            SmallToLarge { small_repo, .. } => small_repo,
         }
     }
 
@@ -512,7 +537,11 @@ where
     ) -> Result<Mover, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         self.commit_sync_data_provider
-            .get_mover(version, source_repo.get_repoid(), target_repo.get_repoid())
+            .get_mover(
+                version,
+                source_repo.repo_identity().id(),
+                target_repo.repo_identity().id(),
+            )
             .await
     }
 
@@ -522,7 +551,11 @@ where
     ) -> Result<Mover, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         self.commit_sync_data_provider
-            .get_reverse_mover(version, source_repo.get_repoid(), target_repo.get_repoid())
+            .get_reverse_mover(
+                version,
+                source_repo.repo_identity().id(),
+                target_repo.repo_identity().id(),
+            )
             .await
     }
 
@@ -530,7 +563,10 @@ where
         let (source_repo, target_repo) = self.get_source_target();
 
         self.commit_sync_data_provider
-            .get_bookmark_renamer(source_repo.get_repoid(), target_repo.get_repoid())
+            .get_bookmark_renamer(
+                source_repo.repo_identity().id(),
+                target_repo.repo_identity().id(),
+            )
             .await
     }
 
@@ -538,7 +574,10 @@ where
         let (source_repo, target_repo) = self.get_source_target();
 
         self.commit_sync_data_provider
-            .get_reverse_bookmark_renamer(source_repo.get_repoid(), target_repo.get_repoid())
+            .get_reverse_bookmark_renamer(
+                source_repo.repo_identity().id(),
+                target_repo.repo_identity().id(),
+            )
             .await
     }
 
@@ -556,8 +595,8 @@ where
     ) -> Result<Option<PluralCommitSyncOutcome>, Error> {
         get_plural_commit_sync_outcome(
             ctx,
-            Source(self.repos.get_source_repo().get_repoid()),
-            Target(self.repos.get_target_repo().get_repoid()),
+            Source(self.repos.get_source_repo().repo_identity().id()),
+            Target(self.repos.get_target_repo().repo_identity().id()),
             Source(source_cs_id),
             &self.mapping,
             self.repos.get_direction(),
@@ -571,10 +610,10 @@ where
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<Option<CommitSyncOutcome>, Error> {
-        get_commit_sync_outcome(
+        get_commit_sync_outcome::<M>(
             ctx,
-            Source(self.repos.get_source_repo().get_repoid()),
-            Target(self.repos.get_target_repo().get_repoid()),
+            Source(self.repos.get_source_repo().repo_identity().id()),
+            Target(self.repos.get_target_repo().repo_identity().id()),
             Source(source_cs_id),
             &self.mapping,
             self.repos.get_direction(),
@@ -590,8 +629,8 @@ where
     ) -> Result<bool, Error> {
         commit_sync_outcome_exists(
             ctx,
-            Source(self.repos.get_source_repo().get_repoid()),
-            Target(self.repos.get_target_repo().get_repoid()),
+            Source(self.repos.get_source_repo().repo_identity().id()),
+            Target(self.repos.get_target_repo().repo_identity().id()),
             source_cs_id,
             &self.mapping,
             self.repos.get_direction(),
@@ -604,12 +643,12 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs_id: Source<ChangesetId>,
-        hint: CandidateSelectionHint,
+        hint: CandidateSelectionHint<R>,
     ) -> Result<Option<CommitSyncOutcome>, Error> {
         get_commit_sync_outcome_with_hint(
             ctx,
-            Source(self.repos.get_source_repo().get_repoid()),
-            Target(self.repos.get_target_repo().get_repoid()),
+            Source(self.repos.get_source_repo().repo_identity().id()),
+            Target(self.repos.get_target_repo().repo_identity().id()),
             source_cs_id,
             &self.mapping,
             hint,
@@ -632,7 +671,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
-        ancestor_selection_hint: CandidateSelectionHint,
+        ancestor_selection_hint: CandidateSelectionHint<R>,
         commit_sync_context: CommitSyncContext,
         disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -657,7 +696,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
-        ancestor_selection_hint: CandidateSelectionHint,
+        ancestor_selection_hint: CandidateSelectionHint<R>,
         disable_lease: bool,
     ) -> Result<Option<ChangesetId>, Error> {
         let (unsynced_ancestors, synced_ancestors_versions) =
@@ -667,7 +706,8 @@ where
         let target_repo = self.repos.get_target_repo();
 
         let small_repo = self.get_small_repo();
-        let source_repo_is_small = source_repo.get_repoid() == small_repo.get_repoid();
+        let source_repo_is_small =
+            source_repo.repo_identity().id() == small_repo.repo_identity().id();
 
         if source_repo_is_small {
             let public_unsynced_ancestors = source_repo
@@ -690,8 +730,8 @@ where
         for ancestor in unsynced_ancestors {
             let lease_key = format!(
                 "sourcerepo_{}_targetrepo_{}.{}",
-                source_repo.get_repoid().id(),
-                target_repo.get_repoid().id(),
+                source_repo.repo_identity().id().id(),
+                target_repo.repo_identity().id().id(),
                 source_cs_id,
             );
 
@@ -790,7 +830,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint,
+        parent_mapping_selection_hint: CandidateSelectionHint<R>,
         commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
@@ -818,7 +858,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint,
+        parent_mapping_selection_hint: CandidateSelectionHint<R>,
         expected_version: CommitSyncConfigVersion,
         commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -848,7 +888,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint,
+        parent_mapping_selection_hint: CandidateSelectionHint<R>,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
@@ -862,7 +902,7 @@ where
             parent_mapping_selection_hint
         );
 
-        let cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
+        let cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
         let parents: Vec<_> = cs.parents().collect();
 
         if parents.is_empty() {
@@ -937,7 +977,7 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         let mover = self.get_mover_by_version(sync_config_version).await?;
-        let source_cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
+        let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
 
         let source_cs = source_cs.clone().into_mut();
         let remapped_parents = match maybe_parents {
@@ -950,7 +990,7 @@ where
             source_cs,
             &remapped_parents,
             mover,
-            source_repo.clone(),
+            &source_repo,
             CommitRewrittenToEmpty::Discard,
         )
         .await?;
@@ -1010,7 +1050,7 @@ where
 
     pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkName>, Error> {
         self.commit_sync_data_provider
-            .get_common_pushrebase_bookmarks(self.get_small_repo().get_repoid())
+            .get_common_pushrebase_bookmarks(self.get_small_repo().repo_identity().id())
             .await
     }
 
@@ -1089,7 +1129,7 @@ where
             source_cs_mut,
             &remapped_parents,
             mover,
-            source_repo.clone(),
+            &source_repo,
             CommitRewrittenToEmpty::Discard,
         )
         .await?;
@@ -1194,7 +1234,7 @@ where
             cs.into_mut(),
             &HashMap::new(),
             mover,
-            source_repo.clone(),
+            &source_repo,
             CommitRewrittenToEmpty::Discard,
         )
         .await?
@@ -1226,7 +1266,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
-        parent_mapping_selection_hint: CandidateSelectionHint,
+        parent_mapping_selection_hint: CandidateSelectionHint<R>,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
@@ -1291,7 +1331,7 @@ where
                     cs,
                     &remapped_parents,
                     rewrite_paths,
-                    source_repo.clone(),
+                    &source_repo,
                     discard_commits_rewriting_to_empty,
                 )
                 .await?;
@@ -1452,7 +1492,7 @@ where
                 cs,
                 &new_parents,
                 mover,
-                self.get_source_repo().clone(),
+                self.get_source_repo(),
                 CommitRewrittenToEmpty::Discard,
             )
             .await?
@@ -1561,7 +1601,7 @@ where
         Ok(source_cs)
     }
 
-    fn get_source_target(&self) -> (BlobRepo, BlobRepo) {
+    fn get_source_target(&self) -> (R, R) {
         match self.repos.clone() {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
@@ -1611,8 +1651,8 @@ where
             } => (small_repo, large_repo, false),
         };
 
-        let source_repoid = source_repo.get_repoid();
-        let target_repoid = target_repo.get_repoid();
+        let source_repoid = source_repo.repo_identity().id();
+        let target_repoid = target_repo.repo_identity().id();
 
         let wc_entry = match maybe_target_bcs_id {
             Some(target_bcs_id) => {
@@ -1657,15 +1697,15 @@ where
     }
 }
 
-impl CommitSyncRepos {
-    pub fn get_source_repo(&self) -> &BlobRepo {
+impl<R: Repo> CommitSyncRepos<R> {
+    pub fn get_source_repo(&self) -> &R {
         match self {
             CommitSyncRepos::LargeToSmall { large_repo, .. } => large_repo,
             CommitSyncRepos::SmallToLarge { small_repo, .. } => small_repo,
         }
     }
 
-    pub fn get_target_repo(&self) -> &BlobRepo {
+    pub fn get_target_repo(&self) -> &R {
         match self {
             CommitSyncRepos::LargeToSmall { small_repo, .. } => small_repo,
             CommitSyncRepos::SmallToLarge { large_repo, .. } => large_repo,
@@ -1687,10 +1727,10 @@ impl CommitSyncRepos {
     }
 }
 
-pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static>(
+pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &'a CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
-    syncer: &'a CommitSyncer<M>,
+    syncer: &'a CommitSyncer<M, R>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
     if tunables().get_xrepo_sync_disable_all_syncs() {
@@ -1708,10 +1748,10 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     Ok(())
 }
 
-pub fn create_synced_commit_mapping_entry(
+pub fn create_synced_commit_mapping_entry<R: Repo>(
     from: ChangesetId,
     to: ChangesetId,
-    repos: &CommitSyncRepos,
+    repos: &CommitSyncRepos<R>,
     version_name: CommitSyncConfigVersion,
 ) -> SyncedCommitMappingEntry {
     let (source_repo, target_repo, source_is_large) = match repos {
@@ -1727,8 +1767,8 @@ pub fn create_synced_commit_mapping_entry(
         } => (small_repo, large_repo, false),
     };
 
-    let source_repoid = source_repo.get_repoid();
-    let target_repoid = target_repo.get_repoid();
+    let source_repoid = source_repo.repo_identity().id();
+    let target_repoid = target_repo.repo_identity().id();
 
     if source_is_large {
         SyncedCommitMappingEntry::new(
@@ -1752,23 +1792,25 @@ pub fn create_synced_commit_mapping_entry(
 }
 
 #[derive(Clone)]
-pub struct Syncers<M: SyncedCommitMapping + Clone + 'static> {
-    pub large_to_small: CommitSyncer<M>,
-    pub small_to_large: CommitSyncer<M>,
+pub struct Syncers<M: SyncedCommitMapping + Clone + 'static, R: Repo> {
+    pub large_to_small: CommitSyncer<M, R>,
+    pub small_to_large: CommitSyncer<M, R>,
 }
 
-pub fn create_commit_syncers<M>(
+pub fn create_commit_syncers<M, R>(
     ctx: &CoreContext,
-    small_repo: BlobRepo,
-    large_repo: BlobRepo,
+    small_repo: R,
+    large_repo: R,
     mapping: M,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_sync_lease: Arc<dyn LeaseOps>,
-) -> Result<Syncers<M>, Error>
+) -> Result<Syncers<M, R>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
 {
-    let common_config = live_commit_sync_config.get_common_config(large_repo.get_repoid())?;
+    let common_config =
+        live_commit_sync_config.get_common_config(large_repo.repo_identity().id())?;
 
     let small_to_large_commit_sync_repos =
         CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &common_config)?;

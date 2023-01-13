@@ -66,7 +66,8 @@ use crate::UnbundlePushResponse;
 use crate::UnbundleResponse;
 use crate::UploadedBonsais;
 
-pub trait Repo = crate::processing::Repo + SkiplistIndexArc + HookManagerRef;
+pub trait Repo =
+    crate::processing::Repo + cross_repo_sync::Repo + SkiplistIndexArc + HookManagerRef;
 
 /// An auxillary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`
@@ -127,8 +128,8 @@ impl<R: Repo> PushRedirectorArgs<R> {
             ..
         } = self;
 
-        let small_repo = source_repo.as_blob_repo().clone();
-        let large_repo = target_repo.as_blob_repo().clone();
+        let small_repo = (*source_repo).clone();
+        let large_repo = (*target_repo).clone();
         let syncers = create_commit_syncers(
             ctx,
             small_repo,
@@ -161,9 +162,9 @@ pub struct PushRedirector<R> {
     // small repo to sync from
     pub small_repo: Arc<R>,
     // `CommitSyncer` struct to do push redirecion
-    pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
+    pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>, R>,
     // `CommitSyncer` struct for the backsyncer
-    pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
+    pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>, R>,
     // A struct, needed to backsync commits
     pub target_repo_dbs: Arc<TargetRepoDbs>,
 }
@@ -695,7 +696,7 @@ impl<R: Repo> PushRedirector<R> {
     async fn remap_changeset_expect_rewritten_or_preserved(
         &self,
         ctx: &CoreContext,
-        syncer: &CommitSyncer<Arc<dyn SyncedCommitMapping>>,
+        syncer: &CommitSyncer<Arc<dyn SyncedCommitMapping>, R>,
         cs_id: ChangesetId,
     ) -> Result<ChangesetId, Error> {
         let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(ctx, cs_id).await?;
@@ -926,7 +927,7 @@ impl<R: Repo> PushRedirector<R> {
                     cloned!(ctx, target_repo);
                     async move {
                         let target_bcs = target_repo_bcs_id
-                            .load(&ctx, target_repo.blobstore())
+                            .load(&ctx, target_repo.repo_blobstore())
                             .await?;
 
                         Ok((*small_bcs_id, target_bcs))

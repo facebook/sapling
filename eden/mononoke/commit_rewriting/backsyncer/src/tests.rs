@@ -97,6 +97,8 @@ const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";
 const BRANCHMERGE_FILE: &str = "branchmerge";
 
+type Repo = BlobRepo;
+
 #[fbinit::test]
 async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) =
@@ -681,9 +683,9 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
-    let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
+    let source_repo: Repo = factory.with_id(source_repo_id).build()?;
     let target_repo_id = RepositoryId::new(2);
-    let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;
+    let target_repo: Repo = factory.with_id(target_repo_id).build()?;
 
     // Create commit syncer with two version - current and new
     let target_repo_dbs = TargetRepoDbs {
@@ -842,7 +844,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn build_unrelated_branch(ctx: CoreContext, source_repo: &BlobRepo) -> ChangesetId {
+async fn build_unrelated_branch(ctx: CoreContext, source_repo: &Repo) -> ChangesetId {
     let p1 = new_commit(
         ctx.clone(),
         source_repo,
@@ -875,7 +877,7 @@ async fn build_unrelated_branch(ctx: CoreContext, source_repo: &BlobRepo) -> Cha
 
 async fn new_commit<T: AsRef<str>>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &Repo,
     parents: Vec<ChangesetId>,
     contents: BTreeMap<&str, Option<T>>,
 ) -> ChangesetId {
@@ -890,7 +892,7 @@ async fn new_commit<T: AsRef<str>>(
 
 async fn backsync_and_verify_master_wc(
     fb: FacebookInit,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
     target_repo_dbs: TargetRepoDbs,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
@@ -936,7 +938,7 @@ async fn backsync_and_verify_master_wc(
 
 async fn verify_mapping_and_all_wc(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
     dont_verify_commits: Vec<ChangesetId>,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
@@ -1021,7 +1023,7 @@ async fn verify_mapping_and_all_wc(
 
 async fn verify_bookmarks(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
@@ -1107,7 +1109,7 @@ async fn compare_contents(
     ctx: &CoreContext,
     source_hg_cs_id: HgChangesetId,
     target_hg_cs_id: HgChangesetId,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
     mover: Mover,
 ) -> Result<(), Error> {
     let source_content =
@@ -1137,7 +1139,7 @@ async fn compare_contents(
 async fn list_content(
     ctx: &CoreContext,
     hg_cs_id: HgChangesetId,
-    repo: &BlobRepo,
+    repo: &Repo,
 ) -> Result<HashMap<String, String>, Error> {
     let cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
@@ -1265,15 +1267,15 @@ async fn init_repos(
     fb: FacebookInit,
     mover_type: MoverType,
     bookmark_renamer_type: BookmarkRenamerType,
-) -> Result<(CommitSyncer<SqlSyncedCommitMapping>, TargetRepoDbs), Error> {
+) -> Result<(CommitSyncer<SqlSyncedCommitMapping, Repo>, TargetRepoDbs), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
     let source_repo_id = RepositoryId::new(1);
-    let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
+    let source_repo: Repo = factory.with_id(source_repo_id).build()?;
     Linear::initrepo(fb, &source_repo).await;
 
     let target_repo_id = RepositoryId::new(2);
-    let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;
+    let target_repo: Repo = factory.with_id(target_repo_id).build()?;
 
     let target_repo_dbs = TargetRepoDbs {
         connections: factory.metadata_db().clone().into(),
@@ -1341,7 +1343,7 @@ async fn init_repos(
             first_bcs_mut,
             &empty_map,
             commit_syncer.get_mover_by_version(&version).await?,
-            source_repo,
+            &source_repo,
             CommitRewrittenToEmpty::Discard,
         )
         .await
@@ -1544,8 +1546,8 @@ async fn init_merged_repos(
     num_repos: usize,
 ) -> Result<
     (
-        Vec<(CommitSyncer<SqlSyncedCommitMapping>, TargetRepoDbs)>,
-        BlobRepo,
+        Vec<(CommitSyncer<SqlSyncedCommitMapping, Repo>, TargetRepoDbs)>,
+        Repo,
         i64,
         Vec<ChangesetId>,
     ),
@@ -1555,7 +1557,7 @@ async fn init_merged_repos(
 
     let mut factory = TestRepoFactory::new(fb)?;
     let large_repo_id = RepositoryId::new(num_repos as i32);
-    let large_repo: BlobRepo = factory.with_id(large_repo_id).build()?;
+    let large_repo: Repo = factory.with_id(large_repo_id).build()?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -1565,7 +1567,7 @@ async fn init_merged_repos(
     // Create small repos and one large repo
     for idx in 0..num_repos {
         let repoid = RepositoryId::new(idx as i32);
-        let small_repo: BlobRepo = factory.with_id(repoid).build()?;
+        let small_repo: Repo = factory.with_id(repoid).build()?;
         let small_repo_dbs = TargetRepoDbs {
             connections: factory.metadata_db().clone().into(),
             bookmarks: small_repo.bookmarks_arc(),
@@ -1856,8 +1858,8 @@ async fn init_merged_repos(
 
 async fn preserve_premerge_commit(
     ctx: CoreContext,
-    large_repo: BlobRepo,
-    small_repo: BlobRepo,
+    large_repo: Repo,
+    small_repo: Repo,
     another_small_repo_ids: Vec<RepositoryId>,
     bcs_id: ChangesetId,
     mapping: &SqlSyncedCommitMapping,
@@ -1930,7 +1932,7 @@ async fn preserve_premerge_commit(
 
 async fn move_bookmark(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: Repo,
     bookmark: &BookmarkName,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {

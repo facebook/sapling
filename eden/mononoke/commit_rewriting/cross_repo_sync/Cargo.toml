@@ -14,18 +14,20 @@ path = "test/main.rs"
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.58"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
@@ -41,6 +43,9 @@ pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook"
 rand = { version = "0.8", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.12"
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 scopeguard = "1.0.0"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
@@ -54,7 +59,7 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 [dev-dependencies]
 ascii = "1.0"
 assert_matches = "1.5"
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }

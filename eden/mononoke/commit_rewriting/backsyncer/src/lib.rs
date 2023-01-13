@@ -37,7 +37,6 @@ use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
-use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksArc;
 use bookmarks::Freshness;
@@ -83,9 +82,9 @@ pub enum BacksyncLimit {
     Limit(u64),
 }
 
-pub async fn backsync_latest<M>(
+pub async fn backsync_latest<M, R>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<M>,
+    commit_syncer: CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     limit: BacksyncLimit,
     cancellation_requested: Arc<AtomicBool>,
@@ -94,9 +93,10 @@ pub async fn backsync_latest<M>(
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: cross_repo_sync::Repo,
 {
     // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
-    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
+    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
     let counter_name = format_counter(&source_repo_id);
 
     let counter = target_repo_dbs
@@ -151,9 +151,9 @@ where
     }
 }
 
-async fn sync_entries<M>(
+async fn sync_entries<M, R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: i64,
@@ -163,6 +163,7 @@ async fn sync_entries<M>(
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: cross_repo_sync::Repo,
 {
     for entry in entries {
         // Before processing each entry, check if cancellation has
@@ -205,7 +206,7 @@ where
                     .counters
                     .set_counter(
                         &ctx,
-                        &format_counter(&commit_syncer.get_source_repo().get_repoid()),
+                        &format_counter(&commit_syncer.get_source_repo().repo_identity().id()),
                         entry.id,
                         Some(counter),
                     )
@@ -255,7 +256,7 @@ where
             // Transaction failed, it could be because another process already backsynced it
             // Verify that counter was moved and continue if that's the case
 
-            let source_repo_id = commit_syncer.get_source_repo().get_repoid();
+            let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
             let counter_name = format_counter(&source_repo_id);
             let new_counter = target_repo_dbs
                 .counters
@@ -280,18 +281,19 @@ where
     Ok(())
 }
 
-async fn backsync_bookmark<M>(
+async fn backsync_bookmark<M, R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<i64>,
     log_entry: BookmarkUpdateLogEntry,
 ) -> Result<bool, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: cross_repo_sync::Repo,
 {
-    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
-    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
+    let target_repo_id = commit_syncer.get_target_repo().repo_identity().id();
+    let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
 
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 

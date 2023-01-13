@@ -6,6 +6,7 @@
  */
 
 #![feature(auto_traits)]
+#![feature(trait_alias)]
 
 //! Mononoke Cross Repo sync job
 //!
@@ -50,10 +51,12 @@ use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
+use changesets::ChangesetsArc;
 use clap_old::ArgMatches;
 use cmdlib::args;
 use cmdlib::args::MononokeClapApp;
@@ -67,6 +70,7 @@ use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncer;
 use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
+use filenodes::FilenodesArc;
 use futures::future;
 use futures::future::try_join;
 use futures::stream;
@@ -83,6 +87,8 @@ use mutable_counters::ArcMutableCounters;
 use mutable_counters::MutableCountersArc;
 use mutable_counters::MutableCountersRef;
 use regex::Regex;
+use repo_derived_data::RepoDerivedDataArc;
+use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::debug;
@@ -116,6 +122,14 @@ use crate::setup::get_starting_commit;
 use crate::sync::sync_commit_and_ancestors;
 use crate::sync::sync_single_bookmark_update_log;
 
+pub trait Repo = cross_repo_sync::Repo
+    + RepoDerivedDataArc
+    + RepoDerivedDataRef
+    + ChangesetsArc
+    + FilenodesArc
+    + BonsaiHgMappingArc
+    + MutableCountersRef;
+
 fn print_error(ctx: CoreContext, error: &Error) {
     error!(ctx.logger(), "{}", error);
     for cause in error.chain().skip(1) {
@@ -123,10 +137,10 @@ fn print_error(ctx: CoreContext, error: &Error) {
     }
 }
 
-async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: CommitSyncer<M>,
+    commit_syncer: CommitSyncer<M, R>,
     scuba_sample: MononokeScubaSampleBuilder,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
@@ -137,8 +151,8 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
         ctx.logger(),
         "Checking if {} is already synced {}->{}",
         bcs,
-        commit_syncer.repos.get_source_repo().get_repoid(),
-        commit_syncer.repos.get_target_repo().get_repoid()
+        commit_syncer.repos.get_source_repo().repo_identity().id(),
+        commit_syncer.repos.get_target_repo().repo_identity().id()
     );
     if commit_syncer
         .commit_sync_outcome_exists(ctx, Source(bcs))
@@ -167,12 +181,12 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     res.map(|_| ())
 }
 
-enum TailingArgs<M> {
-    CatchUpOnce(CommitSyncer<M>),
-    LoopForever(CommitSyncer<M>, ConfigStore),
+enum TailingArgs<M, R> {
+    CatchUpOnce(CommitSyncer<M, R>),
+    LoopForever(CommitSyncer<M, R>, ConfigStore),
 }
 
-async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     target_mutable_counters: ArcMutableCounters,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
@@ -181,7 +195,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
     derived_data_types: Vec<String>,
-    tailing_args: TailingArgs<M>,
+    tailing_args: TailingArgs<M, R>,
     sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
 ) -> Result<(), Error> {
@@ -206,7 +220,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
         TailingArgs::LoopForever(commit_syncer, config_store) => {
             let live_commit_sync_config =
                 Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?);
-            let source_repo_id = commit_syncer.get_source_repo().get_repoid();
+            let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
 
             loop {
                 let scuba_sample = base_scuba_sample.clone();
@@ -248,9 +262,9 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     Ok(())
 }
 
-async fn tail<M: SyncedCommitMapping + Clone + 'static>(
+async fn tail<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
@@ -356,18 +370,18 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static>(
 async fn maybe_apply_backpressure(
     ctx: &CoreContext,
     backpressure_params: &BackpressureParams,
-    target_repo: &BlobRepo,
+    target_repo: &impl Repo,
     scuba_sample: MononokeScubaSampleBuilder,
     sleep_duration: Duration,
 ) -> Result<(), Error> {
-    let target_repo_id = target_repo.get_repoid();
+    let target_repo_id = target_repo.repo_identity().id();
     let limit = 10;
     loop {
         let max_further_entries = stream::iter(&backpressure_params.backsync_repos)
             .map(Ok)
             .map_ok(|repo| {
                 async move {
-                    let repo_id = repo.get_repoid();
+                    let repo_id = repo.repo_identity().id();
                     let backsyncer_counter = format_backsyncer_counter(&target_repo_id);
                     let maybe_counter = repo
                         .mutable_counters()
@@ -414,8 +428,8 @@ async fn maybe_apply_backpressure(
     Ok(())
 }
 
-fn format_counter<M: SyncedCommitMapping + Clone + 'static>(
-    commit_syncer: &CommitSyncer<M>,
+fn format_counter<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+    commit_syncer: &CommitSyncer<M, R>,
 ) -> String {
     let source_repo_id = commit_syncer.get_source_repo_id();
     format!("xreposync_from_{}", source_repo_id)
@@ -441,11 +455,11 @@ async fn run<'a>(
     let (source_repo, target_repo): (InnerRepo, InnerRepo) =
         try_join(source_repo, target_repo).await?;
 
-    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches, None).await?;
+    let commit_syncer = create_commit_syncer_from_matches::<BlobRepo>(&ctx, matches, None).await?;
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(logger, config_store)?);
     let common_commit_sync_config =
-        live_commit_sync_config.get_common_config(source_repo.blob_repo.get_repoid())?;
+        live_commit_sync_config.get_common_config(source_repo.blob_repo.repo_identity().id())?;
 
     let common_bookmarks: HashSet<_> = common_commit_sync_config
         .common_pushrebase_bookmarks

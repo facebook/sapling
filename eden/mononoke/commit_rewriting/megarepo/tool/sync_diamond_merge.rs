@@ -230,7 +230,7 @@ async fn create_rewritten_merge_commit(
     small_merge_cs_id: ChangesetId,
     small_repo: &BlobRepo,
     large_repo: &BlobRepo,
-    syncers: &Syncers<SqlSyncedCommitMapping>,
+    syncers: &Syncers<SqlSyncedCommitMapping, BlobRepo>,
     small_root: ChangesetId,
     onto_value: ChangesetId,
 ) -> Result<(BonsaiChangeset, CommitSyncConfigVersion), Error> {
@@ -282,7 +282,7 @@ async fn create_rewritten_merge_commit(
             .small_to_large
             .get_mover_by_version(&version_p1)
             .await?,
-        syncers.small_to_large.get_source_repo().clone(),
+        syncers.small_to_large.get_source_repo(),
         CommitRewrittenToEmpty::Discard,
     )
     .await?;
@@ -313,7 +313,7 @@ async fn generate_additional_file_changes(
     ctx: CoreContext,
     root: ChangesetId,
     large_repo: &BlobRepo,
-    large_to_small: &CommitSyncer<SqlSyncedCommitMapping>,
+    large_to_small: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
 ) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
@@ -346,7 +346,7 @@ async fn generate_additional_file_changes(
 
 async fn remap_commit(
     ctx: CoreContext,
-    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
     cs_id: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer

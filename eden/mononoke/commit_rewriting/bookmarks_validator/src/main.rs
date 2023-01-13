@@ -16,7 +16,6 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
-use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
 use cmdlib::args;
@@ -29,6 +28,7 @@ use cross_repo_sync::validation;
 use cross_repo_sync::validation::BookmarkDiff;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::Syncers;
 use executor_lib::split_repo_names;
 use executor_lib::RepoShardedProcess;
@@ -60,6 +60,8 @@ define_stats! {
 const SM_SERVICE_SCOPE: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 const APP_NAME: &str = "megarepo_bookmarks_validator";
+
+type Repo = blobrepo::BlobRepo;
 
 /// Struct representing the Bookmark Validate BP.
 pub struct BookmarkValidateProcess {
@@ -115,13 +117,13 @@ impl RepoShardedProcess for BookmarkValidateProcess {
         let target_repo_id =
             args::resolve_repo_by_name(&config_store, &self.matches, target_repo_name)?.id;
 
-        let syncers = create_commit_syncers_from_matches(
+        let syncers = create_commit_syncers_from_matches::<Repo>(
             &ctx,
             &self.matches,
             Some((source_repo_id, target_repo_id)),
         )
         .await?;
-        if syncers.large_to_small.get_large_repo().get_repoid() != source_repo_id {
+        if syncers.large_to_small.get_large_repo().repo_identity().id() != source_repo_id {
             bail!(
                 "Source repo must be a large repo!. Source repo: {}, Target repo: {}",
                 &source_repo_name,
@@ -148,7 +150,7 @@ impl RepoShardedProcess for BookmarkValidateProcess {
 /// Struct representing the execution of the Bookmark Validate
 /// BP over the context of a provided repos.
 pub struct BookmarkValidateProcessExecutor {
-    syncers: Syncers<SqlSyncedCommitMapping>,
+    syncers: Syncers<SqlSyncedCommitMapping, Repo>,
     ctx: CoreContext,
     config_store: ConfigStore,
     cancellation_requested: Arc<AtomicBool>,
@@ -158,7 +160,7 @@ pub struct BookmarkValidateProcessExecutor {
 
 impl BookmarkValidateProcessExecutor {
     fn new(
-        syncers: Syncers<SqlSyncedCommitMapping>,
+        syncers: Syncers<SqlSyncedCommitMapping, Repo>,
         ctx: CoreContext,
         config_store: ConfigStore,
         source_repo_name: String,
@@ -254,9 +256,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let config_store = matches.config_store();
             let source_repo_id =
                 args::not_shardmanager_compatible::get_source_repo_id(config_store, &matches)?;
-            let syncers =
-                runtime.block_on(create_commit_syncers_from_matches(&ctx, &matches, None))?;
-            if syncers.large_to_small.get_large_repo().get_repoid() != source_repo_id {
+            let syncers = runtime.block_on(create_commit_syncers_from_matches::<Repo>(
+                &ctx, &matches, None,
+            ))?;
+            if syncers.large_to_small.get_large_repo().repo_identity().id() != source_repo_id {
                 return Err(format_err!("Source repo must be a large repo!"));
             }
             helpers::block_execute(
@@ -277,16 +280,24 @@ fn create_core_context(fb: FacebookInit, logger: Logger) -> CoreContext {
     session_container.new_context(logger, scuba_sample)
 }
 
-async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
+async fn loop_forever<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     ctx: CoreContext,
-    syncers: Syncers<M>,
+    syncers: Syncers<M, R>,
     config_store: &ConfigStore,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    let large_repo_name = syncers.large_to_small.get_large_repo().name();
-    let small_repo_name = syncers.large_to_small.get_small_repo().name();
+    let large_repo_name = syncers
+        .large_to_small
+        .get_large_repo()
+        .repo_identity()
+        .name();
+    let small_repo_name = syncers
+        .large_to_small
+        .get_small_repo()
+        .repo_identity()
+        .name();
 
-    let small_repo_id = syncers.small_to_large.get_small_repo().get_repoid();
+    let small_repo_id = syncers.small_to_large.get_small_repo().repo_identity().id();
 
     let config_handle =
         config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
@@ -320,7 +331,7 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
                         STATS::result_counter.set_value(
                             ctx.fb,
                             0,
-                            (large_repo_name.clone(), small_repo_name.clone()),
+                            (large_repo_name.to_string(), small_repo_name.to_string()),
                         );
                         error!(ctx.logger(), "validation failed: {:?}", err_msg);
                     }
@@ -329,7 +340,7 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
                 STATS::result_counter.set_value(
                     ctx.fb,
                     1,
-                    (large_repo_name.clone(), small_repo_name.clone()),
+                    (large_repo_name.to_string(), small_repo_name.to_string()),
                 );
             }
         } else {
@@ -338,7 +349,7 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
             STATS::result_counter.set_value(
                 ctx.fb,
                 1,
-                (large_repo_name.clone(), small_repo_name.clone()),
+                (large_repo_name.to_string(), small_repo_name.to_string()),
             );
         }
         tokio::time::sleep(Duration::new(1, 0)).await;
@@ -356,9 +367,9 @@ impl From<Error> for ValidationError {
     }
 }
 
-async fn validate<M: SyncedCommitMapping + Clone + 'static>(
+async fn validate<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     ctx: &CoreContext,
-    syncers: &Syncers<M>,
+    syncers: &Syncers<M, R>,
     large_repo_name: &str,
     small_repo_name: &str,
 ) -> Result<(), ValidationError> {
@@ -417,9 +428,9 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
 }
 
 // Check that commit equivalent to maybe_small_cs_id was in large_bookmark log recently
-async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
+async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     ctx: &CoreContext,
-    syncers: &Syncers<M>,
+    syncers: &Syncers<M, R>,
     large_bookmark: &BookmarkName,
     maybe_large_cs_id: &Option<ChangesetId>,
     maybe_small_cs_id: &Option<ChangesetId>,
@@ -512,9 +523,9 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
-async fn remap<M: SyncedCommitMapping + Clone + 'static>(
+async fn remap<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     source_cs_id: &ChangesetId,
 ) -> Result<Option<ChangesetId>, Error> {
     let maybe_commit_sync_outcome = commit_syncer

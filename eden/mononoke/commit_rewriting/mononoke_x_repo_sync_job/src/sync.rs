@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogEntry;
@@ -20,7 +19,6 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
-use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::types::Source;
@@ -41,6 +39,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use reachabilityindex::ReachabilityIndex;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -51,6 +50,7 @@ use synced_commit_mapping::SyncedCommitMapping;
 use crate::reporting::log_bookmark_deletion_result;
 use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
 use crate::reporting::log_pushrebase_sync_single_changeset_result;
+use crate::Repo;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum SyncResult {
@@ -74,9 +74,9 @@ pub enum SyncResult {
 /// in a target repo. This depends on which bookmark introduced a commit - if it's a
 /// common_pushrebase_bookmark (usually "master"), then a commit will be pushrebased.
 /// Otherwise it will be synced without pushrebase.
-pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     entry: BookmarkUpdateLogEntry,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
@@ -125,9 +125,9 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     // Note: counter update might fail after a successful sync
 }
 
-pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
     maybe_bookmark: Option<BookmarkName>,
@@ -232,9 +232,9 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
 /// Just as normal pushrebase behaves while pushing merges, we rebase the actual merge
 /// commit and it's ancestors, but we don't rebase merge ancestors.
 /// ```
-pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     bookmark: &BookmarkName,
@@ -255,7 +255,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
             continue;
         }
 
-        let bcs = cs_id.load(ctx, source_repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, source_repo.repo_blobstore()).await?;
 
         let mut parents = bcs.parents();
         let maybe_p1 = parents.next();
@@ -309,9 +309,9 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     Ok(res)
 }
 
-pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     scuba_sample: MononokeScubaSampleBuilder,
     cs_id: ChangesetId,
@@ -320,7 +320,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "syncing {}", cs_id);
     let bcs = cs_id
-        .load(ctx, commit_syncer.get_source_repo().blobstore())
+        .load(ctx, commit_syncer.get_source_repo().repo_blobstore())
         .await?;
 
     let (stats, result) = if bcs.is_merge() {
@@ -394,9 +394,9 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
     Ok(maybe_cs_id.into_iter().collect())
 }
 
-async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static>(
+async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     scuba_sample: MononokeScubaSampleBuilder,
     bookmark: &BookmarkName,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
@@ -417,9 +417,9 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
-async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static>(
+async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     skiplist_index: &Arc<SkiplistIndex>,
     to_cs_id: ChangesetId,
     from_cs_id: ChangesetId,
@@ -440,9 +440,9 @@ async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static>(
     Ok(())
 }
 
-async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
+async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     orig_cs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error> {
     let maybe_sync_outcome = commit_syncer
@@ -458,15 +458,15 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
-async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
+async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     bookmark: &BookmarkName,
     cs_id: ChangesetId,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
-    let bcs = cs_id.load(ctx, source_repo.blobstore()).await?;
+    let bcs = cs_id.load(ctx, source_repo.repo_blobstore()).await?;
     // TODO: do not require clone here
     let target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new((*target_skiplist_index.0).clone()));
@@ -494,7 +494,7 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
 /// This function returns new commits that were introduced by this merge
 async fn validate_if_new_repo_merge(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl ChangesetFetcherRef + ChangesetFetcherArc + RepoBlobstoreRef),
     skiplist_index: Source<Arc<SkiplistIndex>>,
     p1: ChangesetId,
     p2: ChangesetId,
@@ -534,12 +534,13 @@ async fn validate_if_new_repo_merge(
 /// i.e. (::branch_tips) is returned in mercurial's revset terms
 async fn check_if_independent_branch_and_return(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl ChangesetFetcherArc + RepoBlobstoreRef),
     skiplist_index: Arc<SkiplistIndex>,
     branch_tips: Vec<ChangesetId>,
     other_branches: Vec<ChangesetId>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
     let fetcher = repo.changeset_fetcher_arc();
+    let blobstore = repo.repo_blobstore();
     let bcss = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),
         &fetcher,
@@ -548,15 +549,11 @@ async fn check_if_independent_branch_and_return(
         other_branches,
     )
     .map({
-        cloned!(ctx, repo);
         move |cs| {
-            {
-                cloned!(ctx, repo);
-                async move { cs.load(&ctx, repo.blobstore()).await }
-            }
-            .boxed()
-            .compat()
-            .from_err()
+            { async move { cs.load(ctx, blobstore).await } }
+                .boxed()
+                .compat()
+                .from_err()
         }
     })
     .buffered(100)
@@ -592,7 +589,7 @@ async fn check_if_independent_branch_and_return(
 
 async fn delete_bookmark(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &impl BookmarksRef,
     bookmark: &BookmarkName,
 ) -> Result<(), Error> {
     let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
@@ -617,7 +614,7 @@ async fn delete_bookmark(
 
 async fn move_or_create_bookmark(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl BookmarksRef,
     bookmark: &BookmarkName,
     cs_id: ChangesetId,
 ) -> Result<(), Error> {
@@ -648,6 +645,7 @@ async fn move_or_create_bookmark(
 
 #[cfg(test)]
 mod test {
+    use blobrepo::BlobRepo;
     use bookmarks::BookmarkUpdateLogRef;
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::Freshness;
@@ -1015,7 +1013,7 @@ mod test {
 
     async fn sync_and_validate(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
     ) -> Result<(), Error> {
         sync_and_validate_with_common_bookmarks(
             ctx,
@@ -1028,7 +1026,7 @@ mod test {
 
     async fn sync_and_validate_with_common_bookmarks(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
         should_be_missing: &HashSet<BookmarkName>,
     ) -> Result<(), Error> {
@@ -1058,7 +1056,7 @@ mod test {
 
     async fn sync(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     ) -> Result<Vec<SyncResult>, Error> {
         let smallrepo = commit_syncer.get_source_repo();

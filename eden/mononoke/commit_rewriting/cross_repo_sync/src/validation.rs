@@ -12,10 +12,8 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarksMaybeStaleExt;
-use bookmarks::BookmarksRef;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
@@ -32,7 +30,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::MPath;
 use movers::Mover;
-use ref_cast::RefCast;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -41,15 +41,13 @@ use synced_commit_mapping::SyncedCommitMapping;
 use super::CommitSyncConfigVersion;
 use super::CommitSyncOutcome;
 use super::CommitSyncer;
+use super::Repo;
 use crate::types::Source;
 use crate::types::Target;
 
-type SourceRepo = Source<BlobRepo>;
-type TargetRepo = Target<BlobRepo>;
-
-pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<M>,
+    commit_syncer: CommitSyncer<M, R>,
     source_hash: ChangesetId,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
@@ -65,8 +63,8 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 
     verify_working_copy_inner(
         &ctx,
-        Source::ref_cast(source_repo),
-        Target::ref_cast(target_repo),
+        Source(source_repo),
+        Target(target_repo),
         Source(source_hash),
         Target(target_hash),
         &commit_syncer.get_mover_by_version(&version).await?,
@@ -77,9 +75,13 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 }
 
 // This method uses CommitSyncConfig to minimize the number of manifest traversals.
-pub async fn verify_working_copy_fast_path<'a, M: SyncedCommitMapping + Clone + 'static>(
+pub async fn verify_working_copy_fast_path<
+    'a,
+    M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
+>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<M>,
+    commit_syncer: &'a CommitSyncer<M, R>,
     source_hash: ChangesetId,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
@@ -103,8 +105,8 @@ pub async fn verify_working_copy_fast_path<'a, M: SyncedCommitMapping + Clone + 
 
     verify_working_copy_inner(
         ctx,
-        Source::ref_cast(source_repo),
-        Target::ref_cast(target_repo),
+        Source(source_repo),
+        Target(target_repo),
         Source(source_hash),
         Target(target_hash),
         &commit_syncer.get_mover_by_version(&version).await?,
@@ -117,9 +119,10 @@ pub async fn verify_working_copy_fast_path<'a, M: SyncedCommitMapping + Clone + 
 pub async fn verify_working_copy_with_version_fast_path<
     'a,
     M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
 >(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<M>,
+    commit_syncer: &'a CommitSyncer<M, R>,
     source_hash: Source<ChangesetId>,
     target_hash: Target<ChangesetId>,
     version: &'a CommitSyncConfigVersion,
@@ -134,8 +137,8 @@ pub async fn verify_working_copy_with_version_fast_path<
 
     verify_working_copy_inner(
         ctx,
-        Source::ref_cast(source_repo),
-        Target::ref_cast(target_repo),
+        Source(source_repo),
+        Target(target_repo),
         source_hash,
         target_hash,
         &commit_syncer.get_mover_by_version(version).await?,
@@ -147,15 +150,15 @@ pub async fn verify_working_copy_with_version_fast_path<
 
 // Returns list of prefixes that need to be visited in both large and small
 // repositories to establish working copy equivalence.
-async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static>(
-    source_repo: &'a BlobRepo,
-    commit_syncer: &'a CommitSyncer<M>,
+async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+    source_repo: &'a impl RepoIdentityRef,
+    commit_syncer: &'a CommitSyncer<M, R>,
     version: &'a CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<PrefixesToVisit, Error> {
-    let small_repo_id = commit_syncer.get_small_repo().get_repoid();
+    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
     let config = live_commit_sync_config
-        .get_commit_sync_config_by_version(source_repo.get_repoid(), version)
+        .get_commit_sync_config_by_version(source_repo.repo_identity().id(), version)
         .await?;
 
     let small_repo_config = config.small_repos.get(&small_repo_id).ok_or_else(|| {
@@ -173,7 +176,7 @@ async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static>(
             // All other large repo paths don't need visiting.
             let mut prefixes_to_visit = small_repo_config.map.values().cloned().collect::<Vec<_>>();
             prefixes_to_visit.push(prefix.clone());
-            if small_repo_id == source_repo.get_repoid() {
+            if small_repo_id == source_repo.repo_identity().id() {
                 Ok(PrefixesToVisit {
                     source_prefixes_to_visit: None,
                     target_prefixes_to_visit: Some(prefixes_to_visit),
@@ -196,8 +199,12 @@ pub struct PrefixesToVisit {
 
 pub async fn verify_working_copy_inner<'a>(
     ctx: &'a CoreContext,
-    source_repo: &'a SourceRepo,
-    target_repo: &'a TargetRepo,
+    source_repo: Source<
+        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
+    >,
+    target_repo: Target<
+        &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
+    >,
     source_hash: Source<ChangesetId>,
     target_hash: Target<ChangesetId>,
     mover: &Mover,
@@ -211,7 +218,7 @@ pub async fn verify_working_copy_inner<'a>(
 
     let moved_source_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
-        source_repo,
+        source_repo.0,
         *source_hash,
         if *source_hash != *target_hash {
             Some(GetMaybeMovedFilenodesPolicy::ActuallyMove(mover))
@@ -223,7 +230,7 @@ pub async fn verify_working_copy_inner<'a>(
     );
     let target_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
-        target_repo,
+        target_repo.0,
         *target_hash,
         Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(reverse_mover)),
         target_prefixes_to_visit,
@@ -251,8 +258,8 @@ pub async fn verify_working_copy_inner<'a>(
 async fn verify_type_content_mapping_equivalence<'a>(
     ctx: CoreContext,
     source_hash: Source<ChangesetId>,
-    source_repo: &'a Source<BlobRepo>,
-    target_repo: &'a Target<BlobRepo>,
+    source_repo: Source<&'a impl RepoIdentityRef>,
+    target_repo: Target<&'a impl RepoIdentityRef>,
     moved_source_repo_entries: &'a Source<HashMap<MPath, (FileType, ContentId)>>,
     target_repo_entries: &'a Target<HashMap<MPath, (FileType, ContentId)>>,
     reverse_mover: &'a Mover,
@@ -281,8 +288,8 @@ async fn verify_type_content_mapping_equivalence<'a>(
                 ctx.logger(),
                 "{:?} is present in {}, but not in {}",
                 path,
-                source_repo.0.name(),
-                target_repo.0.name(),
+                source_repo.0.repo_identity().name(),
+                target_repo.0.repo_identity().name(),
             );
             extra_source_files_count += 1;
         }
@@ -291,8 +298,8 @@ async fn verify_type_content_mapping_equivalence<'a>(
         return Err(format_err!(
             "{} files are present in {}, but not in {}",
             extra_source_files_count,
-            source_repo.0.name(),
-            target_repo.0.name(),
+            source_repo.0.repo_identity().name(),
+            target_repo.0.repo_identity().name(),
         ));
     }
 
@@ -305,8 +312,8 @@ async fn verify_type_content_mapping_equivalence<'a>(
                 ctx.logger(),
                 "{:?} is present in {}, but not in {}",
                 path,
-                target_repo.0.name(),
-                source_repo.0.name(),
+                target_repo.0.repo_identity().name(),
+                source_repo.0.repo_identity().name(),
             );
             extra_target_files_count += 1;
         }
@@ -316,8 +323,8 @@ async fn verify_type_content_mapping_equivalence<'a>(
         return Err(format_err!(
             "{} files are present in {}, but not in {}",
             extra_target_files_count,
-            target_repo.0.name(),
-            source_repo.0.name(),
+            target_repo.0.repo_identity().name(),
+            source_repo.0.repo_identity().name(),
         ));
     }
 
@@ -338,7 +345,7 @@ enum GetMaybeMovedFilenodesPolicy<'a> {
 /// potentially applying a `Mover` to all file paths
 async fn get_maybe_moved_contents_and_types<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a (impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
     hash: ChangesetId,
     maybe_mover_policy: Option<GetMaybeMovedFilenodesPolicy<'a>>,
     prefixes: Option<Vec<MPath>>,
@@ -369,9 +376,9 @@ async fn get_maybe_moved_contents_and_types<'a>(
 ///   |                           |
 ///  ...                         ...
 /// ```
-pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
 ) -> Result<Vec<BookmarkDiff>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
@@ -441,7 +448,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
 
 async fn list_content_ids_and_types(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoIdentityRef + RepoDerivedDataRef + RepoBlobstoreRef + Send + Sync),
     cs_id: ChangesetId,
     prefixes: Option<Vec<MPath>>,
 ) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
@@ -449,17 +456,17 @@ async fn list_content_ids_and_types(
         ctx.logger(),
         "fetching content ids and types for {} in {}",
         cs_id,
-        repo.name(),
+        repo.repo_identity().name(),
     );
 
     let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
     let root_fsnode_id = root_fsnode_id.fsnode_id();
     let s = match prefixes {
         Some(prefixes) => root_fsnode_id
-            .list_leaf_entries_under(ctx.clone(), repo.get_blobstore(), prefixes)
+            .list_leaf_entries_under(ctx.clone(), repo.repo_blobstore().clone(), prefixes)
             .left_stream(),
         None => root_fsnode_id
-            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
             .right_stream(),
     };
     let content_ids_and_types = s
@@ -472,11 +479,11 @@ async fn list_content_ids_and_types(
 async fn compare_contents_and_types(
     ctx: CoreContext,
     (source_repo, source_types_and_content_ids): (
-        Source<BlobRepo>,
+        Source<&impl RepoIdentityRef>,
         &Source<HashMap<MPath, (FileType, ContentId)>>,
     ),
     (target_repo, target_types_and_content_ids): (
-        Target<BlobRepo>,
+        Target<&impl RepoIdentityRef>,
         &Target<HashMap<MPath, (FileType, ContentId)>>,
     ),
     source_hash: Source<ChangesetId>,
@@ -534,16 +541,16 @@ async fn compare_contents_and_types(
                 ctx.logger(),
                 "{:?} exists in {} but not in {}",
                 path,
-                target_repo.0.name(),
-                source_repo.0.name(),
+                target_repo.0.repo_identity().name(),
+                source_repo.0.repo_identity().name(),
             )
         }
         info!(
             ctx.logger(),
             "{} files exist in {} but not in {}",
             exists_in_target_but_not_source.len(),
-            target_repo.0.name(),
-            source_repo.0.name(),
+            target_repo.0.repo_identity().name(),
+            source_repo.0.repo_identity().name(),
         );
         let path = exists_in_target_but_not_source
             .into_iter()
@@ -553,8 +560,8 @@ async fn compare_contents_and_types(
         return Err(format_err!(
             "{:?} exists in {} but not in {}",
             path,
-            target_repo.0.name(),
-            source_repo.0.name(),
+            target_repo.0.repo_identity().name(),
+            source_repo.0.repo_identity().name(),
         ));
     }
 
@@ -563,8 +570,8 @@ async fn compare_contents_and_types(
         different_filetypes,
         &source_hash,
         "filetype",
-        Source(source_repo.0.name()),
-        Target(target_repo.0.name()),
+        Source(source_repo.0.repo_identity().name()),
+        Target(target_repo.0.repo_identity().name()),
     )?;
 
     report_different(
@@ -572,8 +579,8 @@ async fn compare_contents_and_types(
         different_content_ids,
         &source_hash,
         "contents",
-        Source(source_repo.0.name()),
-        Target(target_repo.0.name()),
+        Source(source_repo.0.repo_identity().name()),
+        Target(target_repo.0.repo_identity().name()),
     )?;
 
     Ok(())
@@ -590,8 +597,8 @@ pub fn report_different<
     different_things: I,
     source_hash: &Source<ChangesetId>,
     name: &str,
-    source_repo_name: Source<&String>,
-    target_repo_name: Target<&String>,
+    source_repo_name: Source<&str>,
+    target_repo_name: Target<&str>,
 ) -> Result<(), Error> {
     let mut different_things = different_things.into_iter();
     let len = different_things.len();
@@ -670,9 +677,9 @@ fn keep_movable_paths<V: Clone>(
     Ok(res)
 }
 
-async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
+async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     hash: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(&ctx, hash).await?;
@@ -723,9 +730,9 @@ struct CorrespondingChangesets {
     target_cs_id: ChangesetId,
 }
 
-async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
+async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     bookmarks: impl IntoIterator<Item = (BookmarkName, ChangesetId)>,
 ) -> Result<
     (
@@ -789,6 +796,7 @@ mod test {
     use std::sync::Arc;
 
     use ascii::AsciiString;
+    use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use changeset_fetcher::ChangesetFetcherArc;
     // To support async tests
@@ -815,6 +823,8 @@ mod test {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
+
+    type TestRepo = BlobRepo;
 
     use super::*;
     use crate::CommitSyncDataProvider;
@@ -912,14 +922,14 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source = test_repo_factory::build_empty(fb)?;
+        let source: TestRepo = test_repo_factory::build_empty(fb)?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/file1", "1")
             .add_file("prefix/file2", "2")
             .commit()
             .await?;
 
-        let target = test_repo_factory::build_empty(fb)?;
+        let target: TestRepo = test_repo_factory::build_empty(fb)?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("file1", "1")
             .commit()
@@ -930,8 +940,8 @@ mod test {
         let reverse_mover: Mover = Arc::new(prefix_mover);
         let res = verify_working_copy_inner(
             &ctx,
-            &Source(source),
-            &Target(target),
+            Source(&source),
+            Target(&target),
             Source(source_cs_id),
             Target(target_cs_id),
             &mover,
@@ -948,7 +958,7 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let source: TestRepo = test_repo_factory::build_empty(fb)?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/sub/file1", "1")
             .add_file("prefix/sub/file2", "2")
@@ -956,7 +966,7 @@ mod test {
             .commit()
             .await?;
 
-        let target: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let target: TestRepo = test_repo_factory::build_empty(fb)?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .add_file("sub/file2", "2")
@@ -968,8 +978,8 @@ mod test {
         let reverse_mover: Mover = Arc::new(prefix_mover);
         let res = verify_working_copy_inner(
             &ctx,
-            &Source(source.clone()),
-            &Target(target.clone()),
+            Source(&source),
+            Target(&target),
             Source(source_cs_id),
             Target(target_cs_id),
             &mover,
@@ -983,8 +993,8 @@ mod test {
         // Now limit the paths we need to verify
         verify_working_copy_inner(
             &ctx,
-            &Source(source),
-            &Target(target),
+            Source(&source),
+            Target(&target),
             Source(source_cs_id),
             Target(target_cs_id),
             &mover,
@@ -1018,7 +1028,7 @@ mod test {
             .commit()
             .await?;
 
-        let target = factory.with_id(RepositoryId::new(1)).build()?;
+        let target: TestRepo = factory.with_id(RepositoryId::new(1)).build()?;
         let root_target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .commit()
@@ -1130,7 +1140,7 @@ mod test {
     async fn init(
         fb: FacebookInit,
         direction: CommitSyncDirection,
-    ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
         let ctx = CoreContext::test_mock(fb);
         let small_repo = Linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
         let large_repo = Linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
@@ -1164,8 +1174,8 @@ mod test {
                 .add(
                     &ctx,
                     SyncedCommitMappingEntry {
-                        large_repo_id: large_repo.get_repoid(),
-                        small_repo_id: small_repo.get_repoid(),
+                        large_repo_id: large_repo.repo_identity().id(),
+                        small_repo_id: small_repo.repo_identity().id(),
                         small_bcs_id: cs_id,
                         large_bcs_id: cs_id,
                         version_name: Some(current_version.clone()),
@@ -1180,18 +1190,18 @@ mod test {
         let common_config = CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => SmallRepoPermanentConfig {
+                small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("prefix/").unwrap(),
                 }
             },
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
         };
 
         let current_version_config = CommitSyncConfig {
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
 

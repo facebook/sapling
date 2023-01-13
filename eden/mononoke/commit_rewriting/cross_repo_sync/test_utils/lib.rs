@@ -17,7 +17,6 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks::BookmarksRef;
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
@@ -27,6 +26,7 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncDataProvider;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Repo;
 use cross_repo_sync::Syncers;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -58,17 +58,18 @@ pub fn xrepo_mapping_version_with_small_repo() -> CommitSyncConfigVersion {
 
 // Helper function that takes a root commit from source repo and rebases it on master bookmark
 // in target repo
-pub async fn rebase_root_on_master<M>(
+pub async fn rebase_root_on_master<M, R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     source_bcs_id: ChangesetId,
 ) -> Result<ChangesetId, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: Repo,
 {
     let bookmark_name = BookmarkName::new("master").unwrap();
     let source_bcs = source_bcs_id
-        .load(&ctx, commit_syncer.get_source_repo().blobstore())
+        .load(&ctx, commit_syncer.get_source_repo().repo_blobstore())
         .await
         .unwrap();
     if !source_bcs.parents().collect::<Vec<_>>().is_empty() {
@@ -96,7 +97,7 @@ where
             source_bcs_mut,
             &map,
             mover,
-            source_repo.clone(),
+            source_repo,
             CommitRewrittenToEmpty::Discard,
         )
         .await?
@@ -124,9 +125,9 @@ where
     txn.commit().await.unwrap();
 
     let entry = SyncedCommitMappingEntry::new(
-        target_repo.get_repoid(),
+        target_repo.repo_identity().id(),
         target_bcs.get_changeset_id(),
-        source_repo.get_repoid(),
+        source_repo.repo_identity().id(),
         source_bcs_id,
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         commit_syncer.get_source_repo_type(),
@@ -140,7 +141,7 @@ pub async fn init_small_large_repo(
     ctx: &CoreContext,
 ) -> Result<
     (
-        Syncers<SqlSyncedCommitMapping>,
+        Syncers<SqlSyncedCommitMapping, BlobRepo>,
         CommitSyncConfig,
         TestLiveCommitSyncConfig,
         TestLiveCommitSyncConfigSource,
@@ -335,10 +336,10 @@ pub fn base_commit_sync_config(large_repo: &BlobRepo, small_repo: &BlobRepo) -> 
         map: hashmap! {},
     };
     CommitSyncConfig {
-        large_repo_id: large_repo.get_repoid(),
+        large_repo_id: large_repo.repo_identity().id(),
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.get_repoid() => small_repo_sync_config,
+            small_repo.repo_identity().id() => small_repo_sync_config,
         },
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     }

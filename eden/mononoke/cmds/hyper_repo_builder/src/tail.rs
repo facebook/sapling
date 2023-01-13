@@ -244,7 +244,7 @@ async fn sync_commits(
         bcss,
         hyper_repo_tip_cs_id,
         mover.clone(),
-        source_repo.blob_repo.clone(),
+        &source_repo.blob_repo,
         None, // force_first_parent
         |(cs_id, mut rewritten_commit)| {
             latest_synced_state.insert(source_repo.blob_repo.name().to_string(), cs_id);

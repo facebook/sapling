@@ -10,12 +10,12 @@ use std::collections::HashSet;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 
 use crate::commit_sync_outcome::CommitSyncOutcome;
@@ -28,7 +28,7 @@ pub const CHANGE_XREPO_MAPPING_EXTRA: &str = "change-xrepo-mapping-to-version";
 /// its parents, get the version to use to construct a mover
 pub async fn get_version_for_merge<'a>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoDerivedDataRef + Send + Sync),
     source_cs_id: ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
@@ -70,7 +70,7 @@ fn get_version_for_merge_impl<'a>(
 
 pub async fn get_version<'a>(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoDerivedDataRef + Send + Sync),
     source_cs_id: ChangesetId,
     parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
@@ -109,7 +109,7 @@ fn get_version_impl<'a>(
 /// value.
 pub async fn get_mapping_change_version(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoDerivedDataRef + Send + Sync),
     source_cs_id: ChangesetId,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     if tunables::tunables().get_allow_change_xrepo_mapping_extra() {

@@ -11,10 +11,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
-use bookmarks::BookmarksRef;
-use changeset_fetcher::ChangesetFetcherArc;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
@@ -30,6 +27,7 @@ use synced_commit_mapping::WorkingCopyEquivalence;
 use crate::commit_sync_data_provider::CommitSyncDataProvider;
 use crate::types::Source;
 use crate::types::Target;
+use crate::Repo;
 
 /// The state of a source repo commit in a target repo, assuming
 /// that any multiple `RewrittenAs` options have been resolved
@@ -60,7 +58,7 @@ pub enum PluralCommitSyncOutcome {
 /// See the docstring for `get_plural_commit_sync_outcome`
 /// for why this is needed.
 #[derive(Clone)]
-pub enum CandidateSelectionHint {
+pub enum CandidateSelectionHint<R: Repo> {
     /// Selected candidate should be the only candidate
     Only,
     /// Selected candidate should be a given changeset
@@ -69,33 +67,33 @@ pub enum CandidateSelectionHint {
     /// or be an ancestor of a given bookmark
     OnlyOrAncestorOfBookmark(
         Target<BookmarkName>,
-        Target<BlobRepo>,
+        Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
     /// Selected candidate should either be the only candidate
     /// or be a descendant of a given bookmark
     OnlyOrDescendantOfBookmark(
         Target<BookmarkName>,
-        Target<BlobRepo>,
+        Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
     /// Selected candidate should either be the only candidate
     /// or be an ancestor of a given changeset
     OnlyOrAncestorOfCommit(
         Target<ChangesetId>,
-        Target<BlobRepo>,
+        Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
     /// Selected candidate should either be the only candidate
     /// or be a descendant of a given changeset
     OnlyOrDescendantOfCommit(
         Target<ChangesetId>,
-        Target<BlobRepo>,
+        Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
 }
 
-impl fmt::Debug for CandidateSelectionHint {
+impl<R: Repo> fmt::Debug for CandidateSelectionHint<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Only => write!(f, "CandidateSelectionHint::Only"),
@@ -122,7 +120,7 @@ impl fmt::Debug for CandidateSelectionHint {
     }
 }
 
-impl CandidateSelectionHint {
+impl<R: Repo> CandidateSelectionHint<R> {
     /// Convert `self` into an appropriate variant of the `DesiredRelationship`
     /// if it is possible. Specifically:
     /// - `Only` variant does not represent a topological relationship, so cannot
@@ -141,7 +139,7 @@ impl CandidateSelectionHint {
     async fn try_into_desired_relationship(
         self,
         ctx: &CoreContext,
-    ) -> Result<Option<DesiredRelationship>, Error> {
+    ) -> Result<Option<DesiredRelationship<R>>, Error> {
         match self {
             Self::Only => Ok(None),
             Self::Exact(cs_id) => Ok(Some(DesiredRelationship::EqualTo(cs_id))),
@@ -310,7 +308,7 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         target_repo_id,
         source_cs_id,
         mapping,
-        CandidateSelectionHint::Only,
+        CandidateSelectionHint::<!>::Only,
         direction,
         commit_sync_data_provider,
     )
@@ -329,13 +327,13 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
 /// bookmark is selected from multiple `source_cs_id` remappings.
 /// Important: if there's just one remapping, this function will
 /// always select it, even if it does not satisfy the desired relationship.
-pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping>(
+pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping, R: Repo>(
     ctx: &'a CoreContext,
     source_repo_id: Source<RepositoryId>,
     target_repo_id: Target<RepositoryId>,
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
-    hint: CandidateSelectionHint,
+    hint: CandidateSelectionHint<R>,
     direction: CommitSyncDirection,
     commit_sync_data_provider: &CommitSyncDataProvider,
 ) -> Result<Option<CommitSyncOutcome>, Error> {
@@ -429,26 +427,26 @@ fn get_only_item_selector<'a>(
 /// This struct is a simplified version of `CandidateSelectionHint`:
 /// - it does not deal with bookmarks
 /// - it deos not deal with the expectation of having only one candidate in the list
-enum DesiredRelationship {
+enum DesiredRelationship<R: Repo> {
     /// Changeset should be an ancestor of this variant's payload
     /// Note: in this case any changeset is an ancestor of itself
     AncestorOf(
         Target<ChangesetId>,
-        Target<BlobRepo>,
+        Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
     /// Changeset should be a descendant of this variant's payload
     /// Note: in this case any changeset is a descendant of itself
     DescendantOf(
         Target<ChangesetId>,
-        Target<BlobRepo>,
+        Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
     /// Changeset should the same as this variant's paylod
     EqualTo(Target<ChangesetId>),
 }
 
-impl fmt::Debug for DesiredRelationship {
+impl<R: Repo> fmt::Debug for DesiredRelationship<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::AncestorOf(cs_id, _, _) => {
@@ -462,7 +460,7 @@ impl fmt::Debug for DesiredRelationship {
     }
 }
 
-impl DesiredRelationship {
+impl<R: Repo> DesiredRelationship<R> {
     /// Get the payload changeset of the desired relationship
     fn cs_id(&self) -> Target<ChangesetId> {
         match self {
@@ -565,11 +563,11 @@ impl DesiredRelationship {
 /// Get a `CandidateSelector` which produces:
 /// - the only cadidate
 /// - or if there are multiple, the only one in the desired topological relationship
-fn get_only_or_in_desired_relationship_selector<'a>(
+fn get_only_or_in_desired_relationship_selector<'a, R: Repo>(
     ctx: &'a CoreContext,
     original_source_cs_id: Source<ChangesetId>,
     target_repo_id: Target<RepositoryId>,
-    desired_relationship: DesiredRelationship,
+    desired_relationship: DesiredRelationship<R>,
 ) -> impl CandidateSelector<'a> {
     let inner = move |v: Vec<(ChangesetId, CommitSyncConfigVersion)>| async move {
         if v.len() == 1 {
@@ -649,12 +647,12 @@ impl PluralCommitSyncOutcome {
             .await
     }
 
-    async fn try_into_commit_sync_outcome_with_desired_relationship(
+    async fn try_into_commit_sync_outcome_with_desired_relationship<R: Repo>(
         self,
         ctx: &CoreContext,
         original_source_cs_id: Source<ChangesetId>,
         target_repo_id: Target<RepositoryId>,
-        desired_relationship: DesiredRelationship,
+        desired_relationship: DesiredRelationship<R>,
     ) -> Result<CommitSyncOutcome, Error> {
         let selector = get_only_or_in_desired_relationship_selector(
             ctx,
@@ -669,6 +667,7 @@ impl PluralCommitSyncOutcome {
 
 #[cfg(test)]
 mod tests {
+    use blobrepo::BlobRepo;
     use bookmarks::BookmarkUpdateReason;
     use fbinit::FacebookInit;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -691,6 +690,7 @@ mod tests {
 
     const SMALL_REPO_ID: RepositoryId = RepositoryId::new(0);
     const LARGE_REPO_ID: RepositoryId = RepositoryId::new(1);
+    type TestRepo = BlobRepo;
 
     fn test_version() -> CommitSyncConfigVersion {
         CommitSyncConfigVersion("test_version".to_string())
@@ -728,7 +728,7 @@ mod tests {
     async fn get_selection_result(
         ctx: &CoreContext,
         candidates: Vec<ChangesetId>,
-        hint: CandidateSelectionHint,
+        hint: CandidateSelectionHint<TestRepo>,
     ) -> Result<Option<CommitSyncOutcome>, Error> {
         let entries: Vec<_> = candidates
             .iter()
@@ -755,7 +755,7 @@ mod tests {
         ctx: &CoreContext,
         candidates: Vec<ChangesetId>,
         expected_selected_candidate: ChangesetId,
-        hint: CandidateSelectionHint,
+        hint: CandidateSelectionHint<TestRepo>,
     ) -> Result<(), Error> {
         let outcome = get_selection_result(ctx, candidates, hint).await?;
         assert_eq!(
@@ -772,7 +772,7 @@ mod tests {
         ctx: &CoreContext,
         candidates: Vec<ChangesetId>,
         expected_error_message: &str,
-        hint: CandidateSelectionHint,
+        hint: CandidateSelectionHint<TestRepo>,
     ) -> Result<(), Error> {
         let selection_error = get_selection_result(ctx, candidates, hint)
             .await

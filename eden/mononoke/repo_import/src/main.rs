@@ -38,6 +38,7 @@ use cross_repo_sync::CommitRewrittenToEmpty;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Repo as CrossRepo;
 use cross_repo_sync::Syncers;
 use derived_data_utils::derived_data_utils;
 use environment::MononokeEnvironment;
@@ -78,9 +79,7 @@ use movers::Mover;
 use pushrebase::do_pushrebase_bonsai;
 use question::Answer;
 use question::Question;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
-use repo_derived_data::RepoDerivedDataRef;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::SeedHead;
 use segmented_changelog::SegmentedChangelogTailer;
@@ -153,7 +152,7 @@ struct RepoImportSetting {
 
 #[derive(Clone)]
 struct SmallRepoBackSyncVars {
-    large_to_small_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    large_to_small_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
     target_repo_dbs: TargetRepoDbs,
     small_repo_bookmark: BookmarkName,
     small_repo: Repo,
@@ -233,7 +232,7 @@ async fn rewrite_file_paths(
             bcs.clone().into_mut(),
             &remapped_parents,
             mover.clone(),
-            repo.as_blob_repo().clone(),
+            repo,
             CommitRewrittenToEmpty::Discard,
         )
         .await?;
@@ -267,7 +266,7 @@ async fn rewrite_file_paths(
 
 async fn find_mapping_version(
     ctx: &CoreContext,
-    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
     dest_bookmark: &BookmarkName,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let bookmark_val = large_to_small_syncer
@@ -283,7 +282,7 @@ async fn find_mapping_version(
 async fn back_sync_commits_to_small_repo(
     ctx: &CoreContext,
     small_repo: &Repo,
-    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
     bcs_ids: &[ChangesetId],
     version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -328,7 +327,7 @@ async fn back_sync_commits_to_small_repo(
 
 async fn wait_until_backsynced_and_return_version(
     ctx: &CoreContext,
-    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
     cs_id: ChangesetId,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let sleep_time_secs = 10;
@@ -837,13 +836,14 @@ async fn get_large_repo_config_if_pushredirected<'a>(
     Ok(None)
 }
 
-async fn get_large_repo_setting<M>(
+async fn get_large_repo_setting<M, R>(
     ctx: &CoreContext,
     small_repo_setting: &RepoImportSetting,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
 ) -> Result<RepoImportSetting, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
+    R: CrossRepo,
 {
     info!(
         ctx.logger(),
@@ -926,7 +926,14 @@ async fn get_pushredirected_vars(
     configs: &RepoConfigs,
     env: &MononokeEnvironment,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
-) -> Result<(Repo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
+) -> Result<
+    (
+        Repo,
+        RepoImportSetting,
+        Syncers<SqlSyncedCommitMapping, Repo>,
+    ),
+    Error,
+> {
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, env.caching)?;
 
     let large_repo_id = large_repo_config.repoid;
@@ -946,8 +953,8 @@ async fn get_pushredirected_vars(
     let mapping = open_sql::<SqlSyncedCommitMapping>(ctx.fb, repo.repo_id(), configs, env)?;
     let syncers = create_commit_syncers(
         ctx,
-        repo.as_blob_repo().clone(),
-        large_repo.as_blob_repo().clone(),
+        repo.clone(),
+        large_repo.clone(),
         mapping.clone(),
         Arc::new(live_commit_sync_config),
         x_repo_syncer_lease,

@@ -70,6 +70,7 @@ use ephemeral_blobstore::StorageLocation;
 use fbinit::FacebookInit;
 use filestore::Alias;
 use filestore::FetchKey;
+use filestore::FilestoreConfig;
 use futures::compat::Stream01CompatExt;
 use futures::stream;
 use futures::stream::Stream;
@@ -193,6 +194,7 @@ define_stats! {
 }
 
 #[facet::container]
+#[derive(Clone)]
 pub struct Repo {
     #[delegate(
         RepoBlobstore,
@@ -238,6 +240,9 @@ pub struct Repo {
 
     #[facet]
     pub commit_graph: CommitGraph,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
 }
 
 impl AsBlobRepo for Repo {
@@ -386,6 +391,7 @@ impl Repo {
             hook_manager: self.hook_manager.clone(),
             repo_handler_base: self.repo_handler_base.clone(),
             commit_graph: self.commit_graph.clone(),
+            filestore_config: self.filestore_config.clone(),
         }
     }
 
@@ -522,6 +528,7 @@ impl Repo {
         // is fully warmed, so that tests see up-to-date bookmarks.
         warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
+        let filestore_config = Arc::new(FilestoreConfig::no_chunking_filestore());
 
         Ok(Self {
             name: name.clone(),
@@ -530,6 +537,7 @@ impl Repo {
             hook_manager,
             repo_handler_base,
             commit_graph,
+            filestore_config,
         })
     }
 
@@ -1520,17 +1528,17 @@ impl RepoContext {
 
     fn get_target_repo_and_lca_hint(
         &self,
-    ) -> (Target<BlobRepo>, Target<Arc<dyn LeastCommonAncestorsHint>>) {
-        let blob_repo = self.blob_repo().clone();
+    ) -> (Target<Repo>, Target<Arc<dyn LeastCommonAncestorsHint>>) {
+        let repo = self.repo().clone();
         let lca_hint = self.repo.skiplist_index_arc();
-        (Target(blob_repo), Target(lca_hint))
+        (Target(repo), Target(lca_hint))
     }
 
     async fn build_candidate_selection_hint(
         &self,
         maybe_args: Option<CandidateSelectionHintArgs>,
         other_repo_context: &Self,
-    ) -> Result<CandidateSelectionHint, MononokeError> {
+    ) -> Result<CandidateSelectionHint<Repo>, MononokeError> {
         let args = match maybe_args {
             None => return Ok(CandidateSelectionHint::Only),
             Some(args) => args,
@@ -1539,23 +1547,23 @@ impl RepoContext {
         use CandidateSelectionHintArgs::*;
         match args {
             OnlyOrAncestorOfBookmark(bookmark) => {
-                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
                 Ok(CandidateSelectionHint::OnlyOrAncestorOfBookmark(
                     Target(bookmark),
-                    blob_repo,
+                    repo,
                     lca_hint,
                 ))
             }
             OnlyOrDescendantOfBookmark(bookmark) => {
-                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
                 Ok(CandidateSelectionHint::OnlyOrDescendantOfBookmark(
                     Target(bookmark),
-                    blob_repo,
+                    repo,
                     lca_hint,
                 ))
             }
             OnlyOrAncestorOfCommit(specifier) => {
-                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
                 let cs_id = other_repo_context
                     .resolve_specifier(specifier)
                     .await?
@@ -1567,12 +1575,12 @@ impl RepoContext {
                     })?;
                 Ok(CandidateSelectionHint::OnlyOrAncestorOfCommit(
                     Target(cs_id),
-                    blob_repo,
+                    repo,
                     lca_hint,
                 ))
             }
             OnlyOrDescendantOfCommit(specifier) => {
-                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let (repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
                 let cs_id = other_repo_context
                     .resolve_specifier(specifier)
                     .await?
@@ -1584,7 +1592,7 @@ impl RepoContext {
                     })?;
                 Ok(CandidateSelectionHint::OnlyOrDescendantOfCommit(
                     Target(cs_id),
-                    blob_repo,
+                    repo,
                     lca_hint,
                 ))
             }
@@ -1620,15 +1628,12 @@ impl RepoContext {
                 ))
             })?;
 
-        let candidate_selection_hint: CandidateSelectionHint = self
+        let candidate_selection_hint: CandidateSelectionHint<Repo> = self
             .build_candidate_selection_hint(maybe_candidate_selection_hint_args, other)
             .await?;
 
-        let commit_sync_repos = CommitSyncRepos::new(
-            self.blob_repo().clone(),
-            other.blob_repo().clone(),
-            &common_config,
-        )?;
+        let commit_sync_repos =
+            CommitSyncRepos::new(self.repo().clone(), other.repo().clone(), &common_config)?;
 
         let specifier = specifier.into();
         let changeset = self.resolve_specifier(specifier).await?.ok_or_else(|| {

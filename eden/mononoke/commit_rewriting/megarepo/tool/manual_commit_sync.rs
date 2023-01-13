@@ -13,6 +13,7 @@ use blobstore::Loadable;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Repo as CrossRepo;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -34,16 +35,16 @@ use synced_commit_mapping::SyncedCommitMapping;
 /// commit A.
 /// The function below can be used to achieve exactly that.
 /// ```
-pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M, R>,
     source_cs_id: ChangesetId,
     target_repo_parents: Option<Vec<ChangesetId>>,
     mapping_version: CommitSyncConfigVersion,
 ) -> Result<Option<ChangesetId>, Error> {
     if let Some(target_repo_parents) = target_repo_parents {
         let source_repo = commit_syncer.get_source_repo();
-        let source_cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
+        let source_cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
         let source_parents: Vec<_> = source_cs.parents().collect();
         if source_parents.len() != target_repo_parents.len() {
             return Err(anyhow!(
