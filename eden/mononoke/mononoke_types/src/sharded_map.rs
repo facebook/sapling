@@ -530,13 +530,11 @@ impl<Value: MapValue> ShardedMapNode<Value> {
                                     // prefix doesn't match
                                     return Ok(vec![]);
                                 }
+                            } else if new_prefix.starts_with(remaining_prefix) {
+                                &[]
                             } else {
-                                if new_prefix.starts_with(remaining_prefix) {
-                                    &[]
-                                } else {
-                                    // prefix doesn't match
-                                    return Ok(vec![]);
-                                }
+                                // prefix doesn't match
+                                return Ok(vec![]);
                             };
                             // Step 2-a. Extend cur_prefix
                             cur_prefix.extend(new_prefix);

@@ -17,6 +17,7 @@ use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use blobsync::copy_content;
 use borrowed::borrowed;
+use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
@@ -37,6 +38,7 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::TrackedFileChange;
 use pushrebase::find_bonsai_diff;
+use repo_blobstore::RepoBlobstoreRef;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 
@@ -527,8 +529,8 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
 pub async fn upload_commits<'a>(
     ctx: &'a CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
+    source_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef),
+    target_repo: &'a (impl RepoBlobstoreRef + ChangesetsRef + FilestoreConfigRef),
 ) -> Result<(), Error> {
     let mut files_to_sync = vec![];
     for rewritten in &rewritten_list {
@@ -551,13 +553,13 @@ pub async fn upload_commits<'a>(
 
 pub async fn copy_file_contents<'a>(
     ctx: &'a CoreContext,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
+    source_repo: &'a impl RepoBlobstoreRef,
+    target_repo: &'a (impl RepoBlobstoreRef + FilestoreConfigRef),
     content_ids: impl IntoIterator<Item = ContentId>,
     progress_reporter: impl Fn(usize),
 ) -> Result<(), Error> {
-    let source_blobstore = source_repo.get_blobstore();
-    let target_blobstore = target_repo.get_blobstore();
+    let source_blobstore = source_repo.repo_blobstore();
+    let target_blobstore = target_repo.repo_blobstore();
     let target_filestore_config = target_repo.filestore_config();
 
     let mut i = 0;
@@ -565,8 +567,8 @@ pub async fn copy_file_contents<'a>(
         |content_id| {
             copy_content(
                 ctx,
-                &source_blobstore,
-                &target_blobstore,
+                source_blobstore,
+                target_blobstore,
                 target_filestore_config.clone(),
                 content_id,
             )
