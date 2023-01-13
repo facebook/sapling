@@ -285,6 +285,10 @@ export default class ServerToClientAPI {
         );
         break;
       }
+      case 'deleteFile': {
+        // TODO in next diff in the stack
+        break;
+      }
       case 'requestComparison': {
         const {comparison} = data;
         const DIFF_CONTEXT_LINES = 4;

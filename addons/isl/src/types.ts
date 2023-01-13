@@ -309,6 +309,7 @@ export type ClientToServerMessage =
       type: 'refresh';
     }
   | {type: 'runOperation'; operation: RunnableOperation}
+  | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'requestRepoInfo'}
   | {type: 'fetchDiffSummaries'}

@@ -10,6 +10,7 @@ import type {SetterOrUpdater} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {islDrawerState} from './App';
+import serverAPI from './ClientToServerAPI';
 import {commitFieldsBeingEdited, commitMode} from './CommitInfo';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
@@ -23,6 +24,7 @@ import {AmendOperation} from './operations/AmendOperation';
 import {CommitOperation} from './operations/CommitOperation';
 import {ContinueOperation} from './operations/ContinueMergeOperation';
 import {DiscardOperation} from './operations/DiscardOperation';
+import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
@@ -378,7 +380,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
   );
 }
 
-const revertableStatues = new Set(['M', 'A', 'R', '!']);
+const revertableStatues = new Set(['M', 'R', '!']);
 function FileActions({file}: {file: ChangedFile}) {
   const runOperation = useRunOperation();
   const actions: Array<React.ReactNode> = [];
@@ -406,7 +408,24 @@ function FileActions({file}: {file: ChangedFile}) {
     );
   }
 
-  if (file.status === '?') {
+  if (file.status === 'A') {
+    actions.push(
+      <Tooltip
+        title={t('Stop tracking this file, without removing from the filesystem')}
+        key="forget"
+        delayMs={1000}>
+        <VSCodeButton
+          className="file-show-on-hover"
+          key={file.path}
+          appearance="icon"
+          onClick={() => {
+            runOperation(new ForgetOperation(file.path));
+          }}>
+          <Icon icon="circle-slash" />
+        </VSCodeButton>
+      </Tooltip>,
+    );
+  } else if (file.status === '?') {
     actions.push(
       <Tooltip title={t('Start tracking this file')} key="add" delayMs={1000}>
         <VSCodeButton
@@ -415,6 +434,27 @@ function FileActions({file}: {file: ChangedFile}) {
           appearance="icon"
           onClick={() => runOperation(new AddOperation(file.path))}>
           <Icon icon="add" />
+        </VSCodeButton>
+      </Tooltip>,
+      <Tooltip title={t('Remove this file from the filesystem')} key="remove" delayMs={1000}>
+        <VSCodeButton
+          className="file-show-on-hover"
+          key={file.path}
+          appearance="icon"
+          onClick={async () => {
+            const ok = await platform.confirm(
+              t('Are you sure you want to delete $file?', {replace: {$file: file.path}}),
+            );
+            if (!ok) {
+              return;
+            }
+            // There's no `sl` command that will delete an untracked file, we need to do it manually.
+            serverAPI.postMessage({
+              type: 'deleteFile',
+              filePath: file.path,
+            });
+          }}>
+          <Icon icon="trash" />
         </VSCodeButton>
       </Tooltip>,
     );

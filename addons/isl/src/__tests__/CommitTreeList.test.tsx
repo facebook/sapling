@@ -91,9 +91,9 @@ describe('CommitTreeList', () => {
 
       it('shows file actions', () => {
         const fileActions = screen.getAllByTestId('file-actions');
-        expect(fileActions).toHaveLength(5);
+        expect(fileActions).toHaveLength(5); // 5 files
         const revertButtons = screen.getAllByTestId('file-revert-button');
-        expect(revertButtons).toHaveLength(4); // modified, added, removed, missing
+        expect(revertButtons).toHaveLength(3); // modified, removed, missing files can be reverted
       });
 
       it('runs revert command when clicking revert button', async () => {
