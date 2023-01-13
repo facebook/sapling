@@ -7,7 +7,10 @@
 
 use anyhow::Context;
 use anyhow::Result;
+use bytes::Bytes;
 use fbthrift::compact_protocol;
+use futures::Stream;
+use futures::StreamExt;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
@@ -20,6 +23,9 @@ use crate::thrift;
 use crate::thrift_field;
 use crate::typed_hash::ContentId;
 use crate::typed_hash::ContentMetadataV2Id;
+
+const MAX_BYTES_FOR_FIRST_LINE: usize = 64;
+const UTF8_BYTES_COUNT: usize = 8;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ContentMetadataV2 {
@@ -123,6 +129,174 @@ impl BlobstoreValue for ContentMetadataV2 {
             .with_context(|| ErrorKind::BlobDeserializeError("ContentMetadataV2".into()))?;
         Self::from_thrift(thrift_tc)
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PartialMetadata {
+    pub is_binary: bool,
+    pub is_ascii: bool,
+    pub is_utf8: bool,
+    pub ends_in_newline: bool,
+    pub newline_count: u64,
+    pub first_line: Option<String>,
+}
+
+enum FoldState<T> {
+    InProgress(T),
+    Done(bool),
+}
+
+/// Computes if the entire stream of bytes is valid UTF-8 encoded.
+pub async fn is_utf8(bytes_stream: impl Stream<Item = Bytes>) -> bool {
+    let output = bytes_stream
+        .fold(
+            FoldState::InProgress(Bytes::new()),
+            |acc, bytes| async move {
+                match acc {
+                    FoldState::Done(_) => acc,
+                    FoldState::InProgress(ref rem_bytes) => {
+                        let bytes = [rem_bytes, bytes.as_ref()].concat();
+                        match std::str::from_utf8(bytes.as_ref()) {
+                            // The entire chunk was valid UTF8, carry on to the next chunk.
+                            Ok(_) => FoldState::InProgress(Bytes::new()),
+                            Err(error) => {
+                                let (_, invalid) = bytes.split_at(error.valid_up_to());
+                                // If the length of invalid slice is more than a UTF8 codepoint
+                                // then the file isn't UTF-8 encoded.
+                                if invalid.len() > UTF8_BYTES_COUNT {
+                                    FoldState::Done(false)
+                                } else {
+                                    // The remaining invalid bytes need to be carried over to the next
+                                    // chunk to be concatenated with it.
+                                    FoldState::InProgress(Bytes::copy_from_slice(invalid))
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        )
+        .await;
+    match output {
+        // Check continued till the last chunk. If the last chunk was valid UTF-8,
+        // then 'bytes' would be empty and the entire file would be valid UTF-8
+        FoldState::InProgress(ref bytes) => bytes.is_empty(),
+        // The UTF8 check was completed before the last chunk with `status` value
+        FoldState::Done(status) => status,
+    }
+}
+
+/// Computes if the entire stream of bytes is valid ASCII.
+pub async fn is_ascii(bytes_stream: impl Stream<Item = Bytes>) -> bool {
+    // NOTE: This can be achieved in much shorter form by using short-circuiting
+    // variants like 'all' or 'any'. However, that leads to Multiplexer error due
+    // to the stream getting dropped prematurely.
+    let output = bytes_stream
+        .fold(FoldState::InProgress(true), |acc, bytes| async move {
+            match acc {
+                FoldState::Done(_) => acc,
+                FoldState::InProgress(val) => {
+                    let is_ascii = val && bytes.as_ref().iter().all(u8::is_ascii);
+                    if !is_ascii {
+                        FoldState::Done(false)
+                    } else {
+                        FoldState::InProgress(true)
+                    }
+                }
+            }
+        })
+        .await;
+    match output {
+        FoldState::InProgress(val) => val,
+        FoldState::Done(val) => val,
+    }
+}
+
+/// Computes if the stream of bytes represents binary content
+pub async fn is_binary(bytes_stream: impl Stream<Item = Bytes>) -> bool {
+    let output = bytes_stream
+        .fold(FoldState::InProgress(false), |acc, bytes| async move {
+            match acc {
+                FoldState::Done(_) => acc,
+                FoldState::InProgress(val) => {
+                    let is_binary = val || bytes.as_ref().contains(&b'\0');
+                    FoldState::InProgress(is_binary)
+                }
+            }
+        })
+        .await;
+    match output {
+        FoldState::InProgress(val) => val,
+        FoldState::Done(val) => val,
+    }
+}
+
+/// Computes if the entire stream of bytes ends in a newline.
+pub async fn ends_in_newline(bytes_stream: impl Stream<Item = Bytes>) -> bool {
+    bytes_stream
+        .fold(false, |acc, bytes| async move {
+            match bytes.as_ref().last() {
+                Some(&byte) => byte == b'\n',
+                None => acc,
+            }
+        })
+        .await
+}
+
+/// Computes the count of newline characters in the entire stream of bytes.
+pub async fn newline_count(bytes_stream: impl Stream<Item = Bytes>) -> u64 {
+    bytes_stream
+        .fold(0, |acc, bytes| async move {
+            acc + bytes
+                .as_ref()
+                .iter()
+                .fold(0, |acc, &byte| if byte == b'\n' { acc + 1 } else { acc })
+        })
+        .await
+}
+
+/// Gets the first UTF-8 encoded line OR the first 64 bytes of data from the input
+/// data stream, whichever is shortest.
+pub async fn first_line(bytes_stream: impl Stream<Item = Bytes>) -> Option<String> {
+    let line = bytes_stream
+        .fold(
+            (String::with_capacity(MAX_BYTES_FOR_FIRST_LINE), false),
+            |(mut acc, done), bytes| async move {
+                // We already have the first line that we are looking for,
+                // no need to look at further data.
+                if done || acc.len() >= MAX_BYTES_FOR_FIRST_LINE {
+                    (acc, true)
+                } else {
+                    let valid_line = match std::str::from_utf8(bytes.as_ref()) {
+                        Ok(line) => line.lines().next(),
+                        Err(error) => {
+                            let (valid, invalid) = bytes.split_at(error.valid_up_to());
+                            // If the length of invalid slice is more than a UTF8 codepoint
+                            // then the file isn't UTF-8 encoded. Return whatever we have
+                            // in the accumulator and exit.
+                            if invalid.len() > UTF8_BYTES_COUNT {
+                                return (acc, true);
+                            }
+                            // We know that the slice is valid UTF-8 by this point, so safe to do the below.
+                            let valid = unsafe { std::str::from_utf8_unchecked(valid) };
+                            valid.lines().next()
+                        }
+                    };
+                    let valid_line = match valid_line {
+                        Some(line) => line,
+                        None => return (acc, true),
+                    };
+                    let len_to_push =
+                        std::cmp::min(MAX_BYTES_FOR_FIRST_LINE - acc.len(), valid_line.len());
+                    // Push only till the end of the line or till the end of buffer, whichever is the shortest.
+                    acc.push_str(valid_line[..len_to_push].as_ref());
+                    (acc, done)
+                }
+            },
+        )
+        .await
+        .0;
+    if line.is_empty() { None } else { Some(line) }
 }
 
 #[cfg(test)]
