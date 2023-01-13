@@ -29,6 +29,7 @@ import type {
   CodeReviewSystem,
   Revset,
   PreferredSubmitCommand,
+  RepoRelativePath,
 } from 'isl/src/types';
 
 import {OperationQueue} from './OperationQueue';
@@ -846,4 +847,28 @@ export function extractRepoInfoFromUrl(
 
   const [, hostname1, hostname2, owner, repo] = match;
   return {owner, repo, hostname: hostname1 ?? hostname2};
+}
+
+/**
+ * Returns absolute path for a repo-relative file path.
+ * If the path "escapes" the repository's root dir, returns null
+ * Used to validate that a file path does not "escape" the repo, and the file can safely be modified on the filesystem.
+ * absolutePathForFileInRepo("foo/bar/file.txt", repo) -> /path/to/repo/foo/bar/file.txt
+ * absolutePathForFileInRepo("../file.txt", repo) -> null
+ */
+export function absolutePathForFileInRepo(
+  filePath: RepoRelativePath,
+  repo: Repository,
+  pathMod = path,
+): AbsolutePath | null {
+  // Note that resolve() is contractually obligated to return an absolute path.
+  const fullPath = pathMod.resolve(repo.info.repoRoot, filePath);
+  // Prefix checks on paths can be footguns on Windows for C:\\ vs c:\\, but since
+  // we use the same exact path check here and in the resolve, there should be
+  // no incompatibility here.
+  if (fullPath.startsWith(repo.info.repoRoot + pathMod.sep)) {
+    return fullPath;
+  } else {
+    return null;
+  }
 }

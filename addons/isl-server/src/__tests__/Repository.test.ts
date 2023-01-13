@@ -8,9 +8,10 @@
 import type {ResolveCommandConflictOutput} from '../Repository';
 import type {ValidatedRepoInfo} from 'isl/src/types';
 
-import {extractRepoInfoFromUrl, Repository} from '../Repository';
+import {absolutePathForFileInRepo, extractRepoInfoFromUrl, Repository} from '../Repository';
 import * as execa from 'execa';
 import os from 'os';
+import path from 'path';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
 
@@ -506,5 +507,51 @@ describe('extractRepoInfoFromUrl', () => {
         hostname: 'ghe.company.com',
       });
     });
+  });
+});
+
+describe('absolutePathForFileInRepo', () => {
+  it('rejects .. in paths that escape the repo', () => {
+    const repoInfo: ValidatedRepoInfo = {
+      type: 'success',
+      command: 'sl',
+      dotdir: '/path/to/repo/.sl',
+      repoRoot: '/path/to/repo',
+      codeReviewSystem: {type: 'unknown'},
+      pullRequestDomain: undefined,
+    };
+    const repo = new Repository(repoInfo, mockLogger);
+
+    expect(absolutePathForFileInRepo('foo/bar/file.txt', repo)).toEqual(
+      '/path/to/repo/foo/bar/file.txt',
+    );
+    expect(absolutePathForFileInRepo('foo/../bar/file.txt', repo)).toEqual(
+      '/path/to/repo/bar/file.txt',
+    );
+    expect(absolutePathForFileInRepo('file.txt', repo)).toEqual('/path/to/repo/file.txt');
+
+    expect(absolutePathForFileInRepo('/file.txt', repo)).toEqual(null);
+    expect(absolutePathForFileInRepo('', repo)).toEqual(null);
+    expect(absolutePathForFileInRepo('foo/../../file.txt', repo)).toEqual(null);
+    expect(absolutePathForFileInRepo('../file.txt', repo)).toEqual(null);
+    expect(absolutePathForFileInRepo('/../file.txt', repo)).toEqual(null);
+  });
+
+  it('works on windows', () => {
+    const repoInfo: ValidatedRepoInfo = {
+      type: 'success',
+      command: 'sl',
+      dotdir: 'C:\\path\\to\\repo\\.sl',
+      repoRoot: 'C:\\path\\to\\repo',
+      codeReviewSystem: {type: 'unknown'},
+      pullRequestDomain: undefined,
+    };
+    const repo = new Repository(repoInfo, mockLogger);
+
+    expect(absolutePathForFileInRepo('foo\\bar\\file.txt', repo, path.win32)).toEqual(
+      'C:\\path\\to\\repo\\foo\\bar\\file.txt',
+    );
+
+    expect(absolutePathForFileInRepo('foo\\..\\..\\file.txt', repo, path.win32)).toEqual(null);
   });
 });
