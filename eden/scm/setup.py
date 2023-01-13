@@ -1305,7 +1305,8 @@ class hginstalllib(install_lib):
         for src, dst in [("edenscmdeps3.zip", "edenscmdeps3.zip")]:
             srcpath = pjoin(builddir, src)
             dstpath = pjoin(self.install_dir, dst)
-            file_util.copy_file(srcpath, dstpath)
+            if os.path.exists(srcpath):
+                file_util.copy_file(srcpath, dstpath)
 
 
 class hginstallscripts(install_scripts):
