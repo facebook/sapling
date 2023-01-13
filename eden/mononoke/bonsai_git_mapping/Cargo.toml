@@ -17,6 +17,7 @@ ascii = "1.0"
 async-trait = "0.1.58"
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+git_types = { version = "0.1.0", path = "../git/git_types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

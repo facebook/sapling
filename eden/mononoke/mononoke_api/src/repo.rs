@@ -1078,6 +1078,12 @@ impl RepoContext {
                     .get_many_by_prefix(self.ctx.clone(), prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
+            ChangesetPrefixSpecifier::GitSha1(prefix) => ChangesetSpecifierPrefixResolution::from(
+                self.blob_repo()
+                    .bonsai_git_mapping()
+                    .get_many_git_sha1_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
+                    .await?,
+            ),
             ChangesetPrefixSpecifier::Globalrev(prefix) => {
                 ChangesetSpecifierPrefixResolution::from(
                     self.blob_repo()

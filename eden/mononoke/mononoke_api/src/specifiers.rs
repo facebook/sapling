@@ -103,18 +103,26 @@ pub type ChangesetIdPrefix = mononoke_types::ChangesetIdPrefix;
 
 /// A prefix of a Mercurial changeset ID.
 pub type HgChangesetIdPrefix = mercurial_types::HgChangesetIdPrefix;
+pub type GitSha1Prefix = git_types::GitSha1Prefix;
 
 /// This is prefix that may be used to resolve a changeset
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub enum ChangesetPrefixSpecifier {
     Bonsai(ChangesetIdPrefix),
     Hg(HgChangesetIdPrefix),
+    GitSha1(GitSha1Prefix),
     Globalrev(Globalrev),
 }
 
 impl From<HgChangesetIdPrefix> for ChangesetPrefixSpecifier {
     fn from(prefix: HgChangesetIdPrefix) -> Self {
         Self::Hg(prefix)
+    }
+}
+
+impl From<GitSha1Prefix> for ChangesetPrefixSpecifier {
+    fn from(prefix: GitSha1Prefix) -> Self {
+        Self::GitSha1(prefix)
     }
 }
 
@@ -161,6 +169,19 @@ impl From<mercurial_types::HgChangesetIdsResolvedFromPrefix>
             Single(id) => Self::Single(Hg(id)),
             Multiple(ids) => Self::Multiple(ids.into_iter().map(Hg).collect()),
             TooMany(ids) => Self::TooMany(ids.into_iter().map(Hg).collect()),
+            NoMatch => Self::NoMatch,
+        }
+    }
+}
+
+impl From<git_types::GitSha1sResolvedFromPrefix> for ChangesetSpecifierPrefixResolution {
+    fn from(resolved: git_types::GitSha1sResolvedFromPrefix) -> Self {
+        use git_types::GitSha1sResolvedFromPrefix::*;
+        use ChangesetSpecifier::*;
+        match resolved {
+            Single(id) => Self::Single(GitSha1(id)),
+            Multiple(ids) => Self::Multiple(ids.into_iter().map(GitSha1).collect()),
+            TooMany(ids) => Self::TooMany(ids.into_iter().map(GitSha1).collect()),
             NoMatch => Self::NoMatch,
         }
     }

@@ -10,6 +10,8 @@ use anyhow::Result;
 use ascii::AsciiStr;
 use async_trait::async_trait;
 use context::CoreContext;
+use git_types::GitSha1Prefix;
+use git_types::GitSha1sResolvedFromPrefix;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -116,6 +118,27 @@ pub trait BonsaiGitMapping: Send + Sync {
         Ok(result.into_iter().next().map(|entry| entry.bcs_id))
     }
 
+    async fn get_many_git_sha1_by_prefix(
+        &self,
+        ctx: &CoreContext,
+        cs_prefix: GitSha1Prefix,
+        limit: usize,
+    ) -> Result<GitSha1sResolvedFromPrefix> {
+        let mut fetched_cs = self
+            .get_in_range(ctx, cs_prefix.min_cs(), cs_prefix.max_cs(), limit + 1)
+            .await?;
+        let res = match fetched_cs.len() {
+            0 => GitSha1sResolvedFromPrefix::NoMatch,
+            1 => GitSha1sResolvedFromPrefix::Single(fetched_cs[0].clone()),
+            l if l <= limit => GitSha1sResolvedFromPrefix::Multiple(fetched_cs),
+            _ => GitSha1sResolvedFromPrefix::TooMany({
+                fetched_cs.pop();
+                fetched_cs
+            }),
+        };
+        Ok(res)
+    }
+
     async fn bulk_import_from_bonsai(
         &self,
         ctx: &CoreContext,
@@ -143,6 +166,14 @@ pub trait BonsaiGitMapping: Send + Sync {
         self.bulk_add(ctx, &entries).await?;
         Ok(())
     }
+
+    async fn get_in_range(
+        &self,
+        ctx: &CoreContext,
+        low: GitSha1,
+        high: GitSha1,
+        limit: usize,
+    ) -> Result<Vec<GitSha1>>;
 }
 
 pub const HGGIT_SOURCE_EXTRA: &str = "hg-git-rename-source";

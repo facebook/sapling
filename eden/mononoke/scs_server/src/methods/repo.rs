@@ -159,6 +159,15 @@ impl SourceControlServiceImpl {
                     ..Default::default()
                 })
             }
+            Single(ChangesetSpecifier::GitSha1(cs_id)) if same_request_response_schemes => {
+                Ok(Response {
+                    ids: Some(btreemap! {
+                        params.prefix_scheme => thrift::CommitId::git(cs_id.as_ref().into())
+                    }),
+                    resolved_type: ResponseType::RESOLVED,
+                    ..Default::default()
+                })
+            }
             Single(cs_id) => match &repo.changeset(cs_id).await? {
                 None => Err(errors::internal_error(
                     "unexpected failure to resolve an existing commit",

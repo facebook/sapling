@@ -21,6 +21,7 @@ use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
 use hooks::CrossRepoPushSource;
 use mononoke_api::specifiers::GitSha1;
+use mononoke_api::specifiers::GitSha1Prefix;
 use mononoke_api::specifiers::Globalrev;
 use mononoke_api::specifiers::Svnrev;
 use mononoke_api::BookmarkName;
@@ -228,6 +229,15 @@ impl FromRequest<thrift::RepoResolveCommitPrefixParams> for ChangesetPrefixSpeci
         match params.prefix_scheme {
             thrift::CommitIdentityScheme::HG => {
                 let prefix = HgChangesetIdPrefix::from_str(&params.prefix).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id prefix (scheme={} {}): {}",
+                        params.prefix_scheme, params.prefix, e
+                    ))
+                })?;
+                Ok(ChangesetPrefixSpecifier::from(prefix))
+            }
+            thrift::CommitIdentityScheme::GIT => {
+                let prefix = GitSha1Prefix::from_str(&params.prefix).map_err(|e| {
                     errors::invalid_request(format!(
                         "invalid commit id prefix (scheme={} {}): {}",
                         params.prefix_scheme, params.prefix, e

@@ -46,6 +46,7 @@ fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+git_types = { version = "0.1.0", path = "../git/git_types" }
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hooks = { version = "0.1.0", path = "../hooks" }
 itertools = "0.10.3"

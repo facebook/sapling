@@ -69,6 +69,20 @@ mononoke_queries! {
          WHERE repo_id = {repo_id}
            AND git_sha1 IN {git_sha1}"
     }
+
+    read SelectGitSha1sByRange(
+        repo_id: RepositoryId,
+        git_sha1_min: GitSha1,
+        git_sha1_max: GitSha1,
+        limit: usize
+    ) -> (GitSha1) {
+        "SELECT git_sha1
+         FROM bonsai_git_mapping
+         WHERE repo_id = {repo_id}
+            AND git_sha1 >= {git_sha1_min} AND git_sha1 <= {git_sha1_max}
+            LIMIT {limit}
+        "
+    }
 }
 
 #[async_trait]
@@ -200,6 +214,45 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             mappings.append(&mut master_mappings);
         }
         Ok(mappings)
+    }
+
+    /// Return [`GitSha1`] entries in the inclusive range described by `low` and `high`.
+    /// Maximum `limit` entries will be returned.
+    async fn get_in_range(
+        &self,
+        ctx: &CoreContext,
+        low: GitSha1,
+        high: GitSha1,
+        limit: usize,
+    ) -> Result<Vec<GitSha1>, Error> {
+        if low > high {
+            return Ok(Vec::new());
+        }
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        let rows = SelectGitSha1sByRange::query(
+            &self.connections.read_connection,
+            &self.repo_id,
+            &low,
+            &high,
+            &limit,
+        )
+        .await?;
+        let mut fetched: Vec<GitSha1> = rows.into_iter().map(|row| row.0).collect();
+        if fetched.is_empty() {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            let rows = SelectGitSha1sByRange::query(
+                &self.connections.read_master_connection,
+                &self.repo_id,
+                &low,
+                &high,
+                &limit,
+            )
+            .await?;
+            fetched = rows.into_iter().map(|row| row.0).collect();
+        }
+        Ok(fetched)
     }
 }
 
