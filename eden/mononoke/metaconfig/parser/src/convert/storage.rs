@@ -48,7 +48,6 @@ use repos::RawFilestoreParams;
 use repos::RawMetadataConfig;
 use repos::RawMultiplexedStoreNormal;
 use repos::RawMultiplexedStoreType;
-use repos::RawMultiplexedStoreWriteMostly;
 use repos::RawMultiplexedStoreWriteOnly;
 use repos::RawShardedDbConfig;
 use repos::RawStorageConfig;
@@ -362,9 +361,6 @@ impl Convert for RawMultiplexedStoreType {
                 Ok(MultiplexedStoreType::Normal)
             }
             RawMultiplexedStoreType::write_only(RawMultiplexedStoreWriteOnly {}) => {
-                Ok(MultiplexedStoreType::WriteOnly)
-            }
-            RawMultiplexedStoreType::write_mostly(RawMultiplexedStoreWriteMostly {}) => {
                 Ok(MultiplexedStoreType::WriteOnly)
             }
             RawMultiplexedStoreType::UnknownField(field) => {
