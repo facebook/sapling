@@ -13,6 +13,7 @@ import {ExternalLink} from '../ExternalLink';
 import {Icon} from '../Icon';
 import {Tooltip} from '../Tooltip';
 import {t} from '../i18n';
+import platform from '../platform';
 import {diffSummary, codeReviewProvider} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {useState, Component, Suspense} from 'react';
@@ -100,7 +101,7 @@ function DiffNumber({children}: {children: string}) {
       <span
         className="diff-number"
         onClick={() => {
-          navigator.clipboard.writeText(children);
+          platform.clipboardCopy(children);
           setShowing(true);
           setTimeout(() => setShowing(false), 2000);
         }}>

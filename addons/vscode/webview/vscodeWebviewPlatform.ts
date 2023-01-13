@@ -28,6 +28,7 @@ export const vscodeWebviewPlatform: Platform = {
   openExternalLink: url => {
     window.clientToServerAPI?.postMessage({type: 'platform/openExternal', url});
   },
+  clipboardCopy: data => navigator.clipboard.writeText(data),
 
   theme: {
     getTheme,

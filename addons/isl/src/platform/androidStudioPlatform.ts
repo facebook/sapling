@@ -12,6 +12,7 @@ declare global {
   interface Window {
     __IdeBridge: {
       openFileInAndroidStudio: (path: string) => void;
+      clipboardCopy?: (data: string) => void;
     };
   }
 }
@@ -34,6 +35,10 @@ const androidStudioPlatform: Platform = {
 
   openExternalLink(_url: string): void {
     window.open(_url, '_blank');
+  },
+
+  clipboardCopy(data: string) {
+    window.__IdeBridge.clipboardCopy?.(data);
   },
 };
 

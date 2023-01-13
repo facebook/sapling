@@ -20,6 +20,7 @@ export interface Platform {
   confirm(message: string, details?: string): Promise<boolean>;
   openFile(path: RepoRelativePath): void;
   openExternalLink(url: string): void;
+  clipboardCopy(value: string): void;
 
   theme?: {
     getTheme(): ThemeColor;

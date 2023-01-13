@@ -30,4 +30,8 @@ export const browserPlatform: Platform = {
   openExternalLink(url: string): void {
     window.open(url, '_blank');
   },
+
+  clipboardCopy(data: string): void {
+    navigator.clipboard.writeText(data);
+  },
 };
