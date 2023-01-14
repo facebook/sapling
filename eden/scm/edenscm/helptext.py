@@ -942,6 +942,45 @@ Email example::
   charsets = iso-8859-1, iso-8859-15, windows-1252
 
 
+``experimental``
+----------------
+
+``experimental.graph.show-abbreviated-ancestors``
+    When showing a commit graph, show or hide ancestor commits outside the
+    selected revset using a marker like '~'.
+
+    If set to "always" or True (default), then '~' is always shown if an
+    ancestor commit exists. For example:
+
+      o    merge commit
+      ├─╮
+      │ │
+      │ ~
+      │
+      o  commit
+      │
+      ~
+
+    If set to "onlymerge", then '~' is shown only there is a visible sibling
+    commit due to a merge. For example:
+
+      o    merge commit
+      ├─╮
+      │ │
+      │ ~
+      │
+      o  commit
+
+    If set to "never" or False, then '~' is never shown. For example:
+
+      o  merge commit
+      │
+      o  commit
+
+    To change the look of the '~' indicator, see the
+    ``experimental.graph.renderer`` setting.
+
+
 ``extensions``
 --------------
 
