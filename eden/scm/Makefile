@@ -171,6 +171,11 @@ test-getdeps: install-getdeps
 
 check: tests
 
+.PHONY: tests
+tests:
+	cd tests && PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
+	    $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) run-tests.py
+
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext

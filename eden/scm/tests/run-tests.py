@@ -697,7 +697,7 @@ def parseargs(args, parser):
     if options.local:
         testdir = os.path.dirname(canonpath(sys.argv[0]))
         reporootdir = os.path.dirname(testdir)
-        pathandattrs = [("hg", "with_hg")]
+        pathandattrs = [("sl", "with_hg")]
         for relpath, attr in pathandattrs:
             if getattr(options, attr, None):
                 continue
