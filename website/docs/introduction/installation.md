@@ -82,13 +82,13 @@ echo "ulimit -n 1048576" >> ~/.zshrc
 After downloading the `sapling_windows` ZIP from the <a href={latestReleasePage}>latest release</a>, run the following in PowerShell as Administrator (substituting the name of the `.zip` file you downloaded, as appropriate):
 
 <CodeBlock>
-PS> Expand-Archive ~/Downloads/{windowsAsset.name} 'C:\Program Files'{'\n'}
+Expand-Archive ~/Downloads/{windowsAsset.name} 'C:\Program Files'{'\n'}
 </CodeBlock>
 
 This will create `C:\Program Files\Sapling`, which you likely want to add to your `%PATH%` environment variable using:
 
 <CodeBlock>
-PS> setx PATH "$env:PATH;C:\Program Files\Sapling" -m
+setx PATH "$env:PATH;C:\Program Files\Sapling" -m
 </CodeBlock>
 
 Note the following tools must be installed to leverage Sapling's full feature set:
@@ -99,8 +99,8 @@ Note the following tools must be installed to leverage Sapling's full feature se
 Note that the name of the Sapling CLI `sl.exe` conflicts with the `sl` shell built-in in PowerShell (`sl` is an alias for `Set-Location`, which is equivalent to `cd`). If you want to use `sl` to run `sl.exe` in PowerShell, you must reassign the alias. Again, you must run the following as Administrator:
 
 <CodeBlock>
-PS> Set-Alias -Name sl -Value 'C:\Program Files\Sapling\sl.exe' -Force -Option Constant,ReadOnly,AllScope{'\n'}
-PS> sl --version{'\n'}
+Set-Alias -Name sl -Value 'C:\Program Files\Sapling\sl.exe' -Force -Option Constant,ReadOnly,AllScope{'\n'}
+sl --version{'\n'}
 Sapling {latestReleaseVersion}
 </CodeBlock>
 
