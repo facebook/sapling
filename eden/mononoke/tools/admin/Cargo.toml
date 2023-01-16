@@ -70,6 +70,7 @@ revset = { version = "0.1.0", path = "../../revset" }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

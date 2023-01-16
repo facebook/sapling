@@ -6,13 +6,17 @@
  */
 
 mod backfill;
+mod backfill_one;
 mod checkpoints;
 
 use anyhow::Result;
 use backfill::BackfillArgs;
+use backfill_one::BackfillOneArgs;
+use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use clap::Parser;
 use clap::Subcommand;
+use commit_graph::CommitGraph;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -31,12 +35,18 @@ pub struct CommandArgs {
 pub enum CommitGraphSubcommand {
     /// Backfill commit graph entries
     Backfill(BackfillArgs),
+    /// Backfill a commit and all of its missing ancestors.
+    BackfillOne(BackfillOneArgs),
 }
 
 #[facet::container]
 pub struct Repo {
     #[facet]
     changesets: dyn Changesets,
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+    #[facet]
+    commit_graph: CommitGraph,
     #[facet]
     config: RepoConfig,
     #[facet]
@@ -49,5 +59,8 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         CommitGraphSubcommand::Backfill(args) => backfill::backfill(&ctx, &app, &repo, args).await,
+        CommitGraphSubcommand::BackfillOne(args) => {
+            backfill_one::backfill_one(&ctx, &repo, args).await
+        }
     }
 }
