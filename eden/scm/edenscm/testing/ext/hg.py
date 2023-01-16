@@ -51,7 +51,7 @@ def testsetup(t: TestTmp):
             if setup:
                 testname = os.path.basename(testfile)
                 setup(testname, str(hgrcpath))
-    inprocesshg = True
+    inprocesshg = False
     if os.path.exists(testfile):
         with open(testfile, "rb") as f:
             content = f.read().decode("utf-8", errors="ignore")
