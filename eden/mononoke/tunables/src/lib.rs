@@ -365,6 +365,9 @@ pub struct MononokeTunables {
 
     // Usage of new commit graph for speeding up server-side operations
     new_commit_graph_is_ancestor_percentage: TunableI64ByRepo,
+
+    // Disable the fix to use isolation level read committed
+    disable_wal_read_committed: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

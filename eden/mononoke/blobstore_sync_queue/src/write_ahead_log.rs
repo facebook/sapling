@@ -41,6 +41,7 @@ use shared_error::anyhow::IntoSharedError;
 use shared_error::anyhow::SharedError;
 use sql::Connection;
 use sql::WriteResult;
+use sql_common::mysql::IsolationLevel;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlShardedConnections;
@@ -425,9 +426,22 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
     fn from_sql_shard_connections(connections: SqlShardedConnections) -> Self {
         let SqlShardedConnections {
             read_connections: _,
-            read_master_connections,
-            write_connections,
+            mut read_master_connections,
+            mut write_connections,
         } = connections;
+        if !tunables().get_disable_wal_read_committed() {
+            for conn in read_master_connections
+                .iter_mut()
+                .chain(write_connections.iter_mut())
+            {
+                if let Connection::Mysql(conn) = conn {
+                    // We don't care about strong locking of the queries, we just a simple "bag".
+                    // Having stronger locking causes deadlocks. Let's use a weaker isolation level.
+                    // See https://fb.workplace.com/groups/mysql.users/posts/24130604319894856
+                    conn.set_isolation_level(Some(IsolationLevel::ReadCommitted));
+                }
+            }
+        }
         let write_connections = Arc::new(write_connections);
 
         let (sender, ensure_worker_scheduled) =
