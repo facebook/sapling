@@ -110,7 +110,7 @@ impl<Repo> MononokeReposManager<Repo> {
     }
 
     /// Construct and add a new repo to the managed repo collection.
-    pub async fn add_repo(&self, repo_name: &str) -> Result<()>
+    pub async fn add_repo(&self, repo_name: &str) -> Result<Arc<Repo>>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
     {
@@ -122,7 +122,9 @@ impl<Repo> MononokeReposManager<Repo> {
             .build(repo_name.to_string(), repo_config, common_config)
             .await?;
         self.repos.add(repo_name, repo_id, repo);
-        Ok(())
+        self.repos
+            .get_by_name(repo_name)
+            .ok_or_else(|| anyhow!("Couldn't retrive added repo {}", repo_name))
     }
 
     /// Remove a repo from the managed repo collection.

@@ -12,7 +12,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -109,24 +108,17 @@ impl MononokeServerProcess {
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
-            self.repos_mgr.add_repo(repo_name).await?;
-            match self.repos_mgr.repos().get_by_name(repo_name) {
-                None => bail!("Added repo {} does not exist in MononokeRepos", repo_name),
-                Some(repo) => {
-                    let blob_repo = repo.blob_repo().clone();
-                    let cache_warmup_params = repo.config().cache_warmup.clone();
-                    let ctx = CoreContext::new_with_logger(self.fb, logger.clone());
-                    cache_warmup(&ctx, &blob_repo, cache_warmup_params)
-                        .await
-                        .with_context(|| {
-                            format!("Error while warming up cache for repo {}", repo_name)
-                        })?;
-                    info!(
-                        &logger,
-                        "Completed repo {} setup in Mononoke service", repo_name
-                    );
-                }
-            }
+            let repo = self.repos_mgr.add_repo(repo_name).await?;
+            let blob_repo = repo.blob_repo().clone();
+            let cache_warmup_params = repo.config().cache_warmup.clone();
+            let ctx = CoreContext::new_with_logger(self.fb, logger.clone());
+            cache_warmup(&ctx, &blob_repo, cache_warmup_params)
+                .await
+                .with_context(|| format!("Error while warming up cache for repo {}", repo_name))?;
+            info!(
+                &logger,
+                "Completed repo {} setup in Mononoke service", repo_name
+            );
         } else {
             info!(
                 &logger,
