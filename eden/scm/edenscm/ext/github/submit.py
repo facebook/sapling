@@ -415,6 +415,9 @@ async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
 
 
 def get_origin(ui) -> str:
+    origin = ui.config("paths", "default-push")
+    if origin:
+        return origin
     origin = ui.config("paths", "default")
     if origin:
         return origin

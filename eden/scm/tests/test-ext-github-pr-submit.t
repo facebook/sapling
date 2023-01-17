@@ -23,3 +23,11 @@ test sending pr
   pushing 1 to https://github.com/facebook/test_github_repo.git
   created new pull request: https://github.com/facebook/test_github_repo/pull/1
   updated body for https://github.com/facebook/test_github_repo/pull/1
+
+test sending pr with a 'default-push' path
+  $ setconfig paths.default-push=https://github.com/contributor/fork_github_repo.git
+  $ sl pr unlink -r .
+  $ sl pr submit --config extensions.pr_submit=$TESTDIR/github/mock_create_one_pr_from_contributor_repo.py
+  pushing 1 to https://github.com/contributor/fork_github_repo.git
+  created new pull request: https://github.com/facebook/test_github_repo/pull/2
+  updated body for https://github.com/facebook/test_github_repo/pull/2
