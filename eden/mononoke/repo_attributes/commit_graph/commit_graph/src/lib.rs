@@ -12,6 +12,7 @@
 #![feature(map_first_last)]
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -20,6 +21,8 @@ use async_trait::async_trait;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
+use itertools::Either;
+use itertools::Itertools;
 use maplit::hashset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
@@ -543,6 +546,70 @@ impl CommitGraph {
                 }
             }
         }
+    }
+
+    /// Returns a frontier for the ancestors of heads
+    /// that satisfy a given property.
+    ///
+    /// Note: The property needs to be monotonic i.e. if the
+    /// property holds for one changeset then it has to hold
+    /// for all its parents.
+    pub async fn get_ancestors_frontier_with(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        monotonic_property: impl Fn(ChangesetId) -> bool,
+    ) -> Result<Vec<ChangesetId>> {
+        let (mut ancestors_frontier, frontier_cs_ids): (HashSet<_>, Vec<_>) =
+            heads.into_iter().partition_map(|cs_id| {
+                if monotonic_property(cs_id) {
+                    Either::Left(cs_id)
+                } else {
+                    Either::Right(cs_id)
+                }
+            });
+        let mut frontier = self.frontier(ctx, frontier_cs_ids).await?;
+
+        while let Some((_, cs_ids)) = frontier.pop_last() {
+            let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
+            let frontier_edges = self
+                .storage
+                .fetch_many_edges_required(ctx, &cs_ids, None)
+                .await?;
+            for cs_id in cs_ids {
+                let edges = frontier_edges
+                    .get(&cs_id)
+                    .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
+                match edges
+                    .skip_tree_parent
+                    .into_iter()
+                    .chain(edges.skip_tree_skew_ancestor)
+                    .filter(|node| !monotonic_property(node.cs_id))
+                    .min_by_key(|ancestor| ancestor.generation)
+                {
+                    Some(ancestor) => {
+                        frontier
+                            .entry(ancestor.generation)
+                            .or_default()
+                            .insert(ancestor.cs_id);
+                    }
+                    None => {
+                        for parent in edges.parents.iter() {
+                            if monotonic_property(parent.cs_id) {
+                                ancestors_frontier.insert(parent.cs_id);
+                            } else {
+                                frontier
+                                    .entry(parent.generation)
+                                    .or_default()
+                                    .insert(parent.cs_id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(ancestors_frontier.into_iter().collect())
     }
 
     /// Returns true if the ancestor changeset is an ancestor of the descendant

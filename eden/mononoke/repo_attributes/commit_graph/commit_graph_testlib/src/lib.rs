@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -446,6 +447,81 @@ pub async fn test_add_recursive(
             .as_slice(),
         &[name_cs_id("F")]
     );
+
+    Ok(())
+}
+
+pub async fn test_get_ancestors_frontier_with(
+    ctx: &CoreContext,
+    storage: Arc<dyn CommitGraphStorage>,
+) -> Result<()> {
+    let graph = from_dag(
+        ctx,
+        r##"
+         A-B-C-D-G-H---J-K
+            \   /   \ /
+             E-F     I
+
+         L-M-N-O-P-Q-R-S-T-U
+         "##,
+        storage.clone(),
+    )
+    .await?;
+
+    let set1 = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+        .into_iter()
+        .map(name_cs_id)
+        .collect::<HashSet<_>>();
+
+    assert_get_ancestors_frontier_with(
+        &graph,
+        ctx,
+        vec!["K", "U"],
+        |cs_id| set1.contains(&cs_id),
+        vec!["H", "I"],
+    )
+    .await?;
+
+    let set2 = ["A", "B", "C", "E"]
+        .into_iter()
+        .map(name_cs_id)
+        .collect::<HashSet<_>>();
+
+    assert_get_ancestors_frontier_with(
+        &graph,
+        ctx,
+        vec!["D", "F"],
+        |cs_id| set2.contains(&cs_id),
+        vec!["C", "E"],
+    )
+    .await?;
+
+    assert_get_ancestors_frontier_with(
+        &graph,
+        ctx,
+        vec!["G"],
+        |cs_id| set2.contains(&cs_id),
+        vec!["C", "E"],
+    )
+    .await?;
+
+    assert_get_ancestors_frontier_with(
+        &graph,
+        ctx,
+        vec!["K"],
+        |cs_id| set2.contains(&cs_id),
+        vec!["C", "E"],
+    )
+    .await?;
+
+    assert_get_ancestors_frontier_with(
+        &graph,
+        ctx,
+        vec!["D"],
+        |cs_id| set2.contains(&cs_id),
+        vec!["C"],
+    )
+    .await?;
 
     Ok(())
 }

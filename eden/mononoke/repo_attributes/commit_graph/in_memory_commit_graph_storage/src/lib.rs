@@ -216,4 +216,12 @@ mod tests {
 
         test_add_recursive(&ctx, storage).await
     }
+
+    #[fbinit::test]
+    async fn test_in_memory_get_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+
+        test_get_ancestors_frontier_with(&ctx, storage).await
+    }
 }

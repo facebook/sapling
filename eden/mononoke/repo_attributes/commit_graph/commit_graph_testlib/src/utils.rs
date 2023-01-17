@@ -188,6 +188,29 @@ pub async fn assert_get_ancestors_difference(
     Ok(())
 }
 
+pub async fn assert_get_ancestors_frontier_with(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: Vec<&str>,
+    property_fn: impl Fn(ChangesetId) -> bool,
+    ancestors_frontier: Vec<&str>,
+) -> Result<()> {
+    let heads = heads.into_iter().map(name_cs_id).collect();
+
+    assert_eq!(
+        graph
+            .get_ancestors_frontier_with(ctx, heads, property_fn)
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        ancestors_frontier
+            .into_iter()
+            .map(name_cs_id)
+            .collect::<HashSet<_>>()
+    );
+    Ok(())
+}
+
 pub async fn assert_p1_linear_skew_ancestor(
     storage: &Arc<dyn CommitGraphStorage>,
     ctx: &CoreContext,

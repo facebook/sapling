@@ -95,3 +95,16 @@ async fn test_buffered_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
 
     test_add_recursive(&ctx, storage).await
 }
+
+#[fbinit::test]
+async fn test_buffered_sqlite_get_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let storage = Arc::new(BufferedCommitGraphStorage::new(
+        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        5,
+    ));
+
+    test_get_ancestors_frontier_with(&ctx, storage).await
+}
