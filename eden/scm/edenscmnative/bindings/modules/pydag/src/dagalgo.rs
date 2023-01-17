@@ -165,24 +165,6 @@ py_class!(pub class dagalgo |py| {
         Self::from_dag(py, dag)
     }
 
-    /// Render the graph into an ASCII string.
-    def render(&self, getmessage: Option<PyObject> = None) -> PyResult<Str> {
-        let get_message = move |vertex: &Vertex| -> Option<String> {
-            if let Some(getmessage) = &getmessage {
-                if getmessage.is_callable(py) {
-                    if let Ok(message) = getmessage.call(py, (PyBytes::new(py, vertex.as_ref()),), None) {
-                        if let Ok(message) = message.extract::<String>(py) {
-                            return Some(message)
-                        }
-                    }
-                }
-            }
-            None
-        };
-        let dag = self.dag(py);
-        Ok(renderdag::render_namedag(dag.as_ref(), get_message).map_pyerr(py)?.into())
-    }
-
     /// segments(nameset, maxlevel=255) -> [segment]
     /// Get the segments covering the set with specified maximum level.
     def segments(&self, set: ImplInto<Set>, maxlevel: u8 = 255) -> PyResult<Serde<VecDeque<IdSegment>>> {
