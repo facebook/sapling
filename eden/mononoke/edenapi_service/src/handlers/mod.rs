@@ -97,6 +97,7 @@ pub enum EdenApiMethod {
     FetchSnapshot,
     AlterSnapshot,
     CommitGraph,
+    CommitGraphV2,
     DownloadFile,
     CommitMutations,
     CommitTranslateId,
@@ -115,6 +116,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitRevlogData => "commit_revlog_data",
             Self::CommitHashLookup => "commit_hash_lookup",
             Self::CommitGraph => "commit_graph",
+            Self::CommitGraphV2 => "commit_graph_v2",
             Self::Clone => "clone",
             Self::Bookmarks => "bookmarks",
             Self::SetBookmark => "set_bookmark",
@@ -318,6 +320,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
         Handlers::setup::<commit::AlterSnapshotHandler>(route);
         Handlers::setup::<commit::GraphHandler>(route);
+        Handlers::setup::<commit::GraphHandlerV2>(route);
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);
         Handlers::setup::<commit::CommitTranslateId>(route);

@@ -613,7 +613,52 @@ impl EdenApiHandler for GraphHandler {
             .collect();
 
         let graph_entries = repo
-            .get_graph_mapping(common, heads)
+            .get_graph_mapping(common, heads, false)
+            .await?
+            .into_iter()
+            .map(|(hgid, parents)| {
+                Ok(CommitGraphEntry {
+                    hgid: HgId::from(hgid.into_nodehash()),
+                    parents: parents
+                        .into_iter()
+                        .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
+                        .collect(),
+                })
+            });
+        Ok(stream::iter(graph_entries).boxed())
+    }
+}
+
+pub struct GraphHandlerV2;
+
+#[async_trait]
+impl EdenApiHandler for GraphHandlerV2 {
+    type Request = CommitGraphRequest;
+    type Response = CommitGraphEntry;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitGraphV2;
+    const ENDPOINT: &'static str = "/commit/graph_v2";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let heads = request
+            .heads
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+        let common = request
+            .common
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+
+        let graph_entries = repo
+            .get_graph_mapping(common, heads, true)
             .await?
             .into_iter()
             .map(|(hgid, parents)| {

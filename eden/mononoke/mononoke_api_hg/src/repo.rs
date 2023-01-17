@@ -795,19 +795,60 @@ impl HgRepoContext {
         &self,
         common: Vec<HgChangesetId>,
         heads: Vec<HgChangesetId>,
+        use_commit_graph: bool,
     ) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>, MononokeError> {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
-        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index_arc();
         let phases = blob_repo.phases();
-        let common: HashSet<_> = common.into_iter().collect();
+        let common_set: HashSet<_> = common.iter().cloned().collect();
+
         // make sure filenodes are derived before sending
-        let (_draft_commits, missing_commits) = try_join!(
-            find_new_draft_commits_and_derive_filenodes_for_public_roots(
-                &ctx, blob_repo, &common, &heads, phases
-            ),
-            find_commits_to_send(&ctx, blob_repo, &common, &heads, &lca_hint),
-        )?;
+        let (_draft_commits, missing_commits) = if use_commit_graph {
+            try_join!(
+                // TODO(liubovd): migrate this part
+                find_new_draft_commits_and_derive_filenodes_for_public_roots(
+                    &ctx,
+                    blob_repo,
+                    &common_set,
+                    &heads,
+                    phases
+                ),
+                {
+                    let hg_bonsai_heads = self
+                        .blob_repo()
+                        .get_hg_bonsai_mapping(ctx.clone(), heads.to_vec())
+                        .await?;
+
+                    let bonsai_heads = hg_bonsai_heads.iter().map(|(_, bcs_id)| *bcs_id).collect();
+
+                    let hg_bonsai_common = self
+                        .blob_repo()
+                        .get_hg_bonsai_mapping(ctx.clone(), common.to_vec())
+                        .await?;
+
+                    let bonsai_common =
+                        hg_bonsai_common.iter().map(|(_, bcs_id)| *bcs_id).collect();
+
+                    self.repo().repo().commit_graph.get_ancestors_difference(
+                        &ctx,
+                        bonsai_heads,
+                        bonsai_common,
+                    )
+                }
+            )?
+        } else {
+            let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index_arc();
+            try_join!(
+                find_new_draft_commits_and_derive_filenodes_for_public_roots(
+                    &ctx,
+                    blob_repo,
+                    &common_set,
+                    &heads,
+                    phases
+                ),
+                find_commits_to_send(&ctx, blob_repo, &common_set, &heads, &lca_hint),
+            )?
+        };
 
         let cs_parent_mapping: HashMap<ChangesetId, Vec<ChangesetId>> =
             stream::iter(missing_commits.clone().into_iter())
