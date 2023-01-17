@@ -164,6 +164,31 @@ pub async fn assert_skip_tree_lowest_common_ancestor(
     Ok(())
 }
 
+pub async fn assert_get_ancestors_difference_with(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    heads: Vec<&str>,
+    common: Vec<&str>,
+    property_fn: impl Fn(ChangesetId) -> bool,
+    ancestors_difference: Vec<&str>,
+) -> Result<()> {
+    let heads = heads.into_iter().map(name_cs_id).collect();
+    let common = common.into_iter().map(name_cs_id).collect();
+
+    assert_eq!(
+        graph
+            .get_ancestors_difference_with(ctx, heads, common, property_fn)
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        ancestors_difference
+            .into_iter()
+            .map(name_cs_id)
+            .collect::<HashSet<_>>()
+    );
+    Ok(())
+}
+
 pub async fn assert_get_ancestors_difference(
     graph: &CommitGraph,
     ctx: &CoreContext,

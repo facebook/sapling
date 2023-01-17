@@ -636,15 +636,21 @@ impl CommitGraph {
         Ok(false)
     }
 
-    // Returns all changesets that are ancestors of any changeset in heads
-    // excluding any changeset that is an ancestor of any changeset in common
-    pub async fn get_ancestors_difference(
+    /// Returns all ancestors of any changeset in heads, excluding
+    /// any ancestor of any changeset in common and any changeset
+    /// that satisfies a given property.
+    ///
+    /// Note: The property needs to be monotonic i.e. if the
+    /// property holds for one changeset then it has to hold
+    /// for all its parents.
+    pub async fn get_ancestors_difference_with(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
+        monotonic_property: impl Fn(ChangesetId) -> bool,
     ) -> Result<Vec<ChangesetId>> {
-        let mut cs_ids_inbetween = vec![];
+        let mut ancestors_difference = vec![];
 
         let (mut heads, mut common) =
             futures::try_join!(self.frontier(ctx, heads), self.frontier(ctx, common))?;
@@ -659,10 +665,12 @@ impl CommitGraph {
                         continue;
                     }
                 }
-                cs_ids_not_excluded.push(cs_id)
+                if !monotonic_property(cs_id) {
+                    cs_ids_not_excluded.push(cs_id)
+                }
             }
 
-            cs_ids_inbetween.extend(&cs_ids_not_excluded);
+            ancestors_difference.extend(&cs_ids_not_excluded);
 
             let all_edges = self
                 .storage
@@ -679,7 +687,19 @@ impl CommitGraph {
             }
         }
 
-        Ok(cs_ids_inbetween)
+        Ok(ancestors_difference)
+    }
+
+    /// Returns all ancestors of any changeset in heads, excluding
+    /// any ancestor of any changeset in common.
+    pub async fn get_ancestors_difference(
+        &self,
+        ctx: &CoreContext,
+        heads: Vec<ChangesetId>,
+        common: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        self.get_ancestors_difference_with(ctx, heads, common, |_| false)
+            .await
     }
 }
 

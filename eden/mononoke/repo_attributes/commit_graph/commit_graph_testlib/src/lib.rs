@@ -302,6 +302,56 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
+    let set1 = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+        .into_iter()
+        .map(name_cs_id)
+        .collect::<HashSet<_>>();
+
+    assert_get_ancestors_difference_with(
+        &graph,
+        ctx,
+        vec!["J", "S"],
+        vec!["C", "E", "O"],
+        |cs_id| set1.contains(&cs_id),
+        vec!["J", "S", "R", "Q", "P"],
+    )
+    .await?;
+
+    assert_get_ancestors_difference_with(
+        &graph,
+        ctx,
+        vec!["K"],
+        vec!["C", "E"],
+        |cs_id| set1.contains(&cs_id),
+        vec!["K", "J"],
+    )
+    .await?;
+
+    let set2 = ["A", "B", "C"]
+        .into_iter()
+        .map(name_cs_id)
+        .collect::<HashSet<_>>();
+
+    assert_get_ancestors_difference_with(
+        &graph,
+        ctx,
+        vec!["H"],
+        vec![],
+        |cs_id| set2.contains(&cs_id),
+        vec!["D", "E", "F", "G", "H"],
+    )
+    .await?;
+
+    assert_get_ancestors_difference_with(
+        &graph,
+        ctx,
+        vec!["H"],
+        vec!["F"],
+        |cs_id| set2.contains(&cs_id),
+        vec!["D", "G", "H"],
+    )
+    .await?;
+
     Ok(())
 }
 
