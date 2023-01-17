@@ -6,7 +6,6 @@
 """utilities for interacting with GitHub (EXPERIMENTAL)
 """
 
-import shutil
 from typing import Optional
 
 from edenscm import error, registrar, util
@@ -21,7 +20,8 @@ from . import (
     submit,
     templates,
 )
-from .github_repo_util import find_github_repo
+from .github_repo_util import gh_args
+
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -200,35 +200,22 @@ def follow_cmd(ui, repo, *revs, **opts):
 )
 def list_cmd(ui, repo, *args, **opts) -> int:
     """calls `gh pr list [flags]` with the current repo as the value of --repo"""
-    github_repo = find_github_repo(repo).ok()
-    if not github_repo:
-        raise error.Abort(_("This does not appear to be a GitHub repo."))
-
-    argv0 = _find_gh_cli()
-    if argv0 is None:
-        raise error.Abort(_("Path to `gh` could not be found."))
-
-    gh_args = [argv0, "--repo", github_repo.as_gh_repo_arg(), "pr", "list"]
+    args = ["pr", "list"]
     for opt, value in opts.items():
         if value:
             val_type = type(value)
             if val_type == str:
-                gh_args.extend([f"--{opt}", value])
+                args.extend([f"--{opt}", value])
             elif val_type == int:
-                gh_args.extend([f"--{opt}", str(value)])
+                args.extend([f"--{opt}", str(value)])
             elif val_type == bool:
-                gh_args.append(f"--{opt}")
+                args.append(f"--{opt}")
             else:
                 raise ValueError(f"unsupported type {val_type} for {value}")
 
-    # Once chg supports an execv-style API, call it with `argv0` and `gh_args`.
-    cmd = " ".join([util.shellquote(arg) for arg in gh_args])
+    cmd = " ".join([util.shellquote(arg) for arg in gh_args(args, repo)])
     rc = ui.system(cmd)
     return rc
-
-
-def _find_gh_cli() -> Optional[str]:
-    return shutil.which("gh")
 
 
 @templatekeyword("github_repo")

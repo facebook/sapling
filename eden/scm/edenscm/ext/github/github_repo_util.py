@@ -4,10 +4,11 @@
 # GNU General Public License version 2.
 
 import re
+import shutil
 import subprocess
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Optional
+from typing import Iterable, List, Optional
 
 from edenscm import error, git
 from edenscm.i18n import _
@@ -116,6 +117,31 @@ def is_github_enterprise_hostname(hostname: str) -> bool:
         # The user may not be authenticated or may not even have `gh` installed.
         return False
     return True
+
+
+def gh_args(args: Iterable[str], repo=None) -> List[str]:
+    """Returns a list of arguments for calling the `gh` binary.
+
+    If a repo object is provided, it will try to determine the GitHub repo
+    it is associated with, and use it for adding `--repo TheNameOfTheRepo`
+    to the list. This option is used by gh for running some repo specific
+    commands.
+    """
+    gh_cli = _find_gh_cli()
+    if gh_cli is None:
+        raise error.Abort(_("Missing gh binary."))
+
+    cmd: List[str] = [gh_cli]
+    if repo:
+        github_repo = find_github_repo(repo).ok()
+        if not github_repo:
+            raise error.Abort(_("This does not appear to be a GitHub repo."))
+        cmd += ["--repo", github_repo.as_gh_repo_arg()]
+    return cmd + list(args)
+
+
+def _find_gh_cli() -> Optional[str]:
+    return shutil.which("gh")
 
 
 def parse_github_repo_from_github_url(url: str) -> Optional[GitHubRepo]:
