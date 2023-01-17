@@ -1399,7 +1399,7 @@ impl RepoFactory {
                     WarmBookmarksCacheDerivedData::AllKinds => {
                         wbc_builder.add_all_warmers(repo_derived_data, phases)?;
                     }
-                    WarmBookmarksCacheDerivedData::None => {}
+                    WarmBookmarksCacheDerivedData::NoDerivation => {}
                 }
 
                 Ok(Arc::new(

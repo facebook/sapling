@@ -25,6 +25,7 @@ use megarepo_api::MegarepoApi;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::args::WarmBookmarksCacheExtension;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeAppBuilder;
@@ -49,7 +50,8 @@ struct AsyncRequestsWorkerArgs {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
-        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::None)
+        .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::NoDerivation)
+        .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(HooksAppExtension {})
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(RepoFilterAppExtension {})

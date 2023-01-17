@@ -35,6 +35,7 @@ use mononoke_app::args::McrouterAppExtension;
 use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::args::WarmBookmarksCacheExtension;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::fb303::ReadyFlagService;
 use mononoke_app::MononokeApp;
@@ -204,6 +205,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_default_scuba_dataset("mononoke_test_perf")
         .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::HgOnly)
+        .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(McrouterAppExtension {})
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(HooksAppExtension {})

@@ -12,6 +12,7 @@ use std::sync::Arc;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
+use clap::ValueEnum;
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -21,6 +22,7 @@ use rendezvous::RendezVousOptions;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
+use strum_macros::EnumString;
 use tokio::runtime::Runtime;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -36,11 +38,11 @@ pub enum Caching {
     Disabled,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, ValueEnum, EnumString, strum_macros::Display)]
 pub enum WarmBookmarksCacheDerivedData {
     HgOnly,
     AllKinds,
-    None,
+    NoDerivation,
 }
 
 /// Struct representing the configuration associated with a MononokeApp instance which

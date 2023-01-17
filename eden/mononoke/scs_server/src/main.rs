@@ -32,6 +32,7 @@ use mononoke_api::CoreContext;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
+use mononoke_app::args::WarmBookmarksCacheExtension;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use panichandler::Fate;
@@ -179,6 +180,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let app = MononokeAppBuilder::new(fb)
         .with_warm_bookmarks_cache(WarmBookmarksCacheDerivedData::AllKinds)
+        .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(HooksAppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .build::<ScsServerArgs>()?;
