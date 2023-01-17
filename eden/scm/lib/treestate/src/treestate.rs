@@ -903,4 +903,69 @@ mod tests {
             [p1, p3].to_vec()
         );
     }
+
+    #[test]
+    #[should_panic] // BUG
+    fn test_concurrent_writes() {
+        check_concurrent_writes(&[b"a"], &[b"b"]);
+        check_concurrent_writes(&[b"a/1"], &[b"a/2"]);
+
+        let paths1 = SAMPLE_PATHS.into_iter().take(10).collect::<Vec<_>>();
+        let paths2 = SAMPLE_PATHS.into_iter().rev().take(1).collect::<Vec<_>>();
+        check_concurrent_writes(&paths1, &paths2);
+
+        let paths2 = SAMPLE_PATHS.into_iter().rev().take(10).collect::<Vec<_>>();
+        check_concurrent_writes(&paths1, &paths2);
+    }
+
+    // Test appending paths1, and paths2 "concurrently".
+    // Paths should not overlap.
+    fn check_concurrent_writes(paths1: &[&[u8]], paths2: &[&[u8]]) {
+        let dir = tempdir().unwrap();
+        let dir_path = dir.path();
+
+        // Prepare initial state.
+        let (path, root_id) = {
+            let mut state = new_treestate(dir_path);
+            let root_id = state.flush().unwrap();
+            (dir_path.join(state.file_name().unwrap()), root_id)
+        };
+
+        // Concurrent writes.
+        let mut state1 = TreeState::open(&path, root_id, true).unwrap();
+        let mut state2 = TreeState::open(&path, root_id, true).unwrap();
+        let file_state1: FileStateV2 = Default::default();
+        let file_state2 = FileStateV2 {
+            size: file_state1.size + 1,
+            ..file_state1.clone()
+        };
+        for p in paths1 {
+            state1.insert(p, &file_state1).unwrap();
+        }
+        for p in paths2 {
+            state2.insert(p, &file_state2).unwrap();
+        }
+
+        let root_id1 = state1.flush().unwrap();
+
+        // Panic (debug build) at
+        // debug_assert!(self.position == file.seek(SeekFrom::End(0))?);
+        // in filestore.rs
+        //
+        // Might error out with (release build): "invalid store id: ..."
+        let root_id2 = state2.flush().unwrap();
+
+        // Check that things can be read properly (aka. no "invalid store id: ..." errors),
+        // and are written properly (file_state1 and file_state2).
+        let mut state1 = TreeState::open(&path, root_id1, true).unwrap();
+        let mut state2 = TreeState::open(&path, root_id2, true).unwrap();
+        for p in paths1 {
+            let got = state1.get(p).unwrap().unwrap();
+            assert_eq!(got, &file_state1);
+        }
+        for p in paths2 {
+            let got = state2.get(p).unwrap().unwrap();
+            assert_eq!(got, &file_state2);
+        }
+    }
 }

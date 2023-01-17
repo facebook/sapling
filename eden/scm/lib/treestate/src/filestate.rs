@@ -52,6 +52,7 @@ bitflags! {
     /// | removed   | either one is yes   | no         | ?       |
     /// | untracked | no       | no       | no         | no      |
     /// | ignored   | no       | no       | no         | yes     |
+    #[cfg_attr(test, derive(Default))]
     pub struct StateFlags: u16 {
         /// Exist in the first working parent.
         const EXIST_P1 = 1;
@@ -91,6 +92,7 @@ impl StateFlags {
 /// Unlike V1, the `state` field is no longer a char defined by Mercurial,
 /// but a bitflag. It also has a `copied` field.
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(test, derive(Default))]
 pub struct FileStateV2 {
     /// Mode (permissions) mask for the file.
     pub mode: u32,
