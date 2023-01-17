@@ -390,7 +390,11 @@ impl EdenApi for EagerRepo {
                     .into_iter()
                     .map(|v| HgId::from_slice(v.as_ref()).unwrap())
                     .collect();
-                let entry = CommitGraphEntry { hgid, parents };
+                let entry = CommitGraphEntry {
+                    hgid,
+                    parents,
+                    is_draft: None,
+                };
                 Ok(entry)
             })
             .map_err(map_dag_err)

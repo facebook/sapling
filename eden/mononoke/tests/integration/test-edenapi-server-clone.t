@@ -30,16 +30,21 @@ Test clone and other pull related endpoints
 
   $ hgedenapi debugapi -e commitgraph -i '["26805aba1e600a82e93661149f2313866a221a7b"]' -i '[]' --sort
   [{"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
-    "parents": [bin("112478962961147124edd43549aedd1a335e44bf")]},
+    "parents": [bin("112478962961147124edd43549aedd1a335e44bf")],
+    "is_draft": False},
    {"hgid": bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
-    "parents": []},
+    "parents": [],
+    "is_draft": False},
    {"hgid": bin("112478962961147124edd43549aedd1a335e44bf"),
-    "parents": [bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0")]}]
+    "parents": [bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0")],
+    "is_draft": False}]
   $ hgedenapi debugapi -e commitgraph -i '["26805aba1e600a82e93661149f2313866a221a7b"]' -i '["426bada5c67598ca65036d57d9e4b64b0c1ce7a0"]' --sort
   [{"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
-    "parents": [bin("112478962961147124edd43549aedd1a335e44bf")]},
+    "parents": [bin("112478962961147124edd43549aedd1a335e44bf")],
+    "is_draft": False},
    {"hgid": bin("112478962961147124edd43549aedd1a335e44bf"),
-    "parents": [bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0")]}]
+    "parents": [bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0")],
+    "is_draft": False}]
 
   $ hgedenapi debugapi -e pulllazy -i '[]' -i '["26805aba1e600a82e93661149f2313866a221a7b"]'
   {"idmap": {0: bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),

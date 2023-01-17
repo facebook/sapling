@@ -95,6 +95,17 @@ Test mutations on client 1
     "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
   $ hgedenapi debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
+Test phases from commitgraph
+  $ hgedenapi debugapi -e commitgraph -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
+  [{"hgid": bin("8b2dca0c8a726d66bf26d47835a356cc4286facd"),
+    "parents": [],
+    "is_draft": False},
+   {"hgid": bin("929f2b9071cf032d9422b3cce9773cbe1c574822"),
+    "parents": [bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")],
+    "is_draft": True},
+   {"hgid": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
+    "parents": [bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")],
+    "is_draft": True}]
   $ hgedenapi debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   [{"op": "metaedit",
     "tz": 0,

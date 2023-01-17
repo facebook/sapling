@@ -616,13 +616,14 @@ impl EdenApiHandler for GraphHandler {
             .get_graph_mapping(common, heads, false)
             .await?
             .into_iter()
-            .map(|(hgid, parents)| {
+            .map(|(hgid, (parents, is_draft))| {
                 Ok(CommitGraphEntry {
                     hgid: HgId::from(hgid.into_nodehash()),
                     parents: parents
                         .into_iter()
                         .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
                         .collect(),
+                    is_draft: Some(is_draft),
                 })
             });
         Ok(stream::iter(graph_entries).boxed())
@@ -661,13 +662,14 @@ impl EdenApiHandler for GraphHandlerV2 {
             .get_graph_mapping(common, heads, true)
             .await?
             .into_iter()
-            .map(|(hgid, parents)| {
+            .map(|(hgid, (parents, is_draft))| {
                 Ok(CommitGraphEntry {
                     hgid: HgId::from(hgid.into_nodehash()),
                     parents: parents
                         .into_iter()
                         .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
                         .collect(),
+                    is_draft: Some(is_draft),
                 })
             });
         Ok(stream::iter(graph_entries).boxed())

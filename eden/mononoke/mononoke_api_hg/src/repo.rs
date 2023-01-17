@@ -796,14 +796,14 @@ impl HgRepoContext {
         common: Vec<HgChangesetId>,
         heads: Vec<HgChangesetId>,
         use_commit_graph: bool,
-    ) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>, MononokeError> {
+    ) -> Result<HashMap<HgChangesetId, (Vec<HgChangesetId>, bool)>, MononokeError> {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
         let phases = blob_repo.phases();
         let common_set: HashSet<_> = common.iter().cloned().collect();
 
         // make sure filenodes are derived before sending
-        let (_draft_commits, missing_commits) = if use_commit_graph {
+        let (draft_commits, missing_commits) = if use_commit_graph {
             try_join!(
                 // TODO(liubovd): migrate this part
                 find_new_draft_commits_and_derive_filenodes_for_public_roots(
@@ -889,7 +889,8 @@ impl HgRepoContext {
             .map(|(hgid, csid)| (csid, hgid))
             .collect::<HashMap<_, _>>();
 
-        let mut hg_parent_mapping: HashMap<HgChangesetId, Vec<HgChangesetId>> = HashMap::new();
+        let mut hg_parent_mapping: HashMap<HgChangesetId, (Vec<HgChangesetId>, bool)> =
+            HashMap::new();
         let get_hg_id = |cs_id| {
             bonsai_hg_mapping
                 .get(cs_id)
@@ -904,7 +905,8 @@ impl HgRepoContext {
                 .map(get_hg_id)
                 .collect::<Result<Vec<HgChangesetId>, Error>>()
                 .map_err(MononokeError::from)?;
-            hg_parent_mapping.insert(hg_id, hg_parents);
+            let is_draft = draft_commits.contains(&hg_id);
+            hg_parent_mapping.insert(hg_id, (hg_parents, is_draft));
         }
         Ok(hg_parent_mapping)
     }

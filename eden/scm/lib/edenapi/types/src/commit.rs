@@ -113,6 +113,8 @@ pub struct CommitGraphEntry {
     pub hgid: HgId,
     #[id(2)]
     pub parents: Vec<HgId>,
+    #[id(3)]
+    pub is_draft: Option<bool>, // server may be able to return phases
 }
 
 #[auto_wire]
