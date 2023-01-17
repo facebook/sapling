@@ -81,12 +81,17 @@ def hasdriveletter(orig, path):
 
 def normalizepath(orig, path):
     if path:
-        for scheme in schemes:
-            if path.startswith(scheme + ":"):
-                repo = hg._peerlookup(path)
-                if isinstance(repo, ShortRepository):
-                    path = repo.resolve(path)
+        path = expandscheme(path)
     return orig(path)
+
+
+def expandscheme(path):
+    for scheme in schemes:
+        if path.startswith(scheme + ":"):
+            repo = hg._peerlookup(path)
+            if isinstance(repo, ShortRepository):
+                path = repo.resolve(path)
+    return path
 
 
 schemes = {}
@@ -112,7 +117,7 @@ def extsetup(ui):
 
 
 @command("debugexpandscheme", norepo=True)
-def expandscheme(ui, url, **opts):
+def debugexpandscheme(ui, url, **opts):
     """given a repo path, provide the scheme-expanded path"""
     repo = hg._peerlookup(url)
     if isinstance(repo, ShortRepository):
@@ -121,7 +126,7 @@ def expandscheme(ui, url, **opts):
 
 
 @command("debugexpandpaths")
-def expandschemes(ui, repo, *args, **opts):
+def debugexpandpaths(ui, repo, *args, **opts):
     """given a repo path, provide the scheme-expanded path"""
     for name, path in sorted(pycompat.iteritems(ui.paths)):
         url = path.rawloc

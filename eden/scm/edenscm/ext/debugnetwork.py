@@ -18,7 +18,8 @@
 import socket
 from typing import List, Optional, Tuple, Union
 
-from edenscm import error, hg, httpclient, httpconnection, registrar, sslutil, util
+from edenscm import error, httpclient, httpconnection, registrar, sslutil, util
+from edenscm.ext import schemes
 from edenscm.i18n import _
 
 
@@ -271,7 +272,7 @@ def debugnetwork(ui, repo, remote: str = "default", **opts) -> Optional[int]:
 
     ui.status(_("Remote name: %s\n") % remote, component="debugnetwork")
 
-    path, branches = hg.parseurl(repo.ui.expandpath(remote))
+    path = schemes.expandscheme(repo.ui.expandpath(remote))
     ui.status(_("Remote url: %s\n") % path, component="debugnetwork")
 
     url = util.url(path)
