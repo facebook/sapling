@@ -4,12 +4,26 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+
+#testcases commitgraph commitgraph_v2
+
   $ . "${TEST_FIXTURES}/library.sh"
 
 Set up local hgrc and Mononoke config.
   $ setup_common_config
   $ setup_configerator_configs
   $ cd $TESTTMP
+#if commitgraph_v2
+  $ merge_tunables <<EOF
+  > {
+  >   "killswitches_by_repo": {
+  >     "repo": {
+  >       "enable_writing_to_new_commit_graph": true
+  >     }
+  >   }
+  > }
+  > EOF
+#endif
 
 Initialize test repo.
   $ hginit_treemanifest repo-hg
@@ -59,8 +73,13 @@ Blobimport test repo.
 Start up EdenAPI server.
   $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
   $ start_and_wait_for_mononoke_server
+#if commitgraph_v2
+  $ export COMMAND_API="commitgraph2"
+#else
+  $ export COMMAND_API="commitgraph"
+#endif
 Check response.
-  $ hgedenapi debugapi -e commitgraph -i "['$H']" -i "['$B','$C']" --sort
+  $ hgedenapi debugapi -e $COMMAND_API -i "['$H']" -i "['$B','$C']" --sort
   [{"hgid": bin("49cb92066bfd0763fff729c354345650b7428554"),
     "parents": [bin("112478962961147124edd43549aedd1a335e44bf")],
     "is_draft": False},

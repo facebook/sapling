@@ -930,9 +930,10 @@ impl EdenApi for Client {
         v2: bool,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
         tracing::info!(
-            "Requesting commit graph with {} heads and {} common",
+            "Requesting commit graph {}with {} heads and {} common",
+            if v2 { "v2 " } else { "" },
             heads.len(),
-            common.len()
+            common.len(),
         );
         let url = self.build_url(if v2 {
             paths::COMMIT_GRAPH_V2
