@@ -203,7 +203,7 @@ impl StreamingCloneWarmup {
         .await?;
         let blobstore = new_memcache_blobstore(ctx.fb, blobstore, "multiplexed", "")?;
         let repo_blobstore = Arc::new(RepoBlobstore::new(
-            blobstore,
+            Arc::new(blobstore),
             None,
             config.repoid,
             MononokeScubaSampleBuilder::with_discard(),
