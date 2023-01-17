@@ -260,7 +260,7 @@ mod tests {
     use std::fs;
     use std::io::Write;
 
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     use crate::filestore::FileStore;
     use crate::store::BlockId;
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn goodpath() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn readonly() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn empty_file() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let file = fs::OpenOptions::new()
             .write(true)
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn invalid_file() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut file = fs::OpenOptions::new()
             .write(true)
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn unsupported_version() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut file = fs::OpenOptions::new()
             .write(true)
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn cache() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn invalid_store_ids() {
-        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut file = fs::OpenOptions::new()
             .write(true)

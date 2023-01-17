@@ -27,4 +27,4 @@ pretty_assertions = { version = "1.2", features = ["alloc"], default-features = 
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 rand_chacha = "0.3"
-tempdir = "0.3"
+tempfile = "3.3"

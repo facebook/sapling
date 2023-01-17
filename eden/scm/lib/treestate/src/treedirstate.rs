@@ -338,7 +338,7 @@ impl TreeDirstate {
 
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
+    use tempfile::tempdir;
 
     use crate::filestate::FileState;
     use crate::treedirstate::TreeDirstate;
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn goodpath() {
-        let dir = TempDir::new("dirstate_test").expect("create temp dir");
+        let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut ds = TreeDirstate::new();
         ds.write_full(&p)
