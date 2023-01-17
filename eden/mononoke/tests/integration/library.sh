@@ -1765,6 +1765,13 @@ function mkcommit() {
    hg ci -m "$1"
 }
 
+function mkcommitedenapi() {
+   echo "$1" > "$1"
+   hgedenapi add "$1"
+   hgedenapi ci -m "$1"
+}
+
+
 function enable_replay_verification_hook {
 
 cat >> "$TESTTMP"/replayverification.py <<EOF
