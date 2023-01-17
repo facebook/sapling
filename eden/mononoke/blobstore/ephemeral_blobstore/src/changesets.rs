@@ -163,7 +163,7 @@ impl Changesets for EphemeralChangesets {
         self.repo_id
     }
 
-    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool> {
+    async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool> {
         let parents_len = cs.parents.len();
         let parents = self.get_many(ctx, cs.parents.clone()).await?;
         if parents.len() != parents_len {
@@ -190,19 +190,17 @@ impl Changesets for EphemeralChangesets {
         Ok(result.last_insert_id().is_some())
     }
 
-    async fn get(&self, ctx: CoreContext, cs_id: ChangesetId) -> Result<Option<ChangesetEntry>> {
+    async fn get(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<ChangesetEntry>> {
         Ok(self.get_many(ctx, vec![cs_id]).await?.into_iter().next())
     }
 
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>> {
         let ephemeral = self.get_ephemeral(&ctx, &cs_ids);
-        let persistent = self
-            .persistent_changesets
-            .get_many(ctx.clone(), cs_ids.clone());
+        let persistent = self.persistent_changesets.get_many(ctx, cs_ids.clone());
         let (mut ephemeral, persistent) = try_join!(ephemeral, persistent)?;
         ephemeral.extend(persistent);
         Ok(ephemeral)
@@ -211,7 +209,7 @@ impl Changesets for EphemeralChangesets {
     /// Use caching for the full changeset ids and slower path otherwise.
     async fn get_many_by_prefix(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix> {

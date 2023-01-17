@@ -93,7 +93,7 @@ async fn get_filenode_generation(
         Some(a) => a,
         None => return Ok(None),
     };
-    let bonsai = repo.changesets().get(ctx.clone(), bcs_id).await?;
+    let bonsai = repo.changesets().get(ctx, bcs_id).await?;
     Ok(bonsai.map(|b| b.gen))
 }
 

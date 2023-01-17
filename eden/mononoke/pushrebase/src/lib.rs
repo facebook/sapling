@@ -572,13 +572,9 @@ async fn find_closest_root(
         let repo = &repo;
 
         async move {
-            let entry = repo
-                .changesets()
-                .get(ctx.clone(), *root)
-                .await?
-                .ok_or_else(|| {
-                    PushrebaseError::from(PushrebaseInternalError::RootNotFound(*root))
-                })?;
+            let entry = repo.changesets().get(ctx, *root).await?.ok_or_else(|| {
+                PushrebaseError::from(PushrebaseInternalError::RootNotFound(*root))
+            })?;
 
             Result::<_, PushrebaseError>::Ok((*root, Generation::new(entry.gen)))
         }
@@ -644,7 +640,7 @@ async fn find_closest_ancestor_root(
 
         let parents = repo
             .changesets()
-            .get(ctx.clone(), id)
+            .get(ctx, id)
             .await?
             .ok_or_else(|| format_err!("Commit {} does not exist in the repo", id))?
             .parents;

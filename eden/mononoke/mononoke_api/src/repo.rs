@@ -761,7 +761,7 @@ impl Repo {
             let parents = self
                 .blob_repo()
                 .changeset_fetcher()
-                .get_parents(ctx.clone(), cs_id)
+                .get_parents(ctx, cs_id)
                 .await?;
 
             if parents.contains(&ancestor) {
@@ -784,7 +784,7 @@ impl Repo {
     ) -> Result<Generation, Error> {
         self.blob_repo()
             .changeset_fetcher()
-            .get_generation_number(ctx.clone(), *cs_id)
+            .get_generation_number(ctx, *cs_id)
             .await
     }
 }
@@ -1083,7 +1083,7 @@ impl RepoContext {
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(
                 self.blob_repo()
                     .changesets()
-                    .get_many_by_prefix(self.ctx.clone(), prefix, MAX_LIMIT_AMBIGUOUS_IDS)
+                    .get_many_by_prefix(&self.ctx, prefix, MAX_LIMIT_AMBIGUOUS_IDS)
                     .await?,
             ),
             ChangesetPrefixSpecifier::GitSha1(prefix) => ChangesetSpecifierPrefixResolution::from(
@@ -1261,7 +1261,7 @@ impl RepoContext {
         let parents = self
             .blob_repo()
             .changesets()
-            .get_many(self.ctx.clone(), changesets)
+            .get_many(&self.ctx, changesets)
             .await?
             .into_iter()
             .map(|entry| (entry.cs_id, entry.parents))
@@ -1454,7 +1454,7 @@ impl RepoContext {
             let parents: Vec<_> = self
                 .blob_repo()
                 .changesets()
-                .get_many(self.ctx.clone(), queue.clone())
+                .get_many(&self.ctx, queue.clone())
                 .await?
                 .into_iter()
                 .flat_map(|cs_entry| cs_entry.parents)

@@ -36,7 +36,7 @@ impl Parents for FetchParents {
         let cs_id = cs_id_from_vertex_name(&name);
         let parents = self
             .changeset_fetcher
-            .get_parents(self.ctx.clone(), cs_id)
+            .get_parents(&self.ctx, cs_id)
             .await
             .map_err(BackendError::from)?;
 

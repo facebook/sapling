@@ -147,7 +147,7 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
     let parents = test
         .blobrepo
         .changeset_fetcher()
-        .get_parents(ctx.clone(), target_cs_id)
+        .get_parents(&ctx, target_cs_id)
         .await?;
     assert_eq!(parents[0], old_target_cs_id);
 

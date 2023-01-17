@@ -150,7 +150,7 @@ impl PlainCommitInfo {
         let repo_name = repo.repo_identity().name().to_string();
         let cs = repo
             .changesets()
-            .get(ctx.clone(), changeset_id)
+            .get(ctx, changeset_id)
             .await?
             .ok_or_else(|| anyhow!("Changeset not found: {}", changeset_id))?;
         let parents = cs.parents;

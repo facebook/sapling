@@ -144,28 +144,28 @@ impl Changesets for CachingChangesets {
         self.repo_id
     }
 
-    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         self.changesets.add(ctx, cs).await
     }
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
-        let ctx = (&ctx, self);
+        let ctx = (ctx, self);
         let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
         Ok(map.remove(&cs_id).map(|entry| entry.0))
     }
 
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
-        let ctx = (&ctx, self);
+        let ctx = (ctx, self);
         let res = get_or_fill_chunked(ctx, cs_ids.into_iter().collect(), 1000, 2)
             .await?
             .into_iter()
@@ -177,7 +177,7 @@ impl Changesets for CachingChangesets {
     /// Use caching for the full changeset ids and slower path otherwise.
     async fn get_many_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
@@ -296,7 +296,7 @@ impl KeyedEntityStore<ChangesetId, ChangesetEntryWrapper> for CacheRequest<'_> {
 
         let res = mapping
             .changesets
-            .get_many((*ctx).clone(), keys.into_iter().collect())
+            .get_many(ctx, keys.into_iter().collect())
             .await?;
 
         Result::<_, Error>::Ok(

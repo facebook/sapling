@@ -33,8 +33,8 @@ async fn setup_changesets(ctx: &CoreContext) -> Result<SqlChangesets, Error> {
         parents: vec![ONES_CSID],
     };
 
-    changesets.add(ctx.clone(), ones).await?;
-    changesets.add(ctx.clone(), twos).await?;
+    changesets.add(ctx, ones).await?;
+    changesets.add(ctx, twos).await?;
     Ok(changesets)
 }
 

@@ -283,7 +283,7 @@ async fn validate_build_idmap(
         let cs_id = cs_id?;
         let parents = blobrepo
             .changeset_fetcher()
-            .get_parents(ctx.clone(), cs_id)
+            .get_parents(&ctx, cs_id)
             .await?;
         for parent in parents {
             let parent_dag_id = sc.idmap.get_dag_id(&ctx, parent).await?;
@@ -297,7 +297,7 @@ async fn validate_build_idmap(
 async fn fetch_cs_entry(ctx: &CoreContext, repo: &BlobRepo, cs: &str) -> Result<ChangesetEntry> {
     let cs = resolve_cs_id(ctx, &repo, cs).await?;
     repo.changesets()
-        .get(ctx.clone(), cs)
+        .get(ctx, cs)
         .await?
         .ok_or_else(|| format_err!("can't find changeset entry for {}", cs))
 }

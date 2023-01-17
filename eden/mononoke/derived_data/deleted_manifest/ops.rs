@@ -154,7 +154,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
                 // parents for the deleted path
                 let parents = &repo
                     .changeset_fetcher()
-                    .get_parents(ctx.clone(), linknode.clone())
+                    .get_parents(&ctx, linknode.clone())
                     .await?;
 
                 // checking parent unodes

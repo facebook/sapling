@@ -549,7 +549,7 @@ async fn hg_to_bonsai_stream(
 
                 let gen_num = repo
                     .changeset_fetcher()
-                    .get_generation_number(ctx.clone(), bcs_id)
+                    .get_generation_number(ctx, bcs_id)
                     .await?;
                 Ok((bcs_id, gen_num))
             }
@@ -759,7 +759,7 @@ async fn traverse_draft_commits(
             .map(move |csid| async move {
                 let parents = repo
                     .changesets()
-                    .get(ctx.clone(), csid)
+                    .get(ctx, csid)
                     .await?
                     .ok_or_else(|| {
                         anyhow::format_err!("Commit {} does not exist in the repo", csid)

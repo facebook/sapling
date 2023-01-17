@@ -116,7 +116,7 @@ impl PublicChangesetBulkFetch {
                             .into_iter()
                             .map(|r| r.map(|((id, _), _bounds)| id))
                             .collect::<Result<Vec<_>, Error>>()?;
-                        let entries = self.changesets.get_many(ctx.clone(), ids.clone()).await?;
+                        let entries = self.changesets.get_many(ctx, ids.clone()).await?;
                         let mut entries_map: HashMap<_, _> =
                             entries.into_iter().map(|e| (e.cs_id, e)).collect();
                         let result = ids
@@ -153,10 +153,7 @@ impl PublicChangesetBulkFetch {
                             .collect::<Result<Vec<_>, Error>>()?;
                         let entries = self
                             .changesets
-                            .get_many(
-                                ctx.clone(),
-                                ids.iter().map(|(cs_id, _)| cs_id).copied().collect(),
-                            )
+                            .get_many(ctx, ids.iter().map(|(cs_id, _)| cs_id).copied().collect())
                             .await?;
                         let mut entries_map: HashMap<_, _> =
                             entries.into_iter().map(|e| (e.cs_id, e)).collect();

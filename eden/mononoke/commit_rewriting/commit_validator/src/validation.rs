@@ -210,7 +210,7 @@ impl ValidationHelper {
 
     async fn get_synced_commit(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         hash: Large<ChangesetId>,
         mapping: &SqlSyncedCommitMapping,
     ) -> Result<Option<(Small<ChangesetId>, CommitSyncConfigVersion)>, Error> {
@@ -376,7 +376,7 @@ impl ValidationHelper {
     ) -> Result<Vec<MPath>, Error> {
         let maybe_p1 = repo
             .changeset_fetcher()
-            .get_parents(ctx.clone(), cs_id.clone())
+            .get_parents(ctx, cs_id.clone())
             .await?
             .first()
             .cloned();
@@ -533,9 +533,8 @@ impl ValidationHelpers {
         let commit_sync_outcomes = try_join_all(self.helpers.iter().map(|(repo_id, helper)| {
             let mapping = &self.mapping;
             async move {
-                let maybe_synced_commit = helper
-                    .get_synced_commit(ctx.clone(), hash.clone(), mapping)
-                    .await?;
+                let maybe_synced_commit =
+                    helper.get_synced_commit(ctx, hash.clone(), mapping).await?;
 
                 Result::<_, Error>::Ok(
                     maybe_synced_commit.map(|synced_commit| (repo_id.clone(), synced_commit)),
@@ -555,7 +554,7 @@ impl ValidationHelpers {
     }
 
     async fn get_root_full_manifest_diff(
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo: &BlobRepo,
         root_mf_id: HgManifestId,
     ) -> Result<FullManifestDiff, Error> {
@@ -568,14 +567,14 @@ impl ValidationHelpers {
 
     /// Produce a full manifest diff between `cs_id` and its first parent
     async fn get_full_manifest_diff(
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo: &BlobRepo,
         cs_id: &ChangesetId,
     ) -> Result<FullManifestDiff, Error> {
-        let cs_root_mf_id_fut = fetch_root_mf_id(&ctx, repo, cs_id.clone());
+        let cs_root_mf_id_fut = fetch_root_mf_id(ctx, repo, cs_id.clone());
         let maybe_p1 = repo
             .changeset_fetcher()
-            .get_parents(ctx.clone(), cs_id.clone())
+            .get_parents(ctx, cs_id.clone())
             .await?
             .first()
             .cloned();
@@ -587,12 +586,8 @@ impl ValidationHelpers {
                     ctx.logger(),
                     "{} is a root cs. Grabbing its entire manifest", cs_id
                 );
-                return Self::get_root_full_manifest_diff(
-                    ctx.clone(),
-                    repo,
-                    cs_root_mf_id_fut.await?,
-                )
-                .await;
+                return Self::get_root_full_manifest_diff(ctx, repo, cs_root_mf_id_fut.await?)
+                    .await;
             }
         };
 
@@ -601,7 +596,7 @@ impl ValidationHelpers {
             try_join!(cs_root_mf_id_fut, p1_root_mf_id_fut)?;
 
         let r: Vec<Result<_, Error>> = p1_root_mf_id
-            .diff(ctx, repo.get_blobstore(), cs_root_mf_id)
+            .diff(ctx.clone(), repo.get_blobstore(), cs_root_mf_id)
             .filter_map(|diff| async move { diff.map(FilenodeDiff::from_diff).transpose() })
             .collect()
             .await;
@@ -611,7 +606,7 @@ impl ValidationHelpers {
 
     async fn get_large_repo_full_manifest_diff(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: &Large<ChangesetId>,
     ) -> Result<Large<FullManifestDiff>, Error> {
         Self::get_full_manifest_diff(ctx, &self.large_repo.0.blob_repo, &cs_id.0)
@@ -621,7 +616,7 @@ impl ValidationHelpers {
 
     async fn get_small_repos_full_manifest_diffs(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_cs_ids: HashMap<Small<RepositoryId>, (Small<ChangesetId>, CommitSyncConfigVersion)>,
     ) -> Result<
         HashMap<
@@ -634,22 +629,17 @@ impl ValidationHelpers {
         >,
         Error,
     > {
-        let full_manifest_diff_futures =
-            repo_cs_ids
-                .into_iter()
-                .map(|(small_repo_id, (small_cs_id, version_name))| {
-                    cloned!(ctx);
-                    async move {
-                        let small_repo = self.get_small_repo(&small_repo_id)?;
-                        let full_manifest_diff =
-                            Self::get_full_manifest_diff(ctx, &small_repo.0, &small_cs_id.0)
-                                .await?;
-                        Result::<_, Error>::Ok((
-                            small_repo_id,
-                            (small_cs_id, Small(full_manifest_diff), version_name),
-                        ))
-                    }
-                });
+        let full_manifest_diff_futures = repo_cs_ids.into_iter().map(
+            |(small_repo_id, (small_cs_id, version_name))| async move {
+                let small_repo = self.get_small_repo(&small_repo_id)?;
+                let full_manifest_diff =
+                    Self::get_full_manifest_diff(ctx, &small_repo.0, &small_cs_id.0).await?;
+                Result::<_, Error>::Ok((
+                    small_repo_id,
+                    (small_cs_id, Small(full_manifest_diff), version_name),
+                ))
+            },
+        );
 
         let full_manifest_diff: Vec<(
             Small<RepositoryId>,
@@ -941,8 +931,8 @@ pub async fn prepare_entry(
     // does not really matter as we are already executing multiple
     // entry preparations at the same time
     let (large_repo_full_manifest_diff, small_repo_full_manifest_diffs) = try_join!(
-        validation_helpers.get_large_repo_full_manifest_diff(ctx.clone(), &cs_id),
-        validation_helpers.get_small_repos_full_manifest_diffs(ctx.clone(), small_repo_cs_ids)
+        validation_helpers.get_large_repo_full_manifest_diff(ctx, &cs_id),
+        validation_helpers.get_small_repos_full_manifest_diffs(ctx, small_repo_cs_ids)
     )?;
 
     Ok(Some(EntryPreparedForValidation {
@@ -977,7 +967,7 @@ async fn validate_topological_order<'a>(
     let small_parents = small_repo
         .0
         .changeset_fetcher()
-        .get_parents(ctx.clone(), small_cs_id.0.clone())
+        .get_parents(ctx, small_cs_id.0.clone())
         .await?;
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =
@@ -1346,7 +1336,7 @@ fn report_missing(
 }
 
 async fn validate_in_a_single_repo(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     validation_helper: ValidationHelper,
     large_repo: Large<BlobRepo>,
     large_cs_id: Large<ChangesetId>,
@@ -1423,7 +1413,7 @@ pub async fn validate_entry(
                         cloned!(ctx, small_cs_id, large_cs_id, large_repo, mapping);
                         async move {
                             validate_in_a_single_repo(
-                                ctx,
+                                &ctx,
                                 validation_helper,
                                 Large(large_repo.blob_repo.clone()),
                                 large_cs_id,
@@ -1486,7 +1476,7 @@ async fn fetch_root_mf_id(
 }
 
 async fn list_all_filenode_ids(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     mf_id: HgManifestId,
 ) -> Result<PathToFileNodeIdMapping, Error> {

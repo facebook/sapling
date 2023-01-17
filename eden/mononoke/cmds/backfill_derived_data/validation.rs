@@ -353,10 +353,7 @@ async fn find_cs_and_parents_derived_data<D: BonsaiDerived>(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<(D, Vec<D>), Error> {
-    let parents = repo
-        .changeset_fetcher_arc()
-        .get_parents(ctx.clone(), cs_id)
-        .await?;
+    let parents = repo.changeset_fetcher_arc().get_parents(ctx, cs_id).await?;
 
     let derived = D::derive(ctx, repo, cs_id).await?;
     let parents = try_join_all(parents.into_iter().map(|p| async move {

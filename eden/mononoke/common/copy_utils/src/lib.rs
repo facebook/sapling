@@ -990,7 +990,7 @@ mod test {
         assert_eq!(
             target_repo
                 .changeset_fetcher()
-                .get_parents(ctx.clone(), *cs_ids.get(0).unwrap())
+                .get_parents(&ctx, *cs_ids.get(0).unwrap())
                 .await?,
             vec![target_cs_id],
         );

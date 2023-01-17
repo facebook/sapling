@@ -113,7 +113,7 @@ impl CommitGraph {
                     search_stack.push((
                         parent,
                         changeset_fetcher
-                            .get_parents(ctx.clone(), parent)
+                            .get_parents(ctx, parent)
                             .await?
                             .to_smallvec(),
                     ));
@@ -707,13 +707,13 @@ impl CommitGraph {
 impl ChangesetFetcher for CommitGraph {
     async fn get_generation_number(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation> {
         self.changeset_generation_required(&ctx, cs_id).await
     }
 
-    async fn get_parents(&self, ctx: CoreContext, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
+    async fn get_parents(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
         self.changeset_parents_required(&ctx, cs_id)
             .await
             .map(SmallVec::into_vec)

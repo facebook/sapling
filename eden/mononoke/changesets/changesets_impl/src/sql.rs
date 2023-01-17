@@ -254,7 +254,7 @@ impl Changesets for SqlChangesets {
         self.repo_id
     }
 
-    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
@@ -294,7 +294,7 @@ impl Changesets for SqlChangesets {
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         let res = self.get_many(ctx, vec![cs_id]).await?.into_iter().next();
@@ -303,7 +303,7 @@ impl Changesets for SqlChangesets {
 
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         if cs_ids.is_empty() {
@@ -345,7 +345,7 @@ impl Changesets for SqlChangesets {
 
     async fn get_many_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {

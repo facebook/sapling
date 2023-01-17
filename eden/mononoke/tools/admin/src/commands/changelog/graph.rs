@@ -94,9 +94,7 @@ pub async fn graph_changesets(
             let changeset_fetcher = &changeset_fetcher;
             async move {
                 Ok((
-                    changeset_fetcher
-                        .get_generation_number(ctx.clone(), head)
-                        .await?,
+                    changeset_fetcher.get_generation_number(ctx, head).await?,
                     head,
                 ))
             }
@@ -110,7 +108,7 @@ pub async fn graph_changesets(
         .build_box_drawing();
 
     while let Some((_, hash)) = to_visit.pop() {
-        let parents = changeset_fetcher.get_parents(ctx.clone(), hash).await?;
+        let parents = changeset_fetcher.get_parents(ctx, hash).await?;
         let current_distance = *minimum_distance.get(&hash).unwrap();
 
         if current_distance > graph_args.limit {
@@ -147,7 +145,7 @@ pub async fn graph_changesets(
                 }
             } else {
                 let parent_generation = changeset_fetcher
-                    .get_generation_number(ctx.clone(), parent_id)
+                    .get_generation_number(ctx, parent_id)
                     .await?;
 
                 minimum_distance.insert(parent_id, current_distance + 1);

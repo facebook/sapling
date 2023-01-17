@@ -338,7 +338,7 @@ impl SegmentedChangelogTailer {
                 .try_fold(0, {
                     let fetcher = &self.changeset_fetcher;
                     move |max, cs_id| async move {
-                        let gen = fetcher.get_generation_number(ctx.clone(), *cs_id).await?;
+                        let gen = fetcher.get_generation_number(ctx, *cs_id).await?;
                         Ok(max.max(gen.value()))
                     }
                 })
@@ -352,7 +352,7 @@ impl SegmentedChangelogTailer {
             .try_fold(Generation::max_gen().value(), {
                 let fetcher = &self.changeset_fetcher;
                 move |min, cs_id| async move {
-                    let gen = fetcher.get_generation_number(ctx.clone(), cs_id).await?;
+                    let gen = fetcher.get_generation_number(ctx, cs_id).await?;
                     Ok(min.min(gen.value()))
                 }
             })

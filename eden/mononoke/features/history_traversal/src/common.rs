@@ -56,7 +56,7 @@ pub(crate) async fn find_possible_mutable_ancestors(
                         // by generation and consider "most recent" candidate first
                         let cs_gen = repo
                             .changeset_fetcher()
-                            .get_generation_number(ctx.clone(), mutated_at)
+                            .get_generation_number(ctx, mutated_at)
                             .await?;
                         Ok(Some((cs_gen, mutated_at)))
                     } else {

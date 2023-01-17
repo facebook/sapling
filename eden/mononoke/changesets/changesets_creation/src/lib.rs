@@ -86,7 +86,7 @@ pub async fn save_changesets(
                 cs_id: bcs_id,
                 parents: bcs.parents().into_iter().collect(),
             };
-            bonsai_complete_futs.push(complete_changesets.add(ctx.clone(), completion_record));
+            bonsai_complete_futs.push(complete_changesets.add(ctx, completion_record));
         }
     }
 

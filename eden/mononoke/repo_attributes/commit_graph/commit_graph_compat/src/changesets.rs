@@ -75,8 +75,8 @@ impl Changesets for ChangesetsCommitGraphCompat {
         self.changesets.repo_id()
     }
 
-    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
-        let added_to_changesets = self.changesets.add(ctx.clone(), cs.clone()).await?;
+    async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+        let added_to_changesets = self.changesets.add(ctx, cs.clone()).await?;
 
         if tunables()
             .get_by_repo_enable_writing_to_new_commit_graph(&self.repo_name)
@@ -133,7 +133,7 @@ impl Changesets for ChangesetsCommitGraphCompat {
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         self.changesets.get(ctx, cs_id).await
@@ -141,7 +141,7 @@ impl Changesets for ChangesetsCommitGraphCompat {
 
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         self.changesets.get_many(ctx, cs_ids).await
@@ -149,7 +149,7 @@ impl Changesets for ChangesetsCommitGraphCompat {
 
     async fn get_many_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {

@@ -36,7 +36,7 @@ impl TestChangesetFetcher {
 impl ChangesetFetcher for TestChangesetFetcher {
     async fn get_generation_number(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error> {
         self.repo
@@ -47,7 +47,7 @@ impl ChangesetFetcher for TestChangesetFetcher {
 
     async fn get_parents(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
         self.repo.changeset_fetcher().get_parents(ctx, cs_id).await
@@ -66,12 +66,8 @@ pub async fn get_single_bonsai_streams(
     let mut ret = vec![];
 
     for hash in hashes {
-        let stream = single_changeset_id(
-            ctx.clone(),
-            string_to_bonsai(ctx.fb, &repo.clone(), hash).await,
-            repo,
-        )
-        .boxify();
+        let bonsai = string_to_bonsai(ctx.fb, repo, hash).await;
+        let stream = single_changeset_id(ctx.clone(), bonsai, repo).boxify();
         ret.push(stream)
     }
 

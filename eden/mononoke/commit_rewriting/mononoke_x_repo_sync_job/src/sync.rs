@@ -499,12 +499,8 @@ async fn validate_if_new_repo_merge(
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let p1gen = repo
-        .changeset_fetcher()
-        .get_generation_number(ctx.clone(), p1);
-    let p2gen = repo
-        .changeset_fetcher()
-        .get_generation_number(ctx.clone(), p2);
+    let p1gen = repo.changeset_fetcher().get_generation_number(ctx, p1);
+    let p2gen = repo.changeset_fetcher().get_generation_number(ctx, p2);
     let (p1gen, p2gen) = try_join!(p1gen, p2gen)?;
     // FIXME: this code has an assumption that parent with a smaller generation number is a
     // parent that introduces a new repo. This is usually the case, however it might not be true

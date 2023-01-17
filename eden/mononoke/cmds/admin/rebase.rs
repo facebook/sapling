@@ -147,7 +147,7 @@ pub async fn subcommand_rebase<'a>(
     let csids = revset::RangeNodeStream::new(ctx.clone(), cs_fetcher.clone(), ancestor, descendant)
         .compat()
         .map_ok(|csid| async move {
-            let parents = cs_fetcher.get_parents(ctx.clone(), csid).await?;
+            let parents = cs_fetcher.get_parents(ctx, csid).await?;
             if parents.len() > 1 {
                 return Err(anyhow!("rebasing stack with merges is not supported"));
             }

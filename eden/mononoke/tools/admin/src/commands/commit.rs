@@ -148,10 +148,7 @@ async fn resolve_stack(
         revset::RangeNodeStream::new(ctx.clone(), repo.changeset_fetcher_arc(), bottom, top)
             .compat()
             .map_ok(|csid| async move {
-                let parents = repo
-                    .changeset_fetcher()
-                    .get_parents(ctx.clone(), csid)
-                    .await?;
+                let parents = repo.changeset_fetcher().get_parents(ctx, csid).await?;
                 if parents.len() > 1 {
                     bail!("rebasing stacks with merges is not supported");
                 }

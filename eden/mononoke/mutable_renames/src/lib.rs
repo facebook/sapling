@@ -181,10 +181,8 @@ impl MutableRenames {
         // descendant of its dst. If so, we reject this as we cannot sanely
         // handle cycles in history
         for (src, dst) in renames.iter().map(|mre| (mre.src_cs_id, mre.dst_cs_id)) {
-            let (src_entry, dst_entry) = try_join!(
-                changesets.get(ctx.clone(), src),
-                changesets.get(ctx.clone(), dst)
-            )?;
+            let (src_entry, dst_entry) =
+                try_join!(changesets.get(ctx, src), changesets.get(ctx, dst))?;
             let src_entry = src_entry.ok_or_else(|| anyhow!("Commit {} does not exist", src))?;
             let dst_entry = dst_entry.ok_or_else(|| anyhow!("Commit {} does not exist", dst))?;
             if src_entry.gen >= dst_entry.gen {

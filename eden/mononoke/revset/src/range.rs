@@ -63,7 +63,7 @@ fn make_pending(
     {
         cloned!(ctx, changeset_fetcher);
         let child_hash = child.hash;
-        async move { changeset_fetcher.get_parents(ctx, child_hash).await }
+        async move { changeset_fetcher.get_parents(&ctx, child_hash).await }
     }
     .boxed()
     .compat()
@@ -76,7 +76,7 @@ fn make_pending(
             cloned!(ctx, changeset_fetcher, parent_hash);
             async move {
                 changeset_fetcher
-                    .get_generation_number(ctx, parent_hash)
+                    .get_generation_number(&ctx, parent_hash)
                     .await
             }
         }
@@ -108,7 +108,7 @@ impl RangeNodeStream {
                 cloned!(ctx, changeset_fetcher);
                 async move {
                     changeset_fetcher
-                        .get_generation_number(ctx, start_node)
+                        .get_generation_number(&ctx, start_node)
                         .await
                 }
             }
@@ -121,7 +121,11 @@ impl RangeNodeStream {
 
         let pending_nodes = {
             cloned!(ctx, changeset_fetcher);
-            async move { changeset_fetcher.get_generation_number(ctx, end_node).await }
+            async move {
+                changeset_fetcher
+                    .get_generation_number(&ctx, end_node)
+                    .await
+            }
         }
         .boxed()
         .compat()
@@ -305,7 +309,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
@@ -333,7 +337,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
@@ -358,7 +362,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![string_to_bonsai(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await],
             nodestream,
@@ -380,7 +384,7 @@ mod test {
         )
         .boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -397,7 +401,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
@@ -423,7 +427,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(&ctx, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,

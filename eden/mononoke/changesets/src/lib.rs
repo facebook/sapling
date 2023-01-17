@@ -44,31 +44,31 @@ pub trait Changesets: Send + Sync {
 
     /// Add a new entry to the changesets table. Returns true if new changeset was inserted,
     /// returns false if the same changeset has already existed.
-    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error>;
+    async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error>;
 
     /// Retrieve the row specified by this commit, if available.
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error>;
 
     /// Return whether a changeset is stored in the backend
     async fn exists(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool, Error> {
-        Ok(self.get(ctx.clone(), cs_id).await?.is_some())
+        Ok(self.get(ctx, cs_id).await?.is_some())
     }
 
     /// Retrieve the rows for all the commits if available
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error>;
 
     /// Retrieve the rows for all the commits with the given prefix up to the given limit
     async fn get_many_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error>;

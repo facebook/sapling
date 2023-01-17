@@ -46,7 +46,7 @@ impl Changesets for MicrowaveChangesets {
         self.repo_id
     }
 
-    async fn add(&self, _ctx: CoreContext, _cs: ChangesetInsert) -> Result<bool, Error> {
+    async fn add(&self, _ctx: &CoreContext, _cs: ChangesetInsert) -> Result<bool, Error> {
         // See rationale in filenodes.rs for why we error out on unexpected calls under
         // MicrowaveFilenodes.
         unimplemented!(
@@ -57,7 +57,7 @@ impl Changesets for MicrowaveChangesets {
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         cloned!(self.inner, mut self.recorder);
@@ -75,7 +75,7 @@ impl Changesets for MicrowaveChangesets {
 
     async fn get_many(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         unimplemented!(
@@ -86,7 +86,7 @@ impl Changesets for MicrowaveChangesets {
 
     async fn get_many_by_prefix(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {

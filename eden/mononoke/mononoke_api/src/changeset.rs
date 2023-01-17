@@ -621,7 +621,7 @@ impl ChangesetContext {
             self.repo
                 .blob_repo()
                 .changesets()
-                .get(self.ctx().clone(), self.id)
+                .get(self.ctx(), self.id)
                 .await?
                 .ok_or_else(|| {
                     MononokeError::NotAvailable(format!(
@@ -1418,7 +1418,7 @@ impl ChangesetContext {
                             .repo()
                             .blob_repo()
                             .changeset_fetcher()
-                            .get_parents(self.ctx().clone(), changeset_id)
+                            .get_parents(self.ctx(), changeset_id)
                             .await?;
                         if parents.len() > 1 {
                             if let Some(ancestor) = descendants_of.as_ref() {

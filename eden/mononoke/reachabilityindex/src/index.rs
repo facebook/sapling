@@ -85,9 +85,7 @@ impl NodeFrontier {
         changeset_fetcher: ArcChangesetFetcher,
         node: ChangesetId,
     ) -> Result<Self, Error> {
-        let gen = changeset_fetcher
-            .get_generation_number(ctx.clone(), node)
-            .await?;
+        let gen = changeset_fetcher.get_generation_number(ctx, node).await?;
         Ok(Self::new(hashmap! {gen => hashset!{node}}))
     }
 

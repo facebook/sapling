@@ -950,7 +950,7 @@ pub fn find_underived_many(
                     // all derived data has already been derived
                     Ok::<_, Error>((None, Vec::new()))
                 } else {
-                    let parents = changeset_fetcher.get_parents(ctx.clone(), csid).await?;
+                    let parents = changeset_fetcher.get_parents(&ctx, csid).await?;
                     let dependencies: Vec<_> = parents
                         .iter()
                         .copied()

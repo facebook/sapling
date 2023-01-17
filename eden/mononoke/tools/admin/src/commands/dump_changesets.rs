@@ -147,7 +147,7 @@ impl Format {
                 .buffered(500)
                 .try_collect()
                 .await?;
-                repo.changesets().get_many(ctx.clone(), ids).await
+                repo.changesets().get_many(ctx, ids).await
             }
         }
     }

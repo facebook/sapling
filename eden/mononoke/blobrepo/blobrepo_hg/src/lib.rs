@@ -207,7 +207,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
 
                 let existing: HashSet<_> = self
                     .changesets()
-                    .get_many(ctx.clone(), notfound.clone())
+                    .get_many(&ctx, notfound.clone())
                     .await?
                     .into_iter()
                     .map(|entry| entry.cs_id)
@@ -277,7 +277,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             .await?;
         match csid {
             Some(bonsai) => {
-                let res = self.changesets().get(ctx, bonsai).await?;
+                let res = self.changesets().get(&ctx, bonsai).await?;
                 Ok(res.is_some())
             }
             None => Ok(false),
@@ -302,7 +302,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
 
         let parents = self
             .changesets()
-            .get(ctx.clone(), csid)
+            .get(&ctx, csid)
             .await?
             .ok_or(ErrorKind::BonsaiNotFound(csid))?
             .parents

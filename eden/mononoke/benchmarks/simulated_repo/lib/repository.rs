@@ -452,14 +452,14 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
         self.inner.repo_id()
     }
 
-    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         delay(self.put_dist).await;
         self.inner.add(ctx, cs).await
     }
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         delay(self.get_dist).await;
@@ -468,7 +468,7 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
 
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         delay(self.get_dist).await;
@@ -477,7 +477,7 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
 
     async fn get_many_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {

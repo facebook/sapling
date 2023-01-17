@@ -527,10 +527,7 @@ pub async fn find_draft_ancestors(
         }
         drafts.push(cs_id);
 
-        let parents = repo
-            .changeset_fetcher()
-            .get_parents(ctx.clone(), cs_id)
-            .await?;
+        let parents = repo.changeset_fetcher().get_parents(ctx, cs_id).await?;
         for p in parents {
             if visited.insert(p) {
                 queue.push_back(p);

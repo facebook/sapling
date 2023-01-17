@@ -188,7 +188,7 @@ struct InMemoryChangesetFetcher {
 impl ChangesetFetcher for InMemoryChangesetFetcher {
     async fn get_generation_number(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error> {
         match self.fetched_changesets.get(&cs_id) {
@@ -199,7 +199,7 @@ impl ChangesetFetcher for InMemoryChangesetFetcher {
 
     async fn get_parents(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
         match self.fetched_changesets.get(&cs_id) {

@@ -30,7 +30,7 @@ pub(super) async fn backfill_one(
 ) -> Result<()> {
     let changeset_fetcher = repo.changeset_fetcher_arc();
     let parents = changeset_fetcher
-        .get_parents(ctx.clone(), args.commit_id)
+        .get_parents(ctx, args.commit_id)
         .await?
         .to_smallvec();
 

@@ -506,7 +506,7 @@ async fn maybe_update_highest_imported_generation_number(
         .get_counter(ctx, blobimport_lib::HIGHEST_IMPORTED_GEN_NUM);
     let new_gen_num = blobrepo
         .changeset_fetcher()
-        .get_generation_number(ctx.clone(), latest_imported_cs_id);
+        .get_generation_number(ctx, latest_imported_cs_id);
     let (maybe_highest_imported_gen_num, new_gen_num) =
         try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
 

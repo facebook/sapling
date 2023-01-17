@@ -85,11 +85,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         .await?;
     let all_commits = repo
         .changesets()
-        .get_many_by_prefix(
-            ctx.clone(),
-            ChangesetIdPrefix::from_bytes("").unwrap(),
-            1000,
-        )
+        .get_many_by_prefix(ctx, ChangesetIdPrefix::from_bytes("").unwrap(), 1000)
         .await?;
     let all_commits = match all_commits {
         ChangesetIdsResolvedFromPrefix::Multiple(all_commits) => all_commits,

@@ -193,7 +193,7 @@ mod test {
         let nodestream =
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![head_csid.clone()], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![head_csid.clone()], nodestream).await;
     }
 
     #[fbinit::test]
@@ -251,13 +251,7 @@ mod test {
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
         // But, once I hit the asserts, I expect them in generation order.
-        assert_changesets_sequence(
-            ctx.clone(),
-            &repo,
-            vec![bcs_3c1, bcs_a947, bcs_d0a],
-            nodestream,
-        )
-        .await;
+        assert_changesets_sequence(&ctx, &repo, vec![bcs_3c1, bcs_a947, bcs_d0a], nodestream).await;
     }
 
     #[fbinit::test]
@@ -271,7 +265,7 @@ mod test {
         let inputs: Vec<BonsaiNodeStream> = vec![];
         let nodestream =
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
-        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -302,13 +296,7 @@ mod test {
         let nodestream =
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(
-            ctx.clone(),
-            &repo,
-            vec![bcs_3c1, bcs_a947, bcs_d0a],
-            nodestream,
-        )
-        .await;
+        assert_changesets_sequence(&ctx, &repo, vec![bcs_3c1, bcs_a947, bcs_d0a], nodestream).await;
     }
 
     #[fbinit::test]
@@ -347,7 +335,7 @@ mod test {
             .collect();
         let nodestream =
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
-        assert_changesets_sequence(ctx.clone(), &repo, nodes, nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, nodes, nodestream).await;
     }
 
     #[fbinit::test]
@@ -374,13 +362,8 @@ mod test {
         let nodestream =
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(
-            ctx.clone(),
-            &repo,
-            vec![cs_5, cs_4, cs_3, cs_1, cs_2],
-            nodestream,
-        )
-        .await;
+        assert_changesets_sequence(&ctx, &repo, vec![cs_5, cs_4, cs_3, cs_1, cs_2], nodestream)
+            .await;
     }
 
     #[fbinit::test]
@@ -407,7 +390,7 @@ mod test {
             UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "49f53ab171171b3180e125b918bd1cf0af7e5449").await,

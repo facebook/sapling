@@ -218,7 +218,7 @@ async fn topo_sort(
     let cs_fetcher = &repo.changeset_fetcher_arc();
     let mut csids_with_gen_num = stream::iter(csids)
         .map(|cs_id| async move {
-            let gen_num = cs_fetcher.get_generation_number(ctx.clone(), cs_id).await?;
+            let gen_num = cs_fetcher.get_generation_number(ctx, cs_id).await?;
             Result::<_, Error>::Ok((cs_id, gen_num))
         })
         .buffer_unordered(100)

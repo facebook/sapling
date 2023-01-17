@@ -47,11 +47,11 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
         self.repo_id
     }
 
-    async fn add(&self, ctx: CoreContext, ci: ChangesetInsert) -> Result<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, ci: ChangesetInsert) -> Result<bool, Error> {
         let ChangesetInsert { cs_id, parents } = ci;
 
-        let cs = self.get(ctx.clone(), cs_id);
-        let parent_css = self.get_many(ctx.clone(), parents.clone());
+        let cs = self.get(ctx, cs_id);
+        let parent_css = self.get_many(ctx, parents.clone());
         let (cs, parent_css) = future::try_join(cs, parent_css).await?;
 
         if cs.is_some() {
@@ -74,7 +74,7 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
 
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
         match self.cache.with(|cache| cache.get(&cs_id).cloned()) {
@@ -85,7 +85,7 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
 
     async fn get_many(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
         let mut from_cache = vec![];
@@ -105,7 +105,7 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
 
     async fn get_many_by_prefix(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {

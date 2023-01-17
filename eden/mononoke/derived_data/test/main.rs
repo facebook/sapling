@@ -94,7 +94,7 @@ async fn derive_for_master(
         .expect("master should be set");
     let expected = repo
         .changesets()
-        .get(ctx.clone(), master)
+        .get(ctx, master)
         .await?
         .expect("changeset should exist")
         .gen;
@@ -172,7 +172,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
         .expect("master should be set");
     let master_anc1 = repo
         .changesets()
-        .get(ctx.clone(), master)
+        .get(&ctx, master)
         .await?
         .expect("changeset should exist")
         .parents
@@ -181,7 +181,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
         .clone();
     let master_anc2 = repo
         .changesets()
-        .get(ctx.clone(), master_anc1)
+        .get(&ctx, master_anc1)
         .await?
         .expect("changeset should exist")
         .parents
@@ -271,7 +271,7 @@ async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
 
     let expected = repo
         .changesets()
-        .get(ctx.clone(), master)
+        .get(&ctx, master)
         .await?
         .expect("changeset should exist")
         .gen;
@@ -347,7 +347,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
         .await?;
     let expected = repo
         .changesets()
-        .get(ctx.clone(), master)
+        .get(&ctx, master)
         .await?
         .expect("changeset should exist")
         .gen;

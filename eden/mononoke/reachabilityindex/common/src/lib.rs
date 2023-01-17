@@ -24,7 +24,7 @@ pub async fn fetch_parents_and_generations(
     cs_fetcher: &ArcChangesetFetcher,
     cs_id: ChangesetId,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
-    let parents = cs_fetcher.get_parents(ctx.clone(), cs_id).await?;
+    let parents = cs_fetcher.get_parents(ctx, cs_id).await?;
     fetch_generations(ctx, cs_fetcher, parents).await
 }
 
@@ -52,9 +52,7 @@ pub async fn fetch_generation(
     changeset_fetcher: &ArcChangesetFetcher,
     node: ChangesetId,
 ) -> Result<Generation, Error> {
-    changeset_fetcher
-        .get_generation_number(ctx.clone(), node)
-        .await
+    changeset_fetcher.get_generation_number(ctx, node).await
 }
 
 /// Confirm whether or not a node with the given hash exists in the repo.
@@ -65,7 +63,7 @@ pub async fn check_if_node_exists(
     node: ChangesetId,
 ) -> Result<(), Error> {
     changeset_fetcher
-        .get_generation_number(ctx.clone(), node)
+        .get_generation_number(ctx, node)
         .await
         .map(|_| ())
         .map_err(|err| ErrorKind::NodeNotFound(format!("{}", err)).into())
@@ -90,7 +88,7 @@ pub async fn get_parents(
     changeset_fetcher: &ArcChangesetFetcher,
     node: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
-    changeset_fetcher.get_parents(ctx.clone(), node).await
+    changeset_fetcher.get_parents(ctx, node).await
 }
 
 // Take ownership of two sets, the current 'layer' of the bfs, and all nodes seen until then.

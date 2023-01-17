@@ -289,8 +289,8 @@ pub async fn mark_reachable_as_public(
         }
 
         let (generation, parents) = try_join(
-            changeset_fetcher.get_generation_number(ctx.clone(), cs),
-            changeset_fetcher.get_parents(ctx.clone(), cs),
+            changeset_fetcher.get_generation_number(ctx, cs),
+            changeset_fetcher.get_parents(ctx, cs),
         )
         .await?;
 

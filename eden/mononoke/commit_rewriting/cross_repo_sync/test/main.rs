@@ -444,7 +444,7 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(
         megarepo
             .changeset_fetcher()
-            .get_parents(ctx.clone(), megarepo_second_bcs_id.unwrap())
+            .get_parents(&ctx, megarepo_second_bcs_id.unwrap())
             .await?,
         vec![megarepo_base_bcs_id]
     );

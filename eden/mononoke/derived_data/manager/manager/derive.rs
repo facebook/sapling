@@ -281,7 +281,7 @@ impl DerivedDataManager {
                             } else {
                                 let parents = self
                                     .changesets()
-                                    .get(ctx.clone(), csid)
+                                    .get(ctx, csid)
                                     .await?
                                     .ok_or_else(|| anyhow!("changeset not found: {}", csid))?
                                     .parents;

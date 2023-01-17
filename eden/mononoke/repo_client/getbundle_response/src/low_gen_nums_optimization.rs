@@ -168,10 +168,10 @@ pub(crate) async fn compute_partial_getbundle(
         partial.push(cs_id);
         new_heads.remove(&cs_id);
 
-        let parents = changeset_fetcher.get_parents(ctx.clone(), cs_id).await?;
+        let parents = changeset_fetcher.get_parents(ctx, cs_id).await?;
         let parents = try_join_all(parents.into_iter().map(|p| {
             changeset_fetcher
-                .get_generation_number(ctx.clone(), p)
+                .get_generation_number(ctx, p)
                 .map_ok(move |gen_num| (p, gen_num))
         }))
         .await?;
@@ -278,9 +278,7 @@ pub(crate) async fn low_gen_num_optimization(
     let mut nodes_to_send: Vec<_> = stream::iter(nodes_to_send)
         .map({
             move |bcs_id| async move {
-                let gen_num = changeset_fetcher
-                    .get_generation_number(ctx.clone(), bcs_id)
-                    .await?;
+                let gen_num = changeset_fetcher.get_generation_number(ctx, bcs_id).await?;
                 Result::<_, Error>::Ok((bcs_id, gen_num))
             }
         })

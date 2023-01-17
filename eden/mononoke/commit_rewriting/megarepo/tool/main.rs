@@ -155,7 +155,7 @@ use crate::cli::WAIT_SECS;
 use crate::merging::perform_merge;
 
 async fn run_move<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
@@ -218,7 +218,7 @@ async fn run_move<'a>(
 }
 
 async fn run_merge<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -252,7 +252,7 @@ async fn run_merge<'a>(
 }
 
 async fn run_sync_diamond_merge<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -304,7 +304,7 @@ async fn run_sync_diamond_merge<'a>(
 }
 
 async fn run_pre_merge_delete<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -374,7 +374,7 @@ async fn run_pre_merge_delete<'a>(
 }
 
 async fn run_history_fixup_delete<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -449,7 +449,7 @@ async fn run_history_fixup_delete<'a>(
 }
 
 async fn run_gradual_delete<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -509,7 +509,7 @@ async fn run_gradual_delete<'a>(
 }
 
 async fn run_bonsai_merge<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -540,7 +540,7 @@ async fn run_bonsai_merge<'a>(
 }
 
 async fn run_gradual_merge<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -583,7 +583,7 @@ async fn run_gradual_merge<'a>(
 }
 
 async fn run_gradual_merge_progress<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -621,7 +621,7 @@ async fn run_gradual_merge_progress<'a>(
 }
 
 async fn run_manual_commit_sync<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -668,7 +668,7 @@ async fn run_manual_commit_sync<'a>(
 }
 
 async fn run_check_push_redirection_prereqs<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -736,7 +736,7 @@ async fn run_check_push_redirection_prereqs<'a>(
 }
 
 async fn run_catchup_delete_head<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -784,7 +784,7 @@ async fn run_catchup_delete_head<'a>(
 }
 
 async fn run_mover<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -800,7 +800,7 @@ async fn run_mover<'a>(
 }
 
 async fn run_catchup_validate<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -831,7 +831,7 @@ async fn run_catchup_validate<'a>(
 }
 
 async fn run_mark_not_synced<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -918,7 +918,7 @@ async fn run_mark_not_synced<'a>(
 }
 
 async fn run_backfill_noop_mapping<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -993,7 +993,7 @@ async fn run_backfill_noop_mapping<'a>(
 }
 
 async fn run_diff_mapping_versions<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -1169,7 +1169,7 @@ async fn process_stream_and_wait_for_replication<'a>(
 }
 
 async fn run_sync_commit_and_ancestors<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -1215,7 +1215,7 @@ fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
 }
 
 async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -1310,6 +1310,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = matches.logger();
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = &ctx;
 
     let subcommand_future = async {
         match matches.subcommand() {

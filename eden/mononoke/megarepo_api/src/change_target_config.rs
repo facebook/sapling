@@ -386,7 +386,7 @@ impl<'a> ChangeTargetConfig<'a> {
         let parents = repo
             .blob_repo()
             .changeset_fetcher()
-            .get_parents(ctx.clone(), actual_target_location)
+            .get_parents(ctx, actual_target_location)
             .await?;
         if parents.get(0) != Some(&expected_target_location) {
             return Err(MegarepoError::request(anyhow!(

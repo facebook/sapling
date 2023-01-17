@@ -36,7 +36,7 @@ pub fn add_generations_by_bonsai(
             cloned!(ctx, changeset_fetcher);
             async move {
                 changeset_fetcher
-                    .get_generation_number(ctx, changesetid)
+                    .get_generation_number(&ctx, changesetid)
                     .await
             }
             .boxed()

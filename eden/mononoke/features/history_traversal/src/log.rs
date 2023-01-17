@@ -228,9 +228,7 @@ impl TraversalOrder {
     ) -> Result<Vec<(Generation, Reverse<ParentOrder>, CsAndPath)>, Error> {
         let cs_ids = try_join_all(cs_ids.iter().enumerate().map(
             |(num, (cs_id, path))| async move {
-                let gen_num = changeset_fetcher
-                    .get_generation_number(ctx.clone(), *cs_id)
-                    .await?;
+                let gen_num = changeset_fetcher.get_generation_number(ctx, *cs_id).await?;
                 Result::<_, Error>::Ok((gen_num, Reverse(ParentOrder(num)), (*cs_id, path.clone())))
             },
         ))
@@ -288,9 +286,9 @@ async fn resolve_path_state(
 /// Because if history contains merges and parents for more than one node on the current depth
 /// haven't been fetched yet, we can fetch them at the same time using FuturesUnordered.
 /// ```
-pub async fn list_file_history(
-    ctx: CoreContext,
-    repo: &impl Repo,
+pub async fn list_file_history<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a impl Repo,
     path: Option<MPath>,
     changeset_id: ChangesetId,
     mut visitor: impl Visitor,
@@ -298,7 +296,7 @@ pub async fn list_file_history(
     mut follow_mutable_renames: FollowMutableFileHistory,
     mutable_renames: Arc<MutableRenames>,
     mut order: TraversalOrder,
-) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + '_, FastlogError> {
+) -> Result<impl NewStream<Item = Result<ChangesetId, Error>> + 'a, FastlogError> {
     if tunables::tunables()
         .get_by_repo_fastlog_disable_mutable_renames(repo.repo_identity().name())
         .unwrap_or(false)
@@ -313,19 +311,19 @@ pub async fn list_file_history(
 
     // The first step to find the last changeset that affected the given path.
     // get unode entry
-    let resolved = resolve_path_state(&ctx, repo, changeset_id, &path).await?;
+    let resolved = resolve_path_state(ctx, repo, changeset_id, &path).await?;
     // there might be more than one unode entry: if the given path was
     // deleted in several different branches, we have to gather history
     // from all of them
     let last_changesets = match resolved {
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
-            process_deletion_nodes(&ctx, repo, &mut history_graph, deletion_nodes, path.clone())
+            process_deletion_nodes(ctx, repo, &mut history_graph, deletion_nodes, path.clone())
                 .await?
         }
         Some(PathState::Exists(unode_entry)) => {
             fetch_linknodes_and_update_graph(
-                &ctx,
+                ctx,
                 repo,
                 vec![unode_entry],
                 &mut history_graph,
@@ -344,14 +342,14 @@ pub async fn list_file_history(
             .any(|x| x == &(changeset_id, path.clone()))
     {
         let possible_mutable_ancestors_for_path = find_possible_mutable_ancestors(
-            &ctx,
+            ctx,
             repo,
             path.as_ref(),
             &mut possible_mutable_ancestors_cache,
         )
         .await?;
         let (replacements, insertions) = replace_ancestors_with_mutable_ancestors(
-            &ctx,
+            ctx,
             repo,
             &(changeset_id, path),
             last_changesets,
@@ -365,7 +363,7 @@ pub async fn list_file_history(
     };
 
     visit(
-        &ctx,
+        ctx,
         repo,
         &mut visitor,
         None,
@@ -388,10 +386,10 @@ pub async fn list_file_history(
         },
         // unfold
         move |state| {
-            cloned!(ctx, mutable_renames);
+            cloned!(mutable_renames);
             async move {
                 do_history_unfold(
-                    ctx.clone(),
+                    ctx,
                     repo,
                     state,
                     history_across_deletions,
@@ -580,7 +578,7 @@ struct TraversalState<V: Visitor> {
 }
 
 async fn do_history_unfold<V>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &impl Repo,
     state: TraversalState<V>,
     history_across_deletions: HistoryAcrossDeletions,
@@ -601,7 +599,7 @@ where
 
     if let Some(ref prefetch) = prefetch {
         prefetch_and_process_history(
-            &ctx,
+            ctx,
             repo,
             &mut visitor,
             prefetch.clone(),
@@ -630,7 +628,7 @@ where
                     parents.clone()
                 } else {
                     try_continue_traversal_when_no_parents(
-                        &ctx,
+                        ctx,
                         repo,
                         cs_and_path.clone(),
                         history_across_deletions,
@@ -642,7 +640,7 @@ where
                 };
 
                 visit(
-                    &ctx,
+                    ctx,
                     repo,
                     &mut visitor,
                     Some(cs_and_path),
@@ -748,7 +746,7 @@ pub(crate) async fn _find_possible_mutable_ancestors(
                     // by generation and consider "most recent" candidate first
                     let cs_gen = repo
                         .changeset_fetcher()
-                        .get_generation_number(ctx.clone(), mutated_at)
+                        .get_generation_number(ctx, mutated_at)
                         .await?;
                     Ok::<_, Error>((cs_gen, mutated_at))
                 }
@@ -952,8 +950,8 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
     let mutable_renames = repo.mutable_renames();
     let changeset_fetcher = repo.changeset_fetcher();
     let (current_gen, immutable_ancestor_gen) = try_join(
-        changeset_fetcher.get_generation_number(ctx.clone(), *cs_id),
-        changeset_fetcher.get_generation_number(ctx.clone(), *immutable_ancestor_cs_id),
+        changeset_fetcher.get_generation_number(ctx, *cs_id),
+        changeset_fetcher.get_generation_number(ctx, *immutable_ancestor_cs_id),
     )
     .await?;
     // For each possible mutable rename destination we have to check:
@@ -1060,7 +1058,7 @@ async fn find_where_file_was_deleted(
 ) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
     let parents = repo
         .changeset_fetcher()
-        .get_parents(ctx.clone(), commit_no_more_history)
+        .get_parents(ctx, commit_no_more_history)
         .await?;
 
     let resolved_path_states = try_join_all(
@@ -1269,6 +1267,8 @@ mod test {
         let mutable_renames = repo.mutable_renames_arc();
         let blob_repo = repo.as_blob_repo();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
+        let ctx = &ctx;
 
         let filename = "1";
 
@@ -1278,7 +1278,7 @@ mod test {
             let file = if i % 2 == 1 { "2" } else { filename };
             let content = format!("{}", i);
 
-            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+            let bcs_id = CreateCommitContext::new(ctx, &repo, parents)
                 .add_file(file, content)
                 .commit()
                 .await?;
@@ -1290,7 +1290,7 @@ mod test {
 
         let top = parents.get(0).unwrap().clone();
 
-        RootFastlog::derive(&ctx, blob_repo, top).await?;
+        RootFastlog::derive(ctx, blob_repo, top).await?;
 
         expected.reverse();
         check_history(
@@ -1342,11 +1342,12 @@ mod test {
         let mutable_renames = repo.mutable_renames_arc();
         let blob_repo = repo.as_blob_repo();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "1";
         let graph = HashMap::new();
         let branch_head = |branch, number, parents, graph| {
-            create_branch(&ctx, &repo, branch, number, false, parents, graph)
+            create_branch(ctx, &repo, branch, number, false, parents, graph)
                 .map_ok(|(commits, graph)| (commits.last().unwrap().clone(), graph))
         };
 
@@ -1364,7 +1365,7 @@ mod test {
         let (m_top, graph) = branch_head("M", 1, vec![all_top.clone()], graph).await?;
         let (top, graph) = branch_head("Top", 2, vec![l_top, m_top], graph).await?;
 
-        RootFastlog::derive(&ctx, blob_repo, top).await?;
+        RootFastlog::derive(ctx, blob_repo, top).await?;
 
         let expected = bfs(&graph, top);
         check_history(
@@ -1414,11 +1415,12 @@ mod test {
         let mutable_renames = repo.mutable_renames_arc();
         let blob_repo = repo.as_blob_repo();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "1";
         let mut expected = vec![];
 
-        let root_id = CreateCommitContext::new_root(&ctx, &blob_repo)
+        let root_id = CreateCommitContext::new_root(ctx, &blob_repo)
             .add_file(filename, "root")
             .commit()
             .await?;
@@ -1426,10 +1428,10 @@ mod test {
 
         let mut prev_id = root_id;
         for _ in 0..50 {
-            prev_id = create_diamond(&ctx, &repo, vec![prev_id], &mut expected).await?;
+            prev_id = create_diamond(ctx, &repo, vec![prev_id], &mut expected).await?;
         }
 
-        RootFastlog::derive(&ctx, blob_repo, prev_id).await?;
+        RootFastlog::derive(ctx, blob_repo, prev_id).await?;
 
         expected.reverse();
         check_history(
@@ -1473,6 +1475,7 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "1";
         let filepath = path(filename);
@@ -1480,14 +1483,14 @@ mod test {
         let graph = HashMap::new();
 
         let (mut a_branch, graph) =
-            create_branch(&ctx, &repo, "A", 20, false, vec![], graph).await?;
+            create_branch(ctx, &repo, "A", 20, false, vec![], graph).await?;
         let a_top = a_branch.last().unwrap().clone();
 
-        let (b_branch, graph) = create_branch(&ctx, &repo, "B", 20, true, vec![], graph).await?;
+        let (b_branch, graph) = create_branch(ctx, &repo, "B", 20, true, vec![], graph).await?;
         let b_top = *b_branch.last().unwrap();
 
         let (mut main_branch, _graph) =
-            create_branch(&ctx, &repo, "top", 100, false, vec![a_top, b_top], graph).await?;
+            create_branch(ctx, &repo, "top", 100, false, vec![a_top, b_top], graph).await?;
         let top = *main_branch.last().unwrap();
         main_branch.reverse();
 
@@ -1507,7 +1510,7 @@ mod test {
         }
         // history now should be empty - the visitor prevented traversal
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             filepath.clone(),
             top.clone(),
@@ -1534,7 +1537,7 @@ mod test {
             }
         }
         let history = list_file_history(
-            ctx.clone(),
+            ctx,
             &repo,
             filepath,
             top,
@@ -1563,45 +1566,46 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "dir/1";
         let mut expected = vec![];
 
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(filename, "blah")
             .commit()
             .await?;
         expected.push(bcs_id.clone());
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file("other_file", "1")
             .commit()
             .await?;
 
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "blah-blah")
             .commit()
             .await?;
         expected.push(bcs_id.clone());
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file("other_file", "1-2")
             .commit()
             .await?;
 
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .delete_file(filename)
             .commit()
             .await?;
         expected.push(bcs_id.clone());
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file("other_file", "1-2-3")
             .commit()
             .await?;
 
         let history = |cs_id, path, expected| {
-            cloned!(ctx, mutable_renames, repo);
+            cloned!(mutable_renames, repo);
             async move {
                 check_history(
-                    ctx.clone(),
+                    ctx,
                     &repo,
                     path,
                     cs_id,
@@ -1624,7 +1628,7 @@ mod test {
         history(bcs_id.clone(), path("dir"), expected.clone()).await?;
 
         // recreate dir and check
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file("dir/otherfile", "boo")
             .commit()
             .await?;
@@ -1656,84 +1660,85 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
-        let a = CreateCommitContext::new_root(&ctx, &repo)
+        let a = CreateCommitContext::new_root(ctx, &repo)
             .add_file("file", "1")
             .commit()
             .await?;
 
-        let b = CreateCommitContext::new(&ctx, &repo, vec![a.clone()])
+        let b = CreateCommitContext::new(ctx, &repo, vec![a.clone()])
             .add_file("file", "1->2")
             .add_file("dir_1/file_1", "sub file 1")
             .add_file("dir_1/file_2", "sub file 2")
             .commit()
             .await?;
 
-        let c = CreateCommitContext::new(&ctx, &repo, vec![b.clone()])
+        let c = CreateCommitContext::new(ctx, &repo, vec![b.clone()])
             .add_file("file", "1->2->3")
             .add_file("dir/file", "a")
             .add_file("dir_1/file_1", "sub file 1 amend")
             .commit()
             .await?;
 
-        let d = CreateCommitContext::new(&ctx, &repo, vec![b.clone()])
+        let d = CreateCommitContext::new(ctx, &repo, vec![b.clone()])
             .delete_file("file")
             .add_file("dir/file", "b")
             .add_file("dir_1/file_2", "sub file 2 amend")
             .commit()
             .await?;
 
-        let e = CreateCommitContext::new_root(&ctx, &repo)
+        let e = CreateCommitContext::new_root(ctx, &repo)
             .add_file("file", "another 1")
             .commit()
             .await?;
 
-        let f = CreateCommitContext::new(&ctx, &repo, vec![e.clone()])
+        let f = CreateCommitContext::new(ctx, &repo, vec![e.clone()])
             .add_file("file", "another 1 -> 2")
             .commit()
             .await?;
 
-        let g = CreateCommitContext::new(&ctx, &repo, vec![d.clone(), f.clone()])
+        let g = CreateCommitContext::new(ctx, &repo, vec![d.clone(), f.clone()])
             .delete_file("file")
             .delete_file("dir/file")
             .delete_file("dir_1/file_2")
             .commit()
             .await?;
 
-        let h = CreateCommitContext::new(&ctx, &repo, vec![g.clone()])
+        let h = CreateCommitContext::new(ctx, &repo, vec![g.clone()])
             .add_file("file-2", "smth")
             .commit()
             .await?;
 
-        let i = CreateCommitContext::new(&ctx, &repo, vec![c.clone()])
+        let i = CreateCommitContext::new(ctx, &repo, vec![c.clone()])
             .delete_file("file")
             .delete_file("dir/file")
             .delete_file("dir_1/file_1")
             .commit()
             .await?;
 
-        let j = CreateCommitContext::new(&ctx, &repo, vec![i.clone()])
+        let j = CreateCommitContext::new(ctx, &repo, vec![i.clone()])
             .add_file("file-3", "smth-2")
             .commit()
             .await?;
 
-        let k = CreateCommitContext::new(&ctx, &repo, vec![j.clone(), h.clone()])
+        let k = CreateCommitContext::new(ctx, &repo, vec![j.clone(), h.clone()])
             .delete_file("file")
             .delete_file("dir_1/file_1")
             .delete_file("dir_1/file_2")
             .commit()
             .await?;
 
-        let l = CreateCommitContext::new(&ctx, &repo, vec![k.clone()])
+        let l = CreateCommitContext::new(ctx, &repo, vec![k.clone()])
             .add_file("file-4", "smth-3")
             .commit()
             .await?;
 
         let history = |cs_id, path, expected| {
-            cloned!(ctx, mutable_renames, repo);
+            cloned!(mutable_renames, repo);
             async move {
                 check_history(
-                    ctx.clone(),
+                    ctx,
                     &repo,
                     path,
                     cs_id,
@@ -1784,21 +1789,22 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "dir/1";
         let mut expected = vec![];
 
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(filename, "content1")
             .commit()
             .await?;
         expected.push(bcs_id.clone());
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .delete_file(filename)
             .commit()
             .await?;
         expected.push(bcs_id.clone());
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "content2")
             .commit()
             .await?;
@@ -1806,7 +1812,7 @@ mod test {
 
         let expected = expected.into_iter().rev().collect::<Vec<_>>();
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(filename)?,
             bcs_id,
@@ -1819,7 +1825,7 @@ mod test {
         .await?;
 
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(filename)?,
             bcs_id,
@@ -1839,35 +1845,36 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "dir/1";
         let mut expected = vec![];
 
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(filename, "content1")
             .commit()
             .await?;
         expected.push(bcs_id.clone());
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .delete_file(filename)
             .commit()
             .await?;
         expected.push(bcs_id.clone());
 
-        let bcs_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_p1 = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file("p1file", "p1")
             .commit()
             .await?;
-        let bcs_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_p2 = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file("p2file", "p2")
             .commit()
             .await?;
 
-        let merge = CreateCommitContext::new(&ctx, &repo, vec![bcs_p1, bcs_p2])
+        let merge = CreateCommitContext::new(ctx, &repo, vec![bcs_p1, bcs_p2])
             .add_file("mergefile", "merge")
             .commit()
             .await?;
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![merge])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![merge])
             .add_file(filename, "aftermerge")
             .commit()
             .await?;
@@ -1885,7 +1892,7 @@ mod test {
 
         let mut expected = expected.into_iter().rev().collect::<Vec<_>>();
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(filename)?,
             bcs_id,
@@ -1900,7 +1907,7 @@ mod test {
         // Now check the history starting from a merge commit
         expected.remove(0);
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(filename)?,
             merge,
@@ -1920,6 +1927,7 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let first_src_filename = "dir/1";
         let first_dst_filename = "dir2/2";
@@ -1927,16 +1935,16 @@ mod test {
         let second_src_filename = "file";
         let second_dst_filename = "moved_file";
 
-        let first_bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let first_bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(first_src_filename, "content1")
             .add_file(second_src_filename, "content1")
             .commit()
             .await?;
-        let second_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_bcs_id])
+        let second_bcs_id = CreateCommitContext::new(ctx, &repo, vec![first_bcs_id])
             .add_file(first_src_filename, "content2")
             .commit()
             .await?;
-        let third_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![second_bcs_id])
+        let third_bcs_id = CreateCommitContext::new(ctx, &repo, vec![second_bcs_id])
             .delete_file(first_src_filename)
             .delete_file(second_src_filename)
             .add_file(first_dst_filename, "content3")
@@ -1952,7 +1960,7 @@ mod test {
 
         // No mutable renames - just a single commit is returned
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(first_dst_filename)?,
             third_bcs_id,
@@ -1965,7 +1973,7 @@ mod test {
         .await?;
 
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(second_dst_filename)?,
             third_bcs_id,
@@ -1979,7 +1987,7 @@ mod test {
 
         // Set mutable renames
         let first_src_unode = derive_unode_entry(
-            &ctx,
+            ctx,
             &repo,
             second_bcs_id,
             &MPath::new_opt(first_src_filename)?,
@@ -1988,7 +1996,7 @@ mod test {
         .ok_or_else(|| format_err!("not found source unode id"))?;
 
         let second_src_unode = derive_unode_entry(
-            &ctx,
+            ctx,
             &repo,
             second_bcs_id,
             &MPath::new_opt(second_src_filename)?,
@@ -1998,7 +2006,7 @@ mod test {
 
         mutable_renames
             .add_or_overwrite_renames(
-                &ctx,
+                ctx,
                 repo.changesets(),
                 vec![
                     MutableRenameEntry::new(
@@ -2028,7 +2036,7 @@ mod test {
         let tunables = Arc::new(tunables);
         // Tunable is not enabled, so result is the same
         let actual = check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(first_dst_filename)?,
             third_bcs_id,
@@ -2041,7 +2049,7 @@ mod test {
         with_tunables_async_arc(tunables.clone(), actual.boxed()).await?;
 
         let actual = check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(second_dst_filename)?,
             third_bcs_id,
@@ -2055,7 +2063,7 @@ mod test {
 
         // Now check the actual mutable history.
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(first_dst_filename)?,
             third_bcs_id,
@@ -2068,7 +2076,7 @@ mod test {
         .await?;
 
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(second_dst_filename)?,
             third_bcs_id,
@@ -2090,6 +2098,7 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let first_src_filename = "dir/1";
         let first_dst_filename = "dir2/2";
@@ -2099,23 +2108,23 @@ mod test {
 
         let unrelated_filename = "unrelated";
 
-        let first_bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let first_bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(first_src_filename, "content1")
             .add_file(second_src_filename, "content1")
             .commit()
             .await?;
-        let second_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_bcs_id])
+        let second_bcs_id = CreateCommitContext::new(ctx, &repo, vec![first_bcs_id])
             .add_file(first_src_filename, "content2")
             .add_file(first_dst_filename, "content2")
             .commit()
             .await?;
 
-        let third_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![second_bcs_id])
+        let third_bcs_id = CreateCommitContext::new(ctx, &repo, vec![second_bcs_id])
             .add_file(unrelated_filename, "unrelated content3")
             .commit()
             .await?;
 
-        let fourth_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![third_bcs_id])
+        let fourth_bcs_id = CreateCommitContext::new(ctx, &repo, vec![third_bcs_id])
             .delete_file(first_src_filename)
             .delete_file(second_src_filename)
             .add_file(first_dst_filename, "content4")
@@ -2123,12 +2132,12 @@ mod test {
             .commit()
             .await?;
 
-        let fifth_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![fourth_bcs_id])
+        let fifth_bcs_id = CreateCommitContext::new(ctx, &repo, vec![fourth_bcs_id])
             .add_file(unrelated_filename, "unrelated content5")
             .commit()
             .await?;
 
-        let sixth_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![fifth_bcs_id])
+        let sixth_bcs_id = CreateCommitContext::new(ctx, &repo, vec![fifth_bcs_id])
             .add_file(unrelated_filename, "unrelated content6")
             .commit()
             .await?;
@@ -2151,7 +2160,7 @@ mod test {
 
         // Set mutable renames
         let first_src_unode = derive_unode_entry(
-            &ctx,
+            ctx,
             &repo,
             first_bcs_id,
             &MPath::new_opt(first_src_filename)?,
@@ -2160,7 +2169,7 @@ mod test {
         .ok_or_else(|| format_err!("not found source unode id"))?;
 
         let second_src_unode = derive_unode_entry(
-            &ctx,
+            ctx,
             &repo,
             second_bcs_id,
             &MPath::new_opt(second_src_filename)?,
@@ -2170,7 +2179,7 @@ mod test {
 
         mutable_renames
             .add_or_overwrite_renames(
-                &ctx,
+                ctx,
                 repo.changesets(),
                 vec![
                     MutableRenameEntry::new(
@@ -2192,7 +2201,7 @@ mod test {
             .await?;
 
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(first_dst_filename)?,
             sixth_bcs_id,
@@ -2205,7 +2214,7 @@ mod test {
         .await?;
 
         check_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(second_dst_filename)?,
             sixth_bcs_id,
@@ -2225,6 +2234,7 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "dir/1";
 
@@ -2236,26 +2246,26 @@ mod test {
         //  \ /
         //   O
 
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(filename, "content1")
             .commit()
             .await?;
 
-        let first_left_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let first_left_bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "leftcontent1")
             .commit()
             .await?;
-        let second_left_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![first_left_bcs_id])
+        let second_left_bcs_id = CreateCommitContext::new(ctx, &repo, vec![first_left_bcs_id])
             .add_file(filename, "leftcontent2")
             .commit()
             .await?;
 
-        let right_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let right_bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "rightcontent1")
             .commit()
             .await?;
 
-        let merge = CreateCommitContext::new(&ctx, &repo, vec![second_left_bcs_id, right_bcs_id])
+        let merge = CreateCommitContext::new(ctx, &repo, vec![second_left_bcs_id, right_bcs_id])
             .add_file(filename, "merge")
             .commit()
             .await?;
@@ -2269,7 +2279,7 @@ mod test {
         ];
 
         let history_stream = list_file_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(filename)?,
             merge,
@@ -2292,6 +2302,7 @@ mod test {
         let repo: TestRepoWithMutableRenames = test_repo_factory::build_empty(fb).unwrap();
         let mutable_renames = repo.mutable_renames_arc();
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let filename = "dir/1";
 
@@ -2304,25 +2315,25 @@ mod test {
         //   O
 
         let mut expected = vec![];
-        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let bcs_id = CreateCommitContext::new_root(ctx, &repo)
             .add_file(filename, "content1")
             .commit()
             .await?;
         expected.push(bcs_id);
 
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "content2")
             .commit()
             .await?;
         expected.push(bcs_id);
 
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "content3")
             .commit()
             .await?;
         expected.push(bcs_id);
 
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+        let bcs_id = CreateCommitContext::new(ctx, &repo, vec![bcs_id])
             .add_file(filename, "content4")
             .commit()
             .await?;
@@ -2336,7 +2347,7 @@ mod test {
         );
 
         let history_stream = list_file_history(
-            ctx.clone(),
+            ctx,
             &repo,
             MPath::new_opt(filename)?,
             bcs_id,
@@ -2344,7 +2355,7 @@ mod test {
             HistoryAcrossDeletions::Track,
             FollowMutableFileHistory::ImmutableCommitParents,
             mutable_renames.clone(),
-            TraversalOrder::new_gen_num_order(ctx, Arc::new(cs_fetcher)),
+            TraversalOrder::new_gen_num_order(ctx.clone(), Arc::new(cs_fetcher)),
         )
         .await?;
 
@@ -2374,7 +2385,7 @@ mod test {
     impl ChangesetFetcher for CountingChangesetFetcher {
         async fn get_generation_number(
             &self,
-            ctx: CoreContext,
+            ctx: &CoreContext,
             cs_id: ChangesetId,
         ) -> Result<Generation, Error> {
             self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
@@ -2383,7 +2394,7 @@ mod test {
 
         async fn get_parents(
             &self,
-            ctx: CoreContext,
+            ctx: &CoreContext,
             cs_id: ChangesetId,
         ) -> Result<Vec<ChangesetId>, Error> {
             self.cs_fetcher.get_parents(ctx, cs_id).await
@@ -2482,7 +2493,7 @@ mod test {
     }
 
     async fn check_history(
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo: &TestRepoWithMutableRenames,
         path: Option<MPath>,
         changeset_id: ChangesetId,
@@ -2493,7 +2504,7 @@ mod test {
         expected: Vec<ChangesetId>,
     ) -> Result<(), Error> {
         let history = list_file_history(
-            ctx.clone(),
+            ctx,
             repo,
             path,
             changeset_id,
@@ -2511,7 +2522,7 @@ mod test {
         for cs_id in &history {
             let new_gen_num = repo
                 .changeset_fetcher_arc()
-                .get_generation_number(ctx.clone(), *cs_id)
+                .get_generation_number(ctx, *cs_id)
                 .await?;
             if let Some(prev_gen_num) = prev_gen_num {
                 assert!(prev_gen_num >= new_gen_num);

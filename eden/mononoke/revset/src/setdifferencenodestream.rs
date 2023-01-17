@@ -156,7 +156,7 @@ mod test {
             single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
         )
         .boxify();
-        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -176,7 +176,7 @@ mod test {
             NotReadyEmptyStream::new(0).boxify(),
         )
         .boxify();
-        assert_changesets_sequence(ctx.clone(), &repo, vec![changeset], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![changeset], nodestream).await;
     }
 
     #[fbinit::test]
@@ -197,7 +197,7 @@ mod test {
         )
         .boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -228,7 +228,7 @@ mod test {
         )
         .boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_id_1], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![bcs_id_1], nodestream).await;
     }
 
     #[fbinit::test]
@@ -320,7 +320,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
@@ -366,7 +366,7 @@ mod test {
         )
         .boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -416,7 +416,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "1f6bc010883e397abeca773192f3370558ee1320").await,
@@ -473,7 +473,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,

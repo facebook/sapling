@@ -329,7 +329,7 @@ impl CreateChangeset {
                 parents: bonsai_cs.parents().into_iter().collect(),
             };
             complete_changesets
-                .add(ctx.clone(), completion_record)
+                .add(&ctx, completion_record)
                 .await
                 .context("While inserting into changeset table")?;
 

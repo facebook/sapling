@@ -299,9 +299,7 @@ where
             None => {
                 let maybe_mapping_change =
                     get_mapping_change_version(ctx, commit_syncer.get_source_repo(), cs_id);
-                let parents = source_repo
-                    .changeset_fetcher()
-                    .get_parents(ctx.clone(), cs_id);
+                let parents = source_repo.changeset_fetcher().get_parents(ctx, cs_id);
                 let (maybe_mapping_change, parents) =
                     try_join(maybe_mapping_change, parents).await?;
 
@@ -743,7 +741,7 @@ where
                 let parents = self
                     .get_source_repo()
                     .changeset_fetcher()
-                    .get_parents(ctx.clone(), ancestor)
+                    .get_parents(ctx, ancestor)
                     .await?;
                 if parents.is_empty() {
                     let version = self

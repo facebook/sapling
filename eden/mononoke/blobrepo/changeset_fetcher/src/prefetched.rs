@@ -80,7 +80,7 @@ impl PrefetchedChangesetsFetcher {
         })
     }
 
-    async fn get_cs_entry(&self, ctx: CoreContext, cs_id: ChangesetId) -> Result<ChangesetEntry> {
+    async fn get_cs_entry(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<ChangesetEntry> {
         let prefetched_entry = self.prefetched.get(&cs_id);
         if let Some(prefetched_entry) = prefetched_entry {
             Ok(prefetched_entry.clone())
@@ -95,7 +95,7 @@ impl PrefetchedChangesetsFetcher {
 impl ChangesetFetcher for PrefetchedChangesetsFetcher {
     async fn get_generation_number(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error> {
         let cs = self.get_cs_entry(ctx, cs_id).await?;
@@ -104,7 +104,7 @@ impl ChangesetFetcher for PrefetchedChangesetsFetcher {
 
     async fn get_parents(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
         let cs = self.get_cs_entry(ctx, cs_id).await?;

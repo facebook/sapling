@@ -203,7 +203,7 @@ mod test {
         let nodestream =
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![head_csid], nodestream).await;
     }
 
     #[fbinit::test]
@@ -229,7 +229,7 @@ mod test {
         let nodestream =
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(ctx, &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -249,7 +249,7 @@ mod test {
         let nodestream =
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_d0a], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![bcs_d0a], nodestream).await;
     }
 
     #[fbinit::test]
@@ -277,7 +277,7 @@ mod test {
         let nodestream =
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
-        assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_3c15.clone()], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![bcs_3c15.clone()], nodestream).await;
     }
 
     #[fbinit::test]
@@ -307,7 +307,7 @@ mod test {
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await,
@@ -359,7 +359,7 @@ mod test {
         let inputs: Vec<BonsaiNodeStream> = vec![];
         let nodestream =
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter());
-        assert_changesets_sequence(ctx, &repo, vec![], nodestream.boxify()).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream.boxify()).await;
     }
 
     #[fbinit::test]
@@ -419,7 +419,7 @@ mod test {
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter());
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![string_to_bonsai(fb, &repo, "03b0589d9788870817d03ce7b87516648ed5b33a").await],
             nodestream.boxify(),
@@ -471,7 +471,7 @@ mod test {
             IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![string_to_bonsai(fb, &repo, "03b0589d9788870817d03ce7b87516648ed5b33a").await],
             nodestream,

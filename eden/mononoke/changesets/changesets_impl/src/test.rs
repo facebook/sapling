@@ -67,13 +67,14 @@ async fn add_and_get<C: Changesets + 'static>(
     changesets: C,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row = ChangesetInsert {
         cs_id: ONES_CSID,
         parents: vec![],
     };
 
-    changesets.add(ctx.clone(), row).await?;
+    changesets.add(ctx, row).await?;
     let result = changesets.get(ctx, ONES_CSID).await?;
     assert_eq!(
         result,
@@ -89,6 +90,7 @@ async fn add_and_get<C: Changesets + 'static>(
 
 async fn add_missing_parents<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row = ChangesetInsert {
         cs_id: ONES_CSID,
@@ -108,6 +110,7 @@ async fn add_missing_parents<C: Changesets>(fb: FacebookInit, changesets: C) -> 
 
 async fn missing<C: Changesets + 'static>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
     let result = changesets
         .get(ctx, ONES_CSID)
         .await
@@ -118,18 +121,19 @@ async fn missing<C: Changesets + 'static>(fb: FacebookInit, changesets: C) -> Re
 
 async fn duplicate<C: Changesets + 'static>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
     let row = ChangesetInsert {
         cs_id: ONES_CSID,
         parents: vec![],
     };
 
     assert!(
-        changesets.add(ctx.clone(), row.clone()).await?,
+        changesets.add(ctx, row.clone()).await?,
         "inserting unique changeset must return true"
     );
 
     assert!(
-        !changesets.add(ctx.clone(), row.clone()).await?,
+        !changesets.add(ctx, row.clone()).await?,
         "inserting the same changeset must return false"
     );
     Ok(())
@@ -140,12 +144,13 @@ async fn broken_duplicate<C: Changesets + 'static>(
     changesets: C,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
     let row = ChangesetInsert {
         cs_id: ONES_CSID,
         parents: vec![],
     };
     assert!(
-        changesets.add(ctx.clone(), row).await?,
+        changesets.add(ctx, row).await?,
         "inserting unique changeset must return true"
     );
 
@@ -154,7 +159,7 @@ async fn broken_duplicate<C: Changesets + 'static>(
         parents: vec![],
     };
     assert!(
-        changesets.add(ctx.clone(), row).await?,
+        changesets.add(ctx, row).await?,
         "inserting unique changeset must return true"
     );
 
@@ -163,7 +168,7 @@ async fn broken_duplicate<C: Changesets + 'static>(
         parents: vec![TWOS_CSID],
     };
     let result = changesets
-        .add(ctx.clone(), row)
+        .add(ctx, row)
         .await
         .expect_err("Adding changeset with the same hash but differen parents should fail");
     match result.downcast::<SqlChangesetsError>() {
@@ -176,39 +181,40 @@ async fn broken_duplicate<C: Changesets + 'static>(
 
 async fn complex<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row1 = ChangesetInsert {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row1).await?;
+    changesets.add(ctx, row1).await?;
 
     let row2 = ChangesetInsert {
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row2).await?;
+    changesets.add(ctx, row2).await?;
 
     let row3 = ChangesetInsert {
         cs_id: THREES_CSID,
         parents: vec![TWOS_CSID],
     };
-    changesets.add(ctx.clone(), row3).await?;
+    changesets.add(ctx, row3).await?;
 
     let row4 = ChangesetInsert {
         cs_id: FOURS_CSID,
         parents: vec![ONES_CSID, THREES_CSID],
     };
-    changesets.add(ctx.clone(), row4).await?;
+    changesets.add(ctx, row4).await?;
 
     let row5 = ChangesetInsert {
         cs_id: FIVES_CSID,
         parents: vec![ONES_CSID, TWOS_CSID, FOURS_CSID],
     };
-    changesets.add(ctx.clone(), row5).await?;
+    changesets.add(ctx, row5).await?;
 
     assert_eq!(
-        changesets.get(ctx.clone(), ONES_CSID).await?,
+        changesets.get(ctx, ONES_CSID).await?,
         Some(ChangesetEntry {
             repo_id: REPO_ZERO,
             cs_id: ONES_CSID,
@@ -218,7 +224,7 @@ async fn complex<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), E
     );
 
     assert_eq!(
-        changesets.get(ctx.clone(), TWOS_CSID).await?,
+        changesets.get(ctx, TWOS_CSID).await?,
         Some(ChangesetEntry {
             repo_id: REPO_ZERO,
             cs_id: TWOS_CSID,
@@ -228,7 +234,7 @@ async fn complex<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), E
     );
 
     assert_eq!(
-        changesets.get(ctx.clone(), THREES_CSID).await?,
+        changesets.get(ctx, THREES_CSID).await?,
         Some(ChangesetEntry {
             repo_id: REPO_ZERO,
             cs_id: THREES_CSID,
@@ -238,7 +244,7 @@ async fn complex<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), E
     );
 
     assert_eq!(
-        changesets.get(ctx.clone(), FOURS_CSID).await?,
+        changesets.get(ctx, FOURS_CSID).await?,
         Some(ChangesetEntry {
             repo_id: REPO_ZERO,
             cs_id: FOURS_CSID,
@@ -248,7 +254,7 @@ async fn complex<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), E
     );
 
     assert_eq!(
-        changesets.get(ctx.clone(), FIVES_CSID).await?,
+        changesets.get(ctx, FIVES_CSID).await?,
         Some(ChangesetEntry {
             repo_id: REPO_ZERO,
             cs_id: FIVES_CSID,
@@ -262,40 +268,39 @@ async fn complex<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), E
 
 async fn get_many<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row1 = ChangesetInsert {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row1).await?;
+    changesets.add(ctx, row1).await?;
 
     let row2 = ChangesetInsert {
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row2).await?;
+    changesets.add(ctx, row2).await?;
 
     let row3 = ChangesetInsert {
         cs_id: THREES_CSID,
         parents: vec![TWOS_CSID],
     };
-    changesets.add(ctx.clone(), row3).await?;
+    changesets.add(ctx, row3).await?;
 
     let row4 = ChangesetInsert {
         cs_id: FOURS_CSID,
         parents: vec![ONES_CSID, THREES_CSID],
     };
-    changesets.add(ctx.clone(), row4).await?;
+    changesets.add(ctx, row4).await?;
 
     let row5 = ChangesetInsert {
         cs_id: FIVES_CSID,
         parents: vec![THREES_CSID, ONES_CSID, TWOS_CSID, FOURS_CSID],
     };
-    changesets.add(ctx.clone(), row5).await?;
+    changesets.add(ctx, row5).await?;
 
-    let actual = changesets
-        .get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID])
-        .await?;
+    let actual = changesets.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
 
     assert_eq!(
         HashSet::from_iter(actual),
@@ -316,7 +321,7 @@ async fn get_many<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), 
     );
 
     let actual = changesets
-        .get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
         .await?;
     assert_eq!(
         HashSet::from_iter(actual),
@@ -342,11 +347,11 @@ async fn get_many<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), 
         ]
     );
 
-    let actual = changesets.get_many(ctx.clone(), vec![]).await?;
+    let actual = changesets.get_many(ctx, vec![]).await?;
     assert_eq!(HashSet::from_iter(actual), hashset![]);
 
     let actual = changesets
-        .get_many(ctx.clone(), vec![ONES_CSID, FOURS_CSID])
+        .get_many(ctx, vec![ONES_CSID, FOURS_CSID])
         .await?;
     assert_eq!(
         HashSet::from_iter(actual),
@@ -367,7 +372,7 @@ async fn get_many<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), 
     );
 
     let actual = changesets
-        .get_many(ctx.clone(), vec![ONES_CSID, FOURS_CSID, FIVES_CSID])
+        .get_many(ctx, vec![ONES_CSID, FOURS_CSID, FIVES_CSID])
         .await?;
     assert_eq!(
         HashSet::from_iter(actual),
@@ -398,21 +403,22 @@ async fn get_many<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), 
 
 async fn get_many_missing<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row1 = ChangesetInsert {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row1).await?;
+    changesets.add(ctx, row1).await?;
 
     let row2 = ChangesetInsert {
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row2).await?;
+    changesets.add(ctx, row2).await?;
 
     let actual = changesets
-        .get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
         .await?;
     assert_eq!(
         HashSet::from_iter(actual),
@@ -437,6 +443,7 @@ async fn get_many_missing<C: Changesets>(fb: FacebookInit, changesets: C) -> Res
 
 async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row1 = ChangesetInsert {
         cs_id: ONES_CSID,
@@ -455,15 +462,15 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
         parents: vec![],
     };
 
-    changesets.add(ctx.clone(), row1).await?;
-    changesets.add(ctx.clone(), row2).await?;
-    changesets.add(ctx.clone(), row3).await?;
-    changesets.add(ctx.clone(), row4).await?;
+    changesets.add(ctx, row1).await?;
+    changesets.add(ctx, row2).await?;
+    changesets.add(ctx, row3).await?;
+    changesets.add(ctx, row4).await?;
 
     // found a single changeset
     let actual = changesets
         .get_many_by_prefix(
-            ctx.clone(),
+            ctx,
             ChangesetIdPrefix::from_bytes(&ONES_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
@@ -473,7 +480,7 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
     // found a single changeset
     let actual = changesets
         .get_many_by_prefix(
-            ctx.clone(),
+            ctx,
             ChangesetIdPrefix::from_bytes(&TWOS_CSID.as_ref()[0..12]).unwrap(),
             1,
         )
@@ -483,7 +490,7 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
     // found several changesets within the limit
     let actual = changesets
         .get_many_by_prefix(
-            ctx.clone(),
+            ctx,
             ChangesetIdPrefix::from_bytes(&FS_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
@@ -495,7 +502,7 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
 
     // found several changesets within the limit by hex string prefix
     let actual = changesets
-        .get_many_by_prefix(ctx.clone(), ChangesetIdPrefix::from_str("fff").unwrap(), 10)
+        .get_many_by_prefix(ctx, ChangesetIdPrefix::from_str("fff").unwrap(), 10)
         .await?;
     assert_eq!(
         actual,
@@ -505,7 +512,7 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
     // found several changesets exceeding the limit
     let actual = changesets
         .get_many_by_prefix(
-            ctx.clone(),
+            ctx,
             ChangesetIdPrefix::from_bytes(&FS_CSID.as_ref()[0..8]).unwrap(),
             1,
         )
@@ -518,7 +525,7 @@ async fn get_many_by_prefix<C: Changesets>(fb: FacebookInit, changesets: C) -> R
     // not found
     let actual = changesets
         .get_many_by_prefix(
-            ctx.clone(),
+            ctx,
             ChangesetIdPrefix::from_bytes(&THREES_CSID.as_ref()[0..16]).unwrap(),
             10,
         )
@@ -535,6 +542,7 @@ async fn caching_fill<C: Changesets + 'static>(
     let changesets = Arc::new(changesets);
     let mut cc = CachingChangesets::mocked(changesets.clone());
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row1 = ChangesetInsert {
         cs_id: ONES_CSID,
@@ -549,12 +557,12 @@ async fn caching_fill<C: Changesets + 'static>(
         parents: vec![],
     };
 
-    changesets.add(ctx.clone(), row1).await?;
-    changesets.add(ctx.clone(), row2).await?;
-    changesets.add(ctx.clone(), row3).await?;
+    changesets.add(ctx, row1).await?;
+    changesets.add(ctx, row2).await?;
+    changesets.add(ctx, row3).await?;
 
     // First read should miss everyhwere.
-    let _ = cc.get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID]).await?;
+    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
     assert_eq!(
         cc.cachelib_stats(),
         MockStoreStats {
@@ -577,7 +585,7 @@ async fn caching_fill<C: Changesets + 'static>(
     );
 
     // Another read with the same pool should hit in local cache.
-    let _ = cc.get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID]).await?;
+    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
     assert_eq!(
         cc.cachelib_stats(),
         MockStoreStats {
@@ -602,7 +610,7 @@ async fn caching_fill<C: Changesets + 'static>(
     cc = cc.fork_cachelib();
 
     // Read with a separate pool should hit in Memcache.
-    let _ = cc.get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID]).await?;
+    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
     assert_eq!(
         cc.cachelib_stats(),
         MockStoreStats {
@@ -625,7 +633,7 @@ async fn caching_fill<C: Changesets + 'static>(
     );
 
     // Reading again from the separate pool should now hit in local cache.
-    let _ = cc.get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID]).await?;
+    let _ = cc.get_many(ctx, vec![ONES_CSID, TWOS_CSID]).await?;
     assert_eq!(
         cc.cachelib_stats(),
         MockStoreStats {
@@ -649,7 +657,7 @@ async fn caching_fill<C: Changesets + 'static>(
 
     // Partial read should partially hit
     let _ = cc
-        .get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
         .await?;
     assert_eq!(
         cc.cachelib_stats(),
@@ -674,7 +682,7 @@ async fn caching_fill<C: Changesets + 'static>(
 
     // Partial read should have filled local cache.
     let _ = cc
-        .get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
         .await?;
     assert_eq!(
         cc.cachelib_stats(),
@@ -707,6 +715,7 @@ async fn caching_shared<C: Changesets + 'static>(
     let changesets = Arc::new(changesets);
     let cc = CachingChangesets::mocked(changesets.clone());
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     let row1 = ChangesetInsert {
         cs_id: ONES_CSID,
@@ -721,12 +730,12 @@ async fn caching_shared<C: Changesets + 'static>(
         parents: vec![],
     };
 
-    changesets.add(ctx.clone(), row1).await?;
-    changesets.add(ctx.clone(), row2).await?;
-    changesets.add(ctx.clone(), row3).await?;
+    changesets.add(ctx, row1).await?;
+    changesets.add(ctx, row2).await?;
+    changesets.add(ctx, row3).await?;
 
     // get should miss
-    let _ = cc.get(ctx.clone(), ONES_CSID).await?;
+    let _ = cc.get(ctx, ONES_CSID).await?;
     assert_eq!(
         cc.cachelib_stats(),
         MockStoreStats {
@@ -750,7 +759,7 @@ async fn caching_shared<C: Changesets + 'static>(
 
     // get_many should hit for what was filled by get
     let _ = cc
-        .get_many(ctx.clone(), vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+        .get_many(ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
         .await?;
     assert_eq!(
         cc.cachelib_stats(),
@@ -774,7 +783,7 @@ async fn caching_shared<C: Changesets + 'static>(
     );
 
     // get should hit for what was filled by get_many
-    let _ = cc.get(ctx.clone(), THREES_CSID).await?;
+    let _ = cc.get(ctx, THREES_CSID).await?;
     assert_eq!(
         cc.cachelib_stats(),
         MockStoreStats {

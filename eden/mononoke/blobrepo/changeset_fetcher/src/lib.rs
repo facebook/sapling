@@ -31,13 +31,13 @@ mod tests;
 pub trait ChangesetFetcher: Send + Sync + 'static {
     async fn get_generation_number(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error>;
 
     async fn get_parents(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error>;
 
@@ -62,7 +62,7 @@ impl SimpleChangesetFetcher {
 impl ChangesetFetcher for SimpleChangesetFetcher {
     async fn get_generation_number(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Generation, Error> {
         let maybe_cs = self.changesets.get(ctx, cs_id).await?;
@@ -72,7 +72,7 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
 
     async fn get_parents(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Vec<ChangesetId>, Error> {
         let maybe_cs = self.changesets.get(ctx, cs_id).await?;

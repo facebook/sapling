@@ -104,7 +104,7 @@ mod test {
 
         let nodestream =
             ValidateNodeStream::new(ctx.clone(), nodestream, &changeset_fetcher).boxify();
-        assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![head_csid], nodestream).await;
     }
 
     #[fbinit::test]

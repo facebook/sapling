@@ -30,11 +30,11 @@ pub fn single_changeset_id(
     ctx: CoreContext,
     cs_id: ChangesetId,
     repo: &BlobRepo,
-) -> impl Stream<Item = ChangesetId, Error = Error> {
+) -> impl Stream<Item = ChangesetId, Error = Error> + 'static {
     let repo = repo.clone();
     async move {
         repo.changesets()
-            .get(ctx, cs_id)
+            .get(&ctx, cs_id)
             .await
             .map(|cs_id| cs_id.is_some())
     }
@@ -59,9 +59,9 @@ pub async fn string_to_bonsai(fb: FacebookInit, repo: &BlobRepo, s: &str) -> Cha
         .unwrap()
 }
 
-pub async fn assert_changesets_sequence<I>(
-    ctx: CoreContext,
-    repo: &BlobRepo,
+pub async fn assert_changesets_sequence<'a, I>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     hashes: I,
     stream: BoxStream<ChangesetId, Error>,
 ) where
@@ -77,7 +77,7 @@ pub async fn assert_changesets_sequence<I>(
 
         let expected_generation = repo
             .changeset_fetcher()
-            .get_generation_number(ctx.clone(), expected)
+            .get_generation_number(ctx, expected)
             .await
             .expect("Unexpected error");
 
@@ -95,7 +95,7 @@ pub async fn assert_changesets_sequence<I>(
 
             let node_generation = repo
                 .changeset_fetcher()
-                .get_generation_number(ctx.clone(), expected)
+                .get_generation_number(ctx, expected)
                 .await
                 .expect("Unexpected error");
 
@@ -144,7 +144,7 @@ mod test {
         let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![bcs_id].into_iter(),
             changeset_stream.boxify(),
@@ -157,8 +157,9 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo = Linear::getrepo(fb).await;
         let cs_id = ONES_CSID;
-        let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
+        let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo);
 
-        assert_changesets_sequence(ctx, &repo, vec![].into_iter(), changeset_stream.boxify()).await;
+        assert_changesets_sequence(&ctx, &repo, vec![].into_iter(), changeset_stream.boxify())
+            .await;
     }
 }

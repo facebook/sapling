@@ -451,12 +451,7 @@ impl HgRepoContext {
             parents: bonsai_cs.parents().collect(),
         };
         match save_bonsai_changeset_object(self.ctx(), blobstore, bonsai_cs).await {
-            Ok(_) => {
-                self.blob_repo()
-                    .changesets()
-                    .add(self.ctx().clone(), insert)
-                    .await
-            }
+            Ok(_) => self.blob_repo().changesets().add(self.ctx(), insert).await,
             Err(err) => Err(err),
         }?;
 
@@ -855,7 +850,7 @@ impl HgRepoContext {
                 .map(move |cs_id| async move {
                     let parents = blob_repo
                         .changeset_fetcher()
-                        .get_parents(self.ctx().clone(), cs_id)
+                        .get_parents(self.ctx(), cs_id)
                         .await?;
                     Ok::<_, Error>((cs_id, parents))
                 })

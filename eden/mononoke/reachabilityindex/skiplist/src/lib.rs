@@ -644,8 +644,8 @@ impl ReachabilityIndex for SkiplistIndex {
         anc_hash: ChangesetId,
     ) -> Result<bool, Error> {
         let (anc_gen, desc_gen) = try_join!(
-            changeset_fetcher.get_generation_number(ctx.clone(), anc_hash),
-            changeset_fetcher.get_generation_number(ctx.clone(), desc_hash),
+            changeset_fetcher.get_generation_number(ctx, anc_hash),
+            changeset_fetcher.get_generation_number(ctx, desc_hash),
         )?;
         if anc_gen > desc_gen {
             return Ok(false);
@@ -1503,7 +1503,7 @@ mod test {
     impl ChangesetFetcher for CountingChangesetFetcher {
         async fn get_generation_number(
             &self,
-            ctx: CoreContext,
+            ctx: &CoreContext,
             cs_id: ChangesetId,
         ) -> Result<Generation, Error> {
             self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
@@ -1512,7 +1512,7 @@ mod test {
 
         async fn get_parents(
             &self,
-            ctx: CoreContext,
+            ctx: &CoreContext,
             cs_id: ChangesetId,
         ) -> Result<Vec<ChangesetId>, Error> {
             self.get_parents_count.fetch_add(1, Ordering::Relaxed);

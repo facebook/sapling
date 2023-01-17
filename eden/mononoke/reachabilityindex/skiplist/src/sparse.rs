@@ -227,19 +227,18 @@ mod test {
     #[fbinit::test]
     async fn test_index_changeset_linear(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
         let repo = Linear::getrepo(fb).await;
 
         let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
-        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-        let master_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), master_cs_id)
-            .await?;
+        let master_cs_id = resolve_cs_id(ctx, &repo, "master").await?;
+        let master_gen_num = cs_fetcher.get_generation_number(ctx, master_cs_id).await?;
 
         let max_skip = NonZeroU64::new(2).unwrap();
         index_changeset(
-            &ctx,
+            ctx,
             (master_cs_id, master_gen_num),
             &mut index,
             max_skip,
@@ -254,7 +253,7 @@ mod test {
         let mut index = HashMap::new();
         let max_skip = NonZeroU64::new(3).unwrap();
         index_changeset(
-            &ctx,
+            ctx,
             (master_cs_id, master_gen_num),
             &mut index,
             max_skip,
@@ -269,7 +268,7 @@ mod test {
         let max_skip = NonZeroU64::new(1).unwrap();
         let mut index = HashMap::new();
         index_changeset(
-            &ctx,
+            ctx,
             (master_cs_id, master_gen_num),
             &mut index,
             max_skip,
@@ -286,11 +285,12 @@ mod test {
     #[fbinit::test]
     async fn test_index_changeset_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F
@@ -307,10 +307,10 @@ mod test {
         let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
-        let f_gen_num = cs_fetcher.get_generation_number(ctx.clone(), f).await?;
+        let f_gen_num = cs_fetcher.get_generation_number(ctx, f).await?;
 
         let max_skip = NonZeroU64::new(2).unwrap();
-        index_changeset(&ctx, (f, f_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+        index_changeset(ctx, (f, f_gen_num), &mut index, max_skip, &cs_fetcher).await?;
 
         assert_eq!(index.len(), 3);
         validate_index(f, &index, max_skip).await?;
@@ -325,11 +325,12 @@ mod test {
     #[fbinit::test]
     async fn test_index_cleanup(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F-G-H-I-J-K
@@ -343,17 +344,17 @@ mod test {
         let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
-        let g_gen_num = cs_fetcher.get_generation_number(ctx.clone(), g).await?;
+        let g_gen_num = cs_fetcher.get_generation_number(ctx, g).await?;
 
         let max_skip = NonZeroU64::new(4).unwrap();
-        index_changeset(&ctx, (g, g_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+        index_changeset(ctx, (g, g_gen_num), &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 1);
         validate_index(g, &index, max_skip).await?;
 
         for vert in &["H", "I", "J", "K"] {
             println!("vertex {}", vert);
             let vert = *dag.get(*vert).unwrap();
-            update_sparse_skiplist(&ctx, vec![vert], &mut index, max_skip, &cs_fetcher).await?;
+            update_sparse_skiplist(ctx, vec![vert], &mut index, max_skip, &cs_fetcher).await?;
             assert_eq!(index.len(), 2);
             validate_index(vert, &index, max_skip).await?;
         }
@@ -364,11 +365,12 @@ mod test {
     #[fbinit::test]
     async fn test_index_cleanup_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F-G
@@ -384,17 +386,17 @@ mod test {
         let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
-        let d_gen_num = cs_fetcher.get_generation_number(ctx.clone(), d).await?;
+        let d_gen_num = cs_fetcher.get_generation_number(ctx, d).await?;
 
         let max_skip = NonZeroU64::new(4).unwrap();
-        index_changeset(&ctx, (d, d_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+        index_changeset(ctx, (d, d_gen_num), &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 2);
         validate_index(d, &index, max_skip).await?;
 
         for vert in &["E", "F", "G"] {
             println!("vertex {}", vert);
             let vert = *dag.get(*vert).unwrap();
-            update_sparse_skiplist(&ctx, vec![vert], &mut index, max_skip, &cs_fetcher).await?;
+            update_sparse_skiplist(ctx, vec![vert], &mut index, max_skip, &cs_fetcher).await?;
             assert_eq!(index.len(), 2);
             validate_index(vert, &index, max_skip).await?;
         }
@@ -411,11 +413,12 @@ mod test {
     #[fbinit::test]
     async fn test_skiplist_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F-G-H-I-J-K-L
@@ -428,19 +431,19 @@ mod test {
         let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
-        let g_gen_num = cs_fetcher.get_generation_number(ctx.clone(), g).await?;
+        let g_gen_num = cs_fetcher.get_generation_number(ctx, g).await?;
 
         let max_skip = NonZeroU64::new(5).unwrap();
-        index_changeset(&ctx, (g, g_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+        index_changeset(ctx, (g, g_gen_num), &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 1);
         validate_index(g, &index, max_skip).await?;
         assert!(index.contains_key(&g));
 
         for i in &["H", "I", "J", "K", "L"] {
             let i = *dag.get(*i).unwrap();
-            let i_gen_num = cs_fetcher.get_generation_number(ctx.clone(), i).await?;
+            let i_gen_num = cs_fetcher.get_generation_number(ctx, i).await?;
 
-            index_changeset(&ctx, (i, i_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+            index_changeset(ctx, (i, i_gen_num), &mut index, max_skip, &cs_fetcher).await?;
             validate_index(i, &index, max_skip).await?;
             assert!(index.contains_key(&i));
         }
@@ -456,11 +459,12 @@ mod test {
     #[fbinit::test]
     async fn test_build_skiplist_heads(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                              M
@@ -481,7 +485,7 @@ mod test {
 
         let max_skip = NonZeroU64::new(5).unwrap();
 
-        update_sparse_skiplist(&ctx, vec![l, m, n], &mut index, max_skip, &cs_fetcher).await?;
+        update_sparse_skiplist(ctx, vec![l, m, n], &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 4);
         assert!(index.contains_key(&g));
         assert!(index.contains_key(&l));
@@ -517,11 +521,12 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F-G-H-I-J-K-L
@@ -540,7 +545,7 @@ mod test {
 
         // Build index with two heads - "L" and "H". We should have a three skiplist edges:
         // L -> G, G->A and H->G.
-        update_sparse_skiplist(&ctx, vec![h, l], &mut index, max_skip, &cs_fetcher).await?;
+        update_sparse_skiplist(ctx, vec![h, l], &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 3);
         assert!(index.contains_key(&g));
         assert!(index.contains_key(&h));
@@ -562,11 +567,12 @@ mod test {
     #[fbinit::test]
     async fn test_skiplist_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F
@@ -583,17 +589,17 @@ mod test {
         let cs_fetcher = repo.changeset_fetcher_arc();
         let mut index = HashMap::new();
 
-        let d_gen_num = cs_fetcher.get_generation_number(ctx.clone(), d).await?;
+        let d_gen_num = cs_fetcher.get_generation_number(ctx, d).await?;
 
         let max_skip = NonZeroU64::new(2).unwrap();
-        index_changeset(&ctx, (d, d_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+        index_changeset(ctx, (d, d_gen_num), &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 2);
         validate_index(d, &index, max_skip).await?;
         assert!(index.contains_key(&c));
         assert!(index.contains_key(&d));
 
-        let e_gen_num = cs_fetcher.get_generation_number(ctx.clone(), e).await?;
-        index_changeset(&ctx, (e, e_gen_num), &mut index, max_skip, &cs_fetcher).await?;
+        let e_gen_num = cs_fetcher.get_generation_number(ctx, e).await?;
+        index_changeset(ctx, (e, e_gen_num), &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 3);
         validate_index(e, &index, max_skip).await?;
         assert!(index.contains_key(&c));
@@ -605,11 +611,12 @@ mod test {
     #[fbinit::test]
     async fn test_build_skiplist(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let ctx = &ctx;
 
         let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
 
         let dag = create_from_dag(
-            &ctx,
+            ctx,
             &repo,
             r##"
                A-C-D-E-F
@@ -626,7 +633,7 @@ mod test {
         let d = *dag.get("D").unwrap();
         let e = *dag.get("E").unwrap();
         let f = *dag.get("F").unwrap();
-        update_sparse_skiplist(&ctx, vec![f], &mut index, max_skip, &cs_fetcher).await?;
+        update_sparse_skiplist(ctx, vec![f], &mut index, max_skip, &cs_fetcher).await?;
 
         assert_eq!(index.len(), 3);
         validate_index(f, &index, max_skip).await?;

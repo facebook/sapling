@@ -27,6 +27,7 @@ use super::PrefetchedChangesetsFetcher;
 #[fbinit::test]
 async fn test_prefetched_fetcher_no_prefetching(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     // Create our mock changesets with just ONES_CSID
     let changesets = Arc::new(
@@ -37,7 +38,7 @@ async fn test_prefetched_fetcher_no_prefetching(fb: FacebookInit) -> Result<()> 
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row).await?;
+    changesets.add(ctx, row).await?;
 
     let prefetched_fetcher =
         PrefetchedChangesetsFetcher::new(REPO_ZERO, changesets, stream::empty()).await?;
@@ -45,16 +46,11 @@ async fn test_prefetched_fetcher_no_prefetching(fb: FacebookInit) -> Result<()> 
     // Confirm the generation number and parents for ONES_CSID
     assert_eq!(
         prefetched_fetcher
-            .get_generation_number(ctx.clone(), ONES_CSID)
+            .get_generation_number(ctx, ONES_CSID)
             .await?,
         Generation::new(1)
     );
-    assert_eq!(
-        prefetched_fetcher
-            .get_parents(ctx.clone(), ONES_CSID)
-            .await?,
-        []
-    );
+    assert_eq!(prefetched_fetcher.get_parents(ctx, ONES_CSID).await?, []);
 
     // Check that TWOS_CSID is an error
     assert!(
@@ -70,6 +66,7 @@ async fn test_prefetched_fetcher_no_prefetching(fb: FacebookInit) -> Result<()> 
 #[fbinit::test]
 async fn test_prefetched_fetcher_no_overlap(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     // Create our mock changesets with just ONES_CSID
     let changesets = Arc::new(
@@ -80,7 +77,7 @@ async fn test_prefetched_fetcher_no_overlap(fb: FacebookInit) -> Result<()> {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row).await?;
+    changesets.add(ctx, row).await?;
 
     let cs2 = Ok(ChangesetEntry {
         repo_id: REPO_ZERO,
@@ -95,28 +92,21 @@ async fn test_prefetched_fetcher_no_overlap(fb: FacebookInit) -> Result<()> {
     // Confirm the generation number and parents for ONES_CSID
     assert_eq!(
         prefetched_fetcher
-            .get_generation_number(ctx.clone(), ONES_CSID)
+            .get_generation_number(ctx, ONES_CSID)
             .await?,
         Generation::new(1)
     );
-    assert_eq!(
-        prefetched_fetcher
-            .get_parents(ctx.clone(), ONES_CSID)
-            .await?,
-        []
-    );
+    assert_eq!(prefetched_fetcher.get_parents(ctx, ONES_CSID).await?, []);
 
     // Confirm the generation number and parents for TWOS_CSID
     assert_eq!(
         prefetched_fetcher
-            .get_generation_number(ctx.clone(), TWOS_CSID)
+            .get_generation_number(ctx, TWOS_CSID)
             .await?,
         Generation::new(5)
     );
     assert_eq!(
-        prefetched_fetcher
-            .get_parents(ctx.clone(), TWOS_CSID)
-            .await?,
+        prefetched_fetcher.get_parents(ctx, TWOS_CSID).await?,
         [ONES_CSID]
     );
 
@@ -134,6 +124,7 @@ async fn test_prefetched_fetcher_no_overlap(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_prefetched_fetcher_overlap(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
+    let ctx = &ctx;
 
     // Create our mock changesets with ONES_CSID and TWOS_CSID
     let changesets = Arc::new(
@@ -144,12 +135,12 @@ async fn test_prefetched_fetcher_overlap(fb: FacebookInit) -> Result<()> {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(ctx.clone(), row).await?;
+    changesets.add(ctx, row).await?;
     let row = ChangesetInsert {
         cs_id: TWOS_CSID,
         parents: vec![ONES_CSID],
     };
-    changesets.add(ctx.clone(), row).await?;
+    changesets.add(ctx, row).await?;
 
     let cs2 = Ok(ChangesetEntry {
         repo_id: REPO_ZERO,
@@ -164,14 +155,12 @@ async fn test_prefetched_fetcher_overlap(fb: FacebookInit) -> Result<()> {
     // Confirm the generation number and parents for TWOS_CSID comes from the prefetch list
     assert_eq!(
         prefetched_fetcher
-            .get_generation_number(ctx.clone(), TWOS_CSID)
+            .get_generation_number(ctx, TWOS_CSID)
             .await?,
         Generation::new(5)
     );
     assert_eq!(
-        prefetched_fetcher
-            .get_parents(ctx.clone(), TWOS_CSID)
-            .await?,
+        prefetched_fetcher.get_parents(ctx, TWOS_CSID).await?,
         [THREES_CSID]
     );
 

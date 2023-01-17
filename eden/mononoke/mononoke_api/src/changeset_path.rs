@@ -539,7 +539,6 @@ impl ChangesetPathHistoryContext {
         opts: ChangesetPathHistoryOptions,
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
     {
-        let ctx = self.changeset.ctx().clone();
         let repo = self.repo().blob_repo().clone();
         let mpath = self.path.as_mpath();
 
@@ -547,7 +546,7 @@ impl ChangesetPathHistoryContext {
             Some(descendants_of) => Some((
                 descendants_of,
                 repo.changeset_fetcher_arc()
-                    .get_generation_number(ctx.clone(), descendants_of)
+                    .get_generation_number(self.changeset.ctx(), descendants_of)
                     .await?,
             )),
             None => None,
@@ -557,7 +556,7 @@ impl ChangesetPathHistoryContext {
             Some(exclude_changeset_and_ancestors) => Some((
                 exclude_changeset_and_ancestors,
                 repo.changeset_fetcher_arc()
-                    .get_generation_number(ctx.clone(), exclude_changeset_and_ancestors)
+                    .get_generation_number(self.changeset.ctx(), exclude_changeset_and_ancestors)
                     .await?,
             )),
             None => None,
@@ -602,9 +601,8 @@ impl ChangesetPathHistoryContext {
                         cloned!(descendant_cs_id, skiplist_index);
                         async move {
                             let changeset_fetcher = repo.changeset_fetcher_arc();
-                            let cs_gen = changeset_fetcher
-                                .get_generation_number(ctx.clone(), cs_id)
-                                .await?;
+                            let cs_gen =
+                                changeset_fetcher.get_generation_number(ctx, cs_id).await?;
                             if cs_gen < descendants_of_gen {
                                 return Ok(None);
                             }
@@ -661,7 +659,7 @@ impl ChangesetPathHistoryContext {
                     let descendant_cs_gen = if let Some((descendant_cs_id, _)) = descendant_cs_id {
                         Some(
                             changeset_fetcher
-                                .get_generation_number(ctx.clone(), descendant_cs_id)
+                                .get_generation_number(ctx, descendant_cs_id)
                                 .await?,
                         )
                     } else {
@@ -670,9 +668,8 @@ impl ChangesetPathHistoryContext {
 
                     cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| {
                         async move {
-                            let cs_gen = changeset_fetcher
-                                .get_generation_number(ctx.clone(), cs_id)
-                                .await?;
+                            let cs_gen =
+                                changeset_fetcher.get_generation_number(ctx, cs_id).await?;
 
                             // If the cs_gen is below the cutoff point
                             if cs_gen <= exclude_changeset_and_ancestors_gen {
@@ -757,7 +754,7 @@ impl ChangesetPathHistoryContext {
         };
 
         let history = list_file_history(
-            ctx.clone(),
+            self.changeset.ctx(),
             self.repo().inner_repo(),
             mpath.cloned(),
             self.changeset.id(),
@@ -776,7 +773,10 @@ impl ChangesetPathHistoryContext {
                 FollowMutableFileHistory::ImmutableCommitParents
             },
             self.repo().mutable_renames().clone(),
-            TraversalOrder::new_gen_num_order(ctx.clone(), repo.changeset_fetcher_arc()),
+            TraversalOrder::new_gen_num_order(
+                self.changeset.ctx().clone(),
+                repo.changeset_fetcher_arc(),
+            ),
         )
         .await
         .map_err(|error| match error {

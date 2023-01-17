@@ -59,7 +59,7 @@ fn make_pending(
                 cloned!(ctx, changeset_fetcher);
                 move |hash| {
                     cloned!(ctx, changeset_fetcher);
-                    async move { changeset_fetcher.get_parents(ctx, hash).await }
+                    async move { changeset_fetcher.get_parents(&ctx, hash).await }
                         .boxed()
                         .compat()
                         .map(|parents| parents.into_iter())
@@ -71,15 +71,11 @@ fn make_pending(
             .flatten()
             .and_then(move |node_cs| {
                 cloned!(ctx, changeset_fetcher);
-                async move {
-                    changeset_fetcher
-                        .get_generation_number(ctx.clone(), node_cs)
-                        .await
-                }
-                .boxed()
-                .compat()
-                .map(move |gen_id| (node_cs, gen_id))
-                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+                async move { changeset_fetcher.get_generation_number(&ctx, node_cs).await }
+                    .boxed()
+                    .compat()
+                    .map(move |gen_id| (node_cs, gen_id))
+                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
             }),
     )
 }
@@ -216,7 +212,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
@@ -249,7 +245,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await,
@@ -287,7 +283,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
@@ -318,7 +314,7 @@ mod test {
         .boxify();
 
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "dd993aab2bed7276e17c88470286ba8459ba6d94").await,
@@ -362,7 +358,7 @@ mod test {
                 string_to_bonsai(fb, &repo, "1700524113b1a3b1806560341009684b4378660b").await,
             ],
         );
-        assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
+        assert_changesets_sequence(&ctx, &repo, vec![], nodestream).await;
     }
 
     #[fbinit::test]
@@ -382,7 +378,7 @@ mod test {
             ],
         );
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![string_to_bonsai(fb, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await],
             nodestream,
@@ -407,7 +403,7 @@ mod test {
             ],
         );
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await],
             nodestream,
@@ -432,7 +428,7 @@ mod test {
             ],
         );
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![string_to_bonsai(fb, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await],
             nodestream,
@@ -457,7 +453,7 @@ mod test {
             ],
         );
         assert_changesets_sequence(
-            ctx.clone(),
+            &ctx,
             &repo,
             vec![
                 string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,

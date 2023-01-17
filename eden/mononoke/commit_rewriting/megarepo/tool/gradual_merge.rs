@@ -283,7 +283,7 @@ async fn find_unmerged_commits(
         let parents = repo
             .blob_repo
             .changeset_fetcher()
-            .get_parents(ctx.clone(), cs_id)
+            .get_parents(ctx, cs_id)
             .await?;
         for p in parents {
             if visited.insert(p) {

@@ -114,7 +114,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 /// 4) Update the bookmark
 /// ```
 pub async fn do_sync_diamond_merge(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     small_repo: InnerRepo,
     large_repo: BlobRepo,
     small_merge_cs_id: ChangesetId,
@@ -131,7 +131,7 @@ pub async fn do_sync_diamond_merge(
     let parents = small_repo
         .blob_repo
         .changeset_fetcher()
-        .get_parents(ctx.clone(), small_merge_cs_id)
+        .get_parents(ctx, small_merge_cs_id)
         .await?;
 
     let (p1, p2) = validate_parents(parents)?;

@@ -58,15 +58,12 @@ async fn parents_with_generations(
     repo: &BlobRepo,
     csid: ChangesetId,
 ) -> Result<Vec<(ChangesetId, Generation)>> {
-    let parents = repo
-        .changeset_fetcher()
-        .get_parents(ctx.clone(), csid)
-        .await?;
+    let parents = repo.changeset_fetcher().get_parents(ctx, csid).await?;
     let parents_with_generations =
         stream::iter(parents.into_iter().map(|parent_csid| async move {
             let gen = repo
                 .changeset_fetcher()
-                .get_generation_number(ctx.clone(), parent_csid)
+                .get_generation_number(ctx, parent_csid)
                 .await?;
             Ok(Some((parent_csid, gen)))
         }))
@@ -153,7 +150,7 @@ pub(crate) async fn slice_repository(
     stream::iter(heads.into_iter().map(|csid| async move {
         let gen = repo
             .changeset_fetcher()
-            .get_generation_number(ctx.clone(), csid)
+            .get_generation_number(ctx, csid)
             .await?;
         Ok(Some((csid, gen)))
     }))
