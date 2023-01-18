@@ -31,12 +31,8 @@ pub struct Config {
     pub commitcloud: Option<CommitCloudConfig>,
 }
 
-// To support older than Rust 1.26 on dev servers
-fn main() {
-    run().unwrap();
-}
-
-fn run() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     check_nice()?;
     env_logger::init();
     let help: &str = &format!(
@@ -101,7 +97,7 @@ fn run() -> Result<()> {
         Err(_) => bail!("commitcloud tcpreceiver panicked"),
     };
 
-    match commitcloud_workspacesubscriber_handler.join() {
+    match commitcloud_workspacesubscriber_handler.await {
         Ok(result) => result?,
         Err(_) => bail!("commitcloud workspace subscriber panicked"),
     };

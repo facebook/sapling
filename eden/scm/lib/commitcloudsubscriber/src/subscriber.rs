@@ -12,19 +12,20 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::bail;
 use anyhow::Result;
+use futures::stream::StreamExt;
 use log::error;
 use log::info;
 use reqwest::Url;
+use reqwest_eventsource::Event;
+use reqwest_eventsource::EventSource;
 use serde::Deserialize;
 
 use crate::action::CloudSyncTrigger;
-use crate::client::Client;
 use crate::config::CommitCloudConfig;
 use crate::error::*;
 use crate::receiver::CommandName;
@@ -205,9 +206,9 @@ impl WorkspaceSubscriberService {
         actions
     }
 
-    pub fn serve(self) -> Result<thread::JoinHandle<Result<()>>> {
+    pub fn serve(self) -> Result<tokio::task::JoinHandle<Result<()>>> {
         self.channel.0.send(CommitCloudStartSubscriptions)?;
-        Ok(thread::spawn(move || {
+        Ok(tokio::task::spawn(async move {
             info!("Starting CommitCloud WorkspaceSubscriberService");
             loop {
                 let command = self.channel.1.recv_timeout(Duration::from_secs(60));
@@ -230,7 +231,7 @@ impl WorkspaceSubscriberService {
                         if let Ok(access_token) = access_token {
                             let subscriptions = self.run_subscriptions(access_token)?;
                             for child in subscriptions {
-                                let _ = child.join();
+                                let _ = child.await;
                             }
                         } else {
                             info!("User is not authenticated with Commit Cloud yet");
@@ -245,7 +246,7 @@ impl WorkspaceSubscriberService {
                         if let Ok(access_token) = access_token {
                             let subscriptions = self.run_subscriptions(access_token)?;
                             for child in subscriptions {
-                                let _ = child.join();
+                                let _ = child.await;
                             }
                         } else {
                             info!("User is not authenticated with Commit Cloud yet");
@@ -268,16 +269,19 @@ impl WorkspaceSubscriberService {
     }
 
     /// This helper function reads the list of current connected subscribers
-    /// It starts all the requested subscriptions by simply runing a separate thread for each one
-    /// All threads keep checking the interrupt flag and join gracefully if it is restart or stop
+    /// It starts all the requested subscriptions by creating a separate async task for each one
+    /// All tasks keep checking the interrupt flag and join gracefully if it is restart or stop
 
-    fn run_subscriptions(&self, access_token: util::Token) -> Result<Vec<thread::JoinHandle<()>>> {
+    fn run_subscriptions(
+        &self,
+        access_token: util::Token,
+    ) -> Result<Vec<tokio::task::JoinHandle<()>>> {
         util::read_subscriptions(&self.connected_subscribers_path)?
             .into_iter()
             .map(|(subscription, repo_roots)| {
                 self.run_subscription(access_token.clone(), subscription, repo_roots)
             })
-            .collect::<Result<Vec<thread::JoinHandle<()>>>>()
+            .collect::<Result<Vec<tokio::task::JoinHandle<()>>>>()
     }
 
     /// Helper function to run a single subscription
@@ -287,7 +291,7 @@ impl WorkspaceSubscriberService {
         access_token: util::Token,
         subscription: Subscription,
         repo_roots: Vec<PathBuf>,
-    ) -> Result<thread::JoinHandle<()>> {
+    ) -> Result<tokio::task::JoinHandle<()>> {
         let mut notification_url = Url::parse(&self.notification_url)?;
 
         let sid = format!("({} @ {})", subscription.repo_name, subscription.workspace);
@@ -300,7 +304,7 @@ impl WorkspaceSubscriberService {
             .append_pair("access_token", &access_token.token)
             .append_pair("token_type", &access_token.token_type.to_string());
 
-        let client = Client::new(notification_url);
+        let mut es = EventSource::get(notification_url);
 
         info!("{} Spawn a thread to handle the subscription", sid);
 
@@ -309,7 +313,7 @@ impl WorkspaceSubscriberService {
         let error_throttling_rate = self.error_throttling_rate;
         let interrupt = self.interrupt.clone();
 
-        Ok(thread::spawn(move || {
+        Ok(tokio::spawn(async move {
             info!("{} Thread started...", sid);
 
             let fire = |reason: &'static str, version: Option<u64>| {
@@ -346,74 +350,79 @@ impl WorkspaceSubscriberService {
             let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate);
             let mut last_error = false;
 
-            // the library handles automatic reconnection
-            for event in client {
+            while let Some(event) = es.next().await {
                 if interrupt.load(Ordering::Relaxed) {
                     return;
                 }
 
                 let event = event.map_err(|e| ErrorKind::CommitCloudHttpError(format!("{}", e)));
-                if let Err(e) = event {
-                    terror!(throttler_error, "{} {}. Continue...", sid, e);
-                    throttler_alive.reset();
-                    last_error = true;
-                    if format!("{}", e).contains("401 Unauthorized") {
-                        // interrupt execution earlier
-                        // all subscriptions have to be restarted from scratch
-                        interrupt.store(true, Ordering::Relaxed);
+                match event {
+                    Err(e) => {
+                        terror!(throttler_error, "{} {}. Continue...", sid, e);
+                        throttler_alive.reset();
+                        last_error = true;
+                        if format!("{}", e).contains("401 Unauthorized") {
+                            // interrupt execution earlier
+                            // all subscriptions have to be restarted from scratch
+                            interrupt.store(true, Ordering::Relaxed);
+                        }
+                        continue;
                     }
-                    continue;
-                }
+                    Ok(Event::Open) => {
+                        info!("EventSource connection open!")
+                    }
+                    Ok(Event::Message(e)) => {
+                        let data = e.data;
+                        if data.is_empty() {
+                            tinfo!(
+                                throttler_alive,
+                                "{} Received empty event. Subscription is alive",
+                                sid
+                            );
+                            throttler_error.reset();
+                            if last_error {
+                                fire("after recover from error", None);
+                                if interrupt.load(Ordering::Relaxed) {
+                                    return;
+                                }
+                            }
+                            last_error = false;
+                            continue;
+                        }
 
-                let data = event.unwrap().data;
-                if data.is_empty() {
-                    tinfo!(
-                        throttler_alive,
-                        "{} Received empty event. Subscription is alive",
-                        sid
-                    );
-                    throttler_error.reset();
-                    if last_error {
-                        fire("after recover from error", None);
+                        throttler_alive.reset();
+                        throttler_error.reset();
+                        last_error = false;
+
+                        info!("{} Received new notification event", sid);
+                        let notification = serde_json::from_str::<Notification>(&data);
+                        if let Err(e) = notification {
+                            error!(
+                                "{} Unable to decode json data in the event, reason: {}. Continue...",
+                                sid, e
+                            );
+                            continue;
+                        }
+                        let notification = notification.unwrap();
+                        info!(
+                            "{} CommitCloud informs that the latest workspace version is {}",
+                            sid, notification.version
+                        );
+                        if let Some(ref new_heads) = notification.new_heads {
+                            if !new_heads.is_empty() {
+                                info!("{} New heads:\n{}", sid, new_heads.join("\n"));
+                            }
+                        }
+                        if let Some(ref removed_heads) = notification.removed_heads {
+                            if !removed_heads.is_empty() {
+                                info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
+                            }
+                        }
+                        fire("on new version notification", Some(notification.version));
                         if interrupt.load(Ordering::Relaxed) {
                             return;
                         }
                     }
-                    last_error = false;
-                    continue;
-                }
-
-                throttler_alive.reset();
-                throttler_error.reset();
-                last_error = false;
-
-                info!("{} Received new notification event", sid);
-                let notification = serde_json::from_str::<Notification>(&data);
-                if let Err(e) = notification {
-                    error!(
-                        "{} Unable to decode json data in the event, reason: {}. Continue...",
-                        sid, e
-                    );
-                    continue;
-                }
-                let notification = notification.unwrap();
-                info!(
-                    "{} CommitCloud informs that the latest workspace version is {}",
-                    sid, notification.version
-                );
-                if let Some(ref new_heads) = notification.new_heads {
-                    if !new_heads.is_empty() {
-                        info!("{} New heads:\n{}", sid, new_heads.join("\n"));
-                    }
-                }
-                if let Some(ref removed_heads) = notification.removed_heads {
-                    if !removed_heads.is_empty() {
-                        info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
-                    }
-                }
-                fire("on new version notification", Some(notification.version));
-                if interrupt.load(Ordering::Relaxed) {
-                    return;
                 }
             }
         }))

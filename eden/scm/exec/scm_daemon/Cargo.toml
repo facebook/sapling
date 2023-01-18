@@ -14,4 +14,5 @@ libc = "0.2.137"
 log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_std"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 thiserror = "1.0.36"
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 toml = "=0.5.8"

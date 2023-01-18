@@ -20,6 +20,7 @@ description = '''
 [dependencies]
 anyhow = "1.0.65"
 filetime = "0.2.9"
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 identity = { version = "0.1.0", path = "../identity" }
 lazy_static = "1.4"
@@ -27,10 +28,12 @@ log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_std"] }
 mime = "0.3.14"
 regex = "1.6.0"
 reqwest = { version = "0.11.11", features = ["blocking", "json", "multipart", "rustls-tls", "rustls-tls-native-roots", "stream", "trust-dns-optional"] }
+reqwest-eventsource = "0.4.0"
 rust-ini = { version = "0.17", features = ["inline-comment"] }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.36"
+tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 tempfile = "3.3"
