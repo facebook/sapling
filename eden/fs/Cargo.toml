@@ -1,4 +1,5 @@
 [patch.crates-io]
+abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 aes-gcm-siv = { git = "https://github.com/lei2022/AEADs", rev = "d9d03399fbc1347a1c2941801c0743e847980757" }
 bindgen = { git = "https://github.com/fbsource/bindgen", rev = "65cde6d7eed1b6785d3c4186f326b4470a680e7b" }
 bindgen-cli = { git = "https://github.com/fbsource/bindgen", rev = "65cde6d7eed1b6785d3c4186f326b4470a680e7b" }
