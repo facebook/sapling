@@ -7,13 +7,25 @@
 
 use std::u64;
 
+use abomonation_derive::Abomonation;
 use serde_derive::Serialize;
 
 /// Generation number
 ///
 /// The generation number for a changeset is defined as the max of the changeset's parents'
 /// generation number plus 1; if there are no parents then it's 1.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(
+    Abomonation,
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Serialize
+)]
 pub struct Generation(u64);
 
 pub const FIRST_GENERATION: Generation = Generation(1);

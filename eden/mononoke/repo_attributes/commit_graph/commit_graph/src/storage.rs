@@ -42,6 +42,19 @@ pub enum Prefetch {
     Include(Generation),
 }
 
+impl Prefetch {
+    pub fn is_hint(&self) -> bool {
+        matches!(self, Prefetch::Hint(_))
+    }
+
+    pub fn include_hint(self) -> Prefetch {
+        match self {
+            Prefetch::None => Prefetch::None,
+            Prefetch::Hint(gen) | Prefetch::Include(gen) => Prefetch::Include(gen),
+        }
+    }
+}
+
 /// Commit Graph Storage.
 #[async_trait]
 pub trait CommitGraphStorage: Send + Sync {

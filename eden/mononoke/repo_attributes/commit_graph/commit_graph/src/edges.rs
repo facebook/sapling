@@ -10,11 +10,12 @@
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 
+use abomonation_derive::Abomonation;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use smallvec::SmallVec;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Abomonation, Copy, Clone, Debug, Eq, PartialEq)]
 pub struct ChangesetNode {
     /// The id of the changeset.
     pub cs_id: ChangesetId,
@@ -38,7 +39,7 @@ pub struct ChangesetNode {
 pub type ChangesetNodeParents = SmallVec<[ChangesetNode; 1]>;
 
 /// Outgoing edges from a changeset node.
-#[derive(Clone, Debug)]
+#[derive(Abomonation, Clone, Debug)]
 pub struct ChangesetEdges {
     /// The starting changeset for this set of edges.
     pub node: ChangesetNode,
