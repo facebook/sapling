@@ -42,7 +42,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_update_logger::log_new_commits;
 use repo_update_logger::CommitInfo;
 use skiplist::SkiplistIndexArc;
-use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use topo_sort::sort_topological;
 use wireproto_handler::TargetRepoDbs;
@@ -142,7 +141,6 @@ impl<R: Repo> PushRedirectorArgs<R> {
         let small_to_large_commit_syncer = syncers.small_to_large;
         let large_to_small_commit_syncer = syncers.large_to_small;
 
-        debug!(ctx.logger(), "Instantiating a new PushRedirector");
         Ok(PushRedirector {
             repo: target_repo,
             small_repo: source_repo,
