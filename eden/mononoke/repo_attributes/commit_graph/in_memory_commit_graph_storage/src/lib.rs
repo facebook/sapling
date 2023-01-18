@@ -13,11 +13,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph::edges::ChangesetEdges;
 use commit_graph::storage::CommitGraphStorage;
+use commit_graph::storage::Prefetch;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use parking_lot::RwLock;
 use vec1::Vec1;
@@ -103,7 +103,7 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         &self,
         _ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        _prefetch_hint: Option<Generation>,
+        _prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let mut result = HashMap::with_capacity(cs_ids.len());
         let changesets = self.changesets.read();
@@ -119,9 +119,9 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch_hint).await?;
+        let edges = self.fetch_many_edges(ctx, cs_ids, prefetch).await?;
         let missing_changesets: Vec<_> = cs_ids
             .iter()
             .filter(|cs_id| !edges.contains_key(cs_id))

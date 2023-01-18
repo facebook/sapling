@@ -11,12 +11,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use commit_graph::edges::ChangesetEdges;
 use commit_graph::storage::CommitGraphStorage;
+use commit_graph::storage::Prefetch;
 use context::CoreContext;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use vec1::Vec1;
 
@@ -101,11 +101,11 @@ impl<T: CommitGraphStorage> CommitGraphStorage for BufferedCommitGraphStorage<T>
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let mut fetched_edges = self
             .in_memory_storage
-            .fetch_many_edges(ctx, cs_ids, prefetch_hint)
+            .fetch_many_edges(ctx, cs_ids, prefetch)
             .await?;
 
         let unfetched_ids = cs_ids
@@ -117,7 +117,7 @@ impl<T: CommitGraphStorage> CommitGraphStorage for BufferedCommitGraphStorage<T>
         if !unfetched_ids.is_empty() {
             fetched_edges.extend(
                 self.persistent_storage
-                    .fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch_hint)
+                    .fetch_many_edges(ctx, unfetched_ids.as_slice(), prefetch)
                     .await?
                     .into_iter(),
             )
@@ -130,11 +130,11 @@ impl<T: CommitGraphStorage> CommitGraphStorage for BufferedCommitGraphStorage<T>
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let mut fetched_edges = self
             .in_memory_storage
-            .fetch_many_edges(ctx, cs_ids, prefetch_hint)
+            .fetch_many_edges(ctx, cs_ids, prefetch)
             .await?;
 
         let unfetched_ids = cs_ids
@@ -146,7 +146,7 @@ impl<T: CommitGraphStorage> CommitGraphStorage for BufferedCommitGraphStorage<T>
         if !unfetched_ids.is_empty() {
             fetched_edges.extend(
                 self.persistent_storage
-                    .fetch_many_edges_required(ctx, unfetched_ids.as_slice(), prefetch_hint)
+                    .fetch_many_edges_required(ctx, unfetched_ids.as_slice(), prefetch)
                     .await?
                     .into_iter(),
             )

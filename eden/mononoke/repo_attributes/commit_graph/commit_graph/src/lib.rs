@@ -36,6 +36,7 @@ use crate::edges::ChangesetFrontier;
 use crate::edges::ChangesetNode;
 use crate::edges::ChangesetNodeParents;
 use crate::storage::CommitGraphStorage;
+use crate::storage::Prefetch;
 
 pub mod edges;
 pub mod storage;
@@ -74,7 +75,7 @@ impl CommitGraph {
     ) -> Result<bool> {
         let parent_edges = self
             .storage
-            .fetch_many_edges_required(ctx, &parents, None)
+            .fetch_many_edges_required(ctx, &parents, Prefetch::None)
             .await?;
 
         self.storage
@@ -103,7 +104,7 @@ impl CommitGraph {
 
             edges_map.extend(
                 self.storage
-                    .fetch_many_edges(ctx, &parents, None)
+                    .fetch_many_edges(ctx, &parents, Prefetch::None)
                     .await?
                     .into_iter(),
             );
@@ -478,7 +479,10 @@ impl CommitGraph {
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<ChangesetFrontier> {
-        let all_edges = self.storage.fetch_many_edges(ctx, &cs_ids, None).await?;
+        let all_edges = self
+            .storage
+            .fetch_many_edges(ctx, &cs_ids, Prefetch::None)
+            .await?;
 
         let mut frontier = ChangesetFrontier::new();
         for cs_id in cs_ids {
@@ -515,7 +519,7 @@ impl CommitGraph {
                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                 let frontier_edges = self
                     .storage
-                    .fetch_many_edges_required(ctx, &cs_ids, Some(target_generation))
+                    .fetch_many_edges_required(ctx, &cs_ids, Prefetch::Hint(target_generation))
                     .await?;
                 for cs_id in cs_ids {
                     let edges = frontier_edges
@@ -574,7 +578,7 @@ impl CommitGraph {
             let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
             let frontier_edges = self
                 .storage
-                .fetch_many_edges_required(ctx, &cs_ids, None)
+                .fetch_many_edges_required(ctx, &cs_ids, Prefetch::None)
                 .await?;
             for cs_id in cs_ids {
                 let edges = frontier_edges
@@ -674,7 +678,7 @@ impl CommitGraph {
 
             let all_edges = self
                 .storage
-                .fetch_many_edges(ctx, &cs_ids_not_excluded, None)
+                .fetch_many_edges(ctx, &cs_ids_not_excluded, Prefetch::None)
                 .await?;
 
             for (_, edges) in all_edges.into_iter() {

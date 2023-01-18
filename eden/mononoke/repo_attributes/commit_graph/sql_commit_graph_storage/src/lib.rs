@@ -22,6 +22,7 @@ use commit_graph::edges::ChangesetEdges;
 use commit_graph::edges::ChangesetNode;
 use commit_graph::edges::ChangesetNodeParents;
 use commit_graph::storage::CommitGraphStorage;
+use commit_graph::storage::Prefetch;
 use commit_graph::ChangesetParents;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -339,7 +340,7 @@ impl SqlCommitGraphStorage {
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        _prefetch_hint: Option<Generation>,
+        _prefetch: Prefetch,
         rendezvous: &RendezVousConnection,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         if cs_ids.is_empty() {
@@ -706,7 +707,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>> {
         Ok(self
-            .fetch_many_edges(ctx, &[cs_id], None)
+            .fetch_many_edges(ctx, &[cs_id], Prefetch::None)
             .await?
             .remove(&cs_id))
     }
@@ -716,7 +717,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<ChangesetEdges> {
-        self.fetch_many_edges_required(ctx, &[cs_id], None)
+        self.fetch_many_edges_required(ctx, &[cs_id], Prefetch::None)
             .await?
             .remove(&cs_id)
             .ok_or_else(|| anyhow!("Missing changeset from sql commit graph storage: {}", cs_id))
@@ -726,11 +727,11 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        self.fetch_many_edges_impl(ctx, cs_ids, prefetch_hint, &self.read_connection)
+        self.fetch_many_edges_impl(ctx, cs_ids, prefetch, &self.read_connection)
             .await
     }
 
@@ -738,12 +739,12 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut edges = self
-            .fetch_many_edges_impl(ctx, cs_ids, prefetch_hint, &self.read_connection)
+            .fetch_many_edges_impl(ctx, cs_ids, prefetch, &self.read_connection)
             .await?;
         let unfetched_ids: Vec<ChangesetId> = cs_ids
             .iter()
@@ -755,12 +756,7 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             let extra_edges = self
-                .fetch_many_edges_impl(
-                    ctx,
-                    &unfetched_ids,
-                    prefetch_hint,
-                    &self.read_master_connection,
-                )
+                .fetch_many_edges_impl(ctx, &unfetched_ids, prefetch, &self.read_master_connection)
                 .await?;
             edges.extend(extra_edges);
             cs_ids

@@ -23,6 +23,25 @@ use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;
 
+/// Indication for additional changesets to be fetched for subsequent
+/// traversals.
+///
+/// If efficient to do so, implementors should use this hint to fetch
+/// additional edges that will be useful for skew-binary traversal
+/// to the target generation.
+#[derive(Copy, Clone, Debug)]
+pub enum Prefetch {
+    /// No prefetch is required.
+    None,
+
+    /// Prefetch is permitted with the given hint, but additional items are
+    /// not to be returned.
+    Hint(Generation),
+
+    /// Prefetch if possible, and included prefetched items in the result.
+    Include(Generation),
+}
+
 /// Commit Graph Storage.
 #[async_trait]
 pub trait CommitGraphStorage: Send + Sync {
@@ -55,17 +74,14 @@ pub trait CommitGraphStorage: Send + Sync {
 
     /// Returns the changeset graph edges for multiple changesets.
     ///
-    /// Prefetch hint indicates that this request is part of a larger request
+    /// Prefetch indicates that this request is part of a larger request
     /// involving commits down to a particular generation number, and so
     /// prefetching more nodes into any internal caches would be beneficial.
-    ///
-    /// If prefetching does occur, it is internal to the caches, and this
-    /// method will only return edges for the requested changesets.
     async fn fetch_many_edges(
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        _prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
 
     /// Same as fetch_many_edges but returns an error if any of
@@ -74,24 +90,8 @@ pub trait CommitGraphStorage: Send + Sync {
         &self,
         ctx: &CoreContext,
         cs_ids: &[ChangesetId],
-        prefetch_hint: Option<Generation>,
+        prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>>;
-
-    /// Returns the changeset graph edges for multiple changesets plus
-    /// additional prefetched edges for subsequent traversals.
-    ///
-    /// If possible, implementors of this method should additionally fetch
-    /// more ancestors down to the prefetch hint, and include these prefetched
-    /// edges in the return value.
-    async fn fetch_many_edges_with_prefetch(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: &[ChangesetId],
-        prefetch_hint: Generation,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        self.fetch_many_edges(ctx, cs_ids, Some(prefetch_hint))
-            .await
-    }
 
     /// Find all changeset ids with a given prefix.
     async fn find_by_prefix(
