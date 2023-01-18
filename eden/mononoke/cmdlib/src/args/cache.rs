@@ -49,6 +49,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
         "override size of the changesets cache",
     ),
     (
+        "commit-graph-cache-size",
+        "override size of the commit graph cache",
+    ),
+    (
         "filenodes-cache-size",
         "override size of the filenodes cache (individual filenodes)",
     ),
@@ -229,6 +233,9 @@ pub fn parse_and_init_cachelib(
             }
             if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
                 settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
+            }
+            if let Some(commit_graph_cache_size) = matches.value_of("commit-graph-cache-size") {
+                settings.commit_graph_cache_size = Some(commit_graph_cache_size.parse().unwrap());
             }
             if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
                 settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());

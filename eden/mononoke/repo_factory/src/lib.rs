@@ -51,12 +51,14 @@ use cacheblob::CachelibBlobstoreOptions;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
+use caching_commit_graph_storage::CachingCommitGraphStorage;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
 use changesets_impl::CachingChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use cloned::cloned;
+use commit_graph::storage::CommitGraphStorage;
 use commit_graph::ArcCommitGraph;
 use commit_graph::CommitGraph;
 use commit_graph_compat::ChangesetsCommitGraphCompat;
@@ -1520,7 +1522,18 @@ impl RepoFactory {
                 },
                 repo_identity.id(),
             );
-        Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
+        let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
+            if let Some(pool) = self.maybe_volatile_pool("commit_graph")? {
+                Arc::new(CachingCommitGraphStorage::new(
+                    self.env.fb,
+                    Arc::new(sql_storage),
+                    pool,
+                ))
+            } else {
+                Arc::new(sql_storage)
+            };
+
+        Ok(Arc::new(CommitGraph::new(maybe_cached_storage)))
     }
 }
 

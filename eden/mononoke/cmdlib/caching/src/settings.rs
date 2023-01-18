@@ -20,6 +20,7 @@ pub struct CachelibSettings {
     pub use_tupperware_shrinker: bool,
     pub presence_cache_size: Option<usize>,
     pub changesets_cache_size: Option<usize>,
+    pub commit_graph_cache_size: Option<usize>,
     pub filenodes_cache_size: Option<usize>,
     pub filenodes_history_cache_size: Option<usize>,
     pub hg_mutation_store_cache_size: Option<usize>,
@@ -84,6 +85,11 @@ impl CachelibSettings {
         );
         set_default(
             &mut defaults,
+            "commit-graph-cache-size",
+            &self.commit_graph_cache_size,
+        );
+        set_default(
+            &mut defaults,
             "filenodes-cache-size",
             &self.filenodes_cache_size,
         );
@@ -142,6 +148,10 @@ impl CachelibSettings {
         replace(&mut self.buckets_power, &args.buckets_power);
         replace(&mut self.presence_cache_size, &args.presence_cache_size);
         replace(&mut self.changesets_cache_size, &args.changesets_cache_size);
+        replace(
+            &mut self.commit_graph_cache_size,
+            &args.commit_graph_cache_size,
+        );
         replace(&mut self.filenodes_cache_size, &args.filenodes_cache_size);
         replace(
             &mut self.filenodes_history_cache_size,
@@ -178,6 +188,7 @@ impl Default for CachelibSettings {
             use_tupperware_shrinker: false,
             presence_cache_size: None,
             changesets_cache_size: None,
+            commit_graph_cache_size: None,
             filenodes_cache_size: None,
             filenodes_history_cache_size: None,
             hg_mutation_store_cache_size: None,
