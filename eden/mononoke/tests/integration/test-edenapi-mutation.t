@@ -4,9 +4,24 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree. 
 
+#testcases commitgraph commitgraph_v2
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
   $ setconfig ui.ignorerevnum=false
+
+Select version of commit graph
+#if commitgraph_v2
+  $ setconfig pull.httpcommitgraph2=true
+#else
+  $ setconfig pull.httpcommitgraph=true
+#endif
+
+#if commitgraph_v2
+  $ export COMMAND_API="commitgraph2"
+#else
+  $ export COMMAND_API="commitgraph"
+#endif
 
 Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ export READ_ONLY_REPO=1
@@ -20,6 +35,11 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   >     "mutation_advertise_for_infinitepush": true,
   >     "mutation_accept_for_infinitepush": true,
   >     "mutation_generate_for_draft": true
+  >   },
+  >   "killswitches_by_repo": {
+  >     "repo": {
+  >       "enable_writing_to_new_commit_graph": true
+  >     }
   >   }
   > }
   > EOF
@@ -46,7 +66,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   > [remotefilelog]
   > reponame=repo
   > [pull]
-  > httpcommitgraph = true
   > httphashprefix = true
   > EOF
 Custom smartlog
@@ -99,7 +118,7 @@ Test mutations on client 1
   $ hgedenapi debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
 Test phases from commitgraph
-  $ hgedenapi debugapi -e commitgraph -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
+  $ hgedenapi debugapi -e $COMMAND_API -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
   [{"hgid": bin("8b2dca0c8a726d66bf26d47835a356cc4286facd"),
     "parents": [],
     "is_draft": False},
