@@ -162,10 +162,12 @@ _hg_prompt() {
 # cf. https://www.internalfb.com/intern/qa/4964/how-do-i-show-the-mercurial-bookmarkgit-branch-in?answerID=540621130023036
 _hg_dirty() {
   if [ -n "${SHOW_DIRTY_STATE}" ] &&
-     [ "$(hg config shell.showDirtyState)" != "false" ]; then
-    command hg status 2> /dev/null \
-    | command awk '$1 == "?" { print "?" } $1 != "?" { print "*" }' \
-    | command sort | command uniq | command head -c1
+     [ "$(command sl config shell.showDirtyState)" != "false" ]; then
+       command sl status 2> /dev/null \
+         | command awk '{print $1}'\
+         | command sort\
+         | command uniq\
+         | command paste -sd ' ' -
   fi
 }
 
