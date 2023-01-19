@@ -1,4 +1,5 @@
 [patch.crates-io]
+abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 deltae = { git = "https://github.com/markbt/deltae", rev = "1c6e9c7c9184751bd17795d78896d522e77a2ce4" }
 reqwest = { git = "https://github.com/vmagro/reqwest", rev = "f9490c06756a9d35ab874c44657db790a87af80b" }
 
