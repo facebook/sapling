@@ -2651,6 +2651,7 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
 
 folly::SemiFuture<std::unique_ptr<Glob>>
 EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
+  TaskTraceBlock block{"EdenServiceHandler::globFiles"};
   ThriftGlobImpl globber{*params};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,

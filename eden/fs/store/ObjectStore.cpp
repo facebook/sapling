@@ -19,6 +19,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/Throw.h"
 
@@ -199,6 +200,7 @@ ObjectStore::getTreeEntryForObjectId(
 ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {
+  TaskTraceBlock block{"ObjectStore::getTree"};
   DurationScope statScope{stats_, &ObjectStoreStats::getTree};
 
   // Check in the LocalStore first
@@ -230,6 +232,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
        statScope = std::move(statScope),
        id,
        fetchContext = fetchContext.copy()](BackingStore::GetTreeResult result) {
+        TaskTraceBlock block2{"ObjectStore::getTree::thenValue"};
         if (!result.tree) {
           // TODO: Perhaps we should do some short-term negative
           // caching?

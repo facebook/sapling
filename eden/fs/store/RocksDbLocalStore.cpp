@@ -28,6 +28,7 @@
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Throw.h"
@@ -438,6 +439,7 @@ void RocksDbLocalStore::compactKeySpace(KeySpace keySpace) {
 }
 
 StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
+  TaskTraceBlock block{"RocksDbLocalStore::get"};
   auto handlesLock = getHandles();
   auto& handles = handlesLock->handles;
   string value;

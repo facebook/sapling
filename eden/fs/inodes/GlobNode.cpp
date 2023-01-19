@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/telemetry/TaskTrace.h"
 
 using folly::StringPiece;
 using std::string;
@@ -239,6 +240,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
+  TaskTraceBlock block{"GlobNode::evaluateImpl"};
   vector<std::pair<PathComponentPiece, GlobNode*>> recurse;
   vector<ImmediateFuture<folly::Unit>> futures;
 
@@ -256,6 +258,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
 
   auto recurseIfNecessary =
       [&](PathComponentPiece name, GlobNode* node, const auto& entry) {
+        TaskTraceBlock block2{"GlobNode::evaluateImpl::recurseIfNecessary"};
         if ((!node->children_.empty() || !node->recursiveChildren_.empty()) &&
             root.entryIsTree(entry)) {
           if (root.entryShouldLoadChildTree(entry)) {
@@ -362,6 +365,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
   // back to the caller early while some processing may still be occurring.
   return collectAll(std::move(futures))
       .thenValue([](vector<folly::Try<folly::Unit>>&& results) {
+        TaskTraceBlock block2{"GlobNode::evaluateImpl::collectAll::thenValue"};
         for (auto& result : results) {
           result.throwUnlessValue();
         }
@@ -453,6 +457,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
+  TaskTraceBlock block{"GlobNode::evaluateRecursiveComponentImpl"};
   vector<RelativePath> subDirNames;
   vector<ImmediateFuture<folly::Unit>> futures;
   {
