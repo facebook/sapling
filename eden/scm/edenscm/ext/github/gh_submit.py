@@ -10,6 +10,7 @@ the API calls directly so we can (1) avoid spawning so many processes, and
 (2) do more work in parallel.
 """
 
+import enum
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, Union
 
@@ -89,6 +90,17 @@ async def get_repository(
     return _parse_repository_from_dict(repo, hostname=hostname, upstream=upstream)
 
 
+class PullRequestState(enum.Enum):
+    """https://docs.github.com/en/graphql/reference/enums#pullrequeststate"""
+
+    """A pull request that has been closed without being merged."""
+    CLOSED = enum.auto()
+    """A pull request that has been closed by being merged."""
+    MERGED = enum.auto()
+    """A pull request that is still open."""
+    OPEN = enum.auto()
+
+
 @dataclass
 class PullRequestDetails:
     node_id: str
@@ -103,6 +115,7 @@ class PullRequestDetails:
     #   bodyText: plaintext version of body with Markdown markup removed
     #   bodyHTML: body rendered as "safe" HTML
     body: str
+    state: PullRequestState
 
 
 async def get_pull_request_details(
@@ -129,6 +142,7 @@ async def get_pull_request_details(
             head_oid=data["headRefOid"],
             head_branch_name=data["headRefName"],
             body=data["body"],
+            state=PullRequestState[data["state"]],
         )
     )
 

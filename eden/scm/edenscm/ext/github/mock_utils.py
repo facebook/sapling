@@ -8,6 +8,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from edenscm.ext.github.consts import query
+from edenscm.ext.github.gh_submit import PullRequestState
 from edenscm.ext.github.pull_request_body import firstline
 from edenscm.result import Ok, Result
 
@@ -401,6 +402,7 @@ class GetPrDetailsRequest(MockRequest):
     def and_respond(
         self,
         pr_id: str,
+        state: PullRequestState = PullRequestState.OPEN,
         head_ref_name: str = "",
         head_ref_oid: str = "",
         base_ref_name: str = "main",
@@ -416,6 +418,7 @@ class GetPrDetailsRequest(MockRequest):
                     "pullRequest": {
                         "id": pr_id,
                         "url": f"https://github.com/{self._owner}/{self._name}/pull/{self._pr_number}",
+                        "state": state.name,
                         "headRefOid": head_ref_oid,
                         "headRefName": head_ref_name,
                         "baseRefOid": base_ref_oid,

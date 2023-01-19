@@ -40,6 +40,7 @@ query ($owner: String!, $name: String!, $number: Int!) {
     pullRequest(number: $number) {
       id
       url
+      state
       baseRefOid
       baseRefName
       headRefOid
