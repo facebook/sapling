@@ -129,6 +129,8 @@ def launch_server(
     args = ["--port", str(port)]
     args.append("--command")
     args.append(util.hgcmd()[0])
+    args.append("--sl-version")
+    args.append(util.version())
     if not open_isl:
         args.append("--no-open")
     if json_output:
