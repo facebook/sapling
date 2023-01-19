@@ -27,13 +27,20 @@ const std::shared_ptr<TraceBus<TaskTraceEvent>>& TaskTraceEvent::getTraceBus() {
   return traceBus;
 }
 
-TaskTraceBlock::TaskTraceBlock(std::string_view name)
-    : name(name),
-      threadName(folly::getCurrentThreadName().value_or("<unknown>")),
-      threadId(folly::getOSThreadID()),
-      start(std::chrono::steady_clock::now()) {}
+TaskTraceBlock::TaskTraceBlock(std::string_view task) {
+  if (TaskTraceEvent::getTraceBus()->hasSubscription()) {
+    name = std::move(task);
+    threadName = folly::getCurrentThreadName().value_or("<unknown>");
+    threadId = folly::getOSThreadID();
+    start = std::chrono::steady_clock::now();
+  }
+}
 
 TaskTraceBlock::~TaskTraceBlock() {
+  if (threadId == 0) {
+    return;
+  }
+
   auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::steady_clock::now() - start);
   publish(TaskTraceEvent(

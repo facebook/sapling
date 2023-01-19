@@ -233,6 +233,17 @@ class TraceBus : public std::enable_shared_from_this<TraceBus<TraceEvent>> {
         std::move(name), std::forward<Fn>(fn)));
   };
 
+  /**
+   * A cheap check on if there is any subscription active for this TraceBus.
+   * This method is prone to racy by nature (TOCTOU) and it is the best
+   * approximation to detect if there is currently a subscriber active. New
+   * subscriber may be added or removed after this function returns. Use with
+   * caution.
+   */
+  bool hasSubscription() const {
+    return hasSubscription_.load(std::memory_order_acquire);
+  }
+
   TraceBus(TraceBus&&) = delete;
   TraceBus(const TraceBus&) = delete;
   TraceBus& operator=(TraceBus&&) = delete;
@@ -282,6 +293,7 @@ class TraceBus : public std::enable_shared_from_this<TraceBus<TraceEvent>> {
   const size_t bufferCapacity_;
 
   folly::Synchronized<State, std::mutex> state_;
+  std::atomic_bool hasSubscription_{false};
   // Encodes the condition done || !writeBuffer.empty()
   std::condition_variable emptyCV_;
   // Encodes the condition writeBuffer.size() < bufferCapacity_

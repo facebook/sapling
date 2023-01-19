@@ -24,3 +24,11 @@ TEST(TaskTraceTest, subscription) {
 
   EXPECT_EQ("hello", std::move(future).get(1000ms));
 }
+
+// When there is no subscriber active, the block should not collect environment
+// information nor send the event to TraceBus.
+TEST(TaskTraceTest, noSubscriber) {
+  TaskTraceBlock block{"no-sub"};
+
+  EXPECT_EQ(block.threadId, 0);
+}

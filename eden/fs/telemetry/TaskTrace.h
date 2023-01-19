@@ -40,7 +40,7 @@ struct TaskTraceEvent : TraceEventBase {
 struct TaskTraceBlock {
   std::string_view name;
   std::string threadName;
-  uint64_t threadId;
+  uint64_t threadId{0};
   std::chrono::steady_clock::time_point start;
 
   template <size_t size>

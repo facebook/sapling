@@ -8,6 +8,8 @@
 #include "eden/fs/telemetry/TraceBus.h"
 #include <folly/futures/Promise.h>
 #include <folly/portability/GTest.h>
+#include <atomic>
+#include <thread>
 
 using namespace std::literals;
 using namespace facebook::eden;
@@ -99,4 +101,26 @@ TEST(TraceBusTest, unsubscribe_before_publish) {
   // It's not guaranteed that unsubscribe will immediately prevent observation
   // of events.
   XCHECK(1 == i || i == 3) << i << " must be 1 or 3";
+}
+
+TEST(TraceBusTest, hasSubscriber) {
+  auto bus = TraceBus<int>::create("bus", 10);
+  ASSERT_FALSE(bus->hasSubscription());
+
+  auto handle = bus->subscribeFunction("sub", [](auto) {});
+  ASSERT_TRUE(bus->hasSubscription());
+
+  handle.reset();
+  bus->publish(1);
+
+  // We need to wait for TraceBus's background thread to run and notice the
+  // subscriber has been removed. This waits at most 10 seconds.
+  auto deadline = std::chrono::steady_clock::now() + 10s;
+  while (std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::yield();
+    if (!bus->hasSubscription()) {
+      break;
+    }
+  }
+  ASSERT_FALSE(bus->hasSubscription());
 }

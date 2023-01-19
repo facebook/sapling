@@ -98,6 +98,7 @@ TraceSubscriptionHandle<TraceEvent> TraceBus<TraceEvent>::subscribe(
   auto state = state_.lock();
   sub->next = state->subscriptions;
   state->subscriptions = sub;
+  hasSubscription_.store(true, std::memory_order_release);
 
   return SubscriptionHandle{sub, this->weak_from_this()};
 }
@@ -180,6 +181,10 @@ void TraceBus<TraceEvent>::threadLoop(
       //
       // This probably isn't important.
       lastObservedSequenceNumber = state->sequenceNumber;
+
+      if (state->subscriptions == nullptr) {
+        hasSubscription_.store(false, std::memory_order_release);
+      }
 
       // If no events are buffered, sleep until events are delivered or we are
       // signaled to terminate.
