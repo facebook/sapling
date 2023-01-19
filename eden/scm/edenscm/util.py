@@ -3392,47 +3392,6 @@ def debugstacktrace(msg="stacktrace", skip=0, f=stderr, otherf=stdout, depth=0):
     f.flush()
 
 
-class puredirs(object):
-    """a multiset of directory names from a dirstate or manifest"""
-
-    def __init__(self, map, skip=None):
-        self._dirs = {}
-        addpath = self.addpath
-        if safehasattr(map, "iteritems") and skip is not None:
-            for f, s in map.iteritems():
-                if s[0] != skip:
-                    addpath(f)
-        elif safehasattr(map, "items") and skip is not None:
-            for f, s in map.items():
-                if s[0] != skip:
-                    addpath(f)
-        else:
-            for f in map:
-                addpath(f)
-
-    def addpath(self, path):
-        dirs = self._dirs
-        for base in finddirs(path):
-            if base in dirs:
-                dirs[base] += 1
-                return
-            dirs[base] = 1
-
-    def delpath(self, path):
-        dirs = self._dirs
-        for base in finddirs(path):
-            if dirs[base] > 1:
-                dirs[base] -= 1
-                return
-            del dirs[base]
-
-    def __iter__(self):
-        return iter(self._dirs)
-
-    def __contains__(self, d):
-        return d in self._dirs
-
-
 dirs = bindings.dirs.dirs
 
 
