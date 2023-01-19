@@ -783,6 +783,17 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Controls whether EdenFS eagerly invalidates directories during checkout or
+   * whether it only does when children were modified.
+   *
+   * On Windows, this must be set to true for correctness reasons.
+   */
+  ConfigSetting<bool> alwaysInvalidateDirectory{
+      "experimental:always-invalidate-directories",
+      folly::kIsWindows,
+      this};
+
   // [treecache]
 
   /**

@@ -2995,7 +2995,13 @@ Future<Unit> TreeInode::checkout(
 
   vector<unique_ptr<CheckoutAction>> actions;
   vector<IncompleteInodeLoad> pendingLoads;
-  bool wasDirectoryListModified = false;
+
+  // This default to true on Windows to always make sure that the directory is
+  // a placeholder and is safe to be dematerialized. On Windows, adding a
+  // placeholder to a directory is idempotent and won't fail on a directory
+  // that is already a placeholder.
+  bool shouldInvalidateDirectory =
+      getMount()->getEdenConfig()->alwaysInvalidateDirectory.getValue();
 
   computeCheckoutActions(
       ctx,
@@ -3003,7 +3009,7 @@ Future<Unit> TreeInode::checkout(
       toTree.get(),
       actions,
       pendingLoads,
-      wasDirectoryListModified);
+      shouldInvalidateDirectory);
 
   // Wire up the callbacks for any pending inode loads we started
   for (auto& load : pendingLoads) {
@@ -3034,14 +3040,14 @@ Future<Unit> TreeInode::checkout(
            self = inodePtrFromThis(),
            toTree = std::move(toTree),
            actions = std::move(actions),
-           wasDirectoryListModified](
+           shouldInvalidateDirectory](
               vector<folly::Try<InvalidationRequired>> actionResults) mutable {
             // Record any errors that occurred
             size_t numErrors = 0;
             for (size_t n = 0; n < actionResults.size(); ++n) {
               auto& result = actionResults[n];
               if (!result.hasException()) {
-                wasDirectoryListModified |=
+                shouldInvalidateDirectory |=
                     (result.value() == InvalidationRequired::Yes);
                 continue;
               }
@@ -3051,7 +3057,7 @@ Future<Unit> TreeInode::checkout(
             }
 
             auto invalidation = ImmediateFuture<folly::Unit>{folly::unit};
-            if (wasDirectoryListModified) {
+            if (shouldInvalidateDirectory) {
               // TODO(xavierd): In theory, this should be done before running
               // the futures, while holding the contents lock all the way. The
               // reason is that we in theory need to rollback what was done in

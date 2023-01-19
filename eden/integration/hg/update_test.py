@@ -29,6 +29,7 @@ from facebook.eden.ttypes import (
 
 
 if sys.platform == "win32":
+    from eden.fs.cli import prjfs
     from eden.fs.cli.proc_utils_win import Handle
 
 
@@ -910,6 +911,74 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.assertEqual(poststats.st_size, 7)
 
     if sys.platform == "win32":
+
+        def test_update_clean_lay_placeholder_on_full(self) -> None:
+            self.repo.write_file("dir2/dir3/file1", "foobar")
+            commit5 = self.repo.commit("dir2")
+
+            # Make the directory virtual by update back and forth
+            self.repo.update(self.commit4)
+            self.repo.update(commit5)
+
+            # Now, remove the whole hierarchy
+            self.rm("dir2/dir3/file1")
+            self.rmdir("dir2/dir3")
+            self.rmdir("dir2")
+
+            # And re-create the directory
+            self.mkdir("dir2/dir3")
+
+            self.repo.update(commit5, clean=True)
+
+            state = prjfs.PrjGetOnDiskFileState(self.mount_path / "dir2")
+            self.assertEqual(state, prjfs.PRJ_FILE_STATE.Placeholder)
+
+        def test_update_clean_keep_not_in_commit_full(self) -> None:
+            self.write_file("dir2/dir3/file1", "foobar")
+            self.repo.update(self.commit3)
+
+            state = prjfs.PrjGetOnDiskFileState(self.mount_path / "dir2")
+            self.assertEqual(state, prjfs.PRJ_FILE_STATE.Full)
+
+        def test_update_clean_lay_placeholder_on_existing(self) -> None:
+            self.repo.write_file("dir2/dir3/file1", "foobar")
+            commit5 = self.repo.commit("dir2")
+
+            # Make sure the directory is removed
+            self.repo.update(self.commit4)
+
+            self.assertFalse(os.path.exists(self.get_path("dir2")))
+
+            # And re-create the directory
+            self.mkdir("dir2/dir3")
+
+            self.repo.update(commit5, clean=True)
+
+            state = prjfs.PrjGetOnDiskFileState(self.mount_path / "dir2")
+            self.assertEqual(state, prjfs.PRJ_FILE_STATE.Placeholder)
+
+            state = prjfs.PrjGetOnDiskFileState(self.mount_path / "dir2" / "dir3")
+            self.assertEqual(state, prjfs.PRJ_FILE_STATE.Placeholder)
+
+        def test_update_remove_on_full(self) -> None:
+            self.repo.write_file("dir2/dir3/file1", "foobar")
+            commit5 = self.repo.commit("dir2")
+
+            # Make the directory virtual by update back and forth
+            self.repo.update(self.commit4)
+            self.repo.update(commit5)
+
+            # Now, remove the whole hierarchy
+            self.rm("dir2/dir3/file1")
+            self.rmdir("dir2/dir3")
+            self.rmdir("dir2")
+
+            # And re-create the directory
+            self.mkdir("dir2/dir3")
+
+            self.repo.update(self.commit4, clean=True)
+
+            self.assertFalse(os.path.exists(self.get_path("dir2")))
 
         def _open_locked(self, path: str, directory: bool = False) -> Handle:
             import ctypes
