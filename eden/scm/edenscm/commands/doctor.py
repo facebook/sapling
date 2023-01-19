@@ -404,7 +404,10 @@ def checkmissingmaster(repo, source="default"):
         for rootid in reversed(roots):
             prog.value += 1
             oldml = ml.checkout(rootid)
-            node = bookmod.decoderemotenames(oldml["remotenames"]).get(mainfullname)
+            remotenames = oldml["remotenames"]
+            if remotenames is None:
+                continue
+            node = bookmod.decoderemotenames(remotenames).get(mainfullname)
             if node and node in repo:
                 found = node
                 break
