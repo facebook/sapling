@@ -20,6 +20,7 @@
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
 #include <folly/container/Access.h>
+#include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/Logger.h>
 #include <folly/logging/LoggerDB.h>
@@ -27,6 +28,7 @@
 #include <folly/stop_watch.h>
 #include <folly/system/Shell.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
+#include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/config/CheckoutConfig.h"
@@ -2673,7 +2675,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       context,
       server_->getServerState());
 
-  auto globFut =
+  ImmediateFuture<std::unique_ptr<Glob>> globFut =
       std::move(backgroundFuture)
           .thenValue([mount = server_->getMount(
                           absolutePathFromThrift(*params->mountPoint())),
@@ -2683,11 +2685,24 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       &context](auto&&) mutable {
             return globber.glob(mount, serverState, std::move(globs), context);
           });
+
   globFut = std::move(globFut).ensure(
       [helper = std::move(helper), params = std::move(params)] {});
-  return detachIfBackgrounded(
-             std::move(globFut), server_->getServerState(), isBackground)
-      .semi();
+
+  globFut = detachIfBackgrounded(
+      std::move(globFut), server_->getServerState(), isBackground);
+
+  if (globFut.isReady()) {
+    return std::move(globFut).semi();
+  }
+
+  // The glob code has a very large fan-out that can easily overload the Thrift
+  // CPU worker pool. To combat with that, we limit the execution to a single
+  // thread by using `folly::SerialExecutor` so the glob queries will not
+  // overload the executor.
+  auto serial = folly::SerialExecutor::create(
+      server_->getServer()->getThreadManager().get());
+  return std::move(globFut).semi().via(serial);
 }
 
 folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
