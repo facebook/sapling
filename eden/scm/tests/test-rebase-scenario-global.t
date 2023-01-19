@@ -337,7 +337,6 @@ Check rebasing public changeset
   $ hg rebase -d 'desc(H)' -b 'desc(C)' --keep
   rebasing 27547f69f254 "B"
   rebasing f838bfaca5c7 "C" (public/f838bfaca5c7226600ebcfd84f3c3c13a28d3757)
-  note: not rebasing b3325c91a4d9 "D" and its descendants as this would cause divergence
   rebasing 7d3e5262cbd7 "C" (public/7d3e5262cbd7c2f6fd18aae7d9373efdc84c9d6b)
   rebasing 3f51ceb7b044 "D"
 

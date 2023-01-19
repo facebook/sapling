@@ -1431,7 +1431,9 @@ def _definedestmap(
                 repo.dageval(lambda: children(tonodes([bp])) & ancestors(tonodes(bs)))
             )
 
-        rebasenodes = repo.dageval(lambda: descendants(rootnodes))
+        rebasenodes = repo.dageval(
+            lambda: descendants(rootnodes) & (draft() + public())
+        )
         if not keepf:
             rebasenodes -= repo.dageval(lambda: public())
         rebaseset = repo.changelog.torevset(rebasenodes)
