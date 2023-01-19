@@ -7,6 +7,7 @@
 
 import type {Logger} from 'isl-server/src/logger';
 
+import * as packageJson from '../package.json';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';
 import {VSCodePlatform} from './vscodePlatform';
@@ -106,6 +107,7 @@ function populateAndSetISLWebview(
     platform: VSCodePlatform,
     logger,
     command: getCLICommand(),
+    version: packageJson.version,
   });
 
   panel.onDidDispose(() => {

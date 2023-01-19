@@ -32,6 +32,12 @@ export interface ClientConnection {
    * Which command to use to run `sl`
    */
   command?: string;
+  /**
+   * Platform-specific version string.
+   * For `sl web`, this is the `sl` version.
+   * For the VS Code extension, this is the extension version.
+   */
+  version: string;
   logFileLocation?: string;
   logger?: Logger;
   cwd: string;

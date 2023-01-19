@@ -414,6 +414,7 @@ export async function runProxyMain(args: Args) {
     logFileLocation,
     logInfo: info,
     command,
+    slVersion,
   });
 
   if (result.type === 'addressInUse' && !force) {

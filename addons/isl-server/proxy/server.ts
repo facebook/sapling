@@ -28,6 +28,7 @@ export type StartServerArgs = {
   logFileLocation: string;
   logInfo: (...args: Parameters<typeof console.log>) => void;
   command: string;
+  slVersion: string;
   foreground: boolean;
 };
 
@@ -49,6 +50,7 @@ export function startServer({
   logFileLocation,
   logInfo,
   command,
+  slVersion,
   foreground,
 }: StartServerArgs): Promise<StartServerResult> {
   return new Promise(resolve => {
@@ -198,6 +200,7 @@ export function startServer({
         cwd: cwd ?? process.cwd(),
         logFileLocation: logFileLocation === 'stdout' ? undefined : logFileLocation,
         command,
+        version: slVersion,
 
         platform: platformImpl,
       });
