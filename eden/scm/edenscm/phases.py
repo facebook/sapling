@@ -210,11 +210,8 @@ class phasecache(object):
             self._draftrevs = None
             self._publicrevs = None
             if _load:
-                if self._headbased:
-                    self.draftrevs(repo)
-                    self.publicrevs(repo)
-                else:
-                    self.loadphaserevs(repo)  # ensure phase's sets are loaded
+                self.draftrevs(repo)
+                self.publicrevs(repo)
         else:
             if _load:
                 # Cheap trick to allow shallow-copy without copy module
