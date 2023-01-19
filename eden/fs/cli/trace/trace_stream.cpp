@@ -15,6 +15,7 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include <unordered_set>
 #include "eden/fs/service/gen-cpp2/StreamingEdenServiceAsyncClient.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -707,6 +708,73 @@ int trace_inode(
   return 0;
 }
 
+int trace_task(
+    folly::ScopedEventBaseThread& evbThread,
+    apache::thrift::RocketClientChannel::Ptr channel,
+    bool chrome_trace) {
+  apache::thrift::Client<StreamingEdenService> client{std::move(channel)};
+
+  apache::thrift::ClientBufferedStream<TaskEvent> traceTaskStream =
+      client.semifuture_traceTaskEvents(TraceTaskEventsRequest{})
+          .via(evbThread.getEventBase())
+          .get();
+  std::unordered_set<uint64_t> metadataPrinted;
+
+  std::move(traceTaskStream).subscribeInline([&](folly::Try<TaskEvent>&& event) {
+    if (event.hasException()) {
+      fmt::print("Error: {}\n", folly::exceptionStr(event.exception()));
+      return;
+    }
+    auto task = event.value();
+
+    // Trace Event Format
+    // https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
+    if (chrome_trace) {
+      fmt::print(
+          R"({{ "name": "{}", "tid": {}, "pid": 1, "ts": {}, "ph": "B" }})"
+          "\n",
+          *task.name(),
+          *task.threadId(),
+          std::floor(
+              *task.start() / 1000)); // Chrome trace operats on millisecond
+      fmt::print(
+          R"({{ "name": "{}", "tid": {}, "pid": 1, "ts": {}, "ph": "E" }})"
+          "\n",
+          *task.name(),
+          *task.threadId(),
+          std::floor((*task.start() + *task.duration()) / 1000));
+    } else {
+      fmt::print(
+          R"({{
+    "name": "{}",
+    "threadId": {},
+    "threadName": {},
+    "start": {},
+    "duration: {}
+}})",
+          *task.name(),
+          *task.threadId(),
+          *task.threadName(),
+          *task.start(),
+          *task.duration());
+    }
+
+    auto threadId = static_cast<uint64_t>(*task.threadId());
+
+    // Metadata event so Chrome trace can show thread name correctly.
+    if (chrome_trace &&
+        metadataPrinted.find(threadId) == metadataPrinted.end()) {
+      fmt::print(
+          R"({{ "name": "thread_name", "ph": "M", "pid": 1, "tid": {}, "args": {{ "name": "{}" }} }})"
+          "\n",
+          threadId,
+          *task.threadName());
+      metadataPrinted.emplace(threadId);
+    }
+  });
+  return 0;
+}
+
 int trace_inode_retroactive(
     folly::ScopedEventBaseThread& evbThread,
     const AbsolutePath& mountRoot,
@@ -817,6 +885,10 @@ int main(int argc, char** argv) {
     return FLAGS_retroactive
         ? trace_inode_retroactive(evbThread, mountRoot, std::move(channel))
         : trace_inode(evbThread, mountRoot, std::move(channel));
+  } else if (FLAGS_trace == "task") {
+    return trace_task(evbThread, std::move(channel), false);
+  } else if (FLAGS_trace == "task-chrome-trace") {
+    return trace_task(evbThread, std::move(channel), true);
   } else if (FLAGS_trace.empty()) {
     fmt::print(stderr, "Must specify trace mode\n");
     return 1;

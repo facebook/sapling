@@ -67,6 +67,7 @@
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/SessionInfo.h"
+#include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
@@ -1106,6 +1107,37 @@ EdenServiceHandler::traceThriftRequestEvents() {
         ThriftRequestEvent thriftEvent;
         convertThriftRequestTraceEventToThriftRequestEvent(event, thriftEvent);
         publisher.next(thriftEvent);
+      });
+
+  return std::move(serverStream);
+}
+
+apache::thrift::ServerStream<TaskEvent> EdenServiceHandler::traceTaskEvents(
+    std::unique_ptr<::facebook::eden::TraceTaskEventsRequest> /* request */) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+  struct SubscriptionHandleOwner {
+    TraceBus<TaskTraceEvent>::SubscriptionHandle handle;
+  };
+
+  auto h = std::make_shared<SubscriptionHandleOwner>();
+
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<TaskEvent>::createPublisher([h] {
+        // on disconnect, release subscription handle
+      });
+
+  h->handle = TaskTraceEvent::getTraceBus()->subscribeFunction(
+      "Live Thrift request tracing",
+      [publisher = ThriftStreamPublisherOwner{std::move(publisher)}](
+          const TaskTraceEvent& event) mutable {
+        TaskEvent taskEvent;
+        taskEvent.times() = thriftTraceEventTimes(event);
+        taskEvent.name() = event.name;
+        taskEvent.threadName() = event.threadName;
+        taskEvent.threadId() = event.threadId;
+        taskEvent.duration() = event.duration.count();
+        taskEvent.start() = event.start.count();
+        publisher.next(taskEvent);
       });
 
   return std::move(serverStream);

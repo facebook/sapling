@@ -228,6 +228,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<InodeEvent> traceInodeEvents(
       std::unique_ptr<std::string> mountPoint) override;
 
+  apache::thrift::ServerStream<TaskEvent> traceTaskEvents(
+      std::unique_ptr<::facebook::eden::TraceTaskEventsRequest> request)
+      override;
+
   folly::SemiFuture<std::unique_ptr<GetScmStatusResult>>
   semifuture_getScmStatusV2(
       std::unique_ptr<GetScmStatusParams> params) override;

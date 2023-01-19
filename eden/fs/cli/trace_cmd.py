@@ -255,3 +255,40 @@ class TraceThriftCmd(Subcmd):
                 f"--retroactive={'true' if args.retroactive else 'false'}",
             ]
         )
+
+
+@trace_cmd("task", "Monitor tasks in EdenFS daemon")
+class TraceTaskCmd(Subcmd):
+    DESCRIPTION = """Trace tasks happening inside EdenFS daemon. The tasks
+    must be pre-instrumented.
+
+    Use `--chrome-trace` flag if you want to analyze the output with Chrome
+    trace tools.
+    """
+
+    # pyre-fixme[15]: Type typing.Type[argparse.RawDescriptionHelpFormatter] is not a
+    # subtype of the overridden attribute typing.Optional[argparse.HelpFormatter]
+    FORMATTER = argparse.RawDescriptionHelpFormatter
+
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "checkout", default=None, nargs="?", help="Path to the checkout"
+        )
+        parser.add_argument(
+            "--chrome-trace",
+            action="store_true",
+            default=False,
+            help="Set the output in Chrome trace format",
+        )
+
+    async def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, _rel_path = require_checkout(args, args.checkout)
+        trace_stream_command = get_trace_stream_command()
+        return execute_cmd(
+            [
+                trace_stream_command,
+                "--mountRoot",
+                checkout.path,
+                f"--trace={'task' if args.chrome_trace else 'task-chrome-trace'}",
+            ]
+        )

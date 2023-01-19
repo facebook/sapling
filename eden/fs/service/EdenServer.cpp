@@ -1925,7 +1925,7 @@ Future<Unit> EdenServer::createThriftServer() {
   server_ = make_shared<ThriftServer>();
   server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
   server_->setNumCPUWorkerThreads(edenConfig->thriftNumWorkers.getValue());
-  server_->setCPUWorkerThreadName("Thrift-");
+  server_->setCPUWorkerThreadName("Thrift");
   server_->setQueueTimeout(std::chrono::floor<std::chrono::milliseconds>(
       edenConfig->thriftQueueTimeout.getValue()));
   server_->setAllowCheckUnimplementedExtraInterfaces(false);
