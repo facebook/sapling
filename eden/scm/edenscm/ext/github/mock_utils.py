@@ -126,7 +126,43 @@ class MockGitHubServer:
         self._add_request(key, request)
         return request
 
+    def expect_guess_next_pull_request_number(
+        self, owner: str = OWNER, name: str = REPO_NAME
+    ) -> "GuessNextPrNumberRequest":
+        params: ParamsType = {
+            "query": query.GRAPHQL_GET_MAX_PR_ISSUE_NUMBER,
+            "owner": owner,
+            "name": name,
+        }
+        key = create_request_key(params, self.hostname)
+        request = GuessNextPrNumberRequest(key)
+        self._add_request(key, request)
+        return request
+
     def expect_create_pr_request(
+        self,
+        body: str,
+        title: str,
+        head: str,
+        is_draft: bool = False,
+        base: str = "main",
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> "CreatePrRequest":
+        params: ParamsType = {
+            "base": base,
+            "head": head,
+            "body": body,
+            "title": title,
+            "draft": is_draft,
+        }
+        endpoint = f"repos/{owner}/{name}/pulls"
+        key = create_request_key(params, self.hostname, endpoint=endpoint)
+        request = CreatePrRequest(key, owner, name)
+        self._add_request(key, request)
+        return request
+
+    def expect_create_pr_using_placeholder_request(
         self,
         body: str,
         issue: int,
@@ -135,7 +171,7 @@ class MockGitHubServer:
         base: str = "main",
         owner: str = OWNER,
         name: str = REPO_NAME,
-    ) -> "CreatePrRequest":
+    ) -> "CreatePrUsingPlaceholderRequest":
         params: ParamsType = {
             "base": base,
             "head": head or f"pr{issue}",
@@ -145,7 +181,7 @@ class MockGitHubServer:
         }
         endpoint = f"repos/{owner}/{name}/pulls"
         key = create_request_key(params, self.hostname, endpoint=endpoint)
-        request = CreatePrRequest(key, owner, name, issue)
+        request = CreatePrUsingPlaceholderRequest(key, owner, name, issue)
         self._add_request(key, request)
         return request
 
@@ -286,7 +322,51 @@ class CreatePrPlaceholderRequest(MockRequest):
             raise MockResponseRunout(self._key)
 
 
+class GuessNextPrNumberRequest(MockRequest):
+    def __init__(self, key: str) -> None:
+        self._key = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+    def and_respond(self, latest_issue_num: int = 40, latest_pr_num: int = 41) -> None:
+        data = {
+            "data": {
+                "repository": {
+                    "issues": {"nodes": [{"number": latest_issue_num}]},
+                    "pullRequests": {"nodes": [{"number": latest_pr_num}]},
+                }
+            }
+        }
+        self._response = Ok(data)
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
 class CreatePrRequest(MockRequest):
+    def __init__(self, key: str, owner, name: str) -> None:
+        self._key: str = key
+        self._response: Optional[Result[JsonDict, str]] = None
+
+        self._owner = owner
+        self._name = name
+
+    def and_respond(self, number: int) -> None:
+        self._response = Ok(
+            {
+                "number": number,
+                "html_url": f"https://github.com/{self._owner}/{self._name}/pull/{number}",
+            }
+        )
+
+    def get_response(self) -> Result[JsonDict, str]:
+        if self._response is None:
+            raise MockResponseNotSet(self._key)
+        return self._response
+
+
+class CreatePrUsingPlaceholderRequest(MockRequest):
     def __init__(self, key: str, owner, name: str, number: int) -> None:
         self._key: str = key
         self._response: Optional[Result[JsonDict, str]] = None
