@@ -1779,9 +1779,15 @@ def _pullcommitgraph(pullop, version):
         items = repo.edenapi.commitgraph(heads, pullop.common)
     traceenabled = tracing.isenabled(tracing.LEVEL_DEBUG, target="pull::httpgraph")
     graphnodes = []
+    draftnodes = []
+    allphasesreturned = True
     for item in items:
         node = item["hgid"]
         parents = item["parents"]
+        if item.get("is_draft") is None:
+            allphasesreturned = False
+        elif item["is_draft"]:
+            draftnodes.append(node)
         if traceenabled:
             tracing.debug(
                 "edenapi fetched graph node: %s %r"
@@ -1794,10 +1800,18 @@ def _pullcommitgraph(pullop, version):
         commits.addgraphnodes(graphnodes)
         pullop.cgresult = 2  # changed
         if repo.ui.configbool("pull", "httpmutation"):
-            nodes = [n for n, _p in graphnodes]
-            repo.changelog.filternodes(nodes)
-            allnodes = repo.dageval(lambda: sort(nodes) - public())
-            mutations = repo.edenapi.commitmutations(list(allnodes))
+            if allphasesreturned:
+                tracing.debug(
+                    "edenapi fetched graph with known %d draft commits"
+                    % len(draftnodes),
+                    target="pull::httpgraph",
+                )
+                mutations = repo.edenapi.commitmutations(draftnodes)
+            else:
+                nodes = [n for n, _p in graphnodes]
+                repo.changelog.filternodes(nodes)
+                allnodes = repo.dageval(lambda: sort(nodes) - public())
+                mutations = repo.edenapi.commitmutations(list(allnodes))
             mutations = [
                 mutation.createsyntheticentry(
                     repo,

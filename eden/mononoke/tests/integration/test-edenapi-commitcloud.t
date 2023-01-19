@@ -173,6 +173,7 @@ Sync from the second client - the commits should appear
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched graph with known 3 draft commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -217,6 +218,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched graph with known 3 draft commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -266,6 +268,7 @@ On the second client sync it
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
   DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched graph with known 3 draft commits
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision c981069f3f05 has been moved remotely to f5aa28a22f7b
