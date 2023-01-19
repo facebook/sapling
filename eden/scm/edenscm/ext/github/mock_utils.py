@@ -185,7 +185,7 @@ class MockGitHubServer:
                 "---\n"
                 "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
                 f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
-                f"* __->__ #1\n"
+                f"* __->__ #{pr_number}\n"
             ),
             "base": base,
         }
