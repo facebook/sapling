@@ -7,7 +7,6 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use async_requests::types::RequestStatus;
 use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
 use clap::Args;
 use context::CoreContext;
@@ -54,12 +53,6 @@ pub async fn list_requests(
             .list_requests(
                 &ctx,
                 &repo_ids,
-                &[
-                    RequestStatus::New,
-                    RequestStatus::InProgress,
-                    RequestStatus::Ready,
-                    RequestStatus::Polled,
-                ],
                 Some(&Timestamp::from_timestamp_secs(
                     Timestamp::now().timestamp_seconds() - lookback,
                 )),

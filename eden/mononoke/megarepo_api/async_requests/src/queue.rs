@@ -30,7 +30,6 @@ pub use requests_table::ClaimedBy;
 use requests_table::LongRunningRequestEntry;
 use requests_table::LongRunningRequestsQueue;
 pub use requests_table::RequestId;
-use requests_table::RequestStatus;
 use requests_table::RequestType;
 pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
@@ -243,7 +242,6 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         repo_ids: &[RepositoryId],
-        statuses: &[RequestStatus],
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<
         Vec<(
@@ -255,7 +253,7 @@ impl AsyncMethodRequestQueue {
     > {
         let entries = self
             .table
-            .list_requests(ctx, repo_ids, statuses, last_update_newer_than)
+            .list_requests(ctx, repo_ids, last_update_newer_than)
             .await?;
 
         stream::iter(entries)

@@ -218,7 +218,7 @@ mononoke_queries! {
         "
     }
 
-    read ListRequests(last_udate_newer_than: Timestamp, >list repo_ids: RepositoryId >list statuses: RequestStatus) -> (
+    read ListRequests(last_udate_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
         RowId,
         RequestType,
         RepositoryId,
@@ -247,7 +247,7 @@ mononoke_queries! {
             status,
             claimed_by
         FROM long_running_request_queue
-        WHERE repo_id IN {repo_ids} AND status IN {statuses} AND inprogress_last_updated_at > {last_udate_newer_than}"
+        WHERE repo_id IN {repo_ids} AND inprogress_last_updated_at > {last_udate_newer_than}"
     }
 }
 
@@ -530,14 +530,12 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         &self,
         _ctx: &CoreContext,
         repo_ids: &[RepositoryId],
-        statuses: &[RequestStatus],
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>> {
         let entries = ListRequests::query(
             &self.connections.read_connection,
             last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
             repo_ids,
-            statuses,
         )
         .await?
         .into_iter()

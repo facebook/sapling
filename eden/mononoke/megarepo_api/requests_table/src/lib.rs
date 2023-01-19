@@ -134,7 +134,6 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         &self,
         ctx: &CoreContext,
         repo_ids: &[RepositoryId],
-        statuses: &[RequestStatus],
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>>;
 }
