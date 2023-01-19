@@ -21,6 +21,7 @@ import {unwrap} from 'shared/utils';
  * See also platform.ts
  */
 export interface ServerPlatform {
+  platformName: string;
   handleMessageFromClient(
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
@@ -29,6 +30,7 @@ export interface ServerPlatform {
 }
 
 export const browserServerPlatform: ServerPlatform = {
+  platformName: 'browser',
   handleMessageFromClient: (
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,

@@ -71,6 +71,9 @@ export default class ServerToClientAPI {
 
   constructor(private connection: ClientConnection) {
     this.platform = connection.platform ?? browserServerPlatform;
+    connection.logger?.log(
+      `platform '${this.platform.platformName}', version '${connection.version}'`,
+    );
     this.incomingListener = this.connection.onDidReceiveMessage(buf => {
       const message = buf.toString('utf-8');
       const data = deserializeFromString(message) as IncomingMessage;

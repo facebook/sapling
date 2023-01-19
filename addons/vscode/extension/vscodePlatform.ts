@@ -18,6 +18,7 @@ import * as pathModule from 'path';
 import * as vscode from 'vscode';
 
 export const VSCodePlatform: ServerPlatform = {
+  platformName: 'vscode',
   handleMessageFromClient: async (
     repo: Repository | undefined,
     message: PlatformSpecificClientToServerMessages,
