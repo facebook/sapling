@@ -134,6 +134,12 @@ Then install:
 sudo apt install -y ./{ubuntu20.name}
 </CodeBlock>
 
+#### Arch Linux (AUR)
+
+<CodeBlock>
+yay -S sapling-scm-bin
+</CodeBlock>
+
 #### Other Linux distros
 
 Sapling can be installed from Homebrew on Linux. First install Homebrew on your machine, then run
