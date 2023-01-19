@@ -165,6 +165,85 @@ repository.
     )
 
 
+async def guess_next_pull_request_number(
+    hostname: str, owner: str, name: str
+) -> Result[int, str]:
+    """Returns our best guess as to the number that will be assigned to the next
+    pull request for the specified repo. It is a "guess" because it is based
+    on the largest number for either issues or pull requests seen thus far and
+    adds 1 to it. This "guess" can be wrong if:
+
+    - The most recent pull request/issue has been deleted, in which case the
+      next number would be one more than that.
+    - If an issue/pull request is created between the time this function is
+      called and the pull request is created, the guess will also be wrong.
+
+    Note that the only reason we bother to do this is because, at least at the
+    time of this writing, we cannot rename  the branch used for the head of a
+    pull request [programmatically] without closing the pull request.
+
+    While there is an official GitHub API for renaming a branch, it closes all
+    pull requests that have their `head` set to the old branch name!
+    Unfortunately, this is not documented on:
+
+    https://docs.github.com/en/rest/branches/branches#rename-a-branch
+
+    Support for renaming a branch WITHOUT closing all of the pull requests was
+    introduced in Jan 2021, but it only appears to be available via the Web UI:
+
+    https://github.blog/changelog/2021-01-19-support-for-renaming-an-existing-branch/
+
+    The endpoint the web UI hits is on github.com, not api.github.com, so it
+    does not appear to be accessible to us.
+    """
+    params: Dict[str, _Params] = {
+        "query": query.GRAPHQL_GET_MAX_PR_ISSUE_NUMBER,
+        "owner": owner,
+        "name": name,
+    }
+    result = await gh_cli.make_request(params, hostname=hostname)
+    if result.is_err():
+        return Err(result.unwrap_err())
+
+    # Find the max value of the fields, though note that it is possible no
+    # issues or pull requests have ever been filed.
+    repository = result.unwrap()["data"]["repository"]
+
+    def get_value(field):
+        nodes = repository[field]["nodes"]
+        return nodes[0]["number"] if nodes else 0
+
+    values = [get_value(field) for field in ["issues", "pullRequests"]]
+    next_number = max(*values) + 1
+    return Ok(next_number)
+
+
+async def create_pull_request(
+    hostname: str,
+    owner: str,
+    name: str,
+    base: str,
+    head: str,
+    title: str,
+    body: str,
+    is_draft: bool = False,
+) -> Result:
+    """Creates a new pull request using the specified parameters.
+
+    The caller is responsible for ensuring that a non-zero set of commits exists
+    between `base` and `head`. See https://github.com/facebook/sapling/issues/384.
+    """
+    endpoint = f"repos/{owner}/{name}/pulls"
+    params: Dict[str, _Params] = {
+        "base": base,
+        "head": head,
+        "title": title,
+        "body": body,
+        "draft": is_draft,
+    }
+    return await gh_cli.make_request(params, hostname=hostname, endpoint=endpoint)
+
+
 async def create_pull_request_placeholder_issue(
     hostname: str,
     owner: str,
@@ -182,7 +261,7 @@ async def create_pull_request_placeholder_issue(
         return Ok(result.unwrap()["number"])
 
 
-async def create_pull_request(
+async def create_pull_request_from_placeholder_issue(
     hostname: str,
     owner: str,
     name: str,
@@ -193,6 +272,9 @@ async def create_pull_request(
     is_draft: bool = False,
 ) -> Result[JsonDict, str]:
     """Creates a new pull request by converting an existing issue into a PR.
+
+    The caller is responsible for ensuring that a non-zero set of commits exists
+    between `base` and `head`. See https://github.com/facebook/sapling/issues/384.
 
     Note that `title` and `issue` are mutually exclusive fields when creating a
     pull request.
@@ -212,6 +294,11 @@ async def create_pull_request(
     403 If creating a PR for the issue is forbidden, closing it probably is, too.
     422 If the endpoint has been spammed, then it seems unlikely that making
         *another* request to the endpoint to close the issue will succeed.
+
+    Though https://github.com/facebook/sapling/issues/371 revealed that some
+    repos opt to disable GitHub issues. Enabling issues should not be a
+    requirement for creating pull requests, so the "placeholder issue" scheme is
+    a non-starter for such repos.
 
     TODO: Figure out some sort of error-recovery scheme. Note that
     make_request() returns an error as a string that may or may not be valid

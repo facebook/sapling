@@ -9,6 +9,7 @@ build up a github repo
 
   $ sl init --git repo1
   $ cd repo1
+  $ setconfig github.placeholder-strategy=True
   $ setconfig paths.default=https://github.com/facebook/test_github_repo.git
   $ echo a > a1
   $ sl ci -Am addfile
