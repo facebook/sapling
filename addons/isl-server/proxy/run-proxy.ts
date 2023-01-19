@@ -43,7 +43,8 @@ optional arguments:
                    Note that this will disrupt other windows still using the previous Sapling Web server.
   --force          Kill any existing Sapling Web server on the specified port, then start a new server.
                    Note that this will disrupt other windows still using the previous Sapling Web server.
-  --command name  Set which command to run for sl commands (default: sl)
+  --command name   Set which command to run for sl commands (default: sl)
+  --sl-version v   Set version number of sl was used to spawn the server (default: '(dev)')
   --platform       Set which platform implementation to use by changing the resulting URL.
                    Used to embed Sapling Web into non-browser web environments like IDEs.
 `;
@@ -86,6 +87,7 @@ function parseArgs() {
   let kill = false;
   let force = false;
   let command = 'sl';
+  let slVersion = '(dev)';
   let platform: string | undefined = undefined;
   let i = 0;
   function consumeArgValue(arg: string) {
@@ -134,6 +136,10 @@ function parseArgs() {
         command = consumeArgValue(arg);
         break;
       }
+      case '--sl-version': {
+        slVersion = consumeArgValue(arg);
+        break;
+      }
       case '--json': {
         json = true;
         break;
@@ -174,7 +180,20 @@ function parseArgs() {
     console.info('NOTE: setting --kill and --force is redundant');
   }
 
-  return {help, foreground, openUrl, port, isDevMode, json, stdout, platform, kill, force, command};
+  return {
+    help,
+    foreground,
+    openUrl,
+    port,
+    isDevMode,
+    json,
+    stdout,
+    platform,
+    kill,
+    force,
+    slVersion,
+    command,
+  };
 }
 
 const CRYPTO_KEY_LENGTH = 128;
@@ -261,8 +280,20 @@ function callStartServer(args: StartServerArgs): Promise<StartServerResult> {
 }
 
 async function main() {
-  const {help, foreground, openUrl, port, isDevMode, json, stdout, platform, kill, force, command} =
-    parseArgs();
+  const {
+    help,
+    foreground,
+    openUrl,
+    port,
+    isDevMode,
+    json,
+    stdout,
+    platform,
+    kill,
+    force,
+    slVersion,
+    command,
+  } = parseArgs();
   if (help) {
     errorAndExit(HELP_MESSAGE, 0);
   } else if (port === false) {
@@ -406,19 +437,37 @@ async function main() {
       process.exit(1);
     }
 
+    let killAndSpawnAgain = false;
+    if (existingServerInfo.command !== command) {
+      info(
+        `warning: Starting a fresh server to use command '${command}' (existing server was using '${existingServerInfo.command}').`,
+      );
+      killAndSpawnAgain = true;
+    } else if (existingServerInfo.slVersion !== slVersion) {
+      info(
+        `warning: sl version has changed since last server was started. Starting a fresh server to use lastest version '${slVersion}'.`,
+      );
+      killAndSpawnAgain = true;
+    }
+
+    if (killAndSpawnAgain) {
+      try {
+        await killServerIfItExists(port, info);
+      } catch (err: unknown) {
+        errorAndExit(`did not stop previous Sapling Web server: ${(err as Error).toString()}`);
+      }
+
+      // Now that we killed the server, try the whole thing again to spawn a new instance.
+      // We're guaranteed to not go down the same code path since the last authentic server was killed.
+      // We also know --force or --kill could not have been supplied.
+      await main();
+      return;
+    }
+
     const url = getURL(port as number, existingServerInfo.sensitiveToken, cwd);
     info('re-used existing Sapling Web server');
     info('\naccess Sapling Web with this link:');
     info(String(url));
-
-    if (existingServerInfo.command !== command) {
-      info(
-        `warning: New server would have used command '${command}', ` +
-          `but command for re-used server is '${existingServerInfo.command}'.` +
-          `\nIf you want to use '${command}' for commands, consider re-running with \`--fresh\` ` +
-          `to close the existing server.`,
-      );
-    }
 
     if (json) {
       outputJson({
@@ -447,6 +496,7 @@ async function main() {
         challengeToken,
         logFileLocation,
         command,
+        slVersion,
       });
     } catch (error) {
       info(

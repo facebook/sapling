@@ -19,6 +19,11 @@ export type ExistingServerInfo = {
    * so it can be propagated to run further sl commands by the server.
    * Usually, "sl". */
   command: string;
+  /**
+   * `sl version` string. If the version of sl changes, we shouldn't re-use that server instance,
+   * due to potential incompatibilities between the old running server javascript and the new client javascript.
+   */
+  slVersion: string;
 };
 
 const cacheDir =
