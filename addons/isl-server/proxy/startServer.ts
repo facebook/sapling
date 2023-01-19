@@ -6,22 +6,19 @@
  */
 
 import type {ChildProcessResponse} from './child';
-import type {ExistingServerInfo} from './existingServerStateFiles';
-import type {ServerChallengeResponse, StartServerArgs, StartServerResult} from './server';
+import type {StartServerArgs, StartServerResult} from './server';
 import type {IOType} from 'child_process';
 import type {PlatformName} from 'isl/src/types';
 
 import {
-  readExistingServerFile,
   ensureExistingServerFolder,
   deleteExistingServerFile,
   writeExistingServerFile,
 } from './existingServerStateFiles';
-import {areTokensEqual} from './proxyUtils';
+import * as lifecycle from './serverLifecycle';
 import child_process from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
-import http from 'http';
 import os from 'os';
 import path from 'path';
 
@@ -423,7 +420,7 @@ export async function runProxyMain(args: Args) {
     // This port is already in use. Determine if it's a pre-existing ISL server,
     // and find the appropriate saved token, and reconstruct URL if recovered.
 
-    const existingServerInfo = await readExistingServerFileWithRetries(port);
+    const existingServerInfo = await lifecycle.readExistingServerFileWithRetries(port);
     if (!existingServerInfo) {
       const errorMessage =
         'failed to find existing server file. This port might not be being used by a Sapling Web server.\n' +
@@ -438,7 +435,7 @@ export async function runProxyMain(args: Args) {
       process.exit(1);
     }
 
-    const pid = await checkIfServerIsAliveAndIsISL(info, port, existingServerInfo);
+    const pid = await lifecycle.checkIfServerIsAliveAndIsISL(info, port, existingServerInfo);
     if (pid == null) {
       const errorMessage =
         `port ${port} is already in use, but not by an Sapling Web server.\n` +
@@ -554,97 +551,25 @@ export async function runProxyMain(args: Args) {
   }
 }
 
-function sleepMs(timeMs: number): Promise<void> {
-  return new Promise(res => setTimeout(res, timeMs));
-}
-
-/**
- * Try multiple times to read the server data, in case we try to read during the time between the server
- * starting and it writing to  the token file.
- */
-async function readExistingServerFileWithRetries(
-  port: number,
-): Promise<ExistingServerInfo | undefined> {
-  let tries = 3;
-  while (tries > 0) {
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      return await readExistingServerFile(port);
-    } catch (error) {
-      sleepMs(500);
-    }
-    tries--;
-  }
-  return undefined;
-}
-
-/**
- * If it looks like something is serving on `localhost` on the same port,
- * send it a request to verify it's actually ISL.
- * Send it the token we recovered and then validate it responds with
- * the same challenge token we recovered.
- *
- * If the challenge is successful, returns the PID of the server; otherwise,
- * returns null.
- */
-async function checkIfServerIsAliveAndIsISL(
-  info: typeof console.info,
-  port: number,
-  existingServerInfo: ExistingServerInfo,
-  silent = false,
-): Promise<number | null> {
-  let response;
-  try {
-    const result = await Promise.race<string>([
-      new Promise<string>((res, rej) => {
-        const req = http.request(
-          {
-            hostname: 'localhost',
-            port,
-            path: `/challenge_authenticity?token=${existingServerInfo.sensitiveToken}`,
-            method: 'GET',
-          },
-          response => {
-            response.on('data', d => {
-              res(d);
-            });
-            response.on('error', e => {
-              rej(e);
-            });
-          },
-        );
-        req.on('error', rej);
-        req.end();
-      }),
-      // Timeout so we don't wait around forever for it.
-      // This should always be on localhost and therefore quite fast.
-      new Promise<never>((_, rej) => setTimeout(() => rej('timeout'), 500)),
-    ]);
-
-    response = JSON.parse(result) as ServerChallengeResponse;
-  } catch (error) {
-    if (!silent) {
-      info(`error checking if existing Sapling Web server on port ${port} is authentic: `, error);
-    }
-    // if the request fails for any reason, we don't think it's an ISL server.
-    return null;
-  }
-
-  const {challengeToken, pid} = response;
-  return areTokensEqual(challengeToken, existingServerInfo.challengeToken) ? pid : null;
-}
-
 /**
  * Finds any existing ISL server process running on `port`.
  * If one is found, it is killed and the PID is returned.
  * Otherwise, an error is returned
  */
-async function killServerIfItExists(port: number, info: typeof console.info): Promise<number> {
-  const existingServerInfo = await readExistingServerFileWithRetries(port);
+export async function killServerIfItExists(
+  port: number,
+  info: typeof console.info,
+): Promise<number> {
+  const existingServerInfo = await lifecycle.readExistingServerFileWithRetries(port);
   if (!existingServerInfo) {
     throw new Error(`could not find existing server information to kill on port ${port}`);
   }
-  const pid = await checkIfServerIsAliveAndIsISL(info, port, existingServerInfo, /* silent */ true);
+  const pid = await lifecycle.checkIfServerIsAliveAndIsISL(
+    info,
+    port,
+    existingServerInfo,
+    /* silent */ true,
+  );
   if (!pid) {
     throw new Error(`could not find existing server process to kill on port ${port}`);
   }
