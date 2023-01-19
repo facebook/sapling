@@ -563,6 +563,11 @@ def cleanupcmd(ui, repo) -> None:
 
     with repo.wlock():
         for (name, _type) in repo.localvfs.readdir(shelvedir):
+            # ignore the hidden attribute files created by MacOS,
+            # they will be deleted automatically when the main file
+            # is deleted. https://fburl.com/7hc21dkc
+            if name.startswith("._"):
+                continue
             suffix = name.rsplit(".", 1)[-1]
             if suffix in shelvefileextensions:
                 shelvedfile(repo, name).movetobackup()
