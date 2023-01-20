@@ -2093,33 +2093,6 @@ ImmediateFuture<folly::Unit> FuseChannel::fuseRename(
   StringPiece oldName{oldNameStr};
   StringPiece newName{oldNameStr + oldName.size() + 1};
 
-  if (folly::kIsApple) {
-    if (oldName.size() == 0 || newName.size() == 0) {
-      // This is gross.  macFUSE appears to have changed the ABI of the FUSE
-      // protocol but not bumped the protocol version, so we don't have a great
-      // way to handle running on macFUSE or osxfuse.  Once everybody is on
-      // macFUSE, this grossness can be removed by updating
-      // fuse_kernel_osxfuse.h to its upstream version.
-      //
-      // The rename request appears to have an additional field that is zeroed
-      // out for a regular rename.  That effectively renders oldName as zero
-      // sized because we end up pointing at the NUL terminator, and thus
-      // newName is also an empty string. Those are impossible names to have, so
-      // let's try reinterpreting the struct as this:
-      struct macfuse_rename_in {
-        __u64 newdir;
-        __u64 undocumented;
-      };
-
-      const auto macfuse_rename =
-          reinterpret_cast<const macfuse_rename_in*>(arg.data());
-
-      oldNameStr = reinterpret_cast<const char*>(macfuse_rename + 1);
-      oldName = StringPiece{oldNameStr};
-      newName = StringPiece{oldNameStr + oldName.size() + 1};
-    }
-  }
-
   InodeNumber parent{header.nodeid};
   InodeNumber newParent{rename->newdir};
   XLOG(DBG7) << "FUSE_RENAME " << oldName << " -> " << newName;
