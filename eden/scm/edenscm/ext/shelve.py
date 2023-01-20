@@ -558,16 +558,22 @@ def _iswctxonnewbranch(repo):
     return repo[None].branch() != repo["."].branch()
 
 
+def _listshelvefileinfos(repo, shelvedir):
+    """Return a list of (filename, type) pair"""
+    # ignore the hidden attribute files created by MacOS,
+    # they will be deleted automatically when the main file
+    # is deleted. https://fburl.com/7hc21dkc
+    return [
+        fileinfo
+        for fileinfo in repo.localvfs.readdir(shelvedir)
+        if not fileinfo[0].startswith("._")
+    ]
+
+
 def cleanupcmd(ui, repo) -> None:
     """subcommand that deletes all shelves"""
-
     with repo.wlock():
-        for (name, _type) in repo.localvfs.readdir(shelvedir):
-            # ignore the hidden attribute files created by MacOS,
-            # they will be deleted automatically when the main file
-            # is deleted. https://fburl.com/7hc21dkc
-            if name.startswith("._"):
-                continue
+        for (name, _type) in _listshelvefileinfos(repo, shelvedir):
             suffix = name.rsplit(".", 1)[-1]
             if suffix in shelvefileextensions:
                 shelvedfile(repo, name).movetobackup()
@@ -601,7 +607,7 @@ def deletecmd(ui, repo, pats) -> None:
 def listshelves(repo):
     """return all shelves in repo as list of (time, filename)"""
     try:
-        names = repo.localvfs.readdir(shelvedir)
+        names = _listshelvefileinfos(repo, shelvedir)
     except OSError as err:
         if err.errno != errno.ENOENT:
             raise

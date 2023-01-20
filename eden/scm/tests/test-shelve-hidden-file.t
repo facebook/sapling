@@ -28,5 +28,5 @@ Use wrong format ._* files to mimic the binary files created by MacOS:
   $ echo 'wrong format' >> .hg/shelved/._default.oshelve
   $ echo 'wrong format' >> .hg/shelved/._default.patch
 
-  $ hg log -r 'shelved()' 2>&1 | head -n 1
-  ** * has crashed: (glob)
+  $ hg log -r 'shelved()' -T '{desc}'
+  shelve changes to: c (no-eol)
