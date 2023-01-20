@@ -41,6 +41,8 @@ use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::SegmentedChangelogConfig;
 use metaconfig_types::SegmentedChangelogHeadConfig;
 use metaconfig_types::ServiceWriteRestrictions;
+use metaconfig_types::ShardedService;
+use metaconfig_types::ShardingModeConfig;
 use metaconfig_types::SourceControlServiceMonitoring;
 use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::SparseProfilesConfig;
@@ -75,6 +77,8 @@ use repos::RawRepoClientKnobs;
 use repos::RawSegmentedChangelogConfig;
 use repos::RawSegmentedChangelogHeadConfig;
 use repos::RawServiceWriteRestrictions;
+use repos::RawShardedService;
+use repos::RawShardingModeConfig;
 use repos::RawSourceControlServiceMonitoring;
 use repos::RawSourceControlServiceParams;
 use repos::RawSparseProfilesConfig;
@@ -689,6 +693,38 @@ impl Convert for RawCommitGraphConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(CommitGraphConfig {
             scuba_table: self.scuba_table,
+        })
+    }
+}
+
+impl Convert for RawShardedService {
+    type Output = ShardedService;
+
+    fn convert(self) -> Result<Self::Output> {
+        let service = match self {
+            RawShardedService::EDEN_API => ShardedService::EdenApi,
+            RawShardedService::SOURCE_CONTROL_SERVICE => ShardedService::SourceControlService,
+            RawShardedService::DERIVED_DATA_SERVICE => ShardedService::DerivedDataService,
+            RawShardedService::LAND_SERVICE => ShardedService::LandService,
+            RawShardedService::LARGE_FILES_SERVICE => ShardedService::LargeFilesService,
+            RawShardedService::DERIVATION_WORKER => ShardedService::DerivationWorker,
+            RawShardedService::ASYNC_REQUESTS_WORKER => ShardedService::AsyncRequestsWorker,
+            v => return Err(anyhow!("Invalid value {} for enum ShardedService", v)),
+        };
+        Ok(service)
+    }
+}
+
+impl Convert for RawShardingModeConfig {
+    type Output = ShardingModeConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(ShardingModeConfig {
+            status: self
+                .status
+                .into_iter()
+                .map(|(k, v)| anyhow::Ok((k.convert()?, v)))
+                .collect::<Result<_>>()?,
         })
     }
 }

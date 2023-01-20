@@ -228,6 +228,34 @@ pub struct RepoConfig {
     pub commit_graph_config: CommitGraphConfig,
     /// Default commit identity scheme. Some repos can be hg-mirrored git repos.
     pub default_commit_identity_scheme: CommitIdentityScheme,
+    /// Config determining if the repo is deep sharded in the context of a service.
+    pub deep_sharding_config: Option<ShardingModeConfig>,
+}
+
+/// Config determining if the repo is deep sharded in the context of a service.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct ShardingModeConfig {
+    /// Deep sharded status of repo for individual services.
+    pub status: HashMap<ShardedService, bool>,
+}
+
+/// Mononoke services for which sharding can be enabled.
+#[derive(Eq, Clone, Debug, PartialEq, Hash)]
+pub enum ShardedService {
+    /// Eden / Mononoke Service
+    EdenApi,
+    /// Source Control Service
+    SourceControlService,
+    /// Derived Data Service
+    DerivedDataService,
+    /// Source Control Land Service
+    LandService,
+    /// Derivation Worker (Worker for Derived Data Service)
+    DerivationWorker,
+    /// Large Files Service (LFS)
+    LargeFilesService,
+    /// Async Requests Worker
+    AsyncRequestsWorker,
 }
 
 /// Indicates types of commit hashes used in a repo context.

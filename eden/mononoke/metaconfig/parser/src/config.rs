@@ -224,6 +224,7 @@ fn parse_with_repo_definition(
         deep_sharded,
         update_logging_config,
         commit_graph_config,
+        deep_sharding_config,
         ..
     } = named_repo_config;
 
@@ -339,6 +340,7 @@ fn parse_with_repo_definition(
     let update_logging_config = update_logging_config.convert()?.unwrap_or_default();
 
     let commit_graph_config = commit_graph_config.convert()?.unwrap_or_default();
+    let deep_sharding_config = deep_sharding_config.convert()?;
 
     Ok(RepoConfig {
         enabled,
@@ -382,6 +384,7 @@ fn parse_with_repo_definition(
         update_logging_config,
         commit_graph_config,
         default_commit_identity_scheme,
+        deep_sharding_config,
     })
 }
 
@@ -537,6 +540,7 @@ mod test {
     use metaconfig_types::ShardableRemoteDatabaseConfig;
     use metaconfig_types::ShardedDatabaseConfig;
     use metaconfig_types::ShardedRemoteDatabaseConfig;
+    use metaconfig_types::ShardingModeConfig;
     use metaconfig_types::SmallRepoCommitSyncConfig;
     use metaconfig_types::SourceControlServiceMonitoring;
     use metaconfig_types::SourceControlServiceParams;
@@ -906,6 +910,8 @@ mod test {
 
             [commit_graph_config]
             scuba_table = "commit_graph"
+            
+            [deep_sharding_config.status]
         "#;
         let fbsource_repo_def = r#"
             repo_id=0
@@ -1276,6 +1282,7 @@ mod test {
                 commit_graph_config: CommitGraphConfig {
                     scuba_table: Some("commit_graph".to_string()),
                 },
+                deep_sharding_config: Some(ShardingModeConfig { status: hashmap!() }),
             },
         );
 
@@ -1351,6 +1358,7 @@ mod test {
                 deep_sharded: false,
                 update_logging_config: UpdateLoggingConfig::default(),
                 commit_graph_config: CommitGraphConfig::default(),
+                deep_sharding_config: None,
             },
         );
         assert_eq!(
