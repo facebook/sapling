@@ -284,7 +284,7 @@ impl Arbitrary for Id {
     }
 }
 
-#[cfg(feature = "for-tests")]
+// For convenience.
 impl std::cmp::PartialEq<u64> for Id {
     fn eq(&self, other: &u64) -> bool {
         self.0 == *other

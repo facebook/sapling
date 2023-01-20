@@ -11,7 +11,7 @@ anyhow = "1.0.65"
 async-trait = "0.1.58"
 bitflags = "1.3"
 byteorder = "1.3"
-dag-types = { version = "0.1.0", path = "dag-types" }
+dag-types = { version = "0.1.0", path = "dag-types", default-features = false }
 drawdag = { version = "0.1.0", path = "../drawdag" }
 fail = { version = "0.4", features = ["failpoints"] }
 fs2 = { version = "0.4", optional = true }
@@ -21,7 +21,6 @@ indexmap = { version = "1.9.1", features = ["rayon", "serde-1"] }
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes", default-features = false }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
-quickcheck = { version = "1.0", optional = true }
 rand = { version = "0.8", features = ["small_rng"] }
 renderdag = { version = "0.1.0", path = "../renderdag", optional = true }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
@@ -31,7 +30,7 @@ tracing = "0.1.35"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
 [dev-dependencies]
-dag-types = { version = "0.1.0", path = "dag-types", features = ["for-tests"] }
+dag-types = { version = "0.1.0", path = "dag-types" }
 dev-logger = { version = "0.1.0", path = "../dev-logger" }
 fs2 = "0.4"
 indexedlog = { version = "0.1.0", path = "../indexedlog" }
@@ -42,7 +41,6 @@ tempfile = "3.3"
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 
 [features]
-default = ["for-tests", "indexedlog-backend", "render"]
-for-tests = ["quickcheck"]
+default = ["indexedlog-backend", "render"]
 indexedlog-backend = ["fs2", "indexedlog", "tempfile"]
 render = ["renderdag"]
