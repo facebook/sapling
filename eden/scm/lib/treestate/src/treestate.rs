@@ -90,7 +90,8 @@ impl TreeState {
         let name = format!("{:x}", uuid::Uuid::new_v4());
         let path = directory.join(&name);
         tracing::trace!(target: "treestate::create", "creating filestore {path:?}");
-        let store = FileStore::create(&path)?;
+        let mut store = FileStore::create(&path)?;
+        let _lock = store.lock()?;
         let root = TreeStateRoot::default();
         let tree = Tree::new();
         let mut treestate = TreeState {
@@ -168,6 +169,7 @@ impl TreeState {
 
     /// Flush dirty entries. Return new `root_id` that can be passed to `open`.
     pub fn flush(&mut self) -> Result<BlockId> {
+        let _lock = self.store.lock()?;
         let tree_block_id = { self.tree.write_delta(&mut self.store)? };
         self.write_root(tree_block_id)
     }
@@ -177,6 +179,7 @@ impl TreeState {
         let name = format!("{:x}", uuid::Uuid::new_v4());
         let path = directory.as_ref().join(&name);
         let mut new_store = FileStore::create(path)?;
+        let _lock = new_store.lock()?;
         let tree_block_id = self.tree.write_full(&mut new_store, &self.store)?;
         self.store = new_store;
         let root_id = self.write_root(tree_block_id)?;
@@ -905,7 +908,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // BUG
     fn test_concurrent_writes() {
         check_concurrent_writes(&[b"a"], &[b"b"]);
         check_concurrent_writes(&[b"a/1"], &[b"a/2"]);
@@ -947,12 +949,6 @@ mod tests {
         }
 
         let root_id1 = state1.flush().unwrap();
-
-        // Panic (debug build) at
-        // debug_assert!(self.position == file.seek(SeekFrom::End(0))?);
-        // in filestore.rs
-        //
-        // Might error out with (release build): "invalid store id: ..."
         let root_id2 = state2.flush().unwrap();
 
         // Check that things can be read properly (aka. no "invalid store id: ..." errors),

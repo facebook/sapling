@@ -191,6 +191,7 @@ impl Store for FileStore {
         }
         let id = BlockId(self.position);
         let mut file = self.file.lock().unwrap();
+        debug_assert!(file.is_locked(), "writing to store requires locking");
         let at_end = self.at_end.get_mut();
         if !*at_end {
             file.seek(SeekFrom::Start(self.position))?;
@@ -206,6 +207,7 @@ impl Store for FileStore {
 
     fn flush(&mut self) -> Result<()> {
         let mut file = self.file.lock().unwrap();
+        debug_assert!(file.is_locked(), "flushing store requires locking");
         file.flush()?;
         file.sync_all()?;
         Ok(())
@@ -213,7 +215,13 @@ impl Store for FileStore {
 
     fn lock(&mut self) -> Result<ScopedLock> {
         let file = self.file.clone();
-        file.lock().unwrap().lock_exclusive()?;
+        {
+            let mut mut_file = file.lock().unwrap();
+            mut_file.lock_exclusive()?;
+            // Seek to the end for appending.
+            self.position = mut_file.seek(SeekFrom::End(0))?;
+            *self.at_end.borrow_mut() = true;
+        }
         let unlock = move || {
             let _ = file.lock().unwrap().unlock();
         };
@@ -288,6 +296,7 @@ mod tests {
         let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
+        let lock = s.lock().unwrap();
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
         let id2 = s
             .append("data block two".as_bytes())
@@ -295,15 +304,16 @@ mod tests {
         s.flush().expect("flush");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
-        drop(s);
+        drop((s, lock));
         let mut s = FileStore::open(&p).expect("open store");
+        let lock = s.lock().unwrap();
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
         let id3 = s
             .append("third data block".as_bytes())
             .expect("write block 3");
         s.flush().expect("flush");
-        drop(s);
+        drop((s, lock));
         let s = FileStore::open(p.clone()).expect("open store");
         assert_eq!(s.read(id3).expect("read 3"), "third data block".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
@@ -316,8 +326,10 @@ mod tests {
         let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
+        let lock = s.lock().unwrap();
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
         s.flush().expect("flush");
+        drop(lock);
         drop(s);
         let mut perms = fs::metadata(&p).unwrap().permissions();
         perms.set_readonly(true);
@@ -400,6 +412,7 @@ mod tests {
         let dir = tempdir().expect("create temp dir");
         let p = dir.path().join("store");
         let mut s = FileStore::create(&p).expect("create store");
+        let lock = s.lock().unwrap();
         let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
         let id2 = s
             .append("data block two".as_bytes())
@@ -407,8 +420,11 @@ mod tests {
         s.flush().expect("flush");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
+        drop(lock);
         drop(s);
+
         let mut s = FileStore::open(&p).expect("open store");
+        let _lock = s.lock().unwrap();
         s.cache().expect("can cache");
         assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
         assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());

@@ -17,6 +17,7 @@ use crate::filestore::FileStore;
 use crate::serialization::Serializable;
 use crate::store::BlockId;
 use crate::store::NullStore;
+use crate::store::ScopedLock;
 use crate::store::Store;
 use crate::store::StoreView;
 use crate::tree::Key;
@@ -61,6 +62,13 @@ impl Backend {
         match *self {
             Backend::Empty(ref _null) => None,
             Backend::File(ref file) => Some(file.position()),
+        }
+    }
+
+    pub fn lock(&mut self) -> Result<ScopedLock> {
+        match *self {
+            Backend::Empty(_) => Ok(ScopedLock { unlock: None }),
+            Backend::File(ref mut file) => file.lock(),
         }
     }
 }
@@ -131,20 +139,20 @@ impl TreeDirstate {
 
     /// Write a full copy of the treedirstate out to a new file.
     pub fn write_full<P: AsRef<Path>>(&mut self, filename: P) -> Result<()> {
+        let mut store = FileStore::create(filename)?;
+        let _lock = store.lock()?;
         {
-            let mut store = FileStore::create(filename)?;
-            {
-                let old_store = self.store.store_view();
-                self.tracked.write_full(&mut store, old_store)?;
-                self.removed.write_full(&mut store, old_store)?;
-            }
-            self.store = Backend::File(store);
+            let old_store = self.store.store_view();
+            self.tracked.write_full(&mut store, old_store)?;
+            self.removed.write_full(&mut store, old_store)?;
         }
+        self.store = Backend::File(store);
         self.write_root()
     }
 
     /// Write updated entries in the treedirstate to the store.
     pub fn write_delta(&mut self) -> Result<()> {
+        let _lock = self.store.lock()?;
         {
             match self.store {
                 Backend::Empty(ref mut store) => {
