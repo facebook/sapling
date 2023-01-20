@@ -27,6 +27,7 @@ use executor_lib::RepoShardedProcessExecutor;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use megarepo_api::MegarepoApi;
+use metaconfig_types::ShardedService;
 use mononoke_api::repo::Repo;
 use mononoke_api::CoreContext;
 use mononoke_app::args::HooksAppExtension;
@@ -157,7 +158,11 @@ impl RepoShardedProcessExecutor for ScsServerProcessExecutor {
         // repo is deep-sharded, then remove it since SM wants some other host to serve it.
         // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
         // sharded repos need to be present on each host.
-        if config.deep_sharded {
+        let is_deep_sharded = config
+            .deep_sharding_config
+            .and_then(|c| c.status.get(&ShardedService::SourceControlService).copied())
+            .unwrap_or(false);
+        if is_deep_sharded {
             self.repos_mgr.remove_repo(&self.repo_name);
             info!(
                 self.repos_mgr.logger(),
@@ -195,7 +200,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let scuba_builder = env.scuba_sample_builder.clone();
 
-    let repos_mgr = runtime.block_on(app.open_managed_repos())?;
+    let repos_mgr =
+        runtime.block_on(app.open_managed_repos(Some(ShardedService::SourceControlService)))?;
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke.clone()))?);
 

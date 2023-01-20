@@ -43,6 +43,7 @@ use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
 use hyper::header::HeaderValue;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::ShardedService;
 use mononoke_app::args::parse_config_spec_to_path;
 use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
@@ -163,7 +164,9 @@ pub struct LfsRepos {
 
 impl LfsRepos {
     pub(crate) async fn new(app: &MononokeApp) -> Result<Self> {
-        let repos_mgr = app.open_managed_repos().await?;
+        let repos_mgr = app
+            .open_managed_repos(Some(ShardedService::LargeFilesService))
+            .await?;
         let repos = repos_mgr.repos().clone();
         Ok(Self { repos })
     }

@@ -28,6 +28,7 @@ use futures::channel::oneshot;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use metaconfig_types::ShardedService;
 use mononoke_api::CoreContext;
 use mononoke_api::Repo;
 use mononoke_app::args::HooksAppExtension;
@@ -167,7 +168,11 @@ impl MononokeServerProcessExecutor {
         // repo is deep-sharded, then remove it since SM wants some other host to serve it.
         // If repo is shallow-sharded, then keep it since regardless of SM sharding, shallow
         // sharded repos need to be present on each host.
-        if config.deep_sharded {
+        let is_deep_sharded = config
+            .deep_sharding_config
+            .and_then(|c| c.status.get(&ShardedService::EdenApi).copied())
+            .unwrap_or(false);
+        if is_deep_sharded {
             self.repos_mgr.remove_repo(repo_name);
             info!(
                 self.repos_mgr.logger(),
@@ -273,7 +278,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         cloned!(root_log, will_exit, env, runtime);
         move |app: MononokeApp| async move {
             let common = configs.common.clone();
-            let repos_mgr = app.open_managed_repos().await?;
+            let repos_mgr = app
+                .open_managed_repos(Some(ShardedService::EdenApi))
+                .await?;
             let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
             info!(&root_log, "Built Mononoke");
 

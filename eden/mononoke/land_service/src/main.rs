@@ -20,6 +20,7 @@ use cmdlib_logging::ScribeLoggingArgs;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use land_service_if::server::*;
+use metaconfig_types::ShardedService;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::MononokeAppBuilder;
 use slog::info;
@@ -76,7 +77,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let scuba_builder = env.scuba_sample_builder.clone();
     let mononoke = Arc::new(
         runtime
-            .block_on(app.open_managed_repos())?
+            .block_on(app.open_managed_repos(Some(ShardedService::LandService)))?
             .make_mononoke_api()?,
     );
 

@@ -42,6 +42,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::ShardedService;
 use mononoke_configs::MononokeConfigs;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
@@ -530,9 +531,12 @@ impl MononokeApp {
         Ok((source_repo, target_repo))
     }
 
-    /// Create a manager for all configured shallow-sharded repos, excluding
+    /// Create a manager for all configured repos based on deep-sharding status, excluding
     /// those filtered by `repo_filter_from` in `MononokeEnvironment`.
-    pub async fn open_managed_repos<Repo>(&self) -> Result<MononokeReposManager<Repo>>
+    pub async fn open_managed_repos<Repo>(
+        &self,
+        service: Option<ShardedService>,
+    ) -> Result<MononokeReposManager<Repo>>
     where
         Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
             + Send
@@ -548,9 +552,17 @@ impl MononokeApp {
                 .filter_map(|(name, config)| {
                     let is_matching_filter =
                         repo_filter.as_ref().map_or(true, |filter| filter(&name));
+                    let is_deep_sharded = service
+                        .as_ref()
+                        .and_then(|service| {
+                            config
+                                .deep_sharding_config
+                                .and_then(|c| c.status.get(service).copied())
+                        })
+                        .unwrap_or(false);
                     // Initialize repos that are enabled and not deep-sharded (i.e. need to exist
                     // at service startup)
-                    if config.enabled && !config.deep_sharded && is_matching_filter {
+                    if config.enabled && !is_deep_sharded && is_matching_filter {
                         Some(name)
                     } else {
                         None
