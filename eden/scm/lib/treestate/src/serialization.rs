@@ -41,7 +41,6 @@ use crate::tree::Key;
 use crate::tree::Node;
 use crate::tree::NodeEntry;
 use crate::tree::NodeEntryMap;
-use crate::treedirstate::TreeDirstateRoot;
 
 pub trait Serializable
 where
@@ -221,42 +220,6 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
             w.write_vlq(name.len())?;
             w.write_all(name)?;
         }
-        Ok(())
-    }
-}
-
-/// Marker indicating that a block is probably a root node.
-const DIRSTATE_ROOT_MAGIC_LEN: usize = 4;
-const DIRSTATE_ROOT_MAGIC: [u8; DIRSTATE_ROOT_MAGIC_LEN] = *b"////";
-
-impl Serializable for TreeDirstateRoot {
-    fn deserialize(r: &mut dyn Read) -> Result<TreeDirstateRoot> {
-        // Sanity check that this is a root
-        let mut buffer = [0; DIRSTATE_ROOT_MAGIC_LEN];
-        r.read_exact(&mut buffer)?;
-        if buffer != DIRSTATE_ROOT_MAGIC {
-            bail!(ErrorKind::CorruptTree);
-        }
-
-        let tracked_root_id = BlockId(r.read_u64::<BigEndian>()?);
-        let tracked_file_count = r.read_u32::<BigEndian>()?;
-        let removed_root_id = BlockId(r.read_u64::<BigEndian>()?);
-        let removed_file_count = r.read_u32::<BigEndian>()?;
-
-        Ok(TreeDirstateRoot {
-            tracked_root_id,
-            tracked_file_count,
-            removed_root_id,
-            removed_file_count,
-        })
-    }
-
-    fn serialize(&self, w: &mut dyn Write) -> Result<()> {
-        w.write_all(&DIRSTATE_ROOT_MAGIC)?;
-        w.write_u64::<BigEndian>(self.tracked_root_id.0)?;
-        w.write_u32::<BigEndian>(self.tracked_file_count)?;
-        w.write_u64::<BigEndian>(self.removed_root_id.0)?;
-        w.write_u32::<BigEndian>(self.removed_file_count)?;
         Ok(())
     }
 }

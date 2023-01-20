@@ -52,8 +52,6 @@ def _localrepoinit(
 
     if "treestate" in self.requirements:
         dirstateformat = "treestate"
-    elif "treedirstate" in self.requirements:
-        dirstateformat = "treedirstate"
     else:
         dirstateformat = "flatdirstate"
 

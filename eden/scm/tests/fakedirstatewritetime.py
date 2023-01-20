@@ -7,16 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import (
-    context,
-    dirstate,
-    extensions,
-    pycompat,
-    registrar,
-    treedirstate,
-    treestate,
-    util,
-)
+from edenscm import context, dirstate, extensions, pycompat, registrar, treestate, util
 from edenscmnative import parsers
 
 
@@ -74,14 +65,6 @@ def markcommitted(orig, committablectx, node):
     return fakewrite(ui, lambda: orig(committablectx, node))
 
 
-def treedirstatewrite(orig, self, st, now):
-    ui = self._ui
-    fakenow = ui.config("fakedirstatewritetime", "fakenow")
-    if fakenow:
-        now = util.parsedate(fakenow)[0]
-    return orig(self, st, now)
-
-
 def treestatewrite(orig, self, st, now):
     ui = self._ui
     fakenow = ui.config("fakedirstatewritetime", "fakenow")
@@ -93,5 +76,4 @@ def treestatewrite(orig, self, st, now):
 def extsetup(ui):
     extensions.wrapfunction(dirstate.dirstate, "_poststatusfixup", _poststatusfixup)
     extensions.wrapfunction(context.committablectx, "markcommitted", markcommitted)
-    extensions.wrapfunction(treedirstate.treedirstatemap, "write", treedirstatewrite)
     extensions.wrapfunction(treestate.treestatemap, "write", treestatewrite)

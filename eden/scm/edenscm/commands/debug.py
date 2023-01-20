@@ -2595,13 +2595,6 @@ def debugpathcomplete(ui, repo, *specs, **opts) -> None:
                         spec, setbits, unsetbits, matches.add, fullpaths
                     )
 
-    elif "treedirstate" in repo.requirements:
-
-        def complete(spec, acceptable, matches, fullpaths):
-            repo.dirstate._map._rmap.pathcomplete(
-                spec, acceptable, matches.add, fullpaths
-            )
-
     else:
 
         def complete(spec, acceptable, matches, fullpaths):
@@ -3938,7 +3931,7 @@ def debugexistingcasecollisions(ui, repo, *basepaths, **opts) -> None:
 
 
 @command(
-    "debugtreestate|debugtreedirstate|debugtree",
+    "debugtreestate|debugtree",
     [],
     "hg debugtreestate [on|off|status|repack|cleanup|v0|v1|v2|list]",
 )
@@ -3946,14 +3939,11 @@ def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
     """manage treestate
 
     v0/off: migrate to flat dirstate
-    v1: migrate to treedirstate
-    v2: migrate to treestate
+    v1 or v2: migrate to treestate
     on: migrate to the latest version (v2)
     """
-    if cmd in ["v2", "on"]:
+    if cmd in {"v2", "v1", "on"}:
         treestate.migrate(ui, repo, 2)
-    elif cmd == "v1":
-        treestate.migrate(ui, repo, 1)
     elif cmd in ["v0", "off"]:
         treestate.migrate(ui, repo, 0)
         treestate.cleanup(ui, repo)
@@ -3966,11 +3956,6 @@ def debugtreestate(ui, repo, cmd: str = "status", **opts) -> None:
         dmap = repo.dirstate._map
         if "eden" in repo.requirements:
             ui.status(_("eden checkout dirstate is managed by edenfs\n"))
-        elif "treedirstate" in repo.requirements:
-            ui.status(
-                _("dirstate v1 (using dirstate.tree.%s, %s files tracked)\n")
-                % (dmap._treeid, len(dmap))
-            )
         elif "treestate" in repo.requirements:
             ui.status(
                 _("dirstate v2 (using treestate/%s, offset %s, %s files tracked)\n")

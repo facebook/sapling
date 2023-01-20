@@ -579,15 +579,13 @@ def currentversion(repo):
     """get the current dirstate version"""
     if "treestate" in repo.requirements:
         return 2
-    elif "treedirstate" in repo.requirements:
-        return 1
     else:
         return 0
 
 
 def cleanup(ui, repo):
     """Clean up old tree files."""
-    if repo.dirstate._istreedirstate or repo.dirstate._istreestate:
+    if repo.dirstate._istreestate:
         repo.dirstate._map._gc()
 
 
@@ -607,18 +605,10 @@ def migrate(ui, repo, version):
         vfs = repo.dirstate._opener
         newmap = None
         # Reset repo requirements
-        for req in ["treestate", "treedirstate"]:
+        for req in {"treestate"}:
             if req in repo.requirements:
                 repo.requirements.remove(req)
-        if wanted == 1 and current in [0, 2]:
-            # to treedirstate
-            from . import treedirstate
-
-            newmap = treedirstate.treedirstatemap(
-                ui, vfs, repo.root, importmap=repo.dirstate._map
-            )
-            repo.requirements.add("treedirstate")
-        elif wanted == 2 and current in [0, 1]:
+        if wanted in {1, 2} and current in {0}:
             # to treestate
             vfs.makedirs("treestate")
             newmap = treestatemap(
@@ -629,14 +619,9 @@ def migrate(ui, repo, version):
                 importdirstate=repo.dirstate,
             )
             repo.requirements.add("treestate")
-        elif wanted == 0 and current == 1:
-            # treedirstate -> flat dirstate
-            repo.dirstate._map.writeflat()
-        elif wanted == 0 and current == 2:
+        elif wanted == 0 and current in {1, 2}:
             # treestate does not support writeflat.
-            # downgrade to treedirstate (version 1) first.
-            migrate(ui, repo, 1)
-            return migrate(ui, repo, wanted)
+            raise error.Abort(_("cannot migrate back to flat dirstate"))
         else:
             # unreachable
             raise error.Abort(

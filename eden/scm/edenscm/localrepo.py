@@ -332,7 +332,6 @@ class localrepository(object):
         "shared",
         "relshared",
         "dotencode",
-        "treedirstate",
         "treestate",
         "storerequirements",
         "lfs",
@@ -1277,7 +1276,6 @@ class localrepository(object):
             raise errormod.RequirementError(
                 "legacy dirstate implementations are no longer supported"
             )
-        istreedirstate = "treedirstate" in self.requirements
 
         ds = dirstatemod.dirstate(
             self.localvfs,
@@ -1286,7 +1284,6 @@ class localrepository(object):
             self._dirstatevalidate,
             self,
             istreestate=istreestate,
-            istreedirstate=istreedirstate,
         )
 
         try:

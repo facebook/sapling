@@ -55,7 +55,6 @@ from . import (
     pycompat,
     scmutil,
     transaction,
-    treedirstate,
     treestate,
     txnutil,
     ui as ui_mod,
@@ -104,11 +103,8 @@ def _getfsnow(vfs: "vfs.abstractvfs") -> int:
 DirstateMapClassType = Union[
     Type["dirstatemap"],
     Type[treestate.treestatemap],
-    Type[treedirstate.treedirstatemap],
 ]
-DirstateMapType = Union[
-    "dirstatemap", treestate.treestatemap, treedirstate.treedirstatemap
-]
+DirstateMapType = Union["dirstatemap", treestate.treestatemap]
 ParentChangeCallback = Callable[
     ["dirstate", Tuple[bytes, bytes], Tuple[bytes, bytes]], None
 ]
@@ -145,7 +141,6 @@ class dirstate(object):
         validate: "Callable[[bytes], bytes]",
         repo: "edenscm.localrepo.localrepository",
         istreestate: bool = False,
-        istreedirstate: bool = False,
     ) -> None:
         """Create a new dirstate object.
 
@@ -172,7 +167,6 @@ class dirstate(object):
         self._updatedfiles: "Set[str]" = set()
         # TODO(quark): after migrating to treestate, remove legacy code.
         self._istreestate = istreestate
-        self._istreedirstate = istreedirstate
         if istreestate:
             opener.makedirs("treestate")
 
@@ -188,9 +182,6 @@ class dirstate(object):
 
             # pyre-ignore
             self._mapcls = make_treestate
-        elif istreedirstate:
-            ui.deprecate("treedirstate", "treedirstate is replaced by treestate")
-            self._mapcls: "DirstateMapClassType" = treedirstate.treedirstatemap
         else:
             if "eden" not in repo.requirements:
                 ui.deprecate("dirstatemap", "dirstatemap is replaced by treestate")
@@ -496,7 +487,7 @@ class dirstate(object):
             # _updatedfiles is not used by treestatemap as it's tracked
             # internally.
             return
-        dmap = cast(Union[dirstatemap, treedirstate.treedirstatemap], self._map)
+        dmap = cast(dirstatemap, self._map)
         if source is not None:
             dmap.copymap[dest] = source
             self._updatedfiles.add(source)
@@ -509,7 +500,7 @@ class dirstate(object):
             tsmap = cast(treestate.treestatemap, self._map)
             return tsmap.copysource(file)
         else:
-            dmap = cast(Union[dirstatemap, treedirstate.treedirstatemap], self._map)
+            dmap = cast(dirstatemap, self._map)
             return dmap.copymap.get(file, None)
 
     def copies(self) -> "Dict[str, str]":
@@ -1332,7 +1323,7 @@ class dirstate(object):
         elif self._istreestate:
             # Treestate native path. Avoid visiting directories.
             # pyre-fixme[16]: Item `dirstatemap` of `Union[dirstatemap,
-            #  treedirstatemap, treestatemap]` has no attribute `matches`.
+            #  treestatemap]` has no attribute `matches`.
             return dmap.matches(match)
         # Slow path: scan all files in dirstate.
         return [f for f in dmap if match(f)]

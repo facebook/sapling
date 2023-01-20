@@ -531,7 +531,7 @@ def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> N
         # Eden and flat dirstate.
         dirstatesize = len(dirstate._map._map)
     except AttributeError:
-        # Treestate and treedirstate.
+        # Treestate.
         dirstatesize = len(dirstate._map)
     if dirstatesize is not None:
         lui.log("dirstate_size", dirstate_size=dirstatesize)

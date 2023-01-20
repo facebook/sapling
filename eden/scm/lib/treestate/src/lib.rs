@@ -23,7 +23,6 @@ pub mod root;
 pub mod serialization;
 pub mod store;
 pub mod tree;
-pub mod treedirstate;
 pub mod treestate;
 pub mod vecmap;
 pub mod vecstack;

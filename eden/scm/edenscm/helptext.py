@@ -983,8 +983,8 @@ Example for ``sapling.conf``::
     Enabled by default.
 
 ``dirstate``
-    Dirstate format version to use. One of 0 (flat dirstate), 1
-    (treedirstate), and 2 (treestate). Default is 1.
+    Dirstate format version to use. One of 0 (flat dirstate), and 2 (treestate).
+    Default is 2.
 
 ``uselz4``
     Enable or disable the lz4 compression format on the revlogs.
