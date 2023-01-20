@@ -85,7 +85,6 @@ use sha1::Sha1;
 use slog::debug;
 use slog::info;
 use slog::o;
-use stats::prelude::*;
 use tunables::tunables;
 
 use crate::errors::ErrorKind;
@@ -99,13 +98,6 @@ use low_gen_nums_optimization::LowGenNumChecker;
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
 pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
 const UNEXPECTED_NONE_ERR_MSG: &str = "unexpected None while calling DifferenceOfUnionsOfAncestors";
-
-define_stats! {
-    prefix = "mononoke.getbundle_response";
-    manifests_returned: dynamic_timeseries("manifests_returned.{}", (reponame: String); Rate, Sum),
-    filenodes_returned: dynamic_timeseries("filenodes_returned.{}", (reponame: String); Rate, Sum),
-    filenodes_weight: dynamic_timeseries("filesnodes_weight.{}", (reponame: String); Rate, Sum),
-}
 
 #[derive(PartialEq, Eq)]
 pub enum PhasesPart {
