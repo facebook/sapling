@@ -26,6 +26,7 @@ use crate::ops::DagStrip;
 use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
+#[cfg(feature = "render")]
 use crate::render::render_namedag;
 use crate::tests::DrawDag;
 use crate::Group;
@@ -204,6 +205,7 @@ impl TestDag {
         format!("{:?}", &self.dag.dag)
     }
 
+    #[cfg(feature = "render")]
     /// Render the graph.
     pub fn render_graph(&self) -> String {
         render_namedag(&self.dag, |v| {

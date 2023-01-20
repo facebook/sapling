@@ -257,8 +257,8 @@ impl fmt::Debug for IntersectionSet {
 mod tests {
     use std::collections::HashSet;
 
-    use super::super::id_lazy::tests::lazy_set;
-    use super::super::id_lazy::tests::lazy_set_inherit;
+    use super::super::id_lazy::test_utils::lazy_set;
+    use super::super::id_lazy::test_utils::lazy_set_inherit;
     use super::super::tests::*;
     use super::*;
     use crate::Id;

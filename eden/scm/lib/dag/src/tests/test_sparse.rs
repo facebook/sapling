@@ -207,6 +207,7 @@ async fn test_basic_pull() {
         .await
         .unwrap();
 
+    #[cfg(feature = "render")]
     assert_eq!(server.render_graph(), client.render_graph());
 }
 
@@ -236,6 +237,7 @@ async fn test_pull_remap() {
         ]
     );
 
+    #[cfg(feature = "render")]
     assert_eq!(
         client.render_graph(),
         "
@@ -254,6 +256,7 @@ async fn test_pull_remap() {
             A  0"
     );
 
+    #[cfg(feature = "render")]
     assert_eq!(
         server.render_graph(),
         "
@@ -285,6 +288,7 @@ async fn test_pull_overlap() {
     let e = client.pull_ff_master(&server, "B", "F").await.unwrap_err();
     assert_eq!(e.to_string(), "NeedSlowPath: C exists in local graph");
 
+    #[cfg(feature = "render")]
     assert_eq!(
         client.render_graph(),
         r#"

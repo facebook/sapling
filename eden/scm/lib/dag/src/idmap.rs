@@ -412,13 +412,16 @@ pub trait IdMapWrite {
 #[cfg(test)]
 mod tests {
     use nonblocking::non_blocking_result as r;
+    #[cfg(feature = "indexedlog-backend")]
     use tempfile::tempdir;
 
     use super::*;
+    #[cfg(feature = "indexedlog-backend")]
     use crate::ops::Persist;
+    #[cfg(feature = "indexedlog-backend")]
     use crate::ops::PrefixLookup;
 
-    #[cfg(all(test, feature = "indexedlog-backend"))]
+    #[cfg(feature = "indexedlog-backend")]
     #[test]
     fn test_basic_operations() {
         let dir = tempdir().unwrap();

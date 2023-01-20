@@ -353,45 +353,25 @@ impl AsyncNameSetQuery for IdLazySet {
     }
 }
 
-#[cfg(all(test, feature = "indexedlog-backend"))]
-#[allow(clippy::redundant_clone)]
-pub(crate) mod tests {
-    use std::collections::HashSet;
+#[cfg(test)]
+pub(crate) mod test_utils {
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering::AcqRel;
 
-    use nonblocking::non_blocking_result as r;
-
-    use super::super::tests::*;
-    use super::super::NameSet;
     use super::*;
     use crate::ops::PrefixLookup;
     use crate::tests::dummy_dag::DummyDag;
     use crate::VerLink;
 
-    pub fn lazy_set(a: &[u64]) -> IdLazySet {
-        let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
-        IdLazySet::from_iter_idmap_dag(
-            ids.into_iter().map(Ok),
-            Arc::new(StrIdMap::new()),
-            Arc::new(DummyDag::new()),
-        )
-    }
-
-    pub fn lazy_set_inherit(a: &[u64], set: &IdLazySet) -> IdLazySet {
-        let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
-        IdLazySet::from_iter_idmap_dag(ids.into_iter().map(Ok), set.map.clone(), set.dag.clone())
-    }
-
     static STR_ID_MAP_ID: AtomicU64 = AtomicU64::new(0);
 
-    struct StrIdMap {
+    pub(crate) struct StrIdMap {
         id: String,
         version: VerLink,
     }
 
     impl StrIdMap {
-        fn new() -> Self {
+        pub(crate) fn new() -> Self {
             Self {
                 id: format!("str:{}", STR_ID_MAP_ID.fetch_add(1, AcqRel)),
                 version: VerLink::new(),
@@ -445,6 +425,33 @@ pub(crate) mod tests {
             Ok(names.iter().map(|name| name.as_ref().len() == 8).collect())
         }
     }
+
+    pub fn lazy_set(a: &[u64]) -> IdLazySet {
+        let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
+        IdLazySet::from_iter_idmap_dag(
+            ids.into_iter().map(Ok),
+            Arc::new(StrIdMap::new()),
+            Arc::new(DummyDag::new()),
+        )
+    }
+
+    pub fn lazy_set_inherit(a: &[u64], set: &IdLazySet) -> IdLazySet {
+        let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
+        IdLazySet::from_iter_idmap_dag(ids.into_iter().map(Ok), set.map.clone(), set.dag.clone())
+    }
+}
+
+#[cfg(all(test, feature = "indexedlog-backend"))]
+#[allow(clippy::redundant_clone)]
+pub(crate) mod tests {
+    use std::collections::HashSet;
+
+    use nonblocking::non_blocking_result as r;
+
+    use super::super::tests::*;
+    use super::super::NameSet;
+    use super::test_utils::*;
+    use super::*;
 
     #[test]
     fn test_id_lazy_basic() -> Result<()> {

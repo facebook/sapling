@@ -16,6 +16,7 @@ use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::ImportAscii;
+#[cfg(feature = "render")]
 use crate::render::render_namedag;
 use crate::DagAlgorithm;
 use crate::IdMap;
@@ -266,6 +267,7 @@ fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> 
     let dir = tempdir().unwrap();
     let mut dag2 = NameDag::open(&dir.path())?;
     r(dag2.import_and_flush(&dag1, nameset("J")))?;
+    #[cfg(feature = "render")]
     assert_eq!(
         render(&dag2),
         r#"
@@ -294,6 +296,7 @@ fn test_specific_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> 
 
     // Check that dag2 is actually flushed to disk.
     let dag3 = NameDag::open(&dir.path())?;
+    #[cfg(feature = "render")]
     assert_eq!(
         render(&dag3),
         r#"
@@ -767,6 +770,7 @@ fn test_namedag_reassign_non_master() {
     t.drawdag("", &["C"]);
 
     // Z still exists.
+    #[cfg(feature = "render")]
     assert_eq!(
         t.render_graph(),
         r#"
@@ -1288,6 +1292,7 @@ o  B(N0)-Z(N1)
 async fn test_subdag() {
     let t = TestDag::draw("A..E");
     let s = t.dag.subdag(nameset("B D E")).await.unwrap();
+    #[cfg(feature = "render")]
     assert_eq!(
         render(&s),
         r#"
@@ -1302,6 +1307,7 @@ async fn test_subdag() {
     let t = TestDag::draw("A-X B-X X-C X-D");
     let s1 = t.dag.subdag(nameset("D C B A")).await.unwrap();
     let s2 = t.dag.subdag(nameset("A B C D")).await.unwrap();
+    #[cfg(feature = "render")]
     assert_eq!(
         render(&s1),
         r#"
@@ -1313,6 +1319,7 @@ async fn test_subdag() {
             │
             B"#
     );
+    #[cfg(feature = "render")]
     assert_eq!(render(&s1), render(&s2));
 }
 
@@ -1430,6 +1437,7 @@ pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + IdConvert + Send + Sync 
     test_generic_dag_beautify(new_dag).unwrap();
 }
 
+#[cfg(feature = "render")]
 fn render(dag: &(impl DagAlgorithm + ?Sized)) -> String {
     render_namedag(dag, |_| None).unwrap()
 }
