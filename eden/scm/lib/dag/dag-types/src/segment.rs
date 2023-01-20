@@ -15,14 +15,21 @@ use crate::id::Id;
 /// Intermediate structure between processing a Dag and constructing high level segments.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[derive(Serialize, Deserialize, Ord, PartialOrd)]
-#[cfg_attr(
-    any(test, feature = "for-tests"),
-    derive(quickcheck_arbitrary_derive::Arbitrary)
-)]
 pub struct FlatSegment {
     pub low: Id,
     pub high: Id,
     pub parents: Vec<Id>,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for FlatSegment {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        Self {
+            low: Id::arbitrary(g),
+            high: Id::arbitrary(g),
+            parents: Vec::arbitrary(g),
+        }
+    }
 }
 
 use std::collections::BTreeSet;
