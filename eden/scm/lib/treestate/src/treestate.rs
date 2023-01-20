@@ -922,7 +922,7 @@ mod tests {
 
     // Test appending paths1, and paths2 "concurrently".
     // Paths should not overlap.
-    fn check_concurrent_writes(paths1: &[&[u8]], paths2: &[&[u8]]) {
+    fn check_concurrent_writes(paths1: &[&'static [u8]], paths2: &[&'static [u8]]) {
         let dir = tempdir().unwrap();
         let dir_path = dir.path();
 
@@ -933,35 +933,51 @@ mod tests {
             (dir_path.join(state.file_name().unwrap()), root_id)
         };
 
-        // Concurrent writes.
-        let mut state1 = TreeState::open(&path, root_id, true).unwrap();
-        let mut state2 = TreeState::open(&path, root_id, true).unwrap();
-        let file_state1: FileStateV2 = Default::default();
-        let file_state2 = FileStateV2 {
-            size: file_state1.size + 1,
-            ..file_state1.clone()
-        };
-        for p in paths1 {
-            state1.insert(p, &file_state1).unwrap();
-        }
-        for p in paths2 {
-            state2.insert(p, &file_state2).unwrap();
-        }
+        // Start M threads for concurrent writes.
+        // Each thread writes N updates for paths, and returns the root_id and state to check for
+        // the paths.
+        const M: usize = 10;
+        const N: usize = 20;
+        let threads = (0..M)
+            .map(|i| {
+                let path = path.to_path_buf();
+                let paths = if i & 1 == 0 { paths1 } else { paths2 };
+                let paths = paths.to_vec();
+                std::thread::spawn(move || {
+                    let mut state = TreeState::open(&path, root_id, true).unwrap();
+                    let mut file_state = FileStateV2 {
+                        size: (i * N) as i32,
+                        ..Default::default()
+                    };
+                    let mut result = Vec::new();
+                    for _ in 0..N {
+                        // Change `file_state` so `result` contains different `file_state`s to
+                        // check. This makes the test more interesting.
+                        file_state.mtime += 1;
+                        for p in &paths {
+                            state.insert(p, &file_state).unwrap();
+                        }
+                        let root_id = state.flush().unwrap();
+                        result.push((root_id, file_state.clone()));
+                    }
+                    (paths, result)
+                })
+            })
+            .collect::<Vec<_>>();
 
-        let root_id1 = state1.flush().unwrap();
-        let root_id2 = state2.flush().unwrap();
+        let to_check: Vec<(Vec<&[u8]>, Vec<(BlockId, FileStateV2)>)> =
+            threads.into_iter().map(|t| t.join().unwrap()).collect();
 
         // Check that things can be read properly (aka. no "invalid store id: ..." errors),
         // and are written properly (file_state1 and file_state2).
-        let mut state1 = TreeState::open(&path, root_id1, true).unwrap();
-        let mut state2 = TreeState::open(&path, root_id2, true).unwrap();
-        for p in paths1 {
-            let got = state1.get(p).unwrap().unwrap();
-            assert_eq!(got, &file_state1);
-        }
-        for p in paths2 {
-            let got = state2.get(p).unwrap().unwrap();
-            assert_eq!(got, &file_state2);
+        for (paths, root_id_file_states) in to_check {
+            for (root_id, file_state) in root_id_file_states {
+                let mut state = TreeState::open(&path, root_id, true).unwrap();
+                for p in &paths {
+                    let got = state.get(p).unwrap().unwrap();
+                    assert_eq!(got, &file_state);
+                }
+            }
         }
     }
 }
