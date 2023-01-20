@@ -151,8 +151,8 @@ struct fuse_attr {
 #ifdef __APPLE__
 	__u32	flags; /* file flags; see chflags(2) */
 #endif
-	__u32	blksize;
-	__u32	padding;
+    __u32	blksize;
+    __u32	padding;
 };
 
 struct fuse_kstatfs {
@@ -189,11 +189,11 @@ struct fuse_file_lock {
 #define FATTR_MTIME_NOW	(1 << 8)
 #define FATTR_LOCKOWNER	(1 << 9)
 #ifdef __APPLE__
-#  define FATTR_CRTIME		(1 << 28)
-#  define FATTR_CHGTIME		(1 << 29)
-#  define FATTR_BKUPTIME	(1 << 30)
-#  define FATTR_FLAGS		(1 << 31)
-#endif /* __APPLE__ */
+#define FATTR_CRTIME	(1 << 28)
+#define FATTR_CHGTIME	(1 << 29)
+#define FATTR_BKUPTIME	(1 << 30)
+#define FATTR_FLAGS	(1 << 31)
+#endif
 
 /**
  * Flags returned by the OPEN request
@@ -206,8 +206,8 @@ struct fuse_file_lock {
 #define FOPEN_KEEP_CACHE	(1 << 1)
 #define FOPEN_NONSEEKABLE	(1 << 2)
 #ifdef __APPLE__
-#  define FOPEN_PURGE_ATTR	(1 << 30)
-#  define FOPEN_PURGE_UBC	(1 << 31)
+#define FOPEN_PURGE_ATTR	(1 << 30)
+#define FOPEN_PURGE_UBC		(1 << 31)
 #endif
 
 /**
@@ -226,16 +226,15 @@ struct fuse_file_lock {
 #define FUSE_BIG_WRITES		(1 << 5)
 #define FUSE_DONT_MASK		(1 << 6)
 #define FUSE_FLOCK_LOCKS	(1 << 10)
-#define FUSE_NO_OPEN_SUPPORT	(1 << 17)
-#define FUSE_NO_OPENDIR_SUPPORT (1 << 24)
 #ifdef __APPLE__
+#  define FUSE_RENAME_SWAP	(1 << 25)
+#  define FUSE_RENAME_EXCL	(1 << 26)
 #  define FUSE_ALLOCATE		(1 << 27)
 #  define FUSE_EXCHANGE_DATA	(1 << 28)
 #  define FUSE_CASE_INSENSITIVE	(1 << 29)
 #  define FUSE_VOL_RENAME	(1 << 30)
 #  define FUSE_XTIMES		(1u << 31)
 #endif
-
 
 /**
  * CUSE INIT request/reply flags
@@ -416,14 +415,12 @@ struct fuse_attr_out {
 };
 
 #ifdef __APPLE__
-
 struct fuse_getxtimes_out {
 	__u64	bkuptime;
 	__u64	crtime;
 	__u32	bkuptimensec;
 	__u32	crtimensec;
 };
-
 #endif /* __APPLE__ */
 
 #define FUSE_COMPAT_MKNOD_IN_SIZE 8
@@ -440,18 +437,20 @@ struct fuse_mkdir_in {
 	__u32	umask;
 };
 
+#ifdef __APPLE__
+#  define FUSE_COMPAT_RENAME_IN_SIZE 8
+#endif
+
 struct fuse_rename_in {
 	__u64	newdir;
 };
 
 #ifdef __APPLE__
-
 struct fuse_exchange_in {
 	__u64	olddir;
 	__u64	newdir;
 	__u64	options;
 };
-
 #endif /* __APPLE__ */
 
 struct fuse_link_in {
