@@ -26,6 +26,27 @@ pub trait Store {
 
     /// Flush all appended blocks to the backing store.
     fn flush(&mut self) -> Result<()>;
+
+    /// Lock the store exclusively to block other writers.
+    /// Block if the lock was taken by others.
+    ///
+    /// Unlock when the returned `ScopedLock` gets dropped.
+    fn lock(&mut self) -> Result<ScopedLock>;
+}
+
+/// Lock for a scope.
+pub struct ScopedLock {
+    /// Specify how to unlock.
+    pub unlock: Option<Box<dyn FnOnce()>>,
+}
+
+impl Drop for ScopedLock {
+    fn drop(&mut self) {
+        let unlock = self.unlock.take();
+        if let Some(unlock) = unlock {
+            (unlock)();
+        }
+    }
 }
 
 /// Read-only view of a store.
@@ -52,6 +73,10 @@ impl Store for NullStore {
 
     fn flush(&mut self) -> Result<()> {
         Ok(())
+    }
+
+    fn lock(&mut self) -> Result<ScopedLock> {
+        Ok(ScopedLock { unlock: None })
     }
 }
 
@@ -98,6 +123,10 @@ pub mod tests {
 
         fn flush(&mut self) -> Result<()> {
             Ok(())
+        }
+
+        fn lock(&mut self) -> Result<ScopedLock> {
+            Ok(ScopedLock { unlock: None })
         }
     }
 

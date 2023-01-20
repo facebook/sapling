@@ -32,6 +32,7 @@ use crate::errors::ErrorKind;
 use crate::filereadwrite::FileReadWrite;
 use crate::filereadwrite::FileReaderWriter;
 use crate::store::BlockId;
+use crate::store::ScopedLock;
 use crate::store::Store;
 use crate::store::StoreView;
 
@@ -208,6 +209,17 @@ impl Store for FileStore {
         file.flush()?;
         file.sync_all()?;
         Ok(())
+    }
+
+    fn lock(&mut self) -> Result<ScopedLock> {
+        let file = self.file.clone();
+        file.lock().unwrap().lock_exclusive()?;
+        let unlock = move || {
+            let _ = file.lock().unwrap().unlock();
+        };
+        Ok(ScopedLock {
+            unlock: Some(Box::new(unlock)),
+        })
     }
 }
 
