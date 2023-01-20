@@ -18,6 +18,8 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::bail;
 use anyhow::Result;
@@ -48,8 +50,8 @@ const HEADER_LEN: u64 = (MAGIC_LEN + 4) as u64;
 
 /// Implementation of a store using file I/O to read and write blocks to a file.
 pub struct FileStore {
-    /// The underlying file.  This is stored in a RefCell so that we can seek during reads.
-    file: RefCell<Box<dyn FileReadWrite>>,
+    /// The underlying file.
+    file: Arc<Mutex<Box<dyn FileReadWrite>>>,
 
     /// The position in the file to which new items will be written.
     position: u64,
@@ -83,8 +85,9 @@ impl FileStore {
         ));
         file.write(&MAGIC)?;
         file.write_u32::<BigEndian>(VERSION)?;
+        let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
         Ok(FileStore {
-            file: RefCell::new(Box::new(file) as Box<dyn FileReadWrite>),
+            file,
             position: HEADER_LEN,
             at_end: RefCell::new(true),
             read_only: false,
@@ -100,8 +103,9 @@ impl FileStore {
         let mut file = Cursor::new(Vec::new());
         file.write_all(&MAGIC)?;
         file.write_u32::<BigEndian>(VERSION)?;
+        let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
         Ok(FileStore {
-            file: RefCell::new(Box::new(file) as Box<dyn FileReadWrite>),
+            file,
             position: HEADER_LEN,
             at_end: RefCell::new(true),
             read_only: false,
@@ -140,9 +144,9 @@ impl FileStore {
         // Find the size of the file (and hence the position to write new blocks of data)
         // by seeking to the end.
         let position = file.seek(SeekFrom::End(0))?;
-
+        let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
         Ok(FileStore {
-            file: RefCell::new(Box::new(file) as Box<dyn FileReadWrite>),
+            file,
             position,
             at_end: RefCell::new(true),
             read_only,
@@ -153,7 +157,7 @@ impl FileStore {
 
     pub fn cache(&mut self) -> Result<()> {
         if self.cache.is_none() {
-            let mut file = self.file.borrow_mut();
+            let mut file = self.file.lock().unwrap();
             file.flush()?;
             file.seek(SeekFrom::Start(0))?;
             *self.at_end.get_mut() = false;
@@ -185,7 +189,7 @@ impl Store for FileStore {
             bail!(ErrorKind::ReadOnlyStore);
         }
         let id = BlockId(self.position);
-        let mut file = self.file.borrow_mut();
+        let mut file = self.file.lock().unwrap();
         let at_end = self.at_end.get_mut();
         if !*at_end {
             file.seek(SeekFrom::Start(self.position))?;
@@ -200,7 +204,7 @@ impl Store for FileStore {
     }
 
     fn flush(&mut self) -> Result<()> {
-        let mut file = self.file.borrow_mut();
+        let mut file = self.file.lock().unwrap();
         file.flush()?;
         file.sync_all()?;
         Ok(())
@@ -233,7 +237,7 @@ impl StoreView for FileStore {
         }
 
         // Get mutable access to the file, and seek to the right location.
-        let mut file = self.file.borrow_mut();
+        let mut file = self.file.lock().unwrap();
         file.seek(SeekFrom::Start(id.0))?;
         *self.at_end.borrow_mut() = false;
 
