@@ -25,6 +25,7 @@ pub mod namedag;
 pub mod nameset;
 pub mod ops;
 pub mod protocol;
+#[cfg(any(test, feature = "render"))]
 pub mod render;
 pub mod segment;
 mod spanset;

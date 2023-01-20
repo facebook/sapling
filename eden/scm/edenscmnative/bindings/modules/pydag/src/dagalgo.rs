@@ -180,7 +180,7 @@ py_class!(pub class dagalgo |py| {
             None
         };
         let dag = self.dag(py);
-        Ok(renderdag::render_namedag(dag.as_ref(), get_message).map_pyerr(py)?.into())
+        Ok(dag::render::render_namedag(dag.as_ref(), get_message).map_pyerr(py)?.into())
     }
 
     /// segments(nameset, maxlevel=255) -> [segment]

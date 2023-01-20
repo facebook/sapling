@@ -275,7 +275,7 @@ mod tests {
     use super::super::test_fixtures;
     use super::super::test_fixtures::TestFixture;
     use super::super::test_utils::render_string;
-    use crate::render::GraphRowRenderer;
+    use crate::GraphRowRenderer;
 
     fn render(fixture: &TestFixture) -> String {
         let mut renderer = GraphRowRenderer::new()

@@ -560,7 +560,7 @@ mod tests {
         let dag = r(ms.get_dag(vec![n("B")]))?;
         assert_eq!(r(non_blocking_result(dag.all())?.count())?, 5); // A B C D E
         assert_eq!(
-            renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
+            dag::render::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
             r#"
             o  4545454545454545454545454545454545454545 (E)
             │
@@ -726,6 +726,6 @@ mod tests {
     /// Render the mutation store for the given nodes.
     fn render(ms: &MutationStore, s: &str) -> Result<String> {
         let dag = r(ms.get_dag(s.chars().map(n).collect::<Vec<Node>>()))?;
-        renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))
+        dag::render::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))
     }
 }

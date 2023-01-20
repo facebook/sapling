@@ -12,13 +12,16 @@ use std::io::Write;
 
 use anyhow::Result;
 use nonblocking::non_blocking_result;
+// Re-export
+pub use renderdag::Ancestor;
+pub use renderdag::GraphRow;
+pub use renderdag::GraphRowRenderer;
+pub use renderdag::Renderer;
+pub use renderdag::*;
 
-use super::render::Ancestor;
-use super::render::Renderer;
 use crate::nameset::SyncNameSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
-use crate::render::render::GraphRow;
 use crate::DagAlgorithm;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::Group;
@@ -36,7 +39,7 @@ pub fn render_namedag(
     dag: &(impl DagAlgorithm + ?Sized),
     get_message: impl Fn(&VertexName) -> Option<String>,
 ) -> Result<String> {
-    let mut renderer = super::GraphRowRenderer::new().output().build_box_drawing();
+    let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
 
     let mut out = String::new();
     let next_rows = dag_to_renderer_next_rows(dag, None)?;
@@ -73,7 +76,7 @@ pub fn render_namedag_structured(
     dag: &dyn DagAlgorithm,
     subset: Option<Set>,
 ) -> Result<Vec<GraphRow<VertexName>>> {
-    let mut renderer = super::GraphRowRenderer::new();
+    let mut renderer = GraphRowRenderer::new();
     let next_rows = dag_to_renderer_next_rows(dag, subset)?;
     let mut out = Vec::with_capacity(next_rows.len());
     for (node, parents) in next_rows {
@@ -145,7 +148,9 @@ pub fn render_segment_dag(
     level: Level,
     group: Group,
 ) -> Result<()> {
-    let mut renderer = super::GraphRowRenderer::new().output().build_box_drawing();
+    let mut renderer = renderdag::GraphRowRenderer::new()
+        .output()
+        .build_box_drawing();
     let segs = dag.dag.next_segments(group.min_id(), level)?;
 
     for seg in segs.iter().rev() {

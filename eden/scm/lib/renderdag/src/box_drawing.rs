@@ -303,7 +303,7 @@ mod tests {
     use super::super::test_fixtures::TestFixture;
     use super::super::test_utils::render_string;
     use super::super::test_utils::render_string_with_order;
-    use crate::render::GraphRowRenderer;
+    use crate::GraphRowRenderer;
 
     fn render(fixture: &TestFixture) -> String {
         let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
