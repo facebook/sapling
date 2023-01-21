@@ -10,6 +10,7 @@ utilities for git support
 import errno
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import textwrap
@@ -128,6 +129,26 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         initgit(repo, "git", url)
         if url:
             if pullnames is None:
+                ls_remote_args = ["ls-remote", "--symref", url, "HEAD"]
+                symref_head_output = callgit(repo, ls_remote_args).decode("utf-8")
+                default_branch = parse_symref_head(symref_head_output)
+                if default_branch:
+                    pullnames = [default_branch]
+                elif not symref_head_output:
+                    # Empty string: may be empty repo?
+                    pass
+                else:
+                    ui.status_err(
+                        _("could not parse output of '%s': %s")
+                        % (
+                            " ".join(ls_remote_args),
+                            symref_head_output,
+                        )
+                    )
+
+            if pullnames is None:
+                # If `git ls-remote --symref <url> HEAD` failed to yield a name,
+                # fall back to the using the names in the config.
                 pullnames = bookmod.selectivepullbookmarknames(repo)
 
             # Make sure we pull "update". If it looks like a hash, add to
@@ -143,6 +164,7 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
                 if not nodes:
                     pullnames.append(update)
 
+            pullnames = util.dedup(pullnames)
             pull(repo, "default", names=pullnames, nodes=nodes)
     except (Exception, KeyboardInterrupt):
         repo = None
@@ -157,6 +179,55 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         if node is not None and node != nullid:
             hg.updatetotally(repo.ui, repo, node, None)
     return repo
+
+
+def parse_symref_head(symref_head_output: str) -> Optional[str]:
+    r"""
+    Args:
+        symref_head_output - output of `ls-remote --symref <url> HEAD`
+
+    >>> sapling = (
+    ...     "ref: refs/heads/main\tHEAD\n"
+    ...     "f58888310501872447b1b2fa4a8789210a6c6252\tHEAD\n"
+    ... )
+    >>> parse_symref_head(sapling)
+    'main'
+    >>> pytorch = (
+    ...     "ref: refs/heads/master\tHEAD\n"
+    ...     "8b3e35ea4aa210f48a92966e3347b78dfc6e9360\tHEAD\n"
+    ... )
+    >>> parse_symref_head(pytorch)
+    'master'
+    >>> foobar = (
+    ...     "ref: refs/heads/foo/bar\tHEAD\n"
+    ...     "8b3e35ea4aa210f48a92966e3347b78dfc6e9360\tHEAD\n"
+    ... )
+    >>> parse_symref_head(foobar)
+    'foo/bar'
+    >>> tag = (
+    ...     "ref: refs/tags/foo\tHEAD\n"
+    ...     "8b3e35ea4aa210f48a92966e3347b78dfc6e9360\tHEAD\n"
+    ... )
+    >>> parse_symref_head(tag) is None
+    True
+    >>> gerrit_refs_for = (
+    ...     "ref: refs/for/master\tHEAD\n"
+    ...     "8b3e35ea4aa210f48a92966e3347b78dfc6e9360\tHEAD\n"
+    ... )
+    >>> parse_symref_head(gerrit_refs_for) is None
+    True
+    >>> parse_symref_head('') is None
+    True
+    """
+    pat = re.compile(r"^ref: ([^\t]*)\t")
+    match = pat.match(symref_head_output)
+    if match:
+        ref = match.group(1)
+        prefix = "refs/heads/"
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
+
+    return None
 
 
 def initgit(repo, gitdir, giturl=None):

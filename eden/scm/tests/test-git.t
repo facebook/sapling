@@ -248,10 +248,10 @@ Test clone with flags (--noupdate, --updaterev):
      remote/master             3f5848713286
   $ cd ..
 
-  $ hg clone --git "$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
+  $ hg clone --git "$TESTTMP/gitrepo" -u foo cloned1
   From $TESTTMP/gitrepo
-   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> remote/foo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
+   * [new ref]         57eda5013e068ac543a52ad073cec3d7750113b5 -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
   57eda5013e06 remote/foo alpha3
