@@ -9,9 +9,9 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use commit_graph::edges::ChangesetEdges;
-use commit_graph::storage::CommitGraphStorage;
-use commit_graph::storage::Prefetch;
+use commit_graph_types::edges::ChangesetEdges;
+use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types::ChangesetId;

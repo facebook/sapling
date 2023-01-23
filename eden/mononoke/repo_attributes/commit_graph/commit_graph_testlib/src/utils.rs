@@ -10,9 +10,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
-use commit_graph::edges::ChangesetNode;
-use commit_graph::storage::CommitGraphStorage;
 use commit_graph::CommitGraph;
+use commit_graph_types::edges::ChangesetNode;
+use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;

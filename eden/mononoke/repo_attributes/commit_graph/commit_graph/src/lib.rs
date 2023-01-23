@@ -20,6 +20,13 @@ use anyhow::Result;
 use async_trait::async_trait;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
+use commit_graph_types::edges::ChangesetEdges;
+use commit_graph_types::edges::ChangesetFrontier;
+use commit_graph_types::edges::ChangesetNode;
+use commit_graph_types::edges::ChangesetNodeParents;
+use commit_graph_types::storage::CommitGraphStorage;
+use commit_graph_types::storage::Prefetch;
+use commit_graph_types::ChangesetParents;
 use context::CoreContext;
 use itertools::Either;
 use itertools::Itertools;
@@ -31,21 +38,6 @@ use mononoke_types::Generation;
 use smallvec::SmallVec;
 use smallvec::ToSmallVec;
 use vec1::Vec1;
-
-use crate::edges::ChangesetEdges;
-use crate::edges::ChangesetFrontier;
-use crate::edges::ChangesetNode;
-use crate::edges::ChangesetNodeParents;
-use crate::storage::CommitGraphStorage;
-use crate::storage::Prefetch;
-
-pub mod edges;
-pub mod storage;
-
-/// The parents of a changeset.
-///
-/// This uses a smallvec, as there is usually exactly one.
-pub type ChangesetParents = SmallVec<[ChangesetId; 1]>;
 
 /// Commit Graph.
 ///

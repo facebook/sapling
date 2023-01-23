@@ -10,8 +10,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
-use commit_graph::storage::CommitGraphStorage;
 use commit_graph::CommitGraph;
+use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types::ChangesetIdPrefix;

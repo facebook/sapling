@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.65"
 async-trait = "0.1.58"
-commit_graph = { version = "0.1.0", path = "../commit_graph" }
+commit_graph_types = { version = "0.1.0", path = "../commit_graph_types" }
 context = { version = "0.1.0", path = "../../../server/context" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
