@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+#![feature(trait_alias)]
+
 use std::collections::HashMap;
 use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -27,10 +28,14 @@ use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use mononoke_types::RepoPath;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use sorted_vector_map::SortedVectorMap;
 use tokio::sync::mpsc;
 
 mod git_walker;
+
+pub trait HgRepo = RepoBlobstoreRef + RepoDerivedDataRef + Send + Sync;
 
 #[derive(Debug)]
 pub(crate) enum CheckEntry {
@@ -106,15 +111,15 @@ async fn check_node(
 
 async fn check_receiver(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    hg_repo: &impl HgRepo,
     cs: ChangesetId,
     rx: mpsc::Receiver<CheckNode>,
     scheduled_max: usize,
 ) -> Result<()> {
-    let root_fsnode = RootFsnodeId::derive(ctx, blobrepo, cs)
+    let root_fsnode = RootFsnodeId::derive(ctx, hg_repo, cs)
         .await?
         .into_fsnode_id()
-        .load(ctx, blobrepo.blobstore())
+        .load(ctx, hg_repo.repo_blobstore())
         .await?;
 
     let path_to_fsnode = Mutex::new(HashMap::new());
@@ -142,7 +147,7 @@ async fn check_receiver(
                         let fsnode = match entry {
                             FsnodeEntry::File(_) => None,
                             FsnodeEntry::Directory(dir) => {
-                                Some(dir.id().load(ctx, blobrepo.blobstore()).await?)
+                                Some(dir.id().load(ctx, hg_repo.repo_blobstore()).await?)
                             }
                         };
                         path_to_fsnode
@@ -168,7 +173,7 @@ async fn check_receiver(
 
 pub async fn check_git_wc(
     ctx: &CoreContext,
-    blobrepo: &BlobRepo,
+    hg_repo: &impl HgRepo,
     cs: ChangesetId,
     git_repo: Repository,
     git_commit: String,
@@ -179,7 +184,7 @@ pub async fn check_git_wc(
     let git_handle =
         tokio::task::spawn_blocking(move || git_walker::thread(git_repo, git_commit, git_lfs, tx));
 
-    let res = check_receiver(ctx, blobrepo, cs, rx, scheduled_max).await;
+    let res = check_receiver(ctx, hg_repo, cs, rx, scheduled_max).await;
     let git_res = git_handle.await?;
     match (res, git_res) {
         (Ok(()), Ok(())) => Ok(()),

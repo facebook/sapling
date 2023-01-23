@@ -19,12 +19,23 @@ use fbinit::FacebookInit;
 use git2::Repository;
 use git2::RepositoryOpenFlags;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstore;
+use repo_derived_data::RepoDerivedData;
 
 const ARG_CS_ID: &str = "csid";
 const ARG_GIT_REPO_PATH: &str = "git-repo-path";
 const ARG_GIT_COMMIT: &str = "git-commit";
 const ARG_GIT_LFS: &str = "git-lfs";
 const ARG_SCHEDULED_MAX: &str = "scheduled-max";
+
+#[facet::container]
+struct HgRepo {
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    repo_derived_data: RepoDerivedData,
+}
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Check that a working copy will match a git checkout")
@@ -85,12 +96,13 @@ async fn run_check_git_wc(
         std::iter::empty::<std::ffi::OsString>(),
     )?;
 
-    let blobrepo = args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
+    let hg_repo: HgRepo =
+        args::not_shardmanager_compatible::open_repo(fb, ctx.logger(), matches).await?;
     let scheduled_max = args::get_usize_opt(matches, ARG_SCHEDULED_MAX).unwrap_or(100) as usize;
 
     check_git_wc(
         ctx,
-        &blobrepo,
+        &hg_repo,
         cs,
         git_repo,
         git_commit,
