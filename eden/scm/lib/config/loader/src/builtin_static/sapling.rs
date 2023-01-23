@@ -195,6 +195,9 @@ warn-fresh-instance=True
 # TODO: T130638905 Update this
 sockpath=/opt/facebook/watchman/var/run/watchman/%i-state/sock
 
+[ghrevset]
+autopull=True
+
 [histgrep]
 allowfullrepogrep=False
 

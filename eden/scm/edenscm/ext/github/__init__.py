@@ -6,10 +6,14 @@
 """utilities for interacting with GitHub (EXPERIMENTAL)
 """
 
+import asyncio
 from typing import Optional
 
-from edenscm import error, registrar, util
+from edenscm import autopull, error, namespaces, registrar, util
+from edenscm.autopull import pullattempt
 from edenscm.i18n import _
+from edenscm.namespaces import namespace
+from edenscm.node import hex
 
 from . import (
     follow,
@@ -20,12 +24,21 @@ from . import (
     submit,
     templates,
 )
-from .github_repo_util import gh_args
-
+from .github_repo_util import (
+    find_github_repo,
+    gh_args,
+    lookup_pr_id,
+    online_pr_no_to_node,
+    parse_pr_number,
+)
+from .pullrequest import PullRequestId
+from .pullrequeststore import PullRequestStore
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 templatekeyword = registrar.templatekeyword()
+namespacepredicate = registrar.namespacepredicate()
+autopullpredicate = registrar.autopullpredicate()
 
 
 def extsetup(ui):
@@ -315,3 +328,40 @@ def sapling_pr_follower(repo, ctx, templ, **args) -> bool:
     """Indicates if this commit is part of a pull request, but not the head commit."""
     store = templates.get_pull_request_store(repo, args["cache"])
     return store.is_follower(ctx.node())
+
+
+@namespacepredicate("ghrevset", priority=90)
+def _getnamespace(_repo) -> namespace:
+    return namespaces.namespace(
+        listnames=lambda repo: [], namemap=lookup_pr_id, nodemap=lambda repo, n: []
+    )
+
+
+@autopullpredicate("ghrevset", priority=90, rewritepullrev=True)
+def _autopullghpr(repo, name, rewritepullrev: bool = False) -> Optional[pullattempt]:
+    if repo.ui.plain():
+        return
+
+    if not repo.ui.configbool("ghrevset", "autopull"):
+        return
+
+    prno = parse_pr_number(name)
+    if prno and (rewritepullrev or name not in repo):
+        n = asyncio.run(online_pr_no_to_node(repo, prno))
+        if n and (rewritepullrev or n not in repo):
+            # Register association between PR and commit id
+            gh_repo = find_github_repo(repo).ok()
+            if not gh_repo:
+                raise error.Abort(_("This does not appear to be a GitHub repo"))
+            pr = PullRequestId(
+                hostname=gh_repo.hostname,
+                owner=gh_repo.owner,
+                name=gh_repo.name,
+                number=int(prno),
+            )
+            store = PullRequestStore(repo)
+            store.map_commit_to_pull_request(n, pr)
+            # Attempt to pull it. This also rewrites "pull -r PRxxx" to "pull -r
+            # HASH".
+            friendlyname = "PR%s (%s)" % (prno, hex(n))
+            return autopull.pullattempt(headnodes=[n], friendlyname=friendlyname)

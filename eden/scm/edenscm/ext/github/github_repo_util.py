@@ -12,8 +12,15 @@ from functools import lru_cache
 from typing import Iterable, List, Optional
 
 from edenscm import error, git, util
+from edenscm.ext.github.consts import query
 from edenscm.i18n import _
+from edenscm.node import bin
 from edenscm.result import Err, Ok, Result
+from ghstack import github_gh_cli as gh_cli
+
+from .pullrequeststore import PullRequestStore
+
+_PULL_REQUEST_ID_RE = re.compile(r"^PR(\d+)$", re.IGNORECASE)
 
 
 class NotGitHubRepoError:
@@ -194,3 +201,52 @@ def parse_github_repo_from_github_url(url: str) -> Optional[GitHubRepo]:
         return GitHubRepo(hostname1 or hostname2, owner, repo)
     else:
         return None
+
+
+async def online_pr_no_to_node(repo, prno: int) -> Optional[bytes]:
+    """Queries GitHub and obtains the commit hash associated to a prno"""
+    if repo:
+        github_repo = find_github_repo(repo).ok()
+        if not github_repo:
+            raise error.Abort(_("This does not appear to be a GitHub repo."))
+    params = {
+        "query": query.GRAPHQL_GET_PULL_REQUEST,
+        "owner": github_repo.owner,
+        "name": github_repo.name,
+        "number": prno,
+    }
+    result = await gh_cli.make_request(params, hostname=github_repo.hostname)
+    if result.is_err():
+        return None
+    try:
+        return bin(result.unwrap()["data"]["repository"]["pullRequest"]["headRefOid"])
+    except KeyError:
+        pass
+
+
+def lookup_pr_id(repo, prid: str) -> List[bytes]:
+    """Returns the local commit associated with a PR as a list with a single
+    element, if one is available. Otherwise returns an empty list
+    """
+    pr_no = parse_pr_number(prid)
+    if not pr_no:
+        return []
+    store = PullRequestStore(repo)
+    node = None
+    for nodeid in repo.revs("sort(draft(), -rev)"):
+        n = repo[nodeid].node()
+        pr = store.find_pull_request(n)
+        if pr and pr.number == pr_no:
+            node = n
+            break
+    if node is None:
+        return []
+    return [node]
+
+
+def parse_pr_number(prid: str) -> Optional[int]:
+    """Returns the pull request no. from a PR id, if valid.
+    Otherwise returns None
+    """
+    match = _PULL_REQUEST_ID_RE.match(prid)
+    return int(match.group(1)) if match else None
