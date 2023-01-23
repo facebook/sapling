@@ -193,7 +193,7 @@ impl<R> MononokeRepos<R> {
     /// doesn't then this method is essentially a no-op.
     /// NOTE: Repo changes are guarded by a mutex. This method attempts
     /// to acquire the lock if it is available, without getting blocked
-    /// on the lock.    
+    /// on the lock.
     pub fn try_remove(&self, repo_name: &str) -> Result<()> {
         // Attempt to acquire the lock before remove, to avoid race condition.
         match self.update_lock.try_lock() {
