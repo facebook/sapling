@@ -79,10 +79,4 @@ def normalize(userstr: str) -> str:
 
 def get_identity_or_raise(ui) -> Tuple[str, str]:
     """Returns a Git identity (name, email) based on ui.username or raises."""
-    username = ui.config("ui", "username")
-    if not username:
-        raise error.Abort(
-            _("ui.username not set. See %s for information on setting your identity.")
-            % "https://sapling-scm.com/docs/introduction/getting-started"
-        )
-    return parse_username(username)
+    return parse_username(ui.username())
