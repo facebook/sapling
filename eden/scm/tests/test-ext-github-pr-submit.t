@@ -3,13 +3,13 @@
 #inprocess-hg-incompatible
 
   $ enable github
+  $ export SL_TEST_GH_URL=https://github.com/facebook/test_github_repo.git
   $ . $TESTDIR/git.sh
 
 build up a github repo
 
   $ sl init --git repo1
   $ cd repo1
-  $ setconfig paths.default=https://github.com/facebook/test_github_repo.git
   $ echo a > a1
   $ sl ci -Am addfile
   adding a1

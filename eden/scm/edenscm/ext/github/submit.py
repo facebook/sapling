@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 import asyncio
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List, Optional, Tuple
@@ -597,7 +598,11 @@ async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
 
 
 def get_origin(ui) -> str:
-    origin = ui.config("paths", "default")
+    test_url = os.environ.get("SL_TEST_GH_URL")
+    if test_url:
+        origin = test_url
+    else:
+        origin = ui.config("paths", "default")
     if origin:
         return origin
     else:
