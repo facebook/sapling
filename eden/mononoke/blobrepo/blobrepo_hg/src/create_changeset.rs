@@ -136,6 +136,10 @@ pub struct CreateChangeset {
     pub sub_entries: BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
     pub cs_metadata: ChangesetMetadata,
     pub create_bonsai_changeset_hook: Option<Arc<BonsaiChangesetHook>>,
+    /// If set to true, don't update Changesets or BonsaiHgMapping, which should be done
+    /// manually after this call. Effectively, the commit will be in the blobstore, but
+    /// unreachable.
+    pub upload_to_blobstore_only: bool,
 }
 
 impl CreateChangeset {
@@ -323,26 +327,28 @@ impl CreateChangeset {
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;
 
-            // update changeset mapping
-            let completion_record = ChangesetInsert {
-                cs_id: bonsai_cs.get_changeset_id(),
-                parents: bonsai_cs.parents().into_iter().collect(),
-            };
-            complete_changesets
-                .add(&ctx, completion_record)
-                .await
-                .context("While inserting into changeset table")?;
+            if !self.upload_to_blobstore_only {
+                // update changeset mapping
+                let completion_record = ChangesetInsert {
+                    cs_id: bonsai_cs.get_changeset_id(),
+                    parents: bonsai_cs.parents().into_iter().collect(),
+                };
+                complete_changesets
+                    .add(&ctx, completion_record)
+                    .await
+                    .context("While inserting into changeset table")?;
 
-            // update bonsai mapping
-            let bcs_id = bonsai_cs.get_changeset_id();
-            let bonsai_hg_entry = BonsaiHgMappingEntry {
-                hg_cs_id: hg_cs.get_changeset_id(),
-                bcs_id,
-            };
-            bonsai_hg_mapping
-                .add(&ctx, bonsai_hg_entry)
-                .await
-                .context("While inserting mapping")?;
+                // update bonsai mapping
+                let bcs_id = bonsai_cs.get_changeset_id();
+                let bonsai_hg_entry = BonsaiHgMappingEntry {
+                    hg_cs_id: hg_cs.get_changeset_id(),
+                    bcs_id,
+                };
+                bonsai_hg_mapping
+                    .add(&ctx, bonsai_hg_entry)
+                    .await
+                    .context("While inserting mapping")?;
+            }
 
             Ok::<_, Error>((bonsai_cs, hg_cs))
         }

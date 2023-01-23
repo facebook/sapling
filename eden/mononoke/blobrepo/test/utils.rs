@@ -179,6 +179,7 @@ pub fn create_changeset_no_parents(
             .boxed(),
         cs_metadata,
         create_bonsai_changeset_hook: None,
+        upload_to_blobstore_only: false,
     };
     create_changeset.create(
         CoreContext::test_mock(fb),
@@ -214,6 +215,7 @@ pub fn create_changeset_one_parent(
             .boxed(),
         cs_metadata,
         create_bonsai_changeset_hook: None,
+        upload_to_blobstore_only: false,
     };
     create_changeset.create(
         CoreContext::test_mock(fb),

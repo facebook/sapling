@@ -338,6 +338,7 @@ impl DerivedDataManager {
         let (find_underived_stats, dag_traversal) = async {
             self.find_underived_inner::<Derivable>(ctx, target_csid, None, derivation_ctx.as_ref())
                 .await
+                .context("Finding underived commits")
         }
         .try_timed()
         .await?;
