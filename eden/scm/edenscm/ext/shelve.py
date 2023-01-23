@@ -560,9 +560,8 @@ def _iswctxonnewbranch(repo):
 
 def _listshelvefileinfos(repo, shelvedir):
     """Return a list of (filename, type) pair"""
-    # ignore the hidden attribute files created by MacOS,
-    # they will be deleted automatically when the main file
-    # is deleted. https://fburl.com/7hc21dkc
+    # ignore the hidden attribute files created by MacOS:
+    # https://fburl.com/7hc21dkc
     return [
         fileinfo
         for fileinfo in repo.localvfs.readdir(shelvedir)

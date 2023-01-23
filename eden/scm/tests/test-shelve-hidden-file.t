@@ -4,7 +4,7 @@
   $ configure modern
   $ enable shelve
 
-Use wrong format ._* files to mimic the binary files created by MacOS:
+Use wrong formatted '._*' files to mimic the binary files created by MacOS:
 
   $ newrepo simple
   $ drawdag << 'EOS'
@@ -15,7 +15,6 @@ Use wrong format ._* files to mimic the binary files created by MacOS:
   > |/
   > a
   > EOS
-  $ hg bookmark -r $d master
   $ hg goto $c
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
