@@ -1,10 +1,11 @@
 import json
 import re
 
+from edenscm import error
+from edenscm.i18n import _
 import ghstack.github
 import ghstack.github_utils
 import ghstack.sapling_shell
-from ghstack.ghs_types import GitCommitHash
 
 
 def main(pull_request: str,
@@ -56,6 +57,10 @@ def main(pull_request: str,
         sh.git("rev-list", "--reverse", "--header", "^" + base, orig_oid),
         github_url=github_url,
     )
+    if not stack:
+        raise error.Abort(_("No stack commits found between base %r and head %r.") % (base, orig_oid))
+
+    starting_parent = sh.run_sapling_command("whereami")
 
     try:
         # Compute the metadata for each commit
@@ -63,6 +68,9 @@ def main(pull_request: str,
         for s in stack:
             pr_resolved = s.pull_request_resolved
             # We got this from GitHub, this better not be corrupted
+            if pr_resolved is None:
+                raise error.Abort(_("Couldn't find PR info in commit header for %r.") % s.oid)
+
             assert pr_resolved is not None
 
             stack_orig_refs.append(ghstack.github_utils.lookup_pr_to_orig_ref(
@@ -71,17 +79,43 @@ def main(pull_request: str,
                 name=pr_resolved.repo,
                 number=pr_resolved.number))
 
-        # Rebase each commit in the stack onto the default branch.
-        rebase_base = default_branch_oid
-        for s in stack:
-            stdout = sh.run_sapling_command("rebase", "--keep", "-s", s.oid, "-d", rebase_base, "-q", "-T", "{nodechanges|json}")
-            mappings = json.loads(stdout) if stdout else None
-            if not mappings:
-                # If there was no stdout, then s.oid was not rebased because
-                # its parent is already the existing `rebase_base`.
-                rebase_base = s.oid
-            else:
-                rebase_base = mappings[s.oid][0]
+        # Rebase each commit we are landing onto the default branch. Be careful
+        # not to rebase further descendants since they may conflict.
+        stdout = sh.run_sapling_command(
+            "rebase",
+            *(x for s in stack for x in ("-r", s.oid)),
+            "-d",
+            default_branch_oid,
+            "-q",
+            "-T",
+            "{nodechanges|json}",
+        )
+
+        mappings = json.loads(stdout) if stdout else None
+        stack_top_oid = stack[-1].oid
+        if mappings:
+            if starting_parent in mappings:
+                # Move back to our starting position in case rebased moved us (i.e.
+                # the user has the stack checked out). The user may have further
+                # descendant commits we didn't rebase, so we don't want to leave
+                # them on a rebased commit. Also, if the "push" fails, we want to
+                # leave them in their starting position.
+                sh.run_sapling_command("goto", "-q", starting_parent)
+
+            # Hide the rebased commits we created. They are internal to "land",
+            # and we don't want them to be visible if the "push" fails.
+            sh.run_sapling_command("hide", "-q", *(x for v in mappings.values() for x in ("-r", v[0])))
+
+            # If only a subset of commits were rebased, that means some commits
+            # were "rebased out". There is a higher likelihood of a semantic
+            # change, so make the user update their stack.
+            if len(mappings) != len(stack):
+                raise error.Abort(_("One or more commits in stack already exists on %s.\nPlease manually rebase and update stack.") % (default_branch))
+
+            push_rev = mappings[stack_top_oid][0]
+        else:
+            # No mappings means the stack is already based on the branch head.
+            push_rev = stack_top_oid
 
         # Advance base to head to "close" the PR for all PRs.
         # This has to happen before the push because the push
@@ -105,7 +139,7 @@ def main(pull_request: str,
             ghstack.github_utils.update_ref(github=github, repo_id=repo_id, ref=base_ref, target_ref=head_ref)
 
         # All good! Push!
-        sh.run_sapling_command("push", "--rev", rebase_base, "--to", default_branch)
+        sh.run_sapling_command("push", "--rev", push_rev, "--to", default_branch)
 
         # Delete the branches
         for orig_ref in stack_orig_refs:

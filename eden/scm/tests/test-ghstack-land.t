@@ -96,22 +96,25 @@ Make a newer commit upstream
   $ git commit -qm z
   $ git checkout -q some-other-branch
 
-Land only the first commit (XXX failing test to be fixed in next diff):
+Land only the first commit
   $ cd $TESTTMP/client
-  $ sl ghstack land https://github.com/facebook/test_github_repo/pull/1 2>&1 | grep rejected
-   ! [rejected]        f4145ca987ad7b3d5c0e733adfebd79602bc423b -> main (non-fast-forward)
-  hint: Updates were rejected because a pushed branch tip is behind its remote
-  $ sl smartlog -T '{node|short} {desc|firstline} {github_pull_request_number}'
-  @  5bdb55e2f7d2 d 2
-  │
-  o  a044d43b2850 c 1
-  │
-  o  4fd2a518c050 z
-  │
-  │ o  012099ee3b71 d 2
-  │ │
-  │ o  f4145ca987ad c 1
-  ├─╯
-  o  6587f91ed4d9 b 1
+  $ sl ghstack land https://github.com/facebook/test_github_repo/pull/1
+  pulling from file:/*/$TESTTMP/upstream (glob)
+  From file:/*/$TESTTMP/upstream (glob)
+     6587f91..4fd2a51  4fd2a518c0503ce36515d98ba908c486679a8854 -> remote/main
+  To file:/*/$TESTTMP/upstream (glob)
+     4fd2a51..a044d43  a044d43b28501875ff456906aee7a53b1e2454f7 -> main
+  To file:/*/$TESTTMP/upstream (glob)
+   - [deleted]         gh/test/0/base
+   - [deleted]         gh/test/0/head
+   - [deleted]         gh/test/0/orig
+  $ sl smartlog -T '{node|short} {bookmarks} {desc|firstline}'
+  o  a044d43b2850  c
+  ╷
+  ╷ @  012099ee3b71  d
+  ╷ │
+  ╷ x  f4145ca987ad  c
+  ╭─╯
+  o  6587f91ed4d9  b
   │
   ~
