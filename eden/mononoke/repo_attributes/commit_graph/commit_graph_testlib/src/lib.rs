@@ -18,6 +18,7 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::RepositoryId;
 use smallvec::smallvec;
+use vec1::vec1;
 
 use crate::utils::*;
 
@@ -445,8 +446,7 @@ pub async fn test_add_recursive(
             .add_recursive(
                 ctx,
                 reference_graph.clone(),
-                name_cs_id("I"),
-                smallvec![name_cs_id("H")],
+                vec1![(name_cs_id("I"), smallvec![name_cs_id("H")])],
             )
             .await?,
         9
@@ -456,8 +456,7 @@ pub async fn test_add_recursive(
             .add_recursive(
                 ctx,
                 reference_graph,
-                name_cs_id("J"),
-                smallvec![name_cs_id("F")],
+                vec1![(name_cs_id("J"), smallvec![name_cs_id("F")])]
             )
             .await?,
         1

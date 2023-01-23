@@ -13,6 +13,7 @@ use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use smallvec::ToSmallVec;
+use vec1::vec1;
 
 use super::Repo;
 
@@ -36,7 +37,7 @@ pub(super) async fn backfill_one(
 
     let (stats, result) = repo
         .commit_graph()
-        .add_recursive(ctx, changeset_fetcher, args.commit_id, parents)
+        .add_recursive(ctx, changeset_fetcher, vec1![(args.commit_id, parents)])
         .timed()
         .await;
 

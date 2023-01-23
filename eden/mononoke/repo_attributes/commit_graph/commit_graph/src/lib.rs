@@ -30,6 +30,7 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use smallvec::SmallVec;
 use smallvec::ToSmallVec;
+use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;
 use crate::edges::ChangesetFrontier;
@@ -92,14 +93,17 @@ impl CommitGraph {
         &self,
         ctx: &CoreContext,
         changeset_fetcher: ArcChangesetFetcher,
-        cs_id: ChangesetId,
-        parents: ChangesetParents,
+        changesets: Vec1<(ChangesetId, ChangesetParents)>,
     ) -> Result<usize> {
         let mut edges_map: HashMap<ChangesetId, ChangesetEdges> = Default::default();
-        let mut search_stack: Vec<(ChangesetId, ChangesetParents)> = vec![(cs_id, parents)];
+        let mut search_stack: Vec<(ChangesetId, ChangesetParents)> = changesets.into_vec();
         let mut to_add_stack: Vec<(ChangesetId, ChangesetParents)> = Default::default();
 
         while let Some((cs_id, parents)) = search_stack.pop() {
+            if edges_map.contains_key(&cs_id) {
+                continue;
+            }
+
             to_add_stack.push((cs_id, parents.clone()));
 
             edges_map.extend(
@@ -110,15 +114,13 @@ impl CommitGraph {
             );
 
             for parent in parents {
-                if !edges_map.contains_key(&parent) {
-                    search_stack.push((
-                        parent,
-                        changeset_fetcher
-                            .get_parents(ctx, parent)
-                            .await?
-                            .to_smallvec(),
-                    ));
-                }
+                search_stack.push((
+                    parent,
+                    changeset_fetcher
+                        .get_parents(ctx, parent)
+                        .await?
+                        .to_smallvec(),
+                ));
             }
         }
 
