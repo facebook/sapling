@@ -92,7 +92,7 @@ impl Fold for CoveredIdSetFold {
         let mut inner = self.inner.lock().unwrap();
         if data.starts_with(IndexedLogStore::MAGIC_REMOVE_SEGMENT) {
             let data_start = IndexedLogStore::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES;
-            for seg_data in data.get(data_start..) {
+            if let Some(seg_data) = data.get(data_start..) {
                 let seg = Segment(Bytes::copy_from_slice(seg_data));
                 let span = match seg.span() {
                     Ok(span) => span,
@@ -569,18 +569,18 @@ impl IndexedLogStore {
                 } else if data.starts_with(Self::MAGIC_REMOVE_SEGMENT) {
                     // data: 0xf1 + MAX_LEVEL (u8) + SEGMENT
                     let mut index_output = Vec::new();
-                    for seg_data in data.get(Self::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES..) {
+                    if let Some(seg_data) =
+                        data.get(Self::MAGIC_REMOVE_SEGMENT.len() + LEVEL_BYTES..)
+                    {
                         let max_level = data[1];
                         let seg = Segment(Bytes::copy_from_slice(seg_data));
                         // Remove head indexes for all levels.
                         index_output.reserve(max_level as usize + 1);
-                        let head = match seg.head() {
-                            Ok(id) => id,
-                            Err(_) => continue,
-                        };
-                        for level in 0..=max_level {
-                            let index_key = Self::serialize_head_level_lookup_key(head, level);
-                            index_output.push(log::IndexOutput::Remove(index_key.into()));
+                        if let Ok(head) = seg.head() {
+                            for level in 0..=max_level {
+                                let index_key = Self::serialize_head_level_lookup_key(head, level);
+                                index_output.push(log::IndexOutput::Remove(index_key.into()));
+                            }
                         }
                     }
                     index_output
@@ -619,21 +619,15 @@ impl IndexedLogStore {
                 if data.starts_with(Self::MAGIC_REMOVE_SEGMENT) {
                     // data: 0xf1 + MAX_LEVEL (u8) + SEGMENT
                     let mut index_output = Vec::new();
-                    for data in data.get(2..) {
+                    if let Some(data) = data.get(2..) {
                         let seg = Segment(Bytes::copy_from_slice(data));
-                        let child = match seg.low() {
-                            Ok(id) => id,
-                            Err(_) => break,
-                        };
-                        let parents = match seg.parents() {
-                            Ok(parents) => parents,
-                            Err(_) => break,
-                        };
-                        // Remove parent->child indexes.
-                        index_output.reserve(parents.len());
-                        for parent in parents {
-                            let index_key = index_parent_key(parent, child);
-                            index_output.push(log::IndexOutput::Remove(index_key.into()));
+                        if let (Ok(child), Ok(parents)) = (seg.low(), seg.parents()) {
+                            // Remove parent->child indexes.
+                            index_output.reserve(parents.len());
+                            for parent in parents {
+                                let index_key = index_parent_key(parent, child);
+                                index_output.push(log::IndexOutput::Remove(index_key.into()));
+                            }
                         }
                     }
                     return index_output;
