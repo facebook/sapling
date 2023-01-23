@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use bitflags::bitflags;
+#[cfg(feature = "serialize")]
 use serde::Serialize;
 
 use super::column::Column;
@@ -177,7 +178,8 @@ impl<N> Column<N> {
 }
 
 /// A column in the node row.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum NodeLine {
     /// Blank.
     Blank,
@@ -193,7 +195,8 @@ pub enum NodeLine {
 }
 
 /// A column in a padding row.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum PadLine {
     /// Blank.
     Blank,
@@ -207,7 +210,8 @@ pub enum PadLine {
 
 bitflags! {
     /// A column in a linking row.
-    #[derive(Default, Serialize)]
+    #[derive(Default)]
+    #[cfg_attr(feature = "serialize", derive(Serialize))]
     pub struct LinkLine: u16 {
         /// This cell contains a horizontal line that connects to a parent.
         const HORIZ_PARENT = 0b0_0000_0000_0001;
@@ -267,7 +271,8 @@ bitflags! {
 }
 
 /// An output graph row.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct GraphRow<N> {
     /// The name of the node for this row.
     pub node: N,
