@@ -34,6 +34,7 @@ use futures_old::future::Future;
 use futures_old::future::IntoFuture;
 use futures_old::stream;
 use futures_old::stream::Stream;
+use repo_identity::RepoIdentityRef;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to upload globalrevs from commits saved in file")
@@ -100,7 +101,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 config_store,
                 &matches,
             )?
-            .build(repo.get_repoid()),
+            .build(repo.repo_identity().id()),
         );
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
         upload(ctx, repo, in_filename, globalrevs_store)

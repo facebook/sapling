@@ -68,6 +68,7 @@ use mononoke_types::RepositoryId;
 use movers::Mover;
 use mutable_counters::MutableCountersArc;
 use pretty_assertions::assert_eq;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
@@ -211,7 +212,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         // Make sure all of the entries were synced
         let fetched_value = target_repo_dbs
             .counters
-            .get_counter(&ctx, &format_counter(&source_repo.get_repoid()))
+            .get_counter(&ctx, &format_counter(&source_repo.repo_identity().id()))
             .await?;
 
         assert_eq!(fetched_value, Some(latest_log_id));
@@ -391,10 +392,10 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     for (commit_syncer, target_repo_dbs) in small_repos {
-        let small_repo_id = commit_syncer.get_target_repo().get_repoid();
+        let small_repo_id = commit_syncer.get_target_repo().repo_identity().id();
         println!("backsyncing small repo#{}", small_repo_id.id());
         let target_repo_dbs = Arc::new(target_repo_dbs);
-        let small_repo_id = commit_syncer.get_target_repo().get_repoid();
+        let small_repo_id = commit_syncer.get_target_repo().repo_identity().id();
         backsync_latest(
             ctx.clone(),
             commit_syncer.clone(),
@@ -711,10 +712,10 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
     let current_version_config = CommitSyncConfig {
-        large_repo_id: source_repo.get_repoid(),
+        large_repo_id: source_repo.repo_identity().id(),
         common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
         small_repos: hashmap! {
-            target_repo.get_repoid() => SmallRepoCommitSyncConfig {
+            target_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
                     MPath::new("current_prefix").unwrap(),
                 ),
@@ -728,10 +729,10 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     lv_cfg_src.add_config(current_version_config);
 
     let new_version_config = CommitSyncConfig {
-        large_repo_id: source_repo.get_repoid(),
+        large_repo_id: source_repo.repo_identity().id(),
         common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
         small_repos: hashmap! {
-            target_repo.get_repoid() => SmallRepoCommitSyncConfig {
+            target_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
                     MPath::new("new_prefix").unwrap(),
                 ),
@@ -743,8 +744,10 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     };
     lv_cfg_src.add_config(new_version_config);
 
-    let common = bookmark_renamer_type
-        .get_common_repo_config(target_repo.get_repoid(), source_repo.get_repoid());
+    let common = bookmark_renamer_type.get_common_repo_config(
+        target_repo.repo_identity().id(),
+        source_repo.repo_identity().id(),
+    );
     lv_cfg_src.add_common_config(common);
 
     let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
@@ -928,7 +931,7 @@ async fn backsync_and_verify_master_wc(
     // Check that counter was moved
     let fetched_value = target_repo_dbs
         .counters
-        .get_counter(&ctx, &format_counter(&source_repo.get_repoid()))
+        .get_counter(&ctx, &format_counter(&source_repo.repo_identity().id()))
         .await?;
     assert_eq!(fetched_value, Some(latest_log_id));
 
@@ -1306,17 +1309,19 @@ async fn init_repos(
 
     let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     let version_config = CommitSyncConfig {
-        large_repo_id: source_repo.get_repoid(),
+        large_repo_id: source_repo.repo_identity().id(),
         common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
         small_repos: hashmap! {
-            target_repo.get_repoid() => mover_type.get_small_repo_config(),
+            target_repo.repo_identity().id() => mover_type.get_small_repo_config(),
         },
         version_name: version.clone(),
     };
 
     lv_cfg_src.add_config(version_config);
-    let common = bookmark_renamer_type
-        .get_common_repo_config(target_repo.get_repoid(), source_repo.get_repoid());
+    let common = bookmark_renamer_type.get_common_repo_config(
+        target_repo.repo_identity().id(),
+        source_repo.repo_identity().id(),
+    );
     lv_cfg_src.add_common_config(common);
 
     let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
@@ -1360,9 +1365,9 @@ async fn init_repos(
     };
 
     let first_entry = SyncedCommitMappingEntry::new(
-        source_repo.get_repoid(),
+        source_repo.repo_identity().id(),
         initial_bcs_id,
-        target_repo.get_repoid(),
+        target_repo.repo_identity().id(),
         rewritten_first_bcs_id,
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         commit_syncer.get_source_repo_type(),
@@ -1587,12 +1592,12 @@ async fn init_merged_repos(
         let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
         let new_version_config = CommitSyncConfig {
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
-                        MPath::new(format!("smallrepo{}", small_repo.get_repoid().id())).unwrap(),
+                        MPath::new(format!("smallrepo{}", small_repo.repo_identity().id().id())).unwrap(),
                     ),
                     map: hashmap! { },
 
@@ -1605,10 +1610,10 @@ async fn init_merged_repos(
 
         let mover_type = MoverType::Noop;
         let noop_version_config = CommitSyncConfig {
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => mover_type.get_small_repo_config(),
+                small_repo.repo_identity().id() => mover_type.get_small_repo_config(),
             },
             version_name: noop_version.clone(),
         };
@@ -1619,8 +1624,10 @@ async fn init_merged_repos(
             format!("smallrepo{}", repoid.id()),
         );
 
-        let common = bookmark_renamer_type
-            .get_common_repo_config(small_repo.get_repoid(), large_repo.get_repoid());
+        let common = bookmark_renamer_type.get_common_repo_config(
+            small_repo.repo_identity().id(),
+            large_repo.repo_identity().id(),
+        );
         lv_cfg_src.add_common_config(common);
 
         let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
@@ -1637,7 +1644,7 @@ async fn init_merged_repos(
         );
         output.push((commit_syncer, small_repo_dbs));
 
-        let filename = format!("file_in_smallrepo{}", small_repo.get_repoid().id());
+        let filename = format!("file_in_smallrepo{}", small_repo.repo_identity().id().id());
         let small_repo_cs_id = create_commit(
             ctx.clone(),
             small_repo.clone(),
@@ -1671,7 +1678,11 @@ async fn init_merged_repos(
         )
         .await?;
 
-        let renamed_filename = format!("smallrepo{}/{}", small_repo.get_repoid().id(), filename);
+        let renamed_filename = format!(
+            "smallrepo{}/{}",
+            small_repo.repo_identity().id().id(),
+            filename
+        );
         let (renamed_path, rename) = store_rename(
             &ctx,
             (MPath::new(&filename).unwrap(), small_repo_cs_id),
@@ -1727,13 +1738,13 @@ async fn init_merged_repos(
 
         println!(
             "empty commit in {}: {}",
-            small_repo.get_repoid(),
+            small_repo.repo_identity().id(),
             small_repo_first_after_merge
         );
         let entry = SyncedCommitMappingEntry::new(
-            large_repo.get_repoid(),
+            large_repo.repo_identity().id(),
             first_after_merge_commit,
-            small_repo.get_repoid(),
+            small_repo.repo_identity().id(),
             small_repo_first_after_merge,
             CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             SyncedCommitSourceRepo::Large,
@@ -1866,8 +1877,8 @@ async fn preserve_premerge_commit(
 ) -> Result<(), Error> {
     println!(
         "preserve_premerge_commit called. large_repo: {}; small_repo: {}, another_small_repo_ids: {:?}, bcs_id: {}",
-        large_repo.get_repoid(),
-        small_repo.get_repoid(),
+        large_repo.repo_identity().id(),
+        small_repo.repo_identity().id(),
         another_small_repo_ids,
         bcs_id
     );
@@ -1886,17 +1897,19 @@ async fn preserve_premerge_commit(
         let mover_type = MoverType::Noop;
 
         let version_config = CommitSyncConfig {
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => mover_type.get_small_repo_config(),
+                small_repo.repo_identity().id() => mover_type.get_small_repo_config(),
             },
             version_name: version.clone(),
         };
 
         lv_cfg_src.add_config(version_config);
-        let common = bookmark_renamer_type
-            .get_common_repo_config(small_repo.get_repoid(), large_repo.get_repoid());
+        let common = bookmark_renamer_type.get_common_repo_config(
+            small_repo.repo_identity().id(),
+            large_repo.repo_identity().id(),
+        );
         lv_cfg_src.add_common_config(common);
 
         let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
@@ -1918,7 +1931,7 @@ async fn preserve_premerge_commit(
             .insert_equivalent_working_copy(
                 &ctx,
                 EquivalentWorkingCopyEntry {
-                    large_repo_id: large_repo.get_repoid(),
+                    large_repo_id: large_repo.repo_identity().id(),
                     large_bcs_id: bcs_id,
                     small_repo_id: another_repo_id,
                     small_bcs_id: None,

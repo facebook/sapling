@@ -69,6 +69,7 @@ use mercurial_types::NULL_HASH;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentMetadata;
 use phases::PhasesArc;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use tokio::runtime::Handle;
 use wireproto_handler::BackupSourceRepo;
@@ -333,7 +334,7 @@ impl UploadChangesets {
 
         let mut scuba_logger = ctx.scuba().clone();
         scuba_logger
-            .add("Repo Id", blobrepo.get_repoid().to_string())
+            .add("Repo Id", blobrepo.repo_identity().id().to_string())
             .add("Repo name", blobrepo.name().to_string());
 
         let lfs_uploader = Arc::new(try_boxstream!(JobProcessor::new(

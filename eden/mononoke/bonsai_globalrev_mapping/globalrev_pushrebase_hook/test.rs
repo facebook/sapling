@@ -29,6 +29,7 @@ use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
 use rand::Rng;
+use repo_identity::RepoIdentityRef;
 use sql::Transaction;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
@@ -67,7 +68,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let hooks = [GlobalrevPushrebaseHook::new(
         ctx.clone(),
         repo.bonsai_globalrev_mapping_arc(),
-        repo.get_repoid(),
+        repo.repo_identity().id(),
     )];
 
     let rebased = do_pushrebase_bonsai(
@@ -206,7 +207,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
         GlobalrevPushrebaseHook::new(
             ctx.clone(),
             repo.bonsai_globalrev_mapping_arc(),
-            repo.get_repoid(),
+            repo.repo_identity().id(),
         ),
         Box::new(SleepHook) as Box<dyn PushrebaseHook>,
     ];

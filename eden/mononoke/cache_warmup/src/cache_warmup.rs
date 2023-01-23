@@ -34,6 +34,7 @@ use mercurial_types::RepoPath;
 use metaconfig_types::CacheWarmupParams;
 use microwave::SnapshotLocation;
 use mononoke_types::ChangesetId;
+use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
 use slog::info;
@@ -266,7 +267,7 @@ pub async fn cache_warmup<T: Into<CacheWarmupRequest>>(
 
         do_cache_warmup(ctx, repo, req.target, req.commit_limit)
             .await
-            .with_context(|| format!("while warming up repo {}", repo.get_repoid()))?;
+            .with_context(|| format!("while warming up repo {}", repo.repo_identity().id()))?;
     }
 
     Ok(())

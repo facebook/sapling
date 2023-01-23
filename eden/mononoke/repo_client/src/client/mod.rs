@@ -1015,7 +1015,7 @@ impl RepoClient {
 
         let live_commit_sync_config = self.repo.live_commit_sync_config();
 
-        let repo_id = self.repo.blob_repo().get_repoid();
+        let repo_id = self.repo.blob_repo().repo_identity().id();
         let redirect = match action {
             InfinitePush(_) => live_commit_sync_config.push_redirector_enabled_for_draft(repo_id),
             Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {

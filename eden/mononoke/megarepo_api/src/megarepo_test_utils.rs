@@ -31,6 +31,7 @@ use mononoke_api::Mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenames;
+use repo_identity::RepoIdentityRef;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;
@@ -70,7 +71,7 @@ impl MegarepoTest {
     }
 
     pub fn repo_id(&self) -> RepositoryId {
-        self.blobrepo.get_repoid()
+        self.blobrepo.repo_identity().id()
     }
 
     pub fn target(&self, bookmark: String) -> Target {

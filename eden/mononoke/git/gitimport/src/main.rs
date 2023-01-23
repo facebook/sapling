@@ -43,6 +43,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 
 use crate::mem_writes_changesets::MemWritesChangesets;
@@ -176,7 +177,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         logger,
         "using repo \"{}\" repoid {:?}",
         repo.name(),
-        repo.get_repoid(),
+        repo.repo_identity().id(),
     );
 
     let repo = if dry_run {
@@ -251,9 +252,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .await
                 .context("failed to create mononoke app")?
                 .make_mononoke_api()?
-                .repo_by_id(ctx.clone(), repo.get_repoid())
+                .repo_by_id(ctx.clone(), repo.repo_identity().id())
                 .await
-                .with_context(|| format!("failed to access repo: {}", repo.get_repoid()))?
+                .with_context(|| format!("failed to access repo: {}", repo.repo_identity().id()))?
                 .expect("repo exists")
                 .with_authorization_context(authz)
                 .build()

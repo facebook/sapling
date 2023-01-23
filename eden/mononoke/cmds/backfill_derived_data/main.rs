@@ -83,6 +83,7 @@ use once_cell::sync::OnceCell;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactoryBuilder;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::info;
@@ -764,7 +765,7 @@ async fn run_subcmd<'a>(
             info!(
                 ctx.logger(),
                 "reading all changesets for: {:?}",
-                repo.blob_repo.get_repoid()
+                repo.blob_repo.repo_identity().id()
             );
             let mut changesets = parse_serialized_commits(prefetched_commits_path)?;
             changesets.sort_by_key(|cs_entry| cs_entry.gen);

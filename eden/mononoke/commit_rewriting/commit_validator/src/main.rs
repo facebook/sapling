@@ -38,6 +38,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 
@@ -116,7 +117,7 @@ async fn run_in_tailing_mode(
         ctx.clone(),
         start_id,
         skip_bookmarks,
-        blobrepo.get_repoid(),
+        blobrepo.repo_identity().id(),
         blobrepo.bookmark_update_log_arc(),
         scuba_sample,
     );
@@ -161,7 +162,7 @@ async fn run_in_once_mode(
     if entries.is_empty() {
         return Err(format_err!(
             "No entries for {} with id >{}",
-            blobrepo.get_repoid(),
+            blobrepo.repo_identity().id(),
             entry_id - 1
         ));
     }

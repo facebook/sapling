@@ -37,6 +37,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use phases::PhasesArc;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
 use strum::IntoEnumIterator;
@@ -220,7 +221,7 @@ where
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
-    let repo_id = repo_params.repo.get_repoid();
+    let repo_id = repo_params.repo.repo_identity().id();
 
     let mut state_start = Timestamp::now();
 

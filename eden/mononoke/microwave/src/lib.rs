@@ -28,6 +28,7 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -118,7 +119,7 @@ impl Snapshot {
 
         match location {
             SnapshotLocation::SharedLocalPath(path) => {
-                let mut file = File::create(snapshot_path(path, repo.get_repoid())).await?;
+                let mut file = File::create(snapshot_path(path, repo.repo_identity().id())).await?;
                 file.write_all(&serialized).await?;
             }
             SnapshotLocation::Blobstore => {
@@ -149,7 +150,7 @@ async fn load_snapshot(
     match location {
         SnapshotLocation::SharedLocalPath(path) => {
             let mut contents = vec![];
-            let mut snapshot = File::open(snapshot_path(path, repo.get_repoid())).await?;
+            let mut snapshot = File::open(snapshot_path(path, repo.repo_identity().id())).await?;
             snapshot.read_to_end(&mut contents).await?;
             Ok(compact_protocol::deserialize(&contents)?)
         }
@@ -187,7 +188,7 @@ pub async fn prime_cache(
     let changesets = snapshot
         .changesets
         .ok_or_else(|| Error::msg("changesets missing"))?;
-    let changesets = reheat_changesets(repo.get_repoid(), changesets)?;
+    let changesets = reheat_changesets(repo.repo_identity().id(), changesets)?;
 
     repo.changesets().prime_cache(ctx, changesets.as_ref());
     info!(

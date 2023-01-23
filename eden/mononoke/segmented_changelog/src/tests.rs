@@ -45,6 +45,7 @@ use mononoke_types::RepositoryId;
 use once_cell::sync::Lazy;
 use phases::PhasesArc;
 use phases::PhasesRef;
+use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
@@ -122,7 +123,7 @@ async fn new_tailer(
 
     let changeset_fetcher = Arc::new(
         PrefetchedChangesetsFetcher::new(
-            blobrepo.get_repoid(),
+            blobrepo.repo_identity().id(),
             blobrepo.changesets_arc(),
             prefetched,
         )
@@ -140,7 +141,7 @@ async fn new_tailer(
     };
 
     Ok(SegmentedChangelogTailer::new(
-        blobrepo.get_repoid(),
+        blobrepo.repo_identity().id(),
         connections.clone(),
         Arc::new(NoReplicaLagMonitor()),
         changeset_fetcher,
@@ -220,9 +221,11 @@ async fn load_iddag(
     blobrepo: &BlobRepo,
     connections: &SegmentedChangelogSqlConnections,
 ) -> Result<InProcessIdDag> {
-    let sc_version = load_sc_version(ctx, blobrepo.get_repoid(), connections).await?;
-    let iddag_save_store =
-        IdDagSaveStore::new(blobrepo.get_repoid(), Arc::new(blobrepo.get_blobstore()));
+    let sc_version = load_sc_version(ctx, blobrepo.repo_identity().id(), connections).await?;
+    let iddag_save_store = IdDagSaveStore::new(
+        blobrepo.repo_identity().id(),
+        Arc::new(blobrepo.get_blobstore()),
+    );
     let iddag = iddag_save_store.load(ctx, sc_version.iddag_version).await?;
     Ok(iddag)
 }
@@ -233,7 +236,7 @@ async fn load_owned(
     connections: &SegmentedChangelogSqlConnections,
 ) -> Result<OwnedSegmentedChangelog> {
     let iddag = load_iddag(ctx, blobrepo, connections).await?;
-    let idmap = load_idmap(ctx, blobrepo.get_repoid(), connections).await?;
+    let idmap = load_idmap(ctx, blobrepo.repo_identity().id(), connections).await?;
     Ok(OwnedSegmentedChangelog::new(iddag, idmap))
 }
 
@@ -243,7 +246,7 @@ async fn get_manager(
     seed_heads: Vec<SeedHead>,
     segmented_changelog_type: SegmentedChangelogType,
 ) -> Result<SegmentedChangelogManager> {
-    let repo_id = blobrepo.get_repoid();
+    let repo_id = blobrepo.repo_identity().id();
     let blobstore = Arc::new(blobrepo.get_blobstore());
     let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
     let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore.clone());
@@ -307,7 +310,7 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let repo_id = blobrepo.get_repoid();
+    let repo_id = blobrepo.repo_identity().id();
 
     let known_cs =
         resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
@@ -806,13 +809,13 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
     let idmap: Arc<dyn IdMap> = Arc::new(SqlIdMap::new(
         conns.0.clone(),
         Arc::new(NoReplicaLagMonitor()),
-        blobrepo.get_repoid(),
+        blobrepo.repo_identity().id(),
         IdMapVersion(0),
     ));
     let new_sc = || {
         OnDemandUpdateSegmentedChangelog::new(
             ctx.clone(),
-            blobrepo.get_repoid(),
+            blobrepo.repo_identity().id(),
             InProcessIdDag::new_in_process(),
             Arc::clone(&idmap),
             blobrepo.changeset_fetcher_arc(),
@@ -900,11 +903,11 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     seed(&ctx, &blobrepo, &conns, head).await?;
 
     let iddag = load_iddag(&ctx, &blobrepo, &conns).await?;
-    let sc_version = load_sc_version(&ctx, blobrepo.get_repoid(), &conns).await?;
+    let sc_version = load_sc_version(&ctx, blobrepo.repo_identity().id(), &conns).await?;
     let idmap = IdMapFactory::new(
         conns.0.clone(),
         Arc::new(NoReplicaLagMonitor()),
-        blobrepo.get_repoid(),
+        blobrepo.repo_identity().id(),
     )
     .with_cache_handlers(cache_handlers)
     .for_server(&ctx, sc_version.idmap_version, &iddag)?;
@@ -963,7 +966,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 
     let on_demand = OnDemandUpdateSegmentedChangelog::new(
         ctx.clone(),
-        blobrepo.get_repoid(),
+        blobrepo.repo_identity().id(),
         InProcessIdDag::new_in_process(),
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.changeset_fetcher_arc(),
@@ -1166,7 +1169,7 @@ async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let repo_id = blobrepo.get_repoid();
+    let repo_id = blobrepo.repo_identity().id();
 
     let first_cs_entry =
         fetch_cs_entry(&ctx, &blobrepo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
@@ -1196,7 +1199,7 @@ async fn test_seeding_with_included_bonsais(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let repo_id = blobrepo.get_repoid();
+    let repo_id = blobrepo.repo_identity().id();
 
     let first_cs_id =
         resolve_cs_id(&ctx, &blobrepo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;

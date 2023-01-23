@@ -1832,7 +1832,7 @@ mod tests {
 
         ClearBookmarkUpdateLog::query(
             &factory.metadata_db().connections().write_connection,
-            &repo.blob_repo.get_repoid(),
+            &repo.blob_repo.repo_identity().id(),
         )
         .await?;
 

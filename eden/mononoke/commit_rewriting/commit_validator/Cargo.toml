@@ -34,6 +34,7 @@ movers = { version = "0.1.0", path = "../movers" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.12"
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

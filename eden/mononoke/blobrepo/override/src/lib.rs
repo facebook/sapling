@@ -85,8 +85,10 @@ impl DangerousOverride<ArcChangesets> for BlobRepoInner {
         F: FnOnce(ArcChangesets) -> ArcChangesets,
     {
         let changesets = modify(self.changesets.clone());
-        let changeset_fetcher =
-            Arc::new(SimpleChangesetFetcher::new(changesets.clone(), self.repoid));
+        let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(
+            changesets.clone(),
+            self.repo_identity.id(),
+        ));
         let repo_derived_data = Arc::new(
             self.repo_derived_data
                 .with_replaced_changesets(changesets.clone()),

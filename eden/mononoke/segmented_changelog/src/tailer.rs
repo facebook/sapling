@@ -36,6 +36,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use phases::PhasesArc;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -146,7 +147,7 @@ impl SegmentedChangelogTailer {
         prefetched_commits: impl Stream<Item = Result<ChangesetEntry, Error>>,
         caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Result<Self> {
-        let repo_id = blobrepo.get_repoid();
+        let repo_id = blobrepo.repo_identity().id();
 
         let db_address = match storage_config_metadata {
             MetadataDatabaseConfig::Local(_) => None,

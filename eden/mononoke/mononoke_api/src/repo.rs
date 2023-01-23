@@ -452,7 +452,7 @@ impl Repo {
         // replace these test methods.
         let repo_factory: TestRepoFactory = TestRepoFactory::new(ctx.fb)?;
 
-        let repo_id = blob_repo.get_repoid();
+        let repo_id = blob_repo.repo_identity().id();
 
         let config = RepoConfig {
             lfs,
@@ -548,7 +548,7 @@ impl Repo {
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
-        self.blob_repo().get_repoid()
+        self.blob_repo().repo_identity().id()
     }
 
     /// The underlying `InnerRepo`.
@@ -691,7 +691,7 @@ impl Repo {
                 debug!(
                     ctx.logger(),
                     "Reporting bookmark age difference for {}: latest {} value is {}, cache points to {}",
-                    repo.get_repoid(),
+                    repo.repo_identity().id(),
                     bookmark,
                     blobrepo_bcs_id,
                     service_bcs_id,
@@ -1620,7 +1620,7 @@ impl RepoContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let common_config = self
             .live_commit_sync_config()
-            .get_common_config(self.blob_repo().get_repoid())
+            .get_common_config(self.blob_repo().repo_identity().id())
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
                     "Commits from {} are not configured to be remapped to another repo: {}",

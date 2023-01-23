@@ -1503,7 +1503,7 @@ mod tests {
                 .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                 .await?;
 
-            let hook: Box<dyn PushrebaseHook> = Box::new(Hook(repo.get_repoid()));
+            let hook: Box<dyn PushrebaseHook> = Box::new(Hook(repo.repo_identity().id()));
             let hooks = vec![hook];
 
             do_pushrebase_bonsai(

@@ -24,7 +24,6 @@ use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use mercurial_mutation::HgMutationStore;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
@@ -33,6 +32,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
 
@@ -42,9 +42,6 @@ use repo_permission_checker::RepoPermissionChecker;
 pub struct BlobRepoInner {
     #[facet]
     pub repo_identity: RepoIdentity,
-
-    #[init(repo_identity.id())]
-    pub repoid: RepositoryId,
 
     #[init(repo_identity.name().to_string())]
     pub reponame: String,
@@ -144,10 +141,6 @@ impl BlobRepo {
         self.inner.repo_blobstore.as_ref().clone()
     }
 
-    pub fn get_repoid(&self) -> RepositoryId {
-        self.inner.repoid
-    }
-
     pub fn name(&self) -> &String {
         &self.inner.reponame
     }
@@ -167,7 +160,8 @@ impl BlobRepo {
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
         let blobstore = bubble.wrap_repo_blobstore(self.get_blobstore());
         let changesets = Arc::new(bubble.changesets(self));
-        let changeset_fetcher = SimpleChangesetFetcher::new(changesets.clone(), self.get_repoid());
+        let changeset_fetcher =
+            SimpleChangesetFetcher::new(changesets.clone(), self.repo_identity().id());
         let new_manager = self
             .inner
             .repo_derived_data

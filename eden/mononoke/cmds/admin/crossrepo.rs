@@ -64,6 +64,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::FAIL_PUSHREBASE_EXTRA;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
 use slog::Logger;
@@ -122,7 +123,7 @@ pub async fn subcommand_crossrepo<'a>(
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
             let common_config =
-                live_commit_sync_config.get_common_config(source_repo.get_repoid())?;
+                live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
             let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &common_config)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
@@ -260,9 +261,9 @@ async fn run_pushredirection_subcommand<'a>(
             )
             .await?;
 
-            if live_commit_sync_config
-                .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
-            {
+            if live_commit_sync_config.push_redirector_enabled_for_public(
+                commit_syncer.get_small_repo().repo_identity().id(),
+            ) {
                 return Err(format_err!(
                     "not allowed to run {} if pushredirection is enabled",
                     PREPARE_ROLLOUT_SUBCOMMAND
@@ -278,13 +279,13 @@ async fn run_pushredirection_subcommand<'a>(
                 .await?
                 .ok_or_else(|| anyhow!("No bookmarks update log entries for large repo"))?;
 
-            let counter = format_backsyncer_counter(&large_repo.get_repoid());
+            let counter = format_backsyncer_counter(&large_repo.repo_identity().id());
             info!(
                 ctx.logger(),
                 "setting value {} to counter {} for repo {}",
                 largest_id,
                 counter,
-                small_repo.get_repoid()
+                small_repo.repo_identity().id()
             );
             let res = small_repo
                 .mutable_counters()
@@ -327,9 +328,9 @@ async fn run_pushredirection_subcommand<'a>(
                 return Ok(());
             }
 
-            if live_commit_sync_config
-                .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
-            {
+            if live_commit_sync_config.push_redirector_enabled_for_public(
+                commit_syncer.get_small_repo().repo_identity().id(),
+            ) {
                 return Err(format_err!(
                     "not allowed to run {} if pushredirection is enabled",
                     CHANGE_MAPPING_VERSION_SUBCOMMAND
@@ -435,7 +436,7 @@ async fn change_mapping_via_extras<'a>(
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     if !live_commit_sync_config
-        .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
+        .push_redirector_enabled_for_public(commit_syncer.get_small_repo().repo_identity().id())
     {
         return Err(format_err!(
             "not allowed to run {} if pushredirection is not enabled",
@@ -447,7 +448,7 @@ async fn change_mapping_via_extras<'a>(
     let large_repo = commit_syncer.get_large_repo();
 
     let (_, repo_config) =
-        args::get_config_by_repoid(config_store, matches, large_repo.get_repoid())?;
+        args::get_config_by_repoid(config_store, matches, large_repo.repo_identity().id())?;
 
     let large_bookmark = Large(
         sub_m
@@ -538,10 +539,10 @@ async fn run_insert_subcommand<'a>(
         (REWRITTEN_SUBCOMMAND, Some(sub_m)) => {
             let (source_cs_id, target_cs_id, mapping_version) =
                 get_source_target_cs_ids_and_version(&ctx, sub_m, &commit_syncer).await?;
-            let small_repo_id = commit_syncer.get_small_repo().get_repoid();
-            let large_repo_id = commit_syncer.get_large_repo().get_repoid();
+            let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
+            let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
 
-            let mapping_entry = if small_repo_id == source_repo.get_repoid() {
+            let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
                 SyncedCommitMappingEntry {
                     large_repo_id,
                     small_repo_id,
@@ -575,10 +576,10 @@ async fn run_insert_subcommand<'a>(
         (EQUIVALENT_WORKING_COPY_SUBCOMMAND, Some(sub_m)) => {
             let (source_cs_id, target_cs_id, mapping_version) =
                 get_source_target_cs_ids_and_version(&ctx, sub_m, &commit_syncer).await?;
-            let small_repo_id = commit_syncer.get_small_repo().get_repoid();
-            let large_repo_id = commit_syncer.get_large_repo().get_repoid();
+            let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
+            let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
 
-            let mapping_entry = if small_repo_id == source_repo.get_repoid() {
+            let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
                 EquivalentWorkingCopyEntry {
                     large_repo_id,
                     small_repo_id,
@@ -616,8 +617,8 @@ async fn run_insert_subcommand<'a>(
                 .ok_or_else(|| anyhow!("{} is not specified", LARGE_REPO_HASH_ARG))?;
             let large_repo_cs_id = helpers::csid_resolve(&ctx, large_repo, large_repo_hash).await?;
 
-            let small_repo_id = commit_syncer.get_small_repo().get_repoid();
-            let large_repo_id = commit_syncer.get_large_repo().get_repoid();
+            let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
+            let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
 
             let maybe_mapping_version = sub_m.value_of(ARG_VERSION_NAME);
             let maybe_mapping_version = match maybe_mapping_version {
@@ -779,7 +780,9 @@ async fn create_file_changes(
         // rewrite to a small repo, then the whole mapping change commit isn't
         // going to exist in the small repo.
 
-        let mover = if commit_syncer.get_source_repo().get_repoid() == large_repo.get_repoid() {
+        let mover = if commit_syncer.get_source_repo().repo_identity().id()
+            == large_repo.repo_identity().id()
+        {
             commit_syncer.get_mover_by_version(mapping_version).await?
         } else {
             commit_syncer
@@ -795,16 +798,16 @@ async fn create_file_changes(
 
         // Now get the mapping and create json with it
         let commit_sync_config = live_commit_sync_config
-            .get_commit_sync_config_by_version(large_repo.get_repoid(), mapping_version)
+            .get_commit_sync_config_by_version(large_repo.repo_identity().id(), mapping_version)
             .await?;
 
         let small_repo_sync_config = commit_sync_config
             .small_repos
-            .get(&small_repo.get_repoid())
+            .get(&small_repo.repo_identity().id())
             .ok_or_else(|| {
                 format_err!(
                     "small repo {} not found in {} mapping",
-                    small_repo.get_repoid(),
+                    small_repo.repo_identity().id(),
                     mapping_version
                 )
             })?;
@@ -990,7 +993,8 @@ async fn subcommand_verify_bookmarks(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let common_config = live_commit_sync_config.get_common_config(target_repo.get_repoid())?;
+    let common_config =
+        live_commit_sync_config.get_common_config(target_repo.repo_identity().id())?;
     let commit_syncer = get_large_to_small_commit_syncer(
         &ctx,
         source_repo,
@@ -1087,7 +1091,7 @@ async fn update_large_repo_bookmarks(
     let mut book_txn = large_repo.bookmarks().create_transaction(ctx.clone());
 
     let bookmark_renamer =
-        get_small_to_large_renamer(common_commit_sync_config, small_repo.get_repoid())?;
+        get_small_to_large_renamer(common_commit_sync_config, small_repo.repo_identity().id())?;
     for d in diff {
         if common_commit_sync_config
             .common_pushrebase_bookmarks
@@ -1111,9 +1115,9 @@ async fn update_large_repo_bookmarks(
                 let large_cs_ids = mapping
                     .get(
                         &ctx,
-                        small_repo.get_repoid(),
+                        small_repo.repo_identity().id(),
                         *target_cs_id,
-                        large_repo.get_repoid(),
+                        large_repo.repo_identity().id(),
                     )
                     .await?;
 
@@ -1121,7 +1125,7 @@ async fn update_large_repo_bookmarks(
                     return Err(format_err!(
                         "multiple remappings of {} in {}: {:?}",
                         *target_cs_id,
-                        large_repo.get_repoid(),
+                        large_repo.repo_identity().id(),
                         large_cs_ids
                     ));
                 } else if let Some((large_cs_id, _, _)) = large_cs_ids.into_iter().next() {
@@ -1370,25 +1374,27 @@ async fn get_large_to_small_commit_syncer<'a>(
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
-    let common_sync_config = live_commit_sync_config.get_common_config(source_repo.get_repoid())?;
+    let common_sync_config =
+        live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
 
-    let (large_repo, small_repo) = if common_sync_config.large_repo_id == source_repo.get_repoid()
+    let (large_repo, small_repo) = if common_sync_config.large_repo_id
+        == source_repo.repo_identity().id()
         && common_sync_config
             .small_repos
-            .contains_key(&target_repo.get_repoid())
+            .contains_key(&target_repo.repo_identity().id())
     {
         (source_repo, target_repo)
-    } else if common_sync_config.large_repo_id == target_repo.get_repoid()
+    } else if common_sync_config.large_repo_id == target_repo.repo_identity().id()
         && common_sync_config
             .small_repos
-            .contains_key(&source_repo.get_repoid())
+            .contains_key(&source_repo.repo_identity().id())
     {
         (target_repo, source_repo)
     } else {
         return Err(format_err!(
             "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
-            source_repo.get_repoid(),
-            target_repo.get_repoid()
+            source_repo.repo_identity().id(),
+            target_repo.repo_identity().id()
         ));
     };
 
@@ -1503,11 +1509,11 @@ mod test {
             let mut common_config = CommonCommitSyncConfig {
                 common_pushrebase_bookmarks: vec![master.clone()],
                 small_repos: hashmap! {
-                    small_repo.get_repoid() => SmallRepoPermanentConfig {
+                    small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                         bookmark_prefix: Default::default()
                     },
                 },
-                large_repo_id: large_repo.get_repoid(),
+                large_repo_id: large_repo.repo_identity().id(),
             };
 
             update_large_repo_bookmarks(
@@ -1591,8 +1597,8 @@ mod test {
                 .add(
                     &ctx,
                     SyncedCommitMappingEntry {
-                        large_repo_id: large_repo.get_repoid(),
-                        small_repo_id: small_repo.get_repoid(),
+                        large_repo_id: large_repo.repo_identity().id(),
+                        small_repo_id: small_repo.repo_identity().id(),
                         small_bcs_id: cs_id,
                         large_bcs_id: cs_id,
                         version_name: Some(current_version.clone()),
@@ -1607,18 +1613,18 @@ mod test {
         let common_config = CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => SmallRepoPermanentConfig {
+                small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
                 }
             },
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
         };
 
         let current_version_config = CommitSyncConfig {
-            large_repo_id: large_repo.get_repoid(),
+            large_repo_id: large_repo.repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                small_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
                 },

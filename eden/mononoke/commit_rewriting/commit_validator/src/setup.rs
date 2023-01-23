@@ -24,6 +24,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_api_types::InnerRepo;
 use mutable_counters::MutableCountersRef;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
@@ -45,7 +46,7 @@ pub async fn get_validation_helpers<'a>(
     readonly_storage: ReadOnlyStorage,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<ValidationHelpers, Error> {
-    let repo_id = large_repo.blob_repo.get_repoid();
+    let repo_id = large_repo.blob_repo.repo_identity().id();
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
@@ -72,7 +73,7 @@ pub async fn get_validation_helpers<'a>(
                         let mut scuba_sample = scuba_sample.clone();
                         add_common_commit_syncing_fields(
                             &mut scuba_sample,
-                            Large(large_blob_repo.get_repoid()),
+                            Large(large_blob_repo.repo_identity().id()),
                             Small(small_repo_id),
                         );
 

@@ -113,6 +113,7 @@ phases = { version = "0.1.0", path = "phases" }
 rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "repo_factory" }
+repo_identity = { version = "0.1.0", path = "repo_attributes/repo_identity" }
 retry = { version = "0.1.0", path = "common/retry" }
 revset = { version = "0.1.0", path = "revset" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }

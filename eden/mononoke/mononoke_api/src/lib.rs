@@ -14,6 +14,7 @@ use anyhow::Error;
 pub use bookmarks::BookmarkName;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
+use repo_identity::RepoIdentityRef;
 
 use crate::repo::RepoContextBuilder;
 
@@ -211,9 +212,9 @@ pub mod test_impl {
                 .map(move |(name, repo)| {
                     cloned!(ctx);
                     async move {
-                        Repo::new_test(ctx.clone(), repo)
-                            .await
-                            .map(move |repo| (repo.blob_repo().get_repoid().id(), name, repo))
+                        Repo::new_test(ctx.clone(), repo).await.map(move |repo| {
+                            (repo.blob_repo().repo_identity().id().id(), name, repo)
+                        })
                     }
                 })
                 .collect::<FuturesOrdered<_>>()
@@ -248,7 +249,9 @@ pub mod test_impl {
                         async move {
                             Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, mapping)
                                 .await
-                                .map(move |repo| (repo.blob_repo().get_repoid().id(), name, repo))
+                                .map(move |repo| {
+                                    (repo.blob_repo().repo_identity().id().id(), name, repo)
+                                })
                         }
                     }
                 })

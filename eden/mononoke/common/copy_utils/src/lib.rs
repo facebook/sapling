@@ -28,6 +28,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use regex::Regex;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
@@ -64,7 +65,7 @@ pub async fn copy(
     let mut file_changes = BTreeMap::new();
     let mut total_file_size = 0;
     let mut contents_to_upload = vec![];
-    let same_repo = source_repo.get_repoid() == target_repo.get_repoid();
+    let same_repo = source_repo.repo_identity().id() == target_repo.repo_identity().id();
 
     for (from_dir, to_dir) in from_to_dirs {
         let (from_entries, to_entries) = try_join(

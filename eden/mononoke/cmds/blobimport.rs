@@ -44,6 +44,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCountersRef;
+use repo_identity::RepoIdentityRef;
 use slog::error;
 use slog::info;
 use slog::warn;
@@ -402,7 +403,7 @@ async fn run_blobimport<'a>(
             None
         };
 
-    let globalrevs_store = Arc::new(globalrevs_store_builder.build(blobrepo.get_repoid()));
+    let globalrevs_store = Arc::new(globalrevs_store_builder.build(blobrepo.repo_identity().id()));
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
     let find_latest_imported_rev_only = matches.is_present(ARG_FIND_ALREADY_IMPORTED_REV_ONLY);

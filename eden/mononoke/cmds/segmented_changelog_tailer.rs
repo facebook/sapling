@@ -24,6 +24,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use repo_identity::RepoIdentityRef;
 use segmented_changelog::seedheads_from_config;
 use segmented_changelog::OperationMode;
 use segmented_changelog::SegmentedChangelogTailer;
@@ -101,7 +102,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     let mut tasks = Vec::new();
     for (index, blobrepo) in blobrepos.into_iter().enumerate() {
-        let repo_id = blobrepo.get_repoid();
+        let repo_id = blobrepo.repo_identity().id();
         let (repo_name, config) = app.repo_config(&RepoArg::Id(repo_id))?;
         info!(
             ctx.logger(),

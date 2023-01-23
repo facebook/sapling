@@ -37,6 +37,7 @@ use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::MPath;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use tests_utils::bookmark;
@@ -1268,8 +1269,8 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     assert_eq!(file_changes, vec![MPath::new("remapped_before")?]);
 
     // Config change: new config remaps prefix2 instead of prefix
-    let large_repo_id = largerepo.blob_repo().get_repoid();
-    let small_repo_id = smallrepo.blob_repo().get_repoid();
+    let large_repo_id = largerepo.blob_repo().repo_identity().id();
+    let small_repo_id = smallrepo.blob_repo().repo_identity().id();
     let mut cfg = cfg_src
         .get_commit_sync_config_by_version_if_exists(
             large_repo_id,

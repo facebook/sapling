@@ -72,6 +72,7 @@ use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_identity::RepoIdentityRef;
 use skiplist::SkiplistIndex;
 use sorted_vector_map::sorted_vector_map;
 use sorted_vector_map::SortedVectorMap;
@@ -259,8 +260,8 @@ async fn check_mapping<M>(
 ) where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let source_repoid = config.get_source_repo().get_repoid();
-    let destination_repoid = config.get_target_repo().get_repoid();
+    let source_repoid = config.get_source_repo().repo_identity().id();
+    let destination_repoid = config.get_target_repo().repo_identity().id();
     let mapping = config.get_mapping();
     assert_eq!(
         mapping
@@ -318,17 +319,17 @@ fn create_small_to_large_commit_syncer(
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
-    let small_repo_id = small_repo.get_repoid();
-    let large_repo_id = large_repo.get_repoid();
+    let small_repo_id = small_repo.repo_identity().id();
+    let large_repo_id = large_repo.repo_identity().id();
 
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.get_repoid() => SmallRepoPermanentConfig {
+            small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
             }
         },
-        large_repo_id: large_repo.get_repoid(),
+        large_repo_id: large_repo.repo_identity().id(),
     };
     let repos = CommitSyncRepos::new(small_repo, large_repo, &common_config)?;
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
@@ -361,18 +362,18 @@ fn create_large_to_small_commit_syncer_and_config_source(
     ),
     Error,
 > {
-    let small_repo_id = small_repo.get_repoid();
-    let large_repo_id = large_repo.get_repoid();
+    let small_repo_id = small_repo.repo_identity().id();
+    let large_repo_id = large_repo.repo_identity().id();
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.get_repoid() => SmallRepoPermanentConfig {
+            small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
             }
         },
-        large_repo_id: large_repo.get_repoid(),
+        large_repo_id: large_repo.repo_identity().id(),
     };
     let repos = CommitSyncRepos::new(large_repo, small_repo, &common_config)?;
 
@@ -826,10 +827,10 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let commit_sync_config = CommitSyncConfig {
-        large_repo_id: megarepo.get_repoid(),
+        large_repo_id: megarepo.repo_identity().id(),
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.get_repoid() => small_repo_config,
+            small_repo.repo_identity().id() => small_repo_config,
         },
         version_name: version_name_with_small_repo(),
     };
@@ -837,11 +838,11 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.get_repoid() => SmallRepoPermanentConfig {
+            small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
             }
         },
-        large_repo_id: megarepo.get_repoid(),
+        large_repo_id: megarepo.repo_identity().id(),
     };
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 
@@ -869,9 +870,9 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     )
     .await;
     let entry = SyncedCommitMappingEntry::new(
-        megarepo.get_repoid(),
+        megarepo.repo_identity().id(),
         megarepo_initial_bcs_id,
-        repo.get_repoid(),
+        repo.repo_identity().id(),
         repo_initial_bcs_id,
         version,
         commit_syncer.get_source_repo_type(),
@@ -1117,9 +1118,9 @@ async fn get_multiple_master_mapping_setup(
         .add(
             &ctx,
             SyncedCommitMappingEntry::new(
-                megarepo.get_repoid(),
+                megarepo.repo_identity().id(),
                 megarepo_master_cs_id,
-                small_repo.get_repoid(),
+                small_repo.repo_identity().id(),
                 small_repo_master_cs_id,
                 version.clone(),
                 small_to_large_syncer.get_source_repo_type(),
@@ -1660,9 +1661,9 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
         .add(
             &ctx,
             SyncedCommitMappingEntry::new(
-                megarepo.get_repoid(),
+                megarepo.repo_identity().id(),
                 megarepo_master_cs_id,
-                small_repo.get_repoid(),
+                small_repo.repo_identity().id(),
                 small_repo_master_cs_id,
                 version.clone(),
                 small_to_large_syncer.get_source_repo_type(),
@@ -1785,8 +1786,8 @@ async fn prepare_commit_syncer_with_mapping_change(
 
     // Change the mapping - "tools" now doesn't change it's location after remapping!
 
-    let small_repo_id = small_repo.get_repoid();
-    let large_repo_id = megarepo.get_repoid();
+    let small_repo_id = small_repo.repo_identity().id();
+    let large_repo_id = megarepo.repo_identity().id();
     let small_repo_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(
             "prefix",
@@ -1809,7 +1810,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     config_source.add_common_config(CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            small_repo.get_repoid() => SmallRepoPermanentConfig {
+            small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
             }
         },
@@ -1950,8 +1951,10 @@ async fn merge_test_setup(
             small_repo: small_repo.clone(),
             large_repo: large_repo.clone(),
         };
-        lts_syncer.commit_sync_data_provider =
-            get_merge_sync_data_provider(large_repo.get_repoid(), small_repo.get_repoid())?;
+        lts_syncer.commit_sync_data_provider = get_merge_sync_data_provider(
+            large_repo.repo_identity().id(),
+            small_repo.repo_identity().id(),
+        )?;
         lts_syncer
     };
 
@@ -2203,10 +2206,10 @@ async fn test_no_accidental_preserved_roots(
             map: hashmap! {},
         };
         let commit_sync_config = CommitSyncConfig {
-            large_repo_id: commit_syncer.get_large_repo().get_repoid(),
+            large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                commit_syncer.get_small_repo().get_repoid() => small_repo_config,
+                commit_syncer.get_small_repo().repo_identity().id() => small_repo_config,
             },
             version_name: version.clone(),
         };
@@ -2214,11 +2217,11 @@ async fn test_no_accidental_preserved_roots(
         let common_config = CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
-                commit_syncer.get_small_repo().get_repoid() => SmallRepoPermanentConfig {
+                commit_syncer.get_small_repo().repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
                 }
             },
-            large_repo_id: commit_syncer.get_large_repo().get_repoid(),
+            large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
         };
 
         let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();

@@ -19,5 +19,6 @@ futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 microwave_if = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }

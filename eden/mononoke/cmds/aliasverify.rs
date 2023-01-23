@@ -43,6 +43,7 @@ use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::RepositoryId;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
 use slog::Logger;
@@ -312,7 +313,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;
-    let repo_id = repo.get_repoid();
+    let repo_id = repo.repo_identity().id();
     AliasVerification::new(logger.clone(), repo, repo_id, mode)
         .verify_all(&ctx, step, min_cs_db_id)
         .await

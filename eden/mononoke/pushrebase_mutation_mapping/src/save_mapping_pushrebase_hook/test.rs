@@ -15,6 +15,7 @@ use maplit::hashset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types_mocks::repo;
 use pushrebase::do_pushrebase_bonsai;
+use repo_identity::RepoIdentityRef;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
 use tests_utils::CreateCommitContext;
@@ -42,7 +43,7 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
         .load(ctx, repo.blobstore())
         .await?;
 
-    let hooks = [SaveMappingPushrebaseHook::new(repo.get_repoid())];
+    let hooks = [SaveMappingPushrebaseHook::new(repo.repo_identity().id())];
 
     // Pushrebase the same commit onto different bookmarks that are pointing to
     // the same commit (root).
@@ -75,7 +76,7 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
 
     let prepushrebase_ids = get_prepushrebase_ids(
         &repo_factory.metadata_db().connections().read_connection,
-        repo.get_repoid(),
+        repo.repo_identity().id(),
         rebased,
     )
     .await?;

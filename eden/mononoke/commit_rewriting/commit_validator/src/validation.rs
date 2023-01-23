@@ -60,6 +60,7 @@ use movers::get_movers;
 use movers::Mover;
 use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use revset::RangeNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -214,8 +215,8 @@ impl ValidationHelper {
         hash: Large<ChangesetId>,
         mapping: &SqlSyncedCommitMapping,
     ) -> Result<Option<(Small<ChangesetId>, CommitSyncConfigVersion)>, Error> {
-        let large_repo_id = self.large_repo.0.get_repoid();
-        let small_repo_id = self.small_repo.0.get_repoid();
+        let large_repo_id = self.large_repo.0.repo_identity().id();
+        let small_repo_id = self.small_repo.0.repo_identity().id();
 
         let commit_sync_data_provider =
             CommitSyncDataProvider::Live(Arc::new(self.live_commit_sync_config.clone()));
@@ -673,7 +674,7 @@ impl ValidationHelpers {
         let commit_sync_config = self
             .live_commit_sync_config
             .get_commit_sync_config_by_version(
-                self.large_repo.0.blob_repo.get_repoid(),
+                self.large_repo.0.blob_repo.repo_identity().id(),
                 version_name,
             )
             .await?;
@@ -961,8 +962,8 @@ async fn validate_topological_order<'a>(
         ctx.logger(),
         "validating topological order for {}<->{}", large_cs_id, small_cs_id
     );
-    let small_repo_id = small_repo.0.get_repoid();
-    let large_repo_id = large_repo.0.get_repoid();
+    let small_repo_id = small_repo.0.repo_identity().id();
+    let large_repo_id = large_repo.0.repo_identity().id();
 
     let small_parents = small_repo
         .0
@@ -1480,7 +1481,7 @@ async fn list_all_filenode_ids(
     repo: &BlobRepo,
     mf_id: HgManifestId,
 ) -> Result<PathToFileNodeIdMapping, Error> {
-    let repoid = repo.get_repoid();
+    let repoid = repo.repo_identity().id();
     info!(
         ctx.logger(),
         "fetching filenode ids for {:?} in {}", mf_id, repoid,

@@ -45,6 +45,7 @@ use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use phases::PhasesRef;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -116,7 +117,7 @@ impl<'a> Blobimport<'a> {
         let synced_commit_mapping = &synced_commit_mapping;
         let derived_data_types = &derived_data_types;
 
-        let repo_id = blobrepo.get_repoid();
+        let repo_id = blobrepo.repo_identity().id();
 
         let revlogrepo = RevlogRepo::open(&revlogrepo_path)
             .with_context(|| format!("While opening revlog repo at {:?}", revlogrepo_path))?;

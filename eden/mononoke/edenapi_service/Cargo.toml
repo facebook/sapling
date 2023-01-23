@@ -43,6 +43,7 @@ permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4.30"
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
+repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_cbor = "0.11"

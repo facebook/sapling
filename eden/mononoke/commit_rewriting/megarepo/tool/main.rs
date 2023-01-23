@@ -55,6 +55,7 @@ use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
 use movers::Mover;
 use regex::Regex;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
 #[cfg(fbcode_build)]
@@ -561,7 +562,7 @@ async fn run_gradual_merge<'a>(
 
     let limit = args::get_usize_opt(sub_m, LIMIT);
     let (_, repo_config) =
-        args::get_config_by_repoid(config_store, matches, repo.blob_repo.get_repoid())?;
+        args::get_config_by_repoid(config_store, matches, repo.blob_repo.repo_identity().id())?;
     let last_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, last_deletion_commit);
     let pre_deletion_commit = helpers::csid_resolve(&ctx, &repo.blob_repo, pre_deletion_commit);
 
@@ -869,9 +870,9 @@ async fn run_mark_not_synced<'a>(
             let existing_value = mapping
                 .get_equivalent_working_copy(
                     ctx,
-                    large_repo.get_repoid(),
+                    large_repo.repo_identity().id(),
                     cs_id,
-                    small_repo.get_repoid(),
+                    small_repo.repo_identity().id(),
                 )
                 .await?;
 
@@ -885,9 +886,9 @@ async fn run_mark_not_synced<'a>(
             }
 
             let wc_entry = EquivalentWorkingCopyEntry {
-                large_repo_id: large_repo.get_repoid(),
+                large_repo_id: large_repo.repo_identity().id(),
                 large_bcs_id: cs_id,
-                small_repo_id: small_repo.get_repoid(),
+                small_repo_id: small_repo.repo_identity().id(),
                 small_bcs_id: None,
                 version_name: Some(mapping_version_name.clone()),
             };
@@ -962,9 +963,9 @@ async fn run_backfill_noop_mapping<'a>(
                 let (small_cs_id, large_cs_id) = try_join(small_cs_id, large_cs_id).await?;
 
                 let entry = SyncedCommitMappingEntry {
-                    large_repo_id: large_repo.get_repoid(),
+                    large_repo_id: large_repo.repo_identity().id(),
                     large_bcs_id: large_cs_id,
-                    small_repo_id: small_repo.get_repoid(),
+                    small_repo_id: small_repo.repo_identity().id(),
                     small_bcs_id: small_cs_id,
                     version_name: Some(mapping_version_name.clone()),
                     source_repo: Some(commit_syncer.get_source_repo_type()),
@@ -1111,9 +1112,9 @@ async fn process_stream_and_wait_for_replication<'a>(
     let large_repo = commit_syncer.get_large_repo();
 
     let (_, small_repo_config) =
-        args::get_config_by_repoid(config_store, matches, small_repo.get_repoid())?;
+        args::get_config_by_repoid(config_store, matches, small_repo.repo_identity().id())?;
     let (_, large_repo_config) =
-        args::get_config_by_repoid(config_store, matches, large_repo.get_repoid())?;
+        args::get_config_by_repoid(config_store, matches, large_repo.repo_identity().id())?;
     if small_repo_config.storage_config.metadata != large_repo_config.storage_config.metadata {
         return Err(format_err!(
             "{} and {} have different db metadata configs: {:?} vs {:?}",
@@ -1221,7 +1222,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches::<BlobRepo>(&ctx, matches, None).await?;
     let large_repo = commit_syncer.get_large_repo();
-    if commit_syncer.get_source_repo().get_repoid() != large_repo.get_repoid() {
+    if commit_syncer.get_source_repo().repo_identity().id() != large_repo.repo_identity().id() {
         return Err(format_err!("source repo must be large!"));
     }
 

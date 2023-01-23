@@ -1081,8 +1081,8 @@ mod test {
         println!(
             "syncing log entries {:?}  from repo#{} to repo#{}",
             log_entries,
-            smallrepo.get_repoid(),
-            megarepo.get_repoid()
+            smallrepo.repo_identity().id(),
+            megarepo.repo_identity().id()
         );
 
         let mut res = vec![];
