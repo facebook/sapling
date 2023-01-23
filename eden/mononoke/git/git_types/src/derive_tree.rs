@@ -197,7 +197,6 @@ mod test {
     use std::path::Path;
 
     use anyhow::format_err;
-    use blobrepo::BlobRepo;
     use bookmarks::BookmarksRef;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
@@ -207,6 +206,8 @@ mod test {
     use git2::Oid;
     use git2::Repository;
     use manifest::ManifestOps;
+    use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedDataRef;
     use tempdir::TempDir;
 
     use super::*;
@@ -215,7 +216,7 @@ mod test {
     /// materializes it to disk, then verifies that libgit produces the same Git tree for it.
     async fn run_tree_derivation_for_fixture(
         fb: FacebookInit,
-        repo: BlobRepo,
+        repo: impl BookmarksRef + RepoBlobstoreArc + RepoDerivedDataRef + Send + Sync,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -228,7 +229,7 @@ mod test {
         let tree = TreeHandle::derive(&ctx, &repo, bcs_id).await?;
 
         let leaves = tree
-            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .list_leaf_entries(ctx.clone(), repo.repo_blobstore_arc())
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -239,7 +240,7 @@ mod test {
 
         for (mpath, blob_handle) in leaves.into_iter() {
             let blob = filestore::fetch_concat(
-                &repo.get_blobstore(),
+                repo.repo_blobstore(),
                 &ctx,
                 FetchKey::Aliased(Alias::GitSha1(blob_handle.oid().sha1())),
             )
