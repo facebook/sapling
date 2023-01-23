@@ -18,6 +18,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
+use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcher;
 use commit_graph_types::edges::ChangesetEdges;
@@ -116,18 +117,17 @@ impl CommitGraph {
             }
         }
 
-        let mut added_edges_num = 0;
-
+        // We use buffered storage here to be able to do all the writes in parallel.
+        // We need to create a new CommitGraph wrapper to work with the buffered storage.
+        let buffered_storage =
+            Arc::new(BufferedCommitGraphStorage::new(self.storage.clone(), 10000));
+        let graph = CommitGraph::new(buffered_storage.clone());
         while let Some((cs_id, parents)) = to_add_stack.pop() {
-            let edges = self.build_edges(ctx, cs_id, parents, &edges_map).await?;
-
+            let edges = graph.build_edges(ctx, cs_id, parents, &edges_map).await?;
             edges_map.insert(cs_id, edges.clone());
-            if self.storage.add(ctx, edges).await? {
-                added_edges_num += 1;
-            }
+            buffered_storage.add(ctx, edges).await?;
         }
-
-        Ok(added_edges_num)
+        buffered_storage.flush(ctx).await
     }
 
     pub async fn build_edges(

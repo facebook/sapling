@@ -57,6 +57,7 @@ impl Prefetch {
 
 /// Commit Graph Storage.
 #[async_trait]
+#[auto_impl::auto_impl(Arc)]
 pub trait CommitGraphStorage: Send + Sync {
     /// The repository this commit graph storage is for.
     fn repo_id(&self) -> RepositoryId;
