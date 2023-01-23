@@ -22,7 +22,9 @@ use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
+use vec1::Vec1;
 
 #[derive(Clone)]
 pub struct MemWritesChangesets<T: Changesets + Clone + 'static> {
@@ -70,6 +72,17 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
 
             Ok(true)
         }
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        css: Vec1<(ChangesetInsert, Generation)>,
+    ) -> Result<(), Error> {
+        for (cs, _) in css {
+            self.add(ctx, cs).await?;
+        }
+        Ok(())
     }
 
     async fn get(

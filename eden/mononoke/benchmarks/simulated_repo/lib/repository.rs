@@ -67,6 +67,7 @@ use metaconfig_types::ArcRepoConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use mutable_counters::ArcMutableCounters;
@@ -97,6 +98,7 @@ use skiplist::ArcSkiplistIndex;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use sqlphases::SqlPhasesBuilder;
+use vec1::Vec1;
 
 pub type Normal = rand_distr::Normal<f64>;
 
@@ -455,6 +457,17 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
     async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         delay(self.put_dist).await;
         self.inner.add(ctx, cs).await
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        css: Vec1<(ChangesetInsert, Generation)>,
+    ) -> Result<(), Error> {
+        for (cs, _) in css {
+            self.add(ctx, cs).await?;
+        }
+        Ok(())
     }
 
     async fn get(

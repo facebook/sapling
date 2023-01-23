@@ -20,6 +20,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }

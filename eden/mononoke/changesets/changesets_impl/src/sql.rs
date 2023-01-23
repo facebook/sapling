@@ -26,6 +26,7 @@ use futures::TryFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use rand::Rng;
 use rendezvous::RendezVous;
@@ -40,6 +41,7 @@ use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 use thiserror::Error;
+use vec1::Vec1;
 
 define_stats! {
     prefix = "mononoke.changesets.sql";
@@ -290,6 +292,18 @@ impl Changesets for SqlChangesets {
             check_changeset_matches(&self.write_connection, self.repo_id, cs).await?;
             Ok(false)
         }
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        css: Vec1<(ChangesetInsert, Generation)>,
+    ) -> Result<(), Error> {
+        // TODO(yancouto): optimise this by doing few SQL writes
+        for (cs, _gen) in css {
+            self.add(ctx, cs).await?;
+        }
+        Ok(())
     }
 
     async fn get(

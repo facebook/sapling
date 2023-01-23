@@ -26,12 +26,14 @@ use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 use sql::Connection;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
+use vec1::Vec1;
 
 use crate::bubble::BubbleId;
 
@@ -188,6 +190,18 @@ impl Changesets for EphemeralChangesets {
         )
         .await?;
         Ok(result.last_insert_id().is_some())
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        css: Vec1<(ChangesetInsert, Generation)>,
+    ) -> Result<()> {
+        // If necessary, this can be optimised.
+        for (cs, _) in css {
+            self.add(ctx, cs).await?;
+        }
+        Ok(())
     }
 
     async fn get(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<ChangesetEntry>> {

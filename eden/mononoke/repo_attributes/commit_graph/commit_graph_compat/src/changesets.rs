@@ -26,10 +26,12 @@ use futures_stats::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use smallvec::SmallVec;
 use tunables::tunables;
+use vec1::Vec1;
 
 pub struct ChangesetsCommitGraphCompat {
     changesets: ArcChangesets,
@@ -129,6 +131,18 @@ impl Changesets for ChangesetsCommitGraphCompat {
         }
 
         Ok(added_to_changesets)
+    }
+
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        css: Vec1<(ChangesetInsert, Generation)>,
+    ) -> Result<(), Error> {
+        // TODO(yancouto): optimise this by doing few inner calls
+        for (cs, _gen) in css {
+            self.add(ctx, cs).await?;
+        }
+        Ok(())
     }
 
     async fn get(

@@ -14,7 +14,9 @@ use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
+use vec1::Vec1;
 
 mod entry;
 
@@ -45,6 +47,14 @@ pub trait Changesets: Send + Sync {
     /// Add a new entry to the changesets table. Returns true if new changeset was inserted,
     /// returns false if the same changeset has already existed.
     async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool, Error>;
+
+    /// Add new entries for multiple changesets, may be faster than adding an entry at a time.
+    /// Should be sorted in topological order. Generation must be provided.
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        css: Vec1<(ChangesetInsert, Generation)>,
+    ) -> Result<(), Error>;
 
     /// Retrieve the row specified by this commit, if available.
     async fn get(
