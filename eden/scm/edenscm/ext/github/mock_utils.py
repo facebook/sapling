@@ -89,8 +89,8 @@ class MockGitHubServer:
         It reads mock data from `self.requests` instead of sending network requests.
         """
         assert (
-            real_make_request.__name__ == "make_request"
-        ), f"expected 'make_request', but got '{real_make_request.__name__}'"
+            real_make_request.__name__ == "_make_request"
+        ), f"expected '_make_request', but got '{real_make_request.__name__}'"
 
         key = create_request_key(params, hostname, endpoint, method)
 

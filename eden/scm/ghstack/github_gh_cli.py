@@ -26,6 +26,16 @@ async def make_request(
     """If successful, returns a Result whose value is parsed JSON returned by
     the request.
     """
+    return await _make_request(params, hostname, endpoint, method)
+
+
+# Unexported extension/mock point.
+async def _make_request(
+    params: Dict[str, Union[str, int, bool]],
+    hostname: str,
+    endpoint: str,
+    method: Optional[str],
+) -> Result[JsonDict, str]:
     if method:
         endpoint_args = ["-X", method.upper(), endpoint]
     else:

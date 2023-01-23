@@ -45,6 +45,6 @@ def setup_mock_github_server() -> MockGitHubServer:
 def uisetup(ui):
     mock_github_server = setup_mock_github_server()
     extensions.wrapfunction(
-        github_gh_cli, "make_request", mock_github_server.make_request
+        github_gh_cli, "_make_request", mock_github_server.make_request
     )
     extensions.wrapfunction(submit, "run_git_command", mock_run_git_command)
