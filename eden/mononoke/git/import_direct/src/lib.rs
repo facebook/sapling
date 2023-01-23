@@ -12,7 +12,6 @@ use std::time::Instant;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use context::CoreContext;
 use git_hash::ObjectId;
@@ -32,7 +31,7 @@ pub async fn range(
     from: ObjectId,
     to: ObjectId,
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl BonsaiGitMappingRef,
 ) -> Result<GitimportTarget, Error> {
     let from_csid = repo
         .bonsai_git_mapping()
@@ -40,7 +39,7 @@ pub async fn range(
         .await?
         .ok_or_else(|| {
             format_err!(
-                "Cannot start import from root {}: commit does not exist in Blobrepo",
+                "Cannot start import from root {}: commit does not exist in repo",
                 from
             )
         })?;
@@ -53,7 +52,7 @@ pub async fn range(
 pub async fn missing_for_commit(
     commit: ObjectId,
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    hg_repo: &impl BonsaiGitMappingRef,
     git_command_path: &Path,
     repo_path: &Path,
 ) -> Result<GitimportTarget, Error> {
@@ -67,7 +66,7 @@ pub async fn missing_for_commit(
     let mut q = vec![commit];
     while let Some(id) = q.pop() {
         if visited.insert(id) {
-            if let Some(changeset) = commit_in_mononoke(ctx, repo, &id).await? {
+            if let Some(changeset) = commit_in_mononoke(ctx, hg_repo, &id).await? {
                 known.insert(id, changeset);
             } else {
                 let object = reader.get_object(&id).await?;
@@ -91,10 +90,10 @@ pub async fn missing_for_commit(
 
 async fn commit_in_mononoke(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    hg_repo: &impl BonsaiGitMappingRef,
     commit_id: &git_hash::oid,
 ) -> Result<Option<ChangesetId>, Error> {
-    let changeset = repo
+    let changeset = hg_repo
         .bonsai_git_mapping()
         .get_bonsai_from_git_sha1(ctx, oid_to_sha1(commit_id)?)
         .await?;

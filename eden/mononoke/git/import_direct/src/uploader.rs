@@ -10,10 +10,10 @@ use std::sync::Arc;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bytes::Bytes;
+use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
@@ -35,6 +35,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
@@ -55,13 +56,13 @@ impl ReuploadCommits {
 }
 
 #[derive(Clone)]
-pub struct DirectUploader {
-    inner: Arc<BlobRepo>,
+pub struct DirectUploader<R> {
+    inner: Arc<R>,
     reupload_commits: ReuploadCommits,
 }
 
-impl DirectUploader {
-    pub fn new(repo: BlobRepo, reupload_commits: ReuploadCommits) -> Self {
+impl<R> DirectUploader<R> {
+    pub fn new(repo: R, reupload_commits: ReuploadCommits) -> Self {
         Self {
             inner: Arc::new(repo),
             reupload_commits,
@@ -70,7 +71,17 @@ impl DirectUploader {
 }
 
 #[async_trait]
-impl GitUploader for DirectUploader {
+impl<R> GitUploader for DirectUploader<R>
+where
+    R: ChangesetsRef
+        + RepoBlobstoreRef
+        + BonsaiGitMappingRef
+        + FilestoreConfigRef
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+{
     type Change = FileChange;
     type IntermediateChangeset = BonsaiChangeset;
 
@@ -103,7 +114,7 @@ impl GitUploader for DirectUploader {
         git_bytes: Bytes,
     ) -> Result<Self::Change, Error> {
         let meta_ret = if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, oid) {
-            let blobstore = self.inner.blobstore();
+            let blobstore = self.inner.repo_blobstore();
             let filestore_config = *self.inner.filestore_config();
             cloned!(ctx, lfs, blobstore, path);
             Ok(lfs
@@ -125,7 +136,7 @@ impl GitUploader for DirectUploader {
         } else {
             let (req, bstream) = git_store_request(ctx, oid, git_bytes)?;
             Ok(filestore::store(
-                self.inner.blobstore(),
+                self.inner.repo_blobstore(),
                 *self.inner.filestore_config(),
                 ctx,
                 &req,
@@ -169,7 +180,7 @@ impl GitUploader for DirectUploader {
 
         // We know that the commits are in order (this is guaranteed by the Walk), so we
         // can insert them as-is, one by one, without extra dependency / ordering checks.
-        let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), &self.inner)
+        let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), &*self.inner)
             .try_timed()
             .await?;
         debug!(
