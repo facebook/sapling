@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import ghstack.github
 import ghstack.github_utils

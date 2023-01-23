@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import os
 import re
 import shutil
 import subprocess
@@ -10,7 +11,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Iterable, List, Optional
 
-from edenscm import error, git
+from edenscm import error, git, util
 from edenscm.i18n import _
 from edenscm.result import Err, Ok, Result
 
@@ -72,7 +73,13 @@ def find_github_repo(repo) -> Result[GitHubRepo, NotGitHubRepoError]:
 
     url = None
     try:
-        url = repo.ui.paths.get("default", "default-push").url
+        # SL_TEST_GH_URL allows tests to use a normal git repo as the upstream while still
+        # operating in GitHub mode.
+        test_url = os.environ.get("SL_TEST_GH_URL")
+        if test_url:
+            url = util.url(test_url)
+        else:
+            url = repo.ui.paths.get("default", "default-push").url
     except AttributeError:  # ex. paths.default is not set
         return Err(NotGitHubRepoError(message=_("could not read paths.default")))
 

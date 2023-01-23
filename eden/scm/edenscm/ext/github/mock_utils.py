@@ -7,6 +7,8 @@ import hashlib
 from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import ghstack.query
+
 from edenscm.ext.github.consts import query
 from edenscm.ext.github.gh_submit import PullRequestState
 from edenscm.ext.github.pull_request_body import firstline
@@ -149,6 +151,8 @@ class MockGitHubServer:
         base: str = "main",
         owner: str = OWNER,
         name: str = REPO_NAME,
+        method: Optional[str] = None,
+        **more_params,
     ) -> "CreatePrRequest":
         params: ParamsType = {
             "base": base,
@@ -156,9 +160,12 @@ class MockGitHubServer:
             "body": body,
             "title": title,
             "draft": is_draft,
+            **more_params,
         }
         endpoint = f"repos/{owner}/{name}/pulls"
-        key = create_request_key(params, self.hostname, endpoint=endpoint)
+        key = create_request_key(
+            params, self.hostname, endpoint=endpoint, method=method
+        )
         request = CreatePrRequest(key, owner, name)
         self._add_request(key, request)
         return request
@@ -180,11 +187,78 @@ class MockGitHubServer:
             "issue": issue,
             "draft": is_draft,
         }
+
         endpoint = f"repos/{owner}/{name}/pulls"
         key = create_request_key(params, self.hostname, endpoint=endpoint)
         request = CreatePrUsingPlaceholderRequest(key, owner, name, issue)
         self._add_request(key, request)
         return request
+
+    def expect_request(
+        self,
+        params: ParamsType,
+        response: JsonDict,
+        endpoint: str = "graphql",
+        method: Optional[str] = None,
+    ):
+        key = create_request_key(
+            params, self.hostname, endpoint=endpoint, method=method
+        )
+        self._add_request(key, GenericRequest(response))
+
+    def expect_pr_to_ref(
+        self,
+        pr_number: int,
+        ref: str,
+        owner: str = OWNER,
+        name: str = REPO_NAME,
+    ) -> None:
+        self.expect_request(
+            params={
+                "query": ghstack.query.GRAPHQL_PR_TO_REF,
+                "owner": owner,
+                "name": name,
+                "number": pr_number,
+            },
+            response={
+                "data": {
+                    "repository": {
+                        "pullRequest": {
+                            "headRefName": ref,
+                        },
+                    },
+                },
+            },
+        )
+
+    def expect_ref_to_commit_and_tree(
+        self,
+        ref: str,
+        commit: str,
+        tree: str,
+        repo_id: str = REPO_ID,
+    ) -> None:
+        self.expect_request(
+            params={
+                "query": ghstack.query.GRAPHQL_REF_TO_COMMIT_AND_TREE,
+                "repo_id": repo_id,
+                "ref": ref,
+            },
+            response={
+                "data": {
+                    "node": {
+                        "ref": {
+                            "target": {
+                                "oid": commit,
+                                "tree": {
+                                    "oid": tree,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        )
 
     def expect_get_pr_details_request(
         self,
@@ -264,6 +338,14 @@ class MockRequest:
     @abstractmethod
     def get_response(self) -> Result[JsonDict, str]:
         pass
+
+
+class GenericRequest(MockRequest):
+    def __init__(self, response: JsonDict) -> None:
+        self._response: JsonDict = response
+
+    def get_response(self) -> Result[JsonDict, str]:
+        return Ok(self._response)
 
 
 class GetRepositoryRequest(MockRequest):
@@ -501,7 +583,7 @@ class MockResponseRunout(Exception):
 
 
 def create_request_key(
-    params: Dict[str, Union[str, int, bool]],
+    params: ParamsType,
     hostname: str = GITHUB_HOSTNAME,
     endpoint: str = "graphql",
     method: Optional[str] = None,

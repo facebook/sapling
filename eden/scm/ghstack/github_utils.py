@@ -1,9 +1,11 @@
+import os
 import re
 from typing import List, Optional, TypedDict
 
 from edenscm import error
 from edenscm.i18n import _
 import ghstack.github
+import ghstack.query
 import ghstack.shell
 from ghstack.ghs_types import GitCommitHash, GhNumber, GitHubRepositoryId, GitTreeHash
 
@@ -20,7 +22,7 @@ def get_github_repo_name_with_owner(
     remote_name: str,
 ) -> GitHubRepoNameWithOwner:
     # Grovel in remotes to figure it out
-    remote_url = sh.git("remote", "get-url", remote_name)
+    remote_url = os.environ.get("SL_TEST_GH_URL") or sh.git("remote", "get-url", remote_name)
     while True:
         match = r'^git@{github_url}:([^/]+)/(.+?)(?:\.git)?$'.format(
             github_url=github_url
@@ -75,16 +77,7 @@ def get_github_repo_info(
 
     # TODO: Cache this guy
     repo = github.graphql_sync(
-        """
-        query ($owner: String!, $name: String!) {
-            repository(name: $name, owner: $owner) {
-                id
-                isFork
-                defaultBranchRef {
-                    name
-                }
-            }
-        }""",
+        ghstack.query.GRAPHQL_GET_REPOSITORY,
         owner=owner,
         name=name)["data"]["repository"]
 
@@ -131,15 +124,12 @@ def parse_pull_request(pull_request: str) -> GitHubPullRequestParams:
 
 
 def lookup_pr_to_orig_ref(github: ghstack.github.GitHubEndpoint, *, owner: str, name: str, number: int) -> str:
-    pr_result = github.graphql_sync("""
-        query ($owner: String!, $name: String!, $number: Int!) {
-            repository(name: $name, owner: $owner) {
-                pullRequest(number: $number) {
-                    headRefName
-                }
-            }
-        }
-    """, owner=owner, name=name, number=number)
+    pr_result = github.graphql_sync(
+        ghstack.query.GRAPHQL_PR_TO_REF,
+        owner=owner,
+        name=name,
+        number=number,
+    )
     head_ref = pr_result["data"]["repository"]["pullRequest"]["headRefName"]
     assert isinstance(head_ref, str)
     orig_ref = re.sub(r'/head$', '/orig', head_ref)
@@ -161,24 +151,7 @@ def get_commit_and_tree_for_ref(
     ref: str,
 ) -> GitCommitAndTree:
     target = github.graphql_sync(
-    """
-      query ($repo_id: ID!, $ref: String!) {
-        node(id: $repo_id) {
-          ... on Repository {
-            ref(qualifiedName: $ref) {
-              target {
-                oid
-                ... on Commit {
-                  tree {
-                    oid
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    """,
+        ghstack.query.GRAPHQL_REF_TO_COMMIT_AND_TREE,
         repo_id=repo_id,
         ref=ref,
     )["data"]["node"]["ref"]["target"]

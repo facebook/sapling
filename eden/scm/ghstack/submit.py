@@ -955,6 +955,16 @@ Since we cannot proceed, ghstack will abort now.
                 skip = False
                 self.process_new_commit(s, stack_index)
 
+    # Mock point so tests don't have to be concerned with contents of PR body.
+    def _update_pr_body_and_title(self, stack_idx: int, stack_item: DiffMeta):
+        self.github.patch(
+            "repos/{owner}/{repo}/pulls/{number}"
+            .format(owner=self.repo_owner, repo=self.repo_name,
+                    number=stack_item.number),
+            body=RE_STACK.sub(self._format_stack(stack_idx), stack_item.body),
+            title=stack_item.title)
+
+
     def push_updates(self, *, import_help: bool = True) -> None:  # noqa: C901
         """
         To be called after prepare_updates: actually push the updates to
@@ -987,12 +997,7 @@ Since we cannot proceed, ghstack will abort now.
                             owner=self.repo_owner,
                             repo=self.repo_name,
                             number=s.number))
-                self.github.patch(
-                    "repos/{owner}/{repo}/pulls/{number}"
-                    .format(owner=self.repo_owner, repo=self.repo_name,
-                            number=s.number),
-                    body=RE_STACK.sub(self._format_stack(i), s.body),
-                    title=s.title)
+                self._update_pr_body_and_title(i, s)
             else:
                 logging.info(
                     "# Skipping closed https://{github_url}/{owner}/{repo}/pull/{number}"
