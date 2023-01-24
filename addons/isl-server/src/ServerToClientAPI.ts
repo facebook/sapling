@@ -24,7 +24,6 @@ import type {
 } from 'isl/src/types';
 
 import {absolutePathForFileInRepo} from './Repository';
-import {browserServerPlatform} from './serverPlatform';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
@@ -51,7 +50,6 @@ export default class ServerToClientAPI {
 
   /** Disposables that must be disposed whenever the current repo is changed */
   private repoDisposables: Array<Disposable> = [];
-  private platform: ServerPlatform;
 
   private queuedMessages: Array<IncomingMessage> = [];
   private currentState:
@@ -69,11 +67,7 @@ export default class ServerToClientAPI {
 
   private pageId = randomId();
 
-  constructor(private connection: ClientConnection) {
-    this.platform = connection.platform ?? browserServerPlatform;
-    connection.logger?.log(
-      `platform '${this.platform.platformName}', version '${connection.version}'`,
-    );
+  constructor(private platform: ServerPlatform, private connection: ClientConnection) {
     this.incomingListener = this.connection.onDidReceiveMessage(buf => {
       const message = buf.toString('utf-8');
       const data = deserializeFromString(message) as IncomingMessage;

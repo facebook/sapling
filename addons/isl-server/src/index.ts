@@ -12,6 +12,7 @@ import {Repository} from './Repository';
 import {repositoryCache} from './RepositoryCache';
 import ServerToClientAPI from './ServerToClientAPI';
 import {fileLogger, stdoutLogger} from './logger';
+import {browserServerPlatform} from './serverPlatform';
 
 export interface ClientConnection {
   /**
@@ -51,10 +52,13 @@ export function onClientConnection(connection: ClientConnection): () => void {
     (connection.logFileLocation ? fileLogger(connection.logFileLocation) : stdoutLogger);
   connection.logger = logger;
   const command = connection?.command ?? 'sl';
+  const platform = connection?.platform ?? browserServerPlatform;
+  const version = connection?.version ?? 'unknown';
   logger.log(`establish ${command} client connection for ${connection.cwd}`);
+  logger.log(`platform '${platform.platformName}', version '${version}'`);
 
   // start listening to messages
-  let api: ServerToClientAPI | null = new ServerToClientAPI(connection);
+  let api: ServerToClientAPI | null = new ServerToClientAPI(platform, connection);
 
   const repositoryReference = repositoryCache.getOrCreate(command, logger, connection.cwd);
   repositoryReference.promise.then(repoOrError => {
