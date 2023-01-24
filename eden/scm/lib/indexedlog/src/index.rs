@@ -2705,10 +2705,10 @@ impl Index {
             // Outside critical section
             self.clear_dirty();
 
-            #[cfg(debug_assertions)]
-            #[cfg(test)]
-            self.verify()
-                .expect("sync() should not break checksum check");
+            if cfg!(all(debug_assertions, test)) {
+                self.verify()
+                    .expect("sync() should not break checksum check");
+            }
 
             Ok(new_len)
         })();
@@ -4222,20 +4222,21 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.l
     fn test_checksum_bitflip_with_size(checksum_log_size: u32) {
         let dir = tempdir().unwrap();
 
-        // Debug build is much slower than release build. Limit the key length to 1-byte.
-        #[cfg(debug_assertions)]
-        let keys = vec![vec![0x13], vec![0x17], vec![]];
+        let keys = if cfg!(debug_assertions) {
+            // Debug build is much slower than release build. Limit the key length to 1-byte.
+            vec![vec![0x13], vec![0x17], vec![]]
+        } else {
+            // Release build can afford 2-byte key test.
+            vec![
+                vec![0x12, 0x34],
+                vec![0x12, 0x78],
+                vec![0x34, 0x56],
+                vec![0x34],
+                vec![0x78],
+                vec![0x78, 0x9a],
+            ]
+        };
 
-        // Release build can afford 2-byte key test.
-        #[cfg(not(debug_assertions))]
-        let keys = vec![
-            vec![0x12, 0x34],
-            vec![0x12, 0x78],
-            vec![0x34, 0x56],
-            vec![0x34],
-            vec![0x78],
-            vec![0x78, 0x9a],
-        ];
         let opts = open_opts()
             .checksum_chunk_size_logarithm(checksum_log_size)
             .clone();
@@ -4282,11 +4283,7 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.l
             let detected = match index {
                 Err(_) => true,
                 Ok(index) => {
-                    #[cfg(debug_assertions)]
-                    let range = 0;
-                    #[cfg(not(debug_assertions))]
-                    let range = 0x10000;
-
+                    let range = if cfg!(debug_assertions) { 0 } else { 0x10000 };
                     (0..range).any(|key_int| {
                         let key = [(key_int >> 8) as u8, (key_int & 0xff) as u8];
                         is_corrupted(&index, &key)

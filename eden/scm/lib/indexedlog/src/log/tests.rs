@@ -1484,10 +1484,7 @@ fn test_multithread_sync() {
     const THREAD_COUNT: u8 = 30;
 
     // Release mode runs much faster.
-    #[cfg(debug_assertions)]
-    const WRITE_COUNT_PER_THREAD: u8 = 30;
-    #[cfg(not(debug_assertions))]
-    const WRITE_COUNT_PER_THREAD: u8 = 150;
+    const WRITE_COUNT_PER_THREAD: u8 = if cfg!(debug_assertions) { 30 } else { 150 };
 
     // Some indexes. They have different lag_threshold.
     fn index_copy(data: &[u8]) -> Vec<IndexOutput> {

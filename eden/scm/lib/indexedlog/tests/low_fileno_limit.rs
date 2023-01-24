@@ -36,15 +36,8 @@ mod unix_tests {
         let dir = tempdir().unwrap();
 
         // Release mode runs much faster.
-        #[cfg(debug_assertions)]
-        const THREAD_COUNT: u8 = 10;
-        #[cfg(not(debug_assertions))]
-        const THREAD_COUNT: u8 = 30;
-
-        #[cfg(debug_assertions)]
-        const WRITE_COUNT_PER_THREAD: u8 = 10;
-        #[cfg(not(debug_assertions))]
-        const WRITE_COUNT_PER_THREAD: u8 = 50;
+        const THREAD_COUNT: u8 = if cfg!(debug_assertions) { 10 } else { 30 };
+        const WRITE_COUNT_PER_THREAD: u8 = if cfg!(debug_assertions) { 10 } else { 50 };
 
         // Some indexes. They have different lag_threshold.
         fn index_ref(data: &[u8]) -> Vec<IndexOutput> {
