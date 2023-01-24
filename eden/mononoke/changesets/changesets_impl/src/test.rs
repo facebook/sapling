@@ -16,16 +16,22 @@ use caching_ext::MockStoreStats;
 use changesets::ChangesetEntry;
 use changesets::ChangesetInsert;
 use changesets::Changesets;
+use changesets::ChangesetsRef;
+use changesets::SortOrder;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::Future;
+use futures::TryStreamExt;
 use maplit::hashset;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
+use mononoke_types::Generation;
 use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
+use pretty_assertions::assert_eq;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
+use vec1::Vec1;
 
 use super::CachingChangesets;
 use super::SqlChangesets;
@@ -808,48 +814,85 @@ async fn caching_shared<C: Changesets + 'static>(
     Ok(())
 }
 
+async fn test_add_many_fixture<F: fixtures::TestRepoFixture + Send, C: Changesets>(
+    fb: FacebookInit,
+    changesets: &C,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = F::get_test_repo(fb).await;
+    let all_changeset_ids: Vec<_> = repo
+        .changesets()
+        .list_enumeration_range(&ctx, 0, 10000, Some((SortOrder::Ascending, 10000)), false)
+        .map_ok(|(cs_id, _)| cs_id)
+        .try_collect()
+        .await?;
+    let mut all_changesets = repo
+        .changesets()
+        .get_many(&ctx, all_changeset_ids.clone())
+        .await?;
+    all_changesets.sort_by_key(|entry| (entry.gen, entry.cs_id));
+    {
+        // Let's insert in two parts to make sure it works fine with
+        // pre-existing parents
+        let insert_data: Vec<_> = all_changesets
+            .clone()
+            .into_iter()
+            .map(|entry| {
+                (
+                    ChangesetInsert {
+                        cs_id: entry.cs_id,
+                        parents: entry.parents,
+                    },
+                    Generation::new(entry.gen),
+                )
+            })
+            .collect();
+        let mid = insert_data.len() / 2;
+        let left_part = &insert_data[..mid];
+        // Have some overlap to test we can reinsert changesets without issue
+        let right_part = &insert_data[(mid.max(2) - 2)..];
+        if let Ok(data) = Vec1::try_from(left_part) {
+            changesets.add_many(&ctx, data).await?;
+        }
+        if let Ok(data) = Vec1::try_from(right_part) {
+            changesets.add_many(&ctx, data).await?;
+        }
+    }
+    let mut new_changesets = changesets.get_many(&ctx, all_changeset_ids).await?;
+    new_changesets.sort_by_key(|entry| (entry.gen, entry.cs_id));
+    assert_eq!(all_changesets, new_changesets);
+
+    Ok(())
+}
+
 // NOTE: Use this wrapper macro to make sure tests are executed both with Changesets and
 // CachingChangesets. Define tests using #[test] if you need to only execute them for Changesets or
 // CachingChangesets.
 macro_rules! testify {
-    ($plain_name: ident, $caching_name: ident, $input: ident) => {
-        #[fbinit::test]
-        async fn $plain_name(fb: FacebookInit) -> Result<(), Error> {
-            run_test(fb, $input).await
-        }
+    ($test: ident) => {
+        paste::item! {
+            #[fbinit::test]
+            async fn [<test_ $test>](fb: FacebookInit) -> Result<(), Error> {
+                run_test(fb, $test).await
+            }
 
-        #[fbinit::test]
-        async fn $caching_name(fb: FacebookInit) -> Result<(), Error> {
-            run_caching_test(fb, $input).await
+            #[fbinit::test]
+            async fn [<test_caching_ $test>](fb: FacebookInit) -> Result<(), Error> {
+                run_caching_test(fb, $test).await
+            }
         }
     };
 }
 
-testify!(test_add_and_get, test_caching_add_and_get, add_and_get);
-testify!(
-    test_add_missing_parents,
-    test_caching_add_missing_parents,
-    add_missing_parents
-);
-testify!(test_missing, test_caching_missing, missing);
-testify!(test_duplicate, test_caching_duplicate, duplicate);
-testify!(
-    test_broken_duplicate,
-    test_caching_broken_duplicate,
-    broken_duplicate
-);
-testify!(test_complex, test_caching_complex, complex);
-testify!(test_get_many, test_caching_get_many, get_many);
-testify!(
-    test_get_many_by_prefix,
-    test_caching_get_many_by_prefix,
-    get_many_by_prefix
-);
-testify!(
-    test_get_many_missing,
-    test_caching_get_many_missing,
-    get_many_missing
-);
+testify!(add_and_get);
+testify!(add_missing_parents);
+testify!(missing);
+testify!(duplicate);
+testify!(broken_duplicate);
+testify!(complex);
+testify!(get_many);
+testify!(get_many_by_prefix);
+testify!(get_many_missing);
 
 #[fbinit::test]
 async fn test_caching_fill(fb: FacebookInit) -> Result<(), Error> {
@@ -860,3 +903,31 @@ async fn test_caching_fill(fb: FacebookInit) -> Result<(), Error> {
 async fn test_caching_shared(fb: FacebookInit) -> Result<(), Error> {
     run_test(fb, caching_shared).await
 }
+
+macro_rules! add_many_tests {
+    ($fixture: ident) => {
+        paste::item! {
+            async fn [<add_many_ $fixture:snake>]<C: Changesets>(fb: FacebookInit, changesets: C) -> Result<(), Error> {
+                test_add_many_fixture::<fixtures::$fixture, C>(fb, &changesets).await
+            }
+            testify!([<add_many_ $fixture:snake>]);
+        }
+    };
+    ($( $fixture:ident ),+ ) => {
+        $(
+            add_many_tests!($fixture);
+        )+
+    };
+}
+
+add_many_tests!(
+    Linear,
+    BranchEven,
+    BranchUneven,
+    BranchWide,
+    MergeEven,
+    MergeUneven,
+    UnsharedMergeEven,
+    UnsharedMergeUneven,
+    ManyDiamonds
+);
