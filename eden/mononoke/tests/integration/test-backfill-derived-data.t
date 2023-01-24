@@ -81,3 +81,19 @@ backfill derived data
   *] Finished derived data command execution for repo repo* (glob)
   $ backfill_derived_data single c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --all-types 2>&1 | grep 'derived .* in' | wc -l
   10
+
+  $ testtool_drawdag -R repo <<EOF
+  > C-D-E-F-G
+  >      \
+  >       H
+  > # exists: C c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  > EOF
+  C=c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  D=81933c8d8759698bb4052d063a6d7a4ec31a7b31416c24bc302ff99baae915b6
+  E=0b22a371e68006839d9f5ff1286c7fffc72e1db96737a75898ededde45a95032
+  F=1285e6a06283ff3cfe6e20035e3d730d8c8fb8c19213b1213e5403982c423d00
+  G=1c0cf47cdb1ea6e4aa571543bf5047bf8354e354b3b20fa48c16c659df54f26a
+  H=ebc9ac5205f2a188f62a5fa43ba092ba4e51744992317aea5b7ee64657c21110
+
+  $ backfill_derived_data backfill-all --parallel --batch-size=10 --changeset $G 2>&1 | grep 'found changesets:'
+  * found changesets: 4 * (glob)

@@ -45,9 +45,8 @@ add a mapping key prefix to skeleton manifests to test these work
   > blame_version=2
   > CONFIG
 
-start the tailer with tailing and backfilling some different types
-normally the tailer runs forever, but for this test we will make it
-stop when it becomes idle.
+Backfill all enabled data types. That command uses the same logic as tailer does
+but doesn't run forever.
   $ backfill_derived_data backfill-all --parallel --batch-size=10 --gap-size=3 &>/dev/null
 
 Heads should all be derived

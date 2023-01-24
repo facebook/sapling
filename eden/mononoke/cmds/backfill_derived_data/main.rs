@@ -413,6 +413,12 @@ impl DerivedDataProcess {
                             .help("size of gap to leave in derived data types that support gaps"),
                     )
                     .arg(
+                        Arg::with_name(ARG_CHANGESET)
+                            .long(ARG_CHANGESET)
+                            .takes_value(true)
+                            .help("changeset by {hg|bonsai} hash or bookmark, used instead of all public heads"),
+                    )
+                    .arg(
                         Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
                             .long(ARG_BACKFILL_CONFIG_NAME)
                             .help("sets the name for backfilling derived data types config")
@@ -717,6 +723,11 @@ async fn run_subcmd<'a>(
                 .map(str::parse::<usize>)
                 .transpose()?;
 
+            let csid = if let Some(cs) = sub_m.value_of_lossy(ARG_CHANGESET) {
+                Some(helpers::csid_resolve(ctx, repo.clone(), cs.to_string()).await?)
+            } else {
+                None
+            };
             subcommand_backfill_all(
                 ctx,
                 &repo,
@@ -727,6 +738,7 @@ async fn run_subcmd<'a>(
                 gap_size,
                 backfill_config_name,
                 wait_for_replication,
+                csid,
             )
             .await
         }
@@ -973,6 +985,7 @@ async fn subcommand_backfill_all(
     gap_size: Option<usize>,
     config_name: &str,
     wait_for_replication: WaitForReplication,
+    csid: Option<ChangesetId>,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
@@ -982,7 +995,11 @@ async fn subcommand_backfill_all(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let heads = get_most_recent_heads(ctx, &repo.blob_repo).await?;
+    let heads = if let Some(csid) = csid {
+        vec![csid]
+    } else {
+        get_most_recent_heads(ctx, &repo.blob_repo).await?
+    };
     backfill_heads(
         ctx,
         &repo.blob_repo,
