@@ -168,9 +168,29 @@ struct MemChecksum {
     chunk_size_logarithm: u32,
 
     /// Checksums per chunk.
+    ///
+    /// The start of a chunk always aligns with the chunk size, which might not
+    /// match `start`. For example, given the `start` and `end` shown below:
+    ///
+    /// ```plain,ignore
+    /// | chunk 1 (1MB) | chunk 2 (1MB) | chunk 3 (1MB) | chunk 4 (200K) |
+    ///                     |<-start                                end->|
+    /// ```
+    ///
+    /// The `xxhash_list_to_write` would be:
+    ///
+    /// ```plain,ignore
+    /// [xxhash(chunk 2 (1MB)), xxhash(chunk 3 (1MB)), xxhash(chunk 4 (200K))]
+    /// ```
+    ///
+    /// For the root checksum (`Index::chunksum`), the `xxhash_list` should
+    /// conver the entire buffer, as if `start` is 0 (but `start` is not 0).
     xxhash_list: Vec<u64>,
 
-    /// Whether chunks are checked.
+    /// Whether chunks are checked against `xxhash_list`.
+    ///
+    /// Stored in a bit vector. `checked.len() * 64` should be >=
+    /// `xxhash_list.len()`.
     checked: Vec<AtomicU64>,
 }
 
@@ -1521,7 +1541,7 @@ impl MemChecksum {
             // The previous Checksum entry covers chunk 0,1,2(incomplete).
             // This Checksum entry covers chunk 2(complete),3,4,5(incomplete).
 
-            // Read the new chunksums.
+            // Read the new checksums.
             let start_chunk_index = (previous_offset >> chunk_size_logarithm) as usize;
             for i in start_chunk_index..chunk_needed {
                 let incomplete_chunk = offset % chunk_size > 0 && i == chunk_needed - 1;
@@ -1565,7 +1585,7 @@ impl MemChecksum {
 
     /// Incrementally update the checksums so it covers the file content + `append_buf`.
     /// Assume the file content is append-only.
-    /// Call this before writing write_to.
+    /// Call this before calling `write_to`.
     fn update(
         &mut self,
         old_buf: &[u8],
@@ -1594,20 +1614,25 @@ impl MemChecksum {
             ));
         }
 
-        //              start_chunk_offset
+        //        start_chunk_offset (start of chunk including self.end)
         //                   v
-        //                   |(1)-|
+        //                   |(1)|
         // |chunk|chunk|chunk|chunk|chunk|chunk|chunk|chunk|chunk|
         //                   |---file_buf---|
         // |--------------file--------------|
-        // |-------old_buf--------|
-        // |-----(2)-----|---(3)--|         |---append_buf---|
-        //               ^        ^         ^                ^
-        //          self.start  self.end  file_len     new_total_len
+        // |-------old_buf-------|
+        // |-----(2)-----|--(3)--|---(4)----|---append_buf---|
+        //               ^       ^          ^                ^
+        //          self.start self.end   file_len     new_total_len
         //
-        // (1): range being rewritten
+        // (1): range being re-checksummed
         // (2): covered by the previous Checksum
         // (3): covered by the current Checksum
+        // (4): range written on-disk after `Index::open` (ex. by another process)
+        //
+        // old_buf:    buffer read at open time.
+        // file:       buffer read at flush time (right now, with a lock).
+        // append_buf: buffer to append to the file (protected by the same lock).
 
         let file_buf = {
             let mut file_buf = vec![0; (file_len - start_chunk_offset) as usize];
