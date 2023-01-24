@@ -158,14 +158,19 @@ where
     .await?;
 
     let mut slices = Vec::new();
+    let mut next_log_size = 1;
     while let Some((cur_gen, mut heads)) = head_generation_groups.pop_last() {
-        info!(
-            ctx.logger(),
-            "Adding slice starting at generation {} with {} heads ({} slices queued)",
-            cur_gen,
-            heads.len(),
-            head_generation_groups.len()
-        );
+        if slices.len() > next_log_size {
+            info!(
+                ctx.logger(),
+                "Adding slice starting at generation {} with {} heads ({} slices queued, {} so far)",
+                cur_gen,
+                heads.len(),
+                head_generation_groups.len(),
+                slices.len(),
+            );
+            next_log_size *= 2;
+        }
         let mut new_heads_groups = HashMap::new();
         let mut seen: HashSet<_> = heads.iter().cloned().collect();
         while let Some(csid) = heads.pop() {
