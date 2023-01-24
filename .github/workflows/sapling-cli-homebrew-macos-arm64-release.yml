@@ -21,7 +21,7 @@ jobs:
 
         -s c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6 -f openssl@1.1 \
 
-        -s 4e968bd8f28aee189bd829c2b9feabeb8c5edd95b949cf327ea2f1f62ac76e66 -f python@3.11 \
+        -s 54c7eb00a23451b956abe4797a759e29824d33953fb57715bde6b9abb2500555 -f python@3.11 \
 
         -t aarch64-apple-darwin \
 

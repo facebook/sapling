@@ -128,7 +128,7 @@ def set_up_downloaded_crates(tmpdir):
     print(f"LOCATION IS {brew_location}")
     dylib_location = os.path.join(
         brew_location,
-        "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib",
+        "python@3.11/3.11.1/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib",
     )
     run_cmd(
         [
@@ -137,14 +137,14 @@ def set_up_downloaded_crates(tmpdir):
             os.path.join(tmpdir, "python@3.11.bottle.tar.gz"),
             "-C",
             tmpdir,
-            "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/Python",
+            "python@3.11/3.11.1/Frameworks/Python.framework/Versions/3.11/Python",
         ]
     )
     os.remove(dylib_location)
     shutil.copy(
         os.path.join(
             tmpdir,
-            "python@3.11/3.11.0/Frameworks/Python.framework/Versions/3.11/Python",
+            "python@3.11/3.11.1/Frameworks/Python.framework/Versions/3.11/Python",
         ),
         dylib_location,
     )
