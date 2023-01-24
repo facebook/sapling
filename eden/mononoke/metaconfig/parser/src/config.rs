@@ -221,7 +221,6 @@ fn parse_with_repo_definition(
         sparse_profiles_config,
         hg_sync_config,
         backup_hg_sync_config,
-        deep_sharded,
         update_logging_config,
         commit_graph_config,
         deep_sharding_config,
@@ -279,7 +278,6 @@ fn parse_with_repo_definition(
         RepoReadOnly::ReadWrite
     };
 
-    let deep_sharded = deep_sharded.unwrap_or(false);
     let redaction = if redaction.unwrap_or(true) {
         Redaction::Enabled
     } else {
@@ -380,7 +378,6 @@ fn parse_with_repo_definition(
         sparse_profiles_config,
         hg_sync_config,
         backup_hg_sync_config,
-        deep_sharded,
         update_logging_config,
         commit_graph_config,
         default_commit_identity_scheme,
@@ -792,7 +789,6 @@ mod test {
             hook_max_file_size=456
             repo_client_use_warm_bookmarks_cache=true
             phabricator_callsign="FBS"
-            deep_sharded=true
 
             [cache_warmup]
             bookmark="master"
@@ -1072,7 +1068,6 @@ mod test {
             RepoConfig {
                 enabled: true,
                 default_commit_identity_scheme: CommitIdentityScheme::default(),
-                deep_sharded: true,
                 storage_config: main_storage_config.clone(),
                 generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
@@ -1355,7 +1350,6 @@ mod test {
                 sparse_profiles_config: None,
                 hg_sync_config: None,
                 backup_hg_sync_config: None,
-                deep_sharded: false,
                 update_logging_config: UpdateLoggingConfig::default(),
                 commit_graph_config: CommitGraphConfig::default(),
                 deep_sharding_config: None,

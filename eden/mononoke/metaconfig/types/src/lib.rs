@@ -217,11 +217,6 @@ pub struct RepoConfig {
     pub hg_sync_config: Option<HgSyncConfig>,
     /// Configuration related to hg-sync job for backup repos
     pub backup_hg_sync_config: Option<HgSyncConfig>,
-    /// Flag that determines if the repo is shallow sharded or deep sharded,
-    /// shallow-sharded: Requests are sharded but repo is on every server
-    /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
-    /// on select servers.
-    pub deep_sharded: bool,
     /// Configuration for update logging.
     pub update_logging_config: UpdateLoggingConfig,
     /// Configuration for the commit graph.
@@ -229,6 +224,9 @@ pub struct RepoConfig {
     /// Default commit identity scheme. Some repos can be hg-mirrored git repos.
     pub default_commit_identity_scheme: CommitIdentityScheme,
     /// Config determining if the repo is deep sharded in the context of a service.
+    /// shallow-sharded: Requests are sharded but repo is on every server
+    /// deep-sharded: In addition to requests, repo is also sharded, i.e. present
+    /// on select servers.
     pub deep_sharding_config: Option<ShardingModeConfig>,
 }
 
