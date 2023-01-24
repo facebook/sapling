@@ -9,7 +9,7 @@ class CircleCIEndpoint(metaclass=ABCMeta):
 
         Returns: parsed JSON response
         """
-        return await self.rest('get', path, **kwargs)
+        return await self.rest("get", path, **kwargs)
 
     async def post(self, path: str, **kwargs: Any) -> Any:
         """
@@ -17,7 +17,7 @@ class CircleCIEndpoint(metaclass=ABCMeta):
 
         Returns: parsed JSON response
         """
-        return await self.rest('post', path, **kwargs)
+        return await self.rest("post", path, **kwargs)
 
     @abstractmethod
     async def rest(self, method: str, path: str, **kwargs: Any) -> Any:

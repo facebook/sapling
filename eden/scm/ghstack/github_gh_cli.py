@@ -7,11 +7,11 @@ import asyncio
 import itertools
 import json
 import os
-from typing import Dict, List, Optional, TypeVar, Union, Any
+from typing import Any, Dict, List, Optional, Union
 
 from edenscm import error
-from edenscm.result import Result, Ok, Err
 from edenscm.i18n import _
+from edenscm.result import Err, Ok, Result
 
 
 JsonDict = Dict[str, Any]

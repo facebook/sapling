@@ -4,8 +4,18 @@ import os
 import shlex
 import subprocess
 import sys
-from typing import (IO, Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union,
-                    overload)
+from typing import (
+    Any,
+    Dict,
+    IO,
+    List,
+    Optional,
+    overload,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from ghstack.ghs_types import GitCommitHash
 
@@ -26,14 +36,14 @@ def log_command(args: Sequence[str]) -> None:
         *args: the list of command line arguments you want to run
         env: the dictionary of environment variable settings for the command
     """
-    cmd = ' '.join(shlex.quote(arg) for arg in args)
+    cmd = " ".join(shlex.quote(arg) for arg in args)
     logging.info("$ " + cmd)
 
 
-K = TypeVar('K')
+K = TypeVar("K")
 
 
-V = TypeVar('V')
+V = TypeVar("V")
 
 
 def merge_dicts(x: Dict[K, V], y: Dict[K, V]) -> Dict[K, V]:
@@ -62,10 +72,9 @@ class Shell(object):
     # The current Unix timestamp.  Only used during testing mode.
     testing_time: int
 
-    def __init__(self,
-                 quiet: bool = False,
-                 cwd: Optional[str] = None,
-                 testing: bool = False):
+    def __init__(
+        self, quiet: bool = False, cwd: Optional[str] = None, testing: bool = False
+    ):
         """
         Args:
             cwd: Current working directory of the shell.  Pass None to
@@ -92,14 +101,17 @@ class Shell(object):
         """Whether this shell corresponds to a Sapling working copy."""
         return False
 
-    def sh(self, *args: str,  # noqa: C901
-           env: Optional[Dict[str, str]] = None,
-           stderr: _HANDLE = None,
-           # TODO: Arguably bytes should be accepted here too
-           input: Optional[str] = None,
-           stdin: _HANDLE = None,
-           stdout: _HANDLE = subprocess.PIPE,
-           exitcode: bool = False) -> _SHELL_RET:
+    def sh(
+        self,
+        *args: str,  # noqa: C901
+        env: Optional[Dict[str, str]] = None,
+        stderr: _HANDLE = None,
+        # TODO: Arguably bytes should be accepted here too
+        input: Optional[str] = None,
+        stdin: _HANDLE = None,
+        stdout: _HANDLE = subprocess.PIPE,
+        exitcode: bool = False
+    ) -> _SHELL_RET:
         """
         Run a command specified by args, and return string representing
         the stdout of the run command, raising an error if exit code
@@ -142,8 +154,9 @@ class Shell(object):
         #   we need to assume *some* sort of buffering with the
         #   stream API.
 
-        async def process_stream(proc_stream: asyncio.StreamReader, setting: _HANDLE,
-                                 default_stream: IO[str]) -> bytes:
+        async def process_stream(
+            proc_stream: asyncio.StreamReader, setting: _HANDLE, default_stream: IO[str]
+        ) -> bytes:
             output = []
             while True:
                 try:
@@ -163,20 +176,20 @@ class Shell(object):
                     os.write(setting, line)
                 elif setting is None:
                     # Sigh.  See https://stackoverflow.com/questions/55681488/python-3-write-binary-to-stdout-respecting-buffering
-                    default_stream.write(line.decode('utf-8'))
+                    default_stream.write(line.decode("utf-8"))
                 else:
                     # NB: don't use setting.write directly, that will
                     # not properly handle binary.  This gives us
                     # "parity" with the normal subprocess implementation
                     os.write(setting.fileno(), line)
-            return b''.join(output)
+            return b"".join(output)
 
         async def feed_input(stdin_writer: Optional[asyncio.StreamWriter]) -> None:
             if stdin_writer is None:
                 return
             if not input:
                 return
-            stdin_writer.write(input.encode('utf-8'))
+            stdin_writer.write(input.encode("utf-8"))
             await stdin_writer.drain()
             stdin_writer.close()
 
@@ -197,7 +210,7 @@ class Shell(object):
                 feed_input(proc.stdin),
                 process_stream(proc_stdout, stdout, sys.stdout),
                 process_stream(proc_stderr, stderr, sys.stderr),
-                proc.wait()
+                proc.wait(),
             )
             assert proc.returncode is not None
             return (proc.returncode, out, err)
@@ -211,15 +224,17 @@ class Shell(object):
         if out:
             logging.debug(
                 ("# stdout:\n" if err else "")
-                + out.decode(errors="backslashreplace").replace('\0', '\\0'))
+                + out.decode(errors="backslashreplace").replace("\0", "\\0")
+            )
 
         if exitcode:
             logging.debug("Exit code: {}".format(returncode))
             return returncode == 0
         if returncode != 0:
             raise RuntimeError(
-                "{} failed with exit code {}. Output was '{}'"
-                .format(' '.join(args), returncode, out)
+                "{} failed with exit code {}. Output was '{}'".format(
+                    " ".join(args), returncode, out
+                )
             )
 
         if stdout == subprocess.PIPE:
@@ -248,8 +263,7 @@ class Shell(object):
 
         ...
 
-    def git(self, *args: str, **kwargs: Any  # noqa: F811
-            ) -> _SHELL_RET:
+    def git(self, *args: str, **kwargs: Any) -> _SHELL_RET:  # noqa: F811
         """
         Run a git command.  The returned stdout has trailing newlines stripped.
 
@@ -274,19 +288,15 @@ class Shell(object):
             env.setdefault("GIT_AUTHOR_NAME", "A U Thor")
             env.setdefault("GIT_COMMITTER_EMAIL", "committer@example.com")
             env.setdefault("GIT_COMMITTER_NAME", "C O Mitter")
-            env.setdefault("GIT_COMMITTER_DATE",
-                           "{} -0700".format(self.testing_time))
-            env.setdefault("GIT_AUTHOR_DATE",
-                           "{} -0700".format(self.testing_time))
-            if 'stderr' not in kwargs:
-                kwargs['stderr'] = subprocess.PIPE
+            env.setdefault("GIT_COMMITTER_DATE", "{} -0700".format(self.testing_time))
+            env.setdefault("GIT_AUTHOR_DATE", "{} -0700".format(self.testing_time))
+            if "stderr" not in kwargs:
+                kwargs["stderr"] = subprocess.PIPE
 
         return self._maybe_rstrip(self.sh(*(("git",) + args), **kwargs))
 
-    def git_commit_tree(self, *args, **kwargs: Any  # noqa: F811
-            ) -> GitCommitHash:
-        """Run `git commit-tree`, adding GPG flags, if appropriate.
-        """
+    def git_commit_tree(self, *args, **kwargs: Any) -> GitCommitHash:  # noqa: F811
+        """Run `git commit-tree`, adding GPG flags, if appropriate."""
         gpg_args = gpg_args_if_necessary(self)
         full_args = ["commit-tree"] + gpg_args + list(args)
         return GitCommitHash(self.git(*full_args, **kwargs))
@@ -304,8 +314,7 @@ class Shell(object):
     def hg(self, *args: str, **kwargs: Any) -> _SHELL_RET:
         ...
 
-    def hg(self, *args: str, **kwargs: Any  # noqa: F811
-           ) -> _SHELL_RET:
+    def hg(self, *args: str, **kwargs: Any) -> _SHELL_RET:  # noqa: F811
         """
         Run a hg command.  The returned stdout has trailing newlines stripped.
 
@@ -325,7 +334,7 @@ class Shell(object):
             **kwargs: Any valid kwargs for sh()
         """
 
-        kwargs.setdefault('stdout', sys.stderr)
+        kwargs.setdefault("stdout", sys.stderr)
 
         return self._maybe_rstrip(self.sh(*(("jf",) + args), **kwargs))
 
@@ -366,7 +375,12 @@ def gpg_args_if_necessary(shell: Shell) -> List[str]:
         try:
             # Why the complicated compare
             # https://git-scm.com/docs/git-config#Documentation/git-config.txt-boolean
-            _should_sign = shell.git("config", "--get", "commit.gpgsign") in ("yes", "on", "true", "1")
+            _should_sign = shell.git("config", "--get", "commit.gpgsign") in (
+                "yes",
+                "on",
+                "true",
+                "1",
+            )
         except (subprocess.CalledProcessError, RuntimeError):
             # Note shell.git() raises RuntimeError for a non-zero exit code.
             _should_sign = False

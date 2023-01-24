@@ -4,11 +4,11 @@
 # GNU General Public License version 2.
 
 import asyncio
-from typing import Any, Dict, Generic, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Dict, Sequence, Union
 
 import ghstack.github
-from ghstack.github_gh_cli import make_request, JsonDict
 from edenscm.result import Result
+from ghstack.github_gh_cli import JsonDict, make_request
 
 
 class GitHubCLIEndpoint(ghstack.github.GitHubEndpoint):

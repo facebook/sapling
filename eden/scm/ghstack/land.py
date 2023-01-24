@@ -8,15 +8,21 @@ import ghstack.shell
 from ghstack.ghs_types import GitCommitHash
 
 
-def main(pull_request: str,
-         remote_name: str,
-         github: ghstack.github.GitHubEndpoint,
-         sh: ghstack.shell.Shell,
-         github_url: str) -> None:
+def main(
+    pull_request: str,
+    remote_name: str,
+    github: ghstack.github.GitHubEndpoint,
+    sh: ghstack.shell.Shell,
+    github_url: str,
+) -> None:
     import ghstack
+
     if isinstance(sh, ghstack.sapling_shell.SaplingShell):
         import ghstack.sapling_land
-        return ghstack.sapling_land.main(pull_request, remote_name, github, sh, github_url)
+
+        return ghstack.sapling_land.main(
+            pull_request, remote_name, github, sh, github_url
+        )
 
     # We land the entire stack pointed to by a URL.
     # Local state is ignored; PR is source of truth
@@ -42,7 +48,9 @@ def main(pull_request: str,
     # Get up-to-date
     sh.git("fetch", "--prune", remote_name)
     remote_orig_ref = remote_name + "/" + orig_ref
-    base = GitCommitHash(sh.git("merge-base", f"{remote_name}/{default_branch}", remote_orig_ref))
+    base = GitCommitHash(
+        sh.git("merge-base", f"{remote_name}/{default_branch}", remote_orig_ref)
+    )
 
     # compute the stack of commits in chronological order (does not
     # include base)
@@ -68,11 +76,14 @@ def main(pull_request: str,
             # We got this from GitHub, this better not be corrupted
             assert pr_resolved is not None
 
-            stack_orig_refs.append(ghstack.github_utils.lookup_pr_to_orig_ref(
-                github,
-                owner=pr_resolved.owner,
-                name=pr_resolved.repo,
-                number=pr_resolved.number))
+            stack_orig_refs.append(
+                ghstack.github_utils.lookup_pr_to_orig_ref(
+                    github,
+                    owner=pr_resolved.owner,
+                    name=pr_resolved.repo,
+                    number=pr_resolved.number,
+                )
+            )
 
         # OK, actually do the land now
         for orig_ref in stack_orig_refs:
@@ -96,8 +107,8 @@ def main(pull_request: str,
 
         for orig_ref in stack_orig_refs:
             # TODO: regex here so janky
-            base_ref = re.sub(r'/orig$', '/base', orig_ref)
-            head_ref = re.sub(r'/orig$', '/head', orig_ref)
+            base_ref = re.sub(r"/orig$", "/base", orig_ref)
+            head_ref = re.sub(r"/orig$", "/head", orig_ref)
             sh.git("push", remote_name, f"{remote_name}/{head_ref}:{base_ref}")
 
         # All good! Push!
@@ -106,8 +117,8 @@ def main(pull_request: str,
         # Delete the branches
         for orig_ref in stack_orig_refs:
             # TODO: regex here so janky
-            base_ref = re.sub(r'/orig$', '/base', orig_ref)
-            head_ref = re.sub(r'/orig$', '/head', orig_ref)
+            base_ref = re.sub(r"/orig$", "/base", orig_ref)
+            head_ref = re.sub(r"/orig$", "/head", orig_ref)
             sh.git("push", remote_name, "--delete", orig_ref, base_ref, head_ref)
 
     finally:

@@ -7,13 +7,15 @@ import ghstack.shell
 from ghstack.ghs_types import GitHubNumber, GitTreeHash
 
 RE_GH_METADATA = re.compile(
-    r'gh-metadata: (?P<owner>[^/]+) (?P<repo>[^/]+) (?P<number>[0-9]+) '
-    r'gh/(?P<username>[a-zA-Z0-9-]+)/(?P<ghnum>[0-9]+)/head', re.MULTILINE)
+    r"gh-metadata: (?P<owner>[^/]+) (?P<repo>[^/]+) (?P<number>[0-9]+) "
+    r"gh/(?P<username>[a-zA-Z0-9-]+)/(?P<ghnum>[0-9]+)/head",
+    re.MULTILINE,
+)
 
 
 RAW_PULL_REQUEST_RESOLVED = (
-    r'Pull Request resolved: '
-    r'https://{github_url}/(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/(?P<number>[0-9]+)'
+    r"Pull Request resolved: "
+    r"https://{github_url}/(?P<owner>[^/]+)/(?P<repo>[^/]+)/pull/(?P<number>[0-9]+)"
 )
 
 
@@ -22,7 +24,7 @@ def re_pull_request_resolved(github_url: str) -> Pattern[str]:
 
 
 def re_pull_request_resolved_w_sp(github_url: str) -> Pattern[str]:
-    return re.compile(r'\n*' + RAW_PULL_REQUEST_RESOLVED.format(github_url=github_url))
+    return re.compile(r"\n*" + RAW_PULL_REQUEST_RESOLVED.format(github_url=github_url))
 
 
 @dataclass
@@ -32,10 +34,12 @@ class PullRequestResolved:
     number: GitHubNumber
 
     def url(self, github_url: str) -> str:
-        return "https://{}/{}/{}/pull/{}".format(github_url, self.owner, self.repo, self.number)
+        return "https://{}/{}/{}/pull/{}".format(
+            github_url, self.owner, self.repo, self.number
+        )
 
     @staticmethod
-    def search(s: str, github_url: str) -> Optional['PullRequestResolved']:
+    def search(s: str, github_url: str) -> Optional["PullRequestResolved"]:
         m = re_pull_request_resolved(github_url).search(s)
         if m is not None:
             return PullRequestResolved(
@@ -58,6 +62,7 @@ class Patch(metaclass=ABCMeta):
     Abstract representation of a patch, i.e., some actual
     change between two trees.
     """
+
     @abstractmethod
     def apply(self, sh: ghstack.shell.Shell, base_tree: GitTreeHash) -> GitTreeHash:
         pass
@@ -69,6 +74,7 @@ class Diff:
     An abstract representation of a diff.  Diffs can come from
     git or hg.
     """
+
     # Title of the diff
     title: str
 

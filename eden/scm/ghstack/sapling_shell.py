@@ -1,31 +1,35 @@
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List, Optional
+
+import ghstack
+import ghstack.config
 
 from edenscm import error, gpg
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
-import ghstack
-import ghstack.config
 from ghstack.ghs_types import GitCommitHash
 from ghstack.shell import _SHELL_RET
 
 WILDCARD_ARG = {}
 
+
 class SaplingShell(ghstack.shell.Shell):
-    def __init__(self,
-                 *,
-                 conf: ghstack.config.Config,
-                 ui = None,  # Sapling ui object.
-                 repo = None,  # Sapling repo object.
-                 git_dir: str,
-                 user_name: str,
-                 user_email: str,
-                 quiet: bool = False,
-                 cwd: Optional[str] = None,
-                 testing: bool = False,
-                 sapling_cli: str = "sl"):
+    def __init__(
+        self,
+        *,
+        conf: ghstack.config.Config,
+        ui=None,  # Sapling ui object.
+        repo=None,  # Sapling repo object.
+        git_dir: str,
+        user_name: str,
+        user_email: str,
+        quiet: bool = False,
+        cwd: Optional[str] = None,
+        testing: bool = False,
+        sapling_cli: str = "sl",
+    ):
         """Creates a new Shell that runs Git commands in terms of Sapling
         commands, as appropriate.
 
@@ -53,8 +57,7 @@ class SaplingShell(ghstack.shell.Shell):
         """Whether this shell corresponds to a Sapling working copy."""
         return True
 
-    def git(self, *_args: str, **kwargs: Any  # noqa: F811
-            ) -> _SHELL_RET:
+    def git(self, *_args: str, **kwargs: Any) -> _SHELL_RET:  # noqa: F811
         args = list(_args)
         remote_name = self.conf.remote_name
         if match_args(["remote", "get-url", remote_name], args):
@@ -62,21 +65,27 @@ class SaplingShell(ghstack.shell.Shell):
         elif match_args(["checkout"], args):
             args[0] = "goto"
         elif match_args(["fetch", "--prune"], args):
-            raise ValueError(f"unexpected use of `git fetch` in SaplingShell: {' '.join(args)}")
+            raise ValueError(
+                f"unexpected use of `git fetch` in SaplingShell: {' '.join(args)}"
+            )
         elif match_args(["merge-base", WILDCARD_ARG, "HEAD"], args):
             # remote is probably "origin/main", which we need to convert to
             # "main" to use with the `log` subcommand.
             remote = args[1]
-            index = remote.rfind('/')
+            index = remote.rfind("/")
             if index != -1:
-                remote = remote[(index+1):]
-            return self._run_sapling_command(["log", "-T", "{node}", "-r", f"ancestor(., {remote})"])
+                remote = remote[(index + 1) :]
+            return self._run_sapling_command(
+                ["log", "-T", "{node}", "-r", f"ancestor(., {remote})"]
+            )
         elif match_args(["push", remote_name], args):
             if len(args) == 2:
                 raise ValueError(f"expected more args: {args}")
             args[1] = self._get_origin()
         elif match_args(["reset"], args):
-            raise ValueError(f"unexpected use of `git reset` in SaplingShell: {' '.join(args)}")
+            raise ValueError(
+                f"unexpected use of `git reset` in SaplingShell: {' '.join(args)}"
+            )
 
         git_args = self._rewrite_args(args)
         full_args = ["--git-dir", self.git_dir] + git_args
@@ -88,14 +97,14 @@ class SaplingShell(ghstack.shell.Shell):
         # When running queries against a bare repo via `git --git-dir`, Git will
         # not be able to resolve arguments like HEAD, so we must resolve those
         # to a full hash before running Git.
-        if 'HEAD' in args:
+        if "HEAD" in args:
             # Approximate `sl whereami`.
             p1 = self.repo.dirstate.p1()
             if p1 == nullid:
                 raise error.Abort(_("could not find a current commit hash"))
 
             for index, arg in enumerate(args):
-                if arg == 'HEAD':
+                if arg == "HEAD":
                     args[index] = hex(p1)
 
         return args
@@ -118,7 +127,8 @@ class SaplingShell(ghstack.shell.Shell):
 
     def rewrite_commit_message(self, rev: str, commit_msg: str) -> Dict[str, str]:
         stdout = self.run_sapling_command(
-            "metaedit", "-q", "-T", "{nodechanges|json}", "-r", rev, "-m", commit_msg)
+            "metaedit", "-q", "-T", "{nodechanges|json}", "-r", rev, "-m", commit_msg
+        )
         # Note that updates will look something like:
         #
         # {
@@ -138,19 +148,24 @@ class SaplingShell(ghstack.shell.Shell):
         mappings = json.loads(stdout)
         return {k: v[0] for k, v in mappings.items()}
 
-    def git_commit_tree(self, *args, **kwargs: Any  # noqa: F811
-            ) -> GitCommitHash:
-        """Run `git commit-tree`, adding GPG flags, if appropriate.
-        """
-        config_flags = ['-c', f'user.name={self.user_name}', '-c', f'user.email={self.user_email}']
+    def git_commit_tree(self, *args, **kwargs: Any) -> GitCommitHash:  # noqa: F811
+        """Run `git commit-tree`, adding GPG flags, if appropriate."""
+        config_flags = [
+            "-c",
+            f"user.name={self.user_name}",
+            "-c",
+            f"user.email={self.user_email}",
+        ]
         keyid = gpg.get_gpg_keyid(self.ui)
-        gpg_args = [f'-S{keyid}'] if keyid else []
+        gpg_args = [f"-S{keyid}"] if keyid else []
         full_args = config_flags + ["commit-tree"] + gpg_args + list(args)
         stdout = self.git(*full_args, **kwargs)
         if isinstance(stdout, str):
             return GitCommitHash(stdout)
         else:
-            raise ValueError(f"Unexpected `{' '.join(full_args)}` returned {stdout} using {kwargs}")
+            raise ValueError(
+                f"Unexpected `{' '.join(full_args)}` returned {stdout} using {kwargs}"
+            )
 
 
 def match_args(pattern, args: List[str]) -> bool:
@@ -164,6 +179,8 @@ def match_args(pattern, args: List[str]) -> bool:
             if pattern_arg != arg:
                 return False
         else:
-            raise ValueError(f"Unknown pattern type: {type(pattern_arg)}: {pattern_arg}")
+            raise ValueError(
+                f"Unknown pattern type: {type(pattern_arg)}: {pattern_arg}"
+            )
 
     return True

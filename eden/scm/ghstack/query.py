@@ -1,4 +1,3 @@
-
 # GraphQL queries for code and mocking tests to use.
 
 GRAPHQL_GET_REPOSITORY = """

@@ -2,17 +2,21 @@ import os
 import re
 from typing import List, Optional, TypedDict
 
-from edenscm import error
-from edenscm.i18n import _
 import ghstack.github
 import ghstack.query
 import ghstack.shell
-from ghstack.ghs_types import GitCommitHash, GhNumber, GitHubRepositoryId, GitTreeHash
 
-GitHubRepoNameWithOwner = TypedDict('GitHubRepoNameWithOwner', {
-    'owner': str,
-    'name': str,
-})
+from edenscm import error
+from edenscm.i18n import _
+from ghstack.ghs_types import GhNumber, GitCommitHash, GitHubRepositoryId, GitTreeHash
+
+GitHubRepoNameWithOwner = TypedDict(
+    "GitHubRepoNameWithOwner",
+    {
+        "owner": str,
+        "name": str,
+    },
+)
 
 
 def get_github_repo_name_with_owner(
@@ -22,9 +26,11 @@ def get_github_repo_name_with_owner(
     remote_name: str,
 ) -> GitHubRepoNameWithOwner:
     # Grovel in remotes to figure it out
-    remote_url = os.environ.get("SL_TEST_GH_URL") or sh.git("remote", "get-url", remote_name)
+    remote_url = os.environ.get("SL_TEST_GH_URL") or sh.git(
+        "remote", "get-url", remote_name
+    )
     while True:
-        match = r'^git@{github_url}:([^/]+)/(.+?)(?:\.git)?$'.format(
+        match = r"^git@{github_url}:([^/]+)/(.+?)(?:\.git)?$".format(
             github_url=github_url
         )
         m = re.match(match, remote_url)
@@ -32,26 +38,27 @@ def get_github_repo_name_with_owner(
             owner = m.group(1)
             name = m.group(2)
             break
-        search = r'{github_url}/([^/]+)/(.+?)(?:\.git)?$'.format(
-            github_url=github_url
-        )
+        search = r"{github_url}/([^/]+)/(.+?)(?:\.git)?$".format(github_url=github_url)
         m = re.search(search, remote_url)
         if m:
             owner = m.group(1)
             name = m.group(2)
             break
         raise RuntimeError(
-            "Couldn't determine repo owner and name from url: {}"
-            .format(remote_url))
-    return {'owner': owner, 'name': name}
+            "Couldn't determine repo owner and name from url: {}".format(remote_url)
+        )
+    return {"owner": owner, "name": name}
 
 
-GitHubRepoInfo = TypedDict('GitHubRepoInfo', {
-    'name_with_owner': GitHubRepoNameWithOwner,
-    'id': GitHubRepositoryId,
-    'is_fork': bool,
-    'default_branch': str,
-})
+GitHubRepoInfo = TypedDict(
+    "GitHubRepoInfo",
+    {
+        "name_with_owner": GitHubRepoNameWithOwner,
+        "id": GitHubRepositoryId,
+        "is_fork": bool,
+        "default_branch": str,
+    },
+)
 
 
 def get_github_repo_info(
@@ -70,27 +77,34 @@ def get_github_repo_info(
             remote_name=remote_name,
         )
     else:
-        name_with_owner: GitHubRepoNameWithOwner = {"owner": repo_owner, "name": repo_name}
+        name_with_owner: GitHubRepoNameWithOwner = {
+            "owner": repo_owner,
+            "name": repo_name,
+        }
 
     owner = name_with_owner["owner"]
     name = name_with_owner["name"]
 
     # TODO: Cache this guy
     repo = github.graphql_sync(
-        ghstack.query.GRAPHQL_GET_REPOSITORY,
-        owner=owner,
-        name=name)["data"]["repository"]
+        ghstack.query.GRAPHQL_GET_REPOSITORY, owner=owner, name=name
+    )["data"]["repository"]
 
     # Note for a new repo without any commits, this will be null in the GraphQL
     # response.
     branch_ref = repo["defaultBranchRef"]
     if branch_ref is None:
-        raise error.Abort(_("""\
+        raise error.Abort(
+            _(
+                """\
 This repository has no default branch. This is likely because it is empty.
 
 Consider using %s to initialize your
 repository.
-""") % f"https://{github_url}/{owner}/{name}/new/main")
+"""
+            )
+            % f"https://{github_url}/{owner}/{name}/new/main"
+        )
 
     return {
         "name_with_owner": name_with_owner,
@@ -101,14 +115,18 @@ repository.
 
 
 RE_PR_URL = re.compile(
-    r'^https://(?P<github_url>[^/]+)/(?P<owner>[^/]+)/(?P<name>[^/]+)/pull/(?P<number>[0-9]+)/?$')
+    r"^https://(?P<github_url>[^/]+)/(?P<owner>[^/]+)/(?P<name>[^/]+)/pull/(?P<number>[0-9]+)/?$"
+)
 
-GitHubPullRequestParams = TypedDict('GitHubPullRequestParams', {
-    'github_url': str,
-    'owner': str,
-    'name': str,
-    'number': int,
-})
+GitHubPullRequestParams = TypedDict(
+    "GitHubPullRequestParams",
+    {
+        "github_url": str,
+        "owner": str,
+        "name": str,
+        "number": int,
+    },
+)
 
 
 def parse_pull_request(pull_request: str) -> GitHubPullRequestParams:
@@ -120,10 +138,12 @@ def parse_pull_request(pull_request: str) -> GitHubPullRequestParams:
     owner = m.group("owner")
     name = m.group("name")
     number = int(m.group("number"))
-    return {'github_url': github_url, 'owner': owner, 'name': name, 'number': number}
+    return {"github_url": github_url, "owner": owner, "name": name, "number": number}
 
 
-def lookup_pr_to_orig_ref(github: ghstack.github.GitHubEndpoint, *, owner: str, name: str, number: int) -> str:
+def lookup_pr_to_orig_ref(
+    github: ghstack.github.GitHubEndpoint, *, owner: str, name: str, number: int
+) -> str:
     pr_result = github.graphql_sync(
         ghstack.query.GRAPHQL_PR_TO_REF,
         owner=owner,
@@ -132,16 +152,21 @@ def lookup_pr_to_orig_ref(github: ghstack.github.GitHubEndpoint, *, owner: str, 
     )
     head_ref = pr_result["data"]["repository"]["pullRequest"]["headRefName"]
     assert isinstance(head_ref, str)
-    orig_ref = re.sub(r'/head$', '/orig', head_ref)
+    orig_ref = re.sub(r"/head$", "/orig", head_ref)
     if orig_ref == head_ref:
-        raise RuntimeError("The ref {} doesn't look like a ghstack reference".format(head_ref))
+        raise RuntimeError(
+            "The ref {} doesn't look like a ghstack reference".format(head_ref)
+        )
     return orig_ref
 
 
-GitCommitAndTree = TypedDict('GitCommitAndTree', {
-    'commit': GitCommitHash,
-    'tree': GitTreeHash,
-})
+GitCommitAndTree = TypedDict(
+    "GitCommitAndTree",
+    {
+        "commit": GitCommitHash,
+        "tree": GitTreeHash,
+    },
+)
 
 
 def get_commit_and_tree_for_ref(
@@ -157,7 +182,7 @@ def get_commit_and_tree_for_ref(
     )["data"]["node"]["ref"]["target"]
     commit = GitCommitHash(target["oid"])
     tree = GitTreeHash(target["tree"]["oid"])
-    return {'commit': commit, 'tree': tree}
+    return {"commit": commit, "tree": tree}
 
 
 def get_next_ghnum(
@@ -256,8 +281,7 @@ def update_ref(
     ref: str,
     target_ref: str,
 ) -> str:
-    """Updates ref to point to the same commit that target_ref points to.
-    """
+    """Updates ref to point to the same commit that target_ref points to."""
     ref_id = get_id_for_ref(
         github=github,
         repo_id=repo_id,
@@ -268,7 +292,7 @@ def update_ref(
         github=github,
         repo_id=repo_id,
         ref=target_ref,
-    )['commit']
+    )["commit"]
 
     data = github.graphql_sync(
         """
@@ -300,7 +324,7 @@ def get_id_for_ref(
     ref: str,
 ) -> GitCommitAndTree:
     return github.graphql_sync(
-    """
+        """
       query ($repo_id: ID!, $ref: String!) {
         node(id: $repo_id) {
           ... on Repository {

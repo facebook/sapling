@@ -1,18 +1,21 @@
 import json
 import re
 
-from edenscm import error
-from edenscm.i18n import _
 import ghstack.github
 import ghstack.github_utils
 import ghstack.sapling_shell
 
+from edenscm import error
+from edenscm.i18n import _
 
-def main(pull_request: str,
-         remote_name: str,
-         github: ghstack.github.GitHubEndpoint,
-         sh: ghstack.sapling_shell.SaplingShell,
-         github_url: str) -> None:
+
+def main(
+    pull_request: str,
+    remote_name: str,
+    github: ghstack.github.GitHubEndpoint,
+    sh: ghstack.sapling_shell.SaplingShell,
+    github_url: str,
+) -> None:
     """The general approach to land is:
 
     - Find the /orig commit that corresponds to the PR.
@@ -42,15 +45,17 @@ def main(pull_request: str,
     )
 
     orig_oid = ghstack.github_utils.get_commit_and_tree_for_ref(
-        github=github,
-        repo_id=repo_id,
-        ref=orig_ref
-    )['commit']
+        github=github, repo_id=repo_id, ref=orig_ref
+    )["commit"]
 
     # Do a `pull` so we have the latest commit for the default branch locally.
     sh.run_sapling_command("pull")
-    default_branch_oid = sh.run_sapling_command("log", "-T", "{node}", "-r", default_branch, "--limit", "1")
-    base = sh.run_sapling_command("log", "-T", "{node}", "-r", f"ancestor({orig_oid}, {default_branch_oid})")
+    default_branch_oid = sh.run_sapling_command(
+        "log", "-T", "{node}", "-r", default_branch, "--limit", "1"
+    )
+    base = sh.run_sapling_command(
+        "log", "-T", "{node}", "-r", f"ancestor({orig_oid}, {default_branch_oid})"
+    )
 
     stack = ghstack.git.parse_header(
         # pyre-ignore[6]
@@ -58,7 +63,9 @@ def main(pull_request: str,
         github_url=github_url,
     )
     if not stack:
-        raise error.Abort(_("No stack commits found between base %r and head %r.") % (base, orig_oid))
+        raise error.Abort(
+            _("No stack commits found between base %r and head %r.") % (base, orig_oid)
+        )
 
     starting_parent = sh.run_sapling_command("whereami")
 
@@ -69,15 +76,20 @@ def main(pull_request: str,
             pr_resolved = s.pull_request_resolved
             # We got this from GitHub, this better not be corrupted
             if pr_resolved is None:
-                raise error.Abort(_("Couldn't find PR info in commit header for %r.") % s.oid)
+                raise error.Abort(
+                    _("Couldn't find PR info in commit header for %r.") % s.oid
+                )
 
             assert pr_resolved is not None
 
-            stack_orig_refs.append(ghstack.github_utils.lookup_pr_to_orig_ref(
-                github,
-                owner=pr_resolved.owner,
-                name=pr_resolved.repo,
-                number=pr_resolved.number))
+            stack_orig_refs.append(
+                ghstack.github_utils.lookup_pr_to_orig_ref(
+                    github,
+                    owner=pr_resolved.owner,
+                    name=pr_resolved.repo,
+                    number=pr_resolved.number,
+                )
+            )
 
         # Rebase each commit we are landing onto the default branch. Be careful
         # not to rebase further descendants since they may conflict.
@@ -104,13 +116,20 @@ def main(pull_request: str,
 
             # Hide the rebased commits we created. They are internal to "land",
             # and we don't want them to be visible if the "push" fails.
-            sh.run_sapling_command("hide", "-q", *(x for v in mappings.values() for x in ("-r", v[0])))
+            sh.run_sapling_command(
+                "hide", "-q", *(x for v in mappings.values() for x in ("-r", v[0]))
+            )
 
             # If only a subset of commits were rebased, that means some commits
             # were "rebased out". There is a higher likelihood of a semantic
             # change, so make the user update their stack.
             if len(mappings) != len(stack):
-                raise error.Abort(_("One or more commits in stack already exists on %s.\nPlease manually rebase and update stack.") % (default_branch))
+                raise error.Abort(
+                    _(
+                        "One or more commits in stack already exists on %s.\nPlease manually rebase and update stack."
+                    )
+                    % (default_branch)
+                )
 
             push_rev = mappings[stack_top_oid][0]
         else:
@@ -134,9 +153,11 @@ def main(pull_request: str,
         # https://docs.github.com/en/graphql/reference/input-objects#updaterefsinput
         for orig_ref in stack_orig_refs:
             # TODO: regex here so janky
-            base_ref = re.sub(r'/orig$', '/base', orig_ref)
-            head_ref = re.sub(r'/orig$', '/head', orig_ref)
-            ghstack.github_utils.update_ref(github=github, repo_id=repo_id, ref=base_ref, target_ref=head_ref)
+            base_ref = re.sub(r"/orig$", "/base", orig_ref)
+            head_ref = re.sub(r"/orig$", "/head", orig_ref)
+            ghstack.github_utils.update_ref(
+                github=github, repo_id=repo_id, ref=base_ref, target_ref=head_ref
+            )
 
         # All good! Push!
         sh.run_sapling_command("push", "--rev", push_rev, "--to", default_branch)
@@ -144,8 +165,8 @@ def main(pull_request: str,
         # Delete the branches
         for orig_ref in stack_orig_refs:
             # TODO: regex here so janky
-            base_ref = re.sub(r'/orig$', '/base', orig_ref)
-            head_ref = re.sub(r'/orig$', '/head', orig_ref)
+            base_ref = re.sub(r"/orig$", "/base", orig_ref)
+            head_ref = re.sub(r"/orig$", "/head", orig_ref)
             sh.git("push", remote_name, "--delete", orig_ref, base_ref, head_ref)
 
     finally:

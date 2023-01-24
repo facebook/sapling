@@ -13,7 +13,7 @@ CURRENT_VERSION = 1
 
 def _db_conn() -> sqlite3.Connection:
     global _handle
-    fn = os.path.expanduser('~/.ghstackcache')
+    fn = os.path.expanduser("~/.ghstackcache")
     if not _handle:
         handle = sqlite3.connect(fn)
         user_version = handle.execute("PRAGMA user_version").fetchone()
@@ -21,17 +21,21 @@ def _db_conn() -> sqlite3.Connection:
             handle.close()
             os.remove(fn)
             handle = sqlite3.connect(fn)
-            handle.execute("""
+            handle.execute(
+                """
             CREATE TABLE ghstack_cache (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 domain TEXT,
                 key TEXT,
                 value TEXT
             )
-            """)
-            handle.execute("""
+            """
+            )
+            handle.execute(
+                """
             CREATE UNIQUE INDEX domain_key ON ghstack_cache (domain, key)
-            """)
+            """
+            )
             handle.execute("PRAGMA user_version = {}".format(CURRENT_VERSION))
             handle.commit()
         _handle = handle
@@ -41,8 +45,8 @@ def _db_conn() -> sqlite3.Connection:
 def get(domain: str, key: str) -> Optional[str]:
     conn = _db_conn()
     c = conn.execute(
-        "SELECT value FROM ghstack_cache WHERE domain = ? AND key = ?",
-        (domain, key))
+        "SELECT value FROM ghstack_cache WHERE domain = ? AND key = ?", (domain, key)
+    )
     r = c.fetchone()
     if r is None:
         return None
@@ -55,14 +59,17 @@ def put(domain: str, key: str, value: str) -> None:
     conn = _db_conn()
     conn.execute(
         "UPDATE ghstack_cache SET value = ? WHERE domain = ? AND key = ?",
-        (value, domain, key))
+        (value, domain, key),
+    )
     c = conn.execute(
         """
         INSERT INTO ghstack_cache (domain, key, value)
         SELECT ?, ?, ? WHERE (SELECT Changes() = 0)
         """,
-        (domain, key, value))
+        (domain, key, value),
+    )
     if c.lastrowid is not None:
         conn.execute(
-            "DELETE FROM ghstack_cache WHERE id < ?", (c.lastrowid - CACHE_SIZE, ))
+            "DELETE FROM ghstack_cache WHERE id < ?", (c.lastrowid - CACHE_SIZE,)
+        )
     conn.commit()

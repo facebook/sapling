@@ -10,25 +10,24 @@ import sys
 import uuid
 from typing import Dict, Iterator, Optional
 
-DATETIME_FORMAT = '%Y-%m-%d_%Hh%Mm%Ss'
+DATETIME_FORMAT = "%Y-%m-%d_%Hh%Mm%Ss"
 
 
 RE_LOG_DIRNAME = re.compile(
-    r'(\d{4}-\d\d-\d\d_\d\dh\d\dm\d\ds)_'
-    r'[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}')
+    r"(\d{4}-\d\d-\d\d_\d\dh\d\dm\d\ds)_" r"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}"
+)
 
 
 class Formatter(logging.Formatter):
     redactions: Dict[str, str]
 
-    def __init__(self, fmt: Optional[str] = None,
-                 datefmt: Optional[str] = None):
+    def __init__(self, fmt: Optional[str] = None, datefmt: Optional[str] = None):
         super().__init__(fmt, datefmt)
         self.redactions = {}
 
     # Remove sensitive information from URLs
     def _filter(self, s: str) -> str:
-        s = re.sub(r':\/\/(.*?)\@', r'://<USERNAME>:<PASSWORD>@', s)
+        s = re.sub(r":\/\/(.*?)\@", r"://<USERNAME>:<PASSWORD>@", s)
         for needle, replace in self.redactions.items():
             s = s.replace(needle, replace)
         return s
@@ -48,16 +47,15 @@ class Formatter(logging.Formatter):
     # Redact specific strings; e.g., authorization tokens.  This won't
     # retroactively redact stuff you've already leaked, so make sure
     # you redact things as soon as possible
-    def redact(self, needle: str, replace: str = '<REDACTED>') -> None:
+    def redact(self, needle: str, replace: str = "<REDACTED>") -> None:
         # Don't redact empty strings; this will lead to something
         # that looks like s<REDACTED>t<REDACTED>r<REDACTED>...
-        if needle == '':
+        if needle == "":
             return
         self.redactions[needle] = replace
 
 
-formatter = Formatter(
-    fmt="%(levelname)s: %(message)s", datefmt="")
+formatter = Formatter(fmt="%(levelname)s: %(message)s", datefmt="")
 
 
 @contextlib.contextmanager
@@ -65,8 +63,9 @@ def manager(*, debug: bool = False) -> Iterator[None]:
     # TCB code to setup logging.  If a failure starts here we won't
     # be able to save the user in a reasonable way.
 
-    setup(stderr_level=logging.DEBUG if debug else logging.INFO,
-          file_level=logging.DEBUG)
+    setup(
+        stderr_level=logging.DEBUG if debug else logging.INFO, file_level=logging.DEBUG
+    )
 
     record_argv()
 
@@ -89,11 +88,15 @@ def manager(*, debug: bool = False) -> Iterator[None]:
         record_exception(e)
         sys.exit(1)
 
+
 _sapling_cli = "sl"
 
-def setup(stderr_level: int = logging.WARN,
-          file_level: int = logging.DEBUG,
-          sapling_cli: str = _sapling_cli):
+
+def setup(
+    stderr_level: int = logging.WARN,
+    file_level: int = logging.DEBUG,
+    sapling_cli: str = _sapling_cli,
+):
 
     global _sapling_cli
     _sapling_cli = sapling_cli
@@ -137,15 +140,16 @@ def base_dir() -> str:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=True,
-            encoding='utf-8'
+            encoding="utf-8",
         ).stdout.rstrip()
     except subprocess.CalledProcessError:
         env = dict(os.environ)
         env["SL_AUTOMATION"] = "true"
 
         meta_dir = subprocess.run(
-            (_sapling_cli, "root", "--dotdir"), stdout=subprocess.PIPE,
-            encoding='utf-8',
+            (_sapling_cli, "root", "--dotdir"),
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
             check=True,
             env=env,
         ).stdout.rstrip()
@@ -166,9 +170,8 @@ def run_dir() -> str:
     # NB: respects timezone
     cur_dir = os.path.join(
         base_dir(),
-        "{}_{}"
-        .format(datetime.datetime.now().strftime(DATETIME_FORMAT),
-                uuid.uuid1()))
+        "{}_{}".format(datetime.datetime.now().strftime(DATETIME_FORMAT), uuid.uuid1()),
+    )
 
     try:
         os.makedirs(cur_dir)
@@ -179,18 +182,18 @@ def run_dir() -> str:
 
 
 def record_exception(e: BaseException) -> None:
-    with open(os.path.join(run_dir(), "exception"), 'w') as f:
+    with open(os.path.join(run_dir(), "exception"), "w") as f:
         f.write(type(e).__name__)
 
 
 @functools.lru_cache()
 def record_argv() -> None:
-    with open(os.path.join(run_dir(), "argv"), 'w') as f:
+    with open(os.path.join(run_dir(), "argv"), "w") as f:
         f.write(subprocess.list2cmdline(sys.argv))
 
 
 def record_status(status: str) -> None:
-    with open(os.path.join(run_dir(), "status"), 'w') as f:
+    with open(os.path.join(run_dir(), "status"), "w") as f:
         f.write(status)
 
 

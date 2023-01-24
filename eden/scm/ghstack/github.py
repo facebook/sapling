@@ -42,7 +42,7 @@ class GitHubEndpoint(metaclass=ABCMeta):
 
         Returns: parsed JSON response
         """
-        return self.rest('get', path, **kwargs)
+        return self.rest("get", path, **kwargs)
 
     def post(self, path: str, **kwargs: Any) -> Any:
         """
@@ -50,7 +50,7 @@ class GitHubEndpoint(metaclass=ABCMeta):
 
         Returns: parsed JSON response
         """
-        return self.rest('post', path, **kwargs)
+        return self.rest("post", path, **kwargs)
 
     def patch(self, path: str, **kwargs: Any) -> Any:
         """
@@ -58,7 +58,7 @@ class GitHubEndpoint(metaclass=ABCMeta):
 
         Returns: parsed JSON response
         """
-        return self.rest('patch', path, **kwargs)
+        return self.rest("patch", path, **kwargs)
 
     @abstractmethod
     def rest(self, method: str, path: str, **kwargs: Any) -> Any:
@@ -82,4 +82,5 @@ def get_github_endpoint(hostname: str) -> GitHubEndpoint:
     GitHubEndpoint for integration test later.
     """
     from ghstack.github_cli_endpoint import GitHubCLIEndpoint
+
     return GitHubCLIEndpoint(hostname)
