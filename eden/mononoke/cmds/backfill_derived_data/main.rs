@@ -1028,15 +1028,16 @@ async fn backfill_heads(
     wait_for_replication: WaitForReplication,
 ) -> Result<()> {
     if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
-        let (count, slices) =
+        let slices =
             slice::slice_repository(ctx, repo, skiplist_index, derivers, heads, slice_size).await?;
-        for (index, (id, slice_heads)) in slices.enumerate() {
+        let slice_count = slices.len();
+        for (index, (id, slice_heads)) in slices.into_iter().enumerate() {
             info!(
                 ctx.logger(),
                 "Deriving slice {} ({}/{}) with {} heads",
                 id,
                 index + 1,
-                count,
+                slice_count,
                 slice_heads.len()
             );
             tail_batch_iteration(
