@@ -42,12 +42,12 @@ UBUNTU_DEPS = [
 MACOS_RELEASES = {
     "x86": {
         "target": "x86_64-apple-darwin",
-        "python_bottle_hash": "919aeadea2828aad7ccd95538e4db27943f8c1fc3c185e5d19d4afd89b1a79ad",
+        "python_bottle_hash": "b668909b679a54930bd35a9a2738a27ef1d545db8a4d889b8d9a475e85519116",
         "openssl_bottle_hash": "d915175bedb146e38d7a2c95e86888a60a5058a5cd21f835813d43d1372a29d9",
     },
     "arm64": {
         "target": "aarch64-apple-darwin",
-        "python_bottle_hash": "4e968bd8f28aee189bd829c2b9feabeb8c5edd95b949cf327ea2f1f62ac76e66",
+        "python_bottle_hash": "54c7eb00a23451b956abe4797a759e29824d33953fb57715bde6b9abb2500555",
         "openssl_bottle_hash": "c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6",
     },
 }
