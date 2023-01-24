@@ -110,6 +110,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   public dispose() {
     this.diffSummaries.removeAllListeners();
   }
+
+  public getSummaryName(): string {
+    return `github:${this.codeReviewSystem.hostname}/${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
+  }
 }
 
 function githubCheckSuitesToCIStatus(

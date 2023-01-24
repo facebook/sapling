@@ -30,4 +30,7 @@ export interface CodeReviewProvider {
   ): Promise<void>;
 
   dispose: () => void;
+
+  /** Convert Code Review Provider info into a short summary string, usable in analytics */
+  getSummaryName(): string;
 }
