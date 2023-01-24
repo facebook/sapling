@@ -212,12 +212,14 @@ export default class ServerToClientAPI {
         }
 
         // send changes as they come in from watchman
-        repo.subscribeToUncommittedChanges(postUncommittedChanges);
+        this.repoDisposables.push(repo.subscribeToUncommittedChanges(postUncommittedChanges));
         // trigger a fetch on startup
         repo.fetchUncommittedChanges();
 
-        repo.subscribeToUncommittedChangesBeginFetching(() =>
-          this.postMessage({type: 'beganFetchingUncommittedChangesEvent'}),
+        this.repoDisposables.push(
+          repo.subscribeToUncommittedChangesBeginFetching(() =>
+            this.postMessage({type: 'beganFetchingUncommittedChangesEvent'}),
+          ),
         );
         return;
       }
@@ -241,12 +243,14 @@ export default class ServerToClientAPI {
           postSmartlogCommits({value: smartlogCommits});
         }
         // send changes as they come from file watcher
-        repo.subscribeToSmartlogCommitsChanges(postSmartlogCommits);
+        this.repoDisposables.push(repo.subscribeToSmartlogCommitsChanges(postSmartlogCommits));
         // trigger a fetch on startup
         repo.fetchSmartlogCommits();
 
-        repo.subscribeToSmartlogCommitsBeginFetching(() =>
-          this.postMessage({type: 'beganFetchingSmartlogCommitsEvent'}),
+        this.repoDisposables.push(
+          repo.subscribeToSmartlogCommitsBeginFetching(() =>
+            this.postMessage({type: 'beganFetchingSmartlogCommitsEvent'}),
+          ),
         );
         return;
       }
@@ -270,7 +274,7 @@ export default class ServerToClientAPI {
           postMergeConflicts(mergeConflicts);
         }
 
-        repo.onChangeConflictState(postMergeConflicts);
+        this.repoDisposables.push(repo.onChangeConflictState(postMergeConflicts));
         return;
       }
       case 'runOperation': {
