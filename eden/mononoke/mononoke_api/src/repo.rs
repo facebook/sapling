@@ -473,7 +473,7 @@ impl Repo {
             ..Default::default()
         };
 
-        let name = blob_repo.name().clone();
+        let name = blob_repo.repo_identity().name().to_string();
         let repo_blobstore = blob_repo.repo_blobstore_arc();
         let hook_manager = repo_factory.hook_manager(
             &blob_repo.repo_identity_arc(),

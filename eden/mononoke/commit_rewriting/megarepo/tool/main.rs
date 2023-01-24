@@ -681,7 +681,7 @@ async fn run_check_push_redirection_prereqs<'a>(
     info!(
         ctx.logger(),
         "Resolving source chageset in {}",
-        source_repo.name()
+        source_repo.repo_identity().name()
     );
     let source_cs_id = helpers::csid_resolve(
         &ctx,
@@ -695,7 +695,7 @@ async fn run_check_push_redirection_prereqs<'a>(
     info!(
         ctx.logger(),
         "Resolving target changeset in {}",
-        target_repo.name()
+        target_repo.repo_identity().name()
     );
     let target_cs_id = helpers::csid_resolve(
         &ctx,
@@ -717,9 +717,9 @@ async fn run_check_push_redirection_prereqs<'a>(
         ctx.logger(),
         "Checking push-redirection prerequisites for {}({})->{}({}), {:?}",
         source_cs_id,
-        source_repo.name(),
+        source_repo.repo_identity().name(),
         target_cs_id,
-        target_repo.name(),
+        target_repo.repo_identity().name(),
         version,
     );
 
@@ -931,8 +931,8 @@ async fn run_backfill_noop_mapping<'a>(
     info!(
         ctx.logger(),
         "small repo: {}, large repo: {}",
-        small_repo.name(),
-        large_repo.name(),
+        small_repo.repo_identity().name(),
+        large_repo.repo_identity().name(),
     );
     let mapping_version_name = sub_m
         .value_of(MAPPING_VERSION_NAME)
@@ -1118,8 +1118,8 @@ async fn process_stream_and_wait_for_replication<'a>(
     if small_repo_config.storage_config.metadata != large_repo_config.storage_config.metadata {
         return Err(format_err!(
             "{} and {} have different db metadata configs: {:?} vs {:?}",
-            small_repo.name(),
-            large_repo.name(),
+            small_repo.repo_identity().name(),
+            large_repo.repo_identity().name(),
             small_repo_config.storage_config.metadata,
             large_repo_config.storage_config.metadata,
         ));

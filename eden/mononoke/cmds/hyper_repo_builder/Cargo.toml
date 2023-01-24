@@ -27,6 +27,7 @@ mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -335,7 +335,7 @@ impl UploadChangesets {
         let mut scuba_logger = ctx.scuba().clone();
         scuba_logger
             .add("Repo Id", blobrepo.repo_identity().id().to_string())
-            .add("Repo name", blobrepo.name().to_string());
+            .add("Repo name", blobrepo.repo_identity().name().to_string());
 
         let lfs_uploader = Arc::new(try_boxstream!(JobProcessor::new(
             {

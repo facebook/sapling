@@ -718,8 +718,8 @@ async fn create_commit_for_mapping_change(
     let commit_msg = format!(
         "Changing synced mapping version to {} for {}->{} sync{}",
         mapping_version,
-        large_repo.name(),
-        small_repo.name(),
+        large_repo.repo_identity().name(),
+        small_repo.repo_identity().name(),
         oncall_msg_part.as_deref().unwrap_or("")
     );
 
@@ -861,7 +861,13 @@ async fn get_bookmark_value(
 ) -> Result<ChangesetId, Error> {
     let maybe_bookmark_value = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
-    maybe_bookmark_value.ok_or_else(|| format_err!("{} is not found in {}", bookmark, repo.name()))
+    maybe_bookmark_value.ok_or_else(|| {
+        format_err!(
+            "{} is not found in {}",
+            bookmark,
+            repo.repo_identity().name()
+        )
+    })
 }
 
 async fn move_bookmark(
@@ -878,7 +884,7 @@ async fn move_bookmark(
         "moving {} to {} in {}",
         bookmark,
         new_value,
-        repo.name()
+        repo.repo_identity().name()
     );
     book_txn.update(
         bookmark,
@@ -895,7 +901,7 @@ async fn move_bookmark(
         Err(format_err!(
             "failed to move bookmark {} in {}",
             bookmark,
-            repo.name()
+            repo.repo_identity().name()
         ))
     }
 }
@@ -1039,9 +1045,9 @@ async fn subcommand_verify_bookmarks(
                         ctx.logger(),
                         "inconsistent value of {}: '{}' has {}, but '{}' bookmark points to {:?}",
                         target_bookmark,
-                        target_repo.name(),
+                        target_repo.repo_identity().name(),
                         target_cs_id,
-                        source_repo.name(),
+                        source_repo.repo_identity().name(),
                         source_cs_id,
                     );
                 }
@@ -1052,9 +1058,9 @@ async fn subcommand_verify_bookmarks(
                     warn!(
                         ctx.logger(),
                         "'{}' doesn't have bookmark {} but '{}' has it and it points to {}",
-                        target_repo.name(),
+                        target_repo.repo_identity().name(),
                         target_bookmark,
-                        source_repo.name(),
+                        source_repo.repo_identity().name(),
                         source_cs_id,
                     );
                 }
@@ -1064,9 +1070,9 @@ async fn subcommand_verify_bookmarks(
                         "'{}' has a bookmark {} but it points to a commit that has no \
                          equivalent in '{}'. If it's a shared bookmark (e.g. master) \
                          that might mean that it points to a commit from another repository",
-                        target_repo.name(),
+                        target_repo.repo_identity().name(),
                         target_bookmark,
-                        source_repo.name(),
+                        source_repo.repo_identity().name(),
                     );
                 }
             }

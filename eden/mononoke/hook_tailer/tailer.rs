@@ -35,6 +35,7 @@ use hooks_content_stores::repo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use permission_checker::AclProvider;
+use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -85,7 +86,7 @@ impl Tailer {
             content_fetcher,
             config.hook_manager_params.clone().unwrap_or_default(),
             MononokeScubaSampleBuilder::with_discard(),
-            repo.name().clone(),
+            repo.repo_identity().name().to_string(),
         )
         .await?;
 

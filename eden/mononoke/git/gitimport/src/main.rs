@@ -176,7 +176,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     info!(
         logger,
         "using repo \"{}\" repoid {:?}",
-        repo.name(),
+        repo.repo_identity().name(),
         repo.repo_identity().id(),
     );
 

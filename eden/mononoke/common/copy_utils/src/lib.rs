@@ -146,8 +146,8 @@ pub async fn copy(
             ctx.logger(),
             "Copying {} files contents from {} to {}",
             contents_to_upload.len(),
-            source_repo.name(),
-            target_repo.name()
+            source_repo.repo_identity().name(),
+            target_repo.repo_identity().name()
         );
         copy_file_contents(ctx, source_repo, target_repo, contents_to_upload, |_| {}).await?;
     }

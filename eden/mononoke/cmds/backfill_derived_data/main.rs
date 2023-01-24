@@ -1218,7 +1218,7 @@ async fn subcommand_tail(
     slog::info!(
         ctx.logger(),
         "[{}] tailing derived data: {:?}",
-        repo.name(),
+        repo.repo_identity().name(),
         tail_derivers
             .iter()
             .map(|d| d.name())
@@ -1258,7 +1258,7 @@ async fn subcommand_tail(
         slog::info!(
             ctx.logger(),
             "[{}] backfilling derived data: {:?}",
-            repo.name(),
+            repo.repo_identity().name(),
             backfill_derivers
                 .iter()
                 .map(|d| d.name())
@@ -1414,7 +1414,10 @@ async fn tail_batch_iteration<'a>(
 
     let size = derive_graph.size();
     if size == 0 {
-        STATS::derivation_idle_time_ms.add_value(SLEEP_TIME as i64, (repo.name().to_string(),));
+        STATS::derivation_idle_time_ms.add_value(
+            SLEEP_TIME as i64,
+            (repo.repo_identity().name().to_string(),),
+        );
         tokio::time::sleep(Duration::from_millis(SLEEP_TIME)).await;
     } else {
         info!(ctx.logger(), "Deriving data for {} commits", size);
@@ -1595,7 +1598,11 @@ async fn tail_one_iteration(
     for (_, _, cur_oldest_underived_age) in &pending {
         oldest_underived_age = ::std::cmp::max(oldest_underived_age, *cur_oldest_underived_age);
     }
-    STATS::oldest_underived_secs.set_value(ctx.fb, oldest_underived_age, (repo.name().clone(),));
+    STATS::oldest_underived_secs.set_value(
+        ctx.fb,
+        oldest_underived_age,
+        (repo.repo_identity().name().to_string(),),
+    );
 
     let pending_futs = pending.into_iter().map(|(derive, pending, _)| {
         pending
@@ -1607,7 +1614,10 @@ async fn tail_one_iteration(
     let pending_futs: Vec<_> = pending_futs.flatten().collect();
 
     if pending_futs.is_empty() {
-        STATS::derivation_idle_time_ms.add_value(SLEEP_TIME as i64, (repo.name().to_string(),));
+        STATS::derivation_idle_time_ms.add_value(
+            SLEEP_TIME as i64,
+            (repo.repo_identity().name().to_string(),),
+        );
         tokio::time::sleep(Duration::from_millis(SLEEP_TIME)).await;
         Ok(())
     } else {
@@ -1627,7 +1637,7 @@ async fn tail_one_iteration(
         );
         STATS::derivation_time_ms.add_value(
             stats.completion_time.as_millis_unchecked() as i64,
-            (repo.name().to_string(),),
+            (repo.repo_identity().name().to_string(),),
         );
         Ok(())
     }

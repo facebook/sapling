@@ -22,6 +22,7 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use movers::Mover;
+use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 
 pub const EXTRA_PREFIX: &str = "source-cs-id-";
@@ -98,7 +99,7 @@ pub fn decode_latest_synced_state_extras<'a>(
 }
 
 pub fn get_mover_and_reverse_mover(source_repo: &BlobRepo) -> Result<(Mover, Mover), Error> {
-    let prefix = MPath::new(source_repo.name())?;
+    let prefix = MPath::new(source_repo.repo_identity().name())?;
     let mover = Arc::new({
         let prefix = prefix.clone();
         move |path: &MPath| Ok(Some(prefix.join(path)))

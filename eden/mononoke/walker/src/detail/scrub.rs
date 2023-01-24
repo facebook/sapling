@@ -31,6 +31,7 @@ use futures::stream::TryStreamExt;
 use futures::TryFutureExt;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::datetime::DateTime;
+use repo_identity::RepoIdentityRef;
 use samplingblob::ComponentSamplingHandler;
 use slog::info;
 use stats::prelude::*;
@@ -493,7 +494,7 @@ async fn run_one(
             fb,
             repo_params.logger.clone(),
             SCRUB,
-            repo_params.repo.name().clone(),
+            repo_params.repo.repo_identity().name().to_string(),
             command.sampling_options.node_types.clone(),
             command.progress_options,
         ));
@@ -501,7 +502,7 @@ async fn run_one(
     let make_sink = {
         cloned!(command, job_params.quiet, sub_params.progress_state,);
         move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
-            let repo_name = repo_params.repo.name().clone();
+            let repo_name = repo_params.repo.repo_identity().name().to_string();
             cloned!(ctx, repo_params.scheduled_max);
             async move |walk_output, run_start, chunk_num, checkpoint_name| {
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);

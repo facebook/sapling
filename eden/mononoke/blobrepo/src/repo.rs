@@ -141,10 +141,6 @@ impl BlobRepo {
         self.inner.repo_blobstore.as_ref().clone()
     }
 
-    pub fn name(&self) -> &String {
-        &self.inner.reponame
-    }
-
     /// To be used by `DangerousOverride` only
     pub fn inner(&self) -> &Arc<BlobRepoInner> {
         &self.inner

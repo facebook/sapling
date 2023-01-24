@@ -36,6 +36,7 @@ use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use maplit::hashset;
 use mononoke_types::BlobstoreBytes;
+use repo_identity::RepoIdentityRef;
 use samplingblob::SamplingHandler;
 use slog::info;
 
@@ -355,7 +356,7 @@ async fn run_one(
             fb,
             repo_params.logger.clone(),
             COMPRESSION_BENEFIT,
-            repo_params.repo.name().clone(),
+            repo_params.repo.repo_identity().name().to_string(),
             command.sampling_options.node_types.clone(),
             command.progress_options,
         ));

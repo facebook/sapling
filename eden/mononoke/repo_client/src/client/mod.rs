@@ -372,7 +372,7 @@ impl UndesiredPathLogger {
     fn new(ctx: CoreContext, repo: &BlobRepo) -> Result<Self, Error> {
         let tunables = tunables();
         let repo_needs_logging =
-            repo.name() == tunables.get_undesired_path_repo_name_to_log().as_str();
+            repo.repo_identity().name() == tunables.get_undesired_path_repo_name_to_log().as_str();
 
         let path_prefix_to_log = if repo_needs_logging {
             MPath::new_opt(tunables.get_undesired_path_prefix_to_log().as_str())?
@@ -388,7 +388,7 @@ impl UndesiredPathLogger {
                     error!(
                         ctx.logger(),
                         "Error initializing undesired path regex for {}: {}",
-                        repo.name(),
+                        repo.repo_identity().name(),
                         e
                     );
                     e
@@ -2664,7 +2664,7 @@ async fn maybe_validate_pushed_bonsais(
                             hg_cs_id,
                             bcs_id,
                             actual_bcs_id,
-                            repo.name(),
+                            repo.repo_identity().name(),
                         ));
                     }
                 }
@@ -2672,7 +2672,7 @@ async fn maybe_validate_pushed_bonsais(
                     return Err(format_err!(
                         "Hg changeset {} does not exist in {}",
                         hg_cs_id,
-                        repo.name(),
+                        repo.repo_identity().name(),
                     ));
                 }
             };

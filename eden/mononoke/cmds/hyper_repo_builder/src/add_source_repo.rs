@@ -31,6 +31,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 
 use crate::common::decode_latest_synced_state_extras;
@@ -53,7 +54,7 @@ pub async fn add_source_repo(
     // First list files that needs copying to hyper repo and prepend
     // source repo name to each path.
     let root_fsnode_id = RootFsnodeId::derive(ctx, source_repo, source_bcs_id).await?;
-    let prefix = MPath::new(source_repo.name())?;
+    let prefix = MPath::new(source_repo.repo_identity().name())?;
     let leaf_entries = root_fsnode_id
         .fsnode_id()
         .list_leaf_entries(ctx.clone(), source_repo.get_blobstore())
@@ -174,8 +175,8 @@ async fn create_new_bonsai_changeset_for_source_repo(
             committer_date: None,
             message: format!(
                 "Introducing new source repo {} to hyper repo {}, idx {} out of {}",
-                source_repo.name(),
-                hyper_repo.name(),
+                source_repo.repo_identity().name(),
+                hyper_repo.repo_identity().name(),
                 idx,
                 len
             ),
@@ -197,7 +198,10 @@ async fn create_new_bonsai_changeset_for_source_repo(
             };
 
             // Append extra that shows what was the latest replayed commit from a given source-repo
-            extra.insert(source_repo.name().to_string(), source_bcs_id);
+            extra.insert(
+                source_repo.repo_identity().name().to_string(),
+                source_bcs_id,
+            );
 
             bcs.extra = encode_latest_synced_state_extras(&extra);
         }

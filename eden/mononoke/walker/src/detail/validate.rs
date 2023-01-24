@@ -38,6 +38,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use phases::Phase;
 use phases::Phases;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::warn;
@@ -900,7 +901,7 @@ async fn run_one(
         repo_params.logger.clone(),
         fb,
         repo_params.scuba_builder.clone(),
-        repo_params.repo.name().clone(),
+        repo_params.repo.repo_identity().name().to_string(),
         command.include_check_types.clone(),
         command.progress_options,
     ));
@@ -940,7 +941,7 @@ async fn run_one(
     }
 
     let stateful_visitor = ValidatingVisitor::new(
-        repo_params.repo.name().clone(),
+        repo_params.repo.repo_identity().name().to_string(),
         repo_params.include_node_types.clone(),
         repo_params.include_edge_types.clone(),
         command.include_check_types,

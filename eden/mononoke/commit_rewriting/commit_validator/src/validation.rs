@@ -281,7 +281,7 @@ impl ValidationHelper {
             ctx.logger(),
             "Checking if a change to {:?}'s filenode in {} ({:?}) relects a true change",
             mpath,
-            repo.name(),
+            repo.repo_identity().name(),
             payload
         );
 
@@ -309,7 +309,7 @@ impl ValidationHelper {
                             ctx.logger(),
                             "change at {:?} in {} was from a tree to a file, so a true change",
                             mpath,
-                            repo.name()
+                            repo.repo_identity().name()
                         );
                         return Ok(true);
                     }
@@ -323,7 +323,7 @@ impl ValidationHelper {
                         ctx.logger(),
                         "change at {:?} in {} was to a file type: {:?}->{:?}",
                         mpath,
-                        repo.name(),
+                        repo.repo_identity().name(),
                         p1_file_type,
                         new_file_type,
                     );
@@ -346,7 +346,7 @@ impl ValidationHelper {
                         ctx.logger(),
                         "change at {:?} in {} resolved to different ContentIds: {:?}->{:?}",
                         mpath,
-                        repo.name(),
+                        repo.repo_identity().name(),
                         p1_content_id,
                         new_content_id,
                     );
@@ -357,7 +357,7 @@ impl ValidationHelper {
                         ctx.logger(),
                         "change at {:?} in {} resolved to identical ContentIds",
                         mpath,
-                        repo.name(),
+                        repo.repo_identity().name(),
                     );
 
                     Ok(false)
@@ -1235,8 +1235,8 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
         })
         .collect::<Result<Vec<_>, Error>>()?;
 
-    let small_name = validation_helper.small_repo.0.name().as_str();
-    let large_name = validation_helper.large_repo.0.name().as_str();
+    let small_name = validation_helper.small_repo.0.repo_identity().name();
+    let large_name = validation_helper.large_repo.0.repo_identity().name();
 
     report_missing(
         ctx,
@@ -1559,8 +1559,8 @@ async fn verify_filenodes_have_same_contents<
         different_contents,
         source_hash,
         "contents",
-        Source(source_repo.0.name()),
-        Target(target_repo.0.name()),
+        Source(source_repo.0.repo_identity().name()),
+        Target(target_repo.0.repo_identity().name()),
     )
 }
 

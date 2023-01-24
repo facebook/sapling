@@ -44,6 +44,7 @@ use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use readonlyblob::ReadOnlyBlobstore;
 use repo_derived_data::RepoDerivedDataArc;
+use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::warn;
@@ -78,7 +79,7 @@ pub async fn validate(
         ctx.logger(),
         "Validating {} on {}...",
         derived_data_type,
-        repo.name()
+        repo.repo_identity().name()
     );
     let opts = regenerate::DeriveOptions::from_matches(sub_m)?;
 

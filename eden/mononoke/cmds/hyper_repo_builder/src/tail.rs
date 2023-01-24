@@ -32,6 +32,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_identity::RepoIdentityRef;
 use revset::RangeNodeStream;
 use slog::info;
 
@@ -53,7 +54,10 @@ pub async fn tail_once(
 
     let mut latest_replayed_state = HashMap::new();
     for (source_repo, latest_synced) in &source_repos_and_latest_synced_commits {
-        latest_replayed_state.insert(source_repo.blob_repo.name().to_string(), *latest_synced);
+        latest_replayed_state.insert(
+            source_repo.blob_repo.repo_identity().name().to_string(),
+            *latest_synced,
+        );
     }
 
     for (source_repo, latest_synced_commit) in source_repos_and_latest_synced_commits {
@@ -98,11 +102,11 @@ async fn find_latest_synced_commits(
     let mut res = vec![];
     for source_repo in source_repos {
         let latest = latest_synced_commits
-            .get(source_repo.blob_repo.name().as_str())
+            .get(source_repo.blob_repo.repo_identity().name())
             .ok_or_else(|| {
                 anyhow!(
                     "not found latest cs id for {}",
-                    source_repo.blob_repo.name()
+                    source_repo.blob_repo.repo_identity().name()
                 )
             })?;
 
@@ -144,7 +148,7 @@ async fn find_commits_to_replay(
         return Err(anyhow!(
             "non-forward bookmark move of {} in {}",
             bookmark_name,
-            source_repo.blob_repo.name()
+            source_repo.blob_repo.repo_identity().name()
         ));
     }
 
@@ -165,7 +169,7 @@ async fn find_commits_to_replay(
         ctx.logger(),
         "found {} commits to sync from {} repo",
         cs_ids.len(),
-        source_repo.blob_repo.name()
+        source_repo.blob_repo.repo_identity().name()
     );
 
     Ok(cs_ids)
@@ -208,7 +212,7 @@ async fn sync_commits(
         bcss.len(),
         bcss.get(0).map(|cs| cs.get_changeset_id()),
         bcss.last().map(|cs| cs.get_changeset_id()),
-        source_repo.blob_repo.name()
+        source_repo.blob_repo.repo_identity().name()
     );
 
     let mut files_to_sync = vec![];
@@ -247,7 +251,10 @@ async fn sync_commits(
         &source_repo.blob_repo,
         None, // force_first_parent
         |(cs_id, mut rewritten_commit)| {
-            latest_synced_state.insert(source_repo.blob_repo.name().to_string(), cs_id);
+            latest_synced_state.insert(
+                source_repo.blob_repo.repo_identity().name().to_string(),
+                cs_id,
+            );
             let extra = encode_latest_synced_state_extras(latest_synced_state);
             rewritten_commit.extra = extra;
             // overwrite the date so that it's closer to when the commit actually

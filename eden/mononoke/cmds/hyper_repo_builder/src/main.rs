@@ -38,6 +38,7 @@ use cross_repo_sync::types::Target;
 use cross_repo_sync::validation::verify_working_copy_inner;
 use fbinit::FacebookInit;
 use futures::future::try_join;
+use repo_identity::RepoIdentityRef;
 use slog::info;
 
 use crate::common::find_source_repos;
@@ -168,7 +169,11 @@ async fn subcommand_validate<'a>(
         find_source_repos_and_latest_synced_cs_ids(&ctx, &hyper_repo, hyper_cs_id, matches).await?;
 
     for (source_repo, source_cs_id) in source_repos {
-        info!(ctx.logger(), "validating {}", source_repo.blob_repo.name());
+        info!(
+            ctx.logger(),
+            "validating {}",
+            source_repo.blob_repo.repo_identity().name()
+        );
 
         let (mover, reverse_mover) = get_mover_and_reverse_mover(&source_repo.blob_repo)?;
         verify_working_copy_inner(

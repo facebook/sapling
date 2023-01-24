@@ -32,6 +32,7 @@ use percent_encoding::percent_encode;
 use percent_encoding::AsciiSet;
 use percent_encoding::CONTROLS;
 use regex::Regex;
+use repo_identity::RepoIdentityRef;
 use samplingblob::SamplingHandler;
 use tokio::fs::{self as tkfs};
 
@@ -420,7 +421,7 @@ async fn run_one(
             fb,
             repo_params.logger.clone(),
             CORPUS,
-            repo_params.repo.name().clone(),
+            repo_params.repo.repo_identity().name().to_string(),
             command.sampling_options.node_types.clone(),
             command.progress_options,
         ));

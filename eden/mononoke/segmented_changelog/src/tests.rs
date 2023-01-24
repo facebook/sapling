@@ -1036,7 +1036,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
         &ctx,
         Duration::from_secs(5),
         manager,
-        blobrepo.name().to_string(),
+        blobrepo.repo_identity().name().to_string(),
     )
     .await?;
 
@@ -1068,7 +1068,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     // Force the reload should trigger even if there are not updates at all.
     let tunables_override = Arc::new(tunables::MononokeTunables::default());
     tunables_override.update_by_repo_ints(&hashmap! {
-        blobrepo.name().clone() => hashmap! {
+        blobrepo.repo_identity().name().to_string() => hashmap! {
             "segmented_changelog_force_reload".to_string() => 2,
         },
     });

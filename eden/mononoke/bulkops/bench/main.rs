@@ -24,6 +24,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use phases::PhasesArc;
+use repo_identity::RepoIdentityRef;
 use tokio::runtime::Handle;
 
 const BENCHMARK_SAVE_BASELINE_ARG: &str = "benchmark-save-baseline";
@@ -125,7 +126,7 @@ fn main(fb: fbinit::FacebookInit) {
             runtime.block_on(async move {
                 let blobrepo = blobrepo.await.expect("blobrepo should open");
                 (
-                    blobrepo.name().to_string(),
+                    blobrepo.repo_identity().name().to_string(),
                     PublicChangesetBulkFetch::new(blobrepo.changesets_arc(), blobrepo.phases_arc()),
                 )
             })

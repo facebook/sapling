@@ -78,6 +78,7 @@ use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
 use phases::PhasesRef;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
@@ -2332,7 +2333,11 @@ where
         }
     }
     .with_context(|| {
-        ErrorKind::NotTraversable(repo.name().clone(), walk_item.clone(), format!("{:?}", via))
+        ErrorKind::NotTraversable(
+            repo.repo_identity().name().to_string(),
+            walk_item.clone(),
+            format!("{:?}", via),
+        )
     })?;
 
     let (vout, via, next) = match step_output {

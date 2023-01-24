@@ -42,6 +42,7 @@ use mercurial_types::RepoPath;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use mononoke_types::ChangesetId;
+use repo_identity::RepoIdentityRef;
 use slog::debug;
 use stats::prelude::*;
 use thiserror::Error;
@@ -239,7 +240,7 @@ pub async fn get_file_history(
         FilenodeRangeResult::TooBig => {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::FilenodesTooBigHistory);
-            STATS::too_big.add_value(1, (repo.name().clone(),));
+            STATS::too_big.add_value(1, (repo.repo_identity().name().to_string(),));
             let history = get_file_history_using_prefetched(
                 ctx,
                 repo,

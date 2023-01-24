@@ -49,6 +49,7 @@ use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use rate_limiting::RateLimitBody;
+use repo_identity::RepoIdentityRef;
 use slog::trace;
 use topo_sort::sort_topological;
 use tunables::tunables;
@@ -366,7 +367,7 @@ fn report_unbundle_type(
     repo: &BlobRepo,
     post_resolve_action: &Result<PostResolveAction, BundleResolverError>,
 ) {
-    let repo_name = repo.name().clone();
+    let repo_name = repo.repo_identity().name().to_string();
     UNBUNDLE_STATS::total_unbundles.add_value(1, (repo_name.clone(),));
     let unbundle_resolved = "Unbundle resolved";
     match post_resolve_action {
