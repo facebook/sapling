@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -92,8 +93,8 @@ mononoke_queries! {
     }
 
     write InsertParents(values: (cs_id: u64, parent_id: u64, seq: i32)) {
-        none,
-        "INSERT INTO csparents (cs_id, parent_id, seq) VALUES {values}"
+        insert_or_ignore,
+        "{insert_or_ignore} INTO csparents (cs_id, parent_id, seq) VALUES {values}"
     }
 
     read SelectChangeset(repo_id: RepositoryId, cs_id: ChangesetId, tok: i32) -> (u64, Option<ChangesetId>, Option<u64>, i32) {
@@ -298,11 +299,83 @@ impl Changesets for SqlChangesets {
         &self,
         ctx: &CoreContext,
         css: Vec1<(ChangesetInsert, Generation)>,
-    ) -> Result<(), Error> {
-        // TODO(yancouto): optimise this by doing few SQL writes
-        for (cs, _gen) in css {
-            self.add(ctx, cs).await?;
+    ) -> Result<()> {
+        STATS::adds.add_value(css.len() as i64);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+        let transaction = self.write_connection.start_transaction().await?;
+        // Part 1 - Add all changesets to the SQL table.
+        let (transaction, result) = InsertChangeset::query_with_transaction(
+            transaction,
+            css.iter()
+                .map(|(insert, gen)| (&self.repo_id, &insert.cs_id, gen.as_ref()))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+        if result.affected_rows() == 0 {
+            return Ok(());
         }
+        // Part 2 - Query parent ids and cs ids from just inserted commits (the transaction is important!)
+        let all_cs_ids_to_query = css
+            .iter()
+            .flat_map(|(insert, _)| {
+                insert
+                    .parents
+                    .iter()
+                    .copied()
+                    .chain(std::iter::once(insert.cs_id))
+            })
+            // remove duplicates
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let (transaction, changesets_info) = SelectChangesets::query_with_transaction(
+            transaction,
+            &self.repo_id,
+            all_cs_ids_to_query.as_slice(),
+        )
+        .await?;
+        let cs_id_to_sql_id: HashMap<ChangesetId, u64> = changesets_info
+            .into_iter()
+            .map(|(sql_id, cs_id, _gen)| (cs_id, sql_id))
+            .collect();
+        let to_sql_id = |cs_id| {
+            cs_id_to_sql_id
+                .get(&cs_id)
+                .with_context(|| format!("Missing {} from SQL table", cs_id))
+        };
+        // Part 3 - Insert parents
+        let maybe_entries = css
+            .into_iter()
+            .flat_map(|(entry, _gen)| {
+                entry
+                    .parents
+                    .into_iter()
+                    .enumerate()
+                    .map(move |(idx, p_cs_id)| (entry.cs_id, p_cs_id, idx))
+            })
+            .map(|(cs_id, p_cs_id, idx)| Ok((to_sql_id(cs_id)?, to_sql_id(p_cs_id)?, idx as i32)))
+            .collect::<Result<Vec<_>>>();
+        let parent_insert_entries = match maybe_entries {
+            Ok(parent_insert_entries) => parent_insert_entries,
+            Err(err) => {
+                let _ = transaction.rollback().await;
+                return Err(err);
+            }
+        };
+        let (transaction, _result) = InsertParents::query_with_transaction(
+            transaction,
+            parent_insert_entries
+                .iter()
+                // Fixing references
+                .map(|(a, b, c)| (*a, *b, c))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+        .await?;
+        transaction.commit().await?;
+
         Ok(())
     }
 

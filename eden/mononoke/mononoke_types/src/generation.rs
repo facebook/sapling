@@ -71,3 +71,9 @@ impl Generation {
         Generation::new(self_gen + value)
     }
 }
+
+impl AsRef<u64> for Generation {
+    fn as_ref(&self) -> &u64 {
+        &self.0
+    }
+}
