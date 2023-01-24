@@ -1334,6 +1334,43 @@ function wait_for_scs {
     scsc repos
 }
 
+# Because of warm bookmark cache the SCS bookmark updates are async.
+# This function allows to wait for them.
+function wait_for_bookmark_update() {
+  local repo=$1
+  local bookmark=$2
+  local target=$3
+  local attempt=1
+  sleep 1
+  while [[ "$(scsc lookup -R $repo -B $bookmark)" != "$target" ]]
+  do
+    attempt=$((attempt + 1))
+    if [[ $attempt -gt 5 ]]
+    then
+        echo "bookmark move of $bookmark to $target has not happened"
+        return 1
+    fi
+    sleep 1
+  done
+}
+
+function wait_for_bookmark_delete() {
+  local repo=$1
+  local bookmark=$2
+  local attempt=1
+  sleep 1
+  while scsc lookup -R $repo -B $bookmark 2>/dev/null
+  do
+    attempt=$((attempt + 1))
+    if [[ $attempt -gt 5 ]]
+    then
+       echo "bookmark deletion of $bookmark has not happened"
+       return 1
+    fi
+    sleep 1
+  done
+}
+
 function wait_for_land_service {
   export LAND_SERVICE_PORT
   wait_for_server "Land service" LAND_SERVICE_PORT "$TESTTMP/land_service.out" \
