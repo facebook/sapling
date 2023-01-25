@@ -382,9 +382,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   bool isSafeForInodeAccess() const {
     auto state = getState();
-    return !(
-        state == State::UNINITIALIZED || state == State::INITIALIZING ||
-        state == State::SHUTTING_DOWN);
+    return (
+        state == State::INITIALIZED || state == State::STARTING ||
+        state == State::RUNNING);
   }
 
   /**
@@ -582,8 +582,23 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return basename(checkoutConfig_->getRepoSource());
   }
 
-  /** Get the TreeInode for the root of the mount. */
+  /**
+   * Get the TreeInode for the root of the mount.
+   *
+   * This may race with the mount being tore down and the InodeMap being
+   * destroyed, it is therefore unsafe to call this unless guaranteed that
+   * another reference was acquired under the EdenServer::mountPoints_ lock.
+   *
+   * In debug builds, this invariant is checked.
+   */
   TreeInodePtr getRootInode() const;
+
+  /**
+   * Same as above, but without checking the invariant.
+   *
+   * THIS SHOULD ONLY BE CALLED IN EdenServer::getMountAndRootInode.
+   */
+  TreeInodePtr getRootInodeUnchecked() const;
 
 #ifndef _WIN32
   /**

@@ -28,6 +28,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
@@ -301,10 +302,15 @@ class EdenServer : private TakeoverHandler {
   /**
    * Look up an EdenMount by the path where it is mounted.
    *
+   * The root TreeInodePtr is also returned to avoid a race where the EdenMount
+   * is shutdown right after this function returns. Keeping the returned
+   * TreeInodePtr alive will keep the mount alive.
+   *
    * Throws an EdenError if no mount exists with the specified path, or if the
    * mount is still initializing and is not ready for inode operations yet.
    */
-  std::shared_ptr<EdenMount> getMount(AbsolutePathPiece mountPath) const;
+  std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr> getMountAndRootInode(
+      AbsolutePathPiece mountPath) const;
 
   folly::Future<CheckoutResult> checkOutRevision(
       AbsolutePathPiece mountPath,
@@ -575,16 +581,6 @@ class EdenServer : private TakeoverHandler {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already.
   void addToMountPoints(std::shared_ptr<EdenMount> edenMount);
-
-  /**
-   * Look up an EdenMount by the path where it is mounted.
-   *
-   * This is similar to getMount(), but will also return mounts that are still
-   * initializing.  It is the caller's responsibility to ensure they do not
-   * perform any inode operations on the returned mount without first verifying
-   * it is ready for access.
-   */
-  std::shared_ptr<EdenMount> getMountUnsafe(AbsolutePathPiece mountPath) const;
 
   // Registers (or removes) stats callbacks for edenMount.
   // These are here rather than in EdenMount because we need to

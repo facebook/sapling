@@ -274,6 +274,7 @@ void TestMount::initialize(
 
 void TestMount::initializeEdenMount() {
   edenMount_->initialize().getVia(serverExecutor_.get());
+  rootInode_ = edenMount_->getRootInodeUnchecked();
 }
 
 void TestMount::createMountWithoutInitializing(
@@ -441,6 +442,7 @@ void TestMount::remount() {
   // We do this explicitly so that the old edenMount_ is destroyed before we
   // create the new one below.
   std::weak_ptr<EdenMount> weakMount = edenMount_;
+  rootInode_.reset();
   edenMount_.reset();
   EXPECT_EQ(0, weakMount.lock().use_count())
       << "All references to EdenMount should be released before calling "
@@ -453,7 +455,7 @@ void TestMount::remount() {
       blobCache_,
       serverState_,
       std::move(journal));
-  edenMount_->initialize().getVia(serverExecutor_.get());
+  initializeEdenMount();
 }
 
 #ifndef _WIN32
@@ -473,9 +475,11 @@ void TestMount::remountGracefully() {
 
   auto journal = std::make_unique<Journal>(stats_);
 
+  rootInode_.reset();
+
   auto takeoverData =
       edenMount_->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)
-          .get();
+          .get(1s);
 
   // Reset the edenMount_ pointer.  This will destroy the old EdenMount
   // assuming that no-one else still has any references to it.
@@ -500,6 +504,7 @@ void TestMount::remountGracefully() {
       std::move(journal));
   edenMount_->initialize([](auto) {}, takeoverData)
       .getVia(serverExecutor_.get());
+  rootInode_ = edenMount_->getRootInodeUnchecked();
 }
 #endif
 

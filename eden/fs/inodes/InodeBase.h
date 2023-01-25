@@ -540,6 +540,18 @@ class InodeBase {
     }
   }
   void onPtrRefZero() const;
+
+ public:
+  /**
+   * Read the refcount of this inode.
+   *
+   * This is racy and should only be called in debug/X*CHECK.
+   */
+  uint32_t debugGetPtrRef() const {
+    return ptrRefcount_.load(std::memory_order_acquire);
+  }
+
+ private:
   ParentInodeInfo getParentInfo() const;
 
   InodeNumber const ino_;

@@ -42,7 +42,8 @@ class InodePtrTestHelper {
 // - The InodeMap keeps 1 reference to the root inode
 // - The .eden inode holds another
 // - We hold a third reference during the tests below
-static constexpr size_t kRootRefCount = 3;
+// - TestMount holds another.
+static constexpr size_t kRootRefCount = 4;
 
 TEST(InodePtr, constructionAndAssignment) {
   TestMount testMount{FakeTreeBuilder{}, /*enableActivityBuffer=*/false};

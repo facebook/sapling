@@ -638,6 +638,9 @@ TEST(EdenMount, destroyDeletesObjectAfterInProgressShutdownCompletes) {
   auto shutdownBlocker =
       EdenMountShutdownBlocker::preventShutdownFromCompleting(*mount);
 
+  auto& inode = testMount.getRootInode();
+  inode.reset();
+
   auto shutdownFuture =
       mount->shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true);
   mount.reset();
@@ -656,6 +659,7 @@ TEST(
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto mountDestroyDetector = EdenMountDestroyDetector{testMount};
   std::shared_ptr<EdenMount>& mount = testMount.getEdenMount();
+  auto& rootInode = testMount.getRootInode();
 
   auto shutdownBlocker =
       EdenMountShutdownBlocker::preventShutdownFromCompleting(*mount);
@@ -664,6 +668,7 @@ TEST(
   testMount.registerFakeFuse(fuse);
   auto startChannelFuture = mount->startChannel(false);
 
+  rootInode.reset();
   mount.reset();
   fuse->close();
 
@@ -1043,6 +1048,7 @@ TEST(EdenMountState, mountIsRunningAfterFuseInitializationCompletes) {
 TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
   auto oldTestMount = TestMount{FakeTreeBuilder{}};
   auto& oldMount = *oldTestMount.getEdenMount();
+  auto& oldRootInode = oldTestMount.getRootInode();
   auto newTestMount = TestMount{FakeTreeBuilder{}};
   auto& newMount = *newTestMount.getEdenMount();
 
@@ -1054,6 +1060,7 @@ TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
   TakeoverData::MountInfo takeoverData =
       oldMount.getChannelCompletionFuture().within(kTimeout).getVia(
           oldTestMount.getServerExecutor().get());
+  oldRootInode.reset();
   oldMount.shutdown(/*doTakeover=*/true).get(kTimeout);
   auto& fuseChannelData = std::get<FuseChannelData>(takeoverData.channelInfo);
   newMount.takeoverFuse(std::move(fuseChannelData));
@@ -1095,7 +1102,7 @@ TEST(EdenMountState, mountIsShuttingDownWhileInodeIsReferencedDuringShutdown) {
   auto& mount = *testMount.getEdenMount();
   auto* executor = testMount.getServerExecutor().get();
 
-  auto inode = mount.getInodeMap()->getRootInode();
+  auto& inode = testMount.getRootInode();
 
   auto shutdownFutures = folly::FutureSplitter<SerializedInodeMap>{
       mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true)
@@ -1116,6 +1123,8 @@ TEST(EdenMountState, mountIsShuttingDownWhileInodeIsReferencedDuringShutdown) {
 TEST(EdenMountState, mountIsShutDownAfterShutdownCompletes) {
   auto testMount = TestMount{FakeTreeBuilder{}};
   auto& mount = *testMount.getEdenMount();
+  auto& inode = testMount.getRootInode();
+  inode.reset();
   mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true)
       .get(kTimeout);
   EXPECT_EQ(testMount.getEdenMount()->getState(), EdenMount::State::SHUT_DOWN);

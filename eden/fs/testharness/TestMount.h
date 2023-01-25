@@ -329,6 +329,10 @@ class TestMount {
     return edenMount_;
   }
 
+  TreeInodePtr& getRootInode() & {
+    return rootInode_;
+  }
+
 #ifndef _WIN32
   const std::shared_ptr<FakePrivHelper>& getPrivHelper() const {
     return privHelper_;
@@ -407,6 +411,8 @@ class TestMount {
   std::unique_ptr<folly::test::TemporaryDirectory> testDir_;
 
   std::shared_ptr<EdenMount> edenMount_;
+  TreeInodePtr rootInode_;
+
 #ifndef _WIN32
   std::unique_ptr<FuseDispatcher> dispatcher_;
 #endif

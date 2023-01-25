@@ -717,6 +717,7 @@ TEST_F(
   file2->decFsRefcount();
 
   edenMount.reset();
+
   tree.reset();
   file1.reset();
   file2.reset();

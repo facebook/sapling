@@ -1022,7 +1022,11 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdown(
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
                << "state was " << getState();
   }
-  return shutdownImpl(doTakeover);
+
+  // The caller calls us with the EdenServer::mountPoints_ lock, make sure that
+  // shutdownImpl isn't executed inline so the lock can be released.
+  return folly::makeSemiFuture().defer(
+      [doTakeover, this](auto&&) { return shutdownImpl(doTakeover); });
 }
 
 folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
@@ -1215,6 +1219,29 @@ EdenStats* EdenMount::getStats() const {
 }
 
 TreeInodePtr EdenMount::getRootInode() const {
+  auto rootInode = inodeMap_->getRootInode();
+  if (isSafeForInodeAccess()) {
+    XDCHECK(rootInode);
+    // The root inode is initialized when the InodeMap is initialized, and
+    // destroyed when the InodeMap is shutdown. Both of these occur outside of
+    // the constructor/destructor when the EdenMount is still alive and may be
+    // held in multiple threads.
+    //
+    // To prevent the InodeMap from being shutdown, a reference must be held on
+    // the rootInode, and this reference must be obtained with the
+    // EdenServer::mountPoints_ lock. Subsequent getRootInode are safe outside
+    // of that lock.
+    //
+    // At this point, the root inode should thus have a refcount of at least 3:
+    //  - One held by InodeMap
+    //  - One returned from EdenServer::getMountAndRootInode
+    //  - And the one on the stack just above.
+    XCHECK_GE(rootInode->debugGetPtrRef(), 3u);
+  }
+  return rootInode;
+}
+
+TreeInodePtr EdenMount::getRootInodeUnchecked() const {
   return inodeMap_->getRootInode();
 }
 
@@ -1831,8 +1858,7 @@ ImmediateFuture<folly::Unit> EdenMount::diffBetweenRoots(
     DiffCallback* callback) {
   auto diffContext = createDiffContext(callback, cancellation, true);
   auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);
-  return std::move(fut).ensure(
-      [diffContext = std::move(diffContext), rootInode = getRootInode()] {});
+  return std::move(fut).ensure([diffContext = std::move(diffContext)] {});
 }
 
 void EdenMount::resetParent(const RootId& parent) {

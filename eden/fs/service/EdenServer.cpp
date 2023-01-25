@@ -1676,19 +1676,23 @@ void EdenServer::mountFinished(
   // Save the unmount and takover Promises
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
+  auto shutdownFuture = folly::SemiFuture<SerializedInodeMap>::makeEmpty();
   {
     const auto mountPoints = mountPoints_->wlock();
     const auto it = mountPoints->find(mountPath);
     XCHECK(it != mountPoints->end());
     unmountPromise = std::move(it->second.unmountPromise);
     takeoverPromise = std::move(it->second.takeoverPromise);
+
+    const bool doTakeover = takeoverPromise.has_value();
+    // Shutdown the EdenMount, while holding the mountPoints_ lock. This is
+    // done to avoid a race between checking isSafeForInodeAccess and the
+    // InodeMap being destroyed. In that race, the rootInode may be a nullptr
+    // thus leading to a nullptr dereference.
+    shutdownFuture = edenMount->shutdown(doTakeover);
   }
 
-  const bool doTakeover = takeoverPromise.has_value();
-
-  // Shutdown the EdenMount, and fulfill the unmount promise
-  // when the shutdown completes
-  edenMount->shutdown(doTakeover)
+  std::move(shutdownFuture)
       .via(getMainEventBase())
       .thenTry([unmountPromise = std::move(unmountPromise),
                 takeoverPromise = std::move(takeoverPromise),
@@ -1744,19 +1748,8 @@ EdenServer::MountList EdenServer::getAllMountPoints() const {
   return results;
 }
 
-shared_ptr<EdenMount> EdenServer::getMount(AbsolutePathPiece mountPath) const {
-  const auto mount = getMountUnsafe(mountPath);
-  if (!mount->isSafeForInodeAccess()) {
-    throw newEdenError(
-        EBUSY,
-        EdenErrorType::POSIX_ERROR,
-        fmt::format("mount point \"{}\" is still initializing", mountPath));
-  }
-  return mount;
-}
-
-shared_ptr<EdenMount> EdenServer::getMountUnsafe(
-    AbsolutePathPiece mountPath) const {
+std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr>
+EdenServer::getMountAndRootInode(AbsolutePathPiece mountPath) const {
   const auto mountPoints = mountPoints_->rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
@@ -1767,7 +1760,14 @@ shared_ptr<EdenMount> EdenServer::getMountUnsafe(
             "mount point \"{}\" is not known to this eden instance",
             mountPath));
   }
-  return it->second.edenMount;
+  auto mount = it->second.edenMount;
+  if (!mount->isSafeForInodeAccess()) {
+    throw newEdenError(
+        EBUSY,
+        EdenErrorType::POSIX_ERROR,
+        fmt::format("mount point \"{}\" is still initializing", mountPath));
+  }
+  return {mount, mount->getRootInodeUnchecked()};
 }
 
 Future<CheckoutResult> EdenServer::checkOutRevision(
@@ -1777,7 +1777,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     std::optional<pid_t> clientPid,
     StringPiece callerName,
     CheckoutMode checkoutMode) {
-  auto edenMount = getMount(mountPath);
+  auto [edenMount, rootInode] = getMountAndRootInode(mountPath);
   auto rootId = edenMount->getObjectStore()->parseRootId(rootHash);
   if (rootHgManifest.has_value()) {
     // The hg client has told us what the root manifest is.
@@ -1797,8 +1797,10 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
       enumerateInProgressCheckouts() + 1);
   return edenMount->checkout(rootId, clientPid, callerName, checkoutMode)
       .via(mainEventBase_)
-      .thenValue([this, checkoutMode, edenMount, mountPath = mountPath.copy()](
-                     CheckoutResult&& result) {
+      .thenValue([this,
+                  checkoutMode,
+                  edenMount = edenMount,
+                  mountPath = mountPath.copy()](CheckoutResult&& result) {
         getServerState()->getNotifier()->signalCheckout(
             enumerateInProgressCheckouts());
         if (checkoutMode == CheckoutMode::DRY_RUN) {
@@ -1836,7 +1838,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
               std::chrono::duration_cast<std::chrono::milliseconds>(delay),
               [this, mountPath = mountPath.copy()]() {
                 try {
-                  auto edenMount = this->getMount(mountPath);
+                  auto [edenMount, _] = this->getMountAndRootInode(mountPath);
                   edenMount->forgetStaleInodes();
                 } catch (EdenError& err) {
                   // This is an expected error if the mount has been
@@ -1853,7 +1855,8 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         }
         return std::move(result);
       })
-      .via(getServerState()->getThreadPool().get());
+      .via(getServerState()->getThreadPool().get())
+      .ensure([rootInode = std::move(rootInode)] {});
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
