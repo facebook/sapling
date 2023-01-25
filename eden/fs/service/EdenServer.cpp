@@ -2214,11 +2214,7 @@ void EdenServer::workingCopyGC() {
   auto cutoffConfig =
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           config->gcCutoff.getValue());
-
-  auto cutoff = std::chrono::system_clock::time_point::max();
-  if (cutoffConfig != std::chrono::system_clock::duration::zero()) {
-    cutoff = std::chrono::system_clock::now() - cutoffConfig;
-  }
+  auto cutoff = std::chrono::system_clock::now() - cutoffConfig;
 
   const auto mountPoints = getMountPoints();
   for (const auto& mount : mountPoints) {

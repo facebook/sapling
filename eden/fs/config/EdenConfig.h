@@ -292,13 +292,12 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Files with an atime older than this will be invalidated during GC.
    *
-   * Default to a day. A value of 0 will invalidate all non-materialized files.
-   * On Windows, the atime is  updated only once an hour, so values below 1h
-   * may over-invalidate.
+   * Default to a day. On Windows, the atime is  updated only once an hour, so
+   * values below 1h are disallowed.
    */
-  ConfigSetting<std::chrono::nanoseconds> gcCutoff{
+  ConfigSetting<OneHourMinDuration> gcCutoff{
       "mount:garbage-collection-cutoff",
-      std::chrono::hours(24),
+      OneHourMinDuration(std::chrono::hours(24)),
       this};
 
   /**
