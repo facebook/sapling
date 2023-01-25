@@ -10,10 +10,10 @@ from __future__ import absolute_import
 from edenscm import posix, util
 
 
-def checklink(path):
+def checklink(path) -> bool:
     return False
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     posix.checklink = checklink
     util.checklink = checklink
