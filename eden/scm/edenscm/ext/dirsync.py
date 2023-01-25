@@ -46,7 +46,6 @@ from typing import Sized
 
 import bindings
 from edenscm import (
-    config,
     context,
     error,
     extensions,
@@ -146,13 +145,14 @@ def getconfigs(wctx) -> sortdict:
         content = pycompat.decodeutf8(wctx[filename].data())
     except (error.ManifestLookupError, IOError, AttributeError, KeyError):
         content = ""
-    cfg = config.config()
+    cfg = bindings.configloader.config()
     if content:
-        cfg.parse(filename, "[dirsync]\n%s" % content, ["dirsync"])
+        cfg.parse("[dirsync]\n%s" % content, filename)
 
     maps = util.sortdict()
     repo = wctx.repo()
-    for key, value in repo.ui.configitems("dirsync") + cfg.items("dirsync"):
+    cfg_items = {name: cfg.get("dirsync", name) for name in cfg.names("dirsync")}
+    for key, value in repo.ui.configitems("dirsync") + list(cfg_items.items()):
         if "." not in key:
             continue
         name, disambig = key.split(".", 1)
