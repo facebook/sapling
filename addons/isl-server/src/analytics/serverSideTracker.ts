@@ -1,0 +1,46 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import type {Repository} from '../Repository';
+import type {Logger} from '../logger';
+import type {ServerPlatform} from '../serverPlatform';
+import type {ApplicationInfo, TrackDataWithEventName} from './types';
+
+import {generateAnalyticsInfo} from './environment';
+import {Tracker} from './tracker';
+
+export type ServerSideTracker = Tracker<ServerSideContext>;
+
+class ServerSideContext {
+  constructor(public logger: Logger, public data: ApplicationInfo) {}
+
+  public setRepo(repo: Repository | undefined): void {
+    this.data.repo = repo?.codeReviewProvider?.getSummaryName();
+  }
+}
+
+/**
+ * Creates a Tracker which includes server-side-only cached application data like platform, username, etc,
+ * and sends data to the underlying analytics engine outside of ISL.
+ * This can not be global since two client connections may have different cached data.
+ */
+export function makeServerSideTracker(
+  logger: Logger,
+  platform: ServerPlatform,
+  version: string,
+): ServerSideTracker {
+  return new Tracker((data: TrackDataWithEventName, context: ServerSideContext) => {
+    const {logger} = context;
+    // log track event, since tracking events can be used as datapoints when reviewing logs
+    logger.log(
+      '[track]',
+      data.eventName,
+      data.errorName ?? '',
+      data.extras != null ? JSON.stringify(data.extras) : '',
+    );
+  }, new ServerSideContext(logger, generateAnalyticsInfo(platform.platformName, version)));
+}

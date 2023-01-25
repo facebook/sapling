@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 // @fb-only
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
@@ -308,6 +309,7 @@ export type ClientToServerMessage =
   | {
       type: 'refresh';
     }
+  | {type: 'track'; data: TrackDataWithEventName}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}

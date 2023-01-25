@@ -7,6 +7,7 @@
 
 import type {ClientConnection} from '.';
 import type {Repository} from './Repository';
+import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {ServerPlatform} from './serverPlatform';
 import type {
   ServerToClientMessage,
@@ -68,7 +69,11 @@ export default class ServerToClientAPI {
 
   private pageId = randomId();
 
-  constructor(private platform: ServerPlatform, private connection: ClientConnection) {
+  constructor(
+    private platform: ServerPlatform,
+    private connection: ClientConnection,
+    private tracker: ServerSideTracker,
+  ) {
     this.incomingListener = this.connection.onDidReceiveMessage(buf => {
       const message = buf.toString('utf-8');
       const data = deserializeFromString(message) as IncomingMessage;
@@ -93,6 +98,8 @@ export default class ServerToClientAPI {
 
     this.currentState = {type: 'error', error};
 
+    this.tracker.context.setRepo(undefined);
+
     this.processQueuedMessages();
   }
 
@@ -100,6 +107,8 @@ export default class ServerToClientAPI {
     this.disposeRepoDisposables();
 
     this.currentState = {type: 'repo', repo, cwd};
+
+    this.tracker.context.setRepo(repo);
 
     if (repo.codeReviewProvider != null) {
       this.repoDisposables.push(
@@ -200,6 +209,10 @@ export default class ServerToClientAPI {
   private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
     const {logger} = repo;
     switch (data.type) {
+      case 'track': {
+        this.tracker.trackData(data.data);
+        break;
+      }
       case 'subscribeUncommittedChanges': {
         if (this.hasSubscribedToUncommittedChanges) {
           break;
