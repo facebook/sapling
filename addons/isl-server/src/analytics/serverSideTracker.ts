@@ -11,6 +11,7 @@ import type {ServerPlatform} from '../serverPlatform';
 import type {ApplicationInfo, TrackDataWithEventName} from './types';
 
 import {generateAnalyticsInfo} from './environment';
+// @fb-only
 import {Tracker} from './tracker';
 
 export type ServerSideTracker = Tracker<ServerSideContext>;
@@ -23,6 +24,10 @@ class ServerSideContext {
   }
 }
 
+const noOp = () => {
+  /* In open source builds, analytics tracking is completely disabled/removed. */
+};
+
 /**
  * Creates a Tracker which includes server-side-only cached application data like platform, username, etc,
  * and sends data to the underlying analytics engine outside of ISL.
@@ -32,6 +37,10 @@ export function makeServerSideTracker(
   logger: Logger,
   platform: ServerPlatform,
   version: string,
+  // prettier-ignore
+  writeToServer =
+    // @fb-only
+    noOp,
 ): ServerSideTracker {
   return new Tracker((data: TrackDataWithEventName, context: ServerSideContext) => {
     const {logger} = context;
@@ -42,5 +51,6 @@ export function makeServerSideTracker(
       data.errorName ?? '',
       data.extras != null ? JSON.stringify(data.extras) : '',
     );
+    writeToServer({...data, ...context.data}, logger);
   }, new ServerSideContext(logger, generateAnalyticsInfo(platform.platformName, version)));
 }
