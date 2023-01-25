@@ -380,6 +380,28 @@ TEST_F(ConfigSettingTest, setDuration) {
   checkSetError(setting, "non-digit character found", "bogus");
 }
 
+TEST_F(ConfigSettingTest, setConstrainedDuration) {
+  constexpr uint64_t TwoHoursTicks =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::hours(2))
+          .count();
+
+  ConfigSetting<ConstrainedDuration<OneHourTicks, TwoHoursTicks>> setting{
+      "test:value", 90min, nullptr};
+  EXPECT_EQ(setting.getValue(), 90min);
+  checkSet(setting, 1h, "1h");
+  checkSet(setting, 2h, "2h");
+  checkSetError(
+      setting, "Value '30m' is smaller than the constraint (60m)", "30m");
+  EXPECT_EQ(setting.getValue(), 2h);
+  checkSetError(setting, "Value '3h' is bigger than the constraint (2h)", "3h");
+  EXPECT_EQ(setting.getValue(), 2h);
+
+  EXPECT_THROW(
+      (ConstrainedDuration<OneHourTicks, TwoHoursTicks>{10min}),
+      std::invalid_argument);
+}
+
 TEST_F(ConfigSettingTest, setArray) {
   ConfigSetting<std::vector<std::string>> setting{
       "test:value", std::vector<std::string>{}, nullptr};

@@ -21,6 +21,7 @@
 
 #include <folly/Expected.h>
 
+#include "eden/fs/utils/ChronoParse.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -193,6 +194,78 @@ class FieldConverter<std::shared_ptr<re2::RE2>> {
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(std::shared_ptr<re2::RE2> value) const;
+};
+
+/**
+ * A duration that can be constrained in a range.
+ *
+ * This can be used to prevent configs from being set too low or too high. Note
+ * that due to C++ template limitation, the min and max times are expressed in
+ * nanoseconds ticks.
+ *
+ * Throws a std::invalid_argument when constructed with a value out of range.
+ * When used in a ConfigSettings, the old value will be preserved when trying
+ * to set the config with an out of range value.
+ */
+template <
+    int64_t MinNsTicks,
+    int64_t MaxNsTicks = std::chrono::nanoseconds::max().count()>
+struct ConstrainedDuration : public std::chrono::nanoseconds {
+  template <class Rep, class Period>
+  /* implicit */ ConstrainedDuration(std::chrono::duration<Rep, Period> time)
+      : std::chrono::nanoseconds{time} {
+    std::chrono::nanoseconds ns = time;
+    if (ns.count() < MinNsTicks || ns.count() > MaxNsTicks) {
+      throw std::invalid_argument(fmt::format(
+          "Default Duration '{}' should be between {} and {}",
+          durationToString(ns),
+          durationToString(std::chrono::nanoseconds{MinNsTicks}),
+          durationToString(std::chrono::nanoseconds{MaxNsTicks})));
+    }
+  }
+};
+
+constexpr int64_t OneHourTicks =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::hours(1))
+        .count();
+
+using OneHourMinDuration = ConstrainedDuration<OneHourTicks>;
+
+template <int64_t MinNsTicks, int64_t MaxNsTicks>
+class FieldConverter<ConstrainedDuration<MinNsTicks, MaxNsTicks>>
+    : private FieldConverter<std::chrono::nanoseconds> {
+ public:
+  folly::Expected<ConstrainedDuration<MinNsTicks, MaxNsTicks>, std::string>
+  fromString(
+      std::string_view value,
+      const std::map<std::string, std::string>& convData) const {
+    auto nanoseconds =
+        FieldConverter<std::chrono::nanoseconds>{}.fromString(value, convData);
+    return nanoseconds.then(
+        [value](std::chrono::nanoseconds ns)
+            -> folly::Expected<
+                ConstrainedDuration<MinNsTicks, MaxNsTicks>,
+                std::string> {
+          if (ns.count() < MinNsTicks) {
+            return folly::makeUnexpected<std::string>(fmt::format(
+                "Value '{}' is smaller than the constraint ({})",
+                value,
+                durationToString(std::chrono::nanoseconds{MinNsTicks})));
+          } else if (ns.count() > MaxNsTicks) {
+            return folly::makeUnexpected<std::string>(fmt::format(
+                "Value '{}' is bigger than the constraint ({})",
+                value,
+                durationToString(std::chrono::nanoseconds{MaxNsTicks})));
+          } else {
+            return ConstrainedDuration<MinNsTicks, MaxNsTicks>{ns};
+          }
+        });
+  }
+
+  std::string toDebugString(
+      ConstrainedDuration<MinNsTicks, MaxNsTicks> value) const {
+    return FieldConverter<std::chrono::nanoseconds>{}.toDebugString(value);
+  }
 };
 
 } // namespace facebook::eden
