@@ -51,6 +51,25 @@ export const repositoryInfo = selector<RepoInfo | undefined>({
   },
 });
 
+export const applicationinfo = atom<{platformName: string; version: string} | undefined>({
+  key: 'applicationinfo',
+  default: undefined,
+  effects: [
+    ({setSelf}) => {
+      const disposable = serverAPI.onMessageOfType('applicationInfo', event => {
+        setSelf(event);
+      });
+      return () => disposable.dispose();
+    },
+    () =>
+      serverAPI.onConnectOrReconnect(() =>
+        serverAPI.postMessage({
+          type: 'requestApplicationInfo',
+        }),
+      ),
+  ],
+});
+
 export const serverCwd = selector<string>({
   key: 'serverCwd',
   get: ({get}) => {

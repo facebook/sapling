@@ -32,7 +32,8 @@ import {randomId} from 'shared/utils';
 export type IncomingMessage = ClientToServerMessage;
 export type OutgoingMessage = ServerToClientMessage;
 
-type GeneralMessage = IncomingMessage & {type: 'requestRepoInfo'};
+type GeneralMessage = IncomingMessage &
+  ({type: 'requestRepoInfo'} | {type: 'requestApplicationInfo'});
 type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
 
 /**
@@ -180,6 +181,14 @@ export default class ServerToClientAPI {
             this.postMessage({type: 'repoInfo', info: this.currentState.error});
             break;
         }
+        break;
+      }
+      case 'requestApplicationInfo': {
+        this.postMessage({
+          type: 'applicationInfo',
+          platformName: this.platform.platformName,
+          version: this.connection.version,
+        });
         break;
       }
     }

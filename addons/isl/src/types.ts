@@ -312,6 +312,7 @@ export type ClientToServerMessage =
   | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'requestRepoInfo'}
+  | {type: 'requestApplicationInfo'}
   | {type: 'fetchDiffSummaries'}
   | {type: 'pageVisibility'; state: PageVisibility}
   | {
@@ -339,6 +340,7 @@ export type ServerToClientMessage =
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | {type: 'fetchedCommitMessageTemplate'; template: string}
+  | {type: 'applicationInfo'; platformName: string; version: string}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
