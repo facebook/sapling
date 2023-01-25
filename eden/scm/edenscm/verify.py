@@ -13,7 +13,7 @@ from .i18n import _
 from .node import short
 
 
-def checklazychangelog(repo):
+def checklazychangelog(repo) -> int:
     """check lazy changelog properties and print found problems
 
     This function only performs quick local checks to find some
@@ -26,6 +26,7 @@ def checklazychangelog(repo):
         return 0
 
     ui = repo.ui
+    # pyre-fixme[11]: Annotation `commits` is not defined as a type.
     commits: "bindings.dag.commits" = repo.changelog.inner
     problems = []
     missingids = commits.checkuniversalids()
@@ -49,7 +50,7 @@ def checklazychangelog(repo):
     return 0
 
 
-def checklazychangelogwithserver(repo):
+def checklazychangelogwithserver(repo) -> int:
     """check lazy changelog shape with the server and print found problems
 
     This check first performs a graph clone using segmented changelog protocols.
