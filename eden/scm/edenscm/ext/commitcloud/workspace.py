@@ -6,7 +6,9 @@
 import socket
 from typing import List, Optional, Tuple
 
-from edenscm import config, error, pycompat, util
+from bindings import configloader
+
+from edenscm import error, pycompat, util
 from edenscm.i18n import _
 
 
@@ -132,8 +134,8 @@ def _get(repo, *names):
     """Read commitcloudrc file to get a value"""
     if repo.svfs.exists(filename):
         with repo.svfs.open(filename, r"rb") as f:
-            cloudconfig = config.config()
-            cloudconfig.read(filename, f)
+            cloudconfig = configloader.config()
+            cloudconfig.parse(f.read().decode("utf-8"), filename)
             return (
                 cloudconfig.get("commitcloud", names[0])
                 if len(names) == 1
