@@ -110,9 +110,8 @@ ParentChangeCallback = Callable[
 ]
 
 
-# pyre-fixme[3]: Return type must be annotated.
 # pyre-fixme[2]: Parameter must be annotated.
-def fastreadp1(repopath):
+def fastreadp1(repopath) -> Optional[bytes]:
     """Read dirstate p1 node without constructing repo or dirstate objects
 
     This is the first 20-bytes of the dirstate file. All known dirstate
