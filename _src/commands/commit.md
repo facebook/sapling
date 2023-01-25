@@ -4,7 +4,7 @@ sidebar_position: 9
 
 ## commit | ci
 <!--
-  @generated SignedSource<<08bb2205940ddbd1ecbb2817b93e86e1>>
+  @generated SignedSource<<7b180547536d1b2ee17f9fbfc0a1cb94>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -19,7 +19,7 @@ changes, choose one of the following options:
 
 - Specify an exact list of files for which you want changes committed.
 
-- Use the `-I` or `-X` flags to match or exclude file names  using a pattern or fileset. See `sl help patterns` and  `sl help filesets` fot details.
+- Use the `-I` or `-X` flags to match or exclude file names  using a pattern or fileset. See `sl help patterns` and  `sl help filesets` for details.
 
 - Specify the `--interactive` flag to open a UI to select  individual files, hunks, or lines.
 
