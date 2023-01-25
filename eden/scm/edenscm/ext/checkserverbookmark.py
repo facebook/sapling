@@ -26,7 +26,7 @@ def runlistkeys(ui, remote):
     return remote.listkeys("bookmarks")
 
 
-def verifyexisting(ui, remote, name, hash):
+def verifyexisting(ui, remote, name, hash) -> int:
     location = hex(runlookup(ui, remote, name))
     if location.strip() != hash.strip():
         ui.warn(
@@ -44,7 +44,7 @@ def verifyexisting(ui, remote, name, hash):
     return 0
 
 
-def verifydeleted(ui, remote, name):
+def verifydeleted(ui, remote, name) -> int:
     serverkeys = runlistkeys(ui, remote)
     if name in serverkeys:
         ui.warn(
