@@ -44,7 +44,7 @@ configitem = registrar.configitem(configtable)
 configitem("errorredirect", "fancy-traceback", default=True)
 
 
-def _printtrace(ui, warning):
+def _printtrace(ui, warning) -> bool:
     # Like dispatch.handlecommandexception, but avoids an unnecessary ui.log
     ui.warn(warning)
     return False  # return value for "handlecommandexception", re-raises
@@ -103,5 +103,5 @@ def _handlecommandexception(orig, ui):
     return True  # do not re-raise
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     extensions.wrapfunction(dispatch, "handlecommandexception", _handlecommandexception)
