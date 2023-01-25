@@ -12,6 +12,7 @@ import {Icon} from './Icon';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
+import {tracker} from './analytics';
 import {t} from './i18n';
 import {
   haveCommitsLoadedYet,
@@ -59,6 +60,7 @@ function RefreshButton() {
       <VSCodeButton
         appearance="secondary"
         onClick={() => {
+          tracker.track('ClickedRefresh');
           clearOptimisticState();
           serverAPI.postMessage({type: 'refresh'});
         }}
