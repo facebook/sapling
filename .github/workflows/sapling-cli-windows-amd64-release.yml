@@ -15,6 +15,8 @@ jobs:
       run: git config --global --add safe.directory "$PWD"
     - name: rustup
       run: rustup default stable
+    - name: Support longpaths
+      run: git config --system core.longpaths true
     - name: openssl
       run: vcpkg install openssl:x64-windows-static-md
     - name: integrate vcpkg
