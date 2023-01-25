@@ -297,6 +297,7 @@ RUN rm -rf /tmp/repo
                 {"name": "Checkout Code", "uses": "actions/checkout@v3"},
                 grant_repo_access(),
                 {"name": "rustup", "run": "rustup default stable"},
+                {"name": "Support longpaths", "run": "git config --system core.longpaths true"},
                 # The "x64-windows-static-md" triple is what the Rust openssl
                 # crate expects on Windows when it goes looking for the vcpkg
                 # install.
