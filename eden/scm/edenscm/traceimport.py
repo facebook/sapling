@@ -8,6 +8,7 @@ from __future__ import absolute_import
 # Attention: Modules imported are not traceable. Keep the list minimal.
 import sys
 import types
+from typing import Optional, Set, Type
 
 import bindings
 
@@ -139,11 +140,11 @@ class TraceImporter(object):
 
 _functypes = (types.FunctionType, types.BuiltinFunctionType)
 _isheaptype = bindings.tracing.isheaptype
-_tracedclasses = {object, type, types.ModuleType, dict}
+_tracedclasses: Set[Type[object]] = {object, type, types.ModuleType, dict}
 _wrapfunc = bindings.tracing.wrapfunc
 
 
-def traceclass(cls):
+def traceclass(cls) -> None:
     """Annotate functions in a class so they get traced."""
     bases = getattr(cls, "__mro__", [])
     for obj in bases:
@@ -167,7 +168,7 @@ def traceclass(cls):
                 setattr(obj, k, _wrapfunc(v, classname=name))
 
 
-def tracemodule(mod):
+def tracemodule(mod) -> None:
     """Annotate functions and classes in a module so they get traced."""
     modname = mod.__name__
     container = mod.__dict__
@@ -181,7 +182,7 @@ def tracemodule(mod):
             container[k] = _wrapfunc(v)
 
 
-def enable(config=None):
+def enable(config: Optional[str] = None) -> None:
     """Enable traceimport.
 
     'config' is space separated names.
@@ -206,6 +207,7 @@ def enable(config=None):
     if config in {None, ""}:
         return
 
+    # pyre-fixme[16]: `Optional` has no attribute `split`.
     names = config.split()
     prefixes = [n[:-1] for n in names if n.endswith("*")]
     exactnames = {n for n in names if not n.endswith("*")}
@@ -224,13 +226,15 @@ def enable(config=None):
             startswith = name.startswith
             return _any(startswith(p) for p in _prefix)
 
+    # pyre-fixme[6]: For 2nd argument expected `_MetaPathFinder` but got
+    #  `TraceImporter`.
     sys.meta_path.insert(0, TraceImporter(shouldtrace))
 
     global enabled
     enabled = True
 
 
-def registeratexit(threshold=20000):
+def registeratexit(threshold: int = 20000) -> None:
     """Register an atexit handler that prints ASCII tracing output.
 
     This is for quick ad-hoc performance analysis.
