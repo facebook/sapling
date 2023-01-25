@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {BugButton} from './BugButton';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {Icon} from './Icon';
@@ -35,6 +36,7 @@ export function TopBar() {
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
+        <BugButton />
         <SettingsGearButton />
         <RefreshButton />
       </span>
