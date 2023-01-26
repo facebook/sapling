@@ -26,7 +26,7 @@ from .pullrequeststore import PullRequestStore
 from .run_git_command import run_git_command
 
 
-def submit(ui, repo, *args, **opts):
+def submit(ui, repo, *args, **opts) -> int:
     """Create or update GitHub pull requests."""
     github_repo = check_github_repo(repo)
     is_draft = opts.get("draft")
@@ -250,7 +250,7 @@ async def rewrite_pull_request_body(
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     repository: Repository,
     ui,
-):
+) -> None:
     # If available, use the head branch of the previous partition as the base
     # of this branch. Recall that partitions is ordered from the top of the
     # stack to the bottom.
@@ -356,7 +356,7 @@ async def create_pull_requests_serially(
     store: PullRequestStore,
     ui,
     is_draft: bool,
-):
+) -> None:
     """Creates a new pull request for each entry in the `commits` list.
 
     Each CommitData in `commits` will be updated such that its `.pr` field is
