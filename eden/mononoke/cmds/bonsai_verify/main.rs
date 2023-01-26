@@ -47,6 +47,7 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
@@ -367,7 +368,7 @@ fn subcommmand_hg_manifest_verify(
 
                         get_manifest_from_bonsai(
                             ctx.clone(),
-                            repo.get_blobstore().boxed(),
+                            repo.repo_blobstore_arc(),
                             bonsai.clone(),
                             parents,
                         )

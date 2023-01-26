@@ -48,6 +48,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
 use unodes::RootUnodeManifestId;
@@ -166,7 +167,7 @@ pub async fn subcommand_blame<'a>(
 
             let mut paths = derived_unode
                 .manifest_unode_id()
-                .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+                .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
                 .map_ok(|(path, file_unode_id)| {
                     let id = BlameId::from(file_unode_id);
                     cloned!(ctx, repo);
@@ -241,7 +242,7 @@ async fn find_leaf(
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx, repo.get_blobstore(), Some(path.clone()))
+        .find_entry(ctx, repo.repo_blobstore().clone(), Some(path.clone()))
         .await?;
     let entry = entry_opt.ok_or_else(|| format_err!("No such path: {}", path))?;
     match entry.into_leaf() {
@@ -264,7 +265,7 @@ async fn try_find_leaf(
     let entry_opt = mf_root
         .manifest_unode_id()
         .clone()
-        .find_entry(ctx, repo.get_blobstore(), Some(path.clone()))
+        .find_entry(ctx, repo.repo_blobstore().clone(), Some(path.clone()))
         .await?;
     Ok(entry_opt.and_then(|entry| entry.into_leaf()))
 }
@@ -342,7 +343,7 @@ async fn subcommand_compute_blame(
     line_number: bool,
     blame_v2: bool,
 ) -> Result<(), Error> {
-    let blobstore = repo.get_blobstore().boxed();
+    let blobstore = repo.repo_blobstore_arc();
     let file_unode_id = find_leaf(ctx.clone(), repo.clone(), csid, path.clone()).await?;
     let (_, _, content, blame) = bounded_traversal_dag(
         256,

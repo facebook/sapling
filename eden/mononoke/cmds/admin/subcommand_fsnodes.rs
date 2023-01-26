@@ -24,6 +24,7 @@ use manifest::ManifestOps;
 use manifest::PathOrPrefix;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use slog::Logger;
 
@@ -84,7 +85,7 @@ async fn subcommand_tree(
 
     let mut stream = root.fsnode_id().find_entries(
         ctx.clone(),
-        repo.get_blobstore(),
+        repo.repo_blobstore().clone(),
         vec![PathOrPrefix::Prefix(path)],
     );
 

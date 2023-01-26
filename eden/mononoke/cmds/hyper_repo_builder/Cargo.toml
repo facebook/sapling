@@ -27,6 +27,7 @@ mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
@@ -36,6 +37,5 @@ tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

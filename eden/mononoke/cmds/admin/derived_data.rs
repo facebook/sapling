@@ -647,7 +647,7 @@ async fn list_hg_manifest(
     let mfid = hg_cs.manifestid();
 
     let map: HashMap<_, _> = mfid
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, (ty, filenode_id))| async move {
             let filenode = filenode_id.load(ctx, repo.repo_blobstore()).await?;
             let content_id = filenode.content_id();
@@ -672,7 +672,7 @@ async fn list_skeleton_manifest(
 
     let skeleton_id = root_skeleton_id.skeleton_manifest_id();
     let map: HashMap<_, _> = skeleton_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, ())| (path, ManifestData::Skeleton))
         .try_collect()
         .await?;
@@ -694,7 +694,7 @@ async fn list_fsnodes(
 
     let fsnode_id = root_fsnode_id.fsnode_id();
     let map: HashMap<_, _> = fsnode_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, fsnode)| {
             let (content_id, ty): (ContentId, FileType) = fsnode.into();
             let val = ManifestData::Fsnodes(ty, content_id);
@@ -717,7 +717,7 @@ async fn list_unodes(
 
     let unode_id = root_unode_id.manifest_unode_id();
     let map: HashMap<_, _> = unode_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, unode_id)| async move {
             let unode = unode_id.load(ctx, repo.repo_blobstore()).await?;
             let val = ManifestData::Unodes(*unode.file_type(), *unode.content_id());

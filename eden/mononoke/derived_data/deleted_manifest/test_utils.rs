@@ -6,8 +6,10 @@
  */
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use anyhow::Error;
+use blobstore::Blobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
@@ -40,6 +42,7 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use pretty_assertions::assert_eq;
 use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
@@ -801,7 +804,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     bcs: BonsaiChangeset,
     parent_mf_ids: Vec<Root::Id>,
 ) -> (ChangesetId, Root::Id, Vec<(Option<MPath>, Status)>) {
-    let blobstore = repo.repo_blobstore().boxed();
+    let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
     let bcs_id = bcs.get_changeset_id();
 
     let changes = get_changes(

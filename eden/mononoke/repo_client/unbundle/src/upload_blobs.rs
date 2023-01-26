@@ -24,6 +24,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::HgNodeKey;
 use mononoke_types::RepoPath;
+use repo_blobstore::RepoBlobstoreArc;
 use wirepack::TreemanifestEntry;
 
 /// Represents data that is Mercurial-encoded and can be uploaded to the blobstore.
@@ -80,7 +81,7 @@ impl UploadableHgBlob for TreemanifestEntry {
             p2: self.p2,
             path: node_key.path.clone(),
         };
-        let (_node, value) = upload.upload(ctx.clone(), repo.get_blobstore().boxed())?;
+        let (_node, value) = upload.upload(ctx.clone(), repo.repo_blobstore_arc())?;
         Ok((
             node_key,
             (

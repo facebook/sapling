@@ -873,7 +873,7 @@ mod test {
         .await?;
 
         let third_bcs = third_rewritten_bcs_id
-            .load(&ctx, &repo.get_blobstore())
+            .load(&ctx, &repo.repo_blobstore().clone())
             .await?;
 
         assert_eq!(

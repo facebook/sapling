@@ -119,7 +119,7 @@ pub async fn get_file_nodes(
     let cs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
     let root_mf_id = cs.manifestid().clone();
     let manifest_entries: HashMap<_, _> = root_mf_id
-        .find_entries(ctx, repo.get_blobstore(), paths.clone())
+        .find_entries(ctx, repo.repo_blobstore().clone(), paths.clone())
         .try_filter_map(|(path, entry)| async move {
             let result =
                 path.and_then(move |path| entry.into_leaf().map(move |leaf| (path, leaf.1)));

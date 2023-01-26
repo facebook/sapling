@@ -22,6 +22,7 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use movers::Mover;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 
@@ -48,7 +49,9 @@ pub async fn find_source_repos_and_latest_synced_cs_ids<'a>(
     cs_id: ChangesetId,
     matches: &'a MononokeMatches<'_>,
 ) -> Result<Vec<(InnerRepo, Source<ChangesetId>)>, Error> {
-    let cs = cs_id.load(ctx, &hyper_repo.get_blobstore()).await?;
+    let cs = cs_id
+        .load(ctx, &hyper_repo.repo_blobstore().clone())
+        .await?;
 
     let latest_synced_state = decode_latest_synced_state_extras(cs.extra())?;
 

@@ -21,6 +21,7 @@ use fixtures::TestRepoFixture;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::resolve_cs_id;
 
 #[fbinit::test]
@@ -94,11 +95,15 @@ async fn assert_linknodes(
     max_length: Option<u64>,
 ) -> Result<(), Error> {
     let root_mf_id = start_from
-        .load(ctx, &repo.get_blobstore())
+        .load(ctx, &repo.repo_blobstore().clone())
         .await?
         .manifestid();
     let (_, files_hg_id) = root_mf_id
-        .find_entry(ctx.clone(), repo.get_blobstore(), Some(path.clone()))
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            Some(path.clone()),
+        )
         .await?
         .ok_or_else(|| anyhow!("entry not found"))?
         .into_leaf()

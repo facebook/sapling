@@ -159,7 +159,7 @@ impl AliasVerification {
         match self.mode {
             Mode::Verify => Ok(()),
             Mode::Generate => {
-                let blobstore = self.blobrepo.get_blobstore();
+                let blobstore = self.blobrepo.repo_blobstore().clone();
 
                 let maybe_meta =
                     filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))

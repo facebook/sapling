@@ -128,7 +128,7 @@ async fn subcommand_list(
 
     match root
         .skeleton_manifest_id()
-        .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
+        .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
         .await?
     {
         Some(Entry::Tree(skeleton_id)) => {
@@ -167,7 +167,7 @@ async fn subcommand_tree(
         root.skeleton_manifest_id()
             .find_entries_ordered(
                 ctx.clone(),
-                repo.get_blobstore(),
+                repo.repo_blobstore().clone(),
                 vec![PathOrPrefix::Prefix(path)],
                 None,
             )
@@ -176,7 +176,7 @@ async fn subcommand_tree(
         root.skeleton_manifest_id()
             .find_entries(
                 ctx.clone(),
-                repo.get_blobstore(),
+                repo.repo_blobstore().clone(),
                 vec![PathOrPrefix::Prefix(path)],
             )
             .right_stream()

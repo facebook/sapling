@@ -185,7 +185,7 @@ async fn hg_manifest_diff(
 ) -> Result<Option<ChangesetAttrDiff>, Error> {
     let diffs: Vec<_> = bonsai_diff(
         ctx,
-        repo.get_blobstore(),
+        repo.repo_blobstore().clone(),
         left,
         Some(right).into_iter().collect(),
     )

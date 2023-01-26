@@ -2268,9 +2268,9 @@ fn get_changed_manifests_stream(
     basemfid
         .filtered_diff(
             ctx,
-            repo.get_blobstore(),
+            repo.repo_blobstore().clone(),
             mfid,
-            repo.get_blobstore(),
+            repo.repo_blobstore().clone(),
             |output_diff| {
                 let (path, entry) = match output_diff {
                     Diff::Added(path, entry) | Diff::Changed(path, _, entry) => (path, entry),

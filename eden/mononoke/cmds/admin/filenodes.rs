@@ -269,7 +269,7 @@ pub async fn subcommand_filenodes<'a>(
 
             let mf_id = helpers::get_root_manifest_id(&ctx, repo.clone(), rev).await?;
             mf_id
-                .list_all_entries(ctx.clone(), repo.get_blobstore())
+                .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
                 .map_ok(move |(path, entry)| {
                     cloned!(ctx, repo);
                     async move {

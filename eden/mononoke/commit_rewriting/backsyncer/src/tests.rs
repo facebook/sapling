@@ -1151,7 +1151,7 @@ async fn list_content(
 
     let entries = cs
         .manifestid()
-        .list_all_entries(ctx.clone(), repo.get_blobstore())
+        .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_collect::<Vec<_>>()
         .await?;
 

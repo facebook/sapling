@@ -17,7 +17,7 @@ use filestore::FetchKey;
 use futures::TryStreamExt;
 use mononoke_types::blame::BlameRejected;
 use mononoke_types::FileUnodeId;
-use repo_blobstore::RepoBlobstoreRef;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 
 use crate::DEFAULT_BLAME_FILESIZE_LIMIT;
@@ -40,7 +40,7 @@ impl FetchOutcome {
 /// too large or binary data is detected then the fetch may be rejected.
 pub async fn fetch_content_for_blame(
     ctx: &CoreContext,
-    repo: &(impl RepoBlobstoreRef + RepoDerivedDataRef),
+    repo: &(impl RepoBlobstoreArc + RepoDerivedDataRef),
     file_unode_id: FileUnodeId,
 ) -> Result<FetchOutcome> {
     let filesize_limit = repo
@@ -49,7 +49,7 @@ pub async fn fetch_content_for_blame(
         .config()
         .blame_filesize_limit
         .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
-    let blobstore = repo.repo_blobstore().boxed();
+    let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
     fetch_content_for_blame_with_limit(ctx, &blobstore, file_unode_id, filesize_limit).await
 }
 

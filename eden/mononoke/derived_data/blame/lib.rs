@@ -37,7 +37,7 @@ use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
-use repo_blobstore::RepoBlobstoreRef;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
@@ -78,7 +78,7 @@ pub enum BlameError {
 /// Fetch the blame for a file.  Blame will be derived if necessary.
 pub async fn fetch_blame_compat(
     ctx: &CoreContext,
-    repo: impl RepoBlobstoreRef + RepoDerivedDataRef + Sync + Send + Copy,
+    repo: impl RepoBlobstoreArc + RepoDerivedDataRef + Sync + Send + Copy,
     csid: ChangesetId,
     path: MPath,
 ) -> Result<(CompatBlame, FileUnodeId), BlameError> {

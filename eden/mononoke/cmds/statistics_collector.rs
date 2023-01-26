@@ -336,7 +336,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
 ) -> Result<(), Error> {
     // 1 day in seconds
     const REQUIRED_COMMITS_DISTANCE: i64 = 60 * 60 * 24;
-    let blobstore = Arc::new(repo.get_blobstore());
+    let blobstore = Arc::new(repo.repo_blobstore().clone());
     // TODO(dgrzegorzewski): T55705023 consider creating csv file here and save statistics using
     // e.g. serde deserialize. To avoid saving fields separately it may be necessary to add new
     // fields to RepoStatistics struct, like cs_timestamp, hg_cs_id, repo_id and refactor code.
@@ -469,7 +469,7 @@ async fn run_statistics<'a>(
         return generate_statistics_from_file(&ctx, &repo, &in_filename).await;
     }
 
-    let blobstore = Arc::new(repo.get_blobstore());
+    let blobstore = Arc::new(repo.repo_blobstore().clone());
     let mut changeset = repo
         .get_bookmark_hg(ctx.clone(), &bookmark)
         .await?
@@ -655,7 +655,7 @@ mod tests {
             let repo = Linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
-            let blobstore = repo.get_blobstore();
+            let blobstore = repo.repo_blobstore().clone();
             borrowed!(ctx, blobstore, repo);
 
             // Commit consists two files (name => content):
@@ -705,7 +705,7 @@ mod tests {
             let repo = Linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
-            let blobstore = repo.get_blobstore();
+            let blobstore = repo.repo_blobstore().clone();
             borrowed!(ctx, blobstore, repo);
 
             // Commit consists two files (name => content):
@@ -770,7 +770,7 @@ mod tests {
             let repo = Linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
-            let blobstore = repo.get_blobstore();
+            let blobstore = repo.repo_blobstore().clone();
             borrowed!(ctx, blobstore, repo);
 
             /*

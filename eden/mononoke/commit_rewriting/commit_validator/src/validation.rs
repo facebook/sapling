@@ -602,7 +602,7 @@ impl ValidationHelpers {
             try_join!(cs_root_mf_id_fut, p1_root_mf_id_fut)?;
 
         let r: Vec<Result<_, Error>> = p1_root_mf_id
-            .diff(ctx.clone(), repo.get_blobstore(), cs_root_mf_id)
+            .diff(ctx.clone(), repo.repo_blobstore().clone(), cs_root_mf_id)
             .filter_map(|diff| async move { diff.map(FilenodeDiff::from_diff).transpose() })
             .collect()
             .await;
@@ -1492,7 +1492,7 @@ async fn list_all_filenode_ids(
         "fetching filenode ids for {:?} in {}", mf_id, repoid,
     );
     let res = mf_id
-        .list_all_entries(ctx.clone(), repo.get_blobstore())
+        .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_filter_map(move |(path, entry)| {
             let res = match entry {
                 Entry::Leaf(leaf_payload) => path.map(|path| (path, leaf_payload)),

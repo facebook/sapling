@@ -155,7 +155,7 @@ impl CommitRemappingState {
         let path = MPath::new(REMAPPING_STATE_FILE)?;
         let maybe_entry = root_fsnode_id
             .fsnode_id()
-            .find_entry(ctx.clone(), repo.get_blobstore(), Some(path))
+            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), Some(path))
             .await?;
 
         let entry = match maybe_entry {

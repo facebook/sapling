@@ -90,7 +90,7 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
 
     // Commit that has only dir2 directory
     let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
-        .load(&ctx, &repo.get_blobstore())
+        .load(&ctx, &repo.repo_blobstore().clone())
         .await?
         .manifestid();
 
@@ -116,12 +116,12 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
     // Now commit that added a few files and directories
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(&ctx, &repo.get_blobstore())
+        .load(&ctx, &repo.repo_blobstore().clone())
         .await?
         .manifestid();
 
     let base_root_mf_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63")?
-        .load(&ctx, &repo.get_blobstore())
+        .load(&ctx, &repo.repo_blobstore().clone())
         .await?
         .manifestid();
 
@@ -156,7 +156,7 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
     let repo = ManyFilesDirs::getrepo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(&ctx, &repo.get_blobstore())
+        .load(&ctx, &repo.repo_blobstore().clone())
         .await?
         .manifestid();
 
@@ -216,7 +216,7 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
     let repo = ManyFilesDirs::getrepo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(&ctx, &repo.get_blobstore())
+        .load(&ctx, &repo.repo_blobstore().clone())
         .await?
         .manifestid();
 
@@ -257,12 +257,16 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
 
     let hg_cs_id = repo.derive_hg_changeset(&ctx, commit).await?;
 
-    let hg_cs = hg_cs_id.load(&ctx, &repo.get_blobstore()).await?;
+    let hg_cs = hg_cs_id.load(&ctx, &repo.repo_blobstore().clone()).await?;
 
     let path = MPath::new("largefile")?;
     let maybe_entry = hg_cs
         .manifestid()
-        .find_entry(ctx.clone(), repo.get_blobstore(), Some(path.clone()))
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            Some(path.clone()),
+        )
         .await?
         .unwrap();
 

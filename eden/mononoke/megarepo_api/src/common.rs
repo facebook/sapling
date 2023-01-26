@@ -239,7 +239,7 @@ pub trait MegarepoOp {
 
         let file_changes = bonsai_diff(
             ctx.clone(),
-            blob_repo.get_blobstore(),
+            blob_repo.repo_blobstore().clone(),
             hg_cs_merge,
             parent_hg_css.into_iter().collect(),
         )
@@ -392,7 +392,7 @@ pub trait MegarepoOp {
             .map_err(Error::from)?;
         let fsnode_id = root_fsnode_id.fsnode_id();
         let entries = fsnode_id
-            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -500,7 +500,7 @@ pub trait MegarepoOp {
         let unode_id = root_unode_id.manifest_unode_id();
 
         let entries = unode_id
-            .list_all_entries(ctx.clone(), repo.get_blobstore())
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
             .try_collect::<Vec<_>>()
             .await?;
 

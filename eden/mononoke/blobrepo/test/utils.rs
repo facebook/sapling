@@ -35,7 +35,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::MPath;
 use mercurial_types::RepoPath;
 use mononoke_types::DateTime;
-use repo_blobstore::RepoBlobstoreRef;
+use repo_blobstore::RepoBlobstoreArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 pub fn upload_file_no_parents<B>(
@@ -118,7 +118,7 @@ fn upload_hg_tree_entry(
         p2: p2.map(|mfid| mfid.into_nodehash()),
         path,
     };
-    let (hgcsid, fut) = upload.upload(ctx, repo.repo_blobstore().boxed()).unwrap();
+    let (hgcsid, fut) = upload.upload(ctx, repo.repo_blobstore_arc()).unwrap();
     (hgcsid, fut.compat().boxed())
 }
 
@@ -150,7 +150,7 @@ fn upload_hg_file_entry(
     };
     let path = path.into_mpath().expect("expected a path to be present");
 
-    let upload_fut = upload.upload_with_path(ctx, repo.get_blobstore().boxed(), path);
+    let upload_fut = upload.upload_with_path(ctx, repo.repo_blobstore_arc(), path);
     (HgFileNodeId::new(node_id), upload_fut.boxed())
 }
 

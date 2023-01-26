@@ -133,10 +133,6 @@ pub struct BlobRepo {
 }
 
 impl BlobRepo {
-    pub fn get_blobstore(&self) -> RepoBlobstore {
-        self.inner.repo_blobstore.as_ref().clone()
-    }
-
     /// To be used by `DangerousOverride` only
     pub fn inner(&self) -> &Arc<BlobRepoInner> {
         &self.inner
@@ -150,7 +146,7 @@ impl BlobRepo {
     }
 
     pub fn with_bubble(&self, bubble: Bubble) -> Self {
-        let blobstore = bubble.wrap_repo_blobstore(self.get_blobstore());
+        let blobstore = bubble.wrap_repo_blobstore(self.repo_blobstore().clone());
         let changesets = Arc::new(bubble.changesets(self));
         let changeset_fetcher =
             SimpleChangesetFetcher::new(changesets.clone(), self.repo_identity().id());

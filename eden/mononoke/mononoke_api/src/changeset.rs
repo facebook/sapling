@@ -412,7 +412,7 @@ impl ChangesetContext {
             .manifest_unode_id()
             .find_entries(
                 self.ctx().clone(),
-                self.repo().blob_repo().get_blobstore(),
+                self.repo().blob_repo().repo_blobstore().clone(),
                 paths.map(|path| path.into_mpath()),
             )
             .map_err(MononokeError::from)
@@ -443,7 +443,7 @@ impl ChangesetContext {
             .fsnode_id()
             .find_entries(
                 self.ctx().clone(),
-                self.repo().blob_repo().get_blobstore(),
+                self.repo().blob_repo().repo_blobstore().clone(),
                 paths.map(|path| path.into_mpath()),
             )
             .map_err(MononokeError::from)
@@ -478,7 +478,7 @@ impl ChangesetContext {
             .skeleton_manifest_id()
             .find_entries(
                 self.ctx().clone(),
-                self.repo().blob_repo().get_blobstore(),
+                self.repo().blob_repo().repo_blobstore().clone(),
                 paths.map(|path| path.into_mpath()),
             )
             .map_err(MononokeError::from)
@@ -831,7 +831,7 @@ impl ChangesetContext {
                 .fsnode_id()
                 .find_entries(
                     self.ctx().clone(),
-                    self.repo().blob_repo().get_blobstore(),
+                    self.repo().blob_repo().repo_blobstore().clone(),
                     copy_path_map.keys().cloned().map(MononokePath::into_mpath),
                 )
                 .map_ok(|(maybe_from_path, entry)| (MononokePath::new(maybe_from_path), entry))
@@ -843,7 +843,7 @@ impl ChangesetContext {
                 .fsnode_id()
                 .find_entries(
                     self.ctx().clone(),
-                    other.repo().blob_repo().get_blobstore(),
+                    other.repo().blob_repo().repo_blobstore().clone(),
                     to_paths.into_iter().map(MononokePath::into_mpath),
                 )
                 .map_ok(|(maybe_to_path, _entry)| MononokePath::new(maybe_to_path))
@@ -884,7 +884,7 @@ impl ChangesetContext {
             .fsnode_id()
             .find_entries(
                 self.ctx().clone(),
-                self.repo().blob_repo().get_blobstore(),
+                self.repo().blob_repo().repo_blobstore().clone(),
                 copy_path_map.keys().cloned().map(MononokePath::into_mpath),
             )
             .map_ok(|(maybe_from_path, _)| MononokePath::new(maybe_from_path))
@@ -916,9 +916,9 @@ impl ChangesetContext {
                     .fsnode_id()
                     .filtered_diff(
                         self.ctx().clone(),
-                        self.repo().blob_repo().get_blobstore(),
+                        self.repo().blob_repo().repo_blobstore().clone(),
                         self_manifest_root.fsnode_id().clone(),
-                        self.repo().blob_repo().get_blobstore(),
+                        self.repo().blob_repo().repo_blobstore().clone(),
                         Some,
                         recurse_pruner,
                     )
@@ -930,9 +930,9 @@ impl ChangesetContext {
                     .fsnode_id()
                     .filtered_diff_ordered(
                         self.ctx().clone(),
-                        self.repo().blob_repo().get_blobstore(),
+                        self.repo().blob_repo().repo_blobstore().clone(),
                         self_manifest_root.fsnode_id().clone(),
-                        self.repo().blob_repo().get_blobstore(),
+                        self.repo().blob_repo().repo_blobstore().clone(),
                         after.map(MononokePath::into_mpath),
                         Some,
                         recurse_pruner,
@@ -1143,7 +1143,7 @@ impl ChangesetContext {
                 .skeleton_manifest_id()
                 .find_entries(
                     self.ctx().clone(),
-                    self.repo().blob_repo().get_blobstore(),
+                    self.repo().blob_repo().repo_blobstore().clone(),
                     prefixes,
                 )
                 .left_stream(),
@@ -1151,7 +1151,7 @@ impl ChangesetContext {
                 .skeleton_manifest_id()
                 .find_entries_ordered(
                     self.ctx().clone(),
-                    self.repo().blob_repo().get_blobstore(),
+                    self.repo().blob_repo().repo_blobstore().clone(),
                     prefixes,
                     after.map(MononokePath::into_mpath),
                 )
@@ -1233,7 +1233,7 @@ impl ChangesetContext {
             .await?
             .find_files_filter_basenames(
                 self.ctx(),
-                self.repo().blob_repo().get_blobstore(),
+                self.repo().blob_repo().repo_blobstore().clone(),
                 prefixes
                     .unwrap_or_else(Vec::new)
                     .into_iter()

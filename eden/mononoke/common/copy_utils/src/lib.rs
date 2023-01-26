@@ -28,6 +28,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use regex::Regex;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
@@ -282,7 +283,11 @@ async fn list_directory(
 
     let entries = root
         .fsnode_id()
-        .find_entries(ctx.clone(), repo.get_blobstore(), vec![path.clone()])
+        .find_entries(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            vec![path.clone()],
+        )
         .try_collect::<Vec<_>>()
         .await?;
 
@@ -302,7 +307,7 @@ async fn list_directory(
     };
 
     let leaf_entries = fsnode_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_collect::<BTreeMap<_, _>>()
         .await?;
 
@@ -796,7 +801,7 @@ mod test {
         let copy_bcs = cs_ids
             .last()
             .expect("changeset is expected to exist")
-            .load(&ctx, &repo.get_blobstore())
+            .load(&ctx, &repo.repo_blobstore().clone())
             .await?;
         let file_changes = copy_bcs.file_changes_map();
         let a_change = match file_changes
@@ -999,7 +1004,7 @@ mod test {
         let copy_bcs = cs_ids
             .get(1)
             .expect("changeset is expected to exist")
-            .load(&ctx, &target_repo.get_blobstore())
+            .load(&ctx, &target_repo.repo_blobstore().clone())
             .await?;
         let file_changes = copy_bcs.file_changes_map();
         let a_change = match file_changes

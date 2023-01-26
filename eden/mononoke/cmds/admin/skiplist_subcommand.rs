@@ -158,7 +158,7 @@ async fn build_skiplist_index<'a, S: ToString>(
     force_full_rebuild: bool,
     exponent: u32,
 ) -> Result<(), Error> {
-    let blobstore = repo.get_blobstore();
+    let blobstore = repo.repo_blobstore().clone();
     // Depth must be one more than the maximum exponent.
     let skiplist_depth = exponent + 1;
     let key = key.to_string();

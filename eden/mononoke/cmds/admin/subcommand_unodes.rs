@@ -133,7 +133,7 @@ async fn subcommand_tree(
     root.manifest_unode_id()
         .find_entries(
             ctx.clone(),
-            repo.get_blobstore(),
+            repo.repo_blobstore().clone(),
             vec![PathOrPrefix::Prefix(path)],
         )
         .try_for_each(|(path, entry)| async move {
@@ -172,7 +172,7 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
             .manifestid()
             .find_entries(
                 ctx.clone(),
-                repo.get_blobstore(),
+                repo.repo_blobstore().clone(),
                 vec![PathOrPrefix::Prefix(None)],
             )
             .try_filter_map(|(path, _)| async move { Ok(path) })
@@ -187,7 +187,7 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
             .manifest_unode_id()
             .find_entries(
                 ctx.clone(),
-                repo.get_blobstore(),
+                repo.repo_blobstore().clone(),
                 vec![PathOrPrefix::Prefix(None)],
             )
             .try_filter_map(|(path, _)| async { Ok(path) })

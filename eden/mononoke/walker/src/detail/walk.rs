@@ -679,7 +679,7 @@ async fn file_content_step<V: VisitOne>(
     checker: &Checker<V>,
     id: ContentId,
 ) -> Result<StepOutput, StepError> {
-    let maybe_s = filestore::fetch(repo.get_blobstore(), ctx, &id.into()).await?;
+    let maybe_s = filestore::fetch(repo.repo_blobstore().clone(), ctx, &id.into()).await?;
     let s = match maybe_s {
         Some(s) => s.map_ok(FileBytes),
         None => {
@@ -1253,7 +1253,7 @@ async fn fsnode_step<V: VisitOne>(
     fsnode_id: &FsnodeId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let fsnode = fsnode_id.load(ctx, &repo.get_blobstore()).await?;
+    let fsnode = fsnode_id.load(ctx, &repo.repo_blobstore().clone()).await?;
 
     let mut content_edges = vec![];
     let mut dir_edges = vec![];

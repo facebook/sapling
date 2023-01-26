@@ -87,8 +87,12 @@ pub async fn subcommand_content_fetch<'a>(
                 .load(&ctx, repo.repo_blobstore())
                 .await
                 .map_err(Error::from)?;
-            let bytes =
-                filestore::fetch_concat(&repo.get_blobstore(), &ctx, envelope.content_id()).await?;
+            let bytes = filestore::fetch_concat(
+                &repo.repo_blobstore().clone(),
+                &ctx,
+                envelope.content_id(),
+            )
+            .await?;
             let content = String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
             println!("{}", content);
         }
@@ -140,7 +144,7 @@ async fn fetch_entry(
 
     let ret = hg_cs
         .manifestid()
-        .find_entry(ctx.clone(), repo.get_blobstore(), Some(mpath))
+        .find_entry(ctx.clone(), repo.repo_blobstore().clone(), Some(mpath))
         .await?
         .ok_or_else(|| format_err!("Path does not exist: {}", path))?;
 

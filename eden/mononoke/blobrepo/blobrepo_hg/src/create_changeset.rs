@@ -42,6 +42,7 @@ use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
@@ -155,7 +156,8 @@ impl CreateChangeset {
         let uuid = Uuid::new_v4();
         scuba_logger.add("changeset_uuid", format!("{}", uuid));
 
-        let entry_processor = UploadEntries::new(repo.get_blobstore(), scuba_logger.clone());
+        let entry_processor =
+            UploadEntries::new(repo.repo_blobstore().clone(), scuba_logger.clone());
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         let signal_parent_ready = Arc::new(Mutex::new(Some(signal_parent_ready)));
         let expected_nodeid = self.expected_nodeid;
@@ -215,7 +217,7 @@ impl CreateChangeset {
             cloned!(ctx, repo, signal_parent_ready, mut scuba_logger);
             let expected_files = self.expected_files;
             let cs_metadata = self.cs_metadata;
-            let blobstore = repo.get_blobstore();
+            let blobstore = repo.repo_blobstore().clone();
 
             async move {
                 let (root_mf_id, (parents, parent_manifest_hashes, bonsai_parents)) =
@@ -229,7 +231,7 @@ impl CreateChangeset {
                     STATS::create_changeset_compute_cf.add_value(1);
                     compute_changed_files(
                         ctx.clone(),
-                        repo.get_blobstore().boxed(),
+                        repo.repo_blobstore_arc(),
                         root_mf_id,
                         parent_manifest_hashes.get(0).cloned(),
                         parent_manifest_hashes.get(1).cloned(),

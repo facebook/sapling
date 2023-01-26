@@ -18,6 +18,7 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::RepoClientKnobs;
 use mutable_counters::ArcMutableCounters;
 use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreArc;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::SqlConnections;
@@ -75,7 +76,7 @@ impl BackupSourceRepo {
     pub fn from_blob_repo(repo: &BlobRepo) -> Self {
         Self {
             bonsai_hg_mapping: repo.bonsai_hg_mapping_arc(),
-            repo_blobstore: Arc::new(repo.get_blobstore()),
+            repo_blobstore: repo.repo_blobstore_arc(),
         }
     }
 }

@@ -207,7 +207,9 @@ mod test {
         // Check that parents were correctly selected
 
         let small_repo_master = resolve_cs_id(&ctx, &small_repo, "master").await?;
-        let synced_cs = synced_cs_id.load(&ctx, &small_repo.get_blobstore()).await?;
+        let synced_cs = synced_cs_id
+            .load(&ctx, &small_repo.repo_blobstore().clone())
+            .await?;
         assert_eq!(
             synced_cs.parents().collect::<Vec<_>>(),
             vec![small_repo_master]

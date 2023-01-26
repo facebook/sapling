@@ -55,7 +55,11 @@ pub async fn get_changed_content_working_copy_paths(
 
     let mut paths = base_unode_id
         .fsnode_id()
-        .diff(ctx.clone(), repo.get_blobstore(), *unode_id.fsnode_id())
+        .diff(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            *unode_id.fsnode_id(),
+        )
         .try_filter_map(|diff| async move {
             use Diff::*;
             let maybe_path = match diff {
@@ -86,7 +90,11 @@ pub async fn get_colliding_paths_between_commits(
 
     let mut paths = base_unode_id
         .fsnode_id()
-        .diff(ctx.clone(), repo.get_blobstore(), *unode_id.fsnode_id())
+        .diff(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            *unode_id.fsnode_id(),
+        )
         .try_filter_map(|diff| async move {
             use Diff::*;
             let maybe_path = match diff {
@@ -119,7 +127,7 @@ pub async fn get_changed_working_copy_paths(
         .manifest_unode_id()
         .diff(
             ctx.clone(),
-            repo.get_blobstore(),
+            repo.repo_blobstore().clone(),
             *unode_id.manifest_unode_id(),
         )
         .try_filter_map(|diff| async move {
@@ -148,7 +156,7 @@ pub async fn get_working_copy_paths_by_prefixes(
     let unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id).await?;
     let mut paths = unode_id
         .manifest_unode_id()
-        .list_leaf_entries_under(ctx.clone(), repo.get_blobstore(), prefixes)
+        .list_leaf_entries_under(ctx.clone(), repo.repo_blobstore().clone(), prefixes)
         .map_ok(|(mpath, _)| mpath)
         .try_collect::<Vec<MPath>>()
         .await?;

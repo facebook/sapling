@@ -31,6 +31,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 
@@ -57,7 +58,7 @@ pub async fn add_source_repo(
     let prefix = MPath::new(source_repo.repo_identity().name())?;
     let leaf_entries = root_fsnode_id
         .fsnode_id()
-        .list_leaf_entries(ctx.clone(), source_repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), source_repo.repo_blobstore().clone())
         // Shift path
         .map_ok(|(path, fsnode_file)| (prefix.join(&path), fsnode_file))
         .try_collect::<Vec<_>>()
@@ -191,7 +192,9 @@ async fn create_new_bonsai_changeset_for_source_repo(
             // from intermediate commits.
             let mut extra = match hyper_parent {
                 Some(parent) => {
-                    let parent = parent.load(ctx, &hyper_repo.get_blobstore()).await?;
+                    let parent = parent
+                        .load(ctx, &hyper_repo.repo_blobstore().clone())
+                        .await?;
                     decode_latest_synced_state_extras(parent.extra())?
                 }
                 None => Default::default(),
@@ -230,7 +233,7 @@ async fn ensure_no_file_intersection(
     let root_fsnode_id = RootFsnodeId::derive(ctx, hyper_repo, hyper_repo_cs_id).await?;
     let hyper_repo_files = root_fsnode_id
         .fsnode_id()
-        .list_leaf_entries(ctx.clone(), hyper_repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), hyper_repo.repo_blobstore().clone())
         .try_collect::<BTreeMap<_, _>>()
         .await?;
 

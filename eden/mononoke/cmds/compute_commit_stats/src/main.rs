@@ -107,7 +107,7 @@ async fn find_commit_stat(
     let root_skeleton_id = RootSkeletonManifestId::derive(ctx, repo, cs_id).await?;
     let entries = root_skeleton_id
         .skeleton_manifest_id()
-        .find_entries(ctx.clone(), repo.get_blobstore(), paths)
+        .find_entries(ctx.clone(), repo.repo_blobstore().clone(), paths)
         .try_filter_map(|(path, entry)| async move {
             let tree = match entry {
                 Entry::Tree(tree_id) => Some((path, tree_id)),
@@ -116,7 +116,7 @@ async fn find_commit_stat(
             Ok(tree)
         })
         .map_ok(|(path, tree_id)| async move {
-            let entry = tree_id.load(ctx, &repo.get_blobstore()).await?;
+            let entry = tree_id.load(ctx, &repo.repo_blobstore().clone()).await?;
             Ok((path, entry.list().collect::<Vec<_>>().len()))
         })
         .try_buffer_unordered(100)

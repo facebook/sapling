@@ -42,6 +42,7 @@ use mercurial_types::RepoPath;
 use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::debug;
 use stats::prelude::*;
@@ -201,7 +202,7 @@ pub fn get_file_history_maybe_incomplete(
                     // from a blobstore
                     let path = RepoPath::FilePath(path);
                     let filenode_info = get_filenode_from_envelope(
-                        repo.get_blobstore(),
+                        repo.repo_blobstore().clone(),
                         &ctx,
                         &path,
                         filenode,
@@ -398,7 +399,8 @@ async fn get_maybe_missing_filenode(
             // filenodes were intentionally disabled.  Attempt
             // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
             // to indicate a draft or missing linknode.
-            get_filenode_from_envelope(repo.get_blobstore(), ctx, path, node, NULL_CSID).await
+            get_filenode_from_envelope(repo.repo_blobstore().clone(), ctx, path, node, NULL_CSID)
+                .await
         }
     }
 }

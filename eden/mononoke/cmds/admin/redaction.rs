@@ -192,7 +192,7 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
 ) -> Result<Vec<(MPath, ContentId)>, Error> {
     let manifest_id = cs.manifestid();
     let mut s = manifest_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(full_path, (_, filenode_id))| async move {
             let env = filenode_id.load(ctx, repo.repo_blobstore()).await?;
             Result::<_, Error>::Ok((env.content_id(), full_path))

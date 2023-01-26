@@ -119,11 +119,11 @@ pub async fn validate(
 
     let head_leaves = head_root_unode
         .manifest_unode_id()
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_collect::<Vec<_>>();
     let to_merge_commit_leaves = to_merge_commit_root_unode
         .manifest_unode_id()
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_collect::<Vec<_>>();
 
     let (head_leaves, mut to_merge_commit_leaves) =
@@ -192,7 +192,7 @@ async fn find_files_that_need_to_be_deleted(
         .manifest_unode_id()
         .diff(
             ctx.clone(),
-            repo.get_blobstore(),
+            repo.repo_blobstore().clone(),
             *commit_to_merge_root_unode.manifest_unode_id(),
         )
         .try_filter_map(|diff| async move {

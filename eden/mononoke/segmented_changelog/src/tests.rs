@@ -45,6 +45,7 @@ use mononoke_types::RepositoryId;
 use once_cell::sync::Lazy;
 use phases::PhasesArc;
 use phases::PhasesRef;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
@@ -147,7 +148,7 @@ async fn new_tailer(
         changeset_fetcher,
         bulk_fetcher,
         blobrepo.bonsai_hg_mapping_arc(),
-        Arc::new(blobrepo.get_blobstore()),
+        Arc::new(blobrepo.repo_blobstore().clone()),
         blobrepo.bookmarks_arc(),
         seed_heads,
         None,
@@ -224,7 +225,7 @@ async fn load_iddag(
     let sc_version = load_sc_version(ctx, blobrepo.repo_identity().id(), connections).await?;
     let iddag_save_store = IdDagSaveStore::new(
         blobrepo.repo_identity().id(),
-        Arc::new(blobrepo.get_blobstore()),
+        Arc::new(blobrepo.repo_blobstore().clone()),
     );
     let iddag = iddag_save_store.load(ctx, sc_version.iddag_version).await?;
     Ok(iddag)
@@ -247,7 +248,7 @@ async fn get_manager(
     segmented_changelog_type: SegmentedChangelogType,
 ) -> Result<SegmentedChangelogManager> {
     let repo_id = blobrepo.repo_identity().id();
-    let blobstore = Arc::new(blobrepo.get_blobstore());
+    let blobstore = Arc::new(blobrepo.repo_blobstore().clone());
     let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
     let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore.clone());
     let clone_hints = CloneHints::new(connections.0.clone(), repo_id, blobstore);
@@ -325,7 +326,8 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
         resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
     assert_eq!(answer, expected_cs);
 
-    let iddag_save_store = IdDagSaveStore::new(repo_id, Arc::new(blobrepo.get_blobstore()));
+    let iddag_save_store =
+        IdDagSaveStore::new(repo_id, Arc::new(blobrepo.repo_blobstore().clone()));
     let iddag_version = iddag_save_store.save(&ctx, &sc.iddag).await?;
 
     assert!(

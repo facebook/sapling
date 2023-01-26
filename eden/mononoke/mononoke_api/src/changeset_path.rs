@@ -212,7 +212,7 @@ impl ChangesetPathContentContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo().blob_repo().get_blobstore();
+                    let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
                     let root_fsnode_id = changeset.root_fsnode_id().await?;
                     if let Some(mpath) = path.into() {
                         root_fsnode_id
@@ -411,7 +411,7 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo().blob_repo().get_blobstore();
+                    let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
                     let root_unode_manifest_id = changeset.root_unode_manifest_id().await?;
                     if let Some(mpath) = path.into() {
                         root_unode_manifest_id
@@ -862,7 +862,7 @@ impl ChangesetPathContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx().clone();
-                    let blobstore = changeset.repo().blob_repo().get_blobstore();
+                    let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
                     let root_skeleton_manifest_id = changeset.root_skeleton_manifest_id().await?;
                     if let Some(mpath) = path.into() {
                         root_skeleton_manifest_id

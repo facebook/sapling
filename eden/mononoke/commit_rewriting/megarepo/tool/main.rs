@@ -55,6 +55,7 @@ use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
 use movers::Mover;
 use regex::Regex;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
@@ -1238,7 +1239,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
         .fsnode_id()
         .find_entries(
             ctx.clone(),
-            large_repo.get_blobstore(),
+            large_repo.repo_blobstore().clone(),
             vec![PathOrPrefix::Prefix(Some(MPath::new(prefix)?))],
         )
         .try_collect::<Vec<_>>()

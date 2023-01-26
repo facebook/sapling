@@ -6,8 +6,8 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
-
 mod file_history_test;
 mod tracing_blobstore;
 mod utils;
@@ -462,7 +462,7 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
     let (root_mfid, _) = root_manifest_future.await.unwrap();
 
     let entries = UploadEntries::new(
-        repo.get_blobstore(),
+        repo.repo_blobstore().clone(),
         MononokeScubaSampleBuilder::with_discard(),
     );
 
@@ -485,7 +485,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
     let repo: BlobRepo = test_repo_factory::build_empty(fb).expect("Couldn't create repo");
 
     let entries = UploadEntries::new(
-        repo.get_blobstore(),
+        repo.repo_blobstore().clone(),
         MononokeScubaSampleBuilder::with_discard(),
     );
 
@@ -527,7 +527,7 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
 
     let diff = (compute_changed_files(
         ctx.clone(),
-        repo.get_blobstore().boxed(),
+        repo.repo_blobstore_arc(),
         cs.manifestid(),
         None,
         None,
@@ -571,7 +571,7 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
 
     let diff = compute_changed_files(
         ctx.clone(),
-        repo.get_blobstore().boxed(),
+        repo.repo_blobstore_arc(),
         cs.manifestid(),
         Some(parent_cs.manifestid()),
         None,
@@ -643,7 +643,8 @@ async fn entry_content(
     let ret = match e {
         Entry::Leaf((_, id)) => {
             let envelope = id.load(ctx, repo.repo_blobstore()).await?;
-            filestore::fetch_concat(&repo.get_blobstore(), ctx, envelope.content_id()).await?
+            filestore::fetch_concat(&repo.repo_blobstore().clone(), ctx, envelope.content_id())
+                .await?
         }
         Entry::Tree(..) => {
             return Err(Error::msg("entry_content was called on a Tree"));
@@ -728,7 +729,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
-            repo.get_blobstore().boxed(),
+            repo.repo_blobstore_arc(),
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
         ))
@@ -745,7 +746,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
-            repo.get_blobstore().boxed(),
+            repo.repo_blobstore_arc(),
             make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
         ))
@@ -781,14 +782,10 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             None,
             vec![("base", FileChange::Deletion), ("new", fc)],
         );
-        let ms_hash = (get_manifest_from_bonsai(
-            ctx.clone(),
-            repo.get_blobstore().boxed(),
-            bcs,
-            vec![ms1, ms2],
-        ))
-        .await
-        .expect("adding new file should not produce coflict");
+        let ms_hash =
+            (get_manifest_from_bonsai(ctx.clone(), repo.repo_blobstore_arc(), bcs, vec![ms1, ms2]))
+                .await
+                .expect("adding new file should not produce coflict");
         let entries = get_entries(ms_hash).await.unwrap();
         let new = entries.get("new").expect("new file should be in entries");
         let bytes = entry_content(&ctx, &repo, new).await.unwrap();
@@ -1067,7 +1064,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         p2,
     };
     upload
-        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .upload(ctx.clone(), repo.repo_blobstore_arc(), None)
         .await?;
 
     let gets = blobstore.tracing_gets();
@@ -1088,7 +1085,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     };
 
     upload
-        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .upload(ctx.clone(), repo.repo_blobstore_arc(), None)
         .await?;
 
     let gets = blobstore.tracing_gets();
@@ -1105,7 +1102,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         p2,
     };
     upload
-        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .upload(ctx.clone(), repo.repo_blobstore_arc(), None)
         .await?;
 
     let gets = blobstore.tracing_gets();
@@ -1153,7 +1150,7 @@ async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error
         p2,
     };
     upload
-        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .upload(ctx.clone(), repo.repo_blobstore_arc(), None)
         .await?;
 
     Ok(())
@@ -1207,7 +1204,11 @@ impl TestHelper {
 
         let entry = hg_cs
             .manifestid()
-            .find_entry(self.ctx.clone(), self.repo.get_blobstore(), Some(path))
+            .find_entry(
+                self.ctx.clone(),
+                self.repo.repo_blobstore().clone(),
+                Some(path),
+            )
             .await?
             .ok_or(err)?;
 

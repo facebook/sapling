@@ -469,7 +469,7 @@ fn find_bonsai_diff(
             move |(d_mf, a_mf)| {
                 bonsai_diff(
                     ctx,
-                    repo.get_blobstore(),
+                    repo.repo_blobstore().clone(),
                     d_mf,
                     Some(a_mf).into_iter().collect(),
                 )

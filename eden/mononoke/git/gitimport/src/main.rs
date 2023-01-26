@@ -42,6 +42,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
@@ -79,7 +80,7 @@ async fn derive_hg(
 
         let manifest = get_manifest_from_bonsai(
             ctx.clone(),
-            repo.get_blobstore().boxed(),
+            repo.repo_blobstore_arc(),
             bcs.clone(),
             parent_manifests,
         )

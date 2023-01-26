@@ -69,6 +69,7 @@ use mercurial_types::NULL_HASH;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ContentMetadata;
 use phases::PhasesArc;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use tokio::runtime::Handle;
@@ -229,7 +230,7 @@ fn upload_entry(
         .and_then(move |(content, is_ext, parents)| {
             let (p1, p2) = parents.get_nodes();
             let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
-            let blobstore = blobrepo.get_blobstore().boxed();
+            let blobstore = blobrepo.repo_blobstore_arc();
             let filestore_config = *blobrepo.filestore_config();
             match (ty, is_ext) {
                 (Type::Tree, false) => {
@@ -399,7 +400,7 @@ impl UploadChangesets {
                                         path: RepoPath::root(),
                                     };
                                     upload
-                                        .upload(ctx, blobrepo.get_blobstore().boxed())
+                                        .upload(ctx, blobrepo.repo_blobstore_arc())
                                         .into_future()
                                         .and_then(|(_, entry)| entry)
                                         .map(Some)

@@ -45,6 +45,7 @@ use mercurial_types::NULL_HASH;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use remotefilelog::create_raw_filenode_blob;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 
 use crate::stats::*;
@@ -99,7 +100,7 @@ impl UploadableHgBlob for Filelog {
             p2: self.p2.map(HgFileNodeId::new),
         };
 
-        let fut = upload.upload_with_path(ctx.clone(), repo.get_blobstore().boxed(), path);
+        let fut = upload.upload_with_path(ctx.clone(), repo.repo_blobstore_arc(), path);
         Ok((node_key, fut.boxed().try_shared()))
     }
 }

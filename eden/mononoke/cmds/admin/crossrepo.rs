@@ -497,7 +497,7 @@ async fn change_mapping_via_extras<'a>(
     )?;
 
     let bcs = large_cs_id
-        .load(ctx, &large_repo.get_blobstore())
+        .load(ctx, &large_repo.repo_blobstore().clone())
         .map_err(Error::from)
         .await?;
     let pushrebase_res = do_pushrebase_bonsai(

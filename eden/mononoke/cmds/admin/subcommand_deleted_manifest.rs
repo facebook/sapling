@@ -214,7 +214,7 @@ async fn get_file_changes(
         futures::try_join!(paths_added_fut, parent_manifests_fut)?;
     let paths_deleted = get_implicit_deletes(
         &ctx,
-        repo.get_blobstore(),
+        repo.repo_blobstore().clone(),
         paths_added.clone(),
         parent_manifests,
     )

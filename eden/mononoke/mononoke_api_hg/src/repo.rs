@@ -993,7 +993,9 @@ mod tests {
         csid: ChangesetId,
     ) -> Result<HgManifestId, Error> {
         let hg_cs_id = blob_repo.derive_hg_changeset(&ctx, csid).await?;
-        let hg_cs = hg_cs_id.load(&ctx, &blob_repo.get_blobstore()).await?;
+        let hg_cs = hg_cs_id
+            .load(&ctx, &blob_repo.repo_blobstore().clone())
+            .await?;
         Ok(hg_cs.manifestid())
     }
 }

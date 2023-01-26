@@ -64,7 +64,7 @@ fn get_all_file_moves<'a>(
 ) -> impl Stream<Item = Result<FileMove, Error>> + 'a {
     hg_cs
         .manifestid()
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_filter_map(move |(old_path, (file_type, filenode_id))| async move {
             let maybe_new_path = path_converter(&old_path).unwrap();
             if Some(&old_path) == maybe_new_path.as_ref() {
@@ -402,7 +402,7 @@ mod test {
         let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await.unwrap();
         hg_cs
             .manifestid()
-            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
             .and_then({
                 cloned!(ctx, repo);
                 move |(path, (file_type, filenode_id))| {
@@ -482,7 +482,7 @@ mod test {
 
         let leaf_entries = last_hg_cs
             .manifestid()
-            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
             .try_collect::<Vec<_>>()
             .await?;
 

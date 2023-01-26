@@ -36,6 +36,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use phases::PhasesArc;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::error;
@@ -204,7 +205,7 @@ impl SegmentedChangelogTailer {
             changeset_fetcher,
             bulk_fetcher,
             bonsai_hg_mapping,
-            Arc::new(blobrepo.get_blobstore()),
+            blobrepo.repo_blobstore_arc(),
             blobrepo.bookmarks_arc(),
             seed_heads,
             caching,

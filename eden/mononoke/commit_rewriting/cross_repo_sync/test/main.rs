@@ -2155,7 +2155,7 @@ async fn assert_working_copy(
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let mf_id = hg_cs.manifestid();
     let mut actual_paths = mf_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, _)| path)
         .try_collect::<Vec<_>>()
         .await?;

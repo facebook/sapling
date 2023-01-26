@@ -23,6 +23,7 @@ use futures::TryFutureExt;
 use maplit::hashset;
 use metaconfig_types::BookmarkAttrs;
 use pushrebase::do_pushrebase_bonsai;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
 
 use crate::error::SubcommandError;
@@ -85,7 +86,7 @@ pub async fn subcommand_pushrebase<'a>(
     .map_err(Error::from)?;
 
     let bcs = cs_id
-        .load(&ctx, &repo.get_blobstore())
+        .load(&ctx, &repo.repo_blobstore().clone())
         .map_err(Error::from)
         .await?;
     let pushrebase_res = do_pushrebase_bonsai(

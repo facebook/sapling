@@ -32,6 +32,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::RangeNodeStream;
 use slog::info;
@@ -94,7 +95,7 @@ async fn find_latest_synced_commits(
         .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", bookmark_name))?;
 
     let hyper_repo_tip = hyper_repo_tip_cs_id
-        .load(ctx, &hyper_repo.get_blobstore())
+        .load(ctx, &hyper_repo.repo_blobstore().clone())
         .await?;
 
     let latest_synced_commits = decode_latest_synced_state_extras(hyper_repo_tip.extra())?;
@@ -193,7 +194,7 @@ async fn sync_commits(
         .await?
         .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", bookmark_name))?;
 
-    let blobstore = source_repo.blob_repo.get_blobstore();
+    let blobstore = source_repo.blob_repo.repo_blobstore().clone();
     let bcss = stream::iter(cs_ids)
         .map(|cs_id| cs_id.load(ctx, &blobstore))
         .buffered(CHUNK_SIZE)

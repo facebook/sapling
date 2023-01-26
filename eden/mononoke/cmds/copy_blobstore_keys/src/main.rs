@@ -36,6 +36,7 @@ use futures::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_factory::RepoFactory;
 use slog::debug;
 use slog::info;
@@ -191,8 +192,8 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
         .map(|key| async {
             let copy_key = key.clone();
             let res = async {
-                let source_blobstore = source_repo.get_blobstore();
-                let target_blobstore = target_repo.get_blobstore();
+                let source_blobstore = source_repo.repo_blobstore().clone();
+                let target_blobstore = target_repo.repo_blobstore().clone();
                 let maybe_value = source_blobstore.get(&ctx, &key).await?;
                 let value = maybe_value.ok_or(CopyError::NotFound)?;
                 debug!(ctx.logger(), "copying {}", key);

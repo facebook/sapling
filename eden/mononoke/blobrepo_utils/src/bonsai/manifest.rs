@@ -44,6 +44,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::Logger;
@@ -103,7 +104,7 @@ impl BonsaiMFVerifyDifference {
         let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
         let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);
         lookup_mf_id
-            .diff(ctx, self.repo.get_blobstore(), roundtrip_mf_id)
+            .diff(ctx, self.repo.repo_blobstore().clone(), roundtrip_mf_id)
             .compat()
     }
 
@@ -256,7 +257,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 try_join(
                     bonsai_diff(
                         ctx.clone(),
-                        repo.get_blobstore(),
+                        repo.repo_blobstore().clone(),
                         changeset.manifestid(),
                         parents.iter().cloned().collect(),
                     )
@@ -378,7 +379,7 @@ fn apply_diff(
         .into_iter()
         .map(|result| (result.path().clone(), make_entry(&result)))
         .collect();
-    derive_hg_manifest(ctx, repo.get_blobstore().boxed(), manifestids, changes)
+    derive_hg_manifest(ctx, repo.repo_blobstore_arc(), manifestids, changes)
         .boxed()
         .compat()
         .map(|manifest_id| manifest_id.into_nodehash())
