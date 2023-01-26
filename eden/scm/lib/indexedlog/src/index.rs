@@ -163,6 +163,10 @@ struct MemChecksum {
     /// This is also the offset of the current Checksum entry.
     end: u64,
 
+    /// Tracks the chain length. Used to detect whether `checksum_max_chain_len`
+    /// is exceeded or not.
+    chain_len: u32,
+
     /// Each chunk has (1 << chunk_size_logarithmarithm) bytes. The last chunk
     /// can be shorter.
     chunk_size_logarithm: u32,
@@ -177,7 +181,7 @@ struct MemChecksum {
     ///                     |<-start                                end->|
     /// ```
     ///
-    /// The `xxhash_list_to_write` would be:
+    /// The `xxhash_list` would be:
     ///
     /// ```plain,ignore
     /// [xxhash(chunk 2 (1MB)), xxhash(chunk 3 (1MB)), xxhash(chunk 4 (200K))]
@@ -1482,6 +1486,8 @@ impl MemRoot {
 
 impl MemChecksum {
     fn read_from(index: &impl IndexBuf, start_offset: u64) -> crate::Result<(Self, usize)> {
+        let span = debug_span!("MemRadix::read", offset = start_offset);
+        let _entered = span.enter();
         let mut result = Self::default();
         let mut size: usize = 0;
 
@@ -1532,6 +1538,7 @@ impl MemChecksum {
                 let checked_needed = (result.xxhash_list.len() + 63) / 64;
                 result.checked.resize_with(checked_needed, Default::default);
             }
+            result.chain_len = result.chain_len.saturating_add(1);
 
             //    0     1     2     3     4     5
             // |chunk|chunk|chunk|chunk|chunk|chunk|
@@ -1579,6 +1586,7 @@ impl MemChecksum {
 
             offset = previous_offset as usize;
         }
+        span.record("chain_len", result.chain_len);
 
         Ok((result, size))
     }
@@ -1687,6 +1695,13 @@ impl MemChecksum {
         Ok(())
     }
 
+    /// Extend the checksum range to cover the entire range of the index buffer
+    /// so the next open would only read O(1) checksum entries.
+    fn flatten(&mut self) {
+        self.start = 0;
+        self.chain_len = 1;
+    }
+
     fn write_to<W: Write>(&self, writer: &mut W, _offset_map: &OffsetMap) -> io::Result<usize> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_CHECKSUM])?;
@@ -1792,6 +1807,7 @@ impl Clone for MemChecksum {
         Self {
             start: self.start,
             end: self.end,
+            chain_len: self.chain_len,
             chunk_size_logarithm: self.chunk_size_logarithm,
             xxhash_list: self.xxhash_list.clone(),
             checked: self
@@ -1809,6 +1825,7 @@ impl Default for MemChecksum {
         Self {
             start: 0,
             end: 0,
+            chain_len: 0,
             chunk_size_logarithm: 20, // chunk_size: 1MB.
             xxhash_list: Vec::new(),
             checked: Vec::new(),
@@ -1972,6 +1989,7 @@ pub struct Index {
 
     // Options
     checksum_enabled: bool,
+    checksum_max_chain_len: u32,
     fsync: bool,
     write: Option<bool>,
 
@@ -2025,6 +2043,7 @@ pub enum InsertKey<'a> {
 /// an [`Index`] structure.
 #[derive(Clone)]
 pub struct OpenOptions {
+    checksum_max_chain_len: u32,
     checksum_chunk_size_logarithm: u32,
     checksum_enabled: bool,
     fsync: bool,
@@ -2037,12 +2056,14 @@ impl OpenOptions {
     #[allow(clippy::new_without_default)]
     /// Create [`OpenOptions`] with default configuration:
     /// - checksum enabled, with 1MB chunk size
+    /// - checksum max chain length is 10
     /// - no external key buffer
     /// - no fsync
     /// - read root entry from the end of the file
     /// - open as read-write but fallback to read-only
     pub fn new() -> OpenOptions {
         OpenOptions {
+            checksum_max_chain_len: 10,
             checksum_chunk_size_logarithm: 20,
             checksum_enabled: true,
             fsync: false,
@@ -2050,6 +2071,17 @@ impl OpenOptions {
             write: None,
             key_buf: None,
         }
+    }
+
+    /// Set the maximum checksum chain length.
+    ///
+    /// If it is non-zero, and the checksum chain (linked list of checksum
+    /// entries needed to verify the entire index) exceeds the specified length,
+    /// they will be collapsed into a single checksum entry to make `open` more
+    /// efficient.
+    pub fn checksum_max_chain_len(&mut self, len: u32) -> &mut Self {
+        self.checksum_max_chain_len = len;
+        self
     }
 
     /// Set checksum chunk size as `1 << checksum_chunk_size_logarithm`.
@@ -2202,6 +2234,7 @@ impl OpenOptions {
                 // Deconstruct open_options instead of storing it whole, since it contains a
                 // permanent reference to the original key_buf mmap.
                 checksum_enabled: open_options.checksum_enabled,
+                checksum_max_chain_len: open_options.checksum_max_chain_len,
                 fsync: open_options.fsync,
                 write: open_options.write,
                 clean_root,
@@ -2241,6 +2274,7 @@ impl OpenOptions {
                 buf,
                 path: PathBuf::new(),
                 checksum_enabled: self.checksum_enabled,
+                checksum_max_chain_len: self.checksum_max_chain_len,
                 fsync: self.fsync,
                 write: self.write,
                 clean_root,
@@ -2436,6 +2470,7 @@ impl Index {
                 buf: self.buf.clone(),
                 path: self.path.clone(),
                 checksum_enabled: self.checksum_enabled,
+                checksum_max_chain_len: self.checksum_max_chain_len,
                 fsync: self.fsync,
                 write: self.write,
                 clean_root: self.clean_root.clone(),
@@ -2454,6 +2489,7 @@ impl Index {
                 buf: self.buf.clone(),
                 path: self.path.clone(),
                 checksum_enabled: self.checksum_enabled,
+                checksum_max_chain_len: self.checksum_max_chain_len,
                 fsync: self.fsync,
                 write: self.write,
                 clean_root: self.clean_root.clone(),
@@ -2682,6 +2718,12 @@ impl Index {
                     new_checksum
                         .update(&self.buf, lock.as_mut(), len, &buf)
                         .context(&path, "cannot read and update checksum")?;
+                    // Optionally merge the checksum entry for optimization.
+                    if self.checksum_max_chain_len > 0
+                        && new_checksum.chain_len >= self.checksum_max_chain_len
+                    {
+                        new_checksum.flatten();
+                    }
                     new_checksum.write_to(&mut buf, &offset_map).infallible()?
                 } else {
                     assert!(!self.checksum.is_enabled());
@@ -4402,6 +4444,110 @@ Disk[374]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82], 4: Disk[19
 Disk[402]: Radix { link: None, 6: Disk[374] }
 Disk[410]: Root { radix: Disk[402] }
 "#
+        );
+    }
+
+    fn show_checksums(index: &Index) -> String {
+        let debug_str = format!("{:?}", index);
+        debug_str
+            .lines()
+            .filter_map(|l| {
+                if l.contains("Checksum") {
+                    Some(format!("\n                {}", l))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .concat()
+    }
+
+    #[test]
+    fn test_checksum_max_chain_len() {
+        // Test with the given max_chain_len config.
+        let t = |max_chain_len: u32| {
+            let dir = tempdir().unwrap();
+            let path = dir.path().join("i");
+            let mut index = open_opts()
+                .checksum_chunk_size_logarithm(7 /* chunk size: 127 */)
+                .checksum_max_chain_len(max_chain_len)
+                .open(&path)
+                .unwrap();
+            for i in 0..10u8 {
+                let data: Vec<u8> = if i % 2 == 0 { vec![i] } else { vec![i; 100] };
+                index.insert(&data, 1).unwrap();
+                index.flush().unwrap();
+                index.verify().unwrap();
+                // If reload from disk, it pass verification too.
+                let mut index2 = open_opts()
+                    .checksum_max_chain_len(max_chain_len)
+                    .open(&path)
+                    .unwrap();
+                index2.verify().unwrap();
+                // Create "racy" writes by flushing from another index.
+                if i % 3 == 0 {
+                    index2.insert(&data, 2).unwrap();
+                    index2.flush().unwrap();
+                }
+            }
+            show_checksums(&index)
+        };
+
+        // Unlimited chain. Chain: 1358 -> 1167 -> 1071 -> 818 -> 738 -> ...
+        assert_eq!(
+            t(0),
+            r#"
+                Disk[21]: Checksum { start: 0, end: 21, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[54]: Checksum { start: 0, end: 54, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[203]: Checksum { start: 0, end: 203, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[266]: Checksum { start: 203, end: 266, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[433]: Checksum { start: 266, end: 433, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[499]: Checksum { start: 433, end: 499, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[563]: Checksum { start: 433, end: 563, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[738]: Checksum { start: 563, end: 738, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[818]: Checksum { start: 738, end: 818, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[896]: Checksum { start: 818, end: 896, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[1071]: Checksum { start: 818, end: 1071, chunk_size_logarithm: 7, checksums.len(): 3 }
+                Disk[1167]: Checksum { start: 1071, end: 1167, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[1358]: Checksum { start: 1167, end: 1358, chunk_size_logarithm: 7, checksums.len(): 2 }"#
+        );
+
+        // Max chain len = 2. Chain: 1331 -> 1180 -> 0; 872 -> 761 -> 0; ...
+        assert_eq!(
+            t(2),
+            r#"
+                Disk[21]: Checksum { start: 0, end: 21, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[54]: Checksum { start: 0, end: 54, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[203]: Checksum { start: 0, end: 203, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[266]: Checksum { start: 203, end: 266, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[433]: Checksum { start: 0, end: 433, chunk_size_logarithm: 7, checksums.len(): 4 }
+                Disk[514]: Checksum { start: 433, end: 514, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[586]: Checksum { start: 433, end: 586, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[761]: Checksum { start: 0, end: 761, chunk_size_logarithm: 7, checksums.len(): 6 }
+                Disk[872]: Checksum { start: 761, end: 872, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[950]: Checksum { start: 0, end: 950, chunk_size_logarithm: 7, checksums.len(): 8 }
+                Disk[1180]: Checksum { start: 0, end: 1180, chunk_size_logarithm: 7, checksums.len(): 10 }
+                Disk[1331]: Checksum { start: 1180, end: 1331, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[1522]: Checksum { start: 0, end: 1522, chunk_size_logarithm: 7, checksums.len(): 12 }"#
+        );
+
+        // Max chain len = 1. All have start: 0.
+        assert_eq!(
+            t(1),
+            r#"
+                Disk[21]: Checksum { start: 0, end: 21, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[54]: Checksum { start: 0, end: 54, chunk_size_logarithm: 7, checksums.len(): 1 }
+                Disk[203]: Checksum { start: 0, end: 203, chunk_size_logarithm: 7, checksums.len(): 2 }
+                Disk[266]: Checksum { start: 0, end: 266, chunk_size_logarithm: 7, checksums.len(): 3 }
+                Disk[440]: Checksum { start: 0, end: 440, chunk_size_logarithm: 7, checksums.len(): 4 }
+                Disk[521]: Checksum { start: 0, end: 521, chunk_size_logarithm: 7, checksums.len(): 5 }
+                Disk[616]: Checksum { start: 0, end: 616, chunk_size_logarithm: 7, checksums.len(): 5 }
+                Disk[814]: Checksum { start: 0, end: 814, chunk_size_logarithm: 7, checksums.len(): 7 }
+                Disk[933]: Checksum { start: 0, end: 933, chunk_size_logarithm: 7, checksums.len(): 8 }
+                Disk[1058]: Checksum { start: 0, end: 1058, chunk_size_logarithm: 7, checksums.len(): 9 }
+                Disk[1296]: Checksum { start: 0, end: 1296, chunk_size_logarithm: 7, checksums.len(): 11 }
+                Disk[1455]: Checksum { start: 0, end: 1455, chunk_size_logarithm: 7, checksums.len(): 12 }
+                Disk[1725]: Checksum { start: 0, end: 1725, chunk_size_logarithm: 7, checksums.len(): 14 }"#
         );
     }
 
