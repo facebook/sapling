@@ -16,7 +16,7 @@ from . import pycompat
 from .node import nullid, nullrev
 
 
-def updatecache(repo):
+def updatecache(repo) -> None:
     # Just use a shortcut path that construct the branchcache directly.
     partial = branchcache()
     partial.update(repo, None)
