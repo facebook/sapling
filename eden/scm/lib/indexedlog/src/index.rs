@@ -2057,14 +2057,14 @@ impl OpenOptions {
     #[allow(clippy::new_without_default)]
     /// Create [`OpenOptions`] with default configuration:
     /// - checksum enabled, with 1MB chunk size
-    /// - checksum max chain length is 10
+    /// - checksum max chain length is `config::INDEX_CHECKSUM_MAX_CHAIN_LEN` (default: 10)
     /// - no external key buffer
     /// - no fsync
     /// - read root entry from the end of the file
     /// - open as read-write but fallback to read-only
     pub fn new() -> OpenOptions {
         OpenOptions {
-            checksum_max_chain_len: 10,
+            checksum_max_chain_len: config::INDEX_CHECKSUM_MAX_CHAIN_LEN.load(Acquire),
             checksum_chunk_size_logarithm: 20,
             checksum_enabled: true,
             fsync: false,
