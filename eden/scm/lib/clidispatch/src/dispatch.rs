@@ -162,6 +162,12 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
         indexedlog::config::SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, SeqCst);
     }
 
+    if let Some(max_chain_len) =
+        config.get_opt::<u32>("storage", "indexedlog-max-index-checksum-chain-len")?
+    {
+        indexedlog::config::INDEX_CHECKSUM_MAX_CHAIN_LEN.store(max_chain_len, SeqCst);
+    }
+
     let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
     indexedlog::config::set_global_fsync(fsync);
 
