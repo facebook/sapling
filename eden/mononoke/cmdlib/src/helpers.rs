@@ -30,6 +30,7 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use services::Fb303Service;
 use slog::error;
@@ -153,7 +154,7 @@ pub async fn get_root_manifest_id(
     Ok(repo
         .derive_hg_changeset(ctx, cs_id)
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?
         .manifestid())
 }

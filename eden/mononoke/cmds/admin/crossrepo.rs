@@ -64,6 +64,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCountersRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::FAIL_PUSHREBASE_EXTRA;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
@@ -829,7 +830,7 @@ async fn create_file_changes(
         let content = bytes::Bytes::from(content);
         let size = content.len() as u64;
         let content_metadata = filestore::store(
-            large_repo.blobstore(),
+            large_repo.repo_blobstore(),
             *large_repo.filestore_config(),
             ctx,
             &filestore::StoreRequest::new(size),

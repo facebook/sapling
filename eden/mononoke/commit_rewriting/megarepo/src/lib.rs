@@ -6,7 +6,6 @@
  */
 
 #![feature(trait_alias)]
-
 use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 
@@ -31,6 +30,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use movers::Mover;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 
 pub mod chunking;
@@ -78,7 +78,7 @@ fn get_all_file_moves<'a>(
         .map_ok({
             move |(old_path, maybe_new_path, file_type, filenode_id)| {
                 async move {
-                    let file_envelope = filenode_id.load(ctx, repo.blobstore()).await?;
+                    let file_envelope = filenode_id.load(ctx, repo.repo_blobstore()).await?;
 
                     // Note: it is always safe to unwrap here, since
                     // `HgFileEnvelope::get_size()` always returns `Some()`
@@ -172,7 +172,7 @@ where
 {
     let parent_hg_cs_id = repo.derive_hg_changeset(ctx, parent_bcs_id).await?;
 
-    let parent_hg_cs = parent_hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let parent_hg_cs = parent_hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
 
     let mut file_changes = get_all_file_moves(ctx, repo, parent_hg_cs, &path_converter)
         .try_fold(vec![], {
@@ -322,7 +322,7 @@ mod test {
             .await
             .unwrap()
             .unwrap();
-        bcs_id.load(&ctx, repo.blobstore()).await.unwrap()
+        bcs_id.load(&ctx, repo.repo_blobstore()).await.unwrap()
     }
 
     #[fbinit::test]
@@ -399,7 +399,7 @@ mod test {
         repo: BlobRepo,
         hg_cs_id: HgChangesetId,
     ) -> BTreeMap<MPath, (FileType, ContentId)> {
-        let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await.unwrap();
+        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await.unwrap();
         hg_cs
             .manifestid()
             .list_leaf_entries(ctx.clone(), repo.get_blobstore())
@@ -407,7 +407,7 @@ mod test {
                 cloned!(ctx, repo);
                 move |(path, (file_type, filenode_id))| {
                     cloned!(ctx, repo);
-                    async move { filenode_id.load(&ctx, repo.blobstore()).await }
+                    async move { filenode_id.load(&ctx, repo.repo_blobstore()).await }
                         .map(move |env| Ok((path, (file_type, env?.content_id()))))
                 }
             })
@@ -478,7 +478,7 @@ mod test {
         assert_eq!(stack.len(), 6);
 
         let last_hg_cs_id = stack.last().unwrap();
-        let last_hg_cs = last_hg_cs_id.load(&ctx, repo.blobstore()).await?;
+        let last_hg_cs = last_hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
 
         let leaf_entries = last_hg_cs
             .manifestid()

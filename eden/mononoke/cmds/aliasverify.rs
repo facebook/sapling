@@ -43,6 +43,7 @@ use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::debug;
 use slog::info;
@@ -115,7 +116,7 @@ impl AliasVerification {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        let bcs = bcs_id.load(ctx, self.blobrepo.blobstore()).await?;
+        let bcs = bcs_id.load(ctx, self.blobrepo.repo_blobstore()).await?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
             .iter()
@@ -193,7 +194,7 @@ impl AliasVerification {
         content_id: ContentId,
     ) -> Result<(), Error> {
         let result = FetchKey::from(alias.clone())
-            .load(ctx, self.blobrepo.blobstore())
+            .load(ctx, self.blobrepo.repo_blobstore())
             .await;
 
         match result {
@@ -216,7 +217,7 @@ impl AliasVerification {
     ) -> Result<(), Error> {
         let repo = self.blobrepo.clone();
 
-        let alias = filestore::fetch_concat(repo.blobstore(), ctx, content_id)
+        let alias = filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id)
             .map_ok(FileBytes)
             .map_ok(|content| get_sha256(&content.into_bytes()))
             .await?;

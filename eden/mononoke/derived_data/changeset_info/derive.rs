@@ -125,6 +125,7 @@ mod test {
     use futures::TryStreamExt;
     use mercurial_types::HgChangesetId;
     use mononoke_types::BonsaiChangeset;
+    use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tests_utils::resolve_cs_id;
@@ -143,7 +144,7 @@ mod test {
             .get_bonsai_from_hg(&ctx, hg_cs_id)
             .await?
             .unwrap();
-        let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
+        let bcs = bcs_id.load(&ctx, repo.repo_blobstore()).await?;
         // Make sure that the changeset info was saved in the blobstore
         let info = manager.derive(&ctx, bcs_id, None).await?;
 
@@ -194,7 +195,7 @@ mod test {
             .await?;
 
         for cs_id in cs_ids {
-            let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
+            let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
             let cs_info = cs_infos
                 .get(&cs_id)
                 .expect("ChangesetInfo should have been derived");

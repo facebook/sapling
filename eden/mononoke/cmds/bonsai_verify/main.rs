@@ -6,7 +6,6 @@
  */
 
 mod config;
-
 use std::collections::HashSet;
 use std::io::Write;
 use std::process;
@@ -48,6 +47,7 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
 use slog::error;
@@ -326,10 +326,10 @@ fn subcommmand_hg_manifest_verify(
                 match res {
                     Ok(csid) => {
                         let cs_id = repo.derive_hg_changeset(ctx, csid).await?;
-                        let bonsai_fut = csid.load(ctx, repo.blobstore()).map_err(Error::from);
+                        let bonsai_fut = csid.load(ctx, repo.repo_blobstore()).map_err(Error::from);
 
                         let parents_fut = async move {
-                            let blob_cs = cs_id.load(ctx, repo.blobstore()).await?;
+                            let blob_cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
                             let expected = blob_cs.manifestid();
 
                             let hg_csid = blob_cs.get_changeset_id();
@@ -347,7 +347,7 @@ fn subcommmand_hg_manifest_verify(
                                         let cs_id = HgChangesetId::new(p);
                                         async move {
                                             cs_id
-                                                .load(&ctx, repo.blobstore())
+                                                .load(&ctx, repo.repo_blobstore())
                                                 .map_ok(|cs| cs.manifestid())
                                                 .map_err(Error::from)
                                                 .await

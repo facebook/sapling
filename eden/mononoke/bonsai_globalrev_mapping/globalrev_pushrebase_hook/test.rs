@@ -29,6 +29,7 @@ use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
 use pushrebase_hook::RebasedChangesets;
 use rand::Rng;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sql::Transaction;
 use test_repo_factory::TestRepoFactory;
@@ -60,7 +61,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let cs2 = CreateCommitContext::new(ctx, repo, vec![root])
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let book = bookmark(ctx, repo, "master").set_to(cs1).await?;
@@ -87,19 +88,19 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .find(|e| e.id_old == cs2.get_changeset_id())
         .ok_or_else(|| Error::msg("missing cs2"))?
         .id_new
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let cs3 = CreateCommitContext::new(ctx, repo, vec![root])
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let cs4 = CreateCommitContext::new(ctx, repo, vec![cs3.get_changeset_id()])
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let rebased = do_pushrebase_bonsai(
@@ -118,7 +119,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .find(|e| e.id_old == cs3.get_changeset_id())
         .ok_or_else(|| Error::msg("missing cs3"))?
         .id_new
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let cs4_rebased = rebased
@@ -126,7 +127,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .find(|e| e.id_old == cs4.get_changeset_id())
         .ok_or_else(|| Error::msg("missing cs4"))?
         .id_new
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     assert_eq!(
@@ -218,7 +219,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
         let bcs = CreateCommitContext::new(ctx, repo, vec![root])
             .commit()
             .await?
-            .load(ctx, repo.blobstore())
+            .load(ctx, repo.repo_blobstore())
             .await?;
 
         let fut = async {
@@ -245,7 +246,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
             break;
         }
 
-        let cs = next_cs_id.load(ctx, repo.blobstore()).await?;
+        let cs = next_cs_id.load(ctx, repo.repo_blobstore()).await?;
 
         assert_eq!(Globalrev::new(next_globalrev), Globalrev::from_bcs(&cs)?);
 

@@ -51,6 +51,7 @@ use mercurial_types::HgManifestId;
 use mononoke_types::FileType;
 use mononoke_types::RepositoryId;
 use redactedblobstore::ErrorKind as RedactedBlobstoreError;
+use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::info;
 use slog::Logger;
@@ -180,7 +181,7 @@ pub async fn get_manifest_from_changeset(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<HgManifestId, Error> {
-    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let changeset = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     Ok(changeset.manifestid())
 }
 
@@ -189,7 +190,7 @@ pub async fn get_changeset_timestamp_from_changeset(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<i64, Error> {
-    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let changeset = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     Ok(changeset.time().timestamp_secs())
 }
 
@@ -202,14 +203,15 @@ pub async fn get_statistics_from_entry(
     match entry {
         Entry::Leaf((file_type, filenode_id)) => {
             let envelope = filenode_id
-                .load(ctx, repo.blobstore())
+                .load(ctx, repo.repo_blobstore())
                 .await
                 .context("Failed to load envelope")?;
             let size = envelope.content_size();
             let content_id = envelope.content_id();
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
-                let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
-                    .map_ok(FileBytes);
+                let content =
+                    filestore::fetch_stream(repo.repo_blobstore(), ctx.clone(), content_id)
+                        .map_ok(FileBytes);
                 number_of_lines_unless_redacted(content)
                     .await
                     .context("Failed to compute number of lines")?

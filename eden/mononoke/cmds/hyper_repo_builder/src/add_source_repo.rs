@@ -249,6 +249,7 @@ mod tests {
     use maplit::hashmap;
     use mononoke_types::MPath;
     use mononoke_types::RepositoryId;
+    use repo_blobstore::RepoBlobstoreRef;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::list_working_copy_utf8;
@@ -447,7 +448,7 @@ mod tests {
             }
         );
 
-        let tip = tip.load(&ctx, hyper_repo.blobstore()).await?;
+        let tip = tip.load(&ctx, hyper_repo.repo_blobstore()).await?;
         assert_eq!(
             tip.file_changes().map(|(path, _)| path).collect::<Vec<_>>(),
             vec![&MPath::new("source_repo/2.txt")?],

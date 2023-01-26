@@ -480,6 +480,7 @@ mod test {
     use fixtures::Linear;
     use fixtures::ManyFilesDirs;
     use fixtures::TestRepoFixture;
+    use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
     use tokio::runtime::Runtime;
 
@@ -505,7 +506,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.blobstore()))
+                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -561,7 +562,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.blobstore()))
+                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -650,7 +651,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.blobstore()))
+                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -726,7 +727,7 @@ mod test {
                 _ => panic!("dir1/subdir1 fsnode should be a tree"),
             };
             let deep_fsnode = runtime
-                .block_on(deep_fsnode_id.load(&ctx, repo.blobstore()))
+                .block_on(deep_fsnode_id.load(&ctx, repo.repo_blobstore()))
                 .unwrap();
             let deep_fsnode_entries: Vec<_> = deep_fsnode.list().collect();
             assert_eq!(
@@ -835,7 +836,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.blobstore()))
+                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.

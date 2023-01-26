@@ -34,6 +34,7 @@ use mercurial_types::RepoPath;
 use metaconfig_types::CacheWarmupParams;
 use microwave::SnapshotLocation;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
@@ -94,7 +95,9 @@ async fn blobstore_and_filenodes_warmup(
 
     // Ensure filenodes are derived for this, and load the changeset.
     let (cs, ()) = future::try_join(
-        hg_cs_id.load(ctx, repo.blobstore()).map_err(Error::from),
+        hg_cs_id
+            .load(ctx, repo.repo_blobstore())
+            .map_err(Error::from),
         FilenodesOnlyPublic::derive(ctx, repo, bcs_id)
             .map_err(Error::from)
             .map_ok(|_| ()),

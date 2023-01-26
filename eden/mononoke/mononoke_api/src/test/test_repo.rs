@@ -37,6 +37,7 @@ use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use synced_commit_mapping::ArcSyncedCommitMapping;
@@ -1139,7 +1140,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let bcs = cs
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().blobstore())
+        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![MPath::new("remapped")?]);
@@ -1157,7 +1158,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let bcs = cs
         .unwrap()
         .id()
-        .load(&ctx, largerepo.blob_repo().blobstore())
+        .load(&ctx, largerepo.blob_repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![MPath::new("prefix/remapped2")?]);
@@ -1203,7 +1204,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     let bcs = cs
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().blobstore())
+        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![MPath::new("remapped")?]);
@@ -1259,7 +1260,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let file_changes: Vec<_> = first_small
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().blobstore())
+        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
         .await?
         .file_changes()
         .map(|(path, _)| path)
@@ -1334,7 +1335,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let file_changes: Vec<_> = second_small
         .unwrap()
         .id()
-        .load(&ctx, smallrepo.blob_repo().blobstore())
+        .load(&ctx, smallrepo.blob_repo().repo_blobstore())
         .await?
         .file_changes()
         .map(|(path, _)| path)

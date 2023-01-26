@@ -44,6 +44,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::Logger;
 
@@ -233,7 +234,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
             .map(|p| {
                 let id = HgChangesetId::new(p);
                 cloned!(ctx, repo);
-                async move { id.load(&ctx, repo.blobstore()).await }
+                async move { id.load(&ctx, repo.repo_blobstore()).await }
                     .boxed()
                     .compat()
                     .from_err()
@@ -249,7 +250,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 let root_mf_fut = {
                     cloned!(ctx, repo);
                     let mf_id = changeset.manifestid();
-                    async move { HgBlobManifest::load(&ctx, repo.blobstore(), mf_id).await }
+                    async move { HgBlobManifest::load(&ctx, repo.repo_blobstore(), mf_id).await }
                 };
 
                 try_join(

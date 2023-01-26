@@ -18,6 +18,7 @@ use manifest::ManifestOps;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use unodes::RootUnodeManifestId;
 
@@ -28,11 +29,11 @@ pub async fn get_working_copy_paths(
 ) -> Result<Vec<MPath>, Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
-    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     info!(ctx.logger(), "Getting working copy contents");
     let mut paths: Vec<_> = hg_cs
         .manifestid()
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .map_ok(|(path, (_file_type, _filenode_id))| path)
         .try_collect()
         .await?;

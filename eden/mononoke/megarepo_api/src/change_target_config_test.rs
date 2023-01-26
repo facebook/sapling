@@ -19,6 +19,7 @@ use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8_with_types;
 use tests_utils::resolve_cs_id;
@@ -94,7 +95,9 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
         }
     );
 
-    let target_bonsai = target_cs_id.load(&ctx, &test.blobrepo.blobstore()).await?;
+    let target_bonsai = target_cs_id
+        .load(&ctx, &test.blobrepo.repo_blobstore())
+        .await?;
     assert_eq!(
         target_bonsai
             .file_changes()

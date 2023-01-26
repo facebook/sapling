@@ -25,6 +25,7 @@ use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::MPath;
 use mononoke_types::FileType;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
 
 use crate::error::SubcommandError;
@@ -56,10 +57,13 @@ pub async fn subcommand_content_fetch<'a>(
 
     match entry {
         Entry::Leaf((FileType::Executable, id)) => {
-            let envelope = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
+            let envelope = id
+                .load(&ctx, repo.repo_blobstore())
+                .await
+                .map_err(Error::from)?;
             let content_id = envelope.content_id();
             let maybe_metadata =
-                filestore::get_metadata(repo.blobstore(), &ctx, &content_id.into()).await?;
+                filestore::get_metadata(repo.repo_blobstore(), &ctx, &content_id.into()).await?;
             let metadata = maybe_metadata.ok_or_else(|| {
                 format_err!(
                     "Corruption: content id {} for executable file {} in {} not found!",
@@ -79,14 +83,20 @@ pub async fn subcommand_content_fetch<'a>(
             );
         }
         Entry::Leaf((FileType::Symlink, id)) | Entry::Leaf((FileType::Regular, id)) => {
-            let envelope = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
+            let envelope = id
+                .load(&ctx, repo.repo_blobstore())
+                .await
+                .map_err(Error::from)?;
             let bytes =
                 filestore::fetch_concat(&repo.get_blobstore(), &ctx, envelope.content_id()).await?;
             let content = String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
             println!("{}", content);
         }
         Entry::Tree(id) => {
-            let manifest = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
+            let manifest = id
+                .load(&ctx, repo.repo_blobstore())
+                .await
+                .map_err(Error::from)?;
 
             let entries: Vec<_> = manifest.list().collect();
             let mut longest_len = 0;
@@ -126,7 +136,7 @@ async fn fetch_entry(
 
     let bcs_id = helpers::csid_resolve(ctx, repo.clone(), rev.to_string()).await?;
     let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
-    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
 
     let ret = hg_cs
         .manifestid()

@@ -30,6 +30,7 @@ use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use serde_json::json;
 use serde_json::to_string_pretty;
@@ -115,7 +116,7 @@ pub async fn get_file_nodes(
     cs_id: HgChangesetId,
     paths: Vec<MPath>,
 ) -> Result<Vec<HgFileNodeId>, Error> {
-    let cs = cs_id.load(&ctx, repo.blobstore()).await?;
+    let cs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
     let root_mf_id = cs.manifestid().clone();
     let manifest_entries: HashMap<_, _> = root_mf_id
         .find_entries(ctx, repo.get_blobstore(), paths.clone())

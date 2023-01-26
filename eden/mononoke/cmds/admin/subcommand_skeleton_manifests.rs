@@ -25,6 +25,7 @@ use manifest::PathOrPrefix;
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::info;
 use slog::Logger;
@@ -131,7 +132,7 @@ async fn subcommand_list(
         .await?
     {
         Some(Entry::Tree(skeleton_id)) => {
-            for (elem, entry) in skeleton_id.load(ctx, repo.blobstore()).await?.list() {
+            for (elem, entry) in skeleton_id.load(ctx, repo.repo_blobstore()).await?.list() {
                 match entry {
                     SkeletonManifestEntry::Directory(..) => {
                         println!("{}/", MPath::join_opt_element(path.as_ref(), elem));

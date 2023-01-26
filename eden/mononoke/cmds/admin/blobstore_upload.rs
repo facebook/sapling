@@ -19,6 +19,7 @@ use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::info;
 use slog::Logger;
 
@@ -65,7 +66,7 @@ pub async fn subcommand_blobstore_upload<'a>(
     let data = tokio::fs::read(value_file).map_err(Error::from).await?;
     info!(ctx.logger(), "writing {} bytes to blobstore", data.len());
 
-    repo.blobstore()
+    repo.repo_blobstore()
         .put(&ctx, key.to_string(), BlobstoreBytes::from_bytes(data))
         .await?;
 

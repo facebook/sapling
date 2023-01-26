@@ -39,6 +39,7 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use phases::PhasesArc;
+use repo_blobstore::RepoBlobstoreRef;
 use skiplist::deserialize_skiplist_index;
 use skiplist::sparse;
 use skiplist::SkiplistIndex;
@@ -255,7 +256,7 @@ async fn read_skiplist_index<S: ToString>(
     logger: Logger,
 ) -> Result<Option<SkiplistIndex>, Error> {
     let key = key.to_string();
-    let maybebytes = repo.blobstore().get(&ctx, &key).await?;
+    let maybebytes = repo.repo_blobstore().get(&ctx, &key).await?;
     match maybebytes {
         Some(bytes) => {
             debug!(

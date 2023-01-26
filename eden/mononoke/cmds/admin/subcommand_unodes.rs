@@ -31,6 +31,7 @@ use manifest::PathOrPrefix;
 use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::info;
 use slog::Logger;
@@ -166,7 +167,7 @@ async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) ->
     let hg_paths = async move {
         let hg_csid = repo.derive_hg_changeset(ctx, csid).await?;
         println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
-        let hg_changeset = hg_csid.load(ctx, repo.blobstore()).await?;
+        let hg_changeset = hg_csid.load(ctx, repo.repo_blobstore()).await?;
         let paths = hg_changeset
             .manifestid()
             .find_entries(

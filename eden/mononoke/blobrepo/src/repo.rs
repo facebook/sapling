@@ -133,10 +133,6 @@ pub struct BlobRepo {
 }
 
 impl BlobRepo {
-    pub fn blobstore(&self) -> &RepoBlobstore {
-        &self.inner.repo_blobstore
-    }
-
     pub fn get_blobstore(&self) -> RepoBlobstore {
         self.inner.repo_blobstore.as_ref().clone()
     }

@@ -25,6 +25,7 @@ use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::ContentMetadata;
 use mononoke_types::MPath;
 use remotefilelog::create_getpack_v2_blob;
+use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
 
 use super::HgDataContext;
@@ -56,7 +57,7 @@ impl HgFileContext {
         // Fetch and store Mononoke's internal representation of the metadata of this
         // file. The actual file contents are not fetched here.
         let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().blobstore();
+        let blobstore = repo.blob_repo().repo_blobstore();
         let envelope = filenode_id.load(ctx, blobstore).await?;
         Ok(Self { repo, envelope })
     }
@@ -66,7 +67,7 @@ impl HgFileContext {
         filenode_id: HgFileNodeId,
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().blobstore();
+        let blobstore = repo.blob_repo().repo_blobstore();
         match filenode_id.load(ctx, blobstore).await {
             Ok(envelope) => Ok(Some(Self { repo, envelope })),
             Err(LoadableError::Missing(_)) => Ok(None),
@@ -102,7 +103,7 @@ impl HgFileContext {
     pub async fn content_metadata(&self) -> Result<ContentMetadata, MononokeError> {
         let content_id = self.envelope.content_id();
         let fetch_key = filestore::FetchKey::Canonical(content_id);
-        let blobstore = self.repo.blob_repo().blobstore();
+        let blobstore = self.repo.blob_repo().repo_blobstore();
         filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
             .await?
             .ok_or_else(|| {

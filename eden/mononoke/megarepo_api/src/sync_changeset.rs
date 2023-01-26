@@ -42,6 +42,7 @@ use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::common::find_source_config;
 use crate::common::find_target_bookmark_and_value;
@@ -155,7 +156,7 @@ impl<'a> SyncChangeset<'a> {
         // Find source repo and changeset that we need to sync
         let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
         let source_cs = source_cs_id
-            .load(ctx, source_repo.blob_repo().blobstore())
+            .load(ctx, source_repo.blob_repo().repo_blobstore())
             .await?;
 
         validate_can_sync_changeset(
@@ -818,7 +819,9 @@ mod test {
             }
         );
 
-        let merge_target_cs = merge_target.load(&ctx, &test.blobrepo.blobstore()).await?;
+        let merge_target_cs = merge_target
+            .load(&ctx, &test.blobrepo.repo_blobstore())
+            .await?;
 
         let copied_file_change_from_bonsai = match merge_target_cs
             .file_changes()
@@ -984,7 +987,9 @@ mod test {
             }
         );
 
-        let target_cs = target_cs_id.load(&ctx, &test.blobrepo.blobstore()).await?;
+        let target_cs = target_cs_id
+            .load(&ctx, &test.blobrepo.repo_blobstore())
+            .await?;
         // All parents are preserved.
         assert_eq!(target_cs.parents().count(), 2);
 
@@ -1138,12 +1143,12 @@ mod test {
             .sync(&ctx, merge, &source_name, &target, main_line_target)
             .await?;
 
-        let _mcs = merge.load(&ctx, test.blobrepo.blobstore()).await?;
+        let _mcs = merge.load(&ctx, test.blobrepo.repo_blobstore()).await?;
 
         // Find source repo and changeset that we need to sync
         let target_repo = sync_changeset.find_repo_by_id(&ctx, target.repo_id).await?;
         let merge_cs = merge_target
-            .load(&ctx, target_repo.blob_repo().blobstore())
+            .load(&ctx, target_repo.blob_repo().repo_blobstore())
             .await?;
 
         let parents: Vec<_> = merge_cs.parents().collect();

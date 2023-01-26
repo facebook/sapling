@@ -6,7 +6,6 @@
  */
 
 mod redaction;
-
 use std::collections::HashSet;
 use std::fmt;
 
@@ -40,6 +39,7 @@ use mercurial_types::HgParents;
 use mercurial_types::MPath;
 use mercurial_types::RevFlags;
 use redaction::RedactionFutureExt;
+use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
 use thiserror::Error;
 
@@ -263,7 +263,7 @@ async fn prepare_blob(
     lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> Result<RemotefilelogBlob> {
-    let envelope = node.load(ctx, repo.blobstore()).await?;
+    let envelope = node.load(ctx, repo.repo_blobstore()).await?;
 
     let inline_file = match lfs_params.threshold {
         Some(lfs_threshold) => envelope.content_size() <= lfs_threshold,
@@ -298,7 +298,7 @@ fn prepare_blob_inline_file(
     let kind = RemotefilelogBlobKind::Inline(envelope.content_size());
     let data = async move {
         let file_bytes = FileBytes(
-            filestore::fetch_concat(repo.blobstore(), &ctx, envelope.content_id()).await?,
+            filestore::fetch_concat(repo.repo_blobstore(), &ctx, envelope.content_id()).await?,
         );
 
         let HgFileEnvelopeMut {
@@ -346,7 +346,7 @@ fn prepare_blob_lfs_file(
     let kind = RemotefilelogBlobKind::Lfs(file_size);
     let data = async move {
         let key = FetchKey::from(envelope.content_id());
-        let oid = filestore::get_metadata(repo.blobstore(), &ctx, &key)
+        let oid = filestore::get_metadata(repo.repo_blobstore(), &ctx, &key)
             .await?
             .ok_or(ErrorKind::MissingContent(key))?
             .sha256;
@@ -393,10 +393,10 @@ mod test {
         let hg_manifest = repo
             .derive_hg_changeset(ctx, bcs)
             .await?
-            .load(ctx, repo.blobstore())
+            .load(ctx, repo.repo_blobstore())
             .await?
             .manifestid()
-            .load(ctx, repo.blobstore())
+            .load(ctx, repo.repo_blobstore())
             .await?;
 
         let entry = hg_manifest

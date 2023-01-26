@@ -30,6 +30,7 @@ use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
 use pushrebase::do_pushrebase_bonsai;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::RangeNodeStream;
 use slog::info;
 
@@ -325,7 +326,7 @@ async fn push_merge_commit(
     info!(ctx.logger(), "Generated hg changeset {}", merge_hg_cs_id);
     info!(ctx.logger(), "Now running pushrebase...");
 
-    let merge_cs = merge_cs_id.load(ctx, repo.blobstore()).await?;
+    let merge_cs = merge_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let pushrebase_res = do_pushrebase_bonsai(
         ctx,
         repo,
@@ -556,7 +557,7 @@ mod test {
             assert_eq!(merged.len(), 1);
             let pushrebased_cs_id = merged.values().next().unwrap();
             let bcs_id = pushrebased_cs_id
-                .load(&ctx, repo.blob_repo.blobstore())
+                .load(&ctx, repo.blob_repo.repo_blobstore())
                 .await?;
             assert_eq!(bcs_id.message(), format!("{}", i));
             result.extend(merged)
@@ -675,7 +676,7 @@ mod test {
 
         for merge_cs_id in gradual_merge_result.values() {
             let hg_cs_id = repo.derive_hg_changeset(ctx, *merge_cs_id).await?;
-            let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
+            let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
             assert!(hg_cs.files().is_empty());
         }
         Ok(())

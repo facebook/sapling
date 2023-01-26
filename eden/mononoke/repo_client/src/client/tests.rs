@@ -6,7 +6,6 @@
  */
 
 #![cfg(test)]
-
 use blobstore::Loadable;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
@@ -20,6 +19,7 @@ use mercurial_types::HgFileNodeId;
 use metaconfig_types::LfsParams;
 use mononoke_api::Repo;
 use mononoke_types_mocks::changesetid::ONES_CSID;
+use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::json;
 use tests_utils::CreateCommitContext;
@@ -444,7 +444,7 @@ async fn fetch_mfs(
 
     // Make sure that Manifest ids are present in the repo
     for (hash, _) in &fetched_mfs {
-        hash.load(ctx, repo.blobstore()).await?;
+        hash.load(ctx, repo.repo_blobstore()).await?;
     }
     Ok(fetched_mfs)
 }

@@ -65,6 +65,7 @@ use mononoke_types::SkeletonManifestId;
 use mononoke_types::Svnrev;
 use reachabilityindex::ReachabilityIndex;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use skeleton_manifest::RootSkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
@@ -500,7 +501,7 @@ impl ChangesetContext {
     ) -> impl Stream<Item = Result<ChangesetPathHistoryContext, MononokeError>> + '_ {
         root.find_entries(
             self.ctx(),
-            self.repo().blob_repo().blobstore(),
+            self.repo().blob_repo().repo_blobstore(),
             paths.map(|path| path.into_mpath()),
         )
         .map_err(MononokeError::from)
@@ -1374,7 +1375,7 @@ impl ChangesetContext {
                     ChangesetInfo::derive(self.ctx(), self.repo().blob_repo(), changeset_id).await?
                 } else {
                     let bonsai = changeset_id
-                        .load(self.ctx(), self.repo().blob_repo().blobstore())
+                        .load(self.ctx(), self.repo().blob_repo().repo_blobstore())
                         .await?;
                     ChangesetInfo::new(changeset_id, bonsai)
                 };

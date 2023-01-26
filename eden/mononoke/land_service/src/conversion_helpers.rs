@@ -28,6 +28,7 @@ use mononoke_types::private::Bytes;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseChangesetPair;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors;
 use crate::errors::LandChangesetsError;
@@ -38,7 +39,7 @@ pub async fn convert_bonsai_changesets(
     ctx: &CoreContext,
     repo: &RepoContext,
 ) -> Result<HashSet<BonsaiChangeset>, LandChangesetsError> {
-    let blobstore = repo.blob_repo().blobstore();
+    let blobstore = repo.blob_repo().repo_blobstore();
     let changeset_ids = changesets
         .into_iter()
         .map(convert_changeset_id_from_bytes)

@@ -20,6 +20,7 @@ use mercurial_types::HgParents;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::file_change::FileType;
 use mononoke_types::path::MPathElement;
+use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
 
 use super::HgDataContext;
@@ -43,7 +44,7 @@ impl HgTreeContext {
         manifest_id: HgManifestId,
     ) -> Result<Self, MononokeError> {
         let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().blobstore();
+        let blobstore = repo.blob_repo().repo_blobstore();
         let envelope = fetch_manifest_envelope(ctx, blobstore, manifest_id).await?;
         Ok(Self { repo, envelope })
     }
@@ -53,7 +54,7 @@ impl HgTreeContext {
         manifest_id: HgManifestId,
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo.ctx();
-        let blobstore = repo.blob_repo().blobstore();
+        let blobstore = repo.blob_repo().repo_blobstore();
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
         Ok(envelope.map(move |envelope| Self { repo, envelope }))
     }
@@ -155,7 +156,9 @@ mod tests {
         // Get the HgManifestId of the root tree manifest for a commit in this repo.
         // (Commit hash was found by inspecting the source of the `fixtures` crate.)
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let hg_cs = hg_cs_id.load(&ctx, rctx.blob_repo().blobstore()).await?;
+        let hg_cs = hg_cs_id
+            .load(&ctx, rctx.blob_repo().repo_blobstore())
+            .await?;
         let manifest_id = hg_cs.manifestid();
 
         let hg = rctx.hg();

@@ -71,6 +71,7 @@ use mononoke_types::RepoPath;
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_client::find_commits_to_send;
 use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
 use repo_client::gettreepack_entries;
@@ -140,7 +141,7 @@ impl HgRepoContext {
         &self,
         bubble_id: Option<BubbleId>,
     ) -> Result<RepoBlobstore, MononokeError> {
-        let main_blobstore = self.blob_repo().blobstore().clone();
+        let main_blobstore = self.blob_repo().repo_blobstore().clone();
         Ok(match bubble_id {
             Some(id) => self
                 .repo
@@ -344,7 +345,7 @@ impl HgRepoContext {
         };
 
         self.blob_repo()
-            .blobstore()
+            .repo_blobstore()
             .put(
                 self.ctx(),
                 filenode_id.blobstore_key(),
@@ -372,7 +373,7 @@ impl HgRepoContext {
         };
         let (_, upload_future) = entry.upload(
             self.ctx().clone(),
-            Arc::new(self.blob_repo().blobstore().clone()),
+            Arc::new(self.blob_repo().repo_blobstore().clone()),
         )?;
 
         upload_future.compat().await.map_err(MononokeError::from)?;
@@ -444,7 +445,7 @@ impl HgRepoContext {
         &self,
         bonsai_cs: BonsaiChangeset,
     ) -> Result<(), MononokeError> {
-        let blobstore = self.blob_repo().blobstore();
+        let blobstore = self.blob_repo().repo_blobstore();
         let cs_id = bonsai_cs.get_changeset_id();
         let insert = ChangesetInsert {
             cs_id,
@@ -645,7 +646,7 @@ impl HgRepoContext {
         hg_cs_id: HgChangesetId,
     ) -> Result<Option<Bytes>, MononokeError> {
         let ctx = self.ctx();
-        let blobstore = self.blob_repo().blobstore();
+        let blobstore = self.blob_repo().repo_blobstore();
         let revlog_cs = RevlogChangeset::load(ctx, blobstore, hg_cs_id)
             .await
             .map_err(MononokeError::from)?;

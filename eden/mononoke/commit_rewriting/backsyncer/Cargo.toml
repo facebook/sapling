@@ -46,6 +46,7 @@ mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercuri
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 movers = { version = "0.1.0", path = "../movers" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }

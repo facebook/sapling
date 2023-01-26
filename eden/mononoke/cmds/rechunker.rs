@@ -23,6 +23,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
+use repo_blobstore::RepoBlobstoreRef;
 
 const NAME: &str = "rechunker";
 const DEFAULT_NUM_JOBS: usize = 10;
@@ -78,7 +79,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .try_for_each_concurrent(jobs, |fid| {
                 cloned!(blobrepo, ctx);
                 async move {
-                    let env = fid.load(&ctx, blobrepo.blobstore()).await?;
+                    let env = fid.load(&ctx, blobrepo.repo_blobstore()).await?;
                     let content_id = env.content_id();
                     filestore::force_rechunk(
                         &blobrepo.get_blobstore(),

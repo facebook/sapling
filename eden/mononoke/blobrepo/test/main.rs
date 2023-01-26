@@ -6,6 +6,7 @@
  */
 
 #![cfg_attr(not(fbcode_build), allow(unused_crate_dependencies))]
+use repo_blobstore::RepoBlobstoreRef;
 
 mod file_history_test;
 mod tracing_blobstore;
@@ -86,8 +87,8 @@ async fn get_content(
     repo: &BlobRepo,
     id: HgFileNodeId,
 ) -> Result<bytes::Bytes, Error> {
-    let content_id = id.load(ctx, repo.blobstore()).await?.content_id();
-    let content = filestore::fetch_concat(repo.blobstore(), ctx, content_id);
+    let content_id = id.load(ctx, repo.repo_blobstore()).await?.content_id();
+    let content = filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id);
     content.await
 }
 
@@ -318,7 +319,7 @@ async fn check_bonsai_creation(fb: FacebookInit) {
     assert!(bonsai_cs_id.is_some());
     let bonsai = bonsai_cs_id
         .unwrap()
-        .load(&ctx, repo.blobstore())
+        .load(&ctx, repo.repo_blobstore())
         .await
         .unwrap();
     assert_eq!(
@@ -401,7 +402,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         .unwrap();
     let bonsai = bonsai_cs_id
         .unwrap()
-        .load(&ctx, repo.blobstore())
+        .load(&ctx, repo.repo_blobstore())
         .await
         .unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
@@ -520,7 +521,7 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
     ];
 
     let cs = HgChangesetId::new(nodehash)
-        .load(&ctx, repo.blobstore())
+        .load(&ctx, repo.repo_blobstore())
         .await
         .unwrap();
 
@@ -560,11 +561,11 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
         MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
     ];
 
-    let cs = (HgChangesetId::new(nodehash).load(&ctx, repo.blobstore()))
+    let cs = (HgChangesetId::new(nodehash).load(&ctx, repo.repo_blobstore()))
         .await
         .unwrap();
 
-    let parent_cs = (HgChangesetId::new(parenthash).load(&ctx, repo.blobstore()))
+    let parent_cs = (HgChangesetId::new(parenthash).load(&ctx, repo.repo_blobstore()))
         .await
         .unwrap();
 
@@ -617,7 +618,7 @@ async fn make_file_change<'a>(
     let content_size = content.len() as u64;
     let content_id = FileContents::new_bytes(Bytes::copy_from_slice(content))
         .into_blob()
-        .store(ctx, repo.blobstore())
+        .store(ctx, repo.repo_blobstore())
         .await?;
     Ok(FileChange::tracked(
         content_id,
@@ -641,7 +642,7 @@ async fn entry_content(
 ) -> Result<Bytes, Error> {
     let ret = match e {
         Entry::Leaf((_, id)) => {
-            let envelope = id.load(ctx, repo.blobstore()).await?;
+            let envelope = id.load(ctx, repo.repo_blobstore()).await?;
             filestore::fetch_concat(&repo.get_blobstore(), ctx, envelope.content_id()).await?
         }
         Entry::Tree(..) => {
@@ -659,11 +660,11 @@ async fn entry_parents(
 ) -> Result<HgParents, Error> {
     let ret = match e {
         Entry::Leaf((_, id)) => {
-            let envelope = id.load(ctx, repo.blobstore()).await?;
+            let envelope = id.load(ctx, repo.repo_blobstore()).await?;
             envelope.hg_parents()
         }
         Entry::Tree(id) => {
-            let manifest = id.load(ctx, repo.blobstore()).await?;
+            let manifest = id.load(ctx, repo.repo_blobstore()).await?;
             manifest.hg_parents()
         }
     };
@@ -684,7 +685,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         > {
             cloned!(ctx, repo);
             async move {
-                let ms = ms_hash.load(&ctx, repo.blobstore()).await?;
+                let ms = ms_hash.load(&ctx, repo.repo_blobstore()).await?;
                 let result = Manifest::list(&ms)
                     .map(|(name, entry)| {
                         (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
@@ -707,7 +708,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     let ms1 = HgChangesetId::new(string_to_nodehash(
         "264f01429683b3dd8042cb3979e8bf37007118bc",
     ))
-    .load(&ctx, repo.blobstore())
+    .load(&ctx, repo.repo_blobstore())
     .await
     .unwrap()
     .manifestid();
@@ -718,7 +719,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     let ms2 = HgChangesetId::new(string_to_nodehash(
         "16839021e338500b3cf7c9b871c8a07351697d68",
     ))
-    .load(&ctx, repo.blobstore())
+    .load(&ctx, repo.repo_blobstore())
     .await
     .unwrap()
     .manifestid();
@@ -1033,7 +1034,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     .into_blob();
     let content_id = *content_blob.id();
     let content_len = content_blob.len() as u64;
-    content_blob.store(&ctx, repo.blobstore()).await?;
+    content_blob.store(&ctx, repo.repo_blobstore()).await?;
 
     let path = RepoPath::file("path/3")?;
 
@@ -1133,7 +1134,7 @@ async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error
     .into_blob();
     let content_id = *content_blob.id();
     let content_len = content_blob.len() as u64;
-    content_blob.store(&ctx, repo.blobstore()).await?;
+    content_blob.store(&ctx, repo.repo_blobstore()).await?;
 
     let path = RepoPath::file("path/2")?;
 
@@ -1177,7 +1178,7 @@ impl TestHelper {
     async fn lookup_changeset(&self, cs_id: ChangesetId) -> Result<HgBlobChangeset, Error> {
         let hg_cs_id = self.repo.derive_hg_changeset(&self.ctx, cs_id).await?;
 
-        let hg_cs = hg_cs_id.load(&self.ctx, self.repo.blobstore()).await?;
+        let hg_cs = hg_cs_id.load(&self.ctx, self.repo.repo_blobstore()).await?;
 
         Ok(hg_cs)
     }
@@ -1187,7 +1188,7 @@ impl TestHelper {
 
         let manifest = hg_cs
             .manifestid()
-            .load(&self.ctx, self.repo.blobstore())
+            .load(&self.ctx, self.repo.repo_blobstore())
             .await?;
 
         Ok(manifest)
@@ -1224,7 +1225,7 @@ impl TestHelper {
             .into_tree()
             .ok_or_else(|| Error::msg(format!("Not a manifest: {}", path)))?;
 
-        let manifest = id.load(&self.ctx, self.repo.blobstore()).await?;
+        let manifest = id.load(&self.ctx, self.repo.repo_blobstore()).await?;
 
         Ok(manifest)
     }
@@ -1240,7 +1241,7 @@ impl TestHelper {
             .into_leaf()
             .ok_or_else(|| Error::msg(format!("Not a filenode: {}", path)))?;
 
-        let envelope = filenode.load(&self.ctx, self.repo.blobstore()).await?;
+        let envelope = filenode.load(&self.ctx, self.repo.repo_blobstore()).await?;
 
         Ok(envelope)
     }
@@ -1275,9 +1276,9 @@ mod octopus_merges {
 
         let hg_cs_id = repo.derive_hg_changeset(&ctx, commit).await?;
 
-        let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
+        let hg_cs = hg_cs_id.load(&ctx, repo.repo_blobstore()).await?;
 
-        let hg_manifest = hg_cs.manifestid().load(&ctx, repo.blobstore()).await?;
+        let hg_manifest = hg_cs.manifestid().load(&ctx, repo.repo_blobstore()).await?;
 
         // Do we get the same files?
         let files = Manifest::list(&hg_manifest);

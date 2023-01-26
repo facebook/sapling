@@ -48,6 +48,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
 use unodes::RootUnodeManifestId;
 
@@ -169,7 +170,7 @@ pub async fn subcommand_blame<'a>(
                 .map_ok(|(path, file_unode_id)| {
                     let id = BlameId::from(file_unode_id);
                     cloned!(ctx, repo);
-                    async move { id.load(&ctx, repo.blobstore()).await }
+                    async move { id.load(&ctx, repo.repo_blobstore()).await }
                         .map_ok(move |blame_maybe_rejected| (path, blame_maybe_rejected))
                         .map_err(Error::from)
                 })
@@ -275,7 +276,7 @@ async fn subcommand_show_diffs(
     path: MPath,
 ) -> Result<(), Error> {
     let file_unode_id = find_leaf(ctx.clone(), repo.clone(), csid, path).await?;
-    let file_unode = file_unode_id.load(&ctx, repo.blobstore()).await?;
+    let file_unode = file_unode_id.load(&ctx, repo.repo_blobstore()).await?;
     let diffs = file_unode
         .parents()
         .iter()

@@ -29,6 +29,7 @@ use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 
 use super::EdenApiHandler;
@@ -66,7 +67,7 @@ async fn maybe_copy_file(
             .copy_file_to_bubble(
                 repo.ctx(),
                 blob_repo.repo_identity().id(),
-                blob_repo.blobstore().clone(),
+                blob_repo.repo_blobstore().clone(),
                 bubble_id,
                 *blob_repo.filestore_config(),
                 id.into(),

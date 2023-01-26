@@ -32,6 +32,7 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::error;
 use slog::info;
 use tokio::time::sleep;
@@ -83,7 +84,7 @@ pub async fn create_deletion_head_commits<'a>(
 
         info!(ctx.logger(), "derived {}, pushrebasing...", hg_cs_id);
 
-        let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
         let pushrebase_res = do_pushrebase_bonsai(
             ctx,
             repo,

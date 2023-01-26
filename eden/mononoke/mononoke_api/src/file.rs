@@ -23,6 +23,7 @@ pub use mononoke_types::ContentId as FileId;
 pub use mononoke_types::ContentMetadata as FileMetadata;
 /// The type of a file.
 pub use mononoke_types::FileType;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -80,7 +81,7 @@ impl FileContext {
             .require_full_repo_read(repo.ctx(), repo.inner_repo())
             .await?;
         // Try to get the file metadata immediately to see if it exists.
-        let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
+        let file = get_metadata(repo.blob_repo().repo_blobstore(), repo.ctx(), &fetch_key)
             .await?
             .map(|metadata| Self {
                 repo,
@@ -112,7 +113,7 @@ impl FileContext {
             .get_or_init(|| {
                 cloned!(self.repo, self.fetch_key);
                 async move {
-                    get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
+                    get_metadata(repo.blob_repo().repo_blobstore(), repo.ctx(), &fetch_key)
                         .await
                         .map_err(MononokeError::from)
                         .and_then(|metadata| {
@@ -129,7 +130,7 @@ impl FileContext {
     /// be expensive in the case of large files.
     pub async fn content_concat(&self) -> Result<Bytes, MononokeError> {
         let bytes = filestore::fetch_concat_opt(
-            self.repo().blob_repo().blobstore(),
+            self.repo().blob_repo().repo_blobstore(),
             self.ctx(),
             &self.fetch_key,
         )
@@ -153,7 +154,7 @@ impl FileContext {
         size: u64,
     ) -> Result<Bytes, MononokeError> {
         let ret = filestore::fetch_range_with_size(
-            self.repo().blob_repo().blobstore(),
+            self.repo().blob_repo().repo_blobstore(),
             self.ctx(),
             &self.fetch_key,
             filestore::Range::sized(start, size),

@@ -26,6 +26,7 @@ use futures_old::Future;
 use futures_old::Stream;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::o;
 use slog::Logger;
 
@@ -214,7 +215,7 @@ where
 
         let visit_fut = {
             cloned!(ctx, changeset_id, shared);
-            async move { changeset_id.load(&ctx, shared.repo.blobstore()).await }
+            async move { changeset_id.load(&ctx, shared.repo.repo_blobstore()).await }
         }
         .boxed()
         .compat()

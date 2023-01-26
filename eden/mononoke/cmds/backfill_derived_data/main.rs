@@ -80,6 +80,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use once_cell::sync::OnceCell;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_factory::RepoFactoryBuilder;
@@ -1555,7 +1556,7 @@ async fn find_oldest_underived(
                 // toposorted order.  Let's use it as a proxy for the oldest
                 // underived commit.
                 match underived.first() {
-                    Some(csid) => Ok(Some(csid.load(ctx, repo.blobstore()).await?)),
+                    Some(csid) => Ok(Some(csid.load(ctx, repo.repo_blobstore()).await?)),
                     None => Ok::<_, Error>(None),
                 }
             })

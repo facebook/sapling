@@ -29,6 +29,7 @@ hooks_content_stores = { version = "0.1.0", path = "../hooks/content-stores" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../revset" }

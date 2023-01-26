@@ -69,6 +69,7 @@ use mononoke_types::RepositoryId;
 use mutable_renames::MutableRenameEntry;
 use mutable_renames::MutableRenames;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstoreRef;
 use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
@@ -223,12 +224,12 @@ pub trait MegarepoOp {
         let blob_repo = repo.blob_repo();
         let hg_cs_merge = async {
             let hg_cs_id = blob_repo.derive_hg_changeset(ctx, merge_commit).await?;
-            let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
+            let hg_cs = hg_cs_id.load(ctx, blob_repo.repo_blobstore()).await?;
             Ok(hg_cs.manifestid())
         };
         let parent_hg_css = try_join_all(new_parent_commits.iter().map(|p| async move {
             let hg_cs_id = blob_repo.derive_hg_changeset(ctx, *p).await?;
-            let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
+            let hg_cs = hg_cs_id.load(ctx, blob_repo.repo_blobstore()).await?;
             Result::<_, Error>::Ok(hg_cs.manifestid())
         }));
 
@@ -247,7 +248,7 @@ pub trait MegarepoOp {
                 BonsaiDiffFileChange::Changed(path, ty, entry_id)
                 | BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
                     let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
-                    let envelope = file_node_id.load(ctx, blob_repo.blobstore()).await?;
+                    let envelope = file_node_id.load(ctx, blob_repo.repo_blobstore()).await?;
                     let size = envelope.content_size();
                     let content_id = envelope.content_id();
 
@@ -781,7 +782,7 @@ pub trait MegarepoOp {
             .map(Ok)
             .map_ok(|(path, content)| async {
                 let ((content_id, size), fut) = filestore::store_bytes(
-                    repo.blobstore(),
+                    repo.repo_blobstore(),
                     *repo.filestore_config(),
                     ctx,
                     content,

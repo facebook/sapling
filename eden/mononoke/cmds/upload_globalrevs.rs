@@ -34,6 +34,7 @@ use futures_old::future::Future;
 use futures_old::future::IntoFuture;
 use futures_old::stream;
 use futures_old::stream::Stream;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
@@ -64,7 +65,7 @@ pub fn upload<P: AsRef<Path>>(
                     cloned!(ctx, repo);
                     move |entry| {
                         cloned!(ctx, repo);
-                        async move { entry.cs_id.load(&ctx, repo.blobstore()).await }
+                        async move { entry.cs_id.load(&ctx, repo.repo_blobstore()).await }
                             .boxed()
                             .compat()
                             .from_err()

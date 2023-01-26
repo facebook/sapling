@@ -79,6 +79,7 @@ use mononoke_types::SkeletonManifestId;
 use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;
 use phases::Phase;
+use repo_blobstore::RepoBlobstoreRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
@@ -1087,7 +1088,7 @@ impl Node {
                 async move {
                     let content_id = envelope.content_id();
                     let file_bytes =
-                        filestore::fetch(repo.blobstore(), ctx, &envelope.content_id().into())
+                        filestore::fetch(repo.repo_blobstore(), ctx, &envelope.content_id().into())
                             .await?;
 
                     let file_bytes = file_bytes.ok_or_else(|| {

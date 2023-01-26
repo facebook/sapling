@@ -37,6 +37,7 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::AncestorsNodeStream;
 use slog::debug;
 use slog::Logger;
@@ -132,7 +133,7 @@ pub async fn subcommand_deleted_manifest<'a>(
                     .ok_or_else(|| format_err!("{} not set", ARG_ID))?,
             )?;
             let mf = mf_id
-                .load(&ctx, repo.blobstore())
+                .load(&ctx, repo.repo_blobstore())
                 .await
                 .map_err(Error::from)?;
             println!("{:?}", mf);
@@ -151,7 +152,11 @@ async fn subcommand_manifest(
     let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
     debug!(ctx.logger(), "ROOT Deleted Manifest V2 {:?}", root_manifest,);
     let mut entries: Vec<_> = root_manifest
-        .find_entries(&ctx, repo.blobstore(), Some(PathOrPrefix::Prefix(prefix)))
+        .find_entries(
+            &ctx,
+            repo.repo_blobstore(),
+            Some(PathOrPrefix::Prefix(prefix)),
+        )
         .try_collect()
         .await?;
     entries.sort_by_key(|(path, _)| path.clone());
@@ -182,7 +187,7 @@ async fn get_file_changes(
     cs_id: ChangesetId,
 ) -> Result<(Vec<MPath>, Vec<MPath>), Error> {
     let paths_added_fut = async {
-        let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
+        let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
         let paths = bonsai
             .into_mut()
             .file_changes
@@ -198,7 +203,7 @@ async fn get_file_changes(
         let parents_futs = parents.into_iter().map(|csid| {
             cloned!(ctx, repo);
             async move {
-                let blob = csid.load(&ctx, repo.blobstore()).await?;
+                let blob = csid.load(&ctx, repo.repo_blobstore()).await?;
                 Ok(blob.manifestid())
             }
         });
@@ -227,7 +232,7 @@ async fn verify_single_commit(
     let deleted_manifest_paths = async move {
         let root_manifest = RootDeletedManifestV2Id::derive(&ctx, &repo, cs_id).await?;
         let entries: BTreeSet<_> = root_manifest
-            .list_all_entries(&ctx, repo.blobstore())
+            .list_all_entries(&ctx, repo.repo_blobstore())
             .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
             .try_collect()
             .await?;

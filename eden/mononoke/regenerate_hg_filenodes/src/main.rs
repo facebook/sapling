@@ -7,7 +7,6 @@
 
 //! Tool to regenerate filenodes. It can be used to fix up linknodes -
 //! but it should be used with caution! PLEASE RUN IT ONLY IF YOU KNOW WHAT YOU ARE DOING!
-
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -32,6 +31,7 @@ use futures::future::join_all;
 use futures::future::FutureExt;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 
@@ -58,7 +58,7 @@ async fn regenerate_single_manifest(
         .get_bonsai_from_hg(&ctx, hg_cs)
         .await?;
     let cs_id = maybe_cs_id.ok_or_else(|| format_err!("changeset not found {}", hg_cs))?;
-    let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
+    let bonsai = cs_id.load(&ctx, repo.repo_blobstore()).await?;
 
     let toinsert = generate_all_filenodes(
         &ctx,

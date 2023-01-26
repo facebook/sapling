@@ -643,13 +643,13 @@ async fn list_hg_manifest(
 ) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
 
-    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let mfid = hg_cs.manifestid();
 
     let map: HashMap<_, _> = mfid
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, (ty, filenode_id))| async move {
-            let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
+            let filenode = filenode_id.load(ctx, repo.repo_blobstore()).await?;
             let content_id = filenode.content_id();
             let val = ManifestData::Hg(ty, content_id);
             Ok((path, val))
@@ -719,7 +719,7 @@ async fn list_unodes(
     let map: HashMap<_, _> = unode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, unode_id)| async move {
-            let unode = unode_id.load(ctx, repo.blobstore()).await?;
+            let unode = unode_id.load(ctx, repo.repo_blobstore()).await?;
             let val = ManifestData::Unodes(*unode.file_type(), *unode.content_id());
             Ok((path, val))
         })

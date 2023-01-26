@@ -20,6 +20,7 @@ use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;
 use tests_utils::list_working_copy_utf8_with_types;
@@ -582,16 +583,22 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
     //     o   M
     //    / \
 
-    let target_cs = target_cs_id.load(&ctx, test.blobrepo.blobstore()).await?;
+    let target_cs = target_cs_id
+        .load(&ctx, test.blobrepo.repo_blobstore())
+        .await?;
     assert!(target_cs.is_merge());
 
     let parents = target_cs.parents().collect::<Vec<_>>();
     assert_eq!(parents.len(), 2);
 
-    let first_merge = parents[0].load(&ctx, test.blobrepo.blobstore()).await?;
+    let first_merge = parents[0]
+        .load(&ctx, test.blobrepo.repo_blobstore())
+        .await?;
     assert!(first_merge.is_merge());
 
-    let move_commit = parents[1].load(&ctx, test.blobrepo.blobstore()).await?;
+    let move_commit = parents[1]
+        .load(&ctx, test.blobrepo.repo_blobstore())
+        .await?;
     assert!(!move_commit.is_merge());
 
     Ok(())

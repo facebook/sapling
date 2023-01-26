@@ -31,6 +31,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use serde::Serialize;
 use sql::Connection;
@@ -171,7 +172,7 @@ impl CommitRemappingState {
             Entry::Leaf(file) => file,
         };
 
-        let bytes = filestore::fetch_concat(repo.blobstore(), ctx, *file.content_id()).await?;
+        let bytes = filestore::fetch_concat(repo.repo_blobstore(), ctx, *file.content_id()).await?;
         let content = String::from_utf8(bytes.to_vec())
             .with_context(|| format!("{} is not utf8", REMAPPING_STATE_FILE))?;
         let state: CommitRemappingState = serde_json::from_str(&content)?;
@@ -218,7 +219,7 @@ impl CommitRemappingState {
         let bytes = self.serialize()?;
 
         let ((content_id, size), fut) = filestore::store_bytes(
-            repo.blobstore(),
+            repo.repo_blobstore(),
             *repo.filestore_config(),
             ctx,
             bytes.into(),

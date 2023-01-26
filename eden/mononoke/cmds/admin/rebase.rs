@@ -27,6 +27,7 @@ use futures::TryStreamExt;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::Logger;
 
 use crate::error::SubcommandError;
@@ -176,7 +177,7 @@ async fn rebase_single_changeset(
     dest: ChangesetId,
 ) -> Result<ChangesetId, Error> {
     let bcs = cs_id
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await
         .map_err(Error::from)?;
     let mut rebased = bcs.into_mut();

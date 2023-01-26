@@ -30,6 +30,7 @@ use mononoke_types::ChangesetId;
 use pushrebase_client::LocalPushrebaseClient;
 use pushrebase_client::PushrebaseClient;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::RangeNodeStream;
 use skiplist::SkiplistIndexArc;
 use unbundle::PushRedirector;
@@ -141,7 +142,7 @@ impl RepoContext {
         // changesets.   These are the commits that are ancestors of the head
         // commit and descendants of the base commit.
         let ctx = self.ctx();
-        let blobstore = self.blob_repo().blobstore();
+        let blobstore = self.blob_repo().repo_blobstore();
         let changesets: HashSet<_> = RangeNodeStream::new(
             ctx.clone(),
             self.blob_repo().changeset_fetcher_arc(),

@@ -484,7 +484,7 @@ async fn create_hg_changeset_part(
                 async move {
                     match res {
                         Ok((hg_cs_id, _bcs_id)) => {
-                            let cs = hg_cs_id.load(&ctx, blobrepo.blobstore()).await?;
+                            let cs = hg_cs_id.load(&ctx, blobrepo.repo_blobstore()).await?;
                             Ok((hg_cs_id, cs))
                         }
                         Err(e) => Err(e),

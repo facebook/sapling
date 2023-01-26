@@ -133,6 +133,7 @@ use remotefilelog::create_getpack_v2_blob;
 use remotefilelog::get_unordered_file_history_for_multiple_nodes;
 use remotefilelog::GetpackBlobInfo;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
@@ -1182,7 +1183,7 @@ impl HgCommands for RepoClient {
                     Some(
                         {
                             cloned!(self.n, self.ctx, self.repo);
-                            async move { n.load(&ctx, repo.blob_repo().blobstore()).await }
+                            async move { n.load(&ctx, repo.blob_repo().repo_blobstore()).await }
                         }
                         .boxed()
                         .compat()
@@ -1321,7 +1322,7 @@ impl HgCommands for RepoClient {
                 .into_iter()
                 .map(|hg_csid| {
                     cloned!(ctx, repo);
-                    async move { hg_csid.load(&ctx, repo.blobstore()).await }
+                    async move { hg_csid.load(&ctx, repo.repo_blobstore()).await }
                         .boxed()
                         .compat()
                         .from_err()
@@ -2109,7 +2110,8 @@ impl HgCommands for RepoClient {
                         cloned!(ctx, blobrepo, hg_cs_id);
                         async move {
                             let revlog_cs =
-                                RevlogChangeset::load(&ctx, blobrepo.blobstore(), hg_cs_id).await?;
+                                RevlogChangeset::load(&ctx, blobrepo.repo_blobstore(), hg_cs_id)
+                                    .await?;
                             let bytes = serialize_getcommitdata(hg_cs_id, revlog_cs)?;
                             Result::<_, Error>::Ok(bytes)
                         }
@@ -2312,7 +2314,7 @@ pub fn fetch_treepack_part_input(
 
     let envelope_fut = {
         cloned!(ctx, repo);
-        async move { fetch_manifest_envelope(&ctx, repo.blobstore(), hg_mf_id).await }
+        async move { fetch_manifest_envelope(&ctx, repo.repo_blobstore(), hg_mf_id).await }
     }
     .boxed()
     .compat();

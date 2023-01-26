@@ -28,6 +28,7 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use mononoke_types::ChangesetId;
 use phases::PhasesArc;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Serialize;
 use skeleton_manifest::RootSkeletonManifestId;
 
@@ -93,7 +94,7 @@ async fn find_commit_stat(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<CommitStat, Error> {
-    let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+    let bcs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let mut paths = vec![];
     let mut copy_froms = 0;
     for (path, file_change) in bcs.file_changes() {

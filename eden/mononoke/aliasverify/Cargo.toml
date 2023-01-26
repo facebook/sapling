@@ -25,6 +25,7 @@ futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 sha2 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

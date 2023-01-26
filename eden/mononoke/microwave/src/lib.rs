@@ -28,6 +28,7 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use tokio::fs::File;
@@ -123,7 +124,7 @@ impl Snapshot {
                 file.write_all(&serialized).await?;
             }
             SnapshotLocation::Blobstore => {
-                repo.blobstore()
+                repo.repo_blobstore()
                     .put(ctx, snapshot_name(), BlobstoreBytes::from_bytes(serialized))
                     .await?;
             }
@@ -156,7 +157,7 @@ async fn load_snapshot(
         }
         SnapshotLocation::Blobstore => {
             let bytes = repo
-                .blobstore()
+                .repo_blobstore()
                 .get(ctx, &snapshot_name())
                 .await?
                 .ok_or_else(|| Error::msg("Snapshot is missing"))?

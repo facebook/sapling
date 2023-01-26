@@ -17,6 +17,7 @@ fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

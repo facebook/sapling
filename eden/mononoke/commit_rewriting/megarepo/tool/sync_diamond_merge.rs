@@ -62,6 +62,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::info;
 use slog::warn;
@@ -234,7 +235,9 @@ async fn create_rewritten_merge_commit(
     small_root: ChangesetId,
     onto_value: ChangesetId,
 ) -> Result<(BonsaiChangeset, CommitSyncConfigVersion), Error> {
-    let merge_bcs = small_merge_cs_id.load(&ctx, small_repo.blobstore()).await?;
+    let merge_bcs = small_merge_cs_id
+        .load(&ctx, small_repo.repo_blobstore())
+        .await?;
 
     let parents = merge_bcs.parents().collect();
     let (p1, p2) = validate_parents(parents)?;
@@ -408,7 +411,7 @@ async fn find_new_branch_oldest_first(
         cloned!(ctx, small_repo);
         move |cs| {
             cloned!(ctx, small_repo);
-            async move { cs.load(&ctx, small_repo.blob_repo.blobstore()).await }
+            async move { cs.load(&ctx, small_repo.blob_repo.repo_blobstore()).await }
                 .boxed()
                 .compat()
                 .from_err()
@@ -485,7 +488,7 @@ fn id_to_manifestid(
 ) -> impl Future<Item = HgManifestId, Error = Error> {
     async move {
         let cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-        let cs = cs_id.load(&ctx, repo.blobstore()).await?;
+        let cs = cs_id.load(&ctx, repo.repo_blobstore()).await?;
         Ok(cs.manifestid())
     }
     .boxed()

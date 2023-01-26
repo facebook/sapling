@@ -60,6 +60,7 @@ use movers::get_movers;
 use movers::Mover;
 use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use revset::RangeNodeStream;
@@ -290,7 +291,11 @@ impl ValidationHelper {
             Added(_, _) | Removed => Ok(true),
             ChangedTo(new_file_type, new_filenode_id) => {
                 let maybe_entry_in_p1 = p1_root_mf_id
-                    .find_entry(ctx.clone(), repo.blobstore().clone(), Some(mpath.clone()))
+                    .find_entry(
+                        ctx.clone(),
+                        repo.repo_blobstore().clone(),
+                        Some(mpath.clone()),
+                    )
                     .await?;
 
                 let (p1_file_type, p1_filenode_id) = match maybe_entry_in_p1 {
@@ -332,11 +337,11 @@ impl ValidationHelper {
 
                 let (p1_content_id, new_content_id) = try_join!(
                     async {
-                        let e = p1_filenode_id.load(ctx, repo.blobstore()).await?;
+                        let e = p1_filenode_id.load(ctx, repo.repo_blobstore()).await?;
                         Result::<_, Error>::Ok(e.content_id())
                     },
                     async {
-                        let e = new_filenode_id.load(ctx, repo.blobstore()).await?;
+                        let e = new_filenode_id.load(ctx, repo.repo_blobstore()).await?;
                         Result::<_, Error>::Ok(e.content_id())
                     }
                 )?;
@@ -1472,7 +1477,7 @@ async fn fetch_root_mf_id(
     cs_id: ChangesetId,
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo.derive_hg_changeset(ctx, cs_id).await?;
-    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let changeset = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     Ok(changeset.manifestid())
 }
 
@@ -1529,14 +1534,14 @@ async fn verify_filenodes_have_same_contents<
                 let f1 = async move {
                     source_filenode_id
                         .0
-                        .load(ctx, source_repo.0.blobstore())
+                        .load(ctx, source_repo.0.repo_blobstore())
                         .await
                 }
                 .map_ok(|e| Source(e.content_id()));
                 let f2 = async move {
                     target_filenode_id
                         .0
-                        .load(ctx, target_repo.0.blobstore())
+                        .load(ctx, target_repo.0.repo_blobstore())
                         .await
                 }
                 .map_ok(|e| Target(e.content_id()));

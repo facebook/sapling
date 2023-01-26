@@ -115,6 +115,7 @@ use regex::Regex;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
@@ -713,7 +714,7 @@ impl Repo {
                 let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
 
                 let compare_timestamp = compare_bcs_id
-                    .load(ctx, repo.blobstore())
+                    .load(ctx, repo.repo_blobstore())
                     .await?
                     .author_date()
                     .timestamp_secs();

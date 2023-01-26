@@ -22,6 +22,7 @@ futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperime
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 thiserror = "1.0.36"
 tunables = { version = "0.1.0", path = "../../tunables" }

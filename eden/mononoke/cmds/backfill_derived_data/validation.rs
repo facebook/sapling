@@ -43,6 +43,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use readonlyblob::ReadOnlyBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -176,7 +177,7 @@ async fn validate_generated_data<'a>(
     cs_id: ChangesetId,
     mem_blob_repo: &'a BlobRepo,
 ) -> Result<(), Error> {
-    let mem_blob = mem_blob_repo.blobstore().boxed();
+    let mem_blob = mem_blob_repo.repo_blobstore().boxed();
     if real_derived_utils.name() == RootFsnodeId::NAME {
         validate_fsnodes(ctx, real_repo, cs_id, &mem_blob).await?;
     } else if real_derived_utils.name() == RootSkeletonManifestId::NAME {
@@ -204,7 +205,7 @@ async fn validate_fsnodes<'a>(
     cs_id: ChangesetId,
     mem_blob: &'a Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
-    let real_blobstore = real_repo.blobstore().boxed();
+    let real_blobstore = real_repo.repo_blobstore().boxed();
     let (fsnode, parents) =
         find_cs_and_parents_derived_data::<RootFsnodeId>(ctx, real_repo, cs_id).await?;
     let fsnode = *fsnode.fsnode_id();
@@ -233,7 +234,7 @@ async fn validate_skeleton_manifests<'a>(
     cs_id: ChangesetId,
     mem_blob: &'a Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
-    let real_blobstore = real_repo.blobstore().boxed();
+    let real_blobstore = real_repo.repo_blobstore().boxed();
 
     let (skeleton_manifest, parents) =
         find_cs_and_parents_derived_data::<RootSkeletonManifestId>(ctx, real_repo, cs_id).await?;
@@ -263,7 +264,7 @@ async fn validate_unodes<'a>(
     cs_id: ChangesetId,
     mem_blob: &'a Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
-    let real_blobstore = real_repo.blobstore().boxed();
+    let real_blobstore = real_repo.repo_blobstore().boxed();
     let (unode, parents) =
         find_cs_and_parents_derived_data::<RootUnodeManifestId>(ctx, real_repo, cs_id).await?;
     let unode = *unode.manifest_unode_id();
@@ -291,7 +292,7 @@ async fn validate_hgchangesets<'a>(
     cs_id: ChangesetId,
     mem_blob: &'a Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
-    let real_blobstore = real_repo.blobstore().boxed();
+    let real_blobstore = real_repo.repo_blobstore().boxed();
 
     let (derived, parents) =
         find_cs_and_parents_derived_data::<MappedHgChangesetId>(ctx, real_repo, cs_id).await?;
@@ -299,7 +300,7 @@ async fn validate_hgchangesets<'a>(
     let manifest = async {
         let hgchangeset = derived
             .hg_changeset_id()
-            .load(ctx, real_repo.blobstore())
+            .load(ctx, real_repo.repo_blobstore())
             .await?;
         check_exists(
             ctx,
@@ -310,7 +311,10 @@ async fn validate_hgchangesets<'a>(
         Result::<_, Error>::Ok(hgchangeset.manifestid())
     };
     let parents = try_join_all(parents.into_iter().map(|p| async move {
-        let p = p.hg_changeset_id().load(ctx, real_repo.blobstore()).await?;
+        let p = p
+            .hg_changeset_id()
+            .load(ctx, real_repo.repo_blobstore())
+            .await?;
         Result::<_, Error>::Ok(p.manifestid())
     }));
 

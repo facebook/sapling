@@ -65,6 +65,7 @@ paste = "1.0"
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../phases" }
 regex = "1.6.0"
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 samplingblob = { version = "0.1.0", path = "../blobstore/samplingblob" }

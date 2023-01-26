@@ -245,6 +245,7 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use repo_blobstore::RepoBlobstoreRef;
 
     use super::*;
 
@@ -252,7 +253,7 @@ mod test {
     async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Linear::getrepo(fb).await;
-        let blobstore = repo.blobstore();
+        let blobstore = repo.repo_blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
@@ -269,7 +270,7 @@ mod test {
     async fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Linear::getrepo(fb).await;
-        let blobstore = repo.blobstore();
+        let blobstore = repo.repo_blobstore();
         borrowed!(ctx);
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));

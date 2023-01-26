@@ -78,6 +78,7 @@ use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
 use phases::PhasesRef;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -375,7 +376,7 @@ async fn blame_step<V: VisitOne>(
     checker: &Checker<V>,
     blame_id: BlameId,
 ) -> Result<StepOutput, StepError> {
-    let blame = blame_id.load(ctx, repo.blobstore()).await?;
+    let blame = blame_id.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
 
     if let BlameMaybeRejected::Blame(blame) = blame {
@@ -406,7 +407,7 @@ async fn fastlog_batch_step<V: VisitOne>(
     id: &FastlogBatchId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let log = id.load(ctx, repo.blobstore()).await?;
+    let log = id.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
     for (cs_id, _offsets) in log.latest() {
         checker.add_edge(&mut edges, EdgeType::FastlogBatchToChangeset, || {
@@ -437,9 +438,12 @@ async fn fastlog_dir_step<V: VisitOne>(
     id: &FastlogKey<ManifestUnodeId>,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let log =
-        fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Tree(id.inner))
-            .await?;
+    let log = fetch_fastlog_batch_by_unode_id(
+        ctx,
+        repo.repo_blobstore(),
+        &UnodeManifestEntry::Tree(id.inner),
+    )
+    .await?;
     let mut edges = vec![];
     match &log {
         Some(log) => {
@@ -481,9 +485,12 @@ async fn fastlog_file_step<V: VisitOne>(
     id: &FastlogKey<FileUnodeId>,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let log =
-        fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Leaf(id.inner))
-            .await?;
+    let log = fetch_fastlog_batch_by_unode_id(
+        ctx,
+        repo.repo_blobstore(),
+        &UnodeManifestEntry::Leaf(id.inner),
+    )
+    .await?;
     let mut edges = vec![];
     match &log {
         Some(log) => {
@@ -589,7 +596,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
     let bcs_id = &key.inner;
 
     // Get the data, and add direct file data for this bonsai changeset
-    let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
+    let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
 
     // Build edges, from mostly queue expansion to least
     let mut edges = vec![];
@@ -697,11 +704,11 @@ async fn file_content_metadata_step<V: VisitOne>(
     enable_derive: bool,
 ) -> Result<StepOutput, StepError> {
     let metadata_opt = if enable_derive {
-        filestore::get_metadata(repo.blobstore(), ctx, &id.into())
+        filestore::get_metadata(repo.repo_blobstore(), ctx, &id.into())
             .await?
             .map(Some)
     } else {
-        filestore::get_metadata_readonly(repo.blobstore(), ctx, &id.into()).await?
+        filestore::get_metadata_readonly(repo.repo_blobstore(), ctx, &id.into()).await?
     };
 
     match metadata_opt {
@@ -905,7 +912,7 @@ async fn hg_changeset_step<V: VisitOne>(
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, StepError> {
-    let hgchangeset = key.inner.load(ctx, repo.blobstore()).await?;
+    let hgchangeset = key.inner.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
     // 1:1 but will then expand a lot, usually
     checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
@@ -947,7 +954,7 @@ async fn hg_file_envelope_step<V: VisitOne>(
     hg_file_node_id: HgFileNodeId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let envelope = hg_file_node_id.load(ctx, repo.blobstore()).await?;
+    let envelope = hg_file_node_id.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
     checker.add_edge_with_path(
         &mut edges,
@@ -1101,8 +1108,8 @@ async fn hg_manifest_step<V: VisitOne>(
     path: WrappedPath,
     hg_manifest_id: HgManifestId,
 ) -> Result<StepOutput, StepError> {
-    let blobstore = repo.blobstore();
-    let hgmanifest = hg_manifest_id.load(ctx, repo.blobstore()).await?;
+    let blobstore = repo.repo_blobstore();
+    let hgmanifest = hg_manifest_id.load(ctx, repo.repo_blobstore()).await?;
 
     let mut edges = vec![];
     let mut filenode_edges = vec![];
@@ -1164,7 +1171,7 @@ async fn alias_content_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     alias: Alias,
 ) -> Result<StepOutput, StepError> {
-    let content_id = alias.load(ctx, repo.blobstore()).await?;
+    let content_id = alias.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
     checker.add_edge(
         &mut edges,
@@ -1373,7 +1380,7 @@ async fn unode_file_step<V: VisitOne>(
     key: &UnodeKey<FileUnodeId>,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let unode_file = key.inner.load(ctx, repo.blobstore()).await?;
+    let unode_file = key.inner.load(ctx, repo.repo_blobstore()).await?;
     let linked_cs_id = *unode_file.linknode();
     if !checker.in_chunk(&linked_cs_id) {
         return Ok(StepOutput::Deferred(linked_cs_id));
@@ -1443,7 +1450,7 @@ async fn unode_manifest_step<V: VisitOne>(
     key: &UnodeKey<ManifestUnodeId>,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let unode_manifest = key.inner.load(ctx, repo.blobstore()).await?;
+    let unode_manifest = key.inner.load(ctx, repo.repo_blobstore()).await?;
     let linked_cs_id = *unode_manifest.linknode();
     if !checker.in_chunk(&linked_cs_id) {
         return Ok(StepOutput::Deferred(linked_cs_id));
@@ -1538,7 +1545,7 @@ async fn deleted_manifest_v2_step<V: VisitOne>(
     id: &DeletedManifestV2Id,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let deleted_manifest_v2 = id.load(ctx, repo.blobstore()).await?;
+    let deleted_manifest_v2 = id.load(ctx, repo.repo_blobstore()).await?;
     let linked_cs_id = deleted_manifest_v2.linknode().cloned();
 
     let mut edges = vec![];
@@ -1561,7 +1568,7 @@ async fn deleted_manifest_v2_step<V: VisitOne>(
 
     let mut subentries = deleted_manifest_v2
         .clone()
-        .into_subentries(ctx, repo.blobstore());
+        .into_subentries(ctx, repo.repo_blobstore());
 
     while let Some((child_path, deleted_manifest_v2_id)) = subentries.try_next().await? {
         checker.add_edge_with_path(
@@ -1625,7 +1632,7 @@ async fn skeleton_manifest_step<V: VisitOne>(
     manifest_id: &SkeletonManifestId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
+    let manifest = manifest_id.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
 
     {
@@ -1703,11 +1710,11 @@ async fn basename_suffix_skeleton_manifest_step<V: VisitOne>(
     manifest_id: &BasenameSuffixSkeletonManifestId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, StepError> {
-    let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
+    let manifest = manifest_id.load(ctx, repo.repo_blobstore()).await?;
     let mut edges = vec![];
     {
         let mut children = manifest
-            .list(ctx, repo.blobstore())
+            .list(ctx, repo.repo_blobstore())
             .await?
             .yield_every(MANIFEST_YIELD_EVERY_ENTRY_COUNT, |_| 1);
 

@@ -27,6 +27,7 @@ use mononoke_types::BasenameSuffixSkeletonManifestId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::MPathElement;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 
 use crate::RootBasenameSuffixSkeletonManifest;
@@ -74,7 +75,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
     let ctx = &ctx;
     let repo = F::getrepo(fb).await;
     let derived_data = repo.repo_derived_data();
-    let blobstore = repo.blobstore();
+    let blobstore = repo.repo_blobstore();
     let master = repo
         .bookmarks()
         .get(ctx.clone(), &"master".try_into()?)

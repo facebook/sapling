@@ -6,7 +6,6 @@
  */
 
 mod mem_writes_changesets;
-
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -43,6 +42,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 
@@ -59,7 +59,7 @@ async fn derive_hg(
     let mut hg_manifests = HashMap::new();
 
     for (id, bcs_id) in import_map {
-        let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
         let parent_manifests = future::try_join_all(bcs.parents().map({
             let hg_manifests = &hg_manifests;
             move |p| async move {
@@ -68,7 +68,7 @@ async fn derive_hg(
                 } else {
                     repo.derive_hg_changeset(ctx, p)
                         .await?
-                        .load(ctx, repo.blobstore())
+                        .load(ctx, repo.repo_blobstore())
                         .await?
                         .manifestid()
                 };

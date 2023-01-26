@@ -15,6 +15,7 @@ use maplit::hashset;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types_mocks::repo;
 use pushrebase::do_pushrebase_bonsai;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
@@ -40,7 +41,7 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
     let cs = CreateCommitContext::new(ctx, repo, vec![root])
         .commit()
         .await?
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
 
     let hooks = [SaveMappingPushrebaseHook::new(repo.repo_identity().id())];

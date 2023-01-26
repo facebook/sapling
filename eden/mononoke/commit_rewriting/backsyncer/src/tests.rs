@@ -68,6 +68,7 @@ use mononoke_types::RepositoryId;
 use movers::Mover;
 use mutable_counters::MutableCountersArc;
 use pretty_assertions::assert_eq;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
@@ -973,7 +974,9 @@ async fn verify_mapping_and_all_wc(
         }
         let csc = commit_syncer.clone();
         let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
-        let source_bcs = source_cs_id.load(&ctx, source_repo.blobstore()).await?;
+        let source_bcs = source_cs_id
+            .load(&ctx, source_repo.repo_blobstore())
+            .await?;
         let outcome = outcome.unwrap_or_else(|| {
             panic!(
                 "commit has not been synced {} {:?}",
@@ -998,7 +1001,7 @@ async fn verify_mapping_and_all_wc(
 
         // Empty commits should always be synced, except for merges
         let bcs = source_cs_id
-            .load(&ctx, csc.get_source_repo().blobstore())
+            .load(&ctx, csc.get_source_repo().repo_blobstore())
             .await?;
         if bcs.file_changes().collect::<Vec<_>>().is_empty() && !bcs.is_merge() {
             match outcome {
@@ -1144,7 +1147,7 @@ async fn list_content(
     hg_cs_id: HgChangesetId,
     repo: &Repo,
 ) -> Result<HashMap<String, String>, Error> {
-    let cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    let cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
 
     let entries = cs
         .manifestid()
@@ -1156,7 +1159,7 @@ async fn list_content(
     for (path, entry) in entries {
         match entry {
             Entry::Leaf((_, filenode_id)) => {
-                let blobstore = repo.blobstore();
+                let blobstore = repo.repo_blobstore();
                 let envelope = filenode_id.load(ctx, blobstore).await?;
                 let content =
                     filestore::fetch_concat(blobstore, ctx, envelope.content_id()).await?;
@@ -1337,7 +1340,9 @@ async fn init_repos(
         )
         .await?
         .unwrap();
-    let first_bcs = initial_bcs_id.load(&ctx, source_repo.blobstore()).await?;
+    let first_bcs = initial_bcs_id
+        .load(&ctx, source_repo.repo_blobstore())
+        .await?;
     upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
     let first_bcs_mut = first_bcs.into_mut();
     let maybe_rewritten = {

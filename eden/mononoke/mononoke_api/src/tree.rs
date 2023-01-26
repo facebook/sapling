@@ -19,6 +19,7 @@ pub use mononoke_types::fsnode::FsnodeEntry as TreeEntry;
 pub use mononoke_types::fsnode::FsnodeSummary as TreeSummary;
 // Trees are identified by their FsnodeId.
 pub use mononoke_types::FsnodeId as TreeId;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -69,7 +70,7 @@ impl TreeContext {
             .await?;
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
-        match id.load(repo.ctx(), repo.blob_repo().blobstore()).await {
+        match id.load(repo.ctx(), repo.blob_repo().repo_blobstore()).await {
             Ok(fsnode) => Ok(Some(Self {
                 repo,
                 id,
@@ -90,7 +91,7 @@ impl TreeContext {
             .get_or_init(|| {
                 cloned!(self.repo, self.id);
                 async move {
-                    id.load(repo.ctx(), repo.blob_repo().blobstore())
+                    id.load(repo.ctx(), repo.blob_repo().repo_blobstore())
                         .await
                         .map_err(Error::from)
                         .map_err(MononokeError::from)

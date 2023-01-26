@@ -31,6 +31,7 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgManifestId;
 use mercurial_types::MPath;
+use repo_blobstore::RepoBlobstoreRef;
 use revset::RangeNodeStream;
 use serde_derive::Serialize;
 use slog::Logger;
@@ -126,8 +127,8 @@ async fn hg_changeset_diff(
     right_id: HgChangesetId,
 ) -> Result<ChangesetDiff, Error> {
     let (left, right) = futures::try_join!(
-        left_id.load(&ctx, repo.blobstore()),
-        right_id.load(&ctx, repo.blobstore()),
+        left_id.load(&ctx, repo.repo_blobstore()),
+        right_id.load(&ctx, repo.repo_blobstore()),
     )?;
 
     let mut diff = ChangesetDiff {

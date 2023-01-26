@@ -31,6 +31,7 @@ use futures_util::stream::TryStreamExt;
 use mercurial_types::HgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeAppBuilder;
+use repo_blobstore::RepoBlobstoreRef;
 
 #[derive(Parser)]
 #[clap(about = "Tool to backfill git mappings for given commits")]
@@ -94,7 +95,8 @@ pub async fn backfill<P: AsRef<Path>>(
             cloned!(ctx, repo);
             move |id| {
                 cloned!(ctx, repo);
-                async move { id.load(&ctx, repo.blobstore()).await }.map_err(anyhow::Error::from)
+                async move { id.load(&ctx, repo.repo_blobstore()).await }
+                    .map_err(anyhow::Error::from)
             }
         })
         .try_buffer_unordered(chunk_size)

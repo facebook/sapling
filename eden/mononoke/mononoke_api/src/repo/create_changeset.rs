@@ -567,9 +567,9 @@ impl RepoContext {
                 self.ctx(),
                 match &bubble {
                     Some(bubble) => {
-                        bubble.wrap_repo_blobstore(self.blob_repo().blobstore().clone())
+                        bubble.wrap_repo_blobstore(self.blob_repo().repo_blobstore().clone())
                     }
-                    None => self.blob_repo().blobstore().clone(),
+                    None => self.blob_repo().repo_blobstore().clone(),
                 },
                 parent_ctxs.as_slice(),
                 &path_changes,
@@ -619,9 +619,10 @@ impl RepoContext {
                                 self.ctx(),
                                 *self.blob_repo().filestore_config(),
                                 match &bubble {
-                                    Some(bubble) => bubble
-                                        .wrap_repo_blobstore(self.blob_repo().blobstore().clone()),
-                                    None => self.blob_repo().blobstore().clone(),
+                                    Some(bubble) => bubble.wrap_repo_blobstore(
+                                        self.blob_repo().repo_blobstore().clone(),
+                                    ),
+                                    None => self.blob_repo().repo_blobstore().clone(),
                                 },
                                 parent_ctxs,
                             )

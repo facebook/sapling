@@ -33,6 +33,7 @@ use mercurial_types::HgFileEnvelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::MPath;
 use mononoke_types::RepoPath;
+use repo_blobstore::RepoBlobstoreRef;
 use slog::debug;
 use slog::info;
 use slog::Logger;
@@ -191,7 +192,9 @@ async fn handle_filenodes_at_revision(
                     };
                     let envelope_fut = async {
                         if log_envelope {
-                            Ok(Some(filenode_id.load(&ctx, blobrepo.blobstore()).await?))
+                            Ok(Some(
+                                filenode_id.load(&ctx, blobrepo.repo_blobstore()).await?,
+                            ))
                         } else {
                             Ok(None)
                         }
@@ -250,7 +253,7 @@ pub async fn subcommand_filenodes<'a>(
             let envelope = if log_envelope {
                 let res = filenode
                     .filenode
-                    .load(&ctx, repo.blobstore())
+                    .load(&ctx, repo.repo_blobstore())
                     .await
                     .map_err(Error::from)?;
                 Some(res)

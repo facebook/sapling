@@ -52,6 +52,7 @@ reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.6.0"
 remotefilelog = { version = "0.1.0", path = "remotefilelog" }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
+repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }

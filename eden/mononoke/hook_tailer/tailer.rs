@@ -35,6 +35,7 @@ use hooks_content_stores::repo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use permission_checker::AclProvider;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use revset::AncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -216,7 +217,7 @@ async fn run_hooks_for_changeset(
     cross_repo_push_source: CrossRepoPushSource,
     push_authored_by: PushAuthoredBy,
 ) -> Result<Option<HookExecutionInstance>, Error> {
-    let cs = cs_id.load(ctx, repo.blobstore()).await?;
+    let cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
 
     if exclude_merges && cs.is_merge() {
         info!(ctx.logger(), "Skipped merge commit {}", cs_id);

@@ -45,6 +45,7 @@ use mercurial_types::NULL_HASH;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use remotefilelog::create_raw_filenode_blob;
+use repo_blobstore::RepoBlobstoreRef;
 
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
@@ -164,7 +165,7 @@ async fn generate_lfs_meta_data(
     // TODO(anastasiyaz): check size
     let lfs_content = File::data_only(data).get_lfs_content()?;
     let content_id = FetchKey::from(lfs_content.oid())
-        .load(ctx, repo.blobstore())
+        .load(ctx, repo.repo_blobstore())
         .await?;
     Ok(ContentBlobMeta {
         id: content_id,

@@ -48,6 +48,7 @@ use mononoke_types::Generation;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use reachabilityindex::ReachabilityIndex;
+use repo_blobstore::RepoBlobstoreRef;
 use skiplist::SkiplistIndex;
 
 use crate::changeset::ChangesetContext;
@@ -374,7 +375,7 @@ impl ChangesetPathHistoryContext {
             )
             .await?;
         let ctx = changeset.ctx().clone();
-        let blobstore = changeset.repo().blob_repo().blobstore().clone();
+        let blobstore = changeset.repo().blob_repo().repo_blobstore().clone();
         Ok(Self {
             changeset,
             path,
@@ -455,7 +456,7 @@ impl ChangesetPathHistoryContext {
                 cloned!(self.changeset, self.path);
                 async move {
                     let ctx = changeset.ctx();
-                    let blobstore = changeset.repo().blob_repo().blobstore();
+                    let blobstore = changeset.repo().blob_repo().repo_blobstore();
                     Self::linknode_from_id(
                         ctx,
                         blobstore,
@@ -475,14 +476,14 @@ impl ChangesetPathHistoryContext {
             Some(Entry::Tree(manifest_unode_id)) => {
                 let ctx = self.changeset.ctx();
                 let repo = self.changeset.repo().blob_repo();
-                let manifest_unode = manifest_unode_id.load(ctx, repo.blobstore()).await?;
+                let manifest_unode = manifest_unode_id.load(ctx, repo.repo_blobstore()).await?;
                 let cs_id = manifest_unode.linknode().clone();
                 Ok(Some(ChangesetContext::new(self.repo().clone(), cs_id)))
             }
             Some(Entry::Leaf(file_unode_id)) => {
                 let ctx = self.changeset.ctx();
                 let repo = self.changeset.repo().blob_repo();
-                let file_unode = file_unode_id.load(ctx, repo.blobstore()).await?;
+                let file_unode = file_unode_id.load(ctx, repo.repo_blobstore()).await?;
                 let cs_id = file_unode.linknode().clone();
                 Ok(Some(ChangesetContext::new(self.repo().clone(), cs_id)))
             }

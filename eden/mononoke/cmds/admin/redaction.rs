@@ -44,6 +44,7 @@ use mononoke_types::ContentId;
 use mononoke_types::RedactionKeyList;
 use mononoke_types::Timestamp;
 use redactedblobstore::SqlRedactedContentStore;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_factory::RepoFactory;
 use slog::error;
 use slog::info;
@@ -193,7 +194,7 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
     let mut s = manifest_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(full_path, (_, filenode_id))| async move {
-            let env = filenode_id.load(ctx, repo.blobstore()).await?;
+            let env = filenode_id.load(ctx, repo.repo_blobstore()).await?;
             Result::<_, Error>::Ok((env.content_id(), full_path))
         })
         .try_buffer_unordered(100);
@@ -308,7 +309,7 @@ async fn content_ids_for_paths(
     let content_ids = hg_node_ids.into_iter().map(|hg_node_id| {
         cloned!(ctx, blobrepo);
         async move {
-            let env = hg_node_id.load(&ctx, blobrepo.blobstore()).await?;
+            let env = hg_node_id.load(&ctx, blobrepo.repo_blobstore()).await?;
             Ok(env.content_id())
         }
     });
@@ -485,7 +486,9 @@ async fn redaction_list<'a>(
     info!(logger, "Please be patient.");
     let (redacted_blobs, hg_cs) = futures::try_join!(
         redacted_blobs.get_all_redacted_blobs(),
-        cs_id.load(&ctx, blobrepo.blobstore()).map_err(Error::from),
+        cs_id
+            .load(&ctx, blobrepo.repo_blobstore())
+            .map_err(Error::from),
     )?;
     let redacted_map = redacted_blobs.redacted();
     let redacted_keys = redacted_map.iter().map(|(key, _)| key).collect();
@@ -551,7 +554,7 @@ async fn check_if_content_is_reachable_from_bookmark(
     let csid = helpers::csid_resolve(ctx, blobrepo, main_bookmark).await?;
     let hg_cs_id = blobrepo.derive_hg_changeset(ctx, csid).await?;
 
-    let hg_cs = hg_cs_id.load(ctx, blobrepo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, blobrepo.repo_blobstore()).await?;
 
     let redacted_files =
         find_files_with_given_content_id_blobstore_keys(ctx, blobrepo, hg_cs, keys_to_redact)
