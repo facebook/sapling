@@ -50,6 +50,9 @@ pub struct RotateLog {
     latest: u8,
     // Indicate an active reader. Destrictive writes (repair) are unsafe.
     reader_lock: Option<ScopedDirLock>,
+    // Run after log.sync(). For testing purpose only.
+    #[cfg(test)]
+    hook_after_log_sync: Option<Box<dyn Fn()>>,
 }
 
 // On disk, a RotateLog is a directory containing:
@@ -236,6 +239,8 @@ impl OpenOptions {
                 logs_len,
                 latest,
                 reader_lock: Some(reader_lock),
+                #[cfg(test)]
+                hook_after_log_sync: None,
             })
         })();
 
@@ -256,6 +261,8 @@ impl OpenOptions {
                 logs_len,
                 latest: 0,
                 reader_lock: None,
+                #[cfg(test)]
+                hook_after_log_sync: None,
             })
         })();
         result.context("in rotate::OpenOptions::create_in_memory")
@@ -505,6 +512,12 @@ impl RotateLog {
                 }
 
                 let size = self.writable_log().flush()?;
+
+                #[cfg(test)]
+                if let Some(func) = self.hook_after_log_sync.as_ref() {
+                    func();
+                }
+
                 if size >= self.open_options.max_bytes_per_log {
                     // `self.writable_log()` will be rotated (i.e., becomes immutable).
                     // Make sure indexes are up-to-date so reading it would not require
@@ -1525,6 +1538,50 @@ mod tests {
         assert_eq!(rotate.logs()[0].iter_dirty().count(), 1);
         rotate.append(vec![b'x'; 50]).unwrap(); // trigger sync
         assert_eq!(rotate.logs()[0].iter_dirty().count(), 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_auto_sync_threshold_with_racy_index_update_on_open() {
+        fn index_defs(lag_threshold: u64) -> Vec<IndexDef> {
+            let index_names = ["a"];
+            (0..index_names.len())
+                .map(|i| {
+                    IndexDef::new(&index_names[i], |_| vec![IndexOutput::Reference(0..1)])
+                        .lag_threshold(lag_threshold)
+                })
+                .collect()
+        }
+
+        fn open_opts(lag_threshold: u64) -> OpenOptions {
+            let index_defs = index_defs(lag_threshold);
+            OpenOptions::new()
+                .auto_sync_threshold(1000)
+                .max_bytes_per_log(400)
+                .max_log_count(10)
+                .create(true)
+                .index_defs(index_defs)
+        }
+
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let data: &[u8] = &[b'x'; 100];
+        let n = 10;
+        for _i in 0..n {
+            let mut rotate1 = open_opts(300).open(path).unwrap();
+            rotate1.hook_after_log_sync = Some({
+                let path = path.to_path_buf();
+                Box::new(move || {
+                    // This might updating indexes (see D20042046 and D20286509).
+                    let rotate2 = open_opts(100).open(&path).unwrap();
+                    // Force loading "lazy" indexes.
+                    let _all = rotate2.iter().collect::<Result<Vec<_>, _>>().unwrap();
+                })
+            });
+            rotate1.append(data).unwrap();
+            // BUG: might error with "race detected"
+            rotate1.sync().unwrap();
+        }
     }
 
     #[test]
