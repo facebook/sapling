@@ -2608,16 +2608,14 @@ class TestResult(unittest._TextTestResult):
 
         # os.times module computes the user time and system time spent by
         # child's processes along with real elapsed time taken by a process.
-        # This module has one limitation. It can only work for Linux user
-        # and not for Windows.
-        test.started = os.times()
+        test.started = os_times()
         if self._firststarttime is None:  # thread racy but irrelevant
             self._firststarttime = test.started[4]
 
     def stopTest(self, test, interrupted=False):
         super(TestResult, self).stopTest(test)
 
-        test.stopped = os.times()
+        test.stopped = os_times()
 
         starttime = test.started
         endtime = test.stopped
@@ -4101,6 +4099,16 @@ def ensureenv():
     python = env.get("PYTHON_SYS_EXECUTABLE", PYTHON)
     p = subprocess.Popen([python] + sys.argv, env=newenv)
     sys.exit(p.wait())
+
+
+def os_times():
+    times = os.times()
+    if os.name == "nt":
+        # patch times[4] (elapsed, 0 on Windows) to be the wall clock time
+        times = list(times)
+        times[4] = time.monotonic()
+        times = tuple(times)
+    return times
 
 
 if __name__ == "__main__":
