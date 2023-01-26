@@ -72,14 +72,10 @@ Force push of unrelated commit stack containing empty tree
   $ hg commit --amend
   $ mkcommit unrelated2
   $ mkcommit unrelated3
-  $ hgmn push -r . --to newbook --non-forward-move --create --force
-  pushing rev e68a5f70b937 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
-  searching for changes
-  abort: "tree nodes missing on server('', 0000000000000000000000000000000000000000)"
-  [255]
+  $ hgmn push -r . --to newbook --non-forward-move --create --force -q
 move back
   $ mononoke_newadmin bookmarks -R repo set newbook "$BOOK_LOC"
-  Updating publishing bookmark newbook from 9243ee8d4ea76ca29fb3135f85b9596eb51688fd06347983c449ed1eec255345 to 9243ee8d4ea76ca29fb3135f85b9596eb51688fd06347983c449ed1eec255345
+  Updating publishing bookmark newbook from 37ea8302245e8e828fa0745759441d4e9cd99cb0e4ffb045096c5fadc3207274 to 9243ee8d4ea76ca29fb3135f85b9596eb51688fd06347983c449ed1eec255345
 
 Delete a bookmark
   $ hgmn push --delete newbook
@@ -95,8 +91,9 @@ Verify that the entries are in update log
   2||9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|pushrebase
   3|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|E7526D79596291BFAB4A40E177157BAE556E11F5F8F137FB751140EF3C65DEA2|pushrebase
   4|E7526D79596291BFAB4A40E177157BAE556E11F5F8F137FB751140EF3C65DEA2|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|pushrebase
-  5|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|manualmove
-  6|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345||pushrebase
+  5|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|37EA8302245E8E828FA0745759441D4E9CD99CB0E4FFB045096C5FADC3207274|pushrebase
+  6|37EA8302245E8E828FA0745759441D4E9CD99CB0E4FFB045096C5FADC3207274|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|manualmove
+  7|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345||pushrebase
 
 Sync it to another client
   $ cd $TESTTMP/repo-hg
@@ -125,9 +122,9 @@ Sync bookmark move
   $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [4]* (glob)
 
-Sync force push of unrelated commit stack containing empty tre
-  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync of entries'
-  * successful sync of entries [5]* (glob)
+Sync force push of unrelated commit stack containing empty tree
+  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'Mercurial content missing'
+      2: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
 
 ..and move the bookmark back (via mononoke-admin)
   $ mononoke_hg_sync repo-hg 5 2>&1 | grep 'successful sync of entries'
@@ -135,7 +132,7 @@ Sync force push of unrelated commit stack containing empty tre
 
 Sync deletion of a bookmark
   $ mononoke_hg_sync repo-hg 6 2>&1 | grep 'successful sync of entries'
-  [1]
+  * successful sync of entries [7]* (glob)
 
   $ cd $TESTTMP/repo-hg
   $ hg log -r newbook

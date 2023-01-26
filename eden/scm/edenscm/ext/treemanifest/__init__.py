@@ -1118,8 +1118,9 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
         ctx = repo[node]
         if sendtrees == shallowbundle.AllTrees or ctx.phase() != phases.public:
             mfnode = ctx.manifestnode()
-            mfnodes.append(mfnode)
-            linknodemap.setdefault(mfnode, node)
+            if mfnode != nullid:
+                mfnodes.append(mfnode)
+                linknodemap.setdefault(mfnode, node)
 
     basectxs = repo.set("parents(%ln) - %ln", outgoing.missing, outgoing.missing)
     for basectx in basectxs:
