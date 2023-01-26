@@ -122,9 +122,17 @@ Sync bookmark move
   $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [4]* (glob)
 
+  $ cd $TESTTMP/repo-hg && hg log -r newbook -T "{desc}\n" && cd -
+  pushcommit
+  $TESTTMP
+
 Sync force push of unrelated commit stack containing empty tree
-  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'Mercurial content missing'
-      2: Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
+  $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync of entries'
+  * successful sync of entries [5]* (glob)
+
+  $ cd $TESTTMP/repo-hg && hg log -r newbook -T "{desc}\n" && cd -
+  unrelated3
+  $TESTTMP
 
 ..and move the bookmark back (via mononoke-admin)
   $ mononoke_hg_sync repo-hg 5 2>&1 | grep 'successful sync of entries'

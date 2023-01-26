@@ -67,6 +67,7 @@ use mercurial_types::HgParents;
 use mercurial_types::MPath;
 use mercurial_types::RevFlags;
 use mercurial_types::NULL_CSID;
+use mercurial_types::NULL_HASH;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -964,6 +965,9 @@ pub fn create_manifest_entries_stream(
     manifests: Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
 ) -> OldBoxStream<OldBoxFuture<parts::TreepackPartInput, Error>, Error> {
     old_stream::iter_ok(manifests.into_iter())
+        .filter(|(fullpath, mf_id, _linknode)| {
+            !(fullpath.is_none() && mf_id.clone().into_nodehash() == NULL_HASH)
+        })
         .map({
             move |(fullpath, mf_id, linknode)| {
                 cloned!(ctx, blobstore);
