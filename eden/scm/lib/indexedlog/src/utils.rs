@@ -14,13 +14,13 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::sync::atomic;
-use std::sync::atomic::AtomicI64;
 
 use memmap::MmapOptions;
 use minibytes::Bytes;
 use twox_hash::XxHash;
 use twox_hash::XxHash32;
 
+use crate::config;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 
@@ -144,7 +144,7 @@ pub fn atomic_write(
         // In theory the non-symlink approach (open, write, rename, close)
         // should also result in a non-empty file. However, we have seen empty
         // files sometimes without OS crashes (see https://fburl.com/bky2zu9e).
-        if SYMLINK_ATOMIC_WRITE.load(atomic::Ordering::SeqCst) {
+        if config::SYMLINK_ATOMIC_WRITE.load(atomic::Ordering::SeqCst) {
             if atomic_write_symlink(path, content).is_ok() {
                 return Ok(());
             }
@@ -159,8 +159,8 @@ pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Re
     let result: crate::Result<_> = {
         atomicfile::atomic_write(
             path,
-            CHMOD_FILE.load(atomic::Ordering::SeqCst) as u32,
-            fsync || get_global_fsync(),
+            config::CHMOD_FILE.load(atomic::Ordering::SeqCst) as u32,
+            fsync || config::get_global_fsync(),
             |file| {
                 file.write_all(content)?;
                 Ok(())
@@ -255,36 +255,6 @@ fn atomic_read_symlink(path: &Path) -> io::Result<Vec<u8>> {
         Ok(encoded_content.to_vec())
     }
 }
-
-/// If set to true, prefer symlinks to normal files for atomic_write. This avoids
-/// states where the metadata file is empty in theory.
-///
-/// Be careful with cases like mixing using ntfs-3g and Windows NTFS on files - they
-/// might use different forms of symlink and are incompatible with this feature.
-pub static SYMLINK_ATOMIC_WRITE: atomic::AtomicBool = atomic::AtomicBool::new(cfg!(test));
-
-/// If set to true, enable fsync for writing.
-static ENFORCE_FSYNC: atomic::AtomicBool = atomic::AtomicBool::new(false);
-
-/// Default chmod mode for directories.
-/// u: rwx g:rws o:r-x
-pub static CHMOD_DIR: AtomicI64 = AtomicI64::new(0o2775);
-
-// XXX: This works around https://github.com/Stebalien/tempfile/pull/61.
-/// Default chmod mode for atomic_write files.
-pub static CHMOD_FILE: AtomicI64 = AtomicI64::new(0o664);
-
-/// Set whether to fsync globally. fsync will be performed if either the local
-/// or global fsync flag is set.
-pub fn set_global_fsync(flag: bool) {
-    ENFORCE_FSYNC.store(flag, atomic::Ordering::Release);
-}
-
-/// Get the fsync flag set by `set_global_fsync`.
-pub fn get_global_fsync() -> bool {
-    ENFORCE_FSYNC.load(atomic::Ordering::Acquire)
-}
-
 /// Similar to `fs::create_dir_all`, but also attempts to chmod
 /// newly created directories on Unix.
 pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
@@ -349,9 +319,9 @@ pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
     {
         // chmod
         let mode = if is_dir {
-            CHMOD_DIR.load(atomic::Ordering::SeqCst)
+            config::CHMOD_DIR.load(atomic::Ordering::SeqCst)
         } else {
-            CHMOD_FILE.load(atomic::Ordering::SeqCst)
+            config::CHMOD_FILE.load(atomic::Ordering::SeqCst)
         };
         if mode >= 0 {
             let perm = std::os::unix::fs::PermissionsExt::from_mode(mode as u32);
@@ -375,7 +345,7 @@ pub(crate) fn fix_perm_symlink(path: &Path) -> io::Result<()> {
         let path = CString::new(path.as_os_str().as_bytes())?;
 
         // chmod
-        let mode = CHMOD_FILE.load(atomic::Ordering::SeqCst);
+        let mode = config::CHMOD_FILE.load(atomic::Ordering::SeqCst);
         if mode >= 0 {
             unsafe {
                 libc::fchmodat(
@@ -419,7 +389,7 @@ mod tests {
     use super::*;
 
     fn check_atomic_read_write(data: &[u8]) {
-        SYMLINK_ATOMIC_WRITE.store(true, atomic::Ordering::SeqCst);
+        config::SYMLINK_ATOMIC_WRITE.store(true, atomic::Ordering::SeqCst);
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("a");
         let fsync = false;

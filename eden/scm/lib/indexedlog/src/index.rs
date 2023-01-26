@@ -99,6 +99,7 @@ use vlqencoding::VLQEncode;
 use crate::base16::base16_to_base256;
 use crate::base16::single_hex_to_base16;
 use crate::base16::Base16Iter;
+use crate::config;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedFileLock;
@@ -2739,7 +2740,7 @@ impl Index {
                     .write_all(&buf)
                     .context(&path, "cannot write new data to index")?;
 
-                if self.fsync || utils::get_global_fsync() {
+                if self.fsync || config::get_global_fsync() {
                     lock.as_mut().sync_all().context(&path, "cannot sync")?;
                 }
 

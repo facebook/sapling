@@ -838,7 +838,7 @@ mod tests {
         // the size assertions.)
         #[cfg(unix)]
         {
-            indexedlog::utils::SYMLINK_ATOMIC_WRITE
+            indexedlog::config::SYMLINK_ATOMIC_WRITE
                 .store(true, std::sync::atomic::Ordering::SeqCst);
         }
         let mut metalog = MetaLog::open(&dir, None).unwrap();
@@ -867,7 +867,7 @@ mod tests {
         MetaLog::compact(&dir).unwrap();
         #[cfg(unix)]
         {
-            indexedlog::utils::SYMLINK_ATOMIC_WRITE
+            indexedlog::config::SYMLINK_ATOMIC_WRITE
                 .store(false, std::sync::atomic::Ordering::SeqCst);
         }
 

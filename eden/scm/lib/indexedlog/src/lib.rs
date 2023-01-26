@@ -19,6 +19,7 @@
 mod macros;
 
 pub mod base16;
+pub mod config;
 mod errors;
 pub mod index;
 pub mod lock;

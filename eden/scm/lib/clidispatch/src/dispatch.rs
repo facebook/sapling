@@ -149,21 +149,21 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
     if cfg!(unix) {
         let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;
         if chmod_file >= 0 {
-            indexedlog::utils::CHMOD_FILE.store(chmod_file, SeqCst);
+            indexedlog::config::CHMOD_FILE.store(chmod_file, SeqCst);
         }
 
         let chmod_dir = config.get_or("permissions", "chmod-dir", || -1)?;
         if chmod_dir >= 0 {
-            indexedlog::utils::CHMOD_DIR.store(chmod_dir, SeqCst);
+            indexedlog::config::CHMOD_DIR.store(chmod_dir, SeqCst);
         }
 
         let use_symlink_atomic_write: bool =
             config.get_or_default("format", "use-symlink-atomic-write")?;
-        indexedlog::utils::SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, SeqCst);
+        indexedlog::config::SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, SeqCst);
     }
 
     let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
-    indexedlog::utils::set_global_fsync(fsync);
+    indexedlog::config::set_global_fsync(fsync);
 
     Ok(())
 }

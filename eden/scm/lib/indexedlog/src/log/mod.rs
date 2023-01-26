@@ -57,6 +57,7 @@ use tracing::trace;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
+use crate::config;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::index;
@@ -612,7 +613,7 @@ impl Log {
                     format!("cannot write data ({} bytes)", self.mem_buf.len())
                 })?;
 
-            if self.open_options.fsync || utils::get_global_fsync() {
+            if self.open_options.fsync || config::get_global_fsync() {
                 primary_file
                     .sync_all()
                     .context(&primary_path, "cannot fsync")?;
