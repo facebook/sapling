@@ -200,8 +200,12 @@ impl UploadEntries {
         ctx: &'a CoreContext,
         entry: HgManifestId,
     ) -> Result<()> {
-        self.process_one_entry(ctx, Entry::Tree(entry), RepoPath::root())
-            .await
+        if entry.clone().into_nodehash() == NULL_HASH {
+            Ok(())
+        } else {
+            self.process_one_entry(ctx, Entry::Tree(entry), RepoPath::root())
+                .await
+        }
     }
 
     pub async fn process_one_entry<'a>(

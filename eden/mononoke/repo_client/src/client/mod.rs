@@ -671,7 +671,10 @@ impl RepoClient {
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blob_repo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
-                move |(hg_mf_id, _)| used_hashes.insert(hg_mf_id.clone())
+                move |(hg_mf_id, _)| {
+                    hg_mf_id.clone().into_nodehash() != NULL_HASH
+                        && used_hashes.insert(hg_mf_id.clone())
+                }
             })
             .map({
                 cloned!(ctx);

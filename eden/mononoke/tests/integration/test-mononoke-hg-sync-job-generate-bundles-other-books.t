@@ -75,21 +75,7 @@ Force push of unrelated commit stack containing empty tree
   $ hgmn push -r . --to newbook --non-forward-move --create --force
   pushing rev e68a5f70b937 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
   searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
-  remote: 
-  remote:   Root cause:
-  remote:     Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
-  remote: 
-  remote:   Debug context:
-  remote:     HgContentMissing(
-  remote:         HgNodeHash(
-  remote:             Sha1(0000000000000000000000000000000000000000),
-  remote:         ),
-  remote:         Tree,
-  remote:     )
-  abort: unexpected EOL, expected netstring digit
+  abort: "tree nodes missing on server('', 0000000000000000000000000000000000000000)"
   [255]
 move back
   $ mononoke_newadmin bookmarks -R repo set newbook "$BOOK_LOC"
