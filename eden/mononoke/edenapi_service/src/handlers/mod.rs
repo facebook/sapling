@@ -18,7 +18,7 @@ use gotham::handler::HandlerError as GothamHandlerError;
 use gotham::handler::HandlerFuture;
 use gotham::middleware::state::StateMiddleware;
 use gotham::pipeline::new_pipeline;
-use gotham::pipeline::single::single_pipeline;
+use gotham::pipeline::single_pipeline;
 use gotham::router::builder::build_router as gotham_build_router;
 use gotham::router::builder::DefineSingleRoute;
 use gotham::router::builder::DrawRoutes;
@@ -281,7 +281,7 @@ struct Handlers<C, P> {
 
 impl<C, P> Handlers<C, P>
 where
-    C: gotham::pipeline::chain::PipelineHandleChain<P> + Copy + Send + Sync + 'static,
+    C: gotham::pipeline::PipelineHandleChain<P> + Copy + Send + Sync + 'static,
     P: std::panic::RefUnwindSafe + Send + Sync + 'static,
 {
     fn setup<Handler: EdenApiHandler>(route: &mut RouterBuilder<C, P>) {

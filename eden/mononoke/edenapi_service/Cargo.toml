@@ -22,8 +22,8 @@ ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobst
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
-gotham = { version = "0.6.0", default-features = false }
-gotham_derive = "0.6.0"
+gotham = "0.7.1"
+gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 hooks = { version = "0.1.0", path = "../hooks" }
 http = "0.2"

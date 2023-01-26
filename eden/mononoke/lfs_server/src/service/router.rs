@@ -14,7 +14,7 @@ use gotham::helpers::http::response::create_empty_response;
 use gotham::helpers::http::response::create_response;
 use gotham::middleware::state::StateMiddleware;
 use gotham::pipeline::new_pipeline;
-use gotham::pipeline::single::single_pipeline;
+use gotham::pipeline::single_pipeline;
 use gotham::router::builder::build_router as gotham_build_router;
 use gotham::router::builder::DefineSingleRoute;
 use gotham::router::builder::DrawRoutes;
