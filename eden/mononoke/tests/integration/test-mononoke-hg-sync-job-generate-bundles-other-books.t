@@ -65,6 +65,36 @@ Bookmark move
   no changes found
   updating bookmark newbook
 
+Force push of unrelated commit stack containing empty tree
+  $ hg update -q null
+  $ mkcommit unrelated
+  $ hg rm unrelated
+  $ hg commit --amend
+  $ mkcommit unrelated2
+  $ mkcommit unrelated3
+  $ hgmn push -r . --to newbook --non-forward-move --create --force
+  pushing rev e68a5f70b937 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark newbook
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
+  remote: 
+  remote:   Root cause:
+  remote:     Mercurial content missing for node 0000000000000000000000000000000000000000 (type tree)
+  remote: 
+  remote:   Debug context:
+  remote:     HgContentMissing(
+  remote:         HgNodeHash(
+  remote:             Sha1(0000000000000000000000000000000000000000),
+  remote:         ),
+  remote:         Tree,
+  remote:     )
+  abort: unexpected EOL, expected netstring digit
+  [255]
+move back
+  $ mononoke_newadmin bookmarks -R repo set newbook "$BOOK_LOC"
+  Updating publishing bookmark newbook from 9243ee8d4ea76ca29fb3135f85b9596eb51688fd06347983c449ed1eec255345 to 9243ee8d4ea76ca29fb3135f85b9596eb51688fd06347983c449ed1eec255345
+
 Delete a bookmark
   $ hgmn push --delete newbook
   pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
@@ -72,6 +102,15 @@ Delete a bookmark
   no changes found
   deleting remote bookmark newbook
   [1]
+
+Verify that the entries are in update log
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select id, hex(from_changeset_id), hex(to_changeset_id), reason from bookmarks_update_log;"
+  1||59443DD90EF0D496A30B73639C6601566ACF9680E320895903AAF7F3380C07F2|blobimport
+  2||9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|pushrebase
+  3|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|E7526D79596291BFAB4A40E177157BAE556E11F5F8F137FB751140EF3C65DEA2|pushrebase
+  4|E7526D79596291BFAB4A40E177157BAE556E11F5F8F137FB751140EF3C65DEA2|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|pushrebase
+  5|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345|manualmove
+  6|9243EE8D4EA76CA29FB3135F85B9596EB51688FD06347983C449ED1EEC255345||pushrebase
 
 Sync it to another client
   $ cd $TESTTMP/repo-hg
@@ -100,9 +139,17 @@ Sync bookmark move
   $ mononoke_hg_sync repo-hg 3 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [4]* (glob)
 
-Sync deletion of a bookmark
+Sync force push of unrelated commit stack containing empty tre
   $ mononoke_hg_sync repo-hg 4 2>&1 | grep 'successful sync of entries'
   * successful sync of entries [5]* (glob)
+
+..and move the bookmark back (via mononoke-admin)
+  $ mononoke_hg_sync repo-hg 5 2>&1 | grep 'successful sync of entries'
+  * successful sync of entries [6]* (glob)
+
+Sync deletion of a bookmark
+  $ mononoke_hg_sync repo-hg 6 2>&1 | grep 'successful sync of entries'
+  [1]
 
   $ cd $TESTTMP/repo-hg
   $ hg log -r newbook
