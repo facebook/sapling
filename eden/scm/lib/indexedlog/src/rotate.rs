@@ -1541,7 +1541,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_auto_sync_threshold_with_racy_index_update_on_open() {
         fn index_defs(lag_threshold: u64) -> Vec<IndexDef> {
             let index_names = ["a"];
@@ -1579,9 +1578,18 @@ mod tests {
                 })
             });
             rotate1.append(data).unwrap();
-            // BUG: might error with "race detected"
             rotate1.sync().unwrap();
         }
+
+        // Verify that data can be read through index.
+        let rotate1 = open_opts(300).open(path).unwrap();
+        let mut count = 0;
+        for entry in rotate1.lookup(0, b"x" as &[u8]).unwrap() {
+            let entry = entry.unwrap();
+            assert_eq!(entry, data);
+            count += 1;
+        }
+        assert_eq!(count, n);
     }
 
     #[test]

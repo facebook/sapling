@@ -761,12 +761,28 @@ impl Log {
                 let _lock = ScopedDirLock::new(&dir)?;
 
                 let meta = Self::load_or_create_meta(&self.dir, false)?;
-                if self.meta != meta {
+                // Only check primary_len, not meta.indexes. This is because
+                // meta.indexes can be updated on open. See D38261693 (test)
+                // and D20042046 (update index on open).
+                //
+                // More details:
+                // For RotateLog it has 2 levels of directories and locks, like:
+                // - rotate/lock: lock when RotateLog is writing
+                // - rotate/0/: Previous (considered by RotateLog as read-only) Log
+                // - rotate/1/: Previous (considered by RotateLog as read-only) Log
+                // - rotate/2/lock: lock when this Log is being written
+                // - rotate/2/: "Current" (writable) Log
+                //
+                // However, when opening rotate/0 as a Log, it might change the indexes
+                // without being noticed by other RotateLogs. If the indexes are updated,
+                // then the meta would be changed. The primary len is not changed, though.
+                if self.meta.primary_len != meta.primary_len || self.meta.epoch != meta.epoch {
                     return Err(crate::Error::programming(format!(
                         "race detected, callsite responsible for preventing races (old meta: {:?}, new meta: {:?})",
                         &self.meta, &meta
                     )));
                 }
+                self.meta = meta;
 
                 // Flush all indexes.
                 for i in 0..self.indexes.len() {
