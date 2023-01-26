@@ -44,6 +44,9 @@ Init an hg repo using the git changelog backend:
     Commit Data (user, message):
       Git
 
+Make sure tests aren't sensitive to the system git overrides file.
+  $ LOG=config=info hg root 2>&1 | grep git_overrides.rc || true
+
 Test checkout:
 
   $ hg up tip

@@ -45,11 +45,19 @@ defaultdest=
 
 %include /etc/mercurial/git_overrides.rc
 %include %PROGRAMDATA%/Facebook/Mercurial/git_overrides.rc
+
+# Don't add more config here. Add above the %includes.
+# We trim everything starting from %include in tests.
+
 "#;
 
 pub(crate) fn get(name: &str) -> Option<&'static str> {
     if name == "builtin:git.rc" {
-        Some(GIT_RC)
+        if std::env::var("TESTTMP").is_ok() {
+            Some(&GIT_RC[..GIT_RC.find("%include").unwrap_or(GIT_RC.len())])
+        } else {
+            Some(GIT_RC)
+        }
     } else {
         None
     }
