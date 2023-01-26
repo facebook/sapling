@@ -314,6 +314,10 @@ impl ReadRootTreeIds for Wrapper<Arc<Mutex<git2::Repository>>> {
         let mut result = Vec::with_capacity(commits.len());
         let repo = self.0.lock();
         for commit_hgid in commits {
+            if commit_hgid.is_null() {
+                continue;
+            }
+
             let oid = hgid_to_git_oid(commit_hgid);
             let commit = repo.find_commit(oid)?;
             let tree_id = commit.tree_id();

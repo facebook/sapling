@@ -3,7 +3,6 @@
 
   $ setconfig workingcopy.ruststatus=False
   $ . $TESTDIR/git.sh
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig diff.git=true ui.allowemptycommit=true
 
 Prepare a git repo:
@@ -84,7 +83,8 @@ Test diff:
   
 Test status:
 
-  $ hg status
+  $ LOG=status=debug hg status
+  DEBUG status_info: status_mode="rust"
   $ echo 3 > alpha
   $ hg status
   M alpha

@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use configloader::config::ConfigSet;
@@ -327,6 +328,17 @@ impl Repo {
         Ok(())
     }
 
+    fn git_dir(&self) -> Result<PathBuf> {
+        if !self.store_requirements.contains("git") {
+            bail!("repo is not using git");
+        }
+
+        const GIT_DIR_FILE: &str = "gitdir";
+        Ok(self.store_path.join(util::file::read_to_string(
+            self.store_path.join(GIT_DIR_FILE),
+        )?))
+    }
+
     pub fn file_store(
         &mut self,
     ) -> Result<Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>> {
@@ -334,16 +346,22 @@ impl Repo {
             return Ok(Arc::new(fs.clone()));
         }
 
+        if self.store_requirements.contains("git") {
+            let git_store = Arc::new(
+                gitstore::GitStore::open(&self.git_dir()?).context("opening git file store")?,
+            );
+            // Set both stores to share underlying git store.
+            self.file_store = Some(git_store.clone());
+            self.tree_store = Some(git_store.clone());
+            return Ok(git_store);
+        }
+
         tracing::trace!(target: "repo::file_store", "creating edenapi");
-        let eden_api = if self.store_requirements.contains("git") {
-            None
-        } else {
-            match self.eden_api() {
-                Ok(eden_api) => Some(eden_api),
-                // For tests, don't error if edenapi.url isn't set.
-                Err(_) if std::env::var("TESTTMP").is_ok() => None,
-                Err(e) => return Err(e.into()),
-            }
+        let eden_api = match self.eden_api() {
+            Ok(eden_api) => Some(eden_api),
+            // For tests, don't error if edenapi.url isn't set.
+            Err(_) if std::env::var("TESTTMP").is_ok() => None,
+            Err(e) => return Err(e.into()),
         };
 
         tracing::trace!(target: "repo::file_store", "building filestore");
@@ -386,15 +404,21 @@ impl Repo {
             return Ok(Arc::new(ts.clone()));
         }
 
-        let eden_api = if self.store_requirements.contains("git") {
-            None
-        } else {
-            match self.eden_api() {
-                Ok(eden_api) => Some(eden_api),
-                // For tests, don't error if edenapi.url isn't set.
-                Err(_) if std::env::var("TESTTMP").is_ok() => None,
-                Err(e) => return Err(e.into()),
-            }
+        if self.store_requirements.contains("git") {
+            let git_store = Arc::new(
+                gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,
+            );
+            // Set both stores to share underlying git store.
+            self.file_store = Some(git_store.clone());
+            self.tree_store = Some(git_store.clone());
+            return Ok(git_store);
+        }
+
+        let eden_api = match self.eden_api() {
+            Ok(eden_api) => Some(eden_api),
+            // For tests, don't error if edenapi.url isn't set.
+            Err(_) if std::env::var("TESTTMP").is_ok() => None,
+            Err(e) => return Err(e.into()),
         };
 
         let mut tree_builder = TreeStoreBuilder::new(self.config())

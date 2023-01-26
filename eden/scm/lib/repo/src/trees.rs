@@ -36,9 +36,13 @@ impl ReadTreeManifest for TreeManifestResolver {
         let commit_store = self.dag_commits.read().to_dyn_read_root_tree_ids();
         let tree_ids =
             async_runtime::block_on(commit_store.read_root_tree_ids(vec![commit_id.clone()]))?;
-        Ok(Arc::new(RwLock::new(TreeManifest::durable(
-            self.tree_store.clone(),
-            tree_ids[0].1,
-        ))))
+
+        let mf = if tree_ids.is_empty() {
+            TreeManifest::ephemeral(self.tree_store.clone())
+        } else {
+            TreeManifest::durable(self.tree_store.clone(), tree_ids[0].1)
+        };
+
+        Ok(Arc::new(RwLock::new(mf)))
     }
 }

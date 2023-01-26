@@ -12,6 +12,7 @@ configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 edenapi = { version = "0.1.0", path = "../edenapi" }
 fail = { version = "0.4", features = ["failpoints"] }
+gitstore = { version = "0.1.0", path = "../gitstore" }
 hgcommits = { version = "0.1.0", path = "../hgcommits" }
 identity = { version = "0.1.0", path = "../identity" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }

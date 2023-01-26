@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -169,7 +170,11 @@ impl WorkingCopy {
                 .collect()
         } else {
             let null_commit = HgId::null_id().clone();
-            Ok(vec![tree_resolver.get(&null_commit)?])
+            Ok(vec![
+                tree_resolver
+                    .get(&null_commit)
+                    .context("resolving null commit tree")?,
+            ])
         }
     }
 
