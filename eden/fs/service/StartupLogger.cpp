@@ -16,7 +16,9 @@
 #include <folly/portability/GFlags.h>
 #include <folly/portability/Unistd.h>
 #include <sys/types.h>
+
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -54,9 +56,11 @@ void writeMessageToFile(folly::File&, folly::StringPiece);
 std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath,
     PrivHelper* privHelper,
-    const std::vector<std::string>& argv) {
+    const std::vector<std::string>& argv,
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel) {
   if (!FLAGS_foreground && FLAGS_startupLoggerFd == -1) {
-    auto startupLogger = std::make_shared<DaemonStartupLogger>();
+    auto startupLogger =
+        std::make_shared<DaemonStartupLogger>(std::move(startupStatusChannel));
     if (!FLAGS_startupLogPath.empty()) {
       startupLogger->warn(
           "Ignoring --startupLogPath because --foreground was not specified");
@@ -66,7 +70,8 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
   }
   if (FLAGS_startupLoggerFd != -1) {
     // We're the child spawned by DaemonStartupLogger::spawn above
-    auto startupLogger = std::make_shared<DaemonStartupLogger>();
+    auto startupLogger =
+        std::make_shared<DaemonStartupLogger>(std::move(startupStatusChannel));
     startupLogger->initClient(
         logPath,
         FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -74,10 +79,16 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
   }
 
   if (!FLAGS_startupLogPath.empty()) {
-    return std::make_shared<FileStartupLogger>(FLAGS_startupLogPath);
+    return std::make_shared<FileStartupLogger>(
+        FLAGS_startupLogPath, std::move(startupStatusChannel));
   }
-  return std::make_shared<ForegroundStartupLogger>();
+  return std::make_shared<ForegroundStartupLogger>(
+      std::move(startupStatusChannel));
 }
+
+StartupLogger::StartupLogger(
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel)
+    : startupStatusChannel_{std::move(startupStatusChannel)} {}
 
 StartupLogger::~StartupLogger() = default;
 
@@ -97,7 +108,12 @@ void StartupLogger::writeMessage(folly::LogLevel level, StringPiece message) {
   static folly::Logger logger("eden.fs.startup");
   FB_LOG_RAW(logger, level, __FILE__, __LINE__, __func__) << message;
   writeMessageImpl(level, message);
+  startupStatusChannel_->publish(message);
 }
+
+DaemonStartupLogger::DaemonStartupLogger(
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel)
+    : StartupLogger(std::move(startupStatusChannel)) {}
 
 void DaemonStartupLogger::successImpl() {
   if (!logPath_.empty()) {
@@ -124,6 +140,7 @@ void DaemonStartupLogger::writeMessageImpl(
 void DaemonStartupLogger::sendResult(ResultType result) {
   // Close the original stderr file descriptors once initialization is complete.
   origStderr_.close();
+  startupStatusChannel_->startupCompleted();
 
   if (pipe_) {
     auto try_ = pipe_.writeFull(&result, sizeof(result));
@@ -403,16 +420,26 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
   }
 }
 
+ForegroundStartupLogger::ForegroundStartupLogger(
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel)
+    : StartupLogger(std::move(startupStatusChannel)) {}
+
 void ForegroundStartupLogger::writeMessageImpl(folly::LogLevel, StringPiece) {}
 
-void ForegroundStartupLogger::successImpl() {}
+void ForegroundStartupLogger::successImpl() {
+  startupStatusChannel_->startupCompleted();
+}
 
 [[noreturn]] void ForegroundStartupLogger::failAndExitImpl(uint8_t exitCode) {
+  startupStatusChannel_->startupCompleted();
   exit(exitCode);
 }
 
-FileStartupLogger::FileStartupLogger(folly::StringPiece startupLogPath)
-    : logFile_{
+FileStartupLogger::FileStartupLogger(
+    folly::StringPiece startupLogPath,
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel)
+    : StartupLogger(std::move(startupStatusChannel)),
+      logFile_{
           startupLogPath,
           O_APPEND | O_CLOEXEC | O_CREAT | O_WRONLY,
           0644} {}
@@ -423,9 +450,12 @@ void FileStartupLogger::writeMessageImpl(
   writeMessageToFile(logFile_, message);
 }
 
-void FileStartupLogger::successImpl() {}
+void FileStartupLogger::successImpl() {
+  startupStatusChannel_->startupCompleted();
+}
 
 [[noreturn]] void FileStartupLogger::failAndExitImpl(uint8_t exitCode) {
+  startupStatusChannel_->startupCompleted();
   exit(exitCode);
 }
 

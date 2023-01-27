@@ -27,6 +27,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -338,8 +339,9 @@ int main(int argc, char** argv) {
   auto edenDir = edenConfig->edenDir.getValue();
 
   auto logPath = makeDefaultLogDirectory(edenDir) + getDefaultLogFileName();
-  auto startupLogger =
-      daemonizeIfRequested(logPath.value(), nullptr, originalCommandArguments);
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto startupLogger = daemonizeIfRequested(
+      logPath.value(), nullptr, originalCommandArguments, startupStatusChannel);
 
   // Acquire the lock file
   if (!acquireLock(edenDir)) {

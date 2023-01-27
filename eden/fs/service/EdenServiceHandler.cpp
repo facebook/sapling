@@ -4088,9 +4088,7 @@ void EdenServiceHandler::reloadConfig() {
   server_->reloadConfig();
 }
 
-void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
-
+void EdenServiceHandler::fillDaemonInfo(DaemonInfo& info) {
   fb303::cpp2::fb303_status status = [&] {
     switch (server_->getStatus()) {
       case EdenServer::RunState::STARTING:
@@ -4104,13 +4102,48 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
                << enumValue(server_->getStatus());
   }();
 
-  result.pid_ref() = getpid();
-  result.commandLine_ref() = originalCommandLine_;
-  result.status_ref() = status;
+  info.pid_ref() = getpid();
+  info.commandLine_ref() = originalCommandLine_;
+  info.status_ref() = status;
 
   auto now = std::chrono::steady_clock::now();
   std::chrono::duration<float> uptime = now - server_->getStartTime();
-  result.uptime_ref() = uptime.count();
+  info.uptime_ref() = uptime.count();
+}
+
+void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
+  fillDaemonInfo(result);
+}
+
+apache::thrift::ResponseAndServerStream<DaemonInfo, std::string>
+EdenServiceHandler::streamStartStatus() {
+  DaemonInfo result;
+  fillDaemonInfo(result);
+
+  if (result.status() != facebook::fb303::cpp2::fb303_status::STARTING) {
+    return {
+        result,
+        apache::thrift::ServerStream<EdenStartStatusUpdate>::createEmpty()};
+  }
+  try {
+    auto serverStream = server_->createStartupStatusThriftStream();
+    return {std::move(result), std::move(serverStream)};
+  } catch (EdenError& error) {
+    if (error.errorType() == EdenErrorType::POSIX_ERROR &&
+        error.errorCode() == EALREADY) {
+      // We raced with eden start completing. Let's re-collect the status and
+      // return as if EdenFS has completed. The EdenFS status should be set
+      // before the startup logger completes, so at this point the status
+      // should be something other than starting. Client should not nessecarily
+      // rely on this though.
+      fillDaemonInfo(result);
+      return {
+          result,
+          apache::thrift::ServerStream<EdenStartStatusUpdate>::createEmpty()};
+    }
+    throw;
+  }
 }
 
 void EdenServiceHandler::checkPrivHelper(PrivHelperInfo& result) {

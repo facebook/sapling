@@ -49,11 +49,11 @@ namespace cpptoml {
 class table;
 } // namespace cpptoml
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 class ThriftServer;
-}
-} // namespace apache
+template <typename T>
+class ServerStream;
+} // namespace apache::thrift
 
 namespace folly {
 class EventBase;
@@ -74,6 +74,7 @@ struct SessionInfo;
 class StartupLogger;
 class UserInfo;
 struct INodePopulationReport;
+class StartupStatusChannel;
 
 #ifndef _WIN32
 class TakeoverServer;
@@ -144,6 +145,7 @@ class EdenServer : private TakeoverHandler {
       ActivityRecorderFactory activityRecorderFactory,
       BackingStoreFactory* backingStoreFactory,
       std::shared_ptr<IHiveLogger> hiveLogger,
+      std::shared_ptr<StartupStatusChannel> startupStatusChannel,
       std::string version = std::string{});
 
   virtual ~EdenServer();
@@ -466,6 +468,25 @@ class EdenServer : private TakeoverHandler {
     return numActive;
   }
 
+  /**
+   * Create a new server stream and publisher to publish the startup status of
+   * eden outside of eden start. Then register a startup status publisher
+   * with the startup logger so that status will be published.
+   * The stream may already be completed if the startup logger has finished.
+   */
+  apache::thrift::ServerStream<std::string> createStartupStatusThriftStream();
+
+  /**
+   * Completes all the startup publishers. This must be called during
+   * shutdown to ensure a clean shutdown.
+   *
+   * If we do not clear the publisher state during shutdown, server_->stop can
+   * hang for a bit waiting for the stream to close. Further, all publishers
+   * must be completed or closed before their objects are destroyed (or else
+   * the destructor fatals).
+   */
+  void clearStartupStatusPublishers();
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronization between unmountFinished
@@ -762,6 +783,8 @@ class EdenServer : private TakeoverHandler {
   };
 
   const std::unique_ptr<folly::Synchronized<ProgressManager>> progressManager_;
+
+  std::shared_ptr<StartupStatusChannel> startupStatusChannel_;
 
   PeriodicFnTask<&EdenServer::reloadConfig> reloadConfigTask_{
       this,

@@ -27,6 +27,7 @@ DECLARE_int32(startupLoggerFd);
 class StartupLogger;
 class PrivHelper;
 class FileDescriptor;
+class StartupStatusChannel;
 
 /**
  * daemonizeIfRequested manages optionally daemonizing the edenfs process.
@@ -55,7 +56,8 @@ class FileDescriptor;
 std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath,
     PrivHelper* privHelper,
-    const std::vector<std::string>& argv);
+    const std::vector<std::string>& argv,
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel);
 
 /**
  * StartupLogger provides an API for logging messages that should be displayed
@@ -67,6 +69,9 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
  */
 class StartupLogger {
  public:
+  explicit StartupLogger(
+      std::shared_ptr<StartupStatusChannel> startupStatusChannel);
+
   virtual ~StartupLogger();
 
   /**
@@ -138,11 +143,14 @@ class StartupLogger {
       folly::StringPiece message) = 0;
   virtual void successImpl() = 0;
   [[noreturn]] virtual void failAndExitImpl(uint8_t exitCode) = 0;
+
+  std::shared_ptr<StartupStatusChannel> startupStatusChannel_;
 };
 
 class DaemonStartupLogger : public StartupLogger {
  public:
-  DaemonStartupLogger() = default;
+  explicit DaemonStartupLogger(
+      std::shared_ptr<StartupStatusChannel> startupStatusChannel);
 
   /**
    * Spawn a child process to act as the server.
@@ -258,7 +266,7 @@ class DaemonStartupLogger : public StartupLogger {
 
 class ForegroundStartupLogger : public StartupLogger {
  public:
-  ForegroundStartupLogger() = default;
+  explicit ForegroundStartupLogger(std::shared_ptr<StartupStatusChannel>);
 
  protected:
   void writeMessageImpl(folly::LogLevel level, folly::StringPiece message)
@@ -269,7 +277,9 @@ class ForegroundStartupLogger : public StartupLogger {
 
 class FileStartupLogger : public StartupLogger {
  public:
-  explicit FileStartupLogger(folly::StringPiece startupLogFile);
+  explicit FileStartupLogger(
+      folly::StringPiece startupLogFile,
+      std::shared_ptr<StartupStatusChannel> startupStatusChannel);
 
  protected:
   void writeMessageImpl(folly::LogLevel level, folly::StringPiece message)

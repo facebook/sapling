@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::result::Result as StdResult;
 
 use thiserror::Error;
+use tokio::time::error::Elapsed;
 
 pub type ExitCode = i32;
 pub type Result<T, E = EdenFsError> = std::result::Result<T, E>;
@@ -25,6 +26,12 @@ pub enum EdenFsError {
 
     #[error("Error when loading configurations: {0}")]
     ConfigurationError(String),
+
+    #[error("EdenFS did not respond within set timeout: {0}")]
+    RequestTimeout(Elapsed),
+
+    #[error("The running version of the EdenFS daemon doesn't know that method.")]
+    UnknownMethod(String),
 
     #[error("{0}")]
     Other(#[from] anyhow::Error),

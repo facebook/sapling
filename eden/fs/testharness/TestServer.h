@@ -11,6 +11,7 @@
 
 #include <folly/experimental/TestUtil.h>
 
+#include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -34,7 +35,9 @@ class TestServer {
   }
 
  private:
-  static std::unique_ptr<EdenServer> createServer(AbsolutePathPiece tmpDir);
+  static std::unique_ptr<EdenServer> createServer(
+      AbsolutePathPiece tmpDir,
+      std::shared_ptr<StartupStatusChannel> startStatusChannel);
 
   folly::test::TemporaryDirectory tmpDir_;
   std::unique_ptr<EdenServer> server_;

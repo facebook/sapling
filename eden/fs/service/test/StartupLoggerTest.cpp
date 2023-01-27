@@ -48,6 +48,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 
@@ -117,7 +118,8 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
   }
 
   DaemonStartupLogger::ParentResult spawnInChild(folly::StringPiece name) {
-    DaemonStartupLogger logger{};
+    auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+    DaemonStartupLogger logger{startupStatusChannel};
     auto args = originalCommandLine;
     args.push_back(name.str());
     args.push_back(logPath().asString());
@@ -132,7 +134,8 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
 
 namespace {
 void crashWithNoResult(const std::string& logPath) {
-  DaemonStartupLogger logger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupStatusChannel};
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -173,8 +176,12 @@ TEST_F(DaemonStartupLoggerTest, successWritesStartedMessageToStandardError) {
 
 void successWritesStartedMessageToStandardErrorDaemonChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logger = daemonizeIfRequested(
-      logFile.path().string(), nullptr, originalCommandLine);
+      logFile.path().string(),
+      nullptr,
+      originalCommandLine,
+      startupStatusChannel);
   logger->success(17);
   exit(0);
 }
@@ -196,14 +203,19 @@ TEST_F(
 void programExitsUnsuccessfullyIfLogFileIsInaccessibleChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
   auto badLogFilePath = logFile.path() / "file.txt";
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logger = daemonizeIfRequested(
-      badLogFilePath.string(), nullptr, originalCommandLine);
+      badLogFilePath.string(),
+      nullptr,
+      originalCommandLine,
+      startupStatusChannel);
   logger->success(19);
   exit(0);
 }
 
 void exitWithNoResult(const std::string& logPath) {
-  DaemonStartupLogger logger{};
+  auto startupPublishers = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupPublishers};
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -224,7 +236,8 @@ TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
 }
 
 void exitSuccessfullyWithNoResult(const std::string& logPath) {
-  DaemonStartupLogger logger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupStatusChannel};
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -246,7 +259,8 @@ TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
 }
 
 void destroyLoggerWhileDaemonIsStillRunning(const std::string& logPath) {
-  DaemonStartupLogger logger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupStatusChannel};
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -275,7 +289,8 @@ TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
 TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
   // Call waitForChildStatus() with our own pid.
   // wait() will return an error trying to wait on ourself.
-  DaemonStartupLogger logger;
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupStatusChannel};
   auto readPipe = createPipe(logger);
   closePipe(logger);
   auto selfProc = SpawnedProcess::fromExistingProcess(getpid());
@@ -290,7 +305,8 @@ TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
 }
 
 void success(const std::string& logPath) {
-  DaemonStartupLogger logger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupStatusChannel};
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -304,7 +320,8 @@ TEST_F(DaemonStartupLoggerTest, success) {
 }
 
 void failure(const std::string& logPath) {
-  DaemonStartupLogger logger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  DaemonStartupLogger logger{startupStatusChannel};
   logger.initClient(
       logPath,
       FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
@@ -370,8 +387,12 @@ TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
 
 void daemonClosesStandardFileDescriptorsChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logger = daemonizeIfRequested(
-      logFile.path().string(), nullptr, originalCommandLine);
+      logFile.path().string(),
+      nullptr,
+      originalCommandLine,
+      startupStatusChannel);
   logger->success(29);
   std::this_thread::sleep_for(30s);
   exit(1);
@@ -385,7 +406,8 @@ TEST(ForegroundStartupLoggerTest, loggedMessagesAreWrittenToStandardError) {
 }
 
 void loggedMessagesAreWrittenToStandardErrorChild() {
-  auto logger = ForegroundStartupLogger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = ForegroundStartupLogger{startupStatusChannel};
   logger.warn("warn message");
 }
 
@@ -396,7 +418,8 @@ TEST(ForegroundStartupLoggerTest, exitUnsuccessfullyMakesProcessExitWithCode) {
 }
 
 void exitUnsuccessfullyMakesProcessExitWithCodeChild() {
-  auto logger = ForegroundStartupLogger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = ForegroundStartupLogger{startupStatusChannel};
   logger.exitUnsuccessfully(42, "intentionally exiting");
 }
 
@@ -407,7 +430,8 @@ TEST(ForegroundStartupLoggerTest, xlogsAfterSuccessAreWrittenToStandardError) {
 }
 
 void xlogsAfterSuccessAreWrittenToStandardErrorChild() {
-  auto logger = ForegroundStartupLogger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = ForegroundStartupLogger{startupStatusChannel};
   logger.success(31);
   XLOG(ERR) << "test error message with xlog";
 }
@@ -422,7 +446,8 @@ TEST(ForegroundStartupLoggerTest, successWritesStartedMessageToStandardError) {
 }
 
 void successWritesStartedMessageToStandardErrorForegroundChild() {
-  auto logger = ForegroundStartupLogger{};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = ForegroundStartupLogger{startupStatusChannel};
   logger.success(37);
 }
 
@@ -432,12 +457,14 @@ TEST_F(FileStartupLoggerTest, loggerCreatesFileIfMissing) {
   auto tempDir = folly::test::TemporaryDirectory();
   auto logPath = tempDir.path() / "startup.log";
   ASSERT_FALSE(fileExists(logPath));
-  auto logger = FileStartupLogger{logPath.string()};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = FileStartupLogger{logPath.string(), startupStatusChannel};
   EXPECT_TRUE(fileExists(logPath));
 }
 
 TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
-  auto logger = FileStartupLogger{logPath().view()};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = FileStartupLogger{logPath().view(), startupStatusChannel};
   logger.log("hello world");
   logger.warn("warning message");
   EXPECT_EQ("hello world\nwarning message\n", readLogContents());
@@ -445,13 +472,15 @@ TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
 
 TEST_F(FileStartupLoggerTest, loggingAppendsToFileIfItAlreadyExists) {
   writeFile(logPath(), "existing line\n"_sp).throwUnlessValue();
-  auto logger = FileStartupLogger{logPath().view()};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = FileStartupLogger{logPath().view(), startupStatusChannel};
   logger.log("new line");
   EXPECT_EQ("existing line\nnew line\n", readLogContents());
 }
 
 TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
-  auto logger = FileStartupLogger{logPath().view()};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = FileStartupLogger{logPath().view(), startupStatusChannel};
   logger.success(41);
   EXPECT_EQ(
       folly::to<std::string>(
@@ -472,7 +501,8 @@ TEST_F(FileStartupLoggerTest, exitUnsuccessfullyWritesMessageAndKillsProcess) {
 }
 
 void exitUnsuccessfullyWritesMessageAndKillsProcessChild(std::string logPath) {
-  auto logger = FileStartupLogger{logPath};
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
+  auto logger = FileStartupLogger{logPath, startupStatusChannel};
   logger.exitUnsuccessfully(3, "error message");
 }
 

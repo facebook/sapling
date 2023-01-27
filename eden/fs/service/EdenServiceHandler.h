@@ -385,6 +385,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void getDaemonInfo(DaemonInfo& result) override;
 
+  apache::thrift::ResponseAndServerStream<DaemonInfo, std::string>
+  streamStartStatus() override;
   /**
    * Checks the PrivHelper connection.
    * For Windows, result.connected will always be set to true.
@@ -431,6 +433,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       const EdenMount& edenMount,
       RelativePath path,
       const ObjectFetchContextPtr& fetchContext);
+
+  void fillDaemonInfo(DaemonInfo& info);
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;

@@ -32,6 +32,8 @@
 #include <folly/stop_watch.h>
 #include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
+#include <thrift/lib/cpp2/async/ServerPublisherStream.h>
+#include <thrift/lib/cpp2/async/ServerStream.h>
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
@@ -49,6 +51,8 @@
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/StartupStatusSubscriber.h"
+#include "eden/fs/service/ThriftStreamStartupStatusSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStoreLogger.h"
@@ -79,6 +83,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/TimeUtil.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
 
 #ifndef _WIN32
@@ -349,6 +354,7 @@ EdenServer::EdenServer(
     ActivityRecorderFactory activityRecorderFactory,
     BackingStoreFactory* backingStoreFactory,
     std::shared_ptr<IHiveLogger> hiveLogger,
+    std::shared_ptr<StartupStatusChannel> startupStatusChannel,
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
@@ -380,8 +386,9 @@ EdenServer::EdenServer(
           getPlatformNotifier(config_, structuredLogger_, version),
           FLAGS_enable_fault_injection)},
       version_{std::move(version)},
-      progressManager_{std::make_unique<
-          folly::Synchronized<EdenServer::ProgressManager>>()} {
+      progressManager_{
+          std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
+      startupStatusChannel_{std::move(startupStatusChannel)} {
   treeCache_ = TreeCache::create(serverState_->getReloadableConfig());
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->registerCallback(kBlobCacheMemory, [this] {
@@ -841,7 +848,7 @@ Future<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
   // Remount our mounts from our prepared takeoverData
   std::vector<Future<Unit>> mountFutures;
   mountFutures = prepareMountsTakeover(
-      std::make_unique<ForegroundStartupLogger>(),
+      std::make_unique<ForegroundStartupLogger>(startupStatusChannel_),
       std::move(takeoverData.mountPoints));
 
   // Return a future that will complete only when all mount points have
@@ -2018,6 +2025,7 @@ void EdenServer::stop() {
     }
     state->state = RunState::SHUTTING_DOWN;
   }
+  clearStartupStatusPublishers();
   shutdownSubscribers();
   server_->stop();
 }
@@ -2271,6 +2279,16 @@ void EdenServer::checkLockValidity() {
   // we'll try.  We potentially could try more aggressive measures (exit() or
   // _exit()) if we find that trying to stop normally here ever causes problems.
   stop();
+}
+
+apache::thrift::ServerStream<std::string>
+EdenServer::createStartupStatusThriftStream() {
+  return ThriftStreamStartupStatusSubscriber::createStartupStatusThriftStream(
+      startupStatusChannel_);
+}
+
+void EdenServer::clearStartupStatusPublishers() {
+  startupStatusChannel_->startupCompleted();
 }
 
 } // namespace facebook::eden

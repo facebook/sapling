@@ -33,6 +33,7 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/StartupStatusSubscriber.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
@@ -302,9 +303,10 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     return kExitCodeError;
   }
 
+  auto startupStatusChannel = std::make_shared<StartupStatusChannel>();
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
-  auto startupLogger =
-      daemonizeIfRequested(logPath, privHelper.get(), originalCommandLine);
+  auto startupLogger = daemonizeIfRequested(
+      logPath, privHelper.get(), originalCommandLine, startupStatusChannel);
   std::optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
   try {
@@ -355,6 +357,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         main.getActivityRecorderFactory(),
         main.getBackingStoreFactory(),
         std::move(hiveLogger),
+        std::move(startupStatusChannel),
         main.getEdenfsVersion());
 
     main.prepare(server.value());

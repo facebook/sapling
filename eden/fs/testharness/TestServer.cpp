@@ -40,9 +40,11 @@ EmptyBackingStoreFactory gEmptyBackingStoreFactory;
 
 } // namespace
 
-TestServer::TestServer()
-    : tmpDir_(makeTempDir()), server_(createServer(getTmpDir())) {
-  auto prepareResult = server_->prepare(make_shared<ForegroundStartupLogger>());
+TestServer::TestServer() : tmpDir_(makeTempDir()) {
+  auto startupSubscriberChannel = std::make_shared<StartupStatusChannel>();
+  server_ = createServer(getTmpDir(), startupSubscriberChannel);
+  auto prepareResult = server_->prepare(make_shared<ForegroundStartupLogger>(
+      std::move(startupSubscriberChannel)));
   // We don't care about waiting for prepareResult: it just indicates when
   // preparation has fully completed, but the EdenServer can begin being used
   // immediately, before prepareResult completes.
@@ -60,7 +62,9 @@ AbsolutePath TestServer::getTmpDir() const {
   return canonicalPath(tmpDir_.path().string());
 }
 
-unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
+unique_ptr<EdenServer> TestServer::createServer(
+    AbsolutePathPiece tmpDir,
+    std::shared_ptr<StartupStatusChannel> startupSubscriberChannel) {
   auto edenDir = tmpDir + "eden"_pc;
   ensureDirectoryExists(edenDir);
 
@@ -95,6 +99,7 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       },
       &gEmptyBackingStoreFactory,
       make_shared<NullHiveLogger>(),
+      std::move(startupSubscriberChannel),
       "test server");
 }
 

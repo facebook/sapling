@@ -27,11 +27,14 @@ use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
 use once_cell::sync::OnceCell;
 #[cfg(fbcode_build)]
+use thrift_streaming::streaming_eden_service::StreamStartStatusError;
+#[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 use thrift_types::edenfs::client::EdenService;
 use thrift_types::edenfs::types::DaemonInfo;
 use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
+use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(fbcode_build)]
 use thriftclient::ThriftChannelBuilder;
 #[cfg(fbcode_build)]
@@ -41,6 +44,8 @@ use tracing::event;
 use tracing::Level;
 
 use crate::EdenFsClient;
+#[cfg(fbcode_build)]
+use crate::StartStatusStream;
 #[cfg(fbcode_build)]
 use crate::StreamingEdenFsClient;
 
@@ -225,6 +230,26 @@ impl EdenFsInstance {
             .context("Unable to connect to EdenFS daemon")?;
         event!(Level::DEBUG, "connected to EdenFS daemon");
         client.getDaemonInfo().await.from_err()
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn get_health_with_startup_updates_included(
+        &self,
+        timeout: Duration,
+    ) -> Result<(DaemonInfo, StartStatusStream)> {
+        let client = self
+            .connect_streaming(Some(timeout))
+            .await
+            .context("Unable to connect to EdenFS daemon")?;
+        let result = client.streamStartStatus().await;
+        match result {
+            Err(StreamStartStatusError::ApplicationException(e))
+                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
+            {
+                Err(EdenFsError::UnknownMethod(e.message))
+            }
+            r => r.from_err(),
+        }
     }
 
     /// Returns a map of mount paths to mount names
