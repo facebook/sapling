@@ -2924,7 +2924,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
   auto helper =
       INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
 
-  auto [edenMount, _] = lookupMount(*mountid);
+  auto edenMount = std::get<0>(lookupMount(*mountid));
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
   auto originFlags = DataFetchOriginFlags::raw(*origins);
   auto store = edenMount->getObjectStore();
@@ -2933,7 +2933,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
 
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
     blobFutures.emplace_back(
-        ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
+        ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
             edenMount,
             id,
             folly::Try<std::shared_ptr<const Blob>>{
@@ -2942,9 +2942,9 @@ EdenServiceHandler::semifuture_debugGetBlob(
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
     auto localStore = store->getLocalStore();
-    blobFutures.emplace_back(localStore->getBlob(id).thenTry(
-        [edenMount = edenMount, id](auto&& blob) {
-          return getBlobFromOrigin(
+    blobFutures.emplace_back(
+        localStore->getBlob(id).thenTry([edenMount, id](auto&& blob) {
+          return transformToBlobFromOrigin(
               edenMount, id, std::move(blob), DataFetchOrigin::DISK_CACHE);
         }));
   }
@@ -2959,7 +2959,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
         castToHgQueuedBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(
-        ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
+        ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
             edenMount,
             id,
             folly::Try<std::shared_ptr<Blob>>{
@@ -2971,7 +2971,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
     // TODO(kmancini): implement
     blobFutures.emplace_back(
-        ImmediateFuture<ScmBlobWithOrigin>{getBlobFromOrigin(
+        ImmediateFuture<ScmBlobWithOrigin>{transformToBlobFromOrigin(
             edenMount,
             id,
             folly::Try<std::unique_ptr<Blob>>(newEdenError(
@@ -2982,8 +2982,8 @@ EdenServiceHandler::semifuture_debugGetBlob(
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
     blobFutures.emplace_back(
         store->getBlob(id, helper->getFetchContext())
-            .thenTry([edenMount = edenMount, id](auto&& blob) {
-              return getBlobFromOrigin(
+            .thenTry([edenMount, id](auto&& blob) {
+              return transformToBlobFromOrigin(
                   edenMount, id, std::move(blob), DataFetchOrigin::ANYWHERE);
             }));
   }

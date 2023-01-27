@@ -53,23 +53,31 @@ inline constexpr auto FROMWHERE_REMOTE_BACKING_STORE =
 inline constexpr auto FROMWHERE_ANYWHERE =
     DataFetchOriginFlags::raw(DataFetchOrigin::ANYWHERE);
 
-ScmBlobWithOrigin getBlobFromOrigin(
+template <typename T>
+ScmBlobWithOrigin transformToBlobFromOrigin(
     std::shared_ptr<EdenMount> edenMount,
     ObjectId id,
-    folly::Try<std::shared_ptr<const Blob>> blobFuture,
-    DataFetchOrigin origin);
-
-ScmBlobWithOrigin getBlobFromOrigin(
-    std::shared_ptr<EdenMount> edenMount,
-    ObjectId id,
-    folly::Try<std::unique_ptr<Blob>> blobFuture,
-    DataFetchOrigin origin);
-
-ScmBlobWithOrigin getBlobFromOrigin(
-    std::shared_ptr<EdenMount> edenMount,
-    ObjectId id,
-    folly::Try<std::shared_ptr<Blob>> blobFuture,
-    DataFetchOrigin origin);
+    folly::Try<T> blob,
+    DataFetchOrigin origin) {
+  ScmBlobOrError blobOrError;
+  if (blob.hasValue()) {
+    if (!blob.value()) {
+      blobOrError.error_ref() = newEdenError(
+          ENOENT,
+          EdenErrorType::POSIX_ERROR,
+          "no blob found for id ",
+          edenMount->getObjectStore()->renderObjectId(id));
+    } else {
+      blobOrError.blob_ref() = blob.value()->asString();
+    }
+  } else {
+    blobOrError.error_ref() = newEdenError(blob.exception());
+  }
+  ScmBlobWithOrigin result;
+  result.blob() = std::move(blobOrError);
+  result.origin() = std::move(origin);
+  return result;
+}
 
 namespace detail {
 /**
