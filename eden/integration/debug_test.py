@@ -12,10 +12,15 @@ from pathlib import Path
 from eden.thrift.legacy import EdenClient
 
 from facebook.eden.ttypes import (
+    BlobMetadataOrError,
+    BlobMetadataWithOrigin,
     DataFetchOrigin,
+    DebugGetBlobMetadataRequest,
+    DebugGetBlobMetadataResponse,
     DebugGetScmBlobRequest,
     DebugGetScmBlobResponse,
     MountId,
+    ScmBlobMetadata,
     ScmBlobOrError,
     ScmBlobWithOrigin,
     SyncBehavior,
@@ -180,3 +185,152 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                     DataFetchOrigin.MEMORY_CACHE,
                     b"\xff\xfe\xfd\xfc",
                 )
+
+
+@testcase.eden_nfs_repo_test
+class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
+    def populate_repo(self) -> None:
+        self.repo.write_file("binary", b"\xff\xfe\xfd\xfc")
+        self.repo.commit("Initial commit.")
+
+    def assert_metadata_not_available(
+        self, client: EdenClient, blob_id: bytes, origin: int
+    ) -> None:
+        response = client.debugGetBlobMetadata(
+            DebugGetBlobMetadataRequest(
+                MountId(self.mount.encode()),
+                blob_id,
+                origin,
+            )
+        )
+        print(response)
+        # this should not error
+        response.metadatas[0].metadata.get_error(),
+
+    def assert_metadata_available(
+        self,
+        client: EdenClient,
+        blob_id: bytes,
+        origin: DataFetchOrigin,
+        sha1: bytes,
+        size: int,
+    ) -> None:
+        response = client.debugGetBlobMetadata(
+            DebugGetBlobMetadataRequest(
+                MountId(self.mount.encode()),
+                blob_id,
+                origin,
+            )
+        )
+        print(response)
+        self.assertEqual(
+            DebugGetBlobMetadataResponse(
+                [
+                    BlobMetadataWithOrigin(
+                        metadata=BlobMetadataOrError(
+                            metadata=ScmBlobMetadata(size=size, contentsSha1=sha1)
+                        ),
+                        origin=origin,
+                    )
+                ]
+            ),
+            response,
+        )
+
+    def test_debug_blob_metadata_locations(self) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            debugInfo = client.debugInodeStatus(
+                os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
+            )
+        [root] = [entry for entry in debugInfo if entry.path == b""]
+        self.assertEqual(1, root.inodeNumber)
+
+        [file] = [entry for entry in root.entries if entry.name == b"binary"]
+        self.assertEqual(False, file.materialized)
+        blob_id = binascii.hexlify(file.hash).decode()
+        print(file.hash)
+        print(blob_id)
+
+        self.eden.run_cmd("gc", cwd=self.mount)
+        self.eden.restart()
+
+        with self.eden.get_thrift_client_legacy() as client:
+            # not present in the local storage yet
+            for origin in [
+                DataFetchOrigin.MEMORY_CACHE,
+                DataFetchOrigin.DISK_CACHE,
+            ]:
+                print(origin)
+                print(file.hash)
+                self.assert_metadata_not_available(
+                    client,
+                    file.hash,
+                    origin,
+                )
+
+            # "fetch from network"
+            self.assert_metadata_available(
+                client,
+                file.hash,
+                DataFetchOrigin.ANYWHERE,
+                b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                4,
+            )
+
+            # now its available locally.
+            for fromWhere in [
+                DataFetchOrigin.MEMORY_CACHE,
+                DataFetchOrigin.DISK_CACHE,
+                DataFetchOrigin.LOCAL_BACKING_STORE,
+            ]:
+                print(fromWhere)
+                self.assert_metadata_available(
+                    client,
+                    file.hash,
+                    fromWhere,
+                    b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                    4,
+                )
+
+            # check a request from multiple places:
+            response = client.debugGetBlobMetadata(
+                DebugGetBlobMetadataRequest(
+                    MountId(self.mount.encode()),
+                    file.hash,
+                    DataFetchOrigin.MEMORY_CACHE
+                    | DataFetchOrigin.DISK_CACHE
+                    | DataFetchOrigin.LOCAL_BACKING_STORE
+                    | DataFetchOrigin.REMOTE_BACKING_STORE
+                    | DataFetchOrigin.ANYWHERE,
+                )
+            )
+            print(response)
+
+            self.assertEqual(5, len(response.metadatas))
+            for metadata in response.metadatas:
+                if metadata.origin == DataFetchOrigin.MEMORY_CACHE:
+                    self.assertEqual(4, metadata.metadata.get_metadata().size)
+                    self.assertEqual(
+                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                        metadata.metadata.get_metadata().contentsSha1,
+                    )
+                elif metadata.origin == DataFetchOrigin.DISK_CACHE:
+                    self.assertEqual(4, metadata.metadata.get_metadata().size)
+                    self.assertEqual(
+                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                        metadata.metadata.get_metadata().contentsSha1,
+                    )
+                elif metadata.origin == DataFetchOrigin.LOCAL_BACKING_STORE:
+                    self.assertEqual(4, metadata.metadata.get_metadata().size)
+                    self.assertEqual(
+                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                        metadata.metadata.get_metadata().contentsSha1,
+                    )
+                elif metadata.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
+                    metadata.metadata.get_error()
+                elif metadata.origin == DataFetchOrigin.ANYWHERE:
+                    self.assertEqual(4, metadata.metadata.get_metadata().size)
+                    self.assertEqual(
+                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                        metadata.metadata.get_metadata().contentsSha1,
+                    )

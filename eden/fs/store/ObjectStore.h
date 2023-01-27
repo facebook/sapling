@@ -201,6 +201,17 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
+   * Get metadata about a Blob from EdenFS's in memory BlobMetadata cache.
+   *
+   * This returns an ImmediateFuture object that will produce the BlobMetadata
+   * when it is ready.  It may result in a std::domain_error if the specified
+   * blob does not exist, or possibly other exceptions on error.
+   */
+  std::optional<BlobMetadata> getBlobMetadataFromInMemoryCache(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
    * Returns the size of the contents of the blob with the given ID.
    */
   ImmediateFuture<uint64_t> getBlobSize(

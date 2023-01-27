@@ -303,11 +303,9 @@ ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
           });
 }
 
-ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
+std::optional<BlobMetadata> ObjectStore::getBlobMetadataFromInMemoryCache(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  DurationScope statScope{stats_, &ObjectStoreStats::getBlobMetadata};
-
   // Check in-memory cache
   {
     auto metadataCache = metadataCache_.wlock();
@@ -322,6 +320,20 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
       updateProcessFetch(*context);
       return cacheIter->second;
     }
+  }
+  return std::nullopt;
+}
+
+ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  DurationScope statScope{stats_, &ObjectStoreStats::getBlobMetadata};
+
+  // Check in-memory cache
+  auto inMemoryCacheBlobMetadata =
+      getBlobMetadataFromInMemoryCache(id, context);
+  if (inMemoryCacheBlobMetadata) {
+    return inMemoryCacheBlobMetadata.value();
   }
 
   auto self = shared_from_this();

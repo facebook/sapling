@@ -42,13 +42,17 @@ from eden.thrift.legacy import EdenClient
 from facebook.eden import EdenService
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
+    BlobMetadataOrError,
+    BlobMetadataWithOrigin,
     DataFetchOrigin,
+    DebugGetBlobMetadataRequest,
     DebugGetRawJournalParams,
     DebugGetScmBlobRequest,
     DebugJournalDelta,
     EdenError,
     MountId,
     NoValueForKeyError,
+    ScmBlobMetadata,
     ScmBlobOrError,
     ScmBlobWithOrigin,
     SyncBehavior,
@@ -343,6 +347,132 @@ class ProcessFetchCmd(Subcmd):
         return 0
 
 
+def add_get_object_options(parser: argparse.ArgumentParser, objectType: str) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "-o",
+        "--object-cache-only",
+        action="store_true",
+        default=False,
+        help=f"Only check the in memory object cache for the {objectType}",
+    )
+    group.add_argument(
+        "-l",
+        "--local-store-only",
+        action="store_true",
+        default=False,
+        help=f"Only check the EdenFS LocalStore for {objectType}. ",
+    )
+    group.add_argument(
+        "-d",  # d for "disk cache"
+        "--hgcache-only",
+        action="store_true",
+        default=False,
+        help=f"Only check the hgcache for the {objectType}",
+    )
+    group.add_argument(
+        "-r",
+        "--remote-only",
+        action="store_true",
+        default=False,
+        help=f"Only fetch the {objectType} from the servers. ",
+    )
+    group.add_argument(
+        "-a",
+        "--all",
+        action="store_true",
+        default=False,
+        help=f"Fetch the {objectType} from all storage locations and display their contents. ",
+    )
+
+
+def get_origin_flags(args: argparse.Namespace) -> int:
+    origin_flags = DataFetchOrigin.ANYWHERE
+    if args.object_cache_only:
+        origin_flags = DataFetchOrigin.MEMORY_CACHE
+    elif args.local_store_only:
+        origin_flags = DataFetchOrigin.DISK_CACHE
+    elif args.hgcache_only:
+        origin_flags = DataFetchOrigin.LOCAL_BACKING_STORE
+    elif args.remote_only:
+        origin_flags = DataFetchOrigin.REMOTE_BACKING_STORE
+    elif args.all:
+        origin_flags = (
+            DataFetchOrigin.MEMORY_CACHE
+            | DataFetchOrigin.DISK_CACHE
+            | DataFetchOrigin.LOCAL_BACKING_STORE
+            | DataFetchOrigin.REMOTE_BACKING_STORE
+            | DataFetchOrigin.ANYWHERE
+        )
+    return origin_flags
+
+
+def origin_to_text(origin: DataFetchOrigin) -> str:
+    if origin == DataFetchOrigin.MEMORY_CACHE:
+        return "object cache"
+    elif origin == DataFetchOrigin.DISK_CACHE:
+        return "local store"
+    elif origin == DataFetchOrigin.LOCAL_BACKING_STORE:
+        return "hgcache"
+    elif origin == DataFetchOrigin.REMOTE_BACKING_STORE:
+        return "servers"
+    elif origin == DataFetchOrigin.ANYWHERE:
+        return "EdenFS complete data fetching behavior"
+    return "<unknown>"
+
+
+def print_blob(blob: bytes) -> None:
+    sys.stdout.buffer.write(blob)
+
+
+def print_blob_metadata(id: str, metadata: ScmBlobMetadata) -> None:
+    print("Blob ID: {}".format(id))
+    print("Size:    {}".format(metadata.size))
+    print("SHA-1:   {}".format(hash_str(metadata.contentsSha1)))
+
+
+def print_all_objects(
+    objects: List,
+    object_type: str,
+    is_error: Callable,
+    equal: Callable,
+    print_data: Callable,
+) -> None:
+    non_error_objects = []
+    for obj in objects:
+        non_error_found = not is_error(obj)
+        pretty_origin = origin_to_text(obj.origin)
+        pretty_non_error_found = "hit" if non_error_found else "miss"
+        print(f"{pretty_origin}: {pretty_non_error_found}")
+        if non_error_found:
+            non_error_objects.append(obj)
+
+    if len(non_error_objects) == 0:
+        return
+    if len(non_error_objects) == 1:
+        print("\n")
+        print_data(non_error_objects[0])
+        return
+
+    objects_match = True
+    for obj in non_error_objects[1::]:
+        if not equal((obj, non_error_objects[0])):
+            objects_match = False
+            break
+
+    if objects_match:
+        print(f"\nAll {object_type}s match :) \n")
+        print_data(non_error_objects[0])
+    else:
+        print(f"\n!!!!! {object_type} mismatch !!!!! \n")
+        for obj in non_error_objects:
+            prety_fromwhere = origin_to_text(obj.origin)
+            print(f"{object_type} from {prety_fromwhere}\n")
+            print("-----------------------------\n")
+            print_data(obj)
+            print("\n-----------------------------\n\n")
+
+
 @debug_cmd(
     "blob",
     "Show EdenFS's data for a source control blob. Fetches from ObjectStore "
@@ -350,124 +480,34 @@ class ProcessFetchCmd(Subcmd):
 )
 class BlobCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument(
-            "-o",
-            "--object-cache-only",
-            action="store_true",
-            default=False,
-            help="Only check the in memory object cache for the blob",
-        )
-        group.add_argument(
-            "-l",
-            "--local-store-only",
-            action="store_true",
-            default=False,
-            help="Only check the EdenFS LocalStore for blob. ",
-        )
-        group.add_argument(
-            "-d",  # d for "disk cache"
-            "--hgcache-only",
-            action="store_true",
-            default=False,
-            help="Only check the hgcache for the blob",
-        )
-        group.add_argument(
-            "-r",
-            "--remote-only",
-            action="store_true",
-            default=False,
-            help="Only fetch the data from the servers. ",
-        )
-        group.add_argument(
-            "-a",
-            "--all",
-            action="store_true",
-            default=False,
-            help="Fetch the blob from all storage locations and display their contents. ",
-        )
+        add_get_object_options(parser, "blob")
         parser.add_argument(
             "mount",
             help="The EdenFS mount point path.",
         )
         parser.add_argument("id", help="The blob ID")
 
-    def origin_to_text(self, origin: DataFetchOrigin) -> str:
-        if origin == DataFetchOrigin.MEMORY_CACHE:
-            return "object cache"
-        elif origin == DataFetchOrigin.DISK_CACHE:
-            return "local store"
-        elif origin == DataFetchOrigin.LOCAL_BACKING_STORE:
-            return "hgcache"
-        elif origin == DataFetchOrigin.REMOTE_BACKING_STORE:
-            return "servers"
-        elif origin == DataFetchOrigin.ANYWHERE:
-            return "EdenFS production data fetching process"
-        return "<unknown>"
-
     def print_blob_or_error(self, blobOrError: ScmBlobOrError) -> None:
         if blobOrError.getType() == ScmBlobOrError.BLOB:
-            sys.stdout.buffer.write(blobOrError.get_blob())
+            print_blob(blobOrError.get_blob())
         else:
             error = blobOrError.get_error()
             sys.stdout.buffer.write(f"ERROR fetching data: {error}\n".encode())
 
     def print_all_blobs(self, blobs: List[ScmBlobWithOrigin]) -> None:
-        non_error_blobs = []
-        for blob in blobs:
-            blob_found = blob.blob.getType() == ScmBlobOrError.BLOB
-            pretty_origin = self.origin_to_text(blob.origin)
-            pretty_blob_found = "hit" if blob_found else "miss"
-            print(f"{pretty_origin}: {pretty_blob_found}")
-            if blob_found:
-                non_error_blobs.append(blob)
-
-        if len(non_error_blobs) == 0:
-            return
-        if len(non_error_blobs) == 1:
-            print("\n")
-            sys.stdout.buffer.write(non_error_blobs[0].blob.get_blob())
-            return
-
-        blobs_match = True
-        for blob in non_error_blobs[1::]:
-            if blob.blob.get_blob() != non_error_blobs[0].blob.get_blob():
-                blobs_match = False
-                break
-
-        if blobs_match:
-            print("\nAll blobs match :) \n")
-            sys.stdout.buffer.write(non_error_blobs[0].blob.get_blob())
-        else:
-            print("\n!!!!! Blob mismatch !!!!! \n")
-            for blob in non_error_blobs:
-                prety_fromwhere = self.origin_to_text(blob.origin)
-                print(f"Blob from {prety_fromwhere}\n")
-                print("-----------------------------\n")
-                sys.stdout.buffer.write(blob.blob.get_blob())
-                print("\n-----------------------------\n\n")
+        print_all_objects(
+            blobs,
+            "blob",
+            lambda blob: blob.blob.getType() != ScmBlobOrError.BLOB,
+            lambda blobs: blobs[0].blob.get_blob() == blobs[1].blob.get_blob(),
+            lambda blob: print_blob(blob.blob.get_blob()),
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         blob_id = parse_object_id(args.id)
 
-        origin_flags = DataFetchOrigin.ANYWHERE
-        if args.object_cache_only:
-            origin_flags = DataFetchOrigin.MEMORY_CACHE
-        elif args.local_store_only:
-            origin_flags = DataFetchOrigin.DISK_CACHE
-        elif args.hgcache_only:
-            origin_flags = DataFetchOrigin.LOCAL_BACKING_STORE
-        elif args.remote_only:
-            origin_flags = DataFetchOrigin.REMOTE_BACKING_STORE
-        elif args.all:
-            origin_flags = (
-                DataFetchOrigin.MEMORY_CACHE
-                | DataFetchOrigin.DISK_CACHE
-                | DataFetchOrigin.LOCAL_BACKING_STORE
-                | DataFetchOrigin.REMOTE_BACKING_STORE
-                | DataFetchOrigin.ANYWHERE
-            )
+        origin_flags = get_origin_flags(args)
 
         with instance.get_thrift_client_legacy() as client:
             data = client.debugGetBlob(
@@ -488,29 +528,52 @@ class BlobCmd(Subcmd):
 @debug_cmd("blobmeta", "Show EdenFS's metadata about a source control blob")
 class BlobMetaCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "-L",
-            "--load",
-            action="store_true",
-            default=False,
-            help="Load data from the backing store if necessary",
-        )
+        add_get_object_options(parser, "blob metadata")
         parser.add_argument("mount", help="The EdenFS mount point path.")
         parser.add_argument("id", help="The blob ID")
+
+    def print_blob_metadata_or_error(
+        self, id: str, metadataOrError: BlobMetadataOrError
+    ) -> None:
+        if metadataOrError.getType() == BlobMetadataOrError.METADATA:
+            print_blob_metadata(id, metadataOrError.get_metadata())
+        else:
+            error = metadataOrError.get_error()
+            sys.stdout.buffer.write(f"ERROR fetching data: {error}\n".encode())
+
+    def print_all_blob_metadatas(
+        self, id: str, blob_metadatas: List[BlobMetadataWithOrigin]
+    ) -> None:
+        print_all_objects(
+            blob_metadatas,
+            "blob metadata",
+            lambda metadata: metadata.metadata.getType()
+            != BlobMetadataOrError.METADATA,
+            lambda metadatas: metadatas[0].metadata.get_metadata()
+            == metadatas[1].metadata.get_metadata(),
+            lambda metadata: print_blob_metadata(id, metadata.metadata.get_metadata()),
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
         blob_id = parse_object_id(args.id)
 
-        local_only = not args.load
+        origin_flags = get_origin_flags(args)
+
         with instance.get_thrift_client_legacy() as client:
-            info = client.debugGetScmBlobMetadata(
-                bytes(checkout.path), blob_id, localStoreOnly=local_only
+            info = client.debugGetBlobMetadata(
+                DebugGetBlobMetadataRequest(
+                    MountId(bytes(checkout.path)),
+                    blob_id,
+                    origin_flags,
+                )
             )
 
-        print("Blob ID: {}".format(args.id))
-        print("Size:    {}".format(info.size))
-        print("SHA1:    {}".format(hash_str(info.contentsSha1)))
+        if args.all:
+            self.print_all_blob_metadatas(args.id, info.metadatas)
+        else:
+            self.print_blob_metadata_or_error(args.id, info.metadatas[0].metadata)
+
         return 0
 
 
