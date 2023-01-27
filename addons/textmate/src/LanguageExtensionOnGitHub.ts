@@ -7,7 +7,7 @@
 
 import type {ExecFileOptions} from 'child_process';
 
-import AbstractLanguageExtension from './AbstractLanguageExtension';
+import AbstractLanguageExtension from './AbstractLanguageExtension.js';
 import child_process, {execFile} from 'child_process';
 import {promises as fs} from 'fs';
 import osMod from 'os';

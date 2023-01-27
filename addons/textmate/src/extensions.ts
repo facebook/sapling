@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import LanguageExtensionOnGitHub from './LanguageExtensionOnGitHub';
+import LanguageExtensionOnGitHub from './LanguageExtensionOnGitHub.js';
 
 /**
  * Commit within the https://github.com/Microsoft/vscode/ repo to use when

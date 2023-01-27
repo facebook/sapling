@@ -12,8 +12,8 @@ import type {
 } from './AbstractLanguageExtension';
 import type {LanguageExtensionAmendment} from './languageExtensionAmendments';
 
-import extensions from './extensions';
-import languageExtensionAmendments from './languageExtensionAmendments';
+import extensions from './extensions.js';
+import languageExtensionAmendments from './languageExtensionAmendments.js';
 import assert from 'assert';
 import {promises as fs} from 'fs';
 import pathMod from 'path';
