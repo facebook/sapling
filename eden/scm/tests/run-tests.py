@@ -694,19 +694,22 @@ def parseargs(args, parser):
             os.path.isfile(options.with_hg) and os.access(options.with_hg, os.X_OK)
         ):
             parser.error("--with-hg must specify an executable hg script")
-    if options.local:
+    if options.local and not options.with_hg:
         testdir = os.path.dirname(canonpath(sys.argv[0]))
         reporootdir = os.path.dirname(testdir)
-        pathandattrs = [("hg", "with_hg")]
-        for relpath, attr in pathandattrs:
-            if getattr(options, attr, None):
-                continue
-            binpath = os.path.join(reporootdir, relpath)
-            if os.name != "nt" and not os.access(binpath, os.X_OK):
-                parser.error(
-                    "--local specified, but %r not found or not executable" % binpath
-                )
-            setattr(options, attr, binpath)
+        exe_names = ("sl", "hg")
+        if os.name == "nt":
+            exe_names = ("sl", "sl.exe", "hg", "hg.exe")
+        for exe_name in exe_names:
+            binpath = os.path.join(reporootdir, exe_name)
+            if os.access(binpath, os.X_OK):
+                options.with_hg = binpath
+                break
+        if not options.with_hg:
+            parser.error(
+                "--local specified, but %s not found in %r or not executable"
+                % (" or ".join(exe_names), reporootdir)
+            )
 
     if options.chg and os.name == "nt":
         parser.error("chg does not work on %s" % os.name)
