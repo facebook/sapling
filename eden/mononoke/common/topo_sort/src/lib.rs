@@ -5,18 +5,67 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Borrow;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::fmt::Debug;
 use std::hash::Hash;
+
+pub trait GenericMap<K, V> {
+    fn get<Q>(&self, k: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + Hash;
+    fn keys(&self) -> Box<dyn Iterator<Item = &K> + '_>;
+}
+
+impl<K, V> GenericMap<K, V> for &HashMap<K, V>
+where
+    K: Hash + Eq,
+{
+    fn get<Q>(&self, k: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + Hash,
+    {
+        <HashMap<K, V>>::get(self, k)
+    }
+
+    fn keys(&self) -> Box<dyn Iterator<Item = &K> + '_> {
+        Box::new(<HashMap<K, V>>::keys(self))
+    }
+}
+
+impl<K, V> GenericMap<K, V> for &BTreeMap<K, V>
+where
+    K: Ord,
+{
+    fn get<Q>(&self, k: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Ord + Hash,
+    {
+        <BTreeMap<K, V>>::get(self, k)
+    }
+
+    fn keys(&self) -> Box<dyn Iterator<Item = &K> + '_> {
+        Box::new(<BTreeMap<K, V>>::keys(self))
+    }
+}
 
 /// Sort nodes of DAG topologically. Implemented as depth-first search with tail-call
 /// eliminated. Complexity: `O(N)` from number of nodes.
 /// It returns None if graph has a cycle.
 /// Nodes with no outgoing edges will be *first* in the resulting vector i.e. ancestors go first
-pub fn sort_topological<T>(dag: &HashMap<T, Vec<T>>) -> Option<Vec<T>>
+///
+/// The function accepts either BTreeMap or HashMap. BTreeMap has advantage of providing
+/// stable output.
+pub fn sort_topological<T, M>(dag: M) -> Option<Vec<T>>
 where
-    T: Clone + Eq + Hash,
+    T: Clone + Eq + Hash + Ord + 'static + Debug,
+    M: GenericMap<T, Vec<T>>, // either &BTreeMap or &HashMap
 {
     sort_topological_starting_with_heads(dag, &[])
 }
@@ -29,14 +78,13 @@ where
 /// start from one of the heads the merge branches would be continous parts
 /// of the sorted list.  If we start from the leaves we might end up
 /// interleaving merges which matters for some consumer of this sorted order.
-pub fn sort_topological_starting_with_heads<T>(
-    dag: &HashMap<T, Vec<T>>,
-    heads: &[T],
-) -> Option<Vec<T>>
+pub fn sort_topological_starting_with_heads<T, M>(dag: M, heads: &[T]) -> Option<Vec<T>>
 where
-    T: Clone + Eq + Hash,
+    T: Clone + Eq + Hash + Ord + 'static + Debug,
+    M: GenericMap<T, Vec<T>>, // either &BTreeMap or &HashMap
 {
     /// Current state of the node in the DAG
+    #[derive(Debug)]
     enum Mark {
         /// DFS is currently visiting the sub-DAG, reachable from this node
         /// *and* it entered this sub-DAG from this node. (the node is present
@@ -50,6 +98,7 @@ where
     }
 
     /// Action to be applied to the node, once we pop it from the stack
+    #[derive(Debug)]
     enum Action<T> {
         /// Visit the node and every node, reachable from it, which has
         /// not been visited yet. Mark the node as `Mark::InProgress`
@@ -189,6 +238,7 @@ where
 mod test {
     use std::collections::HashSet;
 
+    use maplit::btreemap;
     use maplit::hashmap;
     use maplit::hashset;
 
@@ -224,7 +274,7 @@ mod test {
         assert!(Some(vec![5, 4, 3, 2, 1]) == res);
 
         let res = sort_topological_starting_with_heads(
-            &hashmap! {1 => vec![2, 4], 2 => vec![3], 4 => vec![5]},
+            &btreemap! {1 => vec![2, 4], 2 => vec![3], 4 => vec![5]},
             &[2],
         );
         assert!(Some(vec![3, 2, 5, 4, 1]) == res);

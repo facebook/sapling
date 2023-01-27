@@ -423,7 +423,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let any_derivation_needed = args.derive_all | args.print_hg_hashes;
     if any_derivation_needed {
-        let dag = dag
+        let dag: HashMap<_, _> = dag
             .into_iter()
             .map(|(k, v)| (k, v.into_iter().collect()))
             .collect();
