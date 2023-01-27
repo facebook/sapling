@@ -24,7 +24,7 @@ class ServerSideContext {
   }
 }
 
-const noOp = () => {
+const noOp = (...args: any[]) => {
   /* In open source builds, analytics tracking is completely disabled/removed. */
 };
 
