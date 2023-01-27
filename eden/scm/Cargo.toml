@@ -32,6 +32,7 @@ members = [
   "lib/config/static/macros",
   "lib/config/union",
   "lib/control-point",
+  "lib/copytrace",
   "lib/cpython-async",
   "lib/cpython-ext",
   "lib/dag",
