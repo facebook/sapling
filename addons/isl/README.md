@@ -274,3 +274,29 @@ ISL has a built-in i18n system, however the only language currently implemented 
 `t()` and `<T>` functions convert English strings or keys into values for other languages in the `isl/i18n/${languageCode}` folders. To add support for a new langauage, add a new `isl/i18n/${languageCode}/common.js`
 and provide translations for all the strings found by grepping for `t()` and `<T>` in `isl`.
 This system can be improved later as new languages are supported.
+
+# Debugging
+
+## Stack traces
+
+If you encounter a stack trace in production, it will be referencing minified line numbers like:
+
+```txt
+Error: something went wrong
+    at t (/some/production/path/to/isl-server/dist/run-proxy.js:1:4152)
+```
+
+We build/ship with source maps that sit next to source files, like `isl-server/dist/run-proxy.js.map`.
+
+You can use these source maps to recover the real stack trace, using a tool like [stacktracify](https://github.com/mifi/stacktracify).
+
+```sh
+$ npm install -g stacktracify
+# copy minified stack trace to clipboard, then give the path to the source map:
+$ stacktracify /path/to/isl-server/dist/run-proxy.js.map
+Error: something went wrong
+    at from (webpack://isl-server/proxy/proxyUtils.ts:14:22)
+```
+
+Note that the source map you use must match the version in the original stack trace.
+Usually, you can tell the version by the path in the stack trace.
