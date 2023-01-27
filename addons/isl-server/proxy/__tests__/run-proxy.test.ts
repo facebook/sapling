@@ -270,3 +270,23 @@ describe('argument parsing', () => {
     );
   });
 });
+
+describe('validateServerChallengeResponse', () => {
+  it('only accepts real responses', () => {
+    expect(lifecycle.validateServerChallengeResponse(null)).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse(undefined)).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse(123)).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse('1')).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse({})).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse([])).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse({challengeToken: '123'})).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse({pid: 123})).toEqual(false);
+    expect(lifecycle.validateServerChallengeResponse({challengeToken: 123, pid: 123})).toEqual(
+      false,
+    );
+
+    expect(lifecycle.validateServerChallengeResponse({challengeToken: '123', pid: 123})).toEqual(
+      true,
+    );
+  });
+});
