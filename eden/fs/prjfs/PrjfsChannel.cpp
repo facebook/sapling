@@ -74,6 +74,7 @@ bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
   constexpr std::wstring_view misbehavingApps[] = {
       L"Code42Service.exe",
       L"windirstat.exe",
+      L"AgentRansack.exe",
   };
 
   auto appName = basenameFromAppName(fullAppName);
