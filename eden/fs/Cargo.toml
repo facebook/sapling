@@ -31,6 +31,7 @@ windows-sys = { package = "windows-sys", git = "https://github.com/davidbarsky/w
 
 [workspace]
 members = [
+  "benchmarks",
   "cli_rs/edenfs-client",
   "cli_rs/edenfs-commands",
   "cli_rs/edenfs-config",
