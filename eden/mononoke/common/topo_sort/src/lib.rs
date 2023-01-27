@@ -18,6 +18,24 @@ pub fn sort_topological<T>(dag: &HashMap<T, Vec<T>>) -> Option<Vec<T>>
 where
     T: Clone + Eq + Hash,
 {
+    sort_topological_starting_with_heads(dag, &[])
+}
+
+/// This method works like  sort topological but also takes a hint about which
+/// heads should be traversed first with DFS.
+///
+/// There are many valid topological orders for non-linear DAGs. When there
+/// are merges the starting point for the traversal matters a lot. If we
+/// start from one of the heads the merge branches would be continous parts
+/// of the sorted list.  If we start from the leaves we might end up
+/// interleaving merges which matters for some consumer of this sorted order.
+pub fn sort_topological_starting_with_heads<T>(
+    dag: &HashMap<T, Vec<T>>,
+    heads: &[T],
+) -> Option<Vec<T>>
+where
+    T: Clone + Eq + Hash,
+{
     /// Current state of the node in the DAG
     enum Mark {
         /// DFS is currently visiting the sub-DAG, reachable from this node
@@ -45,7 +63,7 @@ where
     let mut marks = HashMap::new();
     let mut stack = Vec::new();
     let mut output = Vec::new();
-    for node in dag.keys() {
+    for node in heads.iter().chain(dag.keys()) {
         stack.push(Action::Visit(node));
         while let Some(action) = stack.pop() {
             match action {
@@ -192,6 +210,30 @@ mod test {
 
         let res = sort_topological(&hashmap! {1 => vec![2, 3], 2 => vec![4], 3 => vec![4]});
         assert!(Some(vec![4, 3, 2, 1]) == res || Some(vec![4, 2, 3, 1]) == res);
+
+        let res = sort_topological_starting_with_heads(
+            &hashmap! {1 => vec![2, 4], 2 => vec![3], 4 => vec![5]},
+            &[1],
+        );
+        assert!(Some(vec![5, 4, 3, 2, 1]) == res || Some(vec![3, 2, 5, 4, 1]) == res);
+
+        let res = sort_topological_starting_with_heads(
+            &hashmap! {1 => vec![2, 4], 2 => vec![3], 4 => vec![5]},
+            &[4],
+        );
+        assert!(Some(vec![5, 4, 3, 2, 1]) == res);
+
+        let res = sort_topological_starting_with_heads(
+            &hashmap! {1 => vec![2, 4], 2 => vec![3], 4 => vec![5]},
+            &[2],
+        );
+        assert!(Some(vec![3, 2, 5, 4, 1]) == res);
+
+        let res = sort_topological_starting_with_heads(
+            &hashmap! {1 => vec![2, 4], 2 => vec![3], 4 => vec![5]},
+            &[5, 3, 4],
+        );
+        assert!(Some(vec![5, 3, 4, 2, 1]) == res);
     }
 
     #[test]
