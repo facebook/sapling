@@ -21,7 +21,7 @@ module.exports = {
   },
   target: 'node',
   mode: process.env.NODE_ENV ?? 'development',
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
   module: {
     rules: [
       {

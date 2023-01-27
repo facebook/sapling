@@ -26,7 +26,7 @@ export async function checkIfServerIsAliveAndIsISL(
   existingServerInfo: ExistingServerInfo,
   silent = false,
 ): Promise<number | null> {
-  let response;
+  let response: unknown;
   try {
     const result = await Promise.race<string>([
       new Promise<string>((res, rej) => {
@@ -54,12 +54,16 @@ export async function checkIfServerIsAliveAndIsISL(
       new Promise<never>((_, rej) => setTimeout(() => rej('timeout'), 500)),
     ]);
 
-    response = JSON.parse(result) as ServerChallengeResponse;
+    response = JSON.parse(result);
   } catch (error) {
     if (!silent) {
       info(`error checking if existing Sapling Web server on port ${port} is authentic: `, error);
     }
     // if the request fails for any reason, we don't think it's an ISL server.
+    return null;
+  }
+
+  if (!validateServerChallengeResponse(response)) {
     return null;
   }
 
@@ -89,4 +93,12 @@ export async function readExistingServerFileWithRetries(
 
 function sleepMs(timeMs: number): Promise<void> {
   return new Promise(res => setTimeout(res, timeMs));
+}
+
+function validateServerChallengeResponse(v: unknown): v is ServerChallengeResponse {
+  return (
+    typeof v === 'object' &&
+    typeof (v as ServerChallengeResponse).challengeToken === 'string' &&
+    typeof (v as ServerChallengeResponse).pid === 'number'
+  );
 }
