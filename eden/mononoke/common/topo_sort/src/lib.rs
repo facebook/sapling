@@ -7,10 +7,8 @@
 
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::hash::Hash;
-use std::iter;
 
 /// Sort nodes of DAG topologically. Implemented as depth-first search with tail-call
 /// eliminated. Complexity: `O(N)` from number of nodes.
@@ -47,11 +45,7 @@ where
     let mut marks = HashMap::new();
     let mut stack = Vec::new();
     let mut output = Vec::new();
-    for node in dag
-        .iter()
-        .flat_map(|(n, ns)| iter::once(n).chain(ns))
-        .collect::<HashSet<_>>()
-    {
+    for node in dag.keys() {
         stack.push(Action::Visit(node));
         while let Some(action) = stack.pop() {
             match action {
@@ -175,6 +169,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
+
     use maplit::hashmap;
     use maplit::hashset;
 
