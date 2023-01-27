@@ -30,6 +30,7 @@ pycheckout = { path = "modules/pycheckout" }
 pyclientinfo = { path = "modules/pyclientinfo" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigloader = { path = "modules/pyconfigloader" }
+pycopytrace = { path = "modules/pycopytrace" }
 pydag = { path = "modules/pydag" }
 pydiffhelpers = { path = "modules/pydiffhelpers" }
 pydirs = { path = "modules/pydirs" }
