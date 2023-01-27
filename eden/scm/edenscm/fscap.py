@@ -51,6 +51,13 @@ _FS_CAP_TABLE = {
     },
     "HFS": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "XFS": _ALL_CAPS,
+    "UFS": _ALL_CAPS,
+    "ZFS": {
+        SYMLINK: True,
+        HARDLINK: True,
+        EXECBIT: True,
+        ALWAYSCASESENSITIVE: False,
+    },
     "tmpfs": _ALL_CAPS,
 }
 
