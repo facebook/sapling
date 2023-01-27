@@ -95,8 +95,9 @@ function sleepMs(timeMs: number): Promise<void> {
   return new Promise(res => setTimeout(res, timeMs));
 }
 
-function validateServerChallengeResponse(v: unknown): v is ServerChallengeResponse {
+export function validateServerChallengeResponse(v: unknown): v is ServerChallengeResponse {
   return (
+    !!v &&
     typeof v === 'object' &&
     typeof (v as ServerChallengeResponse).challengeToken === 'string' &&
     typeof (v as ServerChallengeResponse).pid === 'number'
