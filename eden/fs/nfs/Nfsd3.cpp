@@ -354,13 +354,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::setattr(
       /*mtime*/ makeTimespec(args.new_attributes.mtime),
   };
 
-  if (desired.is_nop(true /* ignoreAtime */)) {
+  if (desired.is_nop(/* ignoreAtime= */ true) && desired.atime.has_value()) {
     // EdenFS does not support `atime`, so ignore `atime`-only changes.
     //
     // Ignoring `atime` is not strictly necessary to work around bugs
     // on macOS ARM64 with nop changes since `atime` is empty but let's be safe.
-    XLOG(DBG7) << "Skipping nop setattr with ignoring `atime`";
-    return folly::unit;
+    XLOG(DBG7) << "Treating atime-only NFS SETATTR as a no-op";
+    desired.atime = std::nullopt;
   }
 
   return dispatcher_
