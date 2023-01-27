@@ -3063,6 +3063,90 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   result.contentsSha1_ref() = thriftHash20(metadata->sha1);
 }
 
+folly::SemiFuture<std::unique_ptr<DebugGetBlobMetadataResponse>>
+EdenServiceHandler::semifuture_debugGetBlobMetadata(
+    std::unique_ptr<DebugGetBlobMetadataRequest> request) {
+  const auto& mountid = request->mountId();
+  const auto& idStr = request->id();
+  const auto& origins = request->origins();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
+
+  auto edenMount = std::get<0>(lookupMount(*mountid));
+  auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
+  auto originFlags = DataFetchOriginFlags::raw(*origins);
+  auto store = edenMount->getObjectStore();
+
+  std::vector<ImmediateFuture<BlobMetadataWithOrigin>> blobFutures;
+
+  if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
+    auto metadata =
+        store->getBlobMetadataFromInMemoryCache(id, helper->getFetchContext());
+    blobFutures.emplace_back(ImmediateFuture<BlobMetadataWithOrigin>{
+        transformToBlobMetadataFromOrigin(
+            edenMount, id, metadata, DataFetchOrigin::MEMORY_CACHE)});
+  }
+  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
+    auto localStore = store->getLocalStore();
+    blobFutures.emplace_back(localStore->getBlobMetadata(id).thenTry(
+        [edenMount, id](auto&& metadata) {
+          return transformToBlobMetadataFromOrigin(
+              edenMount,
+              id,
+              std::move(metadata.value()),
+              DataFetchOrigin::DISK_CACHE);
+        }));
+  }
+  if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
+    auto proxyHash = HgProxyHash::load(
+        store->getLocalStore().get(),
+        id,
+        "debugGetScmBlob",
+        server_->getServerState()->getStats());
+    auto backingStore = edenMount->getObjectStore()->getBackingStore();
+    std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
+        castToHgQueuedBackingStore(backingStore, edenMount->getPath());
+
+    auto metadata = hgBackingStore->getHgBackingStore()
+                        .getDatapackStore()
+                        .getLocalBlobMetadata(proxyHash.revHash());
+    blobFutures.emplace_back(ImmediateFuture<BlobMetadataWithOrigin>{
+        transformToBlobMetadataFromOrigin(
+            edenMount,
+            id,
+            std::move(metadata),
+            DataFetchOrigin::LOCAL_BACKING_STORE)});
+  }
+  if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
+    // TODO(kmancini): implement
+    blobFutures.emplace_back(ImmediateFuture<BlobMetadataWithOrigin>{
+        transformToBlobMetadataFromOrigin(
+            folly::Try<BlobMetadata>{newEdenError(
+                EdenErrorType::GENERIC_ERROR,
+                "remote only fetching not yet supported.")},
+            DataFetchOrigin::REMOTE_BACKING_STORE)});
+  }
+  if (originFlags.contains(FROMWHERE_ANYWHERE)) {
+    blobFutures.emplace_back(
+        store->getBlobMetadata(id, helper->getFetchContext())
+            .thenTry([edenMount, id](auto&& metadata) {
+              return transformToBlobMetadataFromOrigin(
+                  std::move(metadata), DataFetchOrigin::ANYWHERE);
+            }));
+  }
+
+  return wrapImmediateFuture(
+             std::move(helper),
+             collectAllSafe(std::move(blobFutures))
+                 .thenValue([](std::vector<BlobMetadataWithOrigin> blobs) {
+                   auto response =
+                       std::make_unique<DebugGetBlobMetadataResponse>();
+                   response->metadatas() = std::move(blobs);
+                   return response;
+                 }))
+      .semi();
+}
+
 namespace {
 class InodeStatusCallbacks : public TraversalCallbacks {
  public:
