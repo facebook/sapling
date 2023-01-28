@@ -20,6 +20,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use comfy_table::presets::UTF8_BORDERS_ONLY;
+use comfy_table::ContentArrangement;
+use comfy_table::Row;
 use comfy_table::Table;
 use crossterm::cursor;
 use crossterm::event::Event;
@@ -510,8 +512,9 @@ impl crate::Subcommand for MinitopCmd {
             let mut table = Table::new();
             table.set_header(COLUMN_TITLES);
             table.load_preset(UTF8_BORDERS_ONLY);
+            table.set_content_arrangement(ContentArrangement::Dynamic);
             for aggregated_process in aggregate_processes(&tracked_processes, &system) {
-                table.add_row(vec![
+                let mut row = Row::from(vec![
                     aggregated_process.pid.to_string(),
                     aggregated_process.mount_name.clone(),
                     aggregated_process.access_counts.fsChannelReads.to_string(),
@@ -541,6 +544,8 @@ impl crate::Subcommand for MinitopCmd {
                         .simple_human_time(TimeUnit::Seconds),
                     aggregated_process.cmd,
                 ]);
+                row.max_height(1);
+                table.add_row(row);
             }
 
             for line in table.lines() {
