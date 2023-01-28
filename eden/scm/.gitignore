@@ -30,6 +30,7 @@ fb/tests/*.err
 tests/htmlcov
 tests/getdb.sh
 tests/testutil/getdb.py
+tests/__pycache__/
 contrib/chg/chg
 contrib/chg/libchg.a
 contrib/hgsh/hgsh
