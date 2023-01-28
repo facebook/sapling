@@ -82,7 +82,7 @@ ImmediateFuture<std::string> NfsDispatcherImpl::readlink(
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [context = context.copy()](const FileInodePtr& inode) {
-        return inode->readlink(context).semi();
+        return inode->readlink(context);
       });
 }
 

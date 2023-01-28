@@ -1001,11 +1001,10 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
 
   XLOG(DBG4) << "ensureMaterialize " << getLogPath();
   return runWhileMaterialized(
-             LockedState{this},
-             nullptr,
-             [](LockedState&&) { return folly::unit; },
-             fetchContext)
-      .semi();
+      LockedState{this},
+      nullptr,
+      [](LockedState&&) { return folly::unit; },
+      fetchContext);
 }
 
 ImmediateFuture<std::tuple<BufVec, bool>>

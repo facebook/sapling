@@ -542,8 +542,7 @@ ImmediateFuture<Unit> ensureDotEdenSymlink(
               }
               // Remove and re-create the symlink with the desired contents.
               return Action::UnlinkThenSymlink;
-            })
-            .semi();
+            });
       })
       .thenValue([=](Action action) -> ImmediateFuture<Unit> {
         switch (action) {

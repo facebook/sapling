@@ -314,12 +314,10 @@ ImmediateFuture<std::string> FuseDispatcherImpl::readlink(
        context = context.copy()](const FileInodePtr& inode) {
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
-        return inode
-            ->readlink(
-                context,
-                kernelCachesReadlink ? CacheHint::NotNeededAgain
-                                     : CacheHint::LikelyNeededAgain)
-            .semi();
+        return inode->readlink(
+            context,
+            kernelCachesReadlink ? CacheHint::NotNeededAgain
+                                 : CacheHint::LikelyNeededAgain);
       });
 }
 
