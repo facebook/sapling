@@ -171,17 +171,18 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getRootTree(
     const RootId& rootId,
     const ObjectFetchContextPtr& context) const {
   XLOG(DBG3) << "getRootTree(" << rootId << ")";
-  return ImmediateFuture{backingStore_->getRootTree(rootId, context)}.thenValue(
-      [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
-          std::shared_ptr<const Tree> tree) {
-        if (!tree) {
-          throw_<std::domain_error>("unable to import root ", rootId);
-        }
+  return backingStore_->getRootTree(rootId, context)
+      .thenValue(
+          [treeCache = treeCache_, rootId, caseSensitive = caseSensitive_](
+              std::shared_ptr<const Tree> tree) {
+            if (!tree) {
+              throw_<std::domain_error>("unable to import root ", rootId);
+            }
 
-        treeCache->insert(tree);
+            treeCache->insert(tree);
 
-        return changeCaseSensitivity(std::move(tree), caseSensitive);
-      });
+            return changeCaseSensitivity(std::move(tree), caseSensitive);
+          });
 }
 
 ImmediateFuture<std::shared_ptr<TreeEntry>>

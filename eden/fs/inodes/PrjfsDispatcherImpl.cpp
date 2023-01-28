@@ -668,9 +668,8 @@ ImmediateFuture<folly::Unit> fileNotification(
   folly::via(
       executor,
       [&mount, path, receivedAt, context = context.copy(), watch]() mutable {
-        auto fault = ImmediateFuture{
-            mount.getServerState()->getFaultInjector().checkAsync(
-                "PrjfsDispatcherImpl::fileNotification", path)};
+        auto fault = mount.getServerState()->getFaultInjector().checkAsync(
+            "PrjfsDispatcherImpl::fileNotification", path);
 
         std::move(fault)
             .thenValue([&mount,

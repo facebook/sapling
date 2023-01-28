@@ -962,8 +962,7 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
       return folly::unit;
     }
 
-    return ImmediateFuture{
-        readlink(fetchContext, CacheHint::LikelyNeededAgain).semi()}
+    return readlink(fetchContext, CacheHint::LikelyNeededAgain)
         .thenValue(
             [this, followSymlink, fetchContext = fetchContext.copy()](
                 auto target) -> ImmediateFuture<folly::Unit> {
