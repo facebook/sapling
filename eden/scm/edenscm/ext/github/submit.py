@@ -600,9 +600,11 @@ async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
 def get_origin(ui) -> str:
     test_url = os.environ.get("SL_TEST_GH_URL")
     if test_url:
-        origin = test_url
-    else:
-        origin = ui.config("paths", "default")
+        return test_url
+    origin = ui.config("paths", "default-push")
+    if origin:
+        return origin
+    origin = ui.config("paths", "default")
     if origin:
         return origin
     else:

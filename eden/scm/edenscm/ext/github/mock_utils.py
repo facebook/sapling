@@ -366,14 +366,15 @@ class GetRepositoryRequest(MockRequest):
     ):
         data = {
             "data": {
-                "repository": {
-                    "id": repo_id,
-                    "owner": {"id": owner_id, "login": self._owner},
-                    "name": self._name,
-                    "isFork": is_fork,
-                    "defaultBranchRef": {"name": default_branch_ref},
-                    "parent": parent,
-                }
+                "repository": make_repository_for_response(
+                    repo_id=repo_id,
+                    repo_name=self._name,
+                    owner_id=owner_id,
+                    owner_login=self._owner,
+                    default_branch_ref=default_branch_ref,
+                    is_fork=is_fork,
+                    parent=parent,
+                ),
             }
         }
         self._response = Ok(data)
@@ -599,3 +600,22 @@ def create_request_key(
 def gen_hash_hexdigest(s: str) -> str:
     """generate sha1 digit hex string for input `s`"""
     return hashlib.sha1(s.encode()).hexdigest()
+
+
+def make_repository_for_response(
+    repo_id: str,
+    repo_name: str,
+    owner_id: str,
+    owner_login: str,
+    default_branch_ref: str = "main",
+    is_fork: bool = False,
+    parent: Optional[Any] = None,
+) -> Dict:
+    return {
+        "id": repo_id,
+        "owner": {"id": owner_id, "login": owner_login},
+        "name": repo_name,
+        "isFork": is_fork,
+        "defaultBranchRef": {"name": default_branch_ref},
+        "parent": parent,
+    }
