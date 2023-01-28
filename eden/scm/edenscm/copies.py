@@ -15,8 +15,21 @@ from __future__ import absolute_import
 import collections
 import os
 
-from . import git, match as matchmod, node, pathutil, pycompat, scmutil, util
+from . import error, git, match as matchmod, node, pathutil, pycompat, scmutil, util
 from .i18n import _
+
+
+_gitcopytrace = None
+
+
+def _newgitcopytrace(repo):
+    global _gitcopytrace
+    if _gitcopytrace is None:
+        import bindings
+
+        gitdir = git.readgitdir(repo)
+        _gitcopytrace = bindings.copytrace.gitcopytrace(gitdir)
+    return _gitcopytrace
 
 
 def _findlimit(repo, a, b):
@@ -163,15 +176,32 @@ def _backwardrenames(a, b):
     return r
 
 
+def _gitfindcopies(repo, oldnode, newnode):
+    if not oldnode or not newnode:
+        return {}
+
+    if not repo.ui.configbool("experimental", "gitcopytrace"):
+        return {}
+
+    try:
+        gitcopytrace = _newgitcopytrace(repo)
+        return gitcopytrace.findcopies(oldnode, newnode)
+    except error.RustError:
+        return {}
+
+
 def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
-    # git does not track copy information. It will have to be implemented
-    # differently. For now, git pathcopies remains unimplemented.
-    # eagerepo is similar - pathcopies need a new implementation.
     from . import eagerepo
 
-    if git.isgitformat(x.repo()) or eagerepo.iseagerepo(x.repo()):
+    # eagerepo does not track copy information, it will have to be implemented
+    # differently. For now, it remains unimplemented.
+    if eagerepo.iseagerepo(x.repo()):
         return {}
+
+    # we use git2 Rust library to do the actual work for git repo.
+    if git.isgitformat(x.repo()):
+        return _gitfindcopies(x.repo(), x.node(), y.node())
 
     if x == y or not x or not y:
         return {}

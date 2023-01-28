@@ -286,6 +286,7 @@ coreconfigitem("experimental", "regexmatcher", default=True)
 coreconfigitem("experimental", "dynmatcher", default=False)
 coreconfigitem("experimental", "uncommitondirtywdir", default=True)
 coreconfigitem("experimental", "xdiff", default=True)
+coreconfigitem("experimental", "gitcopytrace", default=True)
 coreconfigitem("extensions", ".*", default=None, generic=True)
 coreconfigitem("format", "aggressivemergedeltas", default=False)
 coreconfigitem(

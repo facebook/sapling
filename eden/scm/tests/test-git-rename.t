@@ -16,15 +16,6 @@ Test mv
   $ hg mv a b
   $ hg ci -Am 'mv a -> b'
   $ hg diff -r.~1 -r .
-  diff --git a/a b/a
-  deleted file mode 100644
-  --- a/a
-  +++ /dev/null
-  @@ -1,1 +0,0 @@
-  -1
-  diff --git a/b b/b
-  new file mode 100644
-  --- /dev/null
-  +++ b/b
-  @@ -0,0 +1,1 @@
-  +1
+  diff --git a/a b/b
+  rename from a
+  rename to b
