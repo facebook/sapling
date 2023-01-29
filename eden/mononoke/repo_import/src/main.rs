@@ -611,7 +611,9 @@ async fn merge_imported_commit(
         committer: Some(author.to_string()),
         committer_date: Some(datetime),
         message: message.to_string(),
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
     }

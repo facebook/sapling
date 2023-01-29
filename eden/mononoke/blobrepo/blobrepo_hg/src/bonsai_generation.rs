@@ -79,7 +79,9 @@ pub async fn create_bonsai_changeset_object(
         committer: None,
         committer_date: None,
         message,
-        extra,
+        hg_extra: extra,
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes,
         is_snapshot: false,
     }

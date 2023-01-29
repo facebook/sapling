@@ -458,7 +458,7 @@ async fn generate_hg_changeset(
         user: bcs.author().to_string(),
         time: *bcs.author_date(),
         extra: bcs
-            .extra()
+            .hg_extra()
             .map(|(k, v)| (k.as_bytes().to_vec(), v.to_vec()))
             .collect(),
         message: bcs.message().to_string(),

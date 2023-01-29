@@ -183,7 +183,9 @@ async fn create_new_bonsai_changeset_for_source_repo(
             ),
             file_changes: chunk.iter().cloned().collect(),
             is_snapshot: false,
-            extra: Default::default(),
+            hg_extra: Default::default(),
+            git_extra_headers: None,
+            git_tree_hash: None,
         };
 
         if idx + 1 == len {
@@ -195,7 +197,7 @@ async fn create_new_bonsai_changeset_for_source_repo(
                     let parent = parent
                         .load(ctx, &hyper_repo.repo_blobstore().clone())
                         .await?;
-                    decode_latest_synced_state_extras(parent.extra())?
+                    decode_latest_synced_state_extras(parent.hg_extra())?
                 }
                 None => Default::default(),
             };
@@ -206,7 +208,7 @@ async fn create_new_bonsai_changeset_for_source_repo(
                 source_bcs_id,
             );
 
-            bcs.extra = encode_latest_synced_state_extras(&extra);
+            bcs.hg_extra = encode_latest_synced_state_extras(&extra);
         }
 
         let bcs = bcs.freeze()?;

@@ -301,7 +301,7 @@ impl AffectedChangesets {
 
             for bcs in self.iter() {
                 if bcs
-                    .extra()
+                    .hg_extra()
                     .any(|(name, _)| name == CHANGE_XREPO_MAPPING_EXTRA)
                 {
                     // This extra is used in backsyncer, and it changes how commit

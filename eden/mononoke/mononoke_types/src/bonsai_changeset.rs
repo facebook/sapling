@@ -11,9 +11,11 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use bytes::Bytes;
 use fbthrift::compact_protocol;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::Blob;
@@ -23,11 +25,14 @@ use crate::datetime::DateTime;
 use crate::errors::ErrorKind;
 use crate::file_change::BasicFileChange;
 use crate::file_change::FileChange;
+use crate::hash::GitSha1;
 use crate::path;
 use crate::path::MPath;
 use crate::thrift;
 use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ChangesetIdContext;
+
+const ARBITRARY_SHRINK_FACTOR: usize = 3;
 
 /// A struct callers can use to build up a `BonsaiChangeset`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -41,9 +46,11 @@ pub struct BonsaiChangesetMut {
     // max(author date, max(committer date of parents) + epsilon)
     pub committer_date: Option<DateTime>,
     pub message: String,
-    pub extra: SortedVectorMap<String, Vec<u8>>,
+    pub hg_extra: SortedVectorMap<String, Vec<u8>>,
+    pub git_extra_headers: Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
     pub file_changes: SortedVectorMap<MPath, FileChange>,
     pub is_snapshot: bool,
+    pub git_tree_hash: Option<GitSha1>,
 }
 
 impl BonsaiChangesetMut {
@@ -63,7 +70,10 @@ impl BonsaiChangesetMut {
             committer: tc.committer,
             committer_date: tc.committer_date.map(DateTime::from_thrift).transpose()?,
             message: tc.message,
-            extra: tc.extra,
+            hg_extra: tc.hg_extra,
+            git_extra_headers: tc
+                .git_extra_headers
+                .map(|extra| extra.into_iter().map(|(k, v)| (k.0, v)).collect()),
             file_changes: tc
                 .file_changes
                 .into_iter()
@@ -74,6 +84,11 @@ impl BonsaiChangesetMut {
                 })
                 .collect::<Result<_>>()?,
             is_snapshot: tc.snapshot_state.is_some(),
+            git_tree_hash: tc
+                .git_tree_hash
+                .map(|hash| GitSha1::from_bytes(hash.0))
+                .transpose()
+                .context("Invalid SHA1 hash for git tree hash")?,
         })
     }
 
@@ -90,13 +105,20 @@ impl BonsaiChangesetMut {
             committer: self.committer,
             committer_date: self.committer_date.map(DateTime::into_thrift),
             message: self.message,
-            extra: self.extra,
+            hg_extra: self.hg_extra,
+            git_extra_headers: self.git_extra_headers.map(|extra| {
+                extra
+                    .into_iter()
+                    .map(|(k, v)| (thrift::small_binary(k), v))
+                    .collect()
+            }),
             file_changes: self
                 .file_changes
                 .into_iter()
                 .map(|(f, c)| (f.into_thrift(), c.into_thrift()))
                 .collect(),
             snapshot_state: self.is_snapshot.then_some(thrift::SnapshotState {}),
+            git_tree_hash: self.git_tree_hash.map(|hash| hash.into_thrift()),
         }
     }
 
@@ -157,6 +179,11 @@ impl BonsaiChangesetMut {
             }
         }
 
+        if self.git_tree_hash.is_some()
+            && !(self.parents.is_empty() && self.file_changes.is_empty())
+        {
+            bail!(ErrorKind::InvalidBonsaiChangeset("bonsai changeset representing a git tree should not have any parents or file changes".to_string()))
+        }
         Ok(())
     }
 }
@@ -261,14 +288,28 @@ impl BonsaiChangeset {
         &self.inner.message
     }
 
-    /// Get the extra fields for this message.
-    pub fn extra(&self) -> impl Iterator<Item = (&str, &[u8])> {
+    /// Get the hg_extra fields for this message.
+    pub fn hg_extra(&self) -> impl Iterator<Item = (&str, &[u8])> {
         self.inner
-            .extra
+            .hg_extra
             .iter()
             .map(|(k, v)| (k.as_str(), v.as_slice()))
     }
 
+    /// Get the git_extra_headers fields for this message.
+    pub fn git_extra_headers(&self) -> Option<impl Iterator<Item = (&[u8], &[u8])>> {
+        self.inner
+            .git_extra_headers
+            .as_ref()
+            .map(|extra| extra.iter().map(|(k, v)| (k.as_slice(), v.as_ref())))
+    }
+
+    /// Get the git tree hash corresponding to the current changeset
+    pub fn git_tree_hash(&self) -> Option<&GitSha1> {
+        self.inner.git_tree_hash.as_ref()
+    }
+
+    /// Get the changeset ID of this changeset.
     pub fn get_changeset_id(&self) -> ChangesetId {
         self.id
     }
@@ -311,7 +352,6 @@ impl Arbitrary for BonsaiChangeset {
         let parents: Vec<_> = (0..num_parents)
             .map(|_| ChangesetId::arbitrary(g))
             .collect();
-
         let num_changes = usize::arbitrary(g) % size;
         let file_changes: BTreeMap<_, _> = (0..num_changes)
             .map(|_| {
@@ -343,8 +383,10 @@ impl Arbitrary for BonsaiChangeset {
                 committer: Option::<String>::arbitrary(g),
                 committer_date: Option::<DateTime>::arbitrary(g),
                 message: String::arbitrary(g),
-                extra: SortedVectorMap::arbitrary(g),
+                hg_extra: SortedVectorMap::arbitrary(g),
+                git_extra_headers: None,
                 is_snapshot: bool::arbitrary(g),
+                git_tree_hash: None,
             }
             .freeze()
             .expect("generated bonsai changeset must be valid")
@@ -356,10 +398,11 @@ impl Arbitrary for BonsaiChangeset {
         let iter = (
             cs.parents.clone(),
             cs.file_changes.clone(),
-            cs.extra.clone(),
+            cs.hg_extra.clone(),
+            cs.git_tree_hash.clone(),
         )
             .shrink()
-            .map(move |(parents, file_changes, extra)| {
+            .map(move |(parents, file_changes, hg_extra, git_tree_hash)| {
                 BonsaiChangesetMut {
                     parents,
                     file_changes,
@@ -368,8 +411,22 @@ impl Arbitrary for BonsaiChangeset {
                     committer: cs.committer.clone(),
                     committer_date: cs.committer_date,
                     message: cs.message.clone(),
-                    extra,
+                    hg_extra,
+                    git_extra_headers: cs.git_extra_headers.clone().map(|extra| {
+                        extra
+                            .into_iter()
+                            .enumerate()
+                            .filter_map(|(idx, val)| {
+                                if idx % ARBITRARY_SHRINK_FACTOR == 0 {
+                                    Some(val)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect()
+                    }),
                     is_snapshot: cs.is_snapshot,
+                    git_tree_hash,
                 }
                 .freeze()
                 .expect("shrunken bonsai changeset must be valid")
@@ -415,7 +472,9 @@ mod test {
             committer: Some("bar".into()),
             committer_date: Some(DateTime::from_timestamp(1500000000, -36800).unwrap()),
             message: "Commit message".into(),
-            extra: SortedVectorMap::new(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            git_tree_hash: None,
             file_changes: sorted_vector_map![
                 MPath::new("a/b").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
@@ -482,7 +541,9 @@ mod test {
                 committer: None,
                 committer_date: None,
                 message: "a".into(),
-                extra: SortedVectorMap::new(),
+                hg_extra: SortedVectorMap::new(),
+                git_extra_headers: None,
+                git_tree_hash: None,
                 file_changes,
                 is_snapshot,
             }
@@ -494,5 +555,108 @@ mod test {
         create(true, false, false).expect_err("Non-snapshot can't have untracked");
         create(false, true, false).expect_err("Non-snapshot can't have missing");
         create(true, true, false).unwrap_err();
+    }
+
+    #[test]
+    fn invalid_git_tree_bonsai_changeset() {
+        let changeset = BonsaiChangesetMut {
+            parents: vec![ChangesetId::from_byte_array([3; 32])],
+            author: String::new(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: String::new(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            file_changes: SortedVectorMap::new(),
+            is_snapshot: false,
+            git_tree_hash: GitSha1::from_bytes([
+                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
+                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+            ])
+            .ok(),
+        };
+        changeset
+            .freeze()
+            .expect_err("Changeset representing Git trees can't have parents");
+
+        let changeset = BonsaiChangesetMut {
+            parents: vec![],
+            author: String::new(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: String::new(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            file_changes: sorted_vector_map! [
+                MPath::new("a").unwrap() => FileChange::tracked(
+                    ContentId::from_byte_array([1; 32]),
+                    FileType::Regular,
+                    42,
+                    None,
+                ),
+                MPath::new("b").unwrap() => FileChange::Deletion,
+            ],
+            is_snapshot: false,
+            git_tree_hash: GitSha1::from_bytes([
+                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
+                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+            ])
+            .ok(),
+        };
+        changeset
+            .freeze()
+            .expect_err("Changeset representing Git trees can't have file changes");
+    }
+
+    #[test]
+    fn valid_git_tree_bonsai_changeset() {
+        let changeset = BonsaiChangesetMut {
+            parents: vec![],
+            author: String::new(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: String::new(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            file_changes: SortedVectorMap::new(),
+            is_snapshot: false,
+            git_tree_hash: GitSha1::from_bytes([
+                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
+                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+            ])
+            .ok(),
+        };
+        changeset.freeze().unwrap();
+    }
+
+    #[test]
+    fn valid_git_extra_headers_bonsai_changeset() {
+        let changeset = BonsaiChangesetMut {
+            parents: vec![ChangesetId::from_byte_array([3; 32])],
+            author: String::new(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: String::new(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: Some(sorted_vector_map! [
+                SmallVec::from_vec(b"JustAHeader".to_vec()) => Bytes::from_static(b"Some Content")
+            ]),
+            file_changes: sorted_vector_map! [
+                MPath::new("a").unwrap() => FileChange::tracked(
+                    ContentId::from_byte_array([1; 32]),
+                    FileType::Regular,
+                    42,
+                    None,
+                ),
+                MPath::new("b").unwrap() => FileChange::Deletion,
+            ],
+            is_snapshot: false,
+            git_tree_hash: None,
+        };
+        changeset.freeze().unwrap();
     }
 }

@@ -86,7 +86,7 @@ impl PushrebaseCommitHook for GlobalrevCommitHook {
         bcs_old: ChangesetId,
         bcs_new: &mut BonsaiChangesetMut,
     ) -> Result<(), Error> {
-        bcs_new.extra.insert(
+        bcs_new.hg_extra.insert(
             GLOBALREV_EXTRA.into(),
             format!("{}", self.next_rev).into_bytes(),
         );

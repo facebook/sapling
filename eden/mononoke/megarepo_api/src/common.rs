@@ -268,7 +268,9 @@ pub trait MegarepoOp {
             committer: None,
             committer_date: None,
             message: message.unwrap_or_else(|| "target config change".to_string()),
-            extra: SortedVectorMap::new(),
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            git_tree_hash: None,
             file_changes: file_changes.into_iter().collect(),
             is_snapshot: false,
         };
@@ -1227,7 +1229,9 @@ pub(crate) fn new_megarepo_automation_commit(
         committer: None,
         committer_date: None,
         message,
-        extra: SortedVectorMap::new(),
+        hg_extra: SortedVectorMap::new(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes,
         is_snapshot: false,
     }

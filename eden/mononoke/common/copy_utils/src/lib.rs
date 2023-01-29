@@ -327,7 +327,9 @@ fn create_bonsai_changeset(
         committer: None,
         committer_date: None,
         message,
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes,
         is_snapshot: false,
     }

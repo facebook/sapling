@@ -64,7 +64,7 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
     ) -> Result<(), Error> {
         let git_sha1 = extract_git_sha1_from_bonsai_extra(
             bcs_new
-                .extra
+                .hg_extra
                 .iter()
                 .map(|(k, v)| (k.as_str(), v.as_slice())),
         )?;

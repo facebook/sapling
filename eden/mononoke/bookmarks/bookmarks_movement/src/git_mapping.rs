@@ -125,7 +125,7 @@ async fn new_mapping_entries(
             }
         };
 
-        let git_sha1 = match extract_git_sha1_from_bonsai_extra(needed.bcs.extra())
+        let git_sha1 = match extract_git_sha1_from_bonsai_extra(needed.bcs.hg_extra())
             .with_context(|| format!("Failed to extract Git Sha1 from {}", needed.cs_id))?
         {
             Some(git_sha1) => git_sha1,

@@ -71,7 +71,7 @@ impl BonsaiDerivable for DerivedGeneration {
         parents: Vec<Self>,
     ) -> Result<Self> {
         if let Some(delay_str) = bonsai
-            .extra()
+            .hg_extra()
             .collect::<HashMap<_, _>>()
             .get("test-derive-delay")
         {

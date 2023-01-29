@@ -114,7 +114,9 @@ async fn create_bonsai_changeset_from_test_data(
         committer: None,
         committer_date: None,
         message: commit_metadata.get("message").unwrap().to_string(),
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes,
         is_snapshot: false,
     }
@@ -1599,7 +1601,9 @@ pub fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
     }
@@ -1618,7 +1622,9 @@ pub fn create_bonsai_changeset_with_author(
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
     }
@@ -1637,7 +1643,9 @@ pub fn create_bonsai_changeset_with_files(
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes: file_changes.into(),
         is_snapshot: false,
     }

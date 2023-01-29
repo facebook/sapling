@@ -20,6 +20,7 @@ use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use fbinit::FacebookInit;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -106,8 +107,13 @@ pub struct SerializableBonsaiChangeset {
     // max(author date, max(committer date of parents) + epsilon)
     pub committer_date: Option<DateTime>,
     pub message: String,
-    pub extra: BTreeMap<String, Vec<u8>>,
+    pub hg_extra: BTreeMap<String, Vec<u8>>,
+    pub git_extra_headers: Option<BTreeMap<Vec<u8>, Vec<u8>>>,
     pub file_changes: BTreeMap<String, FileChange>,
+    // SHA1 hash representing a git tree object. If this changeset
+    // corresponds to a Git tree object, then this field will have
+    // value, otherwise it would be omitted.
+    pub git_tree_hash: Option<GitSha1>,
 }
 
 impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
@@ -123,11 +129,14 @@ impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
 
         let message = bonsai.message().to_string();
 
-        let extra = bonsai
-            .extra()
+        let hg_extra = bonsai
+            .hg_extra()
             .map(|(k, v)| (k.to_string(), v.to_vec()))
             .collect();
 
+        let git_extra_headers = bonsai
+            .git_extra_headers()
+            .map(|extra| extra.map(|(k, v)| (k.to_vec(), v.to_vec())).collect());
         let file_changes = bonsai
             .file_changes_map()
             .iter()
@@ -138,6 +147,7 @@ impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
                 )
             })
             .collect();
+        let git_tree_hash = bonsai.git_tree_hash().cloned();
 
         SerializableBonsaiChangeset {
             parents,
@@ -146,8 +156,10 @@ impl From<BonsaiChangeset> for SerializableBonsaiChangeset {
             committer,
             committer_date,
             message,
-            extra,
+            hg_extra,
+            git_extra_headers,
             file_changes,
+            git_tree_hash,
         }
     }
 }

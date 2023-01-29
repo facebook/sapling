@@ -50,7 +50,8 @@ Manually create a bonsai that would not normally be produced because it has unne
   >   "committer": null,
   >   "committer_date": null,
   >   "message": "C",
-  >   "extra": {},
+  >   "hg_extra": {},
+  >   "git_extra_headers": null,
   >   "file_changes": {
   >     "C": {
   >       "Change": {
@@ -72,7 +73,8 @@ Manually create a bonsai that would not normally be produced because it has unne
   >         "copy_from": null
   >       }
   >     }
-  >   }
+  >   },
+  >   "git_tree_hash": null
   > }
   > EOF
 
@@ -97,7 +99,8 @@ Check that bonsais are the same
     "committer": null,
     "committer_date": null,
     "message": "C",
-    "extra": {},
+    "hg_extra": {},
+    "git_extra_headers": null,
     "file_changes": {
       "B": {
         "Change": {
@@ -119,7 +122,8 @@ Check that bonsais are the same
           "copy_from": null
         }
       }
-    }
+    },
+    "git_tree_hash": null
   }
   $ REPOID=1 mononoke_admin bonsai-fetch master_bookmark --json 2> /dev/null | jq .
   {
@@ -131,7 +135,8 @@ Check that bonsais are the same
     "committer": null,
     "committer_date": null,
     "message": "C",
-    "extra": {},
+    "hg_extra": {},
+    "git_extra_headers": null,
     "file_changes": {
       "B": {
         "Change": {
@@ -153,5 +158,6 @@ Check that bonsais are the same
           "copy_from": null
         }
       }
-    }
+    },
+    "git_tree_hash": null
   }

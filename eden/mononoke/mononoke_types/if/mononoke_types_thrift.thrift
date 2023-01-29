@@ -121,14 +121,24 @@ struct BonsaiChangeset {
   4: optional string committer;
   5: optional DateTime committer_date;
   6: string message;
+  // Extra headers specifically for mercurial
   7: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
-  ) extra;
+  ) hg_extra;
   8: map<MPath, FileChangeOpt> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) file_changes;
   // Changeset is a snapshot iff this field is present
   9: optional SnapshotState snapshot_state;
+  // Extra headers specifically for git. Both the key and the value
+  // in these headers can be byte strings
+  10: optional map<small_binary, binary_bytes> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) git_extra_headers;
+  // SHA1 hash representing a git tree object. If this changeset
+  // corresponds to a Git tree object, then this field will have
+  // value, otherwise it would be omitted.
+  11: optional GitSha1 git_tree_hash;
 } (rust.exhaustive)
 
 struct SnapshotState {

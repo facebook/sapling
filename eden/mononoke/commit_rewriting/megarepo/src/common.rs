@@ -147,7 +147,9 @@ fn create_bonsai_changeset_only(
         committer: Some(author),
         committer_date: Some(datetime),
         message,
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes,
         is_snapshot: false,
     }

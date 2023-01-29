@@ -50,7 +50,7 @@ setup configuration
   >   "committer": null,
   >   "committer_date": null,
   >   "message": "C",
-  >   "extra": {},
+  >   "hg_extra": {},
   >   "file_changes": {
   >     "C": {
   >       "Change": {

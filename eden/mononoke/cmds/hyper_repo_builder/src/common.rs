@@ -53,7 +53,7 @@ pub async fn find_source_repos_and_latest_synced_cs_ids<'a>(
         .load(ctx, &hyper_repo.repo_blobstore().clone())
         .await?;
 
-    let latest_synced_state = decode_latest_synced_state_extras(cs.extra())?;
+    let latest_synced_state = decode_latest_synced_state_extras(cs.hg_extra())?;
 
     let source_repos: Vec<(InnerRepo, Source<ChangesetId>)> = try_join_all(
         latest_synced_state

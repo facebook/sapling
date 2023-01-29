@@ -146,7 +146,7 @@ pub trait BonsaiGitMapping: Send + Sync {
     ) -> Result<()> {
         let mut entries = vec![];
         for bcs in changesets.iter() {
-            match extract_git_sha1_from_bonsai_extra(bcs.extra()) {
+            match extract_git_sha1_from_bonsai_extra(bcs.hg_extra()) {
                 Ok(Some(git_sha1)) => {
                     let entry = BonsaiGitMappingEntry::new(git_sha1, bcs.get_changeset_id());
                     entries.push(entry);

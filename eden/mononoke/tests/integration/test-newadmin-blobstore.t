@@ -62,7 +62,8 @@ Examine some of the data
           committer: None,
           committer_date: None,
           message: "C",
-          extra: {},
+          hg_extra: {},
+          git_extra_headers: None,
           file_changes: {
               MPath("C"): Change(
                   TrackedFileChange {
@@ -91,6 +92,7 @@ Examine some of the data
               ),
           },
           is_snapshot: false,
+          git_tree_hash: None,
       },
       id: ChangesetId(
           Blake2(f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1),
@@ -104,4 +106,3 @@ Examine some of the data
   
   00000000: 7465737420636f6e74656e7420aa2065  test content . e
   00000010: 6e64                              nd
-

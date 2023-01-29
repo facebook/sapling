@@ -98,7 +98,7 @@ async fn find_latest_synced_commits(
         .load(ctx, &hyper_repo.repo_blobstore().clone())
         .await?;
 
-    let latest_synced_commits = decode_latest_synced_state_extras(hyper_repo_tip.extra())?;
+    let latest_synced_commits = decode_latest_synced_state_extras(hyper_repo_tip.hg_extra())?;
 
     let mut res = vec![];
     for source_repo in source_repos {
@@ -257,7 +257,7 @@ async fn sync_commits(
                 cs_id,
             );
             let extra = encode_latest_synced_state_extras(latest_synced_state);
-            rewritten_commit.extra = extra;
+            rewritten_commit.hg_extra = extra;
             // overwrite the date so that it's closer to when the commit actually
             // created in hyper repo rather than when it's created in source repo.
             // This makes it easier to track e.g. derivation delay.

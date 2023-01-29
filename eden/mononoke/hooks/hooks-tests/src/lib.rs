@@ -1408,7 +1408,9 @@ fn default_changeset() -> BonsaiChangeset {
         committer: None,
         committer_date: None,
         message: "This is a commit message".to_string(),
-        extra: Default::default(),
+        hg_extra: Default::default(),
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes: sorted_vector_map!{
             to_mpath("dir1/subdir1/subsubdir1/file_1") => FileChange::tracked(ONES_CTID, FileType::Symlink, 15, None),
             to_mpath("dir1/subdir1/subsubdir2/file_1") => FileChange::tracked(TWOS_CTID, FileType::Regular, 17, None),

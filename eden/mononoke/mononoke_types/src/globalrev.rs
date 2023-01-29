@@ -53,8 +53,8 @@ impl Globalrev {
 
     pub fn from_bcs(bcs: &BonsaiChangeset) -> Result<Self> {
         match (
-            bcs.extra().find(|(key, _)| key == &GLOBALREV_EXTRA),
-            bcs.extra().find(|(key, _)| key == &"convert_revision"),
+            bcs.hg_extra().find(|(key, _)| key == &GLOBALREV_EXTRA),
+            bcs.hg_extra().find(|(key, _)| key == &"convert_revision"),
         ) {
             (Some((_, globalrev)), Some((_, svnrev))) => {
                 let globalrev = str::from_utf8(globalrev)?.parse::<u64>()?;

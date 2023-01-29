@@ -753,7 +753,9 @@ async fn create_commit_for_mapping_change(
         committer: None,
         committer_date: None,
         message: commit_msg,
-        extra: extras,
+        hg_extra: extras,
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes: file_changes.into(),
         is_snapshot: false,
     }

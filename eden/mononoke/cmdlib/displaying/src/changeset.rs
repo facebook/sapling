@@ -27,7 +27,7 @@ pub struct DisplayChangeset {
     pub committer: Option<String>,
     pub committer_date: Option<DateTime>,
     pub message: String,
-    pub extra: BTreeMap<String, Vec<u8>>,
+    pub hg_extra: BTreeMap<String, Vec<u8>>,
     pub file_changes: BTreeMap<String, FileChange>,
 }
 
@@ -43,8 +43,8 @@ impl TryFrom<&BonsaiChangeset> for DisplayChangeset {
             committer: bonsai.committer().map(ToString::to_string),
             committer_date: bonsai.committer_date().cloned(),
             message: bonsai.message().to_string(),
-            extra: bonsai
-                .extra()
+            hg_extra: bonsai
+                .hg_extra()
                 .map(|(k, v)| (k.to_string(), v.to_vec()))
                 .collect(),
             file_changes: bonsai

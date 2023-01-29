@@ -988,7 +988,9 @@ mod tests {
             committer: None,
             committer_date: None,
             message: message.to_string(),
-            extra: Default::default(),
+            hg_extra: Default::default(),
+            git_extra_headers: None,
+            git_tree_hash: None,
             file_changes: file_changes.into(),
             is_snapshot: false,
         }

@@ -425,7 +425,7 @@ async fn rebase_in_loop(
 }
 
 fn should_fail_pushrebase(bcs: &BonsaiChangeset) -> bool {
-    bcs.extra().any(|(key, _)| key == FAIL_PUSHREBASE_EXTRA)
+    bcs.hg_extra().any(|(key, _)| key == FAIL_PUSHREBASE_EXTRA)
 }
 
 async fn do_rebase(
@@ -975,7 +975,7 @@ async fn rebase_changeset(
 
     // Mutation information from the original commit must be stripped.
     for key in MUTATION_KEYS {
-        bcs.extra.remove(*key);
+        bcs.hg_extra.remove(*key);
     }
 
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then

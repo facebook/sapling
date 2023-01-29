@@ -106,7 +106,7 @@ impl ChangesetInfo {
             committer,
             committer_date,
             message,
-            extra,
+            hg_extra,
             ..
         } = changeset.into_mut();
 
@@ -118,7 +118,7 @@ impl ChangesetInfo {
             committer,
             committer_date,
             message: ChangesetMessage::Message(message),
-            extra,
+            extra: hg_extra,
         }
     }
 
@@ -311,7 +311,9 @@ mod test {
             committer: None,
             committer_date: None,
             message: message.to_string(),
-            extra: Default::default(),
+            hg_extra: Default::default(),
+            git_extra_headers: None,
+            git_tree_hash: None,
             file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deletion },
             is_snapshot: false,
         }

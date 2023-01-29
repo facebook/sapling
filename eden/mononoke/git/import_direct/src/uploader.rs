@@ -241,7 +241,6 @@ fn generate_bonsai_changeset(
     );
     extra.insert(HGGIT_MARKER_EXTRA.to_string(), HGGIT_MARKER_VALUE.to_vec());
 
-    // TODO: Should we have further extras?
     BonsaiChangesetMut {
         parents,
         author,
@@ -249,7 +248,10 @@ fn generate_bonsai_changeset(
         committer: Some(committer),
         committer_date: Some(committer_date),
         message,
-        extra,
+        hg_extra: extra,
+        // TODO(rajshar): Populate these fields correctly instead of using empty values
+        git_extra_headers: None,
+        git_tree_hash: None,
         file_changes,
         is_snapshot: false,
     }

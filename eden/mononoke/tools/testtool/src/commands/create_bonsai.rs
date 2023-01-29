@@ -20,6 +20,7 @@ use clap::Parser;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -110,7 +111,9 @@ pub struct DeserializableBonsaiChangeset {
     pub committer: Option<String>,
     pub committer_date: Option<DateTime>,
     pub message: String,
-    pub extra: BTreeMap<String, Vec<u8>>,
+    pub hg_extra: BTreeMap<String, Vec<u8>>,
+    pub git_extra_headers: Option<BTreeMap<Vec<u8>, Vec<u8>>>,
+    pub git_tree_hash: Option<GitSha1>,
     pub file_changes: BTreeMap<String, FileChange>,
 }
 
@@ -130,9 +133,16 @@ impl DeserializableBonsaiChangeset {
             committer: self.committer,
             committer_date: self.committer_date,
             message: self.message,
-            extra: self.extra.into(),
+            hg_extra: self.hg_extra.into(),
+            git_extra_headers: self.git_extra_headers.map(|extra| {
+                extra
+                    .into_iter()
+                    .map(|(k, v)| (smallvec::SmallVec::from(k), bytes::Bytes::from(v)))
+                    .collect()
+            }),
             file_changes: files,
             is_snapshot: false,
+            git_tree_hash: self.git_tree_hash,
         })
     }
 }

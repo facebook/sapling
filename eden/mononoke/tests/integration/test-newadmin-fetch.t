@@ -32,14 +32,6 @@ setup configuration
     "changeset_id": "c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba",
     "committer": null,
     "committer_date": null,
-    "extra": {
-      "example_extra": [
-        49,
-        50,
-        51,
-        255
-      ]
-    },
     "file_changes": {
       "A": {
         "Change": {
@@ -51,6 +43,14 @@ setup configuration
           }
         }
       }
+    },
+    "hg_extra": {
+      "example_extra": [
+        49,
+        50,
+        51,
+        255
+      ]
     },
     "message": "A",
     "parents": []
