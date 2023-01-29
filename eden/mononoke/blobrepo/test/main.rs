@@ -606,6 +606,7 @@ fn make_bonsai_changeset(
             .map(|(path, change)| (MPath::new(path).unwrap(), change))
             .collect(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap()

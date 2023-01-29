@@ -186,6 +186,7 @@ async fn create_new_bonsai_changeset_for_source_repo(
             hg_extra: Default::default(),
             git_extra_headers: None,
             git_tree_hash: None,
+            git_annotated_tag: None,
         };
 
         if idx + 1 == len {

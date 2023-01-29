@@ -161,6 +161,7 @@ async fn create_initial_commit_with_contents<'a>(
         git_tree_hash: None,
         file_changes,
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -198,6 +199,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
         git_tree_hash: None,
         file_changes: sorted_vector_map! {},
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -497,6 +499,7 @@ async fn create_commit_from_parent_and_changes<'a>(
         git_tree_hash: None,
         file_changes: proper_changes.into(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -538,6 +541,7 @@ async fn update_master_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
         git_tree_hash: None,
         file_changes: sorted_vector_map! {mpath("master_file") => file_change},
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -715,6 +719,7 @@ async fn megarepo_copy_file(
         git_tree_hash: None,
         file_changes: sorted_vector_map! {mpath("linear/new_file") => file_change},
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -969,6 +974,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId 
         git_tree_hash: None,
         file_changes: sorted_vector_map! {mpath("linear/1") => file_change},
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -2057,6 +2063,7 @@ async fn create_merge(
         git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();

@@ -758,6 +758,7 @@ async fn create_commit_for_mapping_change(
         git_tree_hash: None,
         file_changes: file_changes.into(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()?;
 

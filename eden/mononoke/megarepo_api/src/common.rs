@@ -273,6 +273,7 @@ pub trait MegarepoOp {
             git_tree_hash: None,
             file_changes: file_changes.into_iter().collect(),
             is_snapshot: false,
+            git_annotated_tag: None,
         };
         let merge = bcs.freeze()?;
         save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo()).await?;
@@ -1234,6 +1235,7 @@ pub(crate) fn new_megarepo_automation_commit(
         git_tree_hash: None,
         file_changes,
         is_snapshot: false,
+        git_annotated_tag: None,
     }
 }
 

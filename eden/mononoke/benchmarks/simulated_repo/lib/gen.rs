@@ -140,6 +140,7 @@ impl GenManifest {
                     git_tree_hash: None,
                     file_changes: file_changes.into(),
                     is_snapshot: false,
+                    git_annotated_tag: None,
                 }
                 .freeze()
                 .expect("generated bonsai failed to freeze");

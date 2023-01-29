@@ -616,6 +616,7 @@ async fn merge_imported_commit(
         git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()?;
 

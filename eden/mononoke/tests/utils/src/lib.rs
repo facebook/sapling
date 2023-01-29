@@ -356,6 +356,7 @@ impl<'a, R: Repo> CreateCommitContext<'a, R> {
             git_tree_hash: None,
             file_changes: Default::default(),
             is_snapshot: false,
+            git_annotated_tag: None,
         };
 
         for (path, file_change) in files {
@@ -721,6 +722,7 @@ pub async fn create_commit(
         git_tree_hash: None,
         file_changes: file_changes.into(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -749,6 +751,7 @@ pub async fn create_commit_with_date(
         git_tree_hash: None,
         file_changes: file_changes.into(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();

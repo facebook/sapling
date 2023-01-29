@@ -139,6 +139,28 @@ struct BonsaiChangeset {
   // corresponds to a Git tree object, then this field will have
   // value, otherwise it would be omitted.
   11: optional GitSha1 git_tree_hash;
+  // Bonsai counterpart of git annotated tag. If the current changeset
+  // represents an annotated tag, then this field will have a value.
+  // Otherwise, it would be absent.
+  12: optional BonsaiAnnotatedTag git_annotated_tag;
+} (rust.exhaustive)
+
+// Bonsai counterpart of a git annotated tag. This struct includes subset of
+// tag properties. Rest can be represented using the fields in BonsaiChangeset.
+// Specifically, the tag's name will be derived from the bookmark pointing to it.
+// The tagger and message will be derived from the changeset author and message fields
+// respectively.
+// NOTE: This does not represent a lightweight tag, which is directly implemented as a
+// bookmark in Mononoke.
+struct BonsaiAnnotatedTag {
+  1: BonsaiAnnotatedTagTarget target;
+  2: optional binary_bytes pgp_signature;
+} (rust.exhaustive)
+
+// Target of an annotated tag imported from Git into Bonsai format.
+union BonsaiAnnotatedTagTarget {
+  1: ChangesetId Changeset; // Commmit, Tree or another Tag
+  2: ContentId Content; // Blob
 } (rust.exhaustive)
 
 struct SnapshotState {

@@ -854,6 +854,7 @@ async fn create_bonsai_changeset(
         git_tree_hash: None,
         file_changes,
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();

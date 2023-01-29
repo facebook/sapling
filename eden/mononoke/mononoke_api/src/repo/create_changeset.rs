@@ -671,6 +671,7 @@ impl RepoContext {
             git_tree_hash: None,
             file_changes,
             is_snapshot: bubble.is_some(),
+            git_annotated_tag: None,
         }
         .freeze()
         .map_err(|e| {

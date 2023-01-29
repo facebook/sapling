@@ -119,6 +119,7 @@ async fn create_bonsai_changeset_from_test_data(
         git_tree_hash: None,
         file_changes,
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap();
@@ -1606,6 +1607,7 @@ pub fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
         git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap()
@@ -1627,6 +1629,7 @@ pub fn create_bonsai_changeset_with_author(
         git_tree_hash: None,
         file_changes: Default::default(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap()
@@ -1648,6 +1651,7 @@ pub fn create_bonsai_changeset_with_files(
         git_tree_hash: None,
         file_changes: file_changes.into(),
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
     .unwrap()

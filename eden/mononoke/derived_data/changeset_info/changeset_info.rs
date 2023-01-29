@@ -316,6 +316,7 @@ mod test {
             git_tree_hash: None,
             file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deletion },
             is_snapshot: false,
+            git_annotated_tag: None,
         }
         .freeze()
         .unwrap()

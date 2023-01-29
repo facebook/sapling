@@ -84,6 +84,7 @@ pub async fn create_bonsai_changeset_object(
         git_tree_hash: None,
         file_changes,
         is_snapshot: false,
+        git_annotated_tag: None,
     }
     .freeze()
 }

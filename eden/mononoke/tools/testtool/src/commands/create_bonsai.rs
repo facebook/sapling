@@ -142,6 +142,7 @@ impl DeserializableBonsaiChangeset {
             }),
             file_changes: files,
             is_snapshot: false,
+            git_annotated_tag: None,
             git_tree_hash: self.git_tree_hash,
         })
     }
