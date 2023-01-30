@@ -1813,13 +1813,7 @@ hgmainfeatures = (
     or None
 )
 
-rustextmodules = [
-    RustExtension(
-        "conch_parser",
-        package="",
-        manifest="edenscmnative/conch_parser/Cargo.toml",
-    )
-]
+rustextmodules = []
 
 rustextbinaries = [
     RustBinary(

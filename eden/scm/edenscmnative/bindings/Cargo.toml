@@ -29,6 +29,7 @@ pycats = { path = "modules/pycats" }
 pycheckout = { path = "modules/pycheckout" }
 pyclientinfo = { path = "modules/pyclientinfo" }
 pycliparser = { path = "modules/pycliparser" }
+pyconchparser = { path = "modules/pyconchparser" }
 pyconfigloader = { path = "modules/pyconfigloader" }
 pycopytrace = { path = "modules/pycopytrace" }
 pydag = { path = "modules/pydag" }

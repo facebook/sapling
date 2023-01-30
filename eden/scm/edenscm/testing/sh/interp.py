@@ -20,8 +20,13 @@ from functools import partial
 from io import BytesIO
 from typing import List, Optional
 
-# pyre-fixme[21]: Could not find module `conch_parser`.
-import conch_parser
+try:
+    # When run inside sapling, 'bindings' is available.
+    from bindings import conchparser as conch_parser
+except ImportError:
+    # When run outside sapling, 'conch_parser' is a separate module.
+    # pyre-fixme[21]: Could not find module `conch_parser`.
+    import conch_parser
 
 from .types import Env, InterpResult, OnError, Scope, ShellExit, ShellReturn
 
