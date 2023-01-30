@@ -301,9 +301,6 @@ impl DiskUsageCmd {
                 .keys()
                 .cloned()
                 .collect();
-            if config_paths.is_empty() {
-                return Err(anyhow!("No EdenFS mount found"));
-            }
             Ok(config_paths)
         }
     }
