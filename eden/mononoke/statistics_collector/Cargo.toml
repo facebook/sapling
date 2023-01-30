@@ -35,7 +35,7 @@ repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }

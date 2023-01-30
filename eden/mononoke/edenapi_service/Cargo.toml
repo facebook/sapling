@@ -56,4 +56,4 @@ tunables = { version = "0.1.0", path = "../tunables" }
 types = { version = "0.1.0", path = "../../scm/lib/types" }
 
 [dev-dependencies]
-tokio = { version = "1.21.2", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
