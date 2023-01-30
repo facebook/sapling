@@ -297,8 +297,6 @@ Test extension help:
        catnotate     (no help text available)
        checkmessagehook
                      (no help text available)
-       checkserverbookmark
-                     (no help text available)
        chistedit
        clienttelemetry
                      provide information about the client in server telemetry
