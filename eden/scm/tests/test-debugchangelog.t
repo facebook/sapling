@@ -297,6 +297,8 @@ Revlog -> Lazy:
       Revlog (not used)
   Commit Hashes: lazy, using EdenAPI
 
+  $ cp -R . ~/repo-lazy2
+
 --remove-backup removes backup files
 
   $ f .hg/store/00changelog.*
@@ -338,3 +340,43 @@ Revlog -> LazyText:
 
   $ hg debugchangelog --migrate lazytext
   $ hg debugchangelog --migrate lazytext
+
+Lazy -> Lazy text
+
+  $ cd ~/repo-lazy2
+  $ hg debugchangelog --migrate lazytext -v
+  8 commits fetched
+
+  $ hg debugchangelog
+  The changelog is backed by Rust. More backend information:
+  Backend (lazytext):
+    Local:
+      Segments + IdMap: $TESTTMP/repo-lazy2/.hg/store/segments/v1
+      Zstore: $TESTTMP/repo-lazy2/.hg/store/hgcommits/v1
+      Revlog + Nodemap: (not used)
+  Feature Providers:
+    Commit Graph Algorithms:
+      Segments
+    Commit Hash / Rev Lookup:
+      IdMap
+    Commit Data (user, message):
+      Zstore (incomplete, draft)
+      EdenAPI (remaining, public)
+      Revlog (not used)
+  Commit Hashes: not lazy
+  $ hg log -Gr: -T '{desc}'
+  o    C
+  ├─╮
+  │ o  D
+  │ │
+  │ o  F
+  │ │
+  │ o  H
+  │
+  │ o  B
+  ├─╯
+  o  A
+  │
+  o  E
+  │
+  o  G

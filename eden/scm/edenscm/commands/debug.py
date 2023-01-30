@@ -596,7 +596,8 @@ def debugchangelog(
       - IdMap (commit hash) is lazy.
       - Commit text is lazy.
       - Revlog is not used.
-      - Cannot migrate away to any other backends.
+      - Can migrate to "lazytext" for testing purpose
+        (esp. segmented-changelog-rev-compat).
       - Migrating to this backend rebuilds the commit graph and invisible
         commits will be lost.
       - Usually used in repos with segmented-changelog capability provided

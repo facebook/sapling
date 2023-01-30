@@ -739,6 +739,9 @@ def migrateto(repo, name):
         return
     if "hgsql" in repo.requirements:
         raise error.Abort(_("cannot migrate hgsql repo"))
+    if "lazychangelog" in repo.storerequirements and name == "lazytext":
+        # Special case: lazy -> lazytext. This is supported for testing cases.
+        return migratelazytolazytext(repo)
     if "lazytextchangelog" in repo.storerequirements and name not in {
         "lazytext",
         "lazy",
@@ -921,6 +924,38 @@ def migratetohybird(repo):
     migratetodoublewrite(repo, "hybridchangelog")
 
 
+def migratelazytolazytext(repo):
+    """Migrate from lazy to lazytext.
+
+    This is done by fetching all commits' ids.
+    """
+    if not util.istest():
+        raise error.Abort(
+            _("migrating from lazy to non-lazy is only supported in tests\n")
+        )
+    with repo.lock():
+        # fetch all commits, the iterctx() interface handles batching.
+        # (use revs(...).prefetch("text").iterctx() to fetch text if needed)
+        ctxs = list(repo.revs("sort(_all(),rev)").iterctx())
+        repo.ui.note_err(_("%d commits fetched\n") % len(ctxs))
+
+        # respect devel.segmented-changelog-rev-compat by rewriting non-master
+        # group ids to ids in the master group.
+        if repo.ui.configbool("devel", "segmented-changelog-rev-compat"):
+            nodes = [c.node() for c in ctxs]
+        else:
+            nodes = []
+
+        # write fetched commits to disk
+        repo.changelog.inner.flush(nodes)
+
+        # update requirements
+        _removechangelogrequirements(repo)
+        repo.storerequirements.add("lazytextchangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+
+
 def migratetosegments(repo):
     """Migrate to full "segmentedchangelog" backend.
 
@@ -1022,20 +1057,21 @@ def _isempty(repo):
     return len(repo.changelog) == 0
 
 
-_BACKEND_REQUIREMENT_MAP = {
-    "doublewritechangelog": "doublewrite",
-    "fullsegments": "segmentedchangelog",
-    "hybrid": "hybridchangelog",
-    "lazy": "lazychangelog",
-    "lazytext": "lazytextchangelog",
-    "pythonrevlog": "pythonrevlogchangelog",
-    "rustrevlog": "rustrevlogchangelog",
-}
+_BACKEND_REQUIREMENT_MAP = [
+    # Order matters, first match wins.
+    # For example, requirements with ["segmentedchangelog", "lazychangelog"]
+    # would return "lazy" as backend, not "fullsegments".
+    ("lazytext", "lazytextchangelog"),
+    ("lazy", "lazychangelog"),
+    ("hybrid", "hybridchangelog"),
+    ("doublewritechangelog", "doublewrite"),
+    ("fullsegments", "segmentedchangelog"),
+]
 
 
 def backendname(repo):
     """Obtain the changelog backend name that can be used as a migrate name"""
-    for name, req in _BACKEND_REQUIREMENT_MAP.items():
+    for name, req in _BACKEND_REQUIREMENT_MAP:
         if req in repo.storerequirements:
             return name
     # Fallback

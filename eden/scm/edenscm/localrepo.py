@@ -1769,7 +1769,7 @@ class localrepository(object):
 
             if (
                 repo.ui.configbool("devel", "segmented-changelog-rev-compat")
-                and "lazychangelog" not in self.storerequirements
+                and "lazychangelog" not in repo.storerequirements
             ):
                 # Preserve the revlog revision number compatibility.  This can
                 # cause fragmentation in the master group, hurt performance.
