@@ -392,7 +392,7 @@ def commitcmd(orig, ui, repo, *pats, **opts):
         and not opts.get("to")
         and not ui.configbool("tweakdefaults", "amendkeepdate")
     ):
-        opts["date"] = currentdate()
+        opts["date"] = currentdate(ui)
     return orig(ui, repo, *pats, **opts)
 
 
@@ -503,7 +503,7 @@ def _analyzewrapper(orig, x, ui):
 
 def _rebase(orig, ui, repo, *pats, **opts):
     if not opts.get("date") and not ui.configbool("tweakdefaults", "rebasekeepdate"):
-        opts["date"] = currentdate()
+        opts["date"] = currentdate(ui)
 
     if opts.get("continue") or opts.get("abort") or opts.get("restack"):
         return orig(ui, repo, *pats, **opts)
@@ -589,19 +589,22 @@ def _checkobsrebasewrapper(orig, repo, ui, *args) -> None:
         orig(repo, ui, *args)
 
 
-def currentdate() -> str:
-    return "%d %d" % util.makedate(time.time())
+def currentdate(ui) -> str:
+    date = ui.configdate("devel", "default-date")
+    if date is None:
+        date = util.makedate()
+    return "%d %d" % date
 
 
 def graftcmd(orig, ui, repo, *revs, **opts):
     if not opts.get("date") and not ui.configbool("tweakdefaults", "graftkeepdate"):
-        opts["date"] = currentdate()
+        opts["date"] = currentdate(ui)
     return orig(ui, repo, *revs, **opts)
 
 
 def absorbcmd(orig, ui, repo, *pats, **opts):
     if not opts.get("date") and not ui.configbool("tweakdefaults", "absorbkeepdate"):
-        opts["date"] = currentdate()
+        opts["date"] = currentdate(ui)
     return orig(ui, repo, *pats, **opts)
 
 
@@ -611,7 +614,7 @@ def amendcmd(orig, ui, repo, *pats, **opts):
         and not opts.get("to")
         and not ui.configbool("tweakdefaults", "amendkeepdate")
     ):
-        opts["date"] = currentdate()
+        opts["date"] = currentdate(ui)
     return orig(ui, repo, *pats, **opts)
 
 
@@ -620,7 +623,7 @@ def histeditcommitfuncfor(orig, repo, src):
 
     def commitfunc(**kwargs):
         if not repo.ui.configbool("tweakdefaults", "histeditkeepdate"):
-            kwargs["date"] = util.makedate(time.time())
+            kwargs["date"] = currentdate(repo.ui)
         origcommitfunc(**kwargs)
 
     return commitfunc

@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/histedit-helpers.sh"
 
@@ -11,8 +10,8 @@
 
 Setup repo
 
-  $ hg init repo
-  $ cd repo
+  $ configure modern
+  $ newclientrepo repo
   $ touch a
   $ hg commit -Aqm a
   $ mkdir dir
@@ -264,9 +263,9 @@ This tag is kept to keep the rest of the test consistent:
 Test graft date when tweakdefaults.graftkeepdate is not set
   $ hg revert -a -q
   $ hg up -q 'desc(a2)'
-  $ hg graft -q 'desc(b) & mybook'
-  $ hg log -T "{desc}\n" -d "yesterday to today"
-  b
+  $ hg graft -q 'desc(b) & mybook' --config devel.default-date='2 2'
+  $ hg log -l 1 -T "{date} {desc}\n"
+  2.02 b
 
 Test graft date when tweakdefaults.graftkeepdate is not set and --date is provided
   $ hg up -q 'desc(a2)'
@@ -285,9 +284,9 @@ Test amend date when tweakdefaults.amendkeepdate is not set
   $ echo x > a
   $ hg commit -Aqm "commit for amend"
   $ echo x > a
-  $ hg amend -q -m "amended message"
-  $ hg log -T "{desc}\n" -d "yesterday to today"
-  amended message
+  $ hg amend -q -m "amended message" --config devel.default-date='2 2'
+  $ hg log -l 1 -T "{date} {desc}\n"
+  2.02 amended message
 
 Test amend date when tweakdefaults.amendkeepdate is set
   $ touch new_file
@@ -328,9 +327,9 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ echo test_1 > rebase_source
   $ hg commit --date "1 1" -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_1
-  $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1
-  $ hg log -l 1 -T "{desc}\n" -d "yesterday to today"
-  source commit for rebase
+  $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1 --config devel.default-date='2 2'
+  $ hg log -l 1 -T "{date} {desc}\n"
+  2.02 source commit for rebase
 
 Test rebase date when tweakdefaults.rebasekeepdate is set
   $ echo test_2 > rebase_dest
@@ -355,10 +354,18 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   $ hg commit -Aqm "commit 2 for histedit"
   $ echo test_3 > histedit_3
   $ hg commit -Aqm "commit 3 for histedit"
+  $ tglogp --limit 3
+  @  1cd28f082aaa draft 'commit 3 for histedit' histedit_test
+  │
+  o  ae01c7e395dd draft 'commit 2 for histedit'
+  │
+  o  08116b82180a draft 'commit 1 for histedit'
+  │
+  ~
   $ hg histedit "desc('commit 1 for histedit')" --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
-  > pick 22
-  > pick 24
-  > pick 23
+  > pick 08116b82180a
+  > pick 1cd28f082aaa
+  > pick ae01c7e395dd
   > EOF
   $ hg log -l 3 -T "{date} {desc}\n"
   0.00 commit 2 for histedit
@@ -366,14 +373,22 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   0.00 commit 1 for histedit
 
 Test histedit date when tweakdefaults.histeditkeepdate is not set
-  $ hg histedit "desc('commit 1 for histedit')" --commands - 2>&1 <<EOF| fixbundle
-  > pick 22
-  > pick 26
-  > pick 25
+  $ tglogp --limit 3
+  @  8baf563aea27 draft 'commit 2 for histedit' histedit_test
+  │
+  o  0d8ef43b4a3b draft 'commit 3 for histedit'
+  │
+  o  08116b82180a draft 'commit 1 for histedit'
+  │
+  ~
+  $ hg histedit "desc('commit 1 for histedit')" --config devel.default-date='2 2' --commands - 2>&1 <<EOF| fixbundle
+  > pick 08116b82180a
+  > pick 8baf563aea27
+  > pick 0d8ef43b4a3b
   > EOF
-  $ hg log -l 2 -T "{desc}\n" -d "yesterday to today"
-  commit 3 for histedit
-  commit 2 for histedit
+  $ hg log -l 2 -T "{date} {desc}\n"
+  2.02 commit 3 for histedit
+  2.02 commit 2 for histedit
 
 Test diff --per-file-stat
   $ echo a >> a
@@ -385,8 +400,7 @@ Test diff --per-file-stat
 
 Test rebase with showupdated=True
   $ cd $TESTTMP
-  $ hg init showupdated
-  $ cd showupdated
+  $ newclientrepo showupdated
   $ cat >> .hg/hgrc <<EOF
   > [tweakdefaults]
   > showupdated=True
@@ -409,7 +423,7 @@ Test rebase with showupdated=True
 
 Test rebase with showupdate=True and a lot of source revisions
 
-  $ newrepo
+  $ newclientrepo
   $ setconfig tweakdefaults.showupdated=1 tweakdefaults.rebasekeepdate=1
   $ drawdag << 'EOS'
   > B C

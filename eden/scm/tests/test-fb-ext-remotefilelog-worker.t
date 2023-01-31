@@ -64,5 +64,5 @@ Shallow clone
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [02b5b1] x
-  $ hg amend
+  $ hg amend --date "1 1"
   rebasing 02663ae2e9f7 "y"
