@@ -27,7 +27,6 @@ use phases::ArcPhases;
 use phases::Phases;
 use rendezvous::RendezVousOptions;
 use repo_identity::RepoIdentityRef;
-use sql_commit_graph_storage::SqlCommitGraphStorage;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 
 use super::checkpoints::CommitGraphBackfillerCheckpoints;
@@ -102,7 +101,7 @@ impl Phases for FakeAllCommitsPublic {
 async fn backfill_impl(
     ctx: &CoreContext,
     commit_graph: &CommitGraph,
-    buffered_sql_storage: &BufferedCommitGraphStorage<SqlCommitGraphStorage>,
+    buffered_sql_storage: &BufferedCommitGraphStorage,
     checkpoints: &CommitGraphBackfillerCheckpoints,
     repo: &Repo,
     args: BackfillArgs,
@@ -175,17 +174,18 @@ pub(super) async fn backfill(
     repo: &Repo,
     args: BackfillArgs,
 ) -> Result<()> {
-    let sql_storage = app
-        .repo_factory()
-        .sql_factory(&repo.repo_config().storage_config.metadata)
-        .await?
-        .open::<SqlCommitGraphStorageBuilder>()?
-        .build(
-            RendezVousOptions {
-                free_connections: 5,
-            },
-            repo.repo_identity().id(),
-        );
+    let sql_storage = Arc::new(
+        app.repo_factory()
+            .sql_factory(&repo.repo_config().storage_config.metadata)
+            .await?
+            .open::<SqlCommitGraphStorageBuilder>()?
+            .build(
+                RendezVousOptions {
+                    free_connections: 5,
+                },
+                repo.repo_identity().id(),
+            ),
+    );
     let buffered_sql_storage = Arc::new(BufferedCommitGraphStorage::new(
         sql_storage,
         args.max_in_memory_size,

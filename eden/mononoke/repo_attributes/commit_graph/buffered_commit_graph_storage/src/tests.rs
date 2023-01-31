@@ -22,9 +22,11 @@ use crate::BufferedCommitGraphStorage;
 async fn test_buffered_sqlite_storage_store_and_fetch(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 
@@ -35,9 +37,11 @@ async fn test_buffered_sqlite_storage_store_and_fetch(fb: FacebookInit) -> Resul
 async fn test_buffered_sqlite_skip_tree(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 
@@ -48,9 +52,11 @@ async fn test_buffered_sqlite_skip_tree(fb: FacebookInit) -> Result<()> {
 async fn test_buffered_sqlite_p1_linear_tree(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 
@@ -61,9 +67,11 @@ async fn test_buffered_sqlite_p1_linear_tree(fb: FacebookInit) -> Result<()> {
 async fn test_buffered_sqlite_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 
@@ -74,9 +82,11 @@ async fn test_buffered_sqlite_get_ancestors_difference(fb: FacebookInit) -> Resu
 async fn test_buffered_sqlite_find_by_prefix(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 
@@ -87,9 +97,11 @@ async fn test_buffered_sqlite_find_by_prefix(fb: FacebookInit) -> Result<()> {
 async fn test_buffered_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 
@@ -100,9 +112,11 @@ async fn test_buffered_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
 async fn test_buffered_sqlite_get_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(BufferedCommitGraphStorage::new(
-        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        Arc::new(
+            SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+                .unwrap()
+                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+        ),
         5,
     ));
 

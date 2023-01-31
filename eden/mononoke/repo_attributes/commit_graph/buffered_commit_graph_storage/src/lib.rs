@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -23,16 +24,16 @@ use vec1::Vec1;
 #[cfg(test)]
 mod tests;
 
-pub struct BufferedCommitGraphStorage<T: CommitGraphStorage> {
+pub struct BufferedCommitGraphStorage {
     in_memory_storage: InMemoryCommitGraphStorage,
-    persistent_storage: T,
+    persistent_storage: Arc<dyn CommitGraphStorage>,
     /// The maximum number of changeset edges
     /// allowed to be stored in memory.
     max_in_memory_size: usize,
 }
 
-impl<T: CommitGraphStorage> BufferedCommitGraphStorage<T> {
-    pub fn new(persistent_storage: T, max_in_memory_size: usize) -> Self {
+impl BufferedCommitGraphStorage {
+    pub fn new(persistent_storage: Arc<dyn CommitGraphStorage>, max_in_memory_size: usize) -> Self {
         Self {
             in_memory_storage: InMemoryCommitGraphStorage::new(persistent_storage.repo_id()),
             persistent_storage,
@@ -52,7 +53,7 @@ impl<T: CommitGraphStorage> BufferedCommitGraphStorage<T> {
 }
 
 #[async_trait]
-impl<T: CommitGraphStorage> CommitGraphStorage for BufferedCommitGraphStorage<T> {
+impl CommitGraphStorage for BufferedCommitGraphStorage {
     fn repo_id(&self) -> RepositoryId {
         self.persistent_storage.repo_id()
     }
