@@ -33,7 +33,13 @@
     "eject": "react-scripts eject",
     "eslint": "eslint ./src --ext .ts --ext .tsx"
   },
-  "proxy": "http://localhost:3001",
+  "options": {
+    "allowedHosts": [
+      "localhost",
+      ".localhost"
+    ],
+    "proxy": "https://localhost:3001"
+  },
   "browserslist": {
     "production": [
       ">0.2%",
