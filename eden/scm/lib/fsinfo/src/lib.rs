@@ -18,6 +18,8 @@ use self::freebsd::fstype as fstype_imp;
 use self::linux::fstype as fstype_imp;
 #[cfg(target_os = "macos")]
 use self::macos::fstype as fstype_imp;
+#[cfg(target_os = "freebsd")]
+use self::freebsd::fstype as fstype_imp;
 #[cfg(windows)]
 use self::windows::fstype as fstype_imp;
 
