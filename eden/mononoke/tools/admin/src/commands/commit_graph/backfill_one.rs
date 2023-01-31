@@ -11,17 +11,17 @@ use clap::Args;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
-use mononoke_types::ChangesetId;
 use smallvec::ToSmallVec;
 use vec1::vec1;
 
 use super::Repo;
+use crate::commit_id::parse_commit_id;
 
 #[derive(Args)]
 pub struct BackfillOneArgs {
-    /// Commit ID to backfill (bonsai)
+    /// Commit ID to backfill
     #[clap(long, short = 'i')]
-    commit_id: ChangesetId,
+    commit_id: String,
 }
 
 pub(super) async fn backfill_one(
@@ -29,15 +29,17 @@ pub(super) async fn backfill_one(
     repo: &Repo,
     args: BackfillOneArgs,
 ) -> Result<()> {
+    let cs_id = parse_commit_id(ctx, repo, &args.commit_id).await?;
+
     let changeset_fetcher = repo.changeset_fetcher_arc();
     let parents = changeset_fetcher
-        .get_parents(ctx, args.commit_id)
+        .get_parents(ctx, cs_id)
         .await?
         .to_smallvec();
 
     let (stats, result) = repo
         .commit_graph()
-        .add_recursive(ctx, changeset_fetcher, vec1![(args.commit_id, parents)])
+        .add_recursive(ctx, changeset_fetcher, vec1![(cs_id, parents)])
         .timed()
         .await;
 
