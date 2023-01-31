@@ -57,3 +57,7 @@ code {
   align-items: center;
   justify-content: center;
 }
+
+vscode-button::part(content) {
+  white-space: nowrap;
+}
