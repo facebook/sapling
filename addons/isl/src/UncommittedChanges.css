@@ -72,14 +72,21 @@
   align-items: center;
   gap: var(--halfpad);
   margin-right: var(--halfpad);
-  cursor: pointer;
   transition: color 0.1s;
-}
-.changed-file:hover {
-  color: var(--highlight-foreground);
 }
 
 .changed-file-path {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  cursor: pointer;
+}
+
+.changed-file-path:hover {
+  color: var(--highlight-foreground);
+}
+
+.changed-file-path-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

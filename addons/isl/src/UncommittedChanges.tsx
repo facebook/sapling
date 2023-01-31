@@ -89,14 +89,14 @@ export function ChangedFiles({
                 }}
               />
             )}
-            <Icon icon={icon} />
             <span
               className="changed-file-path"
-              title={file.path}
               onClick={() => {
                 platform.openFile(file.path);
-              }}>
-              {file.path}
+              }}
+              title={file.path}>
+              <Icon icon={icon} />
+              <span className="changed-file-path-text">{file.path}</span>
             </span>
             {showFileActions ? <FileActions file={file} /> : null}
           </div>
