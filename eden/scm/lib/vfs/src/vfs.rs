@@ -460,6 +460,7 @@ fn case_sensitive(root: &Path, fs_type: &FsType) -> Result<bool> {
         FsType::BTRFS => return Ok(true),
         FsType::EXT4 => return Ok(true),
         FsType::XFS => return Ok(true),
+        FsType::UFS => return Ok(true),
         FsType::TMPFS => return Ok(true),
         _ => {}
     }

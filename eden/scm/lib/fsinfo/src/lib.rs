@@ -16,6 +16,8 @@ use anyhow::Result;
 use self::linux::fstype as fstype_imp;
 #[cfg(target_os = "macos")]
 use self::macos::fstype as fstype_imp;
+#[cfg(target_os = "freebsd")]
+use self::freebsd::fstype as fstype_imp;
 #[cfg(windows)]
 use self::windows::fstype as fstype_imp;
 
@@ -28,6 +30,8 @@ pub enum FsType {
     EXT4,
     BTRFS,
     XFS,
+    UFS,
+    ZFS,
     NFS,
     FUSE,
     TMPFS,
@@ -46,6 +50,8 @@ impl fmt::Display for FsType {
             FsType::EXT4 => write!(f, "ext4"),
             FsType::BTRFS => write!(f, "Btrfs"),
             FsType::XFS => write!(f, "XFS"),
+            FsType::UFS => write!(f, "UFS"),
+            FsType::ZFS => write!(f, "ZFS"),
             FsType::NFS => write!(f, "NFS"),
             FsType::FUSE => write!(f, "FUSE"),
             FsType::TMPFS => write!(f, "tmpfs"),
@@ -363,6 +369,30 @@ mod macos {
                 "macfuse_eden" => FsType::EDENFS,
                 "osxfuse_eden" => FsType::EDENFS,
                 "edenfs:" => FsType::EDENFS,
+                _ => FsType::Unknown(value.to_string()),
+            }
+        }
+    }
+
+    pub fn fstype(path: &Path) -> Result<FsType> {
+        let fs_stat = super::unix::get_statfs(path)?;
+        let fs = unsafe { CStr::from_ptr(fs_stat.f_fstypename.as_ptr()) };
+
+        Ok(fs.to_str()?.into())
+    }
+}
+
+#[cfg(target_os = "freebsd")]
+mod freebsd {
+    use std::ffi::CStr;
+
+    use super::*;
+
+    impl<'a> From<&'a str> for FsType {
+        fn from(value: &'a str) -> Self {
+            match value {
+                "ufs" => FsType::UFS,
+                "zfs" => FsType::ZFS,
                 _ => FsType::Unknown(value.to_string()),
             }
         }
