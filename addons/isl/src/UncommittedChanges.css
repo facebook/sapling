@@ -95,6 +95,11 @@
   text-align: left;
 }
 
+.file-actions {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
 .file-actions .tooltip-creator {
   display: inline-flex;
 }
