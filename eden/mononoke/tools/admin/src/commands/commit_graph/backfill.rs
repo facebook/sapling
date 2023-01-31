@@ -14,8 +14,10 @@ use async_trait::async_trait;
 use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
+use caching_commit_graph_storage::CachingCommitGraphStorage;
 use clap::Args;
 use commit_graph::CommitGraph;
+use commit_graph_types::storage::CommitGraphStorage;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -174,28 +176,46 @@ pub(super) async fn backfill(
     repo: &Repo,
     args: BackfillArgs,
 ) -> Result<()> {
-    let sql_storage = Arc::new(
-        app.repo_factory()
-            .sql_factory(&repo.repo_config().storage_config.metadata)
-            .await?
-            .open::<SqlCommitGraphStorageBuilder>()?
-            .build(
-                RendezVousOptions {
-                    free_connections: 5,
-                },
-                repo.repo_identity().id(),
-            ),
-    );
+    let sql_storage = app
+        .repo_factory()
+        .sql_factory(&repo.repo_config().storage_config.metadata)
+        .await?
+        .open::<SqlCommitGraphStorageBuilder>()?
+        .build(
+            RendezVousOptions {
+                free_connections: 5,
+            },
+            repo.repo_identity().id(),
+        );
+    let maybe_cached_sql_storage: Arc<dyn CommitGraphStorage> = match app.environment().caching {
+        environment::Caching::Enabled(_) => {
+            if let Some(pool) = cachelib::get_volatile_pool("commit_graph")
+                .with_context(|| "Missing commit_graph cache pool")?
+            {
+                Arc::new(CachingCommitGraphStorage::new(
+                    ctx.fb,
+                    Arc::new(sql_storage),
+                    pool,
+                ))
+            } else {
+                Arc::new(sql_storage)
+            }
+        }
+        _ => Arc::new(sql_storage),
+    };
     let buffered_sql_storage = Arc::new(BufferedCommitGraphStorage::new(
-        sql_storage,
+        maybe_cached_sql_storage,
         args.max_in_memory_size,
     ));
+
     let commit_graph = CommitGraph::new(buffered_sql_storage.clone());
+
     let checkpoints: CommitGraphBackfillerCheckpoints = app
         .repo_factory()
         .sql_factory(&repo.repo_config().storage_config.metadata)
         .await?
         .open()?;
+
     backfill_impl(
         ctx,
         &commit_graph,
