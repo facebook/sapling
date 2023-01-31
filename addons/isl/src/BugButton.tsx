@@ -28,7 +28,7 @@ export function BugButton() {
   );
 }
 
-function BugDropdown() {
+function BugDropdown({dismiss}: {dismiss: () => void}) {
   const info = useRecoilValue(applicationinfo);
   return (
     <DropdownFields
@@ -52,7 +52,7 @@ function BugDropdown() {
           <Icon icon="book" slot="start" />
           <T>View Documentation</T>
         </VSCodeButton>
-        <FileABug />
+        <FileABug dismissBugDropdown={dismiss} />
       </div>
       {/*
       // TODO: enable these debug actions
@@ -79,7 +79,7 @@ function BugDropdown() {
   );
 }
 
-function FileABug() {
+function FileABug({dismissBugDropdown}: {dismissBugDropdown: () => void}) {
   return (
     // prettier-ignore
     // @fb-only

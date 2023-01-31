@@ -63,12 +63,12 @@ export function Tooltip({
   {trigger: 'manual'; shouldShow: boolean},
   {trigger?: 'hover' | 'click' | 'disabled'}
 > &
-  ExclusiveOr<{component: () => JSX.Element}, {title: string}>) {
+  ExclusiveOr<{component: (props: {dismiss: () => void}) => JSX.Element}, {title: string}>) {
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const content = Component == null ? title : <Component />;
+  const content = Component == null ? title : <Component dismiss={() => setVisible(false)} />;
   useEffect(() => {
     if (typeof shouldShow === 'boolean') {
       setVisible(shouldShow);
