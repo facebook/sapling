@@ -825,7 +825,7 @@ impl HgRepoContext {
                     let bonsai_common =
                         hg_bonsai_common.iter().map(|(_, bcs_id)| *bcs_id).collect();
 
-                    self.repo().repo().commit_graph.get_ancestors_difference(
+                    self.repo().repo().commit_graph.ancestors_difference(
                         &ctx,
                         bonsai_heads,
                         bonsai_common,

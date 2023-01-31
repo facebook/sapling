@@ -47,7 +47,7 @@ pub async fn ancestors_difference(
 
     let ancestors = repo
         .commit_graph()
-        .get_ancestors_difference(ctx, heads, common)
+        .ancestors_difference(ctx, heads, common)
         .await?;
 
     for cs_id in ancestors {

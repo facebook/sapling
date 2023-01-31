@@ -552,7 +552,7 @@ impl CommitGraph {
     /// Note: The property needs to be monotonic i.e. if the
     /// property holds for one changeset then it has to hold
     /// for all its parents.
-    pub async fn get_ancestors_frontier_with(
+    pub async fn ancestors_frontier_with(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
@@ -641,7 +641,7 @@ impl CommitGraph {
     /// Note: The property needs to be monotonic i.e. if the
     /// property holds for one changeset then it has to hold
     /// for all its parents.
-    pub async fn get_ancestors_difference_with(
+    pub async fn ancestors_difference_with(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
@@ -690,13 +690,13 @@ impl CommitGraph {
 
     /// Returns all ancestors of any changeset in heads, excluding
     /// any ancestor of any changeset in common.
-    pub async fn get_ancestors_difference(
+    pub async fn ancestors_difference(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
         common: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>> {
-        self.get_ancestors_difference_with(ctx, heads, common, |_| false)
+        self.ancestors_difference_with(ctx, heads, common, |_| false)
             .await
     }
 }

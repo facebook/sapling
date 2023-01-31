@@ -61,7 +61,7 @@ async fn test_cached_sqlite_p1_linear_tree(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
-async fn test_cached_sqlite_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
+async fn test_cached_sqlite_ancestors_difference(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(CachingCommitGraphStorage::mocked(Arc::new(
         SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
@@ -69,7 +69,7 @@ async fn test_cached_sqlite_get_ancestors_difference(fb: FacebookInit) -> Result
             .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
     )));
 
-    test_get_ancestors_difference(&ctx, storage.clone()).await?;
+    test_ancestors_difference(&ctx, storage.clone()).await?;
     assert!(storage.cachelib.mock_store().unwrap().stats().hits > 0);
     Ok(())
 }

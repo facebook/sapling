@@ -242,7 +242,7 @@ pub async fn test_p1_linear_tree(
     Ok(())
 }
 
-pub async fn test_get_ancestors_difference(
+pub async fn test_ancestors_difference(
     ctx: &CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
@@ -259,7 +259,7 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
-    assert_get_ancestors_difference(
+    assert_ancestors_difference(
         &graph,
         ctx,
         vec!["K"],
@@ -268,7 +268,7 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
-    assert_get_ancestors_difference(
+    assert_ancestors_difference(
         &graph,
         ctx,
         vec!["K", "U"],
@@ -280,12 +280,12 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
-    assert_get_ancestors_difference(&graph, ctx, vec!["K"], vec!["G"], vec!["K", "J", "I", "H"])
+    assert_ancestors_difference(&graph, ctx, vec!["K"], vec!["G"], vec!["K", "J", "I", "H"])
         .await?;
 
-    assert_get_ancestors_difference(&graph, ctx, vec!["K", "I"], vec!["J"], vec!["K"]).await?;
+    assert_ancestors_difference(&graph, ctx, vec!["K", "I"], vec!["J"], vec!["K"]).await?;
 
-    assert_get_ancestors_difference(
+    assert_ancestors_difference(
         &graph,
         ctx,
         vec!["I"],
@@ -294,7 +294,7 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
-    assert_get_ancestors_difference(
+    assert_ancestors_difference(
         &graph,
         ctx,
         vec!["J", "S"],
@@ -308,7 +308,7 @@ pub async fn test_get_ancestors_difference(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
-    assert_get_ancestors_difference_with(
+    assert_ancestors_difference_with(
         &graph,
         ctx,
         vec!["J", "S"],
@@ -318,7 +318,7 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
-    assert_get_ancestors_difference_with(
+    assert_ancestors_difference_with(
         &graph,
         ctx,
         vec!["K"],
@@ -333,7 +333,7 @@ pub async fn test_get_ancestors_difference(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
-    assert_get_ancestors_difference_with(
+    assert_ancestors_difference_with(
         &graph,
         ctx,
         vec!["H"],
@@ -343,7 +343,7 @@ pub async fn test_get_ancestors_difference(
     )
     .await?;
 
-    assert_get_ancestors_difference_with(
+    assert_ancestors_difference_with(
         &graph,
         ctx,
         vec!["H"],
@@ -500,7 +500,7 @@ pub async fn test_add_recursive(
     Ok(())
 }
 
-pub async fn test_get_ancestors_frontier_with(
+pub async fn test_ancestors_frontier_with(
     ctx: &CoreContext,
     storage: Arc<dyn CommitGraphStorage>,
 ) -> Result<()> {
@@ -522,7 +522,7 @@ pub async fn test_get_ancestors_frontier_with(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
-    assert_get_ancestors_frontier_with(
+    assert_ancestors_frontier_with(
         &graph,
         ctx,
         vec!["K", "U"],
@@ -536,7 +536,7 @@ pub async fn test_get_ancestors_frontier_with(
         .map(name_cs_id)
         .collect::<HashSet<_>>();
 
-    assert_get_ancestors_frontier_with(
+    assert_ancestors_frontier_with(
         &graph,
         ctx,
         vec!["D", "F"],
@@ -545,7 +545,7 @@ pub async fn test_get_ancestors_frontier_with(
     )
     .await?;
 
-    assert_get_ancestors_frontier_with(
+    assert_ancestors_frontier_with(
         &graph,
         ctx,
         vec!["G"],
@@ -554,7 +554,7 @@ pub async fn test_get_ancestors_frontier_with(
     )
     .await?;
 
-    assert_get_ancestors_frontier_with(
+    assert_ancestors_frontier_with(
         &graph,
         ctx,
         vec!["K"],
@@ -563,7 +563,7 @@ pub async fn test_get_ancestors_frontier_with(
     )
     .await?;
 
-    assert_get_ancestors_frontier_with(
+    assert_ancestors_frontier_with(
         &graph,
         ctx,
         vec!["D"],

@@ -164,7 +164,7 @@ pub async fn assert_skip_tree_lowest_common_ancestor(
     Ok(())
 }
 
-pub async fn assert_get_ancestors_difference_with(
+pub async fn assert_ancestors_difference_with(
     graph: &CommitGraph,
     ctx: &CoreContext,
     heads: Vec<&str>,
@@ -177,7 +177,7 @@ pub async fn assert_get_ancestors_difference_with(
 
     assert_eq!(
         graph
-            .get_ancestors_difference_with(ctx, heads, common, property_fn)
+            .ancestors_difference_with(ctx, heads, common, property_fn)
             .await?
             .into_iter()
             .collect::<HashSet<_>>(),
@@ -189,7 +189,7 @@ pub async fn assert_get_ancestors_difference_with(
     Ok(())
 }
 
-pub async fn assert_get_ancestors_difference(
+pub async fn assert_ancestors_difference(
     graph: &CommitGraph,
     ctx: &CoreContext,
     heads: Vec<&str>,
@@ -201,7 +201,7 @@ pub async fn assert_get_ancestors_difference(
 
     assert_eq!(
         graph
-            .get_ancestors_difference(ctx, heads, common)
+            .ancestors_difference(ctx, heads, common)
             .await?
             .into_iter()
             .collect::<HashSet<_>>(),
@@ -213,7 +213,7 @@ pub async fn assert_get_ancestors_difference(
     Ok(())
 }
 
-pub async fn assert_get_ancestors_frontier_with(
+pub async fn assert_ancestors_frontier_with(
     graph: &CommitGraph,
     ctx: &CoreContext,
     heads: Vec<&str>,
@@ -224,7 +224,7 @@ pub async fn assert_get_ancestors_frontier_with(
 
     assert_eq!(
         graph
-            .get_ancestors_frontier_with(ctx, heads, property_fn)
+            .ancestors_frontier_with(ctx, heads, property_fn)
             .await?
             .into_iter()
             .collect::<HashSet<_>>(),

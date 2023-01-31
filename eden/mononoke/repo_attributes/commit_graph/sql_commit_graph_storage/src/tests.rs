@@ -54,7 +54,7 @@ async fn test_sqlite_p1_linear_tree(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
-async fn test_sqlite_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
+async fn test_sqlite_ancestors_difference(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(
         SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
@@ -62,7 +62,7 @@ async fn test_sqlite_get_ancestors_difference(fb: FacebookInit) -> Result<()> {
             .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
     );
 
-    test_get_ancestors_difference(&ctx, storage).await
+    test_ancestors_difference(&ctx, storage).await
 }
 
 #[fbinit::test]
@@ -90,7 +90,7 @@ async fn test_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
-async fn test_sqlite_get_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
+async fn test_sqlite_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let storage = Arc::new(
         SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
@@ -98,5 +98,5 @@ async fn test_sqlite_get_ancestors_frontier_with(fb: FacebookInit) -> Result<()>
             .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
     );
 
-    test_get_ancestors_frontier_with(&ctx, storage).await
+    test_ancestors_frontier_with(&ctx, storage).await
 }
