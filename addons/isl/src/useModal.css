@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.options-modal-buttons {
+.use-modal-buttons {
   display: flex;
   flex-direction: row;
   gap: var(--pad);
@@ -13,11 +13,11 @@
   margin: var(--pad) calc(2 * var(--pad));
 }
 
-.options-modal-buttons vscode-button {
+.use-modal-buttons vscode-button {
   min-width: 5em;
 }
 
-.options-modal {
+.use-modal {
   padding: var(--pad);
   display: flex;
   flex-direction: column;
@@ -25,7 +25,7 @@
   justify-content: space-between;
 }
 
-#options-modal-title {
+#use-modal-title {
   font-weight: bold;
   margin: var(--pad) 0;
   display: flex;
@@ -34,7 +34,7 @@
   align-items: center;
 }
 
-#options-modal-title,
-#options-modal-message {
+#use-modal-title,
+#use-modal-message {
   padding: 0 var(--pad);
 }

@@ -19,10 +19,10 @@ import {Icon} from './Icon';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {I18nSupport, t, T} from './i18n';
-import {OptionsModal} from './optionsModal';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
 import {ThemeRoot} from './theme';
+import {ModalContainer} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
 import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
@@ -42,7 +42,7 @@ export default function App() {
                 <ISLDrawers />
                 <div className="tooltip-root-container" data-testid="tooltip-root-container" />
                 <ComparisonViewModal />
-                <OptionsModal />
+                <ModalContainer />
                 <ContextMenus />
               </ErrorBoundary>
             </ISLCommandContext>

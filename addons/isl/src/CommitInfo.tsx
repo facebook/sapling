@@ -30,7 +30,6 @@ import {CommitOperation} from './operations/CommitOperation';
 import {GhStackSubmitOperation} from './operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from './operations/PrSubmitOperation';
 import {SetConfigOperation} from './operations/SetConfigOperation';
-import {useOptionModal} from './optionsModal';
 import platform from './platform';
 import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
@@ -41,6 +40,7 @@ import {
   repositoryInfo,
   useRunOperation,
 } from './serverAPIState';
+import {useModal} from './useModal';
 import {assert, firstOfIterable} from './utils';
 import {
   VSCodeBadge,
@@ -458,7 +458,7 @@ function ActionsBar({
     deselectIfHeadIsSelected();
   };
 
-  const showOptionModal = useOptionModal();
+  const showOptionModal = useModal();
 
   const codeReviewProviderName =
     repoInfo?.type === 'success' ? repoInfo.codeReviewSystem.type : 'unknown';
