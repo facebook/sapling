@@ -41,3 +41,9 @@
 
   $ HGCOLORS=8 hg testcolor --config color.test.test="#359:color68+italic:brightblue:blue+bold underline"
   \x1b[0m\x1b[1m\x1b[4m\x1b[34moutput\x1b[0m (esc)
+
+
+Don't crash on invalid utf-8:
+
+  $ hg testcolor --config color.test.test=blue --config alias.testcolor="debugtemplate '{label(\"test.test\", \"\x96\x96\n\")}'"
+  [34m??[39m

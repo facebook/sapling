@@ -340,8 +340,11 @@ def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
                 ui._styler = bindings.io.styler(supportedcolors(ui))
 
             style = " ".join(ui._styles.get(l, l) for l in label.split())
-            if usebytes:
-                msg = decodeutf8(msg)
+            if not usebytes:
+                # Roundtrip strings to clear out non-utf8 characters.
+                msg = encodeutf8(msg, errors="replace")
+
+            msg = decodeutf8(msg, errors="replace")
             styled = ui._styler.renderbytes(style, msg)
             if not usebytes:
                 styled = styled.decode()
