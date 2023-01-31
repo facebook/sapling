@@ -101,3 +101,17 @@ async fn test_cached_sqlite_add_recursive(fb: FacebookInit) -> Result<()> {
     assert!(storage.cachelib.mock_store().unwrap().stats().hits > 0);
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_cached_sqlite_ancestors_frontier_with(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let storage = Arc::new(CachingCommitGraphStorage::mocked(Arc::new(
+        SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+    )));
+
+    test_ancestors_frontier_with(&ctx, storage.clone()).await?;
+    assert!(storage.cachelib.mock_store().unwrap().stats().hits > 0);
+    Ok(())
+}
