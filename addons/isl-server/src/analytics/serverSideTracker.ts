@@ -8,7 +8,7 @@
 import type {Repository} from '../Repository';
 import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
-import type {ApplicationInfo, TrackDataWithEventName} from './types';
+import type {ApplicationInfo, FullTrackData, TrackDataWithEventName} from './types';
 
 import {generateAnalyticsInfo} from './environment';
 // @fb-only
@@ -24,7 +24,7 @@ class ServerSideContext {
   }
 }
 
-const noOp = () => {
+const noOp = (_data: FullTrackData, _logger: Logger) => {
   /* In open source builds, analytics tracking is completely disabled/removed. */
 };
 
