@@ -18,6 +18,7 @@ import {DiffInfo} from './codeReview/DiffBadge';
 import {isDescendant} from './getCommitTree';
 import {t, T} from './i18n';
 import {GotoOperation} from './operations/GotoOperation';
+import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {CommitPreview, operationBeingPreviewed} from './previews';
 import {RelativeDate} from './relativeDate';
@@ -32,6 +33,7 @@ import {
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
+import {useContextMenu} from 'shared/ContextMenu';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
   switch (previewType) {
@@ -40,6 +42,8 @@ function isDraggablePreview(previewType?: CommitPreview): boolean {
     case CommitPreview.REBASE_DESCENDANT:
     // old commits are already being dragged
     case CommitPreview.REBASE_OLD:
+    case CommitPreview.HIDDEN_ROOT:
+    case CommitPreview.HIDDEN_DESCENDANT:
       return false;
 
     // you CAN let go of the preview and drag it again
@@ -64,6 +68,8 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
     case CommitPreview.REBASE_OLD:
     case CommitPreview.REBASE_DESCENDANT:
     case CommitPreview.REBASE_ROOT:
+    case CommitPreview.HIDDEN_ROOT:
+    case CommitPreview.HIDDEN_DESCENDANT:
       return true;
   }
   return false;
@@ -103,6 +109,29 @@ export const Commit = memo(
       }));
     }
 
+    const handleHideClick = useRecoilCallback(
+      ({snapshot, set}) =>
+        () => {
+          console.log('Part ONE of handling click');
+          const loadable = snapshot.getLoadable(latestCommitTreeMap);
+          if (loadable.state !== 'hasValue') {
+            return;
+          }
+          console.log('Part 2 of handling click');
+          set(operationBeingPreviewed, new HideOperation(commit.hash));
+        },
+      [commit],
+    );
+
+    const contextMenu = useContextMenu(() => {
+      return [
+        {
+          label: <T>Mudamudamuda</T>,
+          onClick: handleHideClick,
+        },
+      ];
+    });
+
     return (
       <div
         className={
@@ -126,6 +155,7 @@ export const Commit = memo(
             draggable={!isPublic && isDraggablePreview(previewType)}
             onClick={onClickToSelect}
             onDoubleClick={onDoubleClickToShowDrawer}>
+            onContextMenu={contextMenu}
             <div className="commit-avatar" />
             {isPublic ? null : (
               <span className="commit-title">
@@ -158,6 +188,20 @@ export const Commit = memo(
                   appearance="primary"
                   onClick={() => handlePreviewedOperation(/* cancel */ false)}>
                   <T>Run Rebase</T>
+                </VSCodeButton>
+              </>
+            ) : null}
+            {previewType === CommitPreview.HIDDEN_ROOT ? (
+              <>
+                <VSCodeButton
+                  appearance="secondary"
+                  onClick={() => handlePreviewedOperation(/* cancel */ true)}>
+                  <T>Cancel</T>
+                </VSCodeButton>
+                <VSCodeButton
+                  appearance="primary"
+                  onClick={() => handlePreviewedOperation(/* cancel */ false)}>
+                  <T>Hide</T>
                 </VSCodeButton>
               </>
             ) : null}
@@ -307,6 +351,7 @@ function DraggableCommit({
   draggable,
   onClick,
   onDoubleClick,
+  onContextMenu,
 }: {
   commit: CommitInfo;
   children: React.ReactNode;
@@ -314,6 +359,7 @@ function DraggableCommit({
   draggable: boolean;
   onClick?: (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => unknown;
   onDoubleClick?: (e: React.MouseEvent<HTMLDivElement>) => unknown;
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
 }) {
   const handleDragEnter = useRecoilCallback(
     ({snapshot, set}) =>
@@ -384,6 +430,7 @@ function DraggableCommit({
           onClick?.(event);
         }
       }}
+      onContextMenu={onContextMenu}
       tabIndex={0}
       data-testid={'draggable-commit'}>
       {children}
