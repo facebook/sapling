@@ -4,10 +4,10 @@ test for old histedit issue #6:
 editing a changeset without any actual change would corrupt the repository
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
+  $ configure modern
 
   $ initrepo ()
   > {
@@ -17,8 +17,7 @@ editing a changeset without any actual change would corrupt the repository
   >         echo % ${comment}
   >         echo % ${comment} | sed 's:.:-:g'
   >     fi
-  >     hg init ${dir}
-  >     cd ${dir}
+  >     newclientrepo ${dir}
   >     for x in a b c d e f ; do
   >         echo $x > $x
   >         hg add $x

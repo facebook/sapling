@@ -1,7 +1,6 @@
 #chg-compatible
 
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
 Tests for change/delete conflicts, including:
 b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
@@ -30,8 +29,8 @@ Make sure HGMERGE doesn't interfere with the test
   >     done
   > }
 
-  $ hg init repo
-  $ cd repo
+  $ configure modern
+  $ newclientrepo repo
 
   $ echo 1 > file1
   $ echo 2 > file2

@@ -2,7 +2,6 @@
 #require no-fsmonitor
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
 
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may
 have it set.
@@ -20,8 +19,8 @@ This enables Rust tracing -> sampling support in tests.
   >    hg ci -l msg
   > }
 Init the repo
-  $ hg init testrepo
-  $ cd testrepo
+  $ configure modern
+  $ newclientrepo testrepo
   $ mkcommit a
 Create an extension that logs every commit and also call repo.revs twice
 
@@ -97,7 +96,7 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
 Test topdir logging:
   $ setconfig sampling.logtopdir=True
   $ setconfig sampling.key.command_info=command_info
-  $ hg st > /dev/null
+  $ hg files c > /dev/null
   atexit handler executed
   >>> from edenscm import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
@@ -110,7 +109,7 @@ Test env-var logging:
   $ setconfig sampling.key.env_vars=env_vars
   $ export TEST_VAR1=abc
   $ export TEST_VAR2=def
-  $ hg st > /dev/null
+  $ hg files c > /dev/null
   atexit handler executed
   >>> import json, pprint
   >>> with open("$LOGDIR/samplingpath.txt") as f:
@@ -181,6 +180,9 @@ Metrics is logged to blackbox:
   atexit handler executed
   $ hg blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"metrics"}}'
   [legacy][metrics] {'metrics': {'watchmanfilecount': 3, 'watchmanfreshinstances': 0}} (?)
+  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 1}, 'prefetch': {'calls': 1}}}, 'write': {'nonlfs': {'items': 1, 'ok': 1}}}}}}
+  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 1}, 'prefetch': {'calls': 1}}}, 'write': {'nonlfs': {'items': 1, 'ok': 1}}}}}}
+  [legacy][metrics] {'metrics': {'scmstore': {'file': {'api': {'hg': {'add': {'calls': 1}, 'prefetch': {'calls': 1}}}, 'write': {'nonlfs': {'items': 1, 'ok': 1}}}}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}
   [legacy][metrics] {'metrics': {'bar': 2, 'foo': {'a': 1, 'b': 5}}}

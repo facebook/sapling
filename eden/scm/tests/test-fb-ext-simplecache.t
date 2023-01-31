@@ -1,18 +1,15 @@
 #chg-compatible
 
-#require no-osx
-
 Setup the extension
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
   $ enable simplecache
   $ setconfig simplecache.showdebug=true simplecache.cachedir="$TESTTMP/hgsimplecache"
 
 Initialize the repo
 
-  $ hg init repo
-  $ cd repo
+  $ configure modern
+  $ newclientrepo repo
 
   $ echo x >> x
   $ hg commit -Am x

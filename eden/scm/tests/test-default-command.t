@@ -1,8 +1,7 @@
 #chg-compatible
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
-
   $ configure modern
   $ enable smartlog
+  $ disable commitcloud
 
 Test running hg without any arguments and various configs
   $ hg | grep "These are some common Mercurial commands"
@@ -12,7 +11,7 @@ Test running hg without any arguments and various configs
   abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
   (use 'cd' to go to a directory inside a repository and try again)
   [255]
-  $ newrepo
+  $ newclientrepo
   $ drawdag << 'EOS'
   > B  # bookmark stable = B
   > |
@@ -33,7 +32,6 @@ Test running hg without any arguments and various configs
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
   
-  note: background backup is currently disabled so your commits are not being backed up.
 
   $ touch something
   $ setconfig commands.naked-default.in-repo=status

@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
 
 Set up a base, local, and remote changeset, as well as the working copy state.
 Files names are of the form base_remote_local_working-copy. For example,
@@ -10,8 +9,8 @@ file that was modified in the remote changeset, left untouched in the
 local changeset, and then modified in the working copy to match the
 remote content, then finally forgotten.
 
-  $ hg init repo
-  $ cd repo
+  $ configure modern
+  $ newclientrepo repo
 
 Create base changeset
 

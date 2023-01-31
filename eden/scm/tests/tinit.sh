@@ -130,8 +130,6 @@ clone() {
 
   cat >> $clientname/.hg/hgrc <<EOF
 [extensions]
-lz4revlog=
-remotefilelog=
 remotenames=
 treemanifest=
 tweakdefaults=
@@ -222,7 +220,6 @@ configure() {
         ;;
       modernclient)
         touch $TESTTMP/.eagerepo
-        enable remotefilelog
         setconfig remotefilelog.http=True
         setconfig treemanifest.http=True
         configure modern

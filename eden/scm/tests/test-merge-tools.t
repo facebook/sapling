@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
@@ -8,8 +7,8 @@
 test merge-tools configuration - mostly exercising filemerge.py
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with the test
-  $ hg init repo
-  $ cd repo
+  $ configure modern
+  $ newclientrepo repo
 
 revision 0
 

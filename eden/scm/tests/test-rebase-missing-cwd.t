@@ -1,7 +1,6 @@
 #debugruntest-compatible
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ configure mutation-norecord
 #require rmcwd
 
@@ -10,7 +9,8 @@ Ensure that dirsync does not cause an abort when cwd goes missing
   $ enable rebase dirsync
   $ setconfig phases.publish=False
 
-  $ newrepo
+  $ configure modern
+  $ newclientrepo
   $ drawdag <<'EOF'
   >   change    # change/a = a
   >    |
@@ -24,8 +24,6 @@ Ensure that dirsync does not cause an abort when cwd goes missing
 
   $ hg rebase -s . -d $delete
   rebasing * "change" (glob)
-  current directory was removed
-  (consider changing to repo root: $TESTTMP/repo1)
 
   $ cd "$TESTTMP/repo1"
   $ hg status

@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ configure modernclient
 
   $ hg help > /dev/null
@@ -111,7 +110,7 @@ Verify we generate and load from a shared repo
   $ enable share
   $ newclientrepo shared
   $ cd ..
-  $ hg share shared shared_copy --configfile shared/.hg/hgrc
+  $ hg share shared shared_copy --configfile shared/.hg/hgrc --traceback --config devel.collapse-traceback=false
   updating working directory
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd shared_copy

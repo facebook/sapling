@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
 
   $ cat > makepatch.py <<EOF
   > f = open('eol.diff', 'wb')
@@ -23,8 +22,8 @@
   > _ = w(b'\ No newline at end of file\r\n')
   > EOF
 
-  $ hg init repo
-  $ cd repo
+  $ configure modern
+  $ newclientrepo repo
   $ echo '*\.diff' > .gitignore
 
 

@@ -5,7 +5,6 @@ Test update logic when there are renames or weird same-name cases between dirs
 and files
 
   $ configure modernclient
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig experimental.nativecheckout=true
 
 Update with local changes across a file rename

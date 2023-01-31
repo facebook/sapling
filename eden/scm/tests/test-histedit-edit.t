@@ -1,16 +1,15 @@
 #chg-compatible
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
+  $ configure modern
 
   $ initrepo ()
   > {
-  >     hg init r
-  >     cd r
+  >     newclientrepo r
   >     for x in a b c d e f g; do
   >         echo $x > $x
   >         hg add $x
@@ -130,8 +129,6 @@ edit the plan via --commands
 
 Go at a random point and try to continue
 
-  $ hg id -n
-  3+
   $ hg up 0
   abort: histedit in progress
   (use 'hg histedit --continue' or 'hg histedit --abort')

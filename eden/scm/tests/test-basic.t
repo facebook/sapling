@@ -1,8 +1,6 @@
 #chg-compatible
 
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ setconfig workingcopy.ruststatus=False
-  $ disable treemanifest
 
 Create a repository:
 
@@ -14,8 +12,8 @@ Create a repository:
   devel.default-date=0 0
   experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
-  extensions.treemanifest=!
   fsmonitor.detectrace=1 (fsmonitor !)
+  extensions.treemanifest=
   hint.ack-match-full-traversal=true
   mutation.record=False
   remotefilelog.cachepath=$TESTTMP/default-hgcache
@@ -23,10 +21,10 @@ Create a repository:
   remotefilelog.reponame=reponame-default
   scmstore.contentstorefallback=True
   scmstore.enableshim=True
-  status.use-rust=False
+  status.use-rust=true
   treemanifest.rustmanifest=True
-  treemanifest.sendtrees=False
-  treemanifest.treeonly=False
+  treemanifest.sendtrees=True
+  treemanifest.treeonly=True
   treemanifest.useruststore=True
   ui.interactive=False
   ui.mergemarkers=detailed
@@ -36,9 +34,10 @@ Create a repository:
   web\.ipv6=(?:True|False) (re)
   workingcopy.enablerustwalker=True
   workingcopy.ruststatus=False
-  workingcopy.use-rust=False
-  $ hg init t
-  $ cd t
+  workingcopy.use-rust=true
+
+  $ configure modernclient
+  $ newclientrepo t
 
 Prepare a changeset:
 
@@ -122,7 +121,8 @@ Poke around at hashes:
 Verify should succeed:
 
   $ hg verify
-  warning: verify does not actually check anything in this repo
+  commit graph passed quick local checks
+  (pass --dag to perform slow checks with server)
 
 At the end...
 

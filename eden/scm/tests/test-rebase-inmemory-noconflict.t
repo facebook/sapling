@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ setconfig workingcopy.ruststatus=False
-  $ setconfig status.use-rust=False workingcopy.use-rust=False
   $ configure mutation-norecord
 Tests the --noconflict rebase flag
 
@@ -10,7 +9,8 @@ Tests the --noconflict rebase flag
   $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.experimental.inmemorywarning="rebasing in-memory!"
-  $ newrepo
+  $ configure modern
+  $ newclientrepo
 
   $ hg debugdrawdag <<'EOS'
   > c
