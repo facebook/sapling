@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+mod ancestors_difference;
 mod backfill;
 mod backfill_one;
 mod checkpoints;
 
+use ancestors_difference::AncestorsDifferenceArgs;
 use anyhow::Result;
 use backfill::BackfillArgs;
 use backfill_one::BackfillOneArgs;
@@ -41,6 +43,8 @@ pub enum CommitGraphSubcommand {
     Backfill(BackfillArgs),
     /// Backfill a commit and all of its missing ancestors.
     BackfillOne(BackfillOneArgs),
+    /// Display ids of all commits that are ancestors of one set of commits (heads), excluding ancestors of another set of commits (common).
+    AncestorsDifference(AncestorsDifferenceArgs),
 }
 
 #[facet::container]
@@ -81,6 +85,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         CommitGraphSubcommand::Backfill(args) => backfill::backfill(&ctx, &app, &repo, args).await,
         CommitGraphSubcommand::BackfillOne(args) => {
             backfill_one::backfill_one(&ctx, &repo, args).await
+        }
+        CommitGraphSubcommand::AncestorsDifference(args) => {
+            ancestors_difference::ancestors_difference(&ctx, &repo, args).await
         }
     }
 }
