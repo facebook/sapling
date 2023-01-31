@@ -33,7 +33,7 @@ tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperi
 toml = "=0.5.8"
 tracing = "0.1.35"
 util = { version = "0.1.0", path = "../../../scm/lib/util" }
-uuid = { version = "0.8.1", features = ["serde", "v4", "v5"] }
+uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 
 [dev-dependencies]
 rand = { version = "0.8", features = ["small_rng"] }
