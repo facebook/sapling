@@ -530,16 +530,17 @@ function ActionsBar({
                 const cancel = buttons[0];
                 const answer = await showOptionModal({
                   type: 'confirm',
+                  icon: 'warning',
                   title: t('Preferred Code Review command not yet configured'),
                   message: (
-                    <div>
-                      <p>
+                    <div className="commit-info-confirm-modal-paragraphs">
+                      <div>
                         <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
                           You can configure Sapling to use either $pr or $ghstack to submit for code
                           review on GitHub.
                         </T>
-                      </p>
-                      <p>
+                      </div>
+                      <div>
                         <T
                           replace={{
                             $config: <code>github.preferred_submit_command</code>,
@@ -547,10 +548,10 @@ function ActionsBar({
                           Each submit command has tradeoffs, due to how GitHub creates Pull
                           Requests. This can be controlled by the $config config.
                         </T>
-                      </p>
-                      <p>
+                      </div>
+                      <div>
                         <T>To continue, select a command to use to submit.</T>
-                      </p>
+                      </div>
                       <VSCodeLink
                         href="https://sapling-scm.com/docs/git/intro#pull-requests"
                         target="_blank">

@@ -5,13 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.options-modal-header {
-  justify-content: flex-end;
-  width: 100%;
-  flex-direction: row;
-  display: flex;
-}
-
 .options-modal-buttons {
   display: flex;
   flex-direction: row;
@@ -34,6 +27,11 @@
 
 #options-modal-title {
   font-weight: bold;
+  margin: var(--pad) 0;
+  display: flex;
+  flex-direction: row;
+  gap: var(--halfpad);
+  align-items: center;
 }
 
 #options-modal-title,

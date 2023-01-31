@@ -19,6 +19,8 @@ import './optionsModal.css';
 type ModalConfig<T> = {
   type: 'confirm';
   buttons: ReadonlyArray<T>;
+  /** Optional codicon to show next to the title */
+  icon?: string;
   title: React.ReactNode;
   message: React.ReactNode;
 };
@@ -52,13 +54,16 @@ export function OptionsModal() {
         height="fit-content"
         className="options-modal"
         aria-labelledby="options-modal-title"
-        aria-describedby="options-modal-message">
-        <div className="options-modal-header">
-          <VSCodeButton appearance="icon" onClick={dismiss}>
-            <Icon icon="x" />
-          </VSCodeButton>
+        aria-describedby="options-modal-message"
+        dismiss={dismiss}>
+        <div id="options-modal-title">
+          {modal.config.icon != null ? <Icon icon={modal.config.icon} size="M" /> : null}
+          {typeof modal.config.title === 'string' ? (
+            <span>{modal.config.title}</span>
+          ) : (
+            modal.config.title
+          )}
         </div>
-        <div id="options-modal-title">{modal.config.title}</div>
         <div id="options-modal-message">{modal.config.message}</div>
         <div className="options-modal-buttons">
           {modal.config.buttons.map(button => (

@@ -156,3 +156,9 @@
   align-items: center;
   margin: var(--halfpad);
 }
+
+.commit-info-confirm-modal-paragraphs {
+  display: flex;
+  gap: var(--pad);
+  flex-direction: column;
+}

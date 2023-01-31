@@ -37,3 +37,10 @@
   flex-direction: column;
   position: relative;
 }
+
+.dismiss-modal {
+  display: flex;
+  position: absolute;
+  top: var(--pad);
+  right: var(--pad);
+}
