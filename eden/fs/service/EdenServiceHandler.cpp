@@ -49,6 +49,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/service/EdenServer.h"
@@ -61,6 +62,7 @@
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/Diff.h"
+#include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -1585,6 +1587,30 @@ class StreamingDiffCallback : public DiffCallback {
       publisher_;
 };
 
+/**
+ * Compute the difference between the passed in roots.
+ *
+ * The order of the roots matters: a file added in toRoot will be returned as
+ * ScmFileStatus::ADDED, while if the order of arguments were reversed, it
+ * would be returned as ScmFileStatus::REMOVED.
+ */
+ImmediateFuture<folly::Unit> diffBetweenRoots(
+    const RootId& fromRoot,
+    const RootId& toRoot,
+    const std::shared_ptr<EdenMount>& mount,
+    folly::CancellationToken cancellation,
+    DiffCallback* callback) {
+  auto diffContext = std::make_unique<DiffContext>(
+      callback,
+      cancellation,
+      true,
+      mount->getCheckoutConfig()->getCaseSensitive(),
+      mount->getObjectStore(),
+      nullptr);
+  auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);
+  return std::move(fut).ensure([diffContext = std::move(diffContext)] {});
+}
+
 } // namespace
 
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
@@ -1690,10 +1716,10 @@ EdenServiceHandler::streamChangesSince(
       futures.push_back(makeNotReadyImmediateFuture().thenValue(
           [from,
            to,
-           edenMount = edenMount.get(),
+           edenMount = edenMount,
            token = cancellationSource->getToken(),
            callback = callback.get()](auto&&) {
-            return edenMount->diffBetweenRoots(from, to, token, callback);
+            return diffBetweenRoots(from, to, edenMount, token, callback);
           }));
     }
 
@@ -2862,9 +2888,10 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
   auto [mount, _] = server_->getMountAndRootInode(mountPath);
 
   auto callback = std::make_unique<ScmStatusDiffCallback>();
-  auto diffFuture = mount->diffBetweenRoots(
+  auto diffFuture = diffBetweenRoots(
       mount->getObjectStore()->parseRootId(*oldHash),
       mount->getObjectStore()->parseRootId(*newHash),
+      mount,
       context->getConnectionContext()->getCancellationToken(),
       callback.get());
   return wrapImmediateFuture(

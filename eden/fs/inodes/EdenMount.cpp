@@ -1850,16 +1850,6 @@ ImmediateFuture<std::unique_ptr<ScmStatus>> EdenMount::diff(
       });
 }
 
-ImmediateFuture<folly::Unit> EdenMount::diffBetweenRoots(
-    const RootId& fromRoot,
-    const RootId& toRoot,
-    folly::CancellationToken cancellation,
-    DiffCallback* callback) {
-  auto diffContext = createDiffContext(callback, cancellation, true);
-  auto fut = diffRoots(diffContext.get(), fromRoot, toRoot);
-  return std::move(fut).ensure([diffContext = std::move(diffContext)] {});
-}
-
 void EdenMount::resetParent(const RootId& parent) {
   // Hold the snapshot lock around the entire operation.
   auto parentLock = parentState_.wlock();

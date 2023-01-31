@@ -2054,43 +2054,6 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_low_level_not_materialized) {
           std::make_pair("root/doc/d.txt", ScmFileStatus::MODIFIED)));
 }
 
-TEST(DiffTest, diffBetweenRoots) {
-  TestMount testMount;
-
-  auto builder1 = FakeTreeBuilder();
-  builder1.setFile("a", "A in 1\n");
-  builder1.setFile("b", "B in 1\n");
-  builder1.setFile("c", "C in 1\n");
-  builder1.finalize(testMount.getBackingStore(), true);
-  auto commit1 = testMount.getBackingStore()->putCommit("1", builder1);
-  commit1->setReady();
-
-  auto builder2 = builder1.clone();
-  builder2.replaceFile("a", "A in 2\n");
-  builder2.removeFile("c");
-  builder2.setFile("d", "D in 2\n");
-  builder2.finalize(testMount.getBackingStore(), true);
-  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
-  commit2->setReady();
-
-  testMount.initialize(RootId("1"));
-  const auto& edenMount = testMount.getEdenMount();
-
-  auto callback = ScmStatusDiffCallback{};
-  edenMount
-      ->diffBetweenRoots(
-          RootId("1"), RootId("2"), folly::CancellationToken{}, &callback)
-      .get(100ms);
-  auto result = callback.extractStatus();
-
-  EXPECT_THAT(
-      *result.entries_ref(),
-      UnorderedElementsAre(
-          std::make_pair("a", ScmFileStatus::MODIFIED),
-          std::make_pair("c", ScmFileStatus::REMOVED),
-          std::make_pair("d", ScmFileStatus::ADDED)));
-}
-
 TEST(DiffTest, multiTreeDiff) {
   TestMount testMount;
 
