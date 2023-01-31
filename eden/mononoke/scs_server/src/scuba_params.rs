@@ -254,6 +254,15 @@ impl AddScubaParams for thrift::CommitHistoryParams {
         if let Some(after) = self.after_timestamp {
             scuba.add("param_after_timestamp", after);
         }
+        if let Some(descendants_of) = &self.descendants_of {
+            scuba.add("param_descendants_of", descendants_of.to_string());
+        }
+        if let Some(exclude_changeset_and_ancestors) = &self.exclude_changeset_and_ancestors {
+            scuba.add(
+                "param_exclude_changeset_and_ancestors",
+                exclude_changeset_and_ancestors.to_string(),
+            );
+        }
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
@@ -305,6 +314,15 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
             "follow_history_across_deletions",
             self.follow_history_across_deletions,
         );
+        if let Some(descendants_of) = &self.descendants_of {
+            scuba.add("param_descendants_of", descendants_of.to_string());
+        }
+        if let Some(exclude_changeset_and_ancestors) = &self.exclude_changeset_and_ancestors {
+            scuba.add(
+                "param_exclude_changeset_and_ancestors",
+                exclude_changeset_and_ancestors.to_string(),
+            );
+        }
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
