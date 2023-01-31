@@ -514,6 +514,12 @@ export class Repository {
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
       this.logger.error('Error fetching files: ', err);
+      if (isProcessError(err)) {
+        if (err.stderr.includes('checkout is currently in progress')) {
+          this.logger.info('Ignoring `hg status` error caused by in-progress checkout');
+          return;
+        }
+      }
       this.uncommittedChangesEmitter.emit('error', err as Error);
     }
   });
@@ -871,4 +877,8 @@ export function absolutePathForFileInRepo(
   } else {
     return null;
   }
+}
+
+function isProcessError(s: any): s is {stderr: string} {
+  return s != null && typeof s === 'object' && 'stderr' in s;
 }
