@@ -152,6 +152,10 @@
   margin: var(--halfpad);
 }
 
+.commit-info-view .changed-file-list {
+  padding: var(--halfpad) 0;
+}
+
 .commit-info-confirm-modal-paragraphs {
   display: flex;
   gap: var(--pad);

@@ -358,10 +358,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               <T>Files Changed</T>
               <VSCodeBadge>{commit.totalFileCount}</VSCodeBadge>
             </SmallCapsTitle>
-            <OpenComparisonViewButton
-              comparison={{type: ComparisonType.Committed, hash: commit.hash}}
-            />
-            <ChangedFiles files={commit.filesSample} showFileActions={false} />
+            <div className="changed-file-list">
+              <OpenComparisonViewButton
+                comparison={{type: ComparisonType.Committed, hash: commit.hash}}
+              />
+              <ChangedFiles files={commit.filesSample} showFileActions={false} />
+            </div>
           </Section>
         )}
       </div>
