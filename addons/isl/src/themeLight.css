@@ -30,6 +30,7 @@
   --background: #ffffff;
   --focus-border: #0090f1;
   --foreground: #616161;
+  --highlight-foreground: #2a2a2a;
   --scrollbar-slider-background: rgba(100, 100, 100, 0.4);
   --scrollbar-slider-hover-background: rgba(100, 100, 100, 0.7);
   --scrollbar-slider-active-background: rgba(0, 0, 0, 0.6);

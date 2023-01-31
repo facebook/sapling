@@ -23,7 +23,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --highlight-foreground: var(--dropdown-foreground);
   --pad: 10px;
   --halfpad: 5px;
 
