@@ -28,7 +28,7 @@ skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
-async-recursion = "0.3.2"
+async-recursion = "1.0.2"
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
