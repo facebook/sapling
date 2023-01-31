@@ -145,11 +145,6 @@
   display: inline;
 }
 
-.subtle {
-  font-size: 90%;
-  opacity: 0.9;
-}
-
 .commit-info-view .empty-description {
   display: flex;
   gap: var(--halfpad);

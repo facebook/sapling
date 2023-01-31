@@ -19,6 +19,7 @@ import type {SetterOrUpdater} from 'recoil';
 import {YouAreHere} from './Commit';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {Icon} from './Icon';
+import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
@@ -343,9 +344,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               <VSCodeBadge>{uncommittedChanges.length}</VSCodeBadge>
             </SmallCapsTitle>
             {uncommittedChanges.length === 0 ? (
-              <span className="subtle">
+              <Subtle>
                 {isCommitMode ? <T>No changes to commit</T> : <T>No changes to amend</T>}
-              </span>
+              </Subtle>
             ) : (
               <UncommittedChanges place={isCommitMode ? 'commit sidebar' : 'amend sidebar'} />
             )}
@@ -603,7 +604,7 @@ function CommitTitleByline({commit}: {commit: CommitInfo}) {
     <T replace={{$author: commit.author}}>Created by $author</T>
   );
   return (
-    <div className="commit-info-title-byline subtle">
+    <Subtle className="commit-info-title-byline">
       {commit.isHead ? <YouAreHere hideSpinner /> : null}
       <OverflowEllipsis shrink>
         <Tooltip trigger="hover" component={() => createdByInfo}>
@@ -615,7 +616,7 @@ function CommitTitleByline({commit}: {commit: CommitInfo}) {
           <RelativeDate date={commit.date} />
         </Tooltip>
       </OverflowEllipsis>
-    </div>
+    </Subtle>
   );
 }
 
