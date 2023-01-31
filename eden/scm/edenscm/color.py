@@ -342,9 +342,9 @@ def colorlabel(ui, msg, label, usebytes: bool = False) -> Union[bytes, str]:
             style = " ".join(ui._styles.get(l, l) for l in label.split())
             if not usebytes:
                 # Roundtrip strings to clear out non-utf8 characters.
-                msg = encodeutf8(msg, errors="replace")
+                msg = encodeutf8(msg, errors="backslashreplace")
 
-            msg = decodeutf8(msg, errors="replace")
+            msg = decodeutf8(msg, errors="backslashreplace")
             styled = ui._styler.renderbytes(style, msg)
             if not usebytes:
                 styled = styled.decode()

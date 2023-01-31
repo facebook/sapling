@@ -46,4 +46,4 @@
 Don't crash on invalid utf-8:
 
   $ hg testcolor --config color.test.test=blue --config alias.testcolor="debugtemplate '{label(\"test.test\", \"\x96\x96\n\")}'"
-  [34m??[39m
+  [34m\udc96\udc96[39m
