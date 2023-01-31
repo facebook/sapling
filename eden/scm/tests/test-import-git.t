@@ -1,8 +1,8 @@
 #chg-compatible
 
   $ setconfig workingcopy.ruststatus=False
-  $ hg init repo
-  $ cd repo
+  $ configure modernclient
+  $ newclientrepo repo
 
 New file:
 
