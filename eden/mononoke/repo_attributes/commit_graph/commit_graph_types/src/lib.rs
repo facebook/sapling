@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(map_first_last)]
+
 use mononoke_types::ChangesetId;
 use smallvec::SmallVec;
 

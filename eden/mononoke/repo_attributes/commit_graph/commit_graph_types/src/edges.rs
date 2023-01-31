@@ -9,6 +9,8 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use abomonation_derive::Abomonation;
 use mononoke_types::ChangesetId;
@@ -73,4 +75,33 @@ pub struct ChangesetEdges {
 }
 
 /// A frontier of changesets ordered by generation number.
-pub type ChangesetFrontier = BTreeMap<Generation, HashSet<ChangesetId>>;
+pub struct ChangesetFrontier(BTreeMap<Generation, HashSet<ChangesetId>>);
+
+impl ChangesetFrontier {
+    pub fn new() -> Self {
+        Self(Default::default())
+    }
+
+    pub fn highest_generation_contains(&self, cs_id: ChangesetId, generation: Generation) -> bool {
+        match self.last_key_value() {
+            None => false,
+            Some((highest_frontier_generation, cs_ids)) => {
+                *highest_frontier_generation == generation && cs_ids.contains(&cs_id)
+            }
+        }
+    }
+}
+
+impl Deref for ChangesetFrontier {
+    type Target = BTreeMap<Generation, HashSet<ChangesetId>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ChangesetFrontier {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}

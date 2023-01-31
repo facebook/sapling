@@ -125,14 +125,7 @@ pub async fn assert_skip_tree_level_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .level_ancestor(
-                ctx,
-                name_cs_id(u),
-                target_depth,
-                |edges| edges.skip_tree_parent,
-                |edges| edges.skip_tree_skew_ancestor,
-                |node| node.skip_tree_depth
-            )
+            .skip_tree_level_ancestor(ctx, name_cs_id(u), target_depth,)
             .await?
             .map(|node| node.cs_id),
         u_level_ancestor.map(name_cs_id)
@@ -149,14 +142,7 @@ pub async fn assert_skip_tree_lowest_common_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .lowest_common_ancestor(
-                ctx,
-                name_cs_id(u),
-                name_cs_id(v),
-                |edges| edges.skip_tree_parent,
-                |edges| edges.skip_tree_skew_ancestor,
-                |node| node.skip_tree_depth
-            )
+            .skip_tree_lowest_common_ancestor(ctx, name_cs_id(u), name_cs_id(v),)
             .await?
             .map(|node| node.cs_id),
         lca.map(name_cs_id)
@@ -263,14 +249,7 @@ pub async fn assert_p1_linear_level_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .level_ancestor(
-                ctx,
-                name_cs_id(u),
-                target_depth,
-                |edges| edges.parents.first().copied(),
-                |edges| edges.p1_linear_skew_ancestor,
-                |node| node.p1_linear_depth
-            )
+            .p1_linear_level_ancestor(ctx, name_cs_id(u), target_depth)
             .await?
             .map(|node| node.cs_id),
         u_level_ancestor.map(name_cs_id)
@@ -287,14 +266,7 @@ pub async fn assert_p1_linear_lowest_common_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .lowest_common_ancestor(
-                ctx,
-                name_cs_id(u),
-                name_cs_id(v),
-                |edges| edges.parents.first().copied(),
-                |edges| edges.p1_linear_skew_ancestor,
-                |node| node.p1_linear_depth
-            )
+            .p1_linear_lowest_common_ancestor(ctx, name_cs_id(u), name_cs_id(v))
             .await?
             .map(|node| node.cs_id),
         lca.map(name_cs_id)

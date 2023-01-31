@@ -330,10 +330,9 @@ impl CommitGraph {
         }
     }
 
-    /// Returns the ancestor of a changeset that has
-    /// depth target_depth, or None if the changeset's
-    /// depth is smaller than target_depth.
-    pub async fn level_ancestor<F, G, H>(
+    /// Returns the ancestor of a changeset that has depth target_depth,
+    /// or None if the changeset's depth is smaller than target_depth.
+    async fn level_ancestor<F, G, H>(
         &self,
         ctx: &CoreContext,
         mut cs_id: ChangesetId,
@@ -373,8 +372,46 @@ impl CommitGraph {
         }
     }
 
+    /// Returns the ancestor of a changeset that has depth target_depth in the skip tree,
+    /// or None if the changeset's depth is smaller than target_depth.
+    pub async fn skip_tree_level_ancestor(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        target_depth: u64,
+    ) -> Result<Option<ChangesetNode>> {
+        self.level_ancestor(
+            ctx,
+            cs_id,
+            target_depth,
+            |edges| edges.skip_tree_parent,
+            |edges| edges.skip_tree_skew_ancestor,
+            |node| node.skip_tree_depth,
+        )
+        .await
+    }
+
+    /// Returns the ancestor of a changeset that has depth target_depth in the p1 linear tree,
+    /// or None if the changeset's depth is smaller than target_depth.
+    pub async fn p1_linear_level_ancestor(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        target_depth: u64,
+    ) -> Result<Option<ChangesetNode>> {
+        self.level_ancestor(
+            ctx,
+            cs_id,
+            target_depth,
+            |edges| edges.parents.first().copied(),
+            |edges| edges.p1_linear_skew_ancestor,
+            |node| node.p1_linear_depth,
+        )
+        .await
+    }
+
     /// Returns the lowest common ancestor of two changesets.
-    pub async fn lowest_common_ancestor<F, G, H>(
+    async fn lowest_common_ancestor<F, G, H>(
         &self,
         ctx: &CoreContext,
         cs_id1: ChangesetId,
@@ -451,6 +488,42 @@ impl CommitGraph {
         }
 
         Ok(Some(u))
+    }
+
+    /// Returns the lowest common ancestor of two changesets in the skip tree.
+    pub async fn skip_tree_lowest_common_ancestor(
+        &self,
+        ctx: &CoreContext,
+        cs_id1: ChangesetId,
+        cs_id2: ChangesetId,
+    ) -> Result<Option<ChangesetNode>> {
+        self.lowest_common_ancestor(
+            ctx,
+            cs_id1,
+            cs_id2,
+            |edges| edges.skip_tree_parent,
+            |edges| edges.skip_tree_skew_ancestor,
+            |node| node.skip_tree_depth,
+        )
+        .await
+    }
+
+    /// Returns the lowest common ancestor of two changesets in the p1 linear tree.
+    pub async fn p1_linear_lowest_common_ancestor(
+        &self,
+        ctx: &CoreContext,
+        cs_id1: ChangesetId,
+        cs_id2: ChangesetId,
+    ) -> Result<Option<ChangesetNode>> {
+        self.lowest_common_ancestor(
+            ctx,
+            cs_id1,
+            cs_id2,
+            |edges| edges.skip_tree_parent,
+            |edges| edges.skip_tree_skew_ancestor,
+            |node| node.skip_tree_depth,
+        )
+        .await
     }
 
     /// Obtain a frontier of changesets from a single changeset id, which must
@@ -626,12 +699,7 @@ impl CommitGraph {
         )?;
         debug_assert!(!frontier.is_empty(), "frontier should contain descendant");
         let frontier = self.lower_frontier(ctx, frontier, target_gen).await?;
-        if let Some((frontier_gen, cs_ids)) = frontier.last_key_value() {
-            if *frontier_gen == target_gen && cs_ids.contains(&ancestor) {
-                return Ok(true);
-            }
-        }
-        Ok(false)
+        Ok(frontier.highest_generation_contains(ancestor, target_gen))
     }
 
     /// Returns all ancestors of any changeset in heads, excluding
@@ -658,12 +726,9 @@ impl CommitGraph {
 
             let mut cs_ids_not_excluded = vec![];
             for cs_id in cs_ids {
-                if let Some((common_frontier_generation, common_cs_ids)) = common.last_key_value() {
-                    if *common_frontier_generation == generation && common_cs_ids.contains(&cs_id) {
-                        continue;
-                    }
-                }
-                if !monotonic_property(cs_id) {
+                if !common.highest_generation_contains(cs_id, generation)
+                    && !monotonic_property(cs_id)
+                {
                     cs_ids_not_excluded.push(cs_id)
                 }
             }
