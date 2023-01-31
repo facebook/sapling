@@ -7,6 +7,7 @@
 
 import type {CommitInfo, SuccessorInfo} from './types';
 
+import {islDrawerState} from './App';
 import {hasUnsavedEditedCommitMessage} from './CommitInfo';
 import {BranchIndicator} from './CommitTreeList';
 import {Icon} from './Icon';
@@ -30,7 +31,7 @@ import {
 } from './serverAPIState';
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
   switch (previewType) {
@@ -78,6 +79,7 @@ export const Commit = memo(
     previewType?: CommitPreview;
     hasChildren: boolean;
   }) => {
+    const setDrawerState = useSetRecoilState(islDrawerState);
     const isPublic = commit.phase === 'public';
 
     const handlePreviewedOperation = useRunPreviewedOperation();
@@ -85,6 +87,21 @@ export const Commit = memo(
 
     const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
+
+    function onDoubleClickToShowDrawer(e: React.MouseEvent<HTMLDivElement>) {
+      // Select the commit if it was deselected.
+      if (!isSelected) {
+        onClickToSelect(e);
+      }
+      // Show the drawer.
+      setDrawerState(state => ({
+        ...state,
+        right: {
+          ...state.right,
+          collapsed: false,
+        },
+      }));
+    }
 
     return (
       <div
@@ -107,7 +124,8 @@ export const Commit = memo(
             }
             commit={commit}
             draggable={!isPublic && isDraggablePreview(previewType)}
-            onClick={onClickToSelect}>
+            onClick={onClickToSelect}
+            onDoubleClick={onDoubleClickToShowDrawer}>
             <div className="commit-avatar" />
             {isPublic ? null : (
               <span className="commit-title">
@@ -288,12 +306,14 @@ function DraggableCommit({
   className,
   draggable,
   onClick,
+  onDoubleClick,
 }: {
   commit: CommitInfo;
   children: React.ReactNode;
   className: string;
   draggable: boolean;
   onClick?: (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => unknown;
+  onDoubleClick?: (e: React.MouseEvent<HTMLDivElement>) => unknown;
 }) {
   const handleDragEnter = useRecoilCallback(
     ({snapshot, set}) =>
@@ -358,6 +378,7 @@ function DraggableCommit({
       onDragEnter={handleDragEnter}
       draggable={draggable}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       onKeyPress={event => {
         if (event.key === 'Enter') {
           onClick?.(event);
