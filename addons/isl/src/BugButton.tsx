@@ -52,7 +52,7 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
           <Icon icon="book" slot="start" />
           <T>View Documentation</T>
         </VSCodeButton>
-        <FileABug dismissBugDropdown={dismiss} />
+        <FileABug _dismissBugDropdown={dismiss} />
       </div>
       {/*
       // TODO: enable these debug actions
@@ -79,7 +79,7 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
   );
 }
 
-function FileABug({dismissBugDropdown}: {dismissBugDropdown: () => void}) {
+function FileABug({_dismissBugDropdown}: {_dismissBugDropdown: () => void}) {
   return (
     // prettier-ignore
     // @fb-only
