@@ -798,7 +798,12 @@ pub async fn unfold_bookmarks_update_log_entry(
                     &changeset_fetcher,
                     lca_hint,
                     vec![to_cs_id],
-                    vec![from_cs_id],
+                    if is_master_entry {
+                        vec![from_cs_id]
+                    } else {
+                        // Skip ancestors of master since validating master bookmark moves covers them.
+                        vec![from_cs_id, master_cs_id]
+                    },
                 )
                 .compat()
                 .collect()
