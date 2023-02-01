@@ -19,6 +19,7 @@ import {t, T} from './i18n';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
+import platform from './platform';
 import {CommitPreview, operationBeingPreviewed} from './previews';
 import {RelativeDate} from './relativeDate';
 import {useCommitSelection} from './selection';
@@ -112,6 +113,10 @@ export const Commit = memo(
 
     const contextMenu = useContextMenu(() => {
       return [
+        {
+          label: <T replace={{$hash: commit?.hash}}>Copy Commit Hash "$hash"</T>,
+          onClick: () => platform.clipboardCopy(commit.hash),
+        },
         {
           label: <T>Hide Commit and Descendents</T>,
           onClick: () => setOperationBeingPreviewed(new HideOperation(commit.hash)),
