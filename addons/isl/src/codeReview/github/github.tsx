@@ -10,12 +10,12 @@ import type {CodeReviewSystem, DiffId, DiffSummary, PreferredSubmitCommand} from
 import type {UICodeReviewProvider} from '../UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
-import {Icon} from '../../Icon';
 import {Tooltip} from '../../Tooltip';
 import {t, T} from '../../i18n';
 import {GhStackSubmitOperation} from '../../operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from '../../operations/PrSubmitOperation';
 import {PullRequestState} from 'isl-server/src/github/generated/graphql';
+import {Icon} from 'shared/Icon';
 
 import './GitHubPRBadge.css';
 

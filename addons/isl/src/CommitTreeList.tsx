@@ -10,12 +10,12 @@ import type {Hash} from './types';
 
 import {Commit} from './Commit';
 import {ErrorNotice} from './ErrorNotice';
-import {Icon} from './Icon';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
 import {t} from './i18n';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {commitFetchError, latestUncommittedChanges} from './serverAPIState';
 import {useRecoilState, useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 import './CommitTreeList.css';
 

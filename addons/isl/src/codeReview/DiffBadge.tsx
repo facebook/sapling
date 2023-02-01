@@ -10,7 +10,6 @@ import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
 import {ExternalLink} from '../ExternalLink';
-import {Icon} from '../Icon';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import platform from '../platform';
@@ -19,6 +18,7 @@ import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {useState, Component, Suspense} from 'react';
 import {useRecoilValue} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
+import {Icon} from 'shared/Icon';
 
 import './DiffBadge.css';
 

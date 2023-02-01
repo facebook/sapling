@@ -11,7 +11,6 @@
     "@types/node": "^16.7.13",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "@vscode/codicons": "^0.0.32",
     "@vscode/webview-ui-toolkit": "^1.0.0",
     "diff": "^5.0.0",
     "isl-server": "0.0.0",

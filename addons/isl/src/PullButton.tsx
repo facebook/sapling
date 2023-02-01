@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Icon} from './Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {PullOperation} from './operations/PullOperation';
@@ -13,6 +12,7 @@ import {relativeDate, RelativeDate} from './relativeDate';
 import {latestCommitTree, useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 import './PullButton.css';
 

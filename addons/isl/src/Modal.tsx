@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Icon} from './Icon';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {Icon} from 'shared/Icon';
 import './Modal.css';
 
 export function Modal({

@@ -13,7 +13,6 @@ import type {LineRangeParams} from 'shared/SplitDiffView/types';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {ErrorNotice} from '../ErrorNotice';
-import {Icon} from '../Icon';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
 import {latestHeadCommit} from '../serverAPIState';
@@ -31,6 +30,7 @@ import {
   useSetRecoilState,
 } from 'recoil';
 import {labelForComparison, ComparisonType} from 'shared/Comparison';
+import {Icon} from 'shared/Icon';
 import {SplitDiffView} from 'shared/SplitDiffView';
 import SplitDiffViewPrimerStyles from 'shared/SplitDiffView/PrimerStyles';
 

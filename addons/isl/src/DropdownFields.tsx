@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Icon} from './Icon';
 import {VSCodeDivider} from '@vscode/webview-ui-toolkit/react';
+import {Icon} from 'shared/Icon';
 
 import './DropdownFields.css';
 

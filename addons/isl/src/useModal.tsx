@@ -8,10 +8,10 @@
 import type {Deferred} from 'shared/utils';
 
 import {useCommand} from './ISLShortcuts';
-import {Icon} from './Icon';
 import {Modal} from './Modal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
+import {Icon} from 'shared/Icon';
 import {defer} from 'shared/utils';
 
 import './useModal.css';

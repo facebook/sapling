@@ -10,7 +10,6 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import {islDrawerState} from './App';
 import {hasUnsavedEditedCommitMessage} from './CommitInfo';
 import {BranchIndicator} from './CommitTreeList';
-import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -32,6 +31,7 @@ import {
 import {VSCodeButton, VSCodeTag} from '@vscode/webview-ui-toolkit/react';
 import React, {memo} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
   switch (previewType) {

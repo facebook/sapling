@@ -7,7 +7,6 @@
 
 import {Copyable} from './Copyable';
 import {DropdownFields} from './DropdownFields';
-import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 // @fb-only
 import {T} from './i18n';
@@ -15,6 +14,7 @@ import platform from './platform';
 import {applicationinfo} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 import './BugButton.css';
 

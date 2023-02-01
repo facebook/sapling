@@ -15,7 +15,8 @@
     "recoil": "^0.7.5",
     "styled-components": "^5.3.5",
     "vscode-oniguruma": "^1.6.1",
-    "vscode-textmate": "^6.0.0"
+    "vscode-textmate": "^6.0.0",
+    "@vscode/codicons": "^0.0.32"
   },
   "scripts": {
     "eslint": "eslint . github --ext .ts --ext .tsx",

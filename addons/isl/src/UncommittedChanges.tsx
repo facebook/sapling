@@ -14,7 +14,6 @@ import serverAPI from './ClientToServerAPI';
 import {commitFieldsBeingEdited, commitMode} from './CommitInfo';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
-import {Icon} from './Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
@@ -41,6 +40,7 @@ import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-
 import {useEffect, useRef} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
+import {Icon} from 'shared/Icon';
 
 import './UncommittedChanges.css';
 

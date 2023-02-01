@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
 import platform from './platform';
 import {useEffect, useState} from 'react';
+import {Icon} from 'shared/Icon';
 
 import './Copyable.css';
 

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Icon} from './Icon';
 import React, {useState, Component} from 'react';
+import {Icon} from 'shared/Icon';
 
 import './error-notice.css';
 

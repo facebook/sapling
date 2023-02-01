@@ -15,7 +15,6 @@ import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
-import {Icon} from './Icon';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {I18nSupport, t, T} from './i18n';
@@ -28,6 +27,7 @@ import React from 'react';
 import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Drawers} from 'shared/Drawers';
+import {Icon} from 'shared/Icon';
 
 import './index.css';
 

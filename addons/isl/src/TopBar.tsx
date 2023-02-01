@@ -8,7 +8,6 @@
 import {BugButton} from './BugButton';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
-import {Icon} from './Icon';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
@@ -21,6 +20,7 @@ import {
 } from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 import './TopBar.css';
 

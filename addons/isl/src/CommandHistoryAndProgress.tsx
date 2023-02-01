@@ -8,12 +8,12 @@
 import type {Operation} from './operations/Operation';
 import type {ValidatedRepoInfo} from './types';
 
-import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {t} from './i18n';
 import {operationList, queuedOperations, repositoryInfo} from './serverAPIState';
 import {CommandRunner} from './types';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 import './CommandHistoryAndProgress.css';
 

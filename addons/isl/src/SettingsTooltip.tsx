@@ -10,7 +10,6 @@ import type {PreferredSubmitCommand} from './types';
 import type {ReactNode} from 'react';
 
 import {DropdownField, DropdownFields} from './DropdownFields';
-import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {T} from './i18n';
 import {SetConfigOperation} from './operations/SetConfigOperation';
@@ -24,6 +23,7 @@ import {
   VSCodeOption,
 } from '@vscode/webview-ui-toolkit/react';
 import {useRecoilState} from 'recoil';
+import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
 import './SettingsTooltip.css';

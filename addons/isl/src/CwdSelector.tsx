@@ -6,13 +6,13 @@
  */
 
 import {DropdownField, DropdownFields} from './DropdownFields';
-import {Icon} from './Icon';
 import {Tooltip} from './Tooltip';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T} from './i18n';
 import {repositoryInfo, serverCwd} from './serverAPIState';
 import {VSCodeBadge, VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 import {basename} from 'shared/utils';
 
 export function CwdSelector() {

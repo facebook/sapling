@@ -8,13 +8,13 @@
 import type {Comparison} from 'shared/Comparison';
 
 import {useCommand} from '../ISLShortcuts';
-import {Icon} from '../Icon';
 import {Modal} from '../Modal';
 import {currentComparisonMode} from './atoms';
 import {lazy, Suspense} from 'react';
 import './ComparisonView.css';
 import {useRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
+import {Icon} from 'shared/Icon';
 
 const ComparisonView = lazy(() => import('./ComparisonView'));
 

@@ -18,7 +18,6 @@ import type {SetterOrUpdater} from 'recoil';
 
 import {YouAreHere} from './Commit';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
-import {Icon} from './Icon';
 import {Subtle} from './Subtle';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
@@ -61,6 +60,7 @@ import {
   useRecoilValue,
 } from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
+import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
 import './CommitInfo.css';

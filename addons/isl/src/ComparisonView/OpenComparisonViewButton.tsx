@@ -7,12 +7,12 @@
 
 import type {Comparison} from 'shared/Comparison';
 
-import {Icon} from '../Icon';
 import {t} from '../i18n';
 import {currentComparisonMode} from './atoms';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useSetRecoilState} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
+import {Icon} from 'shared/Icon';
 
 export function OpenComparisonViewButton({comparison}: {comparison: Comparison}) {
   const setComparisonMode = useSetRecoilState(currentComparisonMode);
