@@ -1,6 +1,7 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ configure modern
+  $ setconfig workingcopy.use-rust=True
 
 Setup repo:
   $ newclientrepo repo1

@@ -1141,6 +1141,12 @@ def _dispatch(req):
         msg = _formatargs(fullargs)
         with perftrace.trace("Main Python Command"):
             repo = None
+            # Right now Rust `hgcommands` (undesirably) sets `func` to the
+            # command description, not a callable function.
+            if not callable(func):
+                raise error.ProgrammingError(
+                    f"'{cmd}' only has a Rust implementation but it wants to fallback to Python."
+                )
             if func.cmdtemplate:
                 templ = cmdtemplatestate(ui, cmdoptions)
                 args.insert(0, templ)

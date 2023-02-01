@@ -184,7 +184,7 @@ Read file content:
 Make a commit on tip, and amend. They do not trigger remote lookups:
 
   $ echo Z > Z
-  $ LOG=warn hg up -q tip
+  $ LOG=error hg up -q tip
   $ LOG=dag::protocol=debug,dag::cache=trace hg commit -Am Z Z
   TRACE dag::cache: cached missing ae226a63078b2a472fa38ec61318bb37e8c10bfb (definitely missing)
   DEBUG dag::cache: reusing cache (1 missing)

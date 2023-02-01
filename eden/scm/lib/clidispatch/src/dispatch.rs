@@ -406,6 +406,7 @@ impl Dispatcher {
 
         let res = || -> Result<u8> {
             add_global_flag_derived_configs(&mut self.optional_repo, parsed.clone().try_into()?);
+            tracing::debug!("command handled by a Rust function");
             match handler.func() {
                 CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),
                 CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
@@ -416,6 +417,9 @@ impl Dispatcher {
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
                     if !repo.config().get_or_default("workingcopy", "use-rust")? {
+                        tracing::warn!(
+                            "command requires working copy but Rust working copy is disabled"
+                        );
                         // TODO(T131699257): Migrate all tests to use Rust
                         // workingcopy and removed fallback to Python.
                         return Err(errors::FallbackToPython("requested command that uses working copy but workingcopy.use-rust not set to True".to_owned()).into());
