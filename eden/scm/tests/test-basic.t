@@ -12,8 +12,8 @@ Create a repository:
   devel.default-date=0 0
   experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
-  fsmonitor.detectrace=1 (fsmonitor !)
   extensions.treemanifest=
+  fsmonitor.detectrace=1 (fsmonitor !)
   hint.ack-match-full-traversal=true
   mutation.record=False
   remotefilelog.cachepath=$TESTTMP/default-hgcache
@@ -54,7 +54,7 @@ Writes to stdio succeed and fail appropriately
   A a
 
   $ hg status >/dev/full
-  abort: No space left on device* (glob)
+  abort: Write Error
   [255]
 #endif
 
@@ -69,7 +69,7 @@ Commands can succeed without a stdin
 
 #if devfull no-chg
   $ hg status >/dev/full 2>&1
-  [1]
+  [255]
 
   $ hg status ENOENT 2>/dev/full
   [1]
