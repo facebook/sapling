@@ -7,7 +7,9 @@
 
 #![feature(auto_traits)]
 #![feature(async_closure)]
+#![feature(drain_filter)]
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
@@ -956,8 +958,57 @@ struct NoopChangesetsFilter;
 impl FilterExistingChangesets for NoopChangesetsFilter {
     async fn filter(
         &self,
+        _ctx: CoreContext,
         cs_ids: Vec<(ChangesetId, HgChangesetId)>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error> {
+        Ok(cs_ids)
+    }
+}
+
+struct DarkstormBackupChangesetsFilter {
+    repo: Arc<Repo>,
+}
+
+#[async_trait]
+impl FilterExistingChangesets for DarkstormBackupChangesetsFilter {
+    async fn filter(
+        &self,
+        ctx: CoreContext,
+        mut cs_ids: Vec<(ChangesetId, HgChangesetId)>,
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error> {
+        let bcs_ids: Vec<_> = cs_ids.iter().map(|(cs_id, _hg_cs_id)| *cs_id).collect();
+        let existing_bcs_ids: Vec<_> = self
+            .repo
+            .changesets
+            .get_many(&ctx, bcs_ids)
+            .await?
+            .into_iter()
+            .map(|entry| entry.cs_id)
+            .collect();
+        let existing_hg_cs_id: BTreeSet<_> = self
+            .repo
+            .bonsai_hg_mapping
+            .get(&ctx, existing_bcs_ids.clone().into())
+            .await?
+            .into_iter()
+            .map(|entry| entry.hg_cs_id)
+            .collect();
+
+        let existing_bcs_ids: BTreeSet<_> = existing_bcs_ids.into_iter().collect();
+
+        let count = cs_ids.len();
+        cs_ids.retain(|(cs_id, hg_cs_id)| {
+            !existing_bcs_ids.contains(cs_id) || !existing_hg_cs_id.contains(hg_cs_id)
+        });
+        if count != cs_ids.len() {
+            info!(
+                ctx.logger(),
+                "{} of {} commits already in the darkstorm backup repo, not including them in the bundle",
+                count - cs_ids.len(),
+                count,
+            );
+        }
+
         Ok(cs_ids)
     }
 }
@@ -1035,7 +1086,7 @@ async fn run<'a>(
 
             scuba_sample.add("repo", backup_repo.repoid.id());
             scuba_sample.add("reponame", backup_repo.repo_name.clone());
-            Some(backup_repo)
+            Some(Arc::new(backup_repo))
         }
         (true, _) => {
             let backup_repo_id = args::not_shardmanager_compatible::get_repo_id_from_value(
@@ -1049,7 +1100,7 @@ async fn run<'a>(
 
             scuba_sample.add("repo", backup_repo.repoid.id());
             scuba_sample.add("reponame", backup_repo.repo_name.clone());
-            Some(backup_repo)
+            Some(Arc::new(backup_repo))
         }
         _ => {
             scuba_sample.add("repo", repo_id.id());
@@ -1058,7 +1109,7 @@ async fn run<'a>(
         }
     };
 
-    let (repo, repo_parts) = {
+    let (repo, filter_changesets, repo_parts) = {
         borrowed!(ctx);
         // FIXME: this cloned! will go away once HgRepo is asyncified
         cloned!(hg_repo_path);
@@ -1127,6 +1178,14 @@ async fn run<'a>(
             .pushrebase
             .globalrevs_publishing_bookmark
             .as_ref();
+
+        let filter_changesets: Arc<dyn FilterExistingChangesets> =
+            if let Some(backup_repo) = maybe_darkstorm_backup_repo.clone() {
+                Arc::new(DarkstormBackupChangesetsFilter { repo: backup_repo })
+            } else {
+                Arc::new(NoopChangesetsFilter {})
+            };
+
         borrowed!(maybe_darkstorm_backup_repo);
         let globalrev_syncer = {
             cloned!(repo);
@@ -1143,7 +1202,11 @@ async fn run<'a>(
             }
         };
 
-        (repo, try_join3(preparer, overlay, globalrev_syncer))
+        (
+            repo,
+            filter_changesets,
+            try_join3(preparer, overlay, globalrev_syncer),
+        )
     };
     let batch_size = match job_config.as_ref().map(|c| c.batch_size) {
         Some(size) => size as usize,
@@ -1187,8 +1250,6 @@ async fn run<'a>(
     } else {
         None
     };
-
-    let filter_changesets = Arc::new(NoopChangesetsFilter {});
 
     // Before beginning any actual processing, check if cancellation has been requested.
     // If yes, then lets return early.
@@ -1255,8 +1316,10 @@ async fn run<'a>(
             let start_id = args::get_i64_opt(&sub_m, "start-id");
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let loop_forever = sub_m.is_present("loop-forever");
-            let replayed_sync_counter =
-                LatestReplayedSyncCounter::new(&repo, maybe_darkstorm_backup_repo.as_ref())?;
+            let replayed_sync_counter = LatestReplayedSyncCounter::new(
+                &repo,
+                maybe_darkstorm_backup_repo.as_ref().map(|r| r.as_ref()),
+            )?;
             let exit_path = sub_m
                 .value_of("exit-file")
                 .map(|name| Path::new(name).to_path_buf());

@@ -114,11 +114,10 @@ Sync a pushrebase bookmark move
 
 Do a manual move
   $ cd "$TESTTMP/client-push"
-  $ NODE="$(hg log -T '{node}' -r master_bookmark~1)"
-  $ echo "$NODE"
-  f5fb745185a2d197d092e7dfffe147f36de1af76
+  $ TIP="$(hg log -T '{node}' -r master_bookmark)"
+  $ TIP_PARENT="$(hg log -T '{node}' -r master_bookmark~1)"
 
-  $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$NODE" &> /dev/null
+  $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$TIP_PARENT" &> /dev/null
 
   $ cd "$TESTTMP"
   $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep 'successful sync'
@@ -135,7 +134,31 @@ Do a manual move
   adding remote bookmark master_bookmark
   $ hgmn log -r master_bookmark -T '{node}\n'
   f5fb745185a2d197d092e7dfffe147f36de1af76
+  $ echo "$TIP_PARENT"
+  f5fb745185a2d197d092e7dfffe147f36de1af76
+
+Move forward to a commit that's already present in the destination
+  $ REPOID=0 mononoke_admin bookmarks set master_bookmark "$TIP" &> /dev/null
+
+  $ cd "$TESTTMP"
+  $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep -e 'successful sync' -e 'already in the darkstorm backup repo'
+  * 1 of 1 commits already in the darkstorm backup repo, not including them in the bundle, repo: orig (glob)
+  * successful sync of entries [9], repo: orig (glob)
+
+  $ cd "$TESTTMP/backup"
+  $ REPONAME=backup
+  $ hgmn pull
+  pulling from mononoke://$LOCALIP:*/backup (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  updating bookmark master_bookmark
+  $ hgmn log -r master_bookmark -T '{node}\n'
+  bcf523b814e2cbae2d4d2d5b1cbbe3e391f4b4d8
+  $ echo "$TIP"
+  bcf523b814e2cbae2d4d2d5b1cbbe3e391f4b4d8
 
 Make sure correct mutable counter is used (it should be repoid = 1)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters" | grep latest
-  1|latest-replayed-request|8
+  1|latest-replayed-request|9

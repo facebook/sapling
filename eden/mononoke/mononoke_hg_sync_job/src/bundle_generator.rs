@@ -64,6 +64,7 @@ use crate::Repo;
 pub trait FilterExistingChangesets: Send + Sync {
     async fn filter(
         &self,
+        ctx: CoreContext,
         cs_ids: Vec<(ChangesetId, HgChangesetId)>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error>;
 }
@@ -94,11 +95,14 @@ pub fn create_bundle(
     .map(|reversed| reversed.into_iter().rev().collect());
 
     commits_to_push
-        .and_then(move |commits_to_push| {
-            #[allow(clippy::redundant_closure_call)]
-            (async move || filter_changesets.filter(commits_to_push).await)()
-                .boxed()
-                .compat()
+        .and_then({
+            cloned!(ctx);
+            move |commits_to_push| {
+                #[allow(clippy::redundant_closure_call)]
+                (async move || filter_changesets.filter(ctx, commits_to_push).await)()
+                    .boxed()
+                    .compat()
+            }
         })
         .and_then({
             move |commits_to_push: Vec<_>| {
