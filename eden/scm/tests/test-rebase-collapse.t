@@ -498,3 +498,25 @@ running into merge conflict and invoking rebase --continue.
   summary:     a
   
   $ cd ..
+
+Collapsed commits have internal conflict:
+
+  $ newrepo e
+  $ drawdag <<'EOS'
+  > D
+  > |
+  > | B # B/foo = foo
+  > | | C # C/foo = bar
+  > | |/
+  > |/
+  > A
+  > EOS
+
+XXX incorrect behavior - rebase should fail due to merge conflict
+
+  $ hg rebase -r $B -r $C -d $D --collapse --config rebase.experimental.inmemory=true
+  rebasing 02385eab34c0 "C"
+  rebasing 15544ab8d64e "B"
+  merging foo
+  hit merge conflicts (in foo); switching to on-disk merge
+  rebasing 15544ab8d64e "B"
