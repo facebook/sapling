@@ -18,6 +18,7 @@ use std::os::unix::io::AsRawFd;
 use std::os::windows::fs::FileExt;
 #[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
+use std::path::Path;
 use std::path::PathBuf;
 
 use criterion::criterion_group;
@@ -127,11 +128,20 @@ impl PosIO for File {
     }
 }
 
+// Criterion does not support custom command-line options, so read from an
+// environment variable.
+fn get_tempfile_path<T: AsRef<Path>>(name: T) -> PathBuf {
+    match std::env::var_os("EDENFS_BENCHMARK_DIR") {
+        Some(val) => PathBuf::from(val).join(name),
+        None => PathBuf::from(name.as_ref()),
+    }
+}
+
 fn random_4k_reads_direct(b: &mut Bencher) {
     let mut rng = thread_rng();
     let mut page = [0u8; PAGE_SIZE];
 
-    let path = PathBuf::from("random_reads.tmp");
+    let path = get_tempfile_path("random_reads.tmp");
 
     let mut options = OpenOptions::new()
         .read(true)
@@ -182,10 +192,10 @@ fn random_4k_writes(b: &mut Bencher) {
     let mut page = [0; PAGE_SIZE];
     rng.fill(&mut page);
 
-    let path = PathBuf::from("random_writes.tmp");
+    let path = get_tempfile_path("random_writes.tmp");
 
-    let file = File::create(&path).expect("failed to open random_writes.tmp");
-    std::fs::remove_file(&path).expect("failed to remove random_writes.tmp");
+    let file = File::create(&path).expect(&format!("failed to open {}", path.display()));
+    std::fs::remove_file(&path).expect(&format!("failed to remove {}", path.display()));
 
     file.set_len(DEFAULT_FILE_SIZE)
         .expect("failed to set file size");
