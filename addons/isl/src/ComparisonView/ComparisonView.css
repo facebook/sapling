@@ -50,6 +50,9 @@
   border: 1px solid var(--panel-view-border);
   /* Remove all border radius so the sticky header doesn't show any of the diff behind it */
   border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
 }
 
 .comparison-view .split-diff-view {

@@ -38,11 +38,14 @@ export function SplitDiffView<Id>({
   const t = ctx.translate ?? (s => s);
 
   const preamble = [];
+  let icon = 'diff-modified';
   if (isAdded) {
     preamble.push(<FileStatusBanner key="added">{t('This file was added')}</FileStatusBanner>);
+    icon = 'diff-added';
   }
   if (isDeleted) {
     preamble.push(<FileStatusBanner key="deleted">{t('This file was removed')}</FileStatusBanner>);
+    icon = 'diff-removed';
   }
   if (isCopied) {
     preamble.push(
@@ -50,6 +53,7 @@ export function SplitDiffView<Id>({
         {t('This file was copied from')} {patch.oldFileName ?? ''}
       </FileStatusBanner>,
     );
+    icon = 'diff-renamed';
   }
 
   return (
@@ -59,7 +63,7 @@ export function SplitDiffView<Id>({
       borderStyle="solid"
       borderColor="border.default"
       borderRadius={2}>
-      <FileHeader path={fileName} />
+      <FileHeader path={fileName} icon={icon} />
       <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />
     </Box>
   );

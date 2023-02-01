@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Icon} from '../Icon';
 import {Box, Text} from '@primer/react';
 
-export function FileHeader({path}: {path: string}) {
+export function FileHeader({path, icon}: {path: string; icon?: string}) {
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
   return (
@@ -24,6 +25,7 @@ export function FileHeader({path}: {path: string}) {
       borderBottomColor="border.default"
       borderBottomStyle="solid"
       borderBottomWidth="1px">
+      {icon !== undefined && <Icon icon={icon} />}
       <Text fontFamily="mono" fontSize={12}>
         {path}
       </Text>
