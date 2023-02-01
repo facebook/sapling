@@ -125,6 +125,12 @@
   opacity: 0.5;
 }
 
+.commit-preview-hidden-root > .commit-title,
+.commit-preview-hidden-descendant > .commit-title {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
 .commit-inline-operation-progress {
   display: flex;
   flex-direction: row;

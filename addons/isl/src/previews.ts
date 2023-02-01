@@ -30,6 +30,8 @@ export enum CommitPreview {
   REBASE_OPTIMISTIC_DESCENDANT = 'rebase-optimistic-descendant',
   GOTO_DESTINATION = 'goto-destination',
   GOTO_PREVIOUS_LOCATION = 'goto-previous-location',
+  HIDDEN_ROOT = 'hidden-root',
+  HIDDEN_DESCENDANT = 'hidden-descendant',
 }
 
 /**
