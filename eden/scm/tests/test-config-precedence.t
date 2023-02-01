@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ configure modernclient
 
@@ -33,11 +33,9 @@ Sample config item that has been moved from configitems.py to Rust HG_PY_CORE_CO
 
 Make sure --config options are available when loading config itself.
 "root" is not material - the important thing is that the regen-command is respected:
-  $ hg root --config "configs.regen-command=touch $TESTTMP/touch" --config configs.generationtime=0 > /dev/null
-  $ sleep 1
-  $ ls $TESTTMP/touch
-  $TESTTMP/touch
 
+  $ LOG=configloader::hg=debug hg root --config "configs.regen-command=false" --config configs.generationtime=0 2>&1 | grep '^DEBUG.* spawn '
+  DEBUG configloader::hg: spawn ["false"] because * (glob)
 
 Only load config a single time.
   $ LOG=configloader::hg=info hg files abc
