@@ -6,11 +6,18 @@
  */
 
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io;
 #[cfg(unix)]
 use std::os::unix::fs::FileExt;
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::OpenOptionsExt;
+#[cfg(target_vendor = "apple")]
+use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::fs::FileExt;
+#[cfg(windows)]
+use std::os::windows::fs::OpenOptionsExt;
 use std::path::PathBuf;
 
 use criterion::criterion_group;
@@ -120,6 +127,56 @@ impl PosIO for File {
     }
 }
 
+fn random_4k_reads_direct(b: &mut Bencher) {
+    let mut rng = thread_rng();
+    let mut page = [0u8; PAGE_SIZE];
+
+    let path = PathBuf::from("random_reads.tmp");
+
+    let mut options = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .clone();
+    #[cfg(target_os = "linux")]
+    let options = options.custom_flags(libc::O_DIRECT);
+    #[cfg(windows)]
+    let options = options.custom_flags(winapi::um::winbase::FILE_FLAG_NO_BUFFERING);
+    let file = options
+        .open(&path)
+        .expect(&format!("failed to open {}", path.display()));
+
+    #[cfg(target_vendor = "apple")]
+    unsafe {
+        libc::fcntl(file.as_raw_fd(), libc::F_NOCACHE, 1);
+    }
+
+    std::fs::remove_file(&path).expect(&format!("failed to remove {}", path.display()));
+
+    const FILE_SIZE: u64 = 20 * (1 << 30); // 20 GiB
+
+    file.set_len(FILE_SIZE).expect("failed to set file size");
+
+    const OFFSET_COUNT: usize = (FILE_SIZE / PAGE_SIZE as u64) as usize;
+    let mut offsets = Vec::with_capacity(OFFSET_COUNT);
+    for i in 0..OFFSET_COUNT {
+        offsets.push((i * PAGE_SIZE) as u64);
+    }
+    offsets.shuffle(&mut rng);
+
+    let mut offset_idx: usize = 0;
+
+    b.iter(|| {
+        let offset = offsets[offset_idx];
+        offset_idx += 1;
+        if offset_idx == offsets.len() {
+            offset_idx = 0;
+        }
+        file.read_full_at(&mut page, offset)
+            .expect("failed to write_full_at");
+    });
+}
+
 fn random_4k_writes(b: &mut Bencher) {
     let mut rng = thread_rng();
     let mut page = [0; PAGE_SIZE];
@@ -156,7 +213,8 @@ fn random_4k_writes(b: &mut Bencher) {
 fn random_4k(c: &mut Criterion) {
     let mut group = c.benchmark_group("throughput");
     group.throughput(Throughput::Bytes(PAGE_SIZE as u64));
-    group.bench_function("random_4k_writes", |b| random_4k_writes(b));
+    group.bench_function("random_4k_reads_direct", random_4k_reads_direct);
+    group.bench_function("random_4k_writes", random_4k_writes);
 
     // glibc's pthread_cancel implementation causes a pair of atomic cmpxchg
     // operations per syscall. If pthread cancellation is disabled, the
@@ -164,6 +222,9 @@ fn random_4k(c: &mut Criterion) {
     // disables pthread cancellation on a particular tested CentOS machine,
     // but try benchmarking anyway:
     if cfg!(all(target_os = "linux", not(target_env = "musl"))) {
+        group.bench_function("random_4k_reads_direct_no_pthread", |b| {
+            pthread::without_pthread_cancellation(|| random_4k_reads_direct(b))
+        });
         group.bench_function("random_4k_writes_no_pthread", |b| {
             pthread::without_pthread_cancellation(|| random_4k_writes(b))
         });
