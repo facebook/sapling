@@ -244,9 +244,13 @@ impl GitimportTarget {
         let stdout = BufReader::new(rev_list.stdout.take().context("stdout not set up")?);
         let lines_stream = LinesStream::new(stdout.lines());
 
-        Ok(lines_stream
-            .err_into()
-            .and_then(|line| async move { line.parse().context("Reading from git rev-list") }))
+        Ok(lines_stream.err_into().and_then(|line| async move {
+            // rev-list with --boundary option returns boundary commits prefixed with `-`
+            // here we remove that prefix to get uniformed list of commits
+            line.replace('-', "")
+                .parse()
+                .context("Reading from git rev-list")
+        }))
     }
 
     async fn write_filter_list(&self, rev_list: &mut Child) -> Result<(), Error> {
@@ -268,7 +272,8 @@ impl GitimportTarget {
             .env_clear()
             .kill_on_drop(false)
             .stdout(Stdio::piped())
-            .arg("rev-list");
+            .arg("rev-list")
+            .arg("--boundary");
 
         if self.wanted.is_none() {
             command.arg("--all").stdin(Stdio::null());

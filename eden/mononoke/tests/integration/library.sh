@@ -1808,6 +1808,11 @@ function mkcommitedenapi() {
    hgedenapi ci -m "$1"
 }
 
+function mkgitcommit() {
+  echo "$1" > "$1"
+  git add "$1"
+  git commit -aqm "$1"
+}
 
 function enable_replay_verification_hook {
 

@@ -229,7 +229,12 @@ pub async fn gitimport_acc<Uploader: GitUploader>(
                         .get(p)
                         .copied()
                         .or_else(|| acc.read().expect("lock poisoned").get(p))
-                        .ok_or_else(|| format_err!("Commit was not imported: {}", p))
+                        .ok_or_else(|| {
+                            format_err!(
+                                "Couldn't find parent: {} in local list of imported commits",
+                                p
+                            )
+                        })
                 })
                 .collect::<Result<Vec<_>, _>>()
                 .with_context(|| format_err!("While looking for parents of {}", oid))?;
