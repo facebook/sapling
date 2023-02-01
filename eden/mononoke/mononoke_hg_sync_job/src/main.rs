@@ -94,6 +94,8 @@ use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use tempfile::NamedTempFile;
 
+use crate::bundle_generator::FilterExistingChangesets;
+
 mod bundle_generator;
 mod bundle_preparer;
 mod darkstorm_verifier;
@@ -948,6 +950,18 @@ impl LatestReplayedSyncCounter {
     }
 }
 
+struct NoopChangesetsFilter;
+
+#[async_trait]
+impl FilterExistingChangesets for NoopChangesetsFilter {
+    async fn filter(
+        &self,
+        cs_ids: Vec<(ChangesetId, HgChangesetId)>,
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error> {
+        Ok(cs_ids)
+    }
+}
+
 async fn run<'a>(
     ctx: &CoreContext,
     matches: &'a MononokeMatches<'a>,
@@ -1174,6 +1188,8 @@ async fn run<'a>(
         None
     };
 
+    let filter_changesets = Arc::new(NoopChangesetsFilter {});
+
     // Before beginning any actual processing, check if cancellation has been requested.
     // If yes, then lets return early.
     if cancellation_requested.load(Ordering::Relaxed) {
@@ -1205,7 +1221,7 @@ async fn run<'a>(
                         .prepare_batches(ctx, &mut overlay, vec![log_entry.clone()])
                         .await?;
                     let mut combined_entries = bundle_preparer
-                        .prepare_bundles(ctx.clone(), batches)
+                        .prepare_bundles(ctx.clone(), batches, filter_changesets)
                         .await?;
 
                     let combined_entry = combined_entries.remove(0);
@@ -1325,7 +1341,7 @@ async fn run<'a>(
                 }
 
                 let bundles = bundle_preparer
-                    .prepare_bundles(ctx.clone(), batches)
+                    .prepare_bundles(ctx.clone(), batches, filter_changesets.clone())
                     .watched(ctx.logger())
                     .await?;
 

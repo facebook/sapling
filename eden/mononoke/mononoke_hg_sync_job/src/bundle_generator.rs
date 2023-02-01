@@ -6,9 +6,11 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
+use async_trait::async_trait;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
@@ -58,6 +60,14 @@ use crate::darkstorm_verifier::DarkstormVerifier;
 use crate::lfs_verifier::LfsVerifier;
 use crate::Repo;
 
+#[async_trait]
+pub trait FilterExistingChangesets: Send + Sync {
+    async fn filter(
+        &self,
+        cs_ids: Vec<(ChangesetId, HgChangesetId)>,
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error>;
+}
+
 pub fn create_bundle(
     ctx: CoreContext,
     repo: Repo,
@@ -67,6 +77,7 @@ pub fn create_bundle(
     lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
     push_vars: Option<HashMap<String, bytes::Bytes>>,
+    filter_changesets: Arc<dyn FilterExistingChangesets>,
 ) -> impl Future<Item = (BytesOld, HashMap<HgChangesetId, (ChangesetId, Timestamp)>), Error = Error>
 {
     let commits_to_push = find_commits_to_push(
@@ -83,6 +94,12 @@ pub fn create_bundle(
     .map(|reversed| reversed.into_iter().rev().collect());
 
     commits_to_push
+        .and_then(move |commits_to_push| {
+            #[allow(clippy::redundant_closure_call)]
+            (async move || filter_changesets.filter(commits_to_push).await)()
+                .boxed()
+                .compat()
+        })
         .and_then({
             move |commits_to_push: Vec<_>| {
                 debug!(

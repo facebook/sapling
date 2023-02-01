@@ -41,6 +41,7 @@ use tempfile::NamedTempFile;
 use crate::bind_sync_err;
 use crate::bundle_generator::BookmarkChange;
 use crate::bundle_generator::FilenodeVerifier;
+use crate::bundle_generator::FilterExistingChangesets;
 use crate::errors::ErrorKind::BookmarkMismatchInBundleCombining;
 use crate::errors::ErrorKind::UnexpectedBookmarkMove;
 use crate::errors::PipelineError;
@@ -117,6 +118,7 @@ impl BundlePreparer {
         &self,
         ctx: CoreContext,
         batches: Vec<BookmarkLogEntryBatch>,
+        filter_changesets: Arc<dyn FilterExistingChangesets>,
     ) -> BoxFuture<'static, Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
         let mut futs = vec![];
 
@@ -126,7 +128,12 @@ impl BundlePreparer {
             }
             let session_lfs_params = self.session_lfs_params(&ctx, &batch.bookmark_name);
             let entries = batch.entries.clone();
-            let f = self.prepare_single_bundle(ctx.clone(), batch, session_lfs_params);
+            let f = self.prepare_single_bundle(
+                ctx.clone(),
+                batch,
+                session_lfs_params,
+                filter_changesets.clone(),
+            );
             futs.push((f, entries));
         }
 
@@ -156,6 +163,7 @@ impl BundlePreparer {
         ctx: CoreContext,
         batch: BookmarkLogEntryBatch,
         session_lfs_params: SessionLfsParams,
+        filter_changesets: Arc<dyn FilterExistingChangesets>,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo, self.push_vars, self.filenode_verifier);
 
@@ -195,6 +203,7 @@ impl BundlePreparer {
                             &bookmark_change,
                             &batch.bookmark_name,
                             push_vars.clone(),
+                            filter_changesets.clone(),
                         )
                     }
                 },
@@ -242,6 +251,7 @@ impl BundlePreparer {
         bookmark_change: &'a BookmarkChange,
         bookmark_name: &'a BookmarkName,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
+        filter_changesets: Arc<dyn FilterExistingChangesets>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
         let (bytes, timestamps) = crate::bundle_generator::create_bundle(
             ctx.clone(),
@@ -252,6 +262,7 @@ impl BundlePreparer {
             session_lfs_params,
             filenode_verifier.clone(),
             push_vars,
+            filter_changesets,
         )
         .compat()
         .await?;
