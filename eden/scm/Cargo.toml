@@ -108,6 +108,7 @@ members = [
   "lib/storemodel",
   "lib/streams",
   "lib/third-party/conch-parser",
+  "lib/third-party/streampager",
   "lib/thrift-types",
   "lib/tracing-analyzer",
   "lib/tracing-collector",

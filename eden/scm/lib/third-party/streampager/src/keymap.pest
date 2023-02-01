@@ -1,0 +1,25 @@
+WHITESPACE = _{ " " | "\t" | "\x0C" }
+
+COMMENT = _{ "#" ~ (!NEWLINE ~ ANY)* } 
+
+ident = @{ ASCII_ALPHA ~ (ASCII_ALPHA | ASCII_DIGIT)* }
+
+char = { ANY }
+
+modifier = @{ "SUPER" | "CTRL" | "ALT" | "SHIFT" }
+
+keycode = ${ ident | "\'" ~ "\\"? ~ char ~ "\'" }
+
+visible_key = { modifier* ~ keycode }
+
+invisible_key = { "(" ~ modifier* ~ keycode ~ ")" }
+
+key = { visible_key | invisible_key }
+
+binding_param = @{ ASCII_DIGIT+ }
+
+binding = { ident ~ ( "(" ~ binding_param ~ ( "," ~ binding_param )* ~ ")" )? }
+
+item = { key ~ ("," ~ key)* ~ "=>" ~ binding ~ ";" }
+
+file = { SOI ~ (item? ~ NEWLINE)* ~ EOI }
