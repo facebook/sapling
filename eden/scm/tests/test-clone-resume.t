@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ configure modern
   $ setconfig devel.segmented-changelog-rev-compat=true
@@ -20,8 +20,8 @@ Bare clone the repo
   $ hg pull -q
 
 Set a failpoint to force incomplete checkout.
-  $ FAILPOINTS=checkout-post-progress=return hg checkout tip --config remotefilelog.debug=False &> /dev/null
-  [1]
+  $ FAILPOINTS=checkout-post-progress=return hg checkout tip --config remotefilelog.debug=False --config devel.silence-crash=True
+  [255]
 
 Verify we see the warning for other commands
   $ hg log -r .

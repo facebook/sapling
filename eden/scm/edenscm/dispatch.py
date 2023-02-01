@@ -1272,6 +1272,8 @@ def handlecommandexception(ui):
     Called when handling an exception; the exception is reraised if
     this function returns False, ignored otherwise.
     """
+    if ui.configbool("devel", "silence-crash"):
+        return True  # do not re-raise
     warning = _exceptionwarning(ui)
     ui.log("command_exception", "%s\n%s\n", warning, util.smartformatexc())
     ui.warn(warning)
