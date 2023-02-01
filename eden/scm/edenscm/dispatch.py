@@ -267,7 +267,6 @@ def _preimportmodules():
         "arcdiff",
         "automv",
         "blackbox",
-        "checkmessagehook",
         "chistedit",
         "clienttelemetry",
         "commitcloud",

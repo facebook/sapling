@@ -4,11 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-  $ cat >> $HGRCPATH << 'EOF'
-  > [extensions]
-  > checkmessagehook=
-  > EOF
-
 # Build up a repo
 
   $ hg init repo
@@ -16,14 +11,17 @@
   $ touch a
   $ hg commit -A -l "$TESTDIR/ctrlchar-msg.txt"
   adding a
-  +-------------------------------------------------------------
-  | Non-printable characters in commit message are not allowed.
-  | Edit your commit message to fix this issue.
-  | The problematic commit message can be found at:
-  |  Line 5: 'This has a sneaky ctrl-A: \x01'
-  |  Line 6: 'And this has esc: \x1b'
-  +-------------------------------------------------------------
-  abort: pretxncommit.checkmessage hook failed
+  abort: non-printable characters in commit message:
+      This is a commit with bad chars in the message - but this one is OK
+      
+      That was a blank line
+    > This has a sneaky ctrl-A: 
+                                ^
+    > And this has esc: 
+                        ^
+      
+      Finish off with an OK line
+  (edit commit message to fix this issue)
   [255]
   $ hg commit -A -l "$TESTDIR/perfectlyok-msg.txt"
   adding a
@@ -36,5 +34,5 @@
 # Try force adding a non-printable character
 
   $ touch b
-  $ hg commit -A -l "$TESTDIR/ctrlchar-msg.txt" --config checkmessage.allownonprintable=True
+  $ hg commit -A -l "$TESTDIR/ctrlchar-msg.txt" --config commit.allow-non-printable=True
   adding b

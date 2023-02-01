@@ -2658,6 +2658,12 @@ class localrepository(object):
         p1, p2 = ctx.p1(), ctx.p2()
         user = ctx.user()
 
+        if (
+            not self.ui.configbool("commit", "allow-non-printable")
+            and not self.ui.plain()
+        ):
+            _check_non_printable(self.ui, ctx.description())
+
         descriptionlimit = self.ui.configbytes("commit", "description-size-limit")
         if descriptionlimit:
             descriptionlen = len(ctx.description())
@@ -3272,6 +3278,38 @@ def newrepostorerequirements(repo):
         requirements.add("invalidatelinkrev")
 
     return requirements
+
+
+def _check_non_printable(ui, message: str) -> None:
+    """Raise if non-printable ASCII characters are detected
+
+    This should probably be updated to check special non-ASCII Unicode
+    characters too. But for now it's easier to only check ASCII.
+    """
+    import string
+
+    printable = set(string.printable)
+    lines = []
+    bad = False
+    for line in message.splitlines(True):
+        for i, c in enumerate(line):
+            if ord(c) < 128 and c not in printable:
+                # Problematic line
+                lines.append("  > %s" % line)
+                lines.append(" " * (i + 4) + "^\n")
+                bad = True
+                break
+        else:
+            # Regular line
+            lines.append("    %s" % line)
+
+    if bad:
+        # Show hint about the problem.
+        text = "".join(lines)
+        raise errormod.Abort(
+            _("non-printable characters in commit message:\n%s") % text,
+            hint=_("edit commit message to fix this issue"),
+        )
 
 
 def _remotenodes(repo):

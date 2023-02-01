@@ -37,6 +37,7 @@ _ignoreextensions = {
     "bookmarks",
     "bundle2hooks",
     "censor",
+    "checkmessagehook",
     "children",
     "cleanobsstore",
     "clindex",

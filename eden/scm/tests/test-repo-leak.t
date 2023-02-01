@@ -93,7 +93,6 @@ Somehow problematic: With many extensions
   > arcdiff=
   > automv=
   > blackbox=
-  > checkmessagehook=
   > chistedit=
   > cleanobsstore=!
   > clienttelemetry=
