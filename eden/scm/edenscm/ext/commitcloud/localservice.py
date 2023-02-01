@@ -14,7 +14,7 @@ from edenscm.i18n import _
 from . import baseservice, error as ccerror, workspace as ccworkspace
 
 
-class _LocalService(baseservice.BaseService):
+class LocalService(baseservice.BaseService):
     """Local commit-cloud service implemented using files on disk.
 
     There is no locking, so this is suitable only for use in unit tests.
@@ -337,7 +337,3 @@ class _LocalService(baseservice.BaseService):
     def rollbackworkspace(self, reponame, workspace, version):
         """Rollback the given workspace to a specific version"""
         raise NotImplementedError  # Since commit cloud history is not supported in the tests yet
-
-
-# Make sure that the LocalService is a singleton
-LocalService = baseservice.SingletonDecorator(_LocalService)
