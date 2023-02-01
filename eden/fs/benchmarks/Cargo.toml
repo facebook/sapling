@@ -13,4 +13,6 @@ path = "benchmarks.rs"
 
 [dependencies]
 criterion = "=0.3.1"
+libc = "0.2.137"
 rand = { version = "0.8", features = ["small_rng"] }
+winapi = { version = "0.3", features = ["everything"] }
