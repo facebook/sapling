@@ -1233,6 +1233,8 @@ def rebase(ui, repo, templ=None, **opts):
         # since the restarting logic will fail the entire transaction.
         elif repo.currenttransaction() is not None:
             whynotimm = "rebase run inside a transaction"
+        elif opts.get("collapse", False):
+            whynotimm = "--collapse"
 
         if whynotimm:
             ui.log(

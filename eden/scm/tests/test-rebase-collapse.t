@@ -512,11 +512,12 @@ Collapsed commits have internal conflict:
   > A
   > EOS
 
-XXX incorrect behavior - rebase should fail due to merge conflict
+Rebase should fail due to merge conflict when inmemory=true:
 
   $ hg rebase -r $B -r $C -d $D --collapse --config rebase.experimental.inmemory=true
   rebasing 02385eab34c0 "C"
   rebasing 15544ab8d64e "B"
   merging foo
-  hit merge conflicts (in foo); switching to on-disk merge
-  rebasing 15544ab8d64e "B"
+  warning: 1 conflicts while merging foo! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
