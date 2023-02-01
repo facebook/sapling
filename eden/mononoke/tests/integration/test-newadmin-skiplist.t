@@ -60,18 +60,25 @@ provided blobstore key]
   $ mononoke_newadmin skiplist -R repo -k skiplist_5 build --exponent 2
   *] creating a skiplist from scratch (glob)
   *] built 5 skiplist nodes (glob)
+  *] Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.. (glob)
+  *] ...done! (glob)
+
 
 Check we can build a new skiplist based on existing skiplist
   $ mononoke_newadmin skiplist -R repo -k skiplist_5 build --exponent 2
   *] cmap size 5, parent nodecount 0, skip nodecount 5, maxsedgelen 1, maxpedgelen 0 (glob)
   *] skiplist graph has 5 entries (glob)
   *] built 5 skiplist nodes (glob)
+  *] Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.. (glob)
+  *] ...done! (glob)
 
 Check we can build a new skiplist from scratch [with blobstore
 key taken from repo config]
   $ mononoke_newadmin skiplist -R repo build --rebuild --exponent 3
   *] creating a skiplist from scratch (glob)
   *] built 2 skiplist nodes (glob)
+  *] Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.. (glob)
+  *] ...done! (glob)
 
 Check we can read and display an existing skiplist [with explicitly
 provided blobstore key]
