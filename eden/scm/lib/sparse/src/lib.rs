@@ -256,6 +256,12 @@ impl Profile {
             }
 
             if let Some(p) = trimmed.strip_prefix("%include ") {
+                let p = p.trim();
+                if p.ends_with('/') {
+                    tracing::warn!(%line, %source, line_num, "ignoring sparse %include ending with /");
+                    continue;
+                }
+
                 prof.entries
                     .push(ProfileEntry::Profile(p.trim().to_string()));
             } else if let Some(section_start) = SectionType::from_str(trimmed) {
