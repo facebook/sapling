@@ -12,6 +12,7 @@ use std::io::Write;
 
 use anyhow::bail;
 use anyhow::Result;
+use clap::ArgEnum;
 use maplit::btreeset;
 use serde::Serialize;
 use source_control as thrift;
@@ -22,6 +23,12 @@ use crate::args::repo::RepoArgs;
 use crate::library::diff::diff_files;
 use crate::render::Render;
 use crate::ScscApp;
+
+#[derive(ArgEnum, Clone, Copy, Debug)]
+enum DiffFormat {
+    RawDiff,
+    MetadataDiff,
+}
 
 #[derive(clap::Parser)]
 /// Diff files between two commits
@@ -52,8 +59,11 @@ pub(super) struct CommandArgs {
     /// Generate ordered diff for at most LIMIT files.
     limit: usize,
     #[clap(long, short = 's')]
-    /// Limit the total size in bytes of returned diffs
+    /// Limit the total size in bytes of returned diffs.
     diff_size_limit: Option<i64>,
+    /// The format of the diff.
+    #[clap(long, short = 'f', arg_enum, default_value_t = DiffFormat::RawDiff)]
+    diff_format: DiffFormat,
 }
 
 #[derive(Serialize)]
@@ -128,6 +138,11 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     } else {
         None
     };
+    let diff_format = match args.diff_format {
+        DiffFormat::RawDiff => thrift::DiffFormat::RAW_DIFF,
+        DiffFormat::MetadataDiff => thrift::DiffFormat::METADATA_DIFF,
+    };
+
     let params = thrift::CommitCompareParams {
         other_commit_id: other_commit.map(|c| c.id.clone()),
         skip_copies_renames: args.skip_copies_renames,
@@ -191,6 +206,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 other_commit_id,
                 paths_sizes,
                 args.diff_size_limit,
+                diff_format,
             ),
         )
         .await

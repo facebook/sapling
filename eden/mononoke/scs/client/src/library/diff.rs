@@ -21,9 +21,89 @@ use crate::connection::Connection;
 use crate::render::Render;
 
 #[derive(Serialize)]
+struct FileInfo {
+    file_type: Option<String>,
+    file_content_type: Option<String>,
+    file_generated_status: Option<String>,
+}
+
+impl From<&thrift::MetadataDiffFileInfo> for FileInfo {
+    fn from(file_info: &thrift::MetadataDiffFileInfo) -> Self {
+        Self {
+            file_type: file_info
+                .file_type
+                .as_ref()
+                .map(thrift::MetadataDiffFileType::to_string),
+            file_content_type: file_info
+                .file_content_type
+                .as_ref()
+                .map(thrift::MetadataDiffFileContentType::to_string),
+            file_generated_status: file_info
+                .file_generated_status
+                .as_ref()
+                .map(thrift::FileGeneratedStatus::to_string),
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct LinesCount {
+    added_lines_count: i64,
+    deleted_lines_count: i64,
+    significant_added_lines_count: i64,
+    significant_deleted_lines_count: i64,
+}
+
+impl From<&thrift::MetadataDiffLinesCount> for LinesCount {
+    fn from(lines_count: &thrift::MetadataDiffLinesCount) -> Self {
+        Self {
+            added_lines_count: lines_count.added_lines_count,
+            deleted_lines_count: lines_count.deleted_lines_count,
+            significant_added_lines_count: lines_count.significant_added_lines_count,
+            significant_deleted_lines_count: lines_count.significant_deleted_lines_count,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct MetadataDiffElement {
+    old_path: String,
+    new_path: String,
+    old_file_info: FileInfo,
+    new_file_info: FileInfo,
+    lines_count: Option<LinesCount>,
+}
+
+#[derive(Serialize)]
+enum DiffOutputElement {
+    RawDiff(Vec<u8>),
+    MetadataDiff(MetadataDiffElement),
+}
+
+#[derive(Serialize)]
 struct DiffOutput {
-    diffs: Vec<Vec<u8>>,
+    diffs: Vec<DiffOutputElement>,
     stopped_at_pair: Option<thrift::CommitFileDiffsStoppedAtPair>,
+}
+
+fn render_file_info(
+    tag: &str,
+    path: &String,
+    file_info: &FileInfo,
+    w: &mut dyn Write,
+) -> Result<()> {
+    write!(w, "{} {},", tag, path)?;
+    if let Some(file_type) = &file_info.file_type {
+        write!(w, " file type: {},", file_type)?;
+    }
+    if let Some(content_type) = &file_info.file_content_type {
+        write!(w, " content type: {},", content_type)?;
+    }
+    if let Some(generated_status) = &file_info.file_generated_status {
+        write!(w, " generated status: {},", generated_status)?;
+    }
+    write!(w, "\n")?;
+    Ok(())
 }
 
 impl Render for DiffOutput {
@@ -31,7 +111,28 @@ impl Render for DiffOutput {
 
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
         for diff in &self.diffs {
-            write!(w, "{}", String::from_utf8_lossy(diff))?;
+            match diff {
+                DiffOutputElement::RawDiff(diff) => write!(w, "{}", String::from_utf8_lossy(diff))?,
+                DiffOutputElement::MetadataDiff(diff) => {
+                    render_file_info("---", &diff.old_path, &diff.old_file_info, w)?;
+                    render_file_info("+++", &diff.new_path, &diff.new_file_info, w)?;
+
+                    if let Some(lines_count) = &diff.lines_count {
+                        writeln!(
+                            w,
+                            "{} significant lines ({} added, {} deleted), {} total ({} added, {} deleted)",
+                            lines_count.significant_added_lines_count
+                                + lines_count.significant_deleted_lines_count,
+                            lines_count.significant_added_lines_count,
+                            lines_count.significant_deleted_lines_count,
+                            lines_count.added_lines_count + lines_count.deleted_lines_count,
+                            lines_count.added_lines_count,
+                            lines_count.deleted_lines_count,
+                        )?
+                    }
+                    write!(w, "\n")?;
+                }
+            }
         }
 
         if let Some(stopped_at_pair) = &self.stopped_at_pair {
@@ -63,11 +164,12 @@ async fn make_file_diff_request(
     other_commit_id: Option<thrift::CommitId>,
     paths: Vec<thrift::CommitFileDiffsParamsPathPair>,
     diff_size_limit: Option<i64>,
+    diff_format: thrift::DiffFormat,
 ) -> Result<DiffOutput> {
     let params = thrift::CommitFileDiffsParams {
         other_commit_id,
         paths,
-        format: thrift::DiffFormat::RAW_DIFF,
+        format: diff_format,
         context: 3,
         diff_size_limit,
         ..Default::default()
@@ -77,12 +179,28 @@ async fn make_file_diff_request(
     let diffs: Vec<_> = response
         .path_diffs
         .into_iter()
-        .filter_map(|path_diff| {
-            if let thrift::Diff::raw_diff(diff) = path_diff.diff {
-                Some(diff.raw_diff.unwrap_or_else(Vec::new))
-            } else {
-                None
-            }
+        .filter_map(|path_diff| match path_diff {
+            thrift::CommitFileDiffsResponseElement {
+                diff: thrift::Diff::raw_diff(diff),
+                ..
+            } => Some(DiffOutputElement::RawDiff(
+                diff.raw_diff.unwrap_or_else(Vec::new),
+            )),
+            thrift::CommitFileDiffsResponseElement {
+                diff: thrift::Diff::metadata_diff(diff),
+                base_path,
+                other_path,
+                ..
+            } => Some(DiffOutputElement::MetadataDiff(MetadataDiffElement {
+                old_path: other_path
+                    .map_or_else(|| "/dev/null".to_string(), |path| format!("a/{}", path)),
+                new_path: base_path
+                    .map_or_else(|| "/dev/null".to_string(), |path| format!("b/{}", path)),
+                old_file_info: FileInfo::from(&diff.old_file_info),
+                new_file_info: FileInfo::from(&diff.new_file_info),
+                lines_count: diff.lines_count.as_ref().map(LinesCount::from),
+            })),
+            _ => None,
         })
         .collect();
 
@@ -100,6 +218,7 @@ pub(crate) fn diff_files(
     other_commit_id: Option<thrift::CommitId>,
     paths_sizes: impl IntoIterator<Item = (thrift::CommitFileDiffsParamsPathPair, i64)>,
     diff_size_limit: Option<i64>,
+    diff_format: thrift::DiffFormat,
 ) -> impl Stream<Item = Result<impl Render<Args = ()>>> {
     let mut size_sum: i64 = 0;
     let mut path_count: i64 = 0;
@@ -131,6 +250,7 @@ pub(crate) fn diff_files(
                 other_commit_id,
                 paths,
                 diff_size_limit,
+                diff_format,
             )
             .await
         }
