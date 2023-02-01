@@ -11,11 +11,12 @@ import {Box, Text} from '@primer/react';
 export function FileHeader({path, icon}: {path: string; icon?: string}) {
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
+  const color = iconToColor[icon ?? 'default'] ?? iconToColor.default;
   return (
     <Box
       className="split-diff-view-file-header"
       bg="accent.subtle"
-      color="fg.muted"
+      color={color}
       paddingX={2}
       paddingY={1}
       lineHeight={2}
@@ -32,3 +33,11 @@ export function FileHeader({path, icon}: {path: string; icon?: string}) {
     </Box>
   );
 }
+
+const iconToColor: Record<string, string> = {
+  'diff-modified': 'var(--scm-modified-foreground)',
+  'diff-added': 'var(--scm-added-foreground)',
+  'diff-removed': 'var(--scm-removed-foreground)',
+  'diff-renamed': 'fg.muted',
+  default: 'fg.muted',
+};
