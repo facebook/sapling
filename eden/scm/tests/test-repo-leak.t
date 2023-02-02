@@ -1,3 +1,6 @@
+#debugruntest-compatible
+#inprocess-hg-incompatible
+
 Test native objects attached to the "repo" object gets properly released at the
 end of process.
 
