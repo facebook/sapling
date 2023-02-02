@@ -8,8 +8,12 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
+use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use filestore::hash_bytes;
+use filestore::Sha1IncrementalHasher;
+use mononoke_types::BlobstoreBytes;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -57,7 +61,36 @@ impl RepoContext {
                     })?;
             }
         }
-
         Ok(())
+    }
+
+    /// Upload serialized git objects
+    pub async fn upload_git_object(
+        &self,
+        git_hash: &git_hash::oid,
+        serialized_representation: Vec<u8>,
+    ) -> anyhow::Result<()> {
+        // Check if the provided Sha1 hash (i.e. ObjectId) of the bytes actually corresponds to the hash of the bytes
+        let bytes = bytes::Bytes::from(serialized_representation);
+        let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
+        if sha1_hash.as_ref() != git_hash.as_bytes() {
+            anyhow::bail!(
+                "ObjectId {} does not match hash of bytes {:?}",
+                git_hash,
+                sha1_hash
+            )
+        };
+        // Check if the bytes actually correspond to a valid Git object
+        let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
+        let _git_obj = git_object::ObjectRef::from_loose(bytes.as_ref())
+            .with_context(|| format!("Invalid git object data for {}", git_hash))?;
+
+        // The bytes are valid, upload to blobstore with the key:
+        // git_object_{hex-value-of-hash}
+        let blobstore_key = format!("git_object_{}", git_hash.to_hex());
+        self.repo_blobstore()
+            .put(&self.ctx, blobstore_key, blobstore_bytes)
+            .await
+            .with_context(|| format!("Failed to store git object {} in blobstore", git_hash))
     }
 }

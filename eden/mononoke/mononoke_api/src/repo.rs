@@ -113,6 +113,7 @@ use pushrebase_mutation_mapping::PushrebaseMutationMapping;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_authorization::AuthorizationContext;
+use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -174,9 +175,9 @@ use crate::xrepo::CandidateSelectionHintArgs;
 pub mod create_bookmark;
 pub mod create_changeset;
 pub mod delete_bookmark;
+pub mod git;
 pub mod land_stack;
 pub mod move_bookmark;
-pub mod set_git_mapping;
 
 define_stats! {
     prefix = "mononoke.api";
@@ -903,6 +904,11 @@ impl RepoContext {
     /// The warm bookmarks cache for the referenced repository.
     pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache + Send + Sync> {
         self.repo.warm_bookmarks_cache()
+    }
+
+    /// The repo blobstore for the referenced repository.
+    pub fn repo_blobstore(&self) -> ArcRepoBlobstore {
+        self.repo.repo_blobstore_arc()
     }
 
     /// The hook manager for the referenced repository.
