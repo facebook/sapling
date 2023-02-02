@@ -41,22 +41,31 @@ use crate::impls::PipeWriterWithTty;
 // to ensure things are cleaned up before the process exits.
 #[derive(Clone)]
 pub struct IO {
-    inner: Arc<Mutex<Inner>>,
+    inner: Arc<Inner>,
 }
 
 /// Implements `io::Write` on the output stream.
 #[derive(Clone)]
-pub struct IOOutput(Weak<Mutex<Inner>>);
+pub struct IOOutput(Weak<Inner>);
 
 /// Implements `io::Write` on the error stream.
 #[derive(Clone)]
-pub struct IOError(Weak<Mutex<Inner>>);
+pub struct IOError(Weak<Inner>);
 
 /// Provides a way to set progress, without requiring the `&IO` reference.
 #[derive(Clone)]
-pub struct IOProgress(Weak<Mutex<Inner>>);
+pub struct IOProgress(Weak<Inner>);
 
 struct Inner {
+    io_state: Mutex<IOState>,
+    // Use a separate Mutex for quitting the pager without blocking.
+    //
+    // Note: wait_pager is in io_state so quit_pager during wait_pager
+    // won't block.
+    pager_quit_func: Mutex<Option<Box<dyn FnOnce() + Send>>>,
+}
+
+struct IOState {
     input: Box<dyn Read>,
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
@@ -77,10 +86,9 @@ struct Inner {
     // How many (nested) blocks want progress output disabled.
     progress_disabled: usize,
 
-    // Quit (optionally) then wait for the pager to complete cleanup.
-    // The function takes a parameter. If it's true, exit the pager immediately,
-    // otherwise, block and wait for the user to exit the pager.
-    pager_cleanup_func: Option<Box<dyn FnOnce(bool) + Send>>,
+    // Function to wait for the pager to cleanup (restore terminal state).
+    // Might block, unless `pager_quit_func` is called right before.
+    pager_wait_func: Option<Box<dyn FnOnce() + Send>>,
 }
 
 /// The "main" IO used by the process.
@@ -92,7 +100,7 @@ struct Inner {
 ///
 /// Use `IO::set_main()` to set the main IO, and `IO::main()`
 /// to obtain the "main" `IO`.
-static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Mutex<Inner>>>>> = Lazy::new(Default::default);
+static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Inner>>>> = Lazy::new(Default::default);
 
 fn colors_disabled_via_env() -> bool {
     hgplain::is_plain(Some("color")) || std::env::var("TERM").ok().as_deref() == Some("dumb")
@@ -157,7 +165,7 @@ impl io::Write for IOError {
             Some(inner) => inner,
             None => return Ok(buf.len()),
         };
-        let mut inner = inner.lock();
+        let mut inner = inner.io_state.lock();
         if inner.redirect_err_to_out {
             inner.clear_progress_for_output()?;
             inner.output_on_new_line = buf.ends_with(b"\n");
@@ -177,7 +185,7 @@ impl io::Write for IOError {
             Some(inner) => inner,
             None => return Ok(()),
         };
-        let mut inner = inner.lock();
+        let mut inner = inner.io_state.lock();
         if let Some(error) = inner.error.as_mut() {
             error.flush()?;
         }
@@ -192,7 +200,7 @@ impl io::Write for IOOutput {
             Some(inner) => inner,
             None => return Ok(buf.len()),
         };
-        let mut inner = inner.lock();
+        let mut inner = inner.io_state.lock();
         inner.clear_progress_for_output()?;
         inner.output_on_new_line = buf.ends_with(b"\n");
         inner.output.write(buf)
@@ -203,7 +211,7 @@ impl io::Write for IOOutput {
             Some(inner) => inner,
             None => return Ok(()),
         };
-        let mut inner = inner.lock();
+        let mut inner = inner.io_state.lock();
         inner.output.flush()
     }
 }
@@ -215,13 +223,13 @@ impl IOProgress {
             Some(inner) => inner,
             None => return Ok(()),
         };
-        let mut inner = inner.lock();
+        let mut inner = inner.io_state.lock();
         inner.set_progress(changes)
     }
 
     pub fn term_size(&self) -> (usize, usize) {
         if let Some(inner) = Weak::upgrade(&self.0) {
-            inner.lock().term_size()
+            inner.io_state.lock().term_size()
         } else {
             (DEFAULT_TERM_WIDTH, DEFAULT_TERM_HEIGHT)
         }
@@ -230,15 +238,15 @@ impl IOProgress {
 
 impl IO {
     pub fn with_input<R>(&self, f: impl FnOnce(&mut dyn Read) -> R) -> R {
-        f(self.inner.lock().input.as_mut())
+        f(self.inner.io_state.lock().input.as_mut())
     }
 
     pub fn with_output<R>(&self, f: impl FnOnce(&dyn Write) -> R) -> R {
-        f(self.inner.lock().output.as_ref())
+        f(self.inner.io_state.lock().output.as_ref())
     }
 
     pub fn with_error<R>(&self, f: impl FnOnce(Option<&dyn Write>) -> R) -> R {
-        f(self.inner.lock().error.as_deref())
+        f(self.inner.io_state.lock().error.as_deref())
     }
 
     /// Returns a clonable value that impls [`io::Write`] to `error` stream.
@@ -276,32 +284,35 @@ impl IO {
         };
 
         let inner = Inner {
-            input: Box::new(input),
-            output: Box::new(output),
-            error: error.map(|e| Box::new(e) as Box<dyn Write>),
-            pager_progress: None,
-            pager_cleanup_func: None,
-            term: None,
-            progress_conflict_with_output,
-            output_on_new_line: true,
-            error_on_new_line: true,
-            progress_has_content: false,
-            progress_disabled: 0,
-            redirect_err_to_out: false,
+            io_state: Mutex::new(IOState {
+                input: Box::new(input),
+                output: Box::new(output),
+                error: error.map(|e| Box::new(e) as Box<dyn Write>),
+                pager_progress: None,
+                term: None,
+                progress_conflict_with_output,
+                output_on_new_line: true,
+                error_on_new_line: true,
+                progress_has_content: false,
+                progress_disabled: 0,
+                redirect_err_to_out: false,
+                pager_wait_func: None,
+            }),
+            pager_quit_func: Default::default(),
         };
 
         Self {
-            inner: Arc::new(Mutex::new(inner)),
+            inner: Arc::new(inner),
         }
     }
 
     /// Wait for the pager to exit, and restore outputs to stdio.
     /// Might block if the pager is waiting for the user to exit.
     pub fn wait_pager(&self) -> io::Result<()> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         inner.flush()?;
 
-        // Drop the piped streams. This sends EOF to pager.
+        // Drop the piped streams (to the pager).
         // XXX: Stdio is hard-coded for wait_pager.
         inner.input = Box::new(io::stdin());
         inner.output = Box::new(io::stdout());
@@ -309,7 +320,11 @@ impl IO {
         inner.redirect_err_to_out = false;
         inner.pager_progress = None;
 
+        // This might block but shouldn't block quit_pager.
         inner.wait_pager();
+
+        // pager_quit_func is no longer needed.
+        let _ = self.inner.pager_quit_func.lock().take();
 
         Ok(())
     }
@@ -318,13 +333,18 @@ impl IO {
     /// Does not restore `input`, `output`, `error`, should only
     /// be used before exiting.
     pub fn quit_pager(&self) {
-        let mut inner = self.inner.lock();
-        inner.quit_pager();
+        let mut lock = self.inner.pager_quit_func.lock();
+        let mut func = None;
+        mem::swap(&mut func, &mut lock);
+        if let Some(func) = func {
+            drop(lock);
+            func();
+        }
     }
 
     pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         inner.clear_progress_for_output()?;
         inner.output_on_new_line = data.ends_with(b"\n");
         inner.output.write_all(data)?;
@@ -333,7 +353,7 @@ impl IO {
 
     pub fn write_err(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         if inner.redirect_err_to_out {
             inner.clear_progress_for_output()?;
             inner.output_on_new_line = data.ends_with(b"\n");
@@ -349,7 +369,7 @@ impl IO {
     }
 
     pub fn set_progress(&self, changes: &[Change]) -> io::Result<()> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         inner.set_progress(changes)
     }
 
@@ -358,33 +378,36 @@ impl IO {
     }
 
     pub fn flush(&self) -> io::Result<()> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         inner.flush()
     }
 
     pub fn stdio() -> Self {
         let progress_conflict_with_output = io::stderr().is_tty() && io::stdout().is_tty();
         let inner = Inner {
-            input: Box::new(io::stdin()),
-            output: Box::new(io::stdout()),
-            error: Some(Box::new(io::stderr())),
-            pager_progress: None,
-            pager_cleanup_func: None,
-            term: None,
-            progress_conflict_with_output,
-            progress_has_content: false,
-            progress_disabled: 0,
-            output_on_new_line: true,
-            error_on_new_line: true,
-            redirect_err_to_out: false,
+            io_state: Mutex::new(IOState {
+                input: Box::new(io::stdin()),
+                output: Box::new(io::stdout()),
+                error: Some(Box::new(io::stderr())),
+                pager_progress: None,
+                term: None,
+                progress_conflict_with_output,
+                progress_has_content: false,
+                progress_disabled: 0,
+                output_on_new_line: true,
+                error_on_new_line: true,
+                redirect_err_to_out: false,
+                pager_wait_func: None,
+            }),
+            pager_quit_func: Default::default(),
         };
         Self {
-            inner: Arc::new(Mutex::new(inner)),
+            inner: Arc::new(inner),
         }
     }
 
     pub fn setup_term(&mut self) -> Result<(), termwiz::Error> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
 
         if std::env::var_os("TESTTMP").is_some() {
             // Use dumb terminal with static width/height for tests.
@@ -435,18 +458,19 @@ impl IO {
 
     /// Check if the pager is active.
     pub fn is_pager_active(&self) -> bool {
-        let inner = self.inner.lock();
-        inner.pager_cleanup_func.is_some()
+        let state = self.inner.io_state.lock();
+        state.is_pager_active()
     }
 
     /// Starts a pager.
     ///
     /// It is recommended to run [`IO::flush`] and [`IO::wait_pager`] before exiting.
     pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
-        let mut inner = self.inner.lock();
-        if inner.pager_cleanup_func.is_some() {
+        let mut inner = self.inner.io_state.lock();
+        if inner.is_pager_active() {
             return Ok(());
         }
+
         inner.set_progress(&[])?;
 
         let mut pager = Pager::new_using_system_terminal()
@@ -525,11 +549,12 @@ impl IO {
             let _ = pager.run();
         });
 
-        inner.pager_cleanup_func = Some(Box::new(move |exit_now: bool| {
-            if exit_now {
-                let _ = pager_action_sender.send(Action::Quit);
-            }
+        inner.pager_wait_func = Some(Box::new(move || {
             let _ = pager_thread_handler.join();
+        }));
+
+        self.inner.pager_quit_func.lock().replace(Box::new(move || {
+            let _ = pager_action_sender.send(Action::Quit);
         }));
 
         Ok(())
@@ -541,7 +566,7 @@ impl IO {
     ///   If all `disable_progress(true)` are canceled out, restore the progress
     ///   rendering.
     pub fn disable_progress(&self, disabled: bool) -> io::Result<()> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         if disabled {
             inner.progress_disabled += 1;
             inner.set_progress(&[])?;
@@ -558,7 +583,7 @@ impl IO {
     }
 
     pub fn set_progress_pipe_writer(&self, progress: Option<PipeWriter>) -> io::Result<()> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.io_state.lock();
         inner.pager_progress = match progress {
             Some(progress) => {
                 let mut pager_term = DumbTerm::new(DumbTty::new(Box::new(progress)))
@@ -572,31 +597,13 @@ impl IO {
     }
 }
 
-impl Inner {
+impl IOState {
     pub(crate) fn flush(&mut self) -> io::Result<()> {
         self.output.flush()?;
         if let Some(ref mut error) = self.error {
             error.flush()?;
         }
         Ok(())
-    }
-
-    /// Optionally quit (exit_now = true), then wait for the pager to cleanup.
-    /// The cleanup is important for user friendliness like exiting raw mode.
-    fn quit_or_wait_pager(&mut self, exit_now: bool) {
-        let mut func = None;
-        mem::swap(&mut func, &mut self.pager_cleanup_func);
-        if let Some(func) = func {
-            func(exit_now);
-        }
-    }
-
-    fn quit_pager(&mut self) {
-        self.quit_or_wait_pager(true);
-    }
-
-    fn wait_pager(&mut self) {
-        self.quit_or_wait_pager(false);
     }
 
     /// Clear the progress (temporarily) for other output.
@@ -664,6 +671,19 @@ impl Inner {
         }
         Ok(())
     }
+
+    /// Wait for the pager to exit and cleanup (restore terminal).
+    fn wait_pager(&mut self) {
+        let mut func = None;
+        mem::swap(&mut func, &mut self.pager_wait_func);
+        if let Some(func) = func {
+            func();
+        }
+    }
+
+    fn is_pager_active(&self) -> bool {
+        self.pager_wait_func.is_some()
+    }
 }
 
 /// Write data to the progress area by clearing everything after
@@ -682,7 +702,7 @@ fn write_term_progress(
     Ok(())
 }
 
-impl Drop for Inner {
+impl Drop for IOState {
     fn drop(&mut self) {
         let _ = self.set_progress(&[]);
         let _ = self.flush();

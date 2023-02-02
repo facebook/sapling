@@ -61,7 +61,7 @@ impl IsTty for crate::IOOutput {
             Some(inner) => inner,
             None => return false,
         };
-        let inner = inner.lock();
+        let inner = inner.io_state.lock();
         inner.output.is_tty()
     }
     fn is_stdout(&self) -> bool {
@@ -69,7 +69,7 @@ impl IsTty for crate::IOOutput {
             Some(inner) => inner,
             None => return false,
         };
-        let inner = inner.lock();
+        let inner = inner.io_state.lock();
         inner.output.is_stdout()
     }
     fn pager_active(&self) -> bool {
@@ -77,7 +77,7 @@ impl IsTty for crate::IOOutput {
             Some(inner) => inner,
             None => return false,
         };
-        let inner = inner.lock();
+        let inner = inner.io_state.lock();
         inner.output.pager_active()
     }
 }
@@ -88,7 +88,7 @@ impl IsTty for crate::IOError {
             Some(inner) => inner,
             None => return false,
         };
-        let inner = inner.lock();
+        let inner = inner.io_state.lock();
         if let Some(error) = inner.error.as_ref() {
             error.is_tty()
         } else {
@@ -100,7 +100,7 @@ impl IsTty for crate::IOError {
             Some(inner) => inner,
             None => return false,
         };
-        let inner = inner.lock();
+        let inner = inner.io_state.lock();
         if let Some(error) = inner.error.as_ref() {
             error.is_stderr()
         } else {
@@ -112,7 +112,7 @@ impl IsTty for crate::IOError {
             Some(inner) => inner,
             None => return false,
         };
-        let inner = inner.lock();
+        let inner = inner.io_state.lock();
         if let Some(error) = inner.error.as_ref() {
             error.pager_active()
         } else {
