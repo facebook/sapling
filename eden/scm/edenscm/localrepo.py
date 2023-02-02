@@ -3200,7 +3200,7 @@ def aftertrans(reporef, files):
     return a
 
 
-def undoname(fn):
+def undoname(fn) -> str:
     base, name = os.path.split(fn)
     assert name.startswith("journal")
     return os.path.join(base, name.replace("journal", "undo", 1))
