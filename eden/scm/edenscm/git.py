@@ -841,7 +841,14 @@ class Submodule:
             repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
             # Write a remote bookmark to mark node public
             with repo.ui.configoverride({("ui", "quiet"): "true"}):
-                refspec = "+%s:refs/remotes/parent/%s" % (hex(node), self.nestedpath)
+                refspec = "+%s:refs/remotes/parent/%s" % (
+                    hex(node),
+                    # Avoids conflicts like gflags/ and gflags/doc sharing a
+                    # same backing repo. (Git does not allow one reference
+                    # "gflags" to be a prefix of another reference
+                    # "gflags/doc").
+                    self.nestedpath.replace("_", "__").replace("/", "_"),
+                )
                 pullrefspecs(repo, self.url, [refspec])
 
     def checkout(self, node, force=False):
@@ -852,11 +859,14 @@ class Submodule:
         if not force and self.workingparentnode() == node:
             return
 
-        repo = self.workingcopyrepo
+        repo = self.backingrepo
         self.pullnode(repo, node)
         # Skip if the commit is already checked out, unless force is set.
         if not force and repo["."].node() == node:
             return
+
+        repo = self.workingcopyrepo
+
         # Run checkout
         from . import hg
 

@@ -584,6 +584,9 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
 
+        # associated submodule
+        self.submodule = None
+
         # whether the repo is changed (by transaction).
         # currently used to decide whether to run fsync.
         self._txnreleased = False
@@ -2334,8 +2337,12 @@ class localrepository(object):
 
         # if this is a shared repo and we must also lock the shared wlock
         # or else we can deadlock due to lock ordering issues
+        #
+        # If this is Git submodule repo, then the backing repo is not intended
+        # to be used as a working copy. Let's skip the sharedwlock to avoid
+        # deadlock. See test-git-submodule-loop.t.
         sharedwlock = None
-        if self.shared():
+        if self.shared() and self.submodule is None:
             sharedwlock = self._lock(
                 self.sharedvfs,
                 "wlock",
