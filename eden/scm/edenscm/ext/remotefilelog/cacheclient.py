@@ -14,27 +14,28 @@ from __future__ import absolute_import
 
 import os
 import sys
+from typing import List, Optional, TextIO
 
 # pyre-fixme[21]: Could not find `memcache`.
 import memcache
 
 
-stdin = sys.stdin
-stdout = sys.stdout
-stderr = sys.stderr
+stdin: TextIO = sys.stdin
+stdout: TextIO = sys.stdout
+stderr: TextIO = sys.stderr
 
 mc = None
-keyprefix = None
-cachepath = None
+keyprefix: Optional[str] = None
+cachepath: Optional[str] = None
 
 # Max number of keys per request
 batchsize = 1000
 
 # Max value size per key (in bytes)
-maxsize = 512 * 1024
+maxsize: int = 512 * 1024
 
 
-def readfile(path):
+def readfile(path) -> str:
     f = open(path, "r")
     try:
         return f.read()
@@ -42,7 +43,7 @@ def readfile(path):
         f.close()
 
 
-def writefile(path, content):
+def writefile(path, content: str) -> None:
     dirname = os.path.dirname(path)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -76,7 +77,7 @@ def generateId(key):
     return key[len(keyprefix) :]
 
 
-def getKeys():
+def getKeys() -> None:
     raw = stdin.readline()[:-1]
     keycount = int(raw)
 
@@ -124,7 +125,7 @@ def getKeys():
     stdout.flush()
 
 
-def setKeys():
+def setKeys() -> None:
     raw = stdin.readline()[:-1]
     keycount = int(raw)
 
@@ -161,7 +162,7 @@ def setKeys():
         mc.set_multi(values)
 
 
-def main(argv=None):
+def main(argv: Optional[List[str]] = None) -> int:
     """
     remotefilelog uses this cacheclient by setting it in the repo config:
 
