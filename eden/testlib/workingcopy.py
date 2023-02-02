@@ -147,11 +147,14 @@ class WorkingCopy:
         self[path].write(content)
 
     def join(self, path: PathLike) -> Path:
+        # pyre-fixme[7]: Expected `Path` but got `str`.
         return os.path.join(self.root, str(path))
 
     def ls(self, path: Optional[PathLike] = None, recurse: bool = False) -> List[Path]:
         if path is None:
             path = ""
+        # pyre-fixme[6]: For 2nd argument expected `Union[PathLike[str], str]` but
+        #  got `Union[File, Path, str]`.
         path = os.path.join(self.root, path)
 
         results = []

@@ -1511,6 +1511,8 @@ class seekableunbundlepart(unbundlepart):
 
         super(seekableunbundlepart, self).__init__(ui, header, fp)
 
+    # pyre-fixme[14]: `_payloadchunks` overrides method defined in `unbundlepart`
+    #  inconsistently.
     def _payloadchunks(self, chunknum: int = 0) -> "Iterable[bytes]":
         """seek to specified chunk and start yielding data"""
         if len(self._chunkindex) == 0:
