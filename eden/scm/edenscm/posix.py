@@ -200,8 +200,13 @@ def makelock(info: str, pathname: str, checkdeadlock: bool = True) -> "Optional[
     #     the unlink without extra locking.
     dirname = os.path.dirname(pathname)
     if checkdeadlock and pathname in _processlocks:
+        _fd, tb = _processlocks[pathname]
         raise error.ProgrammingError(
-            "deadlock: %s was locked in the same process" % pathname
+            (
+                "deadlock: %s was locked in the same process\n"
+                "The lock was created at: %s\n"
+            )
+            % (pathname, tb),
         )
     with _locked(dirname or "."):
         # Check and remove stale lock
@@ -265,7 +270,10 @@ def makelock(info: str, pathname: str, checkdeadlock: bool = True) -> "Optional[
                 fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
                 os.write(fd, infobytes)
                 os.rename(tmppath, pathname)
-                _processlocks[pathname] = fd
+                from . import util
+
+                tb = util.smarttraceback()
+                _processlocks[pathname] = fd, tb
                 return fd
             except Exception:
                 unlink(tmppath)
@@ -296,7 +304,7 @@ def releaselock(lockfd: "Optional[int]", pathname: str) -> None:
     # Explicitly unlock. This avoids issues when a
     # forked process inherits the flock.
     assert lockfd is not None
-    fd = _processlocks.get(pathname, None)
+    fd, _tb = _processlocks.get(pathname, None)
     assert fd == lockfd
     fcntl.flock(lockfd, fcntl.LOCK_UN)
     del _processlocks[pathname]
@@ -304,7 +312,7 @@ def releaselock(lockfd: "Optional[int]", pathname: str) -> None:
     os.unlink(pathname)
 
 
-_processlocks = {}  # {path: fd}
+_processlocks = {}  # {path: (fd, traceback)}
 
 
 def openhardlinks():
