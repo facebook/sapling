@@ -50,10 +50,23 @@ to ensure the client connects with the right token.
 
 See `../vscode/CONTRIBUTING.md` for build instructions for the vscode extension.
 
+When developing, it's useful to add a few extra arguments to `yarn serve`:
+
+`yarn serve --dev --force --foreground --stdout --command sl`
+
+- `--dev`: Connect to the CRA dev build's hot-reloading front-end server (defaulting to 3000), even though this server will spawn on 3001.
+- `--force`: Kill any other active ISL server running on this port, which makes sure it's the latest version of the code.
+- `--foreground`: instead of spawning the server in the background, run it in the foreground. `ctrl-c`-ing the `yarn serve` process will kill this server.
+- `--stdout`: when combined with `--foreground`, prints the server logs to stdout so you can read them directly in the `yarn serve` terminal output.
+- `--command sl`: override the command to use for `sl`, for example you might use `./sl`, or an alias to your local build like `lsl`, or `hg` for Meta-internal uses
+
 ## Production builds
 
 `isl/release.js` is a script to build production bundles and
 package them into a single self-contained directory that can be distributed.
+
+`yarn build` lets you build production bundles without watching for changes, in either
+`isl/` or `isl-server/`.
 
 # Goals
 
@@ -276,6 +289,22 @@ and provide translations for all the strings found by grepping for `t()` and `<T
 This system can be improved later as new languages are supported.
 
 # Debugging
+
+## ✅ Attaching ISL server to VS Code debugger
+
+There's a "Run & Debug isl-server" vscode build action which runs `yarn serve --dev` for you with a few additional arguments. When spawned from here, you can use breakpoints in VS Code to step through your server-side code.
+
+Note that you should have the client & server webpack compilation jobs (described above) running before doing this (it currently won't compile for you, just launch `yarn serve`).
+
+## ❓ Attaching ISL client to a debugger
+
+Attaching the client to VS Code debugger does not work as well as the server side.
+There is currently no launch task to launch the browser and connect to the debugger.
+You can try using "Debug: Open Link" from the command palette, and paste in the ISL server link
+(with the token included), but I found breakpoint line numbers don't match up correctly.
+
+You can open the chrome devtools, go to sources, search for files, and set breakpoints in there,
+which will mostly work. `debugger;` statements also work in the dev tools.
 
 ## Stack traces
 

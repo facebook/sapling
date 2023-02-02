@@ -7,9 +7,18 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": ["--extensionDevelopmentPath=${workspaceRoot}/vscode"],
-      "stopOnEntry": false,
       "sourceMaps": true,
       "outFiles": ["${workspaceRoot}/vscode/dist/**/*.js"]
+    },
+    {
+      "name": "Run & Debug isl-server",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "args": ["./dist/run-proxy.js", "--dev", "--force", "--foreground", "--stdout", "--command", "hg"],
+      "localRoot": "${workspaceRoot}/isl-server",
+      "stopOnEntry": false,
+      "sourceMaps": true,
     }
   ]
 }
