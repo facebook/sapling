@@ -282,7 +282,7 @@ members = [
   "common/scribe_ext",
   "common/scuba_ext",
   "common/sql_construct",
-  "common/timeseries",
+  "common/time_measuring",
   "common/topo_sort",
   "common/type_map",
   "common/uniqueheap",
