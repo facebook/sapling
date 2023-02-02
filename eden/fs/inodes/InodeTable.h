@@ -156,16 +156,15 @@ class InodeTable {
    * std::nullopt.
    */
   std::optional<Record> getOptional(InodeNumber ino) {
-    return state_.withRLock([&](const auto& state) -> std::optional<Record> {
-      auto iter = state.indices.find(ino);
-      if (iter == state.indices.end()) {
-        return std::nullopt;
-      } else {
-        auto index = iter->second;
-        XCHECK_LT(index, state.storage.size());
-        return state.storage[index].record;
-      }
-    });
+    auto state = state_.rlock();
+    auto iter = state->indices.find(ino);
+    if (iter == state->indices.end()) {
+      return std::nullopt;
+    } else {
+      auto index = iter->second;
+      XCHECK_LT(index, state->storage.size());
+      return state->storage[index].record;
+    }
   }
 
   /**
@@ -177,50 +176,48 @@ class InodeTable {
    */
   template <typename ModFn>
   Record modifyOrThrow(InodeNumber ino, ModFn&& fn) {
-    return state_.withRLock([&](auto& state) {
-      auto iter = state.indices.find(ino);
-      if (iter == state.indices.end()) {
-        throw std::out_of_range(
-            folly::to<std::string>("no entry in InodeTable for inode ", ino));
-      }
-      auto index = iter->second;
-      XCHECK_LT(index, state.storage.size());
-      fn(state.storage[index].record);
-      // TODO: maybe trigger a background msync
-      return state.storage[index].record;
-    });
+    auto state = state_.rlock();
+    auto iter = state->indices.find(ino);
+    if (iter == state->indices.end()) {
+      throw std::out_of_range(
+          folly::to<std::string>("no entry in InodeTable for inode ", ino));
+    }
+    auto index = iter->second;
+    XCHECK_LT(index, state->storage.size());
+    fn(state->storage[index].record);
+    // TODO: maybe trigger a background msync
+    return state->storage[index].record;
   }
 
   // TODO: replace with freeInodes - it's much more efficient to free a bunch
   // at once.
   void freeInode(InodeNumber ino) {
-    state_.withWLock([&](auto& state) {
-      auto& storage = state.storage;
-      auto& indices = state.indices;
+    auto state = state_.wlock();
+    auto& storage = state->storage;
+    auto& indices = state->indices;
 
-      auto iter = indices.find(ino);
-      if (iter == indices.end()) {
-        // While transitioning metadata from the overlay to the
-        // InodeMetadataTable, it is common for there to be no metadata for an
-        // inode whose number is known. The Overlay calls freeInode()
-        // unconditionally, so simply do nothing.
-        return;
-      }
+    auto iter = indices.find(ino);
+    if (iter == indices.end()) {
+      // While transitioning metadata from the overlay to the
+      // InodeMetadataTable, it is common for there to be no metadata for an
+      // inode whose number is known. The Overlay calls freeInode()
+      // unconditionally, so simply do nothing.
+      return;
+    }
 
-      size_t indexToDelete = iter->second;
-      indices.erase(iter);
+    size_t indexToDelete = iter->second;
+    indices.erase(iter);
 
-      XDCHECK_GT(storage.size(), 0ul);
-      size_t lastIndex = storage.size() - 1;
+    XDCHECK_GT(storage.size(), 0ul);
+    size_t lastIndex = storage.size() - 1;
 
-      if (lastIndex != indexToDelete) {
-        auto lastInode = storage[lastIndex].inode;
-        storage[indexToDelete] = storage[lastIndex];
-        indices[lastInode] = indexToDelete;
-      }
+    if (lastIndex != indexToDelete) {
+      auto lastInode = storage[lastIndex].inode;
+      storage[indexToDelete] = storage[lastIndex];
+      indices[lastInode] = indexToDelete;
+    }
 
-      storage.pop_back();
-    });
+    storage.pop_back();
   }
 
   /**
