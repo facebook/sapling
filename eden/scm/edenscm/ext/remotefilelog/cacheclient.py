@@ -107,6 +107,8 @@ def getKeys() -> None:
                     stdout.write(id + "\n")
                     stdout.flush()
                     continue
+            # pyre-fixme[6]: For 1st argument expected
+            #  `typing_extensions.LiteralString` but got `Optional[str]`.
             path = os.path.join(cachepath, id)
             value = decompress(value)
             writefile(path, value)
@@ -132,6 +134,8 @@ def setKeys() -> None:
     values = {}
     for i in range(keycount):
         id = stdin.readline()[:-1]
+        # pyre-fixme[6]: For 1st argument expected `Union[PathLike[str], str]` but
+        #  got `Optional[str]`.
         path = os.path.join(cachepath, id)
 
         value = readfile(path)
