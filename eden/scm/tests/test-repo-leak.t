@@ -6,7 +6,6 @@ end of process.
 
 Attach an object with `__del__` to learn whether repo, ui are dropped on not.
 
-  $ setconfig workingcopy.ruststatus=False
   $ newext printondel <<EOF
   > class printondel(object):
   >     def __del__(self):
@@ -17,9 +16,11 @@ Attach an object with `__del__` to learn whether repo, ui are dropped on not.
   >     ui._deltest = obj
   > EOF
 
+  $ configure modern
+
 No leak without extensions
 
-  $ newrepo
+  $ newclientrepo >/dev/null
 
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -27,7 +28,7 @@ No leak without extensions
 
 Fine extension: blackbox
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ setconfig extensions.blackbox=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -35,7 +36,7 @@ Fine extension: blackbox
 
 Fine extension: remotefilelog
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ echo remotefilelog >> .hg/requires
   $ setconfig extensions.remotefilelog= remotefilelog.cachepath=$TESTTMP/cache
   $ hg log -r . -T '{manifest % "{node}"}\n'
@@ -44,7 +45,7 @@ Fine extension: remotefilelog
 
 Fine extension: treemanifest
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ setconfig extensions.treemanifest= remotefilelog.reponame=x
   $ hg log -r . -T '{node}\n'
   0000000000000000000000000000000000000000
@@ -55,7 +56,7 @@ Fine extension: treemanifest
 
 Fine extension: treemanifest only
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ setconfig extensions.treemanifest= treemanifest.treeonly=1 remotefilelog.reponame=x
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -63,7 +64,7 @@ Fine extension: treemanifest only
 
 Fine extension: sparse
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ setconfig extensions.sparse=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -71,7 +72,7 @@ Fine extension: sparse
 
 Fine extension: commitcloud
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ setconfig extensions.infinitepush= extensions.commitcloud=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -79,7 +80,7 @@ Fine extension: commitcloud
 
 Fine extension: sampling
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ setconfig extensions.sampling=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
@@ -87,7 +88,7 @@ Fine extension: sampling
 
 Somehow problematic: With many extensions
 
-  $ newrepo
+  $ newclientrepo >/dev/null
   $ echo remotefilelog >> .hg/requires
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -182,6 +183,7 @@ Somehow problematic: With many extensions
 
   $ touch x
 
+FIXME: this is problematic in non-buck build.
  (this behaves differently with buck / setup.py build)
 
   $ hg ci -m x -A x
