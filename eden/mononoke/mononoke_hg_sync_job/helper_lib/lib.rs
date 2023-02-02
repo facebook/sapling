@@ -204,6 +204,8 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
         If the replayed id is larger or equal to the bookmark id, we can try to move the bookmark
         to the next batch of commits
     */
+    // Force first log
+    let mut time_since_log = Duration::from_secs(60);
 
     loop {
         let mut_counters_value = target_repo
@@ -217,13 +219,17 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
                 )
             })?;
         if largest_id > mut_counters_value.try_into().unwrap() {
-            info!(
-                ctx.logger(),
-                "Waiting for {} to be replayed to hg, the latest replayed is {}, repo: {}",
-                largest_id,
-                mut_counters_value,
-                target_repo.repo_identity().name(),
-            );
+            if time_since_log.as_secs() >= 60 {
+                time_since_log = Duration::ZERO;
+                info!(
+                    ctx.logger(),
+                    "Waiting for {} to be replayed to hg, the latest replayed is {}, repo: {}",
+                    largest_id,
+                    mut_counters_value,
+                    target_repo.repo_identity().name(),
+                );
+            }
+            time_since_log += sleep_duration;
             time::sleep(sleep_duration).await;
         } else {
             break;
