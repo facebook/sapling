@@ -11,7 +11,6 @@ use std::mem;
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::spawn;
-use std::thread::JoinHandle;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -20,6 +19,7 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pipe::pipe;
 use pipe::PipeWriter;
+use streampager::action::Action;
 use streampager::config::InterfaceMode;
 use streampager::config::WrappingMode;
 use streampager::Pager;
@@ -77,7 +77,10 @@ struct Inner {
     // How many (nested) blocks want progress output disabled.
     progress_disabled: usize,
 
-    pager_handle: Option<JoinHandle<streampager::Result<()>>>,
+    // Quit (optionally) then wait for the pager to complete cleanup.
+    // The function takes a parameter. If it's true, exit the pager immediately,
+    // otherwise, block and wait for the user to exit the pager.
+    pager_cleanup_func: Option<Box<dyn FnOnce(bool) + Send>>,
 }
 
 /// The "main" IO used by the process.
@@ -277,7 +280,7 @@ impl IO {
             output: Box::new(output),
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
             pager_progress: None,
-            pager_handle: None,
+            pager_cleanup_func: None,
             term: None,
             progress_conflict_with_output,
             output_on_new_line: true,
@@ -292,7 +295,8 @@ impl IO {
         }
     }
 
-    /// Stop the pager and restore outputs to stdio.
+    /// Wait for the pager to exit, and restore outputs to stdio.
+    /// Might block if the pager is waiting for the user to exit.
     pub fn wait_pager(&self) -> io::Result<()> {
         let mut inner = self.inner.lock();
         inner.flush()?;
@@ -305,14 +309,17 @@ impl IO {
         inner.redirect_err_to_out = false;
         inner.pager_progress = None;
 
-        // Wait for the pager (if running).
-        let mut handle = None;
-        mem::swap(&mut handle, &mut inner.pager_handle);
-        if let Some(handle) = handle {
-            let _ = handle.join();
-        }
+        inner.wait_pager();
 
         Ok(())
+    }
+
+    /// Quit the pager now and wait for it to complete cleanup.
+    /// Does not restore `input`, `output`, `error`, should only
+    /// be used before exiting.
+    pub fn quit_pager(&self) {
+        let mut inner = self.inner.lock();
+        inner.quit_pager();
     }
 
     pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
@@ -362,7 +369,7 @@ impl IO {
             output: Box::new(io::stdout()),
             error: Some(Box::new(io::stderr())),
             pager_progress: None,
-            pager_handle: None,
+            pager_cleanup_func: None,
             term: None,
             progress_conflict_with_output,
             progress_has_content: false,
@@ -429,7 +436,7 @@ impl IO {
     /// Check if the pager is active.
     pub fn is_pager_active(&self) -> bool {
         let inner = self.inner.lock();
-        inner.pager_handle.is_some()
+        inner.pager_cleanup_func.is_some()
     }
 
     /// Starts a pager.
@@ -437,7 +444,7 @@ impl IO {
     /// It is recommended to run [`IO::flush`] and [`IO::wait_pager`] before exiting.
     pub fn start_pager(&self, config: &dyn Config) -> io::Result<()> {
         let mut inner = self.inner.lock();
-        if inner.pager_handle.is_some() {
+        if inner.pager_cleanup_func.is_some() {
             return Ok(());
         }
         inner.set_progress(&[])?;
@@ -513,9 +520,16 @@ impl IO {
         inner.pager_progress = Some(Box::new(pager_term));
         pager.set_progress_stream(prg_read);
 
-        inner.pager_handle = Some(spawn(|| {
-            pager.run()?;
-            Ok(())
+        let pager_action_sender = pager.action_sender();
+        let pager_thread_handler = spawn(|| {
+            let _ = pager.run();
+        });
+
+        inner.pager_cleanup_func = Some(Box::new(move |exit_now: bool| {
+            if exit_now {
+                let _ = pager_action_sender.send(Action::Quit);
+            }
+            let _ = pager_thread_handler.join();
         }));
 
         Ok(())
@@ -565,6 +579,24 @@ impl Inner {
             error.flush()?;
         }
         Ok(())
+    }
+
+    /// Optionally quit (exit_now = true), then wait for the pager to cleanup.
+    /// The cleanup is important for user friendliness like exiting raw mode.
+    fn quit_or_wait_pager(&mut self, exit_now: bool) {
+        let mut func = None;
+        mem::swap(&mut func, &mut self.pager_cleanup_func);
+        if let Some(func) = func {
+            func(exit_now);
+        }
+    }
+
+    fn quit_pager(&mut self) {
+        self.quit_or_wait_pager(true);
+    }
+
+    fn wait_pager(&mut self) {
+        self.quit_or_wait_pager(false);
     }
 
     /// Clear the progress (temporarily) for other output.
@@ -658,11 +690,6 @@ impl Drop for Inner {
         self.output = Box::new(Vec::new());
         self.error = None;
         self.pager_progress = None;
-        // Wait for the pager.
-        let mut handle = None;
-        mem::swap(&mut handle, &mut self.pager_handle);
-        if let Some(handle) = handle {
-            let _ = handle.join();
-        }
+        self.wait_pager();
     }
 }
