@@ -794,15 +794,22 @@ class Submodule:
             raise error.Abort(_("submodule checkout in edenfs is not yet supported"))
         from . import hg
 
+        ui = self.parentrepo.ui
         repopath = self.parentrepo.wvfs.join(self.path)
         ident = identity.sniffdir(repopath)
         if ident:
+            ui.debug(" initializing submodule workingcopy at %s\n" % repopath)
             repo = hg.repository(self.parentrepo.baseui, repopath)
         else:
             if self.parentrepo.wvfs.isfile(self.path):
+                ui.debug(" unlinking conflicted submodule file at %s\n" % self.path)
                 self.parentrepo.wvfs.unlink(self.path)
             self.parentrepo.wvfs.makedirs(self.path)
             backingrepo = self.backingrepo
+            ui.debug(
+                " creating submodule workingcopy at %s with backing repo %s\n"
+                % (repopath, backingrepo.root)
+            )
             repo = hg.share(
                 backingrepo.ui, backingrepo.root, repopath, update=False, relative=True
             )

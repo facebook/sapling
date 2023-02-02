@@ -4495,6 +4495,7 @@ def _render(
     hex=None,
     basectx=None,
     abstractsmartset=None,
+    git=None,
 ):
     """Similar to repr, but only support some "interesting" types.
 
@@ -4507,6 +4508,8 @@ def _render(
         from .context import basectx
     if abstractsmartset is None:
         from .smartset import abstractsmartset
+    if git is None:
+        from . import git
 
     if value is None:
         raise NotRendered(value)
@@ -4529,6 +4532,7 @@ def _render(
         hex=hex,
         basectx=basectx,
         abstractsmartset=abstractsmartset,
+        git=git,
     )
     if isinstance(value, bytes):
         if len(value) == 20:
@@ -4565,6 +4569,8 @@ def _render(
                 break
             items.append("%s: %s" % (render(k), render(v)))
         result = "{%s}" % ", ".join(items)
+    elif isinstance(value, git.Submodule):
+        result = f"<submodule {value.nestedpath} {value.url}>"
     else:
         raise NotRendered(value)
     if len(result) > 1024:
@@ -4640,7 +4646,9 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
         if line:
             line = line.strip()
             # Different from traceback.extract_stack. Try to get more information.
-            for argname in sorted(set(remod.findall("[a-z][a-z0-9_]*", line))):
+            for argname in sorted(set(remod.findall("[a-z][a-z0-9_]*", line))) + [
+                "self"
+            ]:
                 if issensitiveargname(argname):
                     continue
 
