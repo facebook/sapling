@@ -607,7 +607,7 @@ impl From<BookmarkName> for BookmarkIdentifier {
 pub async fn store_files<T: AsRef<str>>(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<T>>,
-    repo: &impl RepoBlobstoreRef,
+    repo: &impl RepoBlobstoreArc,
 ) -> BTreeMap<MPath, FileChange> {
     let mut res = btreemap! {};
 
@@ -616,16 +616,19 @@ pub async fn store_files<T: AsRef<str>>(
         match content {
             Some(content) => {
                 let content = content.as_ref();
-                let size = content.len();
-                let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
-                let content_id = content
-                    .into_blob()
-                    .store(ctx, repo.repo_blobstore())
-                    .await
-                    .unwrap();
+                let size = content.len() as u64;
+                let content_id = filestore::store(
+                    &repo.repo_blobstore_arc(),
+                    FilestoreConfig::no_chunking_filestore(),
+                    ctx,
+                    &StoreRequest::new(size),
+                    stream::iter(vec![anyhow::Ok(Bytes::copy_from_slice(content.as_bytes()))]),
+                )
+                .await
+                .unwrap()
+                .content_id;
 
-                let file_change =
-                    FileChange::tracked(content_id, FileType::Regular, size as u64, None);
+                let file_change = FileChange::tracked(content_id, FileType::Regular, size, None);
                 res.insert(path, file_change);
             }
             None => {
@@ -641,19 +644,22 @@ pub async fn store_rename(
     copy_src: (MPath, ChangesetId),
     path: &str,
     content: &str,
-    repo: &impl RepoBlobstoreRef,
+    repo: &impl RepoBlobstoreArc,
 ) -> (MPath, FileChange) {
     let path = MPath::new(path).unwrap();
-    let size = content.len();
-    let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
-    let content_id = content
-        .into_blob()
-        .store(ctx, repo.repo_blobstore())
-        .await
-        .unwrap();
+    let size = content.len() as u64;
+    let content_id = filestore::store(
+        &repo.repo_blobstore_arc(),
+        FilestoreConfig::no_chunking_filestore(),
+        ctx,
+        &StoreRequest::new(size),
+        stream::iter(vec![anyhow::Ok(Bytes::copy_from_slice(content.as_bytes()))]),
+    )
+    .await
+    .unwrap()
+    .content_id;
 
-    let file_change =
-        FileChange::tracked(content_id, FileType::Regular, size as u64, Some(copy_src));
+    let file_change = FileChange::tracked(content_id, FileType::Regular, size, Some(copy_src));
     (path, file_change)
 }
 

@@ -652,3 +652,30 @@ impl<L: Loadable + Sync, S: Blobstore> StoreLoadable<S> for L {
         self.load(ctx, store).await
     }
 }
+
+/// Trait to copy the value of the key between different blobstores. In the generic
+/// case, we need to load from one blobstore to memory, then store in the other.
+/// But it may be specialised to be more efficient in specific blobstore pairs.
+#[async_trait]
+pub trait BlobCopier {
+    async fn copy(&self, ctx: &CoreContext, key: String) -> Result<()>;
+}
+
+/// Works for any pair of blobstores, does no optimisation at all.
+pub struct GenericBlobstoreCopier<'a, A, B> {
+    pub source: &'a A,
+    pub target: &'a B,
+}
+
+#[async_trait]
+impl<'a, A: Blobstore, B: Blobstore> BlobCopier for GenericBlobstoreCopier<'a, A, B> {
+    async fn copy(&self, ctx: &CoreContext, key: String) -> Result<()> {
+        let value = self
+            .source
+            .get(ctx, &key)
+            .await?
+            .with_context(|| format!("key {} not present", key))?;
+        self.target.put(ctx, key, value.into_bytes()).await?;
+        Ok(())
+    }
+}

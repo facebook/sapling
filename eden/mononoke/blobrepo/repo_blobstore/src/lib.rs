@@ -9,9 +9,11 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::BlobCopier;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
+use blobstore::GenericBlobstoreCopier;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::RepositoryId;
@@ -86,6 +88,10 @@ impl RepoBlobstore {
 
         blobstore
     }
+
+    pub fn copier_to<'a>(&'a self, other: &'a RepoBlobstore) -> RepoBlobstoreCopier<'a> {
+        RepoBlobstoreCopier::new(self, other)
+    }
 }
 
 impl std::fmt::Display for RepoBlobstore {
@@ -125,5 +131,50 @@ impl Blobstore for RepoBlobstore {
         new_key: String,
     ) -> Result<()> {
         self.0.0.copy(ctx, old_key, new_key).await
+    }
+}
+
+pub enum RepoBlobstoreCopier<'a> {
+    Unoptimized(GenericBlobstoreCopier<'a, RepoBlobstore, RepoBlobstore>),
+    /// We checked both repo blobstores have the same inner storage, but differ
+    /// in prefixes
+    Optimized {
+        source: &'a PrefixBlobstore<Arc<dyn Blobstore>>,
+        target: &'a PrefixBlobstore<Arc<dyn Blobstore>>,
+    },
+}
+
+impl<'a> RepoBlobstoreCopier<'a> {
+    fn new(source: &'a RepoBlobstore, target: &'a RepoBlobstore) -> Self {
+        let inner_source = source.0.0.as_inner_unredacted();
+        let inner_target = target.0.0.as_inner_unredacted();
+        if Arc::ptr_eq(inner_source.as_inner(), inner_target.as_inner()) {
+            Self::Optimized {
+                source: inner_source,
+                target: inner_target,
+            }
+        } else {
+            Self::Unoptimized(GenericBlobstoreCopier { source, target })
+        }
+    }
+
+    pub fn is_optimized(&self) -> bool {
+        matches!(self, RepoBlobstoreCopier::Optimized { .. })
+    }
+}
+
+#[async_trait]
+impl<'a> BlobCopier for RepoBlobstoreCopier<'a> {
+    async fn copy(&self, ctx: &CoreContext, key: String) -> Result<()> {
+        match self {
+            Self::Unoptimized(generic) => generic.copy(ctx, key).await,
+            Self::Optimized { source, target } => {
+                // same as target.as_inner()
+                let inner: &Arc<dyn Blobstore> = source.as_inner();
+                let source_key = source.prepend(&key);
+                let target_key = target.prepend(&key);
+                inner.copy(ctx, &source_key, target_key).await
+            }
+        }
     }
 }

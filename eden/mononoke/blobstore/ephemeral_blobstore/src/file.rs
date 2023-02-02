@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::BlobCopier;
 use blobstore::Blobstore;
 use context::CoreContext;
-use filestore::BlobCopier;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use mononoke_types::ContentMetadata;
@@ -70,7 +70,7 @@ impl Bubble {
         let raw_eph_blobstore = Arc::new(self.blobstore.clone().into_inner()) as Arc<dyn Blobstore>;
 
         filestore::copy(
-            blobstore,
+            &blobstore,
             &Copier {
                 raw_eph_blobstore,
                 repo_prefix: repo_id.prefix(),

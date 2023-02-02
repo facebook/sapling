@@ -45,7 +45,6 @@ mod rechunk;
 mod streamhash;
 
 pub use copy::copy;
-pub use copy::BlobCopier;
 pub use fetch::Range;
 pub use fetch_key::Alias;
 pub use fetch_key::AliasBlob;

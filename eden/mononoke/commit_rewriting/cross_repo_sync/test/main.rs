@@ -18,15 +18,12 @@ use assert_matches::assert_matches;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use bytes::Bytes;
 use cacheblob::InProcessLease;
 use changeset_fetcher::ChangesetFetcherRef;
-use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::update_mapping_with_version;
@@ -44,7 +41,6 @@ use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
-use futures::future::join_all;
 use futures::FutureExt;
 use futures::TryStreamExt;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -60,13 +56,10 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::SmallRepoCommitSyncConfig;
 use metaconfig_types::SmallRepoPermanentConfig;
-use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::FileContents;
-use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use pushrebase::PushrebaseError;
@@ -75,7 +68,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use skiplist::SkiplistIndex;
 use sorted_vector_map::sorted_vector_map;
-use sorted_vector_map::SortedVectorMap;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -94,87 +86,41 @@ fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
 }
 
-async fn move_bookmark(ctx: &CoreContext, repo: &TestRepo, bookmark: &str, cs_id: ChangesetId) {
-    let bookmark = BookmarkName::new(bookmark).unwrap();
-    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-    txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove)
+async fn move_bookmark(
+    ctx: &CoreContext,
+    repo: &TestRepo,
+    bookmark_name: &str,
+    cs_id: ChangesetId,
+) {
+    bookmark(ctx, repo, bookmark_name)
+        .set_to(cs_id)
+        .await
         .unwrap();
-    txn.commit().await.unwrap();
 }
 
 async fn get_bookmark(ctx: &CoreContext, repo: &TestRepo, bookmark: &str) -> ChangesetId {
-    let bookmark = BookmarkName::new(bookmark).unwrap();
-    repo.bookmarks()
-        .get(ctx.clone(), &bookmark)
-        .await
-        .unwrap()
-        .unwrap()
+    resolve_cs_id(ctx, repo, bookmark).await.unwrap()
 }
 
 async fn create_initial_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
-    create_initial_commit_with_contents(
-        ctx,
-        repo,
-        btreemap! { "master_file" => Some(b"123" as &[u8]) },
-    )
-    .await
+    create_initial_commit_with_contents(ctx, repo, btreemap! { "master_file" => "123" }).await
 }
 
 async fn create_initial_commit_with_contents<'a>(
     ctx: CoreContext,
     repo: &'a TestRepo,
-    file_changes: BTreeMap<&'static str, Option<impl Into<Bytes>>>,
+    file_changes: BTreeMap<&'static str, impl Into<Vec<u8>>>,
 ) -> ChangesetId {
-    let bookmark = BookmarkName::new("master").unwrap();
-
-    let file_changes: Vec<(_, _)> = join_all(file_changes.into_iter().map(|(path, contents)| {
-        cloned!(ctx);
-        async move {
-            let path = mpath(path);
-            let file_change = match contents {
-                Some(contents) => {
-                    let contents = FileContents::new_bytes(contents.into());
-                    let content_id = contents
-                        .into_blob()
-                        .store(&ctx, repo.repo_blobstore())
-                        .await
-                        .unwrap();
-                    FileChange::tracked(content_id, FileType::Regular, 3, None)
-                }
-                None => FileChange::Deletion,
-            };
-            (path, file_change)
-        }
-    }))
-    .await;
-    let file_changes: SortedVectorMap<_, _> = file_changes.into_iter().collect();
-
-    let bcs = BonsaiChangesetMut {
-        parents: vec![],
-        author: "Test User <test@fb.com>".to_string(),
-        author_date: DateTime::from_timestamp(1504040000, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "Initial commit to get going".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes,
-        is_snapshot: false,
-        git_annotated_tag: None,
-    }
-    .freeze()
-    .unwrap();
-
-    let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
+    let bcs_id = CreateCommitContext::new_root(&ctx, repo)
+        .add_files(file_changes)
+        .set_author("Test User <test@fb.com>")
+        .set_author_date(DateTime::from_timestamp(1504040000, 0).unwrap())
+        .set_message("Initial commit to get going")
+        .commit()
         .await
         .unwrap();
 
-    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    txn.commit().await.unwrap();
+    bookmark(&ctx, repo, "master").set_to(bcs_id).await.unwrap();
     bcs_id
 }
 
@@ -463,98 +409,29 @@ async fn create_commit_from_parent_and_changes<'a>(
     ctx: &'a CoreContext,
     repo: &'a TestRepo,
     p1: ChangesetId,
-    changes: BTreeMap<&'static str, Option<&'static str>>,
+    changes: BTreeMap<&'static str, &'static str>,
 ) -> ChangesetId {
-    let mut proper_changes: BTreeMap<MPath, FileChange> = BTreeMap::new();
-    for (path, maybe_content) in changes.into_iter() {
-        let mpath = MPath::new(path).unwrap();
-        match maybe_content {
-            None => {
-                proper_changes.insert(mpath, FileChange::Deletion);
-            }
-            Some(content) => {
-                let file_contents = FileContents::new_bytes(content.as_bytes());
-                let content_id = file_contents
-                    .into_blob()
-                    .store(ctx, repo.repo_blobstore())
-                    .await
-                    .unwrap();
-                let file_change =
-                    FileChange::tracked(content_id, FileType::Regular, content.len() as u64, None);
-
-                proper_changes.insert(mpath, file_change);
-            }
-        }
-    }
-
-    let bcs = BonsaiChangesetMut {
-        parents: vec![p1],
-        author: "Test User <test@fb.com>".to_string(),
-        author_date: DateTime::from_timestamp(1504040001, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "ababagalamaga".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes: proper_changes.into(),
-        is_snapshot: false,
-        git_annotated_tag: None,
-    }
-    .freeze()
-    .unwrap();
-
-    let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
+    CreateCommitContext::new(ctx, repo, vec![p1])
+        .set_author("Test User <test@fb.com>")
+        .set_author_date(DateTime::from_timestamp(1504040001, 0).unwrap())
+        .set_message("ababagalamaga")
+        .add_files(changes)
+        .commit()
         .await
-        .unwrap();
-
-    bcs_id
+        .unwrap()
 }
 
 async fn update_master_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
-    let bookmark = BookmarkName::new("master").unwrap();
-    let p1 = repo
-        .bookmarks()
-        .get(ctx.clone(), &bookmark)
-        .await
-        .unwrap()
-        .unwrap();
-
-    let content = FileContents::new_bytes(Bytes::from(b"456" as &[u8]));
-    let content_id = content
-        .into_blob()
-        .store(&ctx, repo.repo_blobstore())
-        .await
-        .unwrap();
-    let file_change = FileChange::tracked(content_id, FileType::Regular, 3, None);
-
-    let bcs = BonsaiChangesetMut {
-        parents: vec![p1],
-        author: "Test User <test@fb.com>".to_string(),
-        author_date: DateTime::from_timestamp(1504040001, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "Change master_file".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes: sorted_vector_map! {mpath("master_file") => file_change},
-        is_snapshot: false,
-        git_annotated_tag: None,
-    }
-    .freeze()
-    .unwrap();
-
-    let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
+    let bcs_id = CreateCommitContext::new(&ctx, repo, vec!["master"])
+        .set_author("Test User <test@fb.com>")
+        .set_author_date(DateTime::from_timestamp(1504040001, 0).unwrap())
+        .add_file("master_file", "456")
+        .set_message("Change master_file")
+        .commit()
         .await
         .unwrap();
 
-    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    txn.commit().await.unwrap();
+    bookmark(&ctx, repo, "master").set_to(bcs_id).await.unwrap();
     bcs_id
 }
 
@@ -681,58 +558,18 @@ async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn megarepo_copy_file(
-    ctx: CoreContext,
-    repo: &TestRepo,
-    linear_bcs_id: ChangesetId,
-) -> ChangesetId {
-    let bookmark = BookmarkName::new("master").unwrap();
-    let p1 = repo
-        .bookmarks()
-        .get(ctx.clone(), &bookmark)
-        .await
-        .unwrap()
-        .unwrap();
-
-    let content = FileContents::new_bytes(Bytes::from(b"99\n" as &[u8]));
-    let content_id = content
-        .into_blob()
-        .store(&ctx, repo.repo_blobstore())
-        .await
-        .unwrap();
-    let file_change = FileChange::tracked(
-        content_id,
-        FileType::Regular,
-        3,
-        Some((MPath::new(b"linear/1").unwrap(), linear_bcs_id)),
-    );
-
-    let bcs = BonsaiChangesetMut {
-        parents: vec![p1],
-        author: "Test User <test@fb.com>".to_string(),
-        author_date: DateTime::from_timestamp(1504040055, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "Change 1".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes: sorted_vector_map! {mpath("linear/new_file") => file_change},
-        is_snapshot: false,
-        git_annotated_tag: None,
-    }
-    .freeze()
-    .unwrap();
-
-    let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
+async fn megarepo_copy_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
+    let bcs_id = CreateCommitContext::new(&ctx, repo, vec!["master"])
+        .set_author("Test User <test@fb.com>")
+        .set_author_date(DateTime::from_timestamp(1504040055, 0).unwrap())
+        .add_file_with_copy_info("linear/new_file", "99\n", ("master", "linear/1"))
+        .set_message("Change 1")
+        .commit()
         .await
         .unwrap();
 
-    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    txn.commit().await.unwrap();
+    bookmark(&ctx, repo, "master").set_to(bcs_id).await.unwrap();
+
     bcs_id
 }
 
@@ -781,8 +618,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
             .unwrap()
     };
 
-    let megarepo_copyinfo_commit =
-        megarepo_copy_file(ctx.clone(), &megarepo, megarepo_linear_base_bcs_id).await;
+    let megarepo_copyinfo_commit = megarepo_copy_file(ctx.clone(), &megarepo).await;
     let linear_copyinfo_bcs_id =
         sync_to_master(ctx.clone(), &lts_config, megarepo_copyinfo_commit).await?;
 
@@ -946,48 +782,16 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
 }
 
 async fn update_linear_1_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
-    let bookmark = BookmarkName::new("master").unwrap();
-    let p1 = repo
-        .bookmarks()
-        .get(ctx.clone(), &bookmark)
-        .await
-        .unwrap()
-        .unwrap();
-
-    let content = FileContents::new_bytes(Bytes::from(b"999" as &[u8]));
-    let content_id = content
-        .into_blob()
-        .store(&ctx, repo.repo_blobstore())
-        .await
-        .unwrap();
-    let file_change = FileChange::tracked(content_id, FileType::Regular, 3, None);
-
-    let bcs = BonsaiChangesetMut {
-        parents: vec![p1],
-        author: "Test User <test@fb.com>".to_string(),
-        author_date: DateTime::from_timestamp(1504040002, 0).unwrap(),
-        committer: None,
-        committer_date: None,
-        message: "Change linear/1".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes: sorted_vector_map! {mpath("linear/1") => file_change},
-        is_snapshot: false,
-        git_annotated_tag: None,
-    }
-    .freeze()
-    .unwrap();
-
-    let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
+    let bcs_id = CreateCommitContext::new(&ctx, repo, vec!["master"])
+        .set_author("Test User <test@fb.com>")
+        .set_author_date(DateTime::from_timestamp(1504040002, 0).unwrap())
+        .set_message("Change linear/1")
+        .add_files(btreemap! {"linear/1" => "999"})
+        .commit()
         .await
         .unwrap();
 
-    let mut txn = repo.bookmarks().create_transaction(ctx.clone());
-    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove)
-        .unwrap();
-    txn.commit().await.unwrap();
+    bookmark(&ctx, repo, "master").set_to(bcs_id).await.unwrap();
 
     bcs_id
 }
@@ -1152,14 +956,14 @@ async fn get_multiple_master_mapping_setup(
         &ctx,
         &megarepo,
         megarepo_master_cs_id,
-        btreemap! {"unrelated_1" => Some("unrelated")},
+        btreemap! {"unrelated_1" => "unrelated"},
     )
     .await;
     let b2 = create_commit_from_parent_and_changes(
         &ctx,
         &megarepo,
         megarepo_master_cs_id,
-        btreemap! {"unrelated_2" => Some("unrelated")},
+        btreemap! {"unrelated_2" => "unrelated"},
     )
     .await;
 
@@ -1171,7 +975,7 @@ async fn get_multiple_master_mapping_setup(
         &ctx,
         &small_repo,
         small_repo_master_cs_id,
-        btreemap! {"small_repo_file" => Some("content")},
+        btreemap! {"small_repo_file" => "content"},
     )
     .await;
     move_bookmark(&ctx, &small_repo, "master", small_repo_master_cs_id).await;
@@ -1234,7 +1038,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
         &ctx,
         &small_repo,
         small_repo_master_cs_id,
-        btreemap! {"foo" => Some("bar")},
+        btreemap! {"foo" => "bar"},
     )
     .await;
 
@@ -1287,7 +1091,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
         &ctx,
         &small_repo,
         small_repo_master_cs_id,
-        btreemap! {"foo" => Some("bar")},
+        btreemap! {"foo" => "bar"},
     )
     .await;
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
@@ -1324,7 +1128,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         &ctx,
         &megarepo,
         megarepo_master_cs_id,
-        btreemap! {"unrelated_3" => Some("unrelated")},
+        btreemap! {"unrelated_3" => "unrelated"},
     )
     .await;
     move_bookmark(&ctx, &megarepo, "master", cs_id).await;
@@ -1334,7 +1138,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         &ctx,
         &small_repo,
         small_repo_master_cs_id,
-        btreemap! {"foo" => Some("bar")},
+        btreemap! {"foo" => "bar"},
     )
     .await;
     let to_sync = to_sync_id.load(&ctx, small_repo.repo_blobstore()).await?;
@@ -1694,7 +1498,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
         &ctx,
         &small_repo,
         small_repo_master_cs_id,
-        btreemap! {"small_repo_file" => Some("content")},
+        btreemap! {"small_repo_file" => "content"},
     )
     .await;
     move_bookmark(&ctx, &small_repo, "master", small_repo_master_cs_id).await;
@@ -1976,30 +1780,18 @@ async fn merge_test_setup(
         lts_syncer
     };
 
-    let c1 = create_initial_commit_with_contents(
-        ctx.clone(),
-        &large_repo,
-        btreemap! { "f1" => Some(b"1" as &[u8]) },
-    )
-    .await;
-    let c2 = create_initial_commit_with_contents(
-        ctx.clone(),
-        &large_repo,
-        btreemap! { "f2" => Some(b"2" as &[u8]) },
-    )
-    .await;
-    let c3 = create_initial_commit_with_contents(
-        ctx.clone(),
-        &large_repo,
-        btreemap! { "f3" => Some(b"3" as &[u8]) },
-    )
-    .await;
-    let c4 = create_initial_commit_with_contents(
-        ctx.clone(),
-        &large_repo,
-        btreemap! { "f4" => Some(b"4" as &[u8]) },
-    )
-    .await;
+    let c1 =
+        create_initial_commit_with_contents(ctx.clone(), &large_repo, btreemap! { "f1" => "1" })
+            .await;
+    let c2 =
+        create_initial_commit_with_contents(ctx.clone(), &large_repo, btreemap! { "f2" => "2" })
+            .await;
+    let c3 =
+        create_initial_commit_with_contents(ctx.clone(), &large_repo, btreemap! { "f3" => "3" })
+            .await;
+    let c4 =
+        create_initial_commit_with_contents(ctx.clone(), &large_repo, btreemap! { "f4" => "4" })
+            .await;
 
     lts_syncer
         .unsafe_always_rewrite_sync_commit(

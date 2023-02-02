@@ -74,7 +74,7 @@ impl MemState {
             self.links.insert(link_key, existing_id);
             return Ok(());
         }
-        Err(format_err!("Unknown existing_key {}", existing_key))
+        panic!("Unknown existing_key {} {:?}", existing_key, self.links)
     }
 
     fn get(&self, key: &str) -> Option<&BlobstoreBytes> {

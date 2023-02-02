@@ -124,6 +124,10 @@ impl<T: Blobstore> RedactedBlobstore<T> {
     {
         (self.blobstore.clone(), self.config.clone())
     }
+
+    pub fn as_inner_unredacted(&self) -> &T {
+        &self.blobstore
+    }
 }
 
 impl<T: Blobstore> RedactedBlobstoreInner<T> {

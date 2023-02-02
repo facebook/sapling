@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use async_trait::async_trait;
+use blobstore::BlobCopier;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use context::CoreContext;
@@ -22,13 +22,8 @@ use crate::Alias;
 use crate::FileContents;
 use crate::FilestoreConfig;
 
-#[async_trait]
-pub trait BlobCopier {
-    async fn copy(&self, ctx: &CoreContext, key: String) -> Result<()>;
-}
-
 pub async fn copy(
-    original_blobstore: impl Blobstore + Clone,
+    original_blobstore: &impl Blobstore,
     copier: &impl BlobCopier,
     config: FilestoreConfig,
     ctx: &CoreContext,
@@ -44,7 +39,7 @@ pub async fn copy(
     // Files are stored inline or in chunks, depending on their size. If they're chunked,
     // we need to copy all chunks. Unfortunately, the only way to know how they're stored is
     // by loading FileContents, which might be large-ish if the file is actually inlined.
-    let file_contents = data.content_id.load(ctx, &original_blobstore).await?;
+    let file_contents = data.content_id.load(ctx, original_blobstore).await?;
     match file_contents {
         FileContents::Chunked(chunked) => {
             stream::iter(
