@@ -1017,8 +1017,8 @@ class buildembedded(Command):
             "contrib/editmergeps.ps1": "contrib/editmergeps.ps1",
             "contrib/editmergeps.bat": "contrib/editmergeps.bat",
         }
-        # @fb-only
-            # @fb-only
+        if havefb and iswindows:
+            tocopy["edenscm/commands/isl"] = "isl/isl"
         for sname, tname in tocopy.items():
             source = pjoin(scriptdir, sname)
             target = pjoin(dirtocopy, tname)
