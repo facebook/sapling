@@ -1000,12 +1000,12 @@ def allsupportedversions(repo) -> Set[str]:
 
 
 # Changegroup versions that can be applied to the repo
-def supportedincomingversions(repo):
+def supportedincomingversions(repo) -> Set[str]:
     return allsupportedversions(repo)
 
 
 # Changegroup versions that can be created from the repo
-def supportedoutgoingversions(repo):
+def supportedoutgoingversions(repo) -> Set[str]:
     versions = allsupportedversions(repo)
     versions.discard("01")
     # developer config: format.allowbundle1
