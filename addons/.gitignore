@@ -1,3 +1,4 @@
 node_modules
 isl-server/coverage
+shared/coverage/
 vscode-build/
