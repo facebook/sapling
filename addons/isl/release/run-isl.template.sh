@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$( cd -- "$( dirname -- "$0" )" &> /dev/null && pwd )
 # Facilitate redefining NODE in terms of SCRIPT_DIR via a regex.
 NODE=node
 
