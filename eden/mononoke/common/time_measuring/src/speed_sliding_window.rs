@@ -45,10 +45,14 @@ impl WeightSlidingWindow {
         now
     }
 
-    /// Average weight over the window
-    pub fn avg(&mut self) -> f64 {
+    /// Average weight over the window, if any
+    pub fn avg(&mut self) -> Option<f64> {
         self.prune();
-        self.total_weight / (self.entries.len() as f64)
+        if self.entries.is_empty() {
+            None
+        } else {
+            Some(self.total_weight / (self.entries.len() as f64))
+        }
     }
 
     /// How much weight is consumed per second
@@ -100,7 +104,11 @@ impl<Key: Eq + Hash + Display> Display for AvgTimeSlidingWindows<Key> {
             }
             first = false;
             write!(f, "{} avg ", r.key())?;
-            write!(f, "{:.2?}", Duration::from_secs_f64(r.value_mut().avg()))?
+            if let Some(avg) = r.value_mut().avg() {
+                write!(f, "{:.2?}", Duration::from_secs_f64(avg))?;
+            } else {
+                write!(f, "<NO ENTRIES>")?;
+            }
         }
         Ok(())
     }
