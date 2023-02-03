@@ -60,8 +60,6 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 ascii = "1.0"
 assert_matches = "1.5"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-bytes = { version = "1.1", features = ["serde"] }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
