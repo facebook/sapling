@@ -294,9 +294,14 @@ void Overlay::initOverlay(
   // mountPath will be empty during benchmarking so we must check the value
   // here to skip scanning in that case.
   if (folly::kIsWindows && mountPath.has_value()) {
+    folly::stop_watch<> fsckRuntime;
     optNextInodeNumber =
         dynamic_cast<SqliteInodeCatalog*>(inodeCatalog_.get())
             ->scanLocalChanges(std::move(config), *mountPath, lookupCallback);
+    auto fsckRuntimeInSeconds =
+        std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
+    structuredLogger_->logEvent(Fsck{
+        fsckRuntimeInSeconds, true /*success*/, false /*attempted_repair*/});
   }
 
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);
