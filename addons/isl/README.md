@@ -329,3 +329,18 @@ Error: something went wrong
 
 Note that the source map you use must match the version in the original stack trace.
 Usually, you can tell the version by the path in the stack trace.
+
+## Profiling webpack bundle sizes and dependencies
+
+You can visualize what modules are being bundled by webpack for different entry points:
+
+- `cd isl-server`
+- `yarn --silent webpack --profile --json > webpack_stats.json`
+- Upload that file to <https://chrisbateman.github.io/webpack-visualizer/> to see an easy to understand breakdown of your bundle size
+- Upload that file to <https://webpack.github.io/analyse/#modules> to see the exact dependency graph. This is useful for debugging why code is being included by a certain entry point, for example isl-server somehow including something from isl.
+- This also works for vscode, but you need to pass the config or use e.g. `yarn build-extension --profile --json`.
+
+Due to Create React App, this is slightly different on the isl client / reviewstack:
+
+- `cd isl`
+- [`npx source-map-explorer build/static/js/*.js`](https://create-react-app.dev/docs/analyzing-the-bundle-size/), which opens a browser visualization of your dependencies.
