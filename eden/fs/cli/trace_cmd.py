@@ -289,6 +289,6 @@ class TraceTaskCmd(Subcmd):
                 trace_stream_command,
                 "--mountRoot",
                 checkout.path,
-                f"--trace={'task' if args.chrome_trace else 'task-chrome-trace'}",
+                f"--trace={'task-chrome-trace' if args.chrome_trace else 'task'}",
             ]
         )
