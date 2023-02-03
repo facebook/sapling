@@ -605,8 +605,8 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
     )
     .await;
-    let megarepo_linear_base_bcs_id =
-        rebase_root_on_master(ctx.clone(), &stl_config, linear_base_bcs_id).await?;
+
+    rebase_root_on_master(ctx.clone(), &stl_config, linear_base_bcs_id).await?;
 
     // Fetch master from linear - the pushrebase in a remap will change copyinfo
     let linear_master_bcs_id = {

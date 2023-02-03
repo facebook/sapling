@@ -13,7 +13,6 @@ use std::str::FromStr;
 
 use anyhow::format_err;
 use anyhow::Error;
-use blobstore::Storable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
@@ -39,17 +38,14 @@ use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
-use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
-use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 
