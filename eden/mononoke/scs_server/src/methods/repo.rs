@@ -541,7 +541,7 @@ impl SourceControlServiceImpl {
             leftover_heads.into_iter().collect::<Option<Vec<_>>>(),
         ) {
             (Some(draft_commits), Some(public_parents), Some(leftover_heads)) => {
-                let (draft_commits, public_parents, leftover_heads) = try_join!(
+                let (mut draft_commits, public_parents, leftover_heads) = try_join!(
                     try_join_all(
                         draft_commits
                             .into_iter()
@@ -554,6 +554,12 @@ impl SourceControlServiceImpl {
                     ),
                     leftover_heads.into_response_with(&params.identity_schemes),
                 )?;
+
+                // Need to return the draft commits in topological order to meet the API definition
+                // at https://fburl.com/code/a017qoam.
+                draft_commits.sort_by_key(|commit| commit.generation);
+                draft_commits.reverse();
+
                 Ok(thrift::RepoStackInfoResponse {
                     draft_commits,
                     public_parents,
