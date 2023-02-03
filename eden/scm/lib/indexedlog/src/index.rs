@@ -1487,7 +1487,7 @@ impl MemRoot {
 
 impl MemChecksum {
     fn read_from(index: &impl IndexBuf, start_offset: u64) -> crate::Result<(Self, usize)> {
-        let span = debug_span!("MemRadix::read", offset = start_offset);
+        let span = debug_span!("Checksum::read", offset = start_offset, chain_len = 0);
         let _entered = span.enter();
         let mut result = Self::default();
         let mut size: usize = 0;
