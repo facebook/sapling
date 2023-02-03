@@ -7,10 +7,11 @@
 
 import './SplitDiffHunk.css';
 
+import type {ParsedDiff} from '../patch/parse';
 import type {SplitDiffTableProps} from './SplitDiffHunk';
 import type {Context} from './types';
-import type {ParsedDiff} from 'diff';
 
+import {DiffType} from '../patch/parse';
 import {FileHeader} from './SplitDiffFileHeader';
 import {SplitDiffTable} from './SplitDiffHunk';
 import {Box} from '@primer/react';
@@ -24,13 +25,7 @@ export function SplitDiffView<Id>({
   path: string;
   patch: ParsedDiff;
 }) {
-  const oldName = patch.oldFileName ?? '/dev/null';
-  const newName = patch.newFileName ?? '/dev/null';
-  const fileName = newName == '/dev/null' ? oldName : newName;
-
-  const isAdded = oldName === '/dev/null';
-  const isDeleted = newName === '/dev/null';
-  const isCopied = !isDeleted && !isAdded && oldName != null && oldName !== newName;
+  const fileName = patch.newFileName;
 
   // Type hack to get a templatized version of a React.memo-ized component
   const TypedSplitDiffTable = SplitDiffTable as unknown as React.FC<SplitDiffTableProps<Id>>;
@@ -39,15 +34,23 @@ export function SplitDiffView<Id>({
 
   const preamble = [];
   let icon = 'diff-modified';
-  if (isAdded) {
+  if (patch.type === DiffType.Added) {
     preamble.push(<FileStatusBanner key="added">{t('This file was added')}</FileStatusBanner>);
     icon = 'diff-added';
   }
-  if (isDeleted) {
+  if (patch.type === DiffType.Removed) {
     preamble.push(<FileStatusBanner key="deleted">{t('This file was removed')}</FileStatusBanner>);
     icon = 'diff-removed';
   }
-  if (isCopied) {
+  if (patch.type === DiffType.Renamed) {
+    preamble.push(
+      <FileStatusBanner key="renamed">
+        {t('This file was renamed from')} {patch.oldFileName ?? ''}
+      </FileStatusBanner>,
+    );
+    icon = 'diff-renamed';
+  }
+  if (patch.type === DiffType.Copied) {
     preamble.push(
       <FileStatusBanner key="copied">
         {t('This file was copied from')} {patch.oldFileName ?? ''}

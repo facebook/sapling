@@ -6,9 +6,9 @@
  */
 
 import type {Result} from '../types';
-import type {ParsedDiff} from 'diff';
 import type {Comparison} from 'shared/Comparison';
 import type {LineRangeParams} from 'shared/SplitDiffView/types';
+import type {ParsedDiff} from 'shared/patch/parse';
 
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
@@ -20,7 +20,6 @@ import {themeState} from '../theme';
 import {currentComparisonMode} from './atoms';
 import {ThemeProvider, BaseStyles} from '@primer/react';
 import {VSCodeButton, VSCodeDropdown, VSCodeOption} from '@vscode/webview-ui-toolkit/react';
-import {parsePatch} from 'diff';
 import {useCallback, useEffect} from 'react';
 import {
   atomFamily,
@@ -33,6 +32,7 @@ import {labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {SplitDiffView} from 'shared/SplitDiffView';
 import SplitDiffViewPrimerStyles from 'shared/SplitDiffView/PrimerStyles';
+import {parsePatch} from 'shared/patch/parse';
 
 import './ComparisonView.css';
 

@@ -24,17 +24,19 @@ afterEach(cleanup);
 jest.mock('../MessageBus');
 
 const UNCOMMITTED_CHANGES_DIFF = `\
-diff -r a1b2c3d4e5f6 deletedFile.txt
+diff --git deletedFile.txt deletedFile.txt
+deleted file mode 100644
 --- deletedFile.txt
 +++ /dev/null
 @@ -1,1 +0,0 @@
 -Goodbye
-diff -r a1b2c3d4e5f6 newFile.txt
+diff --git newFile.txt newFile.txt
+new file mode 100644
 --- /dev/null
 +++ newFile.txt
 @@ -0,0 +1,1 @@
 +hello
-diff -r a1b2c3d4e5f6 someFile.txt
+diff --git someFile.txt someFile.txt
 --- someFile.txt
 +++ someFile.txt
 @@ -7,5 +7,5 @@

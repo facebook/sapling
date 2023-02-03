@@ -336,9 +336,6 @@ export default class ServerToClientAPI {
           .runCommand([
             'diff',
             ...revsetArgsForComparison(comparison),
-            // git comparison mode presents renames in a more compact format that
-            // our diff parsing client can't understand.
-            '--no-git',
             // don't include a/ and b/ prefixes on files
             '--noprefix',
             '--no-binary',
