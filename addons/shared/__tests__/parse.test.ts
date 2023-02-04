@@ -246,4 +246,13 @@ new mode 100755
     ];
     expect(parsePatch(patch)).toEqual(expected);
   });
+
+  it('should fail for invalid file mode format', () => {
+    const patch = `
+diff --git sapling/eden/scm/a sapling/eden/scm/a
+old mode XXX
+new mode 100755
+`;
+    expect(() => parsePatch(patch)).toThrow("invalid format 'old mode XXX'");
+  });
 });

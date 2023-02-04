@@ -121,7 +121,7 @@ export function parsePatch(patch: string): ParsedDiff[] {
 
   function parseOldMode(index: ParsedDiff) {
     const arr = OLD_MODE.exec(diffstr[i]);
-    assert(arr);
+    assert(arr !== null, `invalid format '${diffstr[i]}'`);
     index.oldMode = arr[1];
     index.type = DiffType.Modified;
     i++;
@@ -129,7 +129,7 @@ export function parsePatch(patch: string): ParsedDiff[] {
 
   function parseNewMode(index: ParsedDiff) {
     const arr = NEW_MODE.exec(diffstr[i]);
-    assert(arr);
+    assert(arr !== null, `invalid format '${diffstr[i]}'`);
     index.newMode = arr[1];
     index.type = DiffType.Modified;
     i++;
@@ -137,7 +137,7 @@ export function parsePatch(patch: string): ParsedDiff[] {
 
   function parseDeletedFileMode(index: ParsedDiff) {
     const arr = DELETED_FILE_MODE.exec(diffstr[i]);
-    assert(arr);
+    assert(arr !== null, `invalid format '${diffstr[i]}'`);
     index.newMode = arr[1];
     index.type = DiffType.Removed;
     i++;
@@ -145,29 +145,29 @@ export function parsePatch(patch: string): ParsedDiff[] {
 
   function parseNewFileMode(index: ParsedDiff) {
     const arr = NEW_FILE_MODE.exec(diffstr[i]);
-    assert(arr);
+    assert(arr !== null, `invalid format '${diffstr[i]}'`);
     index.newMode = arr[1];
     index.type = DiffType.Added;
     i++;
   }
 
   function parseCopy(index: ParsedDiff) {
-    assert(COPY_FROM.test(diffstr[i]));
-    assert(COPY_TO.test(diffstr[i + 1]));
+    assert(COPY_FROM.test(diffstr[i]), `invalid format '${diffstr[i]}'`);
+    assert(COPY_TO.test(diffstr[i + 1]), `invalid format '${diffstr[i + 1]}'`);
     index.type = DiffType.Copied;
     i += 2;
   }
 
   function parseRename(index: ParsedDiff) {
-    assert(RENAME_FROM.test(diffstr[i]));
-    assert(RENAME_TO.test(diffstr[i + 1]));
+    assert(RENAME_FROM.test(diffstr[i]), `invalid format '${diffstr[i]}'`);
+    assert(RENAME_TO.test(diffstr[i + 1]), `invalid format '${diffstr[i + 1]}'`);
     index.type = DiffType.Renamed;
     i += 2;
   }
 
   function parseFileHeader(index: ParsedDiff) {
-    assert(OLD_FILE_HEADER.test(diffstr[i]));
-    assert(NEW_FILE_HEADER.test(diffstr[i + 1]));
+    assert(OLD_FILE_HEADER.test(diffstr[i]), `invalid format '${diffstr[i]}'`);
+    assert(NEW_FILE_HEADER.test(diffstr[i + 1]), `invalid format '${diffstr[i + 1]}'`);
     if (index.type === undefined) {
       index.type = DiffType.Modified;
     }
