@@ -59,6 +59,7 @@ sl.rebased=brightblack:none
 sl.remote=green
 sl.snapshotnode=brightblue:blue
 sl.split=brightblack:none
+sl.stablecommit = bold green
 sl.tasks=bold
 sl.backuppending=cyan
 sl.backupfail=red
