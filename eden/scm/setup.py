@@ -382,6 +382,18 @@ def hgtemplate(template, cast=None):
         result = cast(result)
     return result
 
+def gitversion():
+    hgenv = localhgenv()
+    format = "%cd-h%h"
+    date_format = "format:%Y%m%d-%H%M%S"
+    try:
+        retcode, out, err = runcmd(["git", "-c", "core.abbrev=8", "show", "-s",
+                         f"--format={format}", f"--date={date_format}"], os.environ)
+        if retcode or err:
+            return None
+        return out.decode("utf-8")
+    except EnvironmentError as e:
+        return None
 
 def pickversion():
     # Respect SAPLING_VERSION set by GitHub workflows.
@@ -392,7 +404,7 @@ def pickversion():
     # This is duplicated a bit from build_rpm.py:auto_release_str()
     template = r'{sub("([:+-]|\d\d\d\d$)", "",date|isodatesec)} {node|short}'
     # if hg is not found, fallback to a fixed version
-    out = hgtemplate(template) or ""
+    out = hgtemplate(template) or gitversion() or ""
     # Some tools parse this number to figure out if they support this version of
     # Mercurial, so prepend with 4.4.2.
     # ex. 4.4.2_20180105_214829_58fda95a0202
