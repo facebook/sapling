@@ -19,34 +19,36 @@ from .i18n import _
 from .pycompat import range
 
 
+# fmt: off
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
-    "(": (21, None, ("group", 1, ")"), ("func", 1, ")"), None),
-    "[": (21, None, None, ("subscript", 1, "]"), None),
-    "#": (21, None, None, ("relation", 21), None),
-    "##": (20, None, None, ("_concat", 20), None),
-    "~": (18, None, None, ("ancestor", 18), None),
-    "^": (18, None, None, ("parent", 18), "parentpost"),
-    "-": (5, None, ("negate", 19), ("minus", 5), None),
-    "::": (17, None, ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
-    "..": (17, None, ("dagrangepre", 17), ("dagrange", 17), "dagrangepost"),
-    ":": (15, "rangeall", ("rangepre", 15), ("range", 15), "rangepost"),
-    "not": (10, None, ("not", 10), None, None),
-    "!": (10, None, ("not", 10), None, None),
-    "and": (5, None, None, ("and", 5), None),
-    "&": (5, None, None, ("and", 5), None),
-    "%": (5, None, None, ("only", 5), "onlypost"),
-    "or": (4, None, None, ("or", 4), None),
-    "|": (4, None, None, ("or", 4), None),
-    "+": (4, None, None, ("or", 4), None),
-    "=": (3, None, None, ("keyvalue", 3), None),
-    ",": (2, None, None, ("list", 2), None),
-    ")": (0, None, None, None, None),
-    "]": (0, None, None, None, None),
-    "symbol": (0, "symbol", None, None, None),
-    "string": (0, "string", None, None, None),
-    "end": (0, None, None, None, None),
+    "(":         (21, None,       ("group", 1, ")"),   ("func", 1, ")"),      None),
+    "[":         (21, None,       None,                ("subscript", 1, "]"), None),
+    "#":         (21, None,       None,                ("relation", 21),      None),
+    "##":        (20, None,       None,                ("_concat", 20),       None),
+    "~":         (18, None,       None,                ("ancestor", 18),      None),
+    "^":         (18, None,       None,                ("parent", 18),        "parentpost"),
+    "-":         (5,  None,       ("negate", 19),      ("minus", 5),          None),
+    "::":        (17, None,       ("dagrangepre", 17), ("dagrange", 17),      "dagrangepost"),
+    "..":        (17, None,       ("dagrangepre", 17), ("dagrange", 17),      "dagrangepost"),
+    ":":         (15, "rangeall", ("rangepre", 15),    ("range", 15),         "rangepost"),
+    "not":       (10, None,       ("not", 10),         None,                  None),
+    "!":         (10, None,       ("not", 10),         None,                  None),
+    "and":       (5,  None,       None,                ("and", 5),            None),
+    "&":         (5,  None,       None,                ("and", 5),            None),
+    "%":         (5,  None,       None,                ("only", 5),           "onlypost"),
+    "or":        (4,  None,       None,                ("or", 4),             None),
+    "|":         (4,  None,       None,                ("or", 4),             None),
+    "+":         (4,  None,       None,                ("or", 4),             None),
+    "=":         (3,  None,       None,                ("keyvalue", 3),       None),
+    ",":         (2,  None,       None,                ("list", 2),           None),
+    ")":         (0,  None,       None,                None,                  None),
+    "]":         (0,  None,       None,                None,                  None),
+    "symbol":    (0,  "symbol",   None,                None,                  None),
+    "string":    (0,  "string",   None,                None,                  None),
+    "end":       (0,  None,       None,                None,                  None),
 }
+# fmt: on
 
 keywords = {"and", "or", "not"}
 
