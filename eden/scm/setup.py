@@ -311,7 +311,7 @@ def filterhgerr(err):
     return b"\n".join(b"  " + e for e in err)
 
 
-def findhg():
+def findhg(vcname: str):
     """Try to figure out how we should invoke hg for examining the local
     repository contents.
 
@@ -328,7 +328,7 @@ def findhg():
     # and disable localization for the same reasons.
     hgenv["HGPLAIN"] = "1"
     hgenv["LANGUAGE"] = "C"
-    hgcmd = ["hg"]
+    hgcmd = [vcname]
     # Run a simple "hg log" command just to see if using hg from the user's
     # path works and can successfully interact with this repository.
     check_cmd = ["log", "-r.", "-Ttest"]
@@ -341,7 +341,7 @@ def findhg():
 
     # Fall back to trying the local hg installation.
     hgenv = localhgenv()
-    hgcmd = [sys.executable, "hg"]
+    hgcmd = [sys.executable, vcname]
     try:
         retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
     except EnvironmentError:
@@ -372,9 +372,7 @@ def localhgenv():
         env["SystemRoot"] = os.environ["SystemRoot"]
     return env
 
-
-hg = None if ossbuild else findhg()
-
+hg = findhg("hg") or findhg("sl")
 
 def hgtemplate(template, cast=None):
     if not hg:
