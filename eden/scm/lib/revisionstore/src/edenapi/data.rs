@@ -25,7 +25,6 @@ use crate::datastore::Metadata;
 use crate::datastore::RemoteDataStore;
 use crate::datastore::StoreResult;
 use crate::localstore::LocalStore;
-use crate::scmstore::FetchMode;
 use crate::types::StoreKey;
 use crate::util;
 
@@ -215,6 +214,7 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
+    use crate::scmstore::FetchMode;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileAuxData;
     use crate::scmstore::FileStore;

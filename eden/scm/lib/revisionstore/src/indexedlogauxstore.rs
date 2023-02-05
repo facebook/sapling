@@ -32,7 +32,6 @@ use vlqencoding::VLQEncode;
 use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
-use crate::scmstore::FetchMode;
 
 /// See edenapi_types::FileAuxData and mononoke_types::ContentMetadata
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
@@ -214,6 +213,7 @@ mod tests {
     use super::*;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
+    use crate::scmstore::FetchMode;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;

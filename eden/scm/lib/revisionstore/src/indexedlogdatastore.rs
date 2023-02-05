@@ -42,7 +42,6 @@ use crate::localstore::ExtStoredPolicy;
 use crate::localstore::LocalStore;
 use crate::missing::MissingInjection;
 use crate::repack::ToKeys;
-use crate::scmstore::FetchMode;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
 
@@ -435,6 +434,7 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
+    use crate::scmstore::FetchMode;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;
