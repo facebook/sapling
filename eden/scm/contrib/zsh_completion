@@ -1,4 +1,4 @@
-#compdef hg
+#compdef hg sl=hg
 
 # Zsh completion script for mercurial.  Rename this file to _hg and copy
 # it into your zsh function path (/usr/share/zsh/site-functions for
