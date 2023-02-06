@@ -25,7 +25,7 @@ export function SplitDiffView<Id>({
   path: string;
   patch: ParsedDiff;
 }) {
-  const fileName = patch.newFileName;
+  const fileName = patch.newFileName ?? patch.oldFileName ?? '/dev/null';
 
   // Type hack to get a templatized version of a React.memo-ized component
   const TypedSplitDiffTable = SplitDiffTable as unknown as React.FC<SplitDiffTableProps<Id>>;
@@ -33,14 +33,11 @@ export function SplitDiffView<Id>({
   const t = ctx.translate ?? (s => s);
 
   const preamble = [];
-  let icon = 'diff-modified';
   if (patch.type === DiffType.Added) {
     preamble.push(<FileStatusBanner key="added">{t('This file was added')}</FileStatusBanner>);
-    icon = 'diff-added';
   }
   if (patch.type === DiffType.Removed) {
     preamble.push(<FileStatusBanner key="deleted">{t('This file was removed')}</FileStatusBanner>);
-    icon = 'diff-removed';
   }
   if (patch.type === DiffType.Renamed) {
     preamble.push(
@@ -48,7 +45,6 @@ export function SplitDiffView<Id>({
         {t('This file was renamed from')} {patch.oldFileName ?? ''}
       </FileStatusBanner>,
     );
-    icon = 'diff-renamed';
   }
   if (patch.type === DiffType.Copied) {
     preamble.push(
@@ -56,7 +52,6 @@ export function SplitDiffView<Id>({
         {t('This file was copied from')} {patch.oldFileName ?? ''}
       </FileStatusBanner>,
     );
-    icon = 'diff-renamed';
   }
 
   return (
@@ -66,7 +61,7 @@ export function SplitDiffView<Id>({
       borderStyle="solid"
       borderColor="border.default"
       borderRadius={2}>
-      <FileHeader path={fileName} icon={icon} />
+      <FileHeader path={fileName} diffType={patch.type} />
       <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />
     </Box>
   );

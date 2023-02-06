@@ -5,13 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DiffType} from '../patch/parse';
+
 import {Icon} from '../Icon';
 import {Box, Text} from '@primer/react';
 
-export function FileHeader({path, icon}: {path: string; icon?: string}) {
+export function FileHeader({path, diffType}: {path: string; diffType?: DiffType}) {
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
-  const color = iconToColor[icon ?? 'default'] ?? iconToColor.default;
+  const color = diffType === undefined ? 'fg.muted' : diffTypeToColor[diffType];
   return (
     <Box
       className="split-diff-view-file-header"
@@ -26,7 +28,7 @@ export function FileHeader({path, icon}: {path: string; icon?: string}) {
       borderBottomColor="border.default"
       borderBottomStyle="solid"
       borderBottomWidth="1px">
-      {icon !== undefined && <Icon icon={icon} />}
+      {diffType !== undefined && <Icon icon={diffTypeToIcon[diffType]} />}
       <Text fontFamily="mono" fontSize={12}>
         {path}
       </Text>
@@ -34,10 +36,18 @@ export function FileHeader({path, icon}: {path: string; icon?: string}) {
   );
 }
 
-const iconToColor: Record<string, string> = {
-  'diff-modified': 'var(--scm-modified-foreground)',
-  'diff-added': 'var(--scm-added-foreground)',
-  'diff-removed': 'var(--scm-removed-foreground)',
-  'diff-renamed': 'fg.muted',
-  default: 'fg.muted',
+const diffTypeToColor: Record<keyof typeof DiffType, string> = {
+  Modified: 'var(--scm-modified-foreground)',
+  Added: 'var(--scm-added-foreground)',
+  Removed: 'var(--scm-removed-foreground)',
+  Renamed: 'var(--scm-modified-foreground)',
+  Copied: 'var(--scm-added-foreground)',
+};
+
+const diffTypeToIcon: Record<keyof typeof DiffType, string> = {
+  Modified: 'diff-modified',
+  Added: 'diff-added',
+  Removed: 'diff-removed',
+  Renamed: 'diff-renamed',
+  Copied: 'diff-renamed',
 };
