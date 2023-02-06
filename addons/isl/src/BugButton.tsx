@@ -7,8 +7,8 @@
 
 import {Copyable} from './Copyable';
 import {DropdownFields} from './DropdownFields';
+import {Internal} from './Internal';
 import {Tooltip} from './Tooltip';
-// @fb-only
 import {T} from './i18n';
 import platform from './platform';
 import {applicationinfo} from './serverAPIState';
@@ -52,7 +52,7 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
           <Icon icon="book" slot="start" />
           <T>View Documentation</T>
         </VSCodeButton>
-        <FileABug _dismissBugDropdown={dismiss} />
+        <FileABug dismissBugDropdown={dismiss} />
       </div>
       {/*
       // TODO: enable these debug actions
@@ -79,10 +79,10 @@ function BugDropdown({dismiss}: {dismiss: () => void}) {
   );
 }
 
-function FileABug({_dismissBugDropdown}: {_dismissBugDropdown: () => void}) {
-  return (
-    // prettier-ignore
-    // @fb-only
+function FileABug({dismissBugDropdown}: {dismissBugDropdown: () => void}) {
+  return Internal.FileABugButton != null ? (
+    <Internal.FileABugButton dismissBugDropdown={dismissBugDropdown} />
+  ) : (
     <OSSFileABug />
   );
 }

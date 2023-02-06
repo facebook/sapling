@@ -9,8 +9,8 @@ import type {DiffId, DiffSummary, PageVisibility, Result} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 
 import serverAPI from '../ClientToServerAPI';
+import {Internal} from '../Internal';
 import {repositoryInfo} from '../serverAPIState';
-// @fb-only
 import {GithubUICodeReviewProvider} from './github/github';
 import {atom, selector, selectorFamily} from 'recoil';
 import {debounce} from 'shared/debounce';
@@ -28,8 +28,13 @@ export const codeReviewProvider = selector<UICodeReviewProvider | null>({
         repoInfo.preferredSubmitCommand ?? 'pr',
       );
     }
-    // prettier-ignore
-    // @fb-only
+    if (
+      repoInfo.codeReviewSystem.type === 'phabricator' &&
+      Internal.PhabricatorUICodeReviewProvider != null
+    ) {
+      return new Internal.PhabricatorUICodeReviewProvider(repoInfo.codeReviewSystem);
+    }
+
     return null;
   },
 });

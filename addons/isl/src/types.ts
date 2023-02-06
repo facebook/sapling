@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {InternalTypes} from './InternalTypes';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
-// @fb-only
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
 import type {AllUndefined} from 'shared/typeUtils';
@@ -52,10 +52,7 @@ export type DiffId = string;
 /**
  * Short info about a Diff fetched in bulk for all diffs to render an overview
  */
-// prettier-ignore
-export type DiffSummary = GitHubDiffSummary
- // @fb-only
- ;
+export type DiffSummary = GitHubDiffSummary | InternalTypes['PhabricatorDiffSummary'];
 
 /**
  * Summary of CI test results for a Diff.

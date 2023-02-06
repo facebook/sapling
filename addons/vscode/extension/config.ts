@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Internal} from 'isl-server/src/Internal';
 import os from 'os';
 import * as vscode from 'vscode';
 
@@ -17,7 +18,7 @@ export function getCLICommand(): string {
   // prettier-disable
   return (
     vscode.workspace.getConfiguration('sapling').get('commandPath') ||
-    // @fb-only
+    Internal.SLCommand ||
     (os.platform() === 'win32' ? 'sl.exe' : 'sl')
   );
 }

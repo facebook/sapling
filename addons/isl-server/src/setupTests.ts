@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Internal} from './Internal';
+
 // ensure we never try to actually log analytics during tests
-// @fb-only
+Internal.mockAnalytics?.();
+
 export {};

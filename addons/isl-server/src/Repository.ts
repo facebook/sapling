@@ -32,10 +32,10 @@ import type {
   RepoRelativePath,
 } from 'isl/src/types';
 
+import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
-// @fb-only
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
 import {serializeAsyncCall} from './utils';
@@ -172,8 +172,9 @@ export class Repository {
       this.codeReviewProvider = new GitHubCodeReviewProvider(remote, logger);
     }
 
-    // prettier-ignore
-    // @fb-only
+    if (remote.type === 'phabricator' && Internal?.PhabricatorCodeReviewProvider != null) {
+      this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(remote, logger);
+    }
 
     this.watchForChanges = new WatchForChanges(info, logger, this.pageFocusTracker, kind => {
       if (kind === 'uncommitted changes') {

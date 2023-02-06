@@ -7,7 +7,7 @@
 
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 
-// @fb-only
+import {Internal} from '../Internal';
 import {Tracker} from 'isl-server/src/analytics/tracker';
 
 /** Client-side global analytics tracker */
@@ -20,6 +20,5 @@ export const tracker = new Tracker(sendDataToServer, {});
 function sendDataToServer(_data: TrackDataWithEventName) {
   // In open source, we don't even need to bother sending these messages to the server,
   // since we don't track anything anyway.
-  // prettier-ignore
-  // @fb-only
+  Internal.sendAnalyticsDataToServer?.(_data);
 }

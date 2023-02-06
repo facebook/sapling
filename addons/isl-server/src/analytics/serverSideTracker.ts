@@ -10,8 +10,8 @@ import type {Logger} from '../logger';
 import type {ServerPlatform} from '../serverPlatform';
 import type {ApplicationInfo, FullTrackData, TrackDataWithEventName} from './types';
 
+import {Internal} from '../Internal';
 import {generateAnalyticsInfo} from './environment';
-// @fb-only
 import {Tracker} from './tracker';
 
 export type ServerSideTracker = Tracker<ServerSideContext>;
@@ -39,7 +39,7 @@ export function makeServerSideTracker(
   version: string,
   // prettier-ignore
   writeToServer =
-    // @fb-only
+    Internal.trackToScribe ??
     noOp,
 ): ServerSideTracker {
   return new Tracker((data: TrackDataWithEventName, context: ServerSideContext) => {
