@@ -709,6 +709,12 @@ impl Convert for RawShardedService {
             RawShardedService::LARGE_FILES_SERVICE => ShardedService::LargeFilesService,
             RawShardedService::DERIVATION_WORKER => ShardedService::DerivationWorker,
             RawShardedService::ASYNC_REQUESTS_WORKER => ShardedService::AsyncRequestsWorker,
+            RawShardedService::WALKER_SCRUB_ALL => ShardedService::WalkerScrubAll,
+            RawShardedService::WALKER_VALIDATE_ALL => ShardedService::WalkerValidateAll,
+            RawShardedService::HG_SYNC => ShardedService::HgSync,
+            RawShardedService::HG_SYNC_BACKUP => ShardedService::HgSyncBackup,
+            RawShardedService::DERIVED_DATA_TAILER => ShardedService::DerivedDataTailer,
+            RawShardedService::ALIAS_VERIFY => ShardedService::AliasVerify,
             v => return Err(anyhow!("Invalid value {} for enum ShardedService", v)),
         };
         Ok(service)

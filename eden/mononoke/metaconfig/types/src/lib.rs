@@ -254,6 +254,18 @@ pub enum ShardedService {
     LargeFilesService,
     /// Async Requests Worker
     AsyncRequestsWorker,
+    /// Walker Scrub All
+    WalkerScrubAll,
+    /// Walker Validate All
+    WalkerValidateAll,
+    /// Hg Sync Job
+    HgSync,
+    /// Hg Sync Backup Job
+    HgSyncBackup,
+    /// Derived Data Tailer
+    DerivedDataTailer,
+    /// Alias Verify
+    AliasVerify,
 }
 
 /// Indicates types of commit hashes used in a repo context.
