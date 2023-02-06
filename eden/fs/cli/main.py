@@ -1041,10 +1041,17 @@ class DoctorCmd(Subcmd):
             action="store_true",
             help="Do not try to fix any issues: only report them.",
         )
+        parser.add_argument(
+            "--fast",
+            action="store_true",
+            help="Only run fast doctor checker, may miss some issues. This is "
+            "intended to be run by tools running doctor in a continuous manner "
+            "such as IDEs.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        doctor = doctor_mod.EdenDoctor(instance, args.dry_run, args.debug)
+        doctor = doctor_mod.EdenDoctor(instance, args.dry_run, args.debug, args.fast)
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()

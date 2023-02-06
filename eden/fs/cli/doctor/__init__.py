@@ -84,6 +84,7 @@ def cure_what_ails_you(
     dry_run: bool,
     *,
     debug: bool = False,
+    fast: bool = False,
     mount_table: Optional[mtab.MountTable] = None,
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -95,6 +96,7 @@ def cure_what_ails_you(
         instance,
         dry_run,
         debug,
+        fast,
         mount_table,
         fs_util,
         proc_utils,
@@ -139,6 +141,7 @@ class EdenDoctorChecker:
         instance: EdenInstance,
         tracker: ProblemTracker,
         debug: bool,
+        fast: bool,
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -149,6 +152,7 @@ class EdenDoctorChecker:
         self.instance = instance
         self.tracker = tracker
         self.debug = debug
+        self.fast = fast
         self.mount_table = mount_table if mount_table is not None else mtab.new()
         self.fs_util = fs_util if fs_util is not None else filesystem.new()
         self.proc_utils = proc_utils if proc_utils is not None else proc_utils_mod.new()
@@ -316,6 +320,7 @@ class EdenDoctorChecker:
                     list(checkouts.values()),
                     checked_backing_repos,
                     self.debug,
+                    self.fast,
                 )
             except Exception as ex:
                 self.tracker.add_problem(UnexpectedMountProblem(path, ex))
@@ -330,6 +335,7 @@ class EdenDoctor(EdenDoctorChecker):
         instance: EdenInstance,
         dry_run: bool,
         debug: bool,
+        fast: bool,
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
@@ -348,6 +354,7 @@ class EdenDoctor(EdenDoctorChecker):
             instance,
             tracker=self.fixer,
             debug=debug,
+            fast=fast,
             mount_table=mount_table,
             fs_util=fs_util,
             proc_utils=proc_utils,
@@ -525,6 +532,7 @@ def check_mount(
     all_checkouts: List[CheckoutInfo],
     checked_backing_repos: Set[str],
     debug: bool,
+    fast: bool,
 ) -> None:
     if sys.platform == "win32":
         try:
@@ -540,7 +548,13 @@ def check_mount(
     elif checkout.state == MountState.RUNNING:
         try:
             check_running_mount(
-                tracker, instance, checkout, mount_table, watchman_info, debug
+                tracker,
+                instance,
+                checkout,
+                mount_table,
+                watchman_info,
+                debug,
+                fast,
             )
         except Exception as ex:
             raise RuntimeError("Failed to check running mount") from ex
@@ -592,6 +606,7 @@ def check_running_mount(
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
     debug: bool,
+    fast: bool,
 ) -> None:
     if checkout_info.configured_state_dir is None:
         tracker.add_problem(CheckoutNotConfigured(checkout_info))
@@ -636,18 +651,20 @@ def check_running_mount(
 
     if sys.platform == "win32":
         try:
-            check_filesystems.check_materialized_are_accessible(
-                tracker, instance, checkout, lambda p: os.lstat(p).st_mode
-            )
+            if not fast:
+                check_filesystems.check_materialized_are_accessible(
+                    tracker, instance, checkout, lambda p: os.lstat(p).st_mode
+                )
         except Exception as ex:
             raise RuntimeError(
                 "Failed to check if materialized files are accessible"
             ) from ex
 
         try:
-            check_filesystems.check_loaded_content(
-                tracker, instance, checkout, prjfs.PrjGetOnDiskFileState
-            )
+            if not fast:
+                check_filesystems.check_loaded_content(
+                    tracker, instance, checkout, prjfs.PrjGetOnDiskFileState
+                )
         except Exception as ex:
             raise RuntimeError("Failed to check loaded content integrity") from ex
 
