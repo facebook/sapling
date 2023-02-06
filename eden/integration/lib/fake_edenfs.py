@@ -81,8 +81,6 @@ class FakeEdenFS(typing.ContextManager[int]):
     def __enter__(self) -> int:
         return self.process_id
 
-    # pyre-fixme[14]: `__exit__` overrides method defined in `ContextManager`
-    #  inconsistently.
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         with contextlib.suppress(ProcessLookupError):
             os.kill(self.process_id, signal.SIGTERM)

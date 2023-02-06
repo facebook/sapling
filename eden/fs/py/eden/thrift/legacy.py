@@ -73,8 +73,6 @@ class EdenClient(EdenService.Client):
         self.open()
         return self
 
-    # pyre-fixme[14]: `__exit__` overrides method defined in `ContextManager`
-    #  inconsistently.
     def __exit__(
         self, exc_type: "Any", exc_value: "Any", exc_traceback: "Any"
     ) -> "Optional[bool]":

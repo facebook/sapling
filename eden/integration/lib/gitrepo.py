@@ -92,7 +92,6 @@ class GitRepository(repobase.Repository):
         else:
             self.git("rm", *paths)
 
-    # pyre-fixme[14]: `commit` overrides method defined in `Repository` inconsistently.
     def commit(
         self,
         message: str,

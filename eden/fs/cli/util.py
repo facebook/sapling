@@ -370,8 +370,6 @@ class HgRepo(Repo):
         out = typing.cast(bytes, out_bytes)
         return out
 
-    # pyre-fixme[14]: `get_commit_hash` overrides method defined in `Repo`
-    #  inconsistently.
     def get_commit_hash(self, commit: str, stderr_output=None) -> str:
         out = self._run_hg(["log", "-r", commit, "-T{node}"], stderr_output)
         return out.strip().decode("utf-8")

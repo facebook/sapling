@@ -1903,7 +1903,6 @@ class atomictempfile(BinaryIO):
     def __enter__(self) -> "atomictempfile":
         return self
 
-    # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
     def __exit__(
         self,
         exctype: "Optional[Type[BaseException]]",
@@ -1939,19 +1938,15 @@ class atomictempfile(BinaryIO):
     def readable(self) -> bool:
         return self._fp.readable()
 
-    # pyre-fixme[14]: `read` overrides method defined in `IO` inconsistently.
     def read(self, n: int = -1) -> bytes:
         return self._fp.read(-1)
 
-    # pyre-fixme[14]: `readline` overrides method defined in `IO` inconsistently.
     def readline(self, limit: int = -1) -> bytes:
         return self._fp.readline(limit)
 
-    # pyre-fixme[14]: `readlines` overrides method defined in `IO` inconsistently.
     def readlines(self, hint: int = -1) -> "List[bytes]":
         return self._fp.readlines(hint)
 
-    # pyre-fixme[14]: `seek` overrides method defined in `IO` inconsistently.
     def seek(self, offset: int, whence: int = 0) -> int:
         return self._fp.seek(offset, whence)
 
@@ -1961,7 +1956,6 @@ class atomictempfile(BinaryIO):
     def tell(self) -> int:
         return self._fp.tell()
 
-    # pyre-fixme[14]: `truncate` overrides method defined in `IO` inconsistently.
     def truncate(self, size: "Optional[int]" = None) -> int:
         return self._fp.truncate(size)
 
@@ -1969,14 +1963,12 @@ class atomictempfile(BinaryIO):
         return self._fp.writable()
 
     # pyre-fixme[15]: `write` overrides method defined in `IO` inconsistently.
-    # pyre-fixme[14]: `write` overrides method defined in `IO` inconsistently.
     def write(self, s: bytes) -> None:
         return self._fp.write(s)
 
     def writeutf8(self, s: str) -> None:
         return self.write(encodeutf8(s))
 
-    # pyre-fixme[14]: `writelines` overrides method defined in `IO` inconsistently.
     def writelines(self, lines: "Iterable[bytes]") -> None:
         return self._fp.writelines(lines)
 

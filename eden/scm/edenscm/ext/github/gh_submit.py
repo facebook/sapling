@@ -94,13 +94,10 @@ class PullRequestState(enum.Enum):
     """https://docs.github.com/en/graphql/reference/enums#pullrequeststate"""
 
     """A pull request that has been closed without being merged."""
-    # pyre-fixme[20]: Argument `value` expected.
     CLOSED = enum.auto()
     """A pull request that has been closed by being merged."""
-    # pyre-fixme[20]: Argument `value` expected.
     MERGED = enum.auto()
     """A pull request that is still open."""
-    # pyre-fixme[20]: Argument `value` expected.
     OPEN = enum.auto()
 
 

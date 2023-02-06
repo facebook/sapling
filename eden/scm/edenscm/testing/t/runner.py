@@ -365,8 +365,6 @@ with t:
 class filelinesdict(collections.defaultdict):
     """{path: [line]} dict - read path on demand"""
 
-    # pyre-fixme[14]: `__missing__` overrides method defined in `defaultdict`
-    #  inconsistently.
     def __missing__(self, key: str) -> List[str]:
         with open(key, "rb") as f:
             lines = f.read().decode().splitlines(True)

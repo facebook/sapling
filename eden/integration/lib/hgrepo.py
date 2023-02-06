@@ -195,7 +195,6 @@ class HgRepository(repobase.Repository):
             str, completed_process.stdout.decode(encoding, errors="replace")
         )
 
-    # pyre-fixme[14]: `init` overrides method defined in `Repository` inconsistently.
     def init(self, hgrc: Optional[configparser.ConfigParser] = None) -> None:
         """
         Initialize a new hg repository by running 'hg init'

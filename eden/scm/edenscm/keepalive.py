@@ -516,7 +516,6 @@ class HTTPResponse(httplib.HTTPResponse):
         chunks[-1] = chunks[-1][:i]
         return b"".join(chunks)
 
-    # pyre-fixme[14]: `readlines` overrides method defined in `IOBase` inconsistently.
     def readlines(self, hint: int = 0) -> "List[bytes]":
         total = 0
         list = []
