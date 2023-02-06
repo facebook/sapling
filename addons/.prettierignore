@@ -8,6 +8,8 @@
 /isl-server/src/github/generated/
 /vscode/coverage/
 /vscode/dist/
+/vscode-build
+/vscode/extension/dist
 /textmate/dist/
 /reviewstack/src/generated/
 /reviewstack.dev/build/
