@@ -85,8 +85,12 @@ pub trait Repo = AsBlobRepo
 /// An error encountered during an attempt to move a bookmark.
 #[derive(Debug, Error)]
 pub enum BookmarkMovementError {
-    #[error("Non fast-forward bookmark move from {from} to {to}")]
-    NonFastForwardMove { from: ChangesetId, to: ChangesetId },
+    #[error("Non fast-forward bookmark move of '{bookmark}' from {from} to {to}")]
+    NonFastForwardMove {
+        bookmark: BookmarkName,
+        from: ChangesetId,
+        to: ChangesetId,
+    },
 
     #[error("Deletion of '{bookmark}' is prohibited")]
     DeletionProhibited { bookmark: BookmarkName },

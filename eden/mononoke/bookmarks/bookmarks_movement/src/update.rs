@@ -79,6 +79,7 @@ impl BookmarkUpdatePolicy {
                 .await?;
             if !is_ancestor {
                 return Err(BookmarkMovementError::NonFastForwardMove {
+                    bookmark: bookmark.clone(),
                     from: targets.old,
                     to: targets.new,
                 });

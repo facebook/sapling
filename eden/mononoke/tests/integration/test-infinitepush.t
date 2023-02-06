@@ -173,12 +173,12 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     While doing an infinitepush
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move from * to * (glob)
+  remote:     Non fast-forward bookmark move of 'scratch/123' from 58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e to e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793
   remote: 
   remote:   Caused by:
   remote:     Failed to fast-forward scratch bookmark (try --force?)
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move from 58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e to e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793
+  remote:     Non fast-forward bookmark move of 'scratch/123' from 58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e to e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -186,6 +186,9 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:         source: Error {
   remote:             context: "Failed to fast-forward scratch bookmark (try --force?)",
   remote:             source: NonFastForwardMove {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "scratch/123",
+  remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e),
   remote:                 ),

@@ -88,12 +88,12 @@ Try non fastforward moves (backwards and across branches)
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
   remote: 
   remote:   Caused by:
   remote:     Failed to move bookmark
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -101,6 +101,9 @@ Try non fastforward moves (backwards and across branches)
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: NonFastForwardMove {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "master_bookmark",
+  remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
   remote:                 ),
@@ -121,12 +124,12 @@ Try non fastforward moves (backwards and across branches)
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
   remote: 
   remote:   Caused by:
   remote:     Failed to move bookmark
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -134,6 +137,9 @@ Try non fastforward moves (backwards and across branches)
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: NonFastForwardMove {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "master_bookmark",
+  remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
   remote:                 ),
@@ -167,12 +173,12 @@ Try non fastfoward moves on regex bookmark
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
   remote: 
   remote:   Caused by:
   remote:     Failed to move bookmark
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -180,6 +186,9 @@ Try non fastfoward moves on regex bookmark
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: NonFastForwardMove {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "ffonly_bookmark",
+  remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
   remote:                 ),
