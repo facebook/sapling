@@ -574,8 +574,7 @@ Simulate a copy/paste turning LF into CRLF (issue2870)
 
 Consecutive import with renames (issue2459)
 
-  $ hg init issue2459
-  $ cd issue2459
+  $ newclientrepo issue2459
   $ hg import --no-commit --force - <<EOF
   > diff --git a/a b/a
   > new file mode 100644
@@ -595,8 +594,7 @@ Consecutive import with renames (issue2459)
 
 Renames and strip
 
-  $ hg init renameandstrip
-  $ cd renameandstrip
+  $ newclientrepo renameandstrip
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -733,8 +731,7 @@ Renames, similarity and git diff
 
 Pure copy with existing destination
 
-  $ hg init copytoexisting
-  $ cd copytoexisting
+  $ newclientrepo copytoexisting
   $ echo a > a
   $ echo b > b
   $ hg ci -Am add
