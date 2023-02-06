@@ -304,8 +304,8 @@ impl FileGeneratedSpan {
         let mut manual_section_start = None;
 
         for (line_number, line) in content.lines().enumerate() {
-            if line.contains(concat!("{}{}", "@", "generated"))
-                || line.contains(concat!("{}{}", "@", "partially-generated"))
+            if line.contains(concat!("@", "generated"))
+                || line.contains(concat!("@", "partially-generated"))
             // The redundant concat is used to avoid marking this file as generated.
             {
                 found_generated_annotation = true;
