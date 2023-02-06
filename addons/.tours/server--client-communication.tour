@@ -1,0 +1,46 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Server & Client communication",
+  "steps": [
+    {
+      "file": "isl-server/src/index.ts",
+      "description": "Once the server has been spawned, the ISL server code starts here. At this point, we have a websocket connection to a client that we've validated as trustworthy.",
+      "line": 50
+    },
+    {
+      "file": "isl-server/src/index.ts",
+      "description": "Now we set up `ServerToClientAPI`, which is the main server-side API which handles messages from the client, and sends new messages back.",
+      "line": 64
+    },
+    {
+      "file": "isl-server/src/ServerToClientAPI.ts",
+      "description": "ServerToClientAPI knows how to handle messages from the client, and then interact with the Repository and send messages back to the client (`postMessage`)",
+      "line": 302
+    },
+    {
+      "file": "isl-server/src/index.ts",
+      "description": "We allow sharing/re-using repositories across clients, but each client connection has at most one repository it references at a time. Two clients could share the same Repository with different cwds.",
+      "line": 66
+    },
+    {
+      "file": "isl/src/MessageBus.ts",
+      "description": "On the client, we create a MessageBus abstraciton to setup the websocket and send messages back and forth with the server. It also has `postMessage` / `onMessage`",
+      "line": 193
+    },
+    {
+      "file": "isl/src/serverAPIState.ts",
+      "description": "Typical usage of messages from the client is to send request messages via postMessage when a user action occurs (or when the client connects for the first time). Then, whenever we get messages back of the right type, we save that data into our Recoil atom state, which then triggers the client to re-render any component using that data.",
+      "line": 21
+    },
+    {
+      "file": "isl/src/types.ts",
+      "description": "This types.ts file defines all the messages that are sent between the client & server. Since messages are typed, you know all possible messages in the type system and can exhasutively `switch` and get payload type information. Client -> Server and Server -> Client have completely different message types.",
+      "line": 308
+    },
+    {
+      "file": "isl/src/serialize.ts",
+      "description": "When sending data across the websocket, we must serialize it to a string and deserialize it on the other end. Thus, message payloads must be JSON-like objects so we can serialize them. Our serialization is slightly fancy and allows you to serialize Map, Set, Date, undefined, in addition to normal JSON. ",
+      "line": 48
+    }
+  ]
+}

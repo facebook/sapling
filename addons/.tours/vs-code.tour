@@ -1,0 +1,65 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "VS Code",
+  "steps": [
+    {
+      "title": "Introduction",
+      "description": "This tour is about how the Sapling VS Code extension works.\nUnlike `sl web` / run-proxy, the vscode extension is spawned by VS Code, so we don't have to manage our own server process.\nThe \"ISL Server\" runs in the VS Code extension host (which has nodeJS-like access to the filesystem and spawning processes),\nand the \"ISL Client\" runs in a vscode webview context (which is browser-like and can only send messages but not access FS / processes directly.)"
+    },
+    {
+      "file": "vscode/extension/extension.ts",
+      "description": "The extension activation function is the entry point for the extension. This is where we register various handlers for the VS Code API",
+      "line": 18
+    },
+    {
+      "file": "vscode/extension/extension.ts",
+      "description": "you can access all vscode APIs via the `vscode` import. This is only available in the extension host but not the webview.",
+      "line": 16
+    },
+    {
+      "file": "vscode/extension/islWebviewPanel.ts",
+      "description": "We register a VS Code Command to open the ISL webview. This command may be triggered in different ways.",
+      "line": 59
+    },
+    {
+      "file": "vscode/extension/islWebviewPanel.ts",
+      "description": "After we create a webview, we fill in its HTML, roughly analagous to the `sl web` client making an HTTP request to get HTML.",
+      "line": 89
+    },
+    {
+      "file": "vscode/extension/islWebviewPanel.ts",
+      "description": "Now the extension host can set up a client connection. In `sl web`, this happens in the websocket connection. But here, we have no websocket, and instead communicate over vscode's message passing API. This is very similar to a websocket, though not technically a websocket.\nWe set up onClientConnection in the same way, which defines how to use this `panel.webview.postMessage` API.",
+      "line": 97
+    },
+    {
+      "file": "vscode/extension/VSCodeRepo.ts",
+      "description": "We wrap around the Repository class that ISL uses, so that we can add on extra VS Code functionality. This is part of the reason that Repositories are re-usable. The VS Code API part has a ref count, and the ISL webview handler has a ref count.",
+      "line": 26
+    },
+    {
+      "file": "vscode/extension/VSCodeRepo.ts",
+      "description": "We auto-create/delete repositories as you update your open folders in your editor",
+      "line": 67
+    },
+    {
+      "file": "vscode/extension/VSCodeRepo.ts",
+      "description": "Each `VSCodeRepository` references a `Repository`, then also uses the VS Code source control API. This lets it show uncommitted changes in the SCM sidebar.",
+      "line": 90
+    },
+    {
+      "file": "vscode/extension/VSCodeRepo.ts",
+      "description": "We also use the quickDiffProvider API to show changed line gutters in files. See `DiffContentProvider`.",
+      "line": 95
+    },
+    {
+      "file": "vscode/extension/vscodePlatform.ts",
+      "description": "Different platforms like VS Code or Android Studio can define a platform, both server-side and client side that describes an API of platform-specific actions, such as opening files. VS Code wants to open all files in VS Code, but Android Studio wants to use Android Studio, etc.\nThe \"ServerPlatform\" is usually responding to messages from the client so it can interact with various platform APIs.",
+      "line": 20
+    },
+    {
+      "file": "vscode/webview/vscodeWebviewPlatform.ts",
+      "description": "The Client Platform is often the more-used API, including things like copying to the clipboard and opening files. These don't necessarily need to send messages to the server, sometimes they can be handled directly (like clipboardCopy for VS Code)",
+      "line": 11
+    }
+  ]
+}

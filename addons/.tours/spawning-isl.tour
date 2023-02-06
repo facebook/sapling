@@ -1,0 +1,55 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Spawning ISL",
+  "steps": [
+    {
+      "title": "Introduction",
+      "description": "This tour is about how the ISL server is spawned and how the client connects to it. This is mainly for the `sl web` embedding. VS Code behaves slightly differently."
+    },
+    {
+      "file": "isl-server/proxy/startServer.ts",
+      "description": "sl web / hg isl CLI starts here, where the python wrapper spawns this node process",
+      "line": 297
+    },
+    {
+      "file": "isl-server/proxy/startServer.ts",
+      "description": "We try to spawn a server, and if we fail due to `addressInUse`, we might be able to re-use this server. We can only re-use it if it's a real ISL server.",
+      "line": 409
+    },
+    {
+      "file": "isl-server/proxy/startServer.ts",
+      "description": "\"re-using\" a server just means printing the URL for the existing running one",
+      "line": 484
+    },
+    {
+      "file": "isl-server/proxy/startServer.ts",
+      "description": "If we spawned a new server, we need to remember its information for future re-use.",
+      "line": 508
+    },
+    {
+      "file": "isl-server/proxy/startServer.ts",
+      "description": "Either directly import the server code to run in the foreground, or spawn a detached subprocess with the server code. Either way, the server is loaded dynamically.",
+      "line": 254
+    },
+    {
+      "file": "isl-server/proxy/server.ts",
+      "description": "Once we've spawned the server process, it spins up an HTTP server and waits for someone to use the ISL url we printed in runProxy.",
+      "line": 103
+    },
+    {
+      "file": "isl-server/proxy/server.ts",
+      "description": "Set up a websocket conneciton listener. The HTTP server serves the HTML and JS files to the client. Once those are rendered by the browser, it immediately starts a websocket connection which comes back here.",
+      "line": 153
+    },
+    {
+      "file": "isl-server/proxy/server.ts",
+      "description": "It's important for security that we only allow websocket connections from authentic URLs that know the generated token, otherwise a malicious page could access localhost and access the repository! So this token is part of the websocket connection process.",
+      "line": 173
+    },
+    {
+      "file": "isl-server/proxy/server.ts",
+      "description": "Finally, in the websocket connection, we invoke the API exposed by isl-server: `onClientConnection`, which describes basic info and how to send/receive messages with the now validated client.",
+      "line": 190
+    }
+  ]
+}
