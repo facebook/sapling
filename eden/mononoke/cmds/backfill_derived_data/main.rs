@@ -6,7 +6,6 @@
  */
 
 #![type_length_limit = "15000000"]
-#![feature(map_first_last)]
 
 use std::collections::BTreeSet;
 use std::collections::HashSet;

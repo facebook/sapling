@@ -9,8 +9,6 @@
 //!
 //! The graph of all commits in the repository.
 
-#![feature(map_first_last)]
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![feature(map_first_last)]
 #![feature(trait_alias)]
 
 use std::collections::BTreeMap;
