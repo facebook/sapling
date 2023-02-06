@@ -37,7 +37,8 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use slog::debug;
 use topo_sort::TopoSortedDagTraversal;
-use tunables::tunables;
+use tunables::get_duration_from_tunable_or;
+use tunables::MononokeTunables;
 
 use super::DerivationAssignment;
 use super::DerivedDataManager;
@@ -492,14 +493,16 @@ impl DerivedDataManager {
         if let Some(client) = self.derivation_service_client() {
             let mut attempt = 0;
             let started = Instant::now();
-            let fallback_timeout = {
-                let timeout = tunables().get_remote_derivation_fallback_timeout_secs();
-                Duration::from_secs(if timeout > 0 {
-                    timeout as u64
-                } else {
-                    FALLBACK_TIMEOUT_SECS
-                })
-            };
+            let fallback_timeout = get_duration_from_tunable_or(
+                MononokeTunables::get_remote_derivation_fallback_timeout_secs,
+                Duration::from_secs,
+                FALLBACK_TIMEOUT_SECS,
+            );
+            let retry_delay = get_duration_from_tunable_or(
+                MononokeTunables::get_derivation_request_retry_delay,
+                Duration::from_millis,
+                RETRY_DELAY_MS,
+            );
             while let Some(true) =
                 tunables::tunables().get_by_repo_enable_remote_derivation(self.repo_name())
             {
@@ -526,14 +529,6 @@ impl DerivedDataManager {
                         return Ok(Derivable::from_thrift(data)?);
                     }
                     Ok(None) => {
-                        let retry_delay = {
-                            let delay = tunables().get_derivation_request_retry_delay();
-                            Duration::from_millis(if delay > 0 {
-                                delay as u64
-                            } else {
-                                RETRY_DELAY_MS
-                            })
-                        };
                         tokio::time::sleep(retry_delay).await;
                     }
                     Err(e) => {
@@ -544,6 +539,7 @@ impl DerivedDataManager {
                             break;
                         }
                         attempt += 1;
+                        tokio::time::sleep(retry_delay).await;
                     }
                 }
             }
@@ -991,11 +987,11 @@ fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
 }
 
 async fn derivation_disabled_watcher(repo_name: &str, derivable_name: &'static str) {
-    let mut delay_secs = tunables::tunables().get_derived_data_disabled_watcher_delay_secs();
-    if delay_secs <= 0 {
-        delay_secs = 10;
-    }
-    let delay_duration = Duration::from_secs(delay_secs as u64);
+    let delay_duration = get_duration_from_tunable_or(
+        MononokeTunables::get_derived_data_disabled_watcher_delay_secs,
+        Duration::from_secs,
+        10,
+    );
     while !emergency_disabled(repo_name, derivable_name) {
         tokio::time::sleep(delay_duration).await;
     }

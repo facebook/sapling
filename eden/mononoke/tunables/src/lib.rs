@@ -12,6 +12,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use std::thread_local;
+use std::time::Duration;
 
 use anyhow::Result;
 use arc_swap::ArcSwap;
@@ -216,6 +217,9 @@ pub struct MononokeTunables {
     // Maximum time to wait for remote derivation request to finish in secs
     // before falling back to local derivation
     remote_derivation_fallback_timeout_secs: AtomicI64,
+
+    // Timeout for derivation request on service.
+    dds_request_timeout: AtomicI64,
 
     // Disable the parallel derivation for DM and default to serial
     deleted_manifest_disable_new_parallel_derivation: AtomicBool,
@@ -517,6 +521,19 @@ pub fn with_tunables_async_arc<Out, Fut: Future<Output = Out> + Unpin>(
 
 pub fn override_tunables(new_tunables: Option<Arc<MononokeTunables>>) {
     TUNABLES_OVERRIDE.with(|t| *t.borrow_mut() = new_tunables);
+}
+
+// Get a duration from tunable
+// Or if tunable is 0 use a provided default value
+pub fn get_duration_from_tunable_or(
+    get_tunable: impl Fn(&MononokeTunables) -> i64,
+    into_duration: impl Fn(u64) -> Duration,
+    default: u64,
+) -> Duration {
+    let value = get_tunable(tunables().deref()) as u64;
+    // 0 is used as sentinel because we don't have a way to know if tunable wasn't set
+    // or was unset. It's hacky but acceptable for Duration.
+    into_duration(if value != 0 { value } else { default })
 }
 
 #[cfg(test)]
