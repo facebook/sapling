@@ -118,6 +118,9 @@ pub struct MetadataDiffLinesCount {
 
     /// Number of significant (not generated) deleted lines.
     pub significant_deleted_lines_count: usize,
+
+    /// Line number of the first added line (1-based).
+    pub first_added_line_number: Option<usize>,
 }
 
 impl MetadataDiffLinesCount {
@@ -152,11 +155,16 @@ impl MetadataDiffLinesCount {
                 acc.add_to_added_lines_count(hunk.add.len());
                 acc.add_to_deleted_lines_count(hunk.remove.len());
                 acc.add_to_significant_added_lines_count(
-                    new_text_file.significant_lines_count_in_a_range(hunk.add),
+                    new_text_file.significant_lines_count_in_a_range(&hunk.add),
                 );
                 acc.add_to_significant_deleted_lines_count(
-                    old_text_file.significant_lines_count_in_a_range(hunk.remove),
+                    old_text_file.significant_lines_count_in_a_range(&hunk.remove),
                 );
+                if !hunk.add.is_empty() {
+                    acc.first_added_line_number
+                        .get_or_insert(hunk.add.start.saturating_add(1)); // +1 because hunk boundaries are 0-based.
+                }
+
                 acc
             },
         )
@@ -166,6 +174,7 @@ impl MetadataDiffLinesCount {
         Self {
             added_lines_count: new_text_file.content.lines().count(),
             significant_added_lines_count: new_text_file.significant_lines_count(),
+            first_added_line_number: Some(1),
             ..Default::default()
         }
     }
@@ -273,7 +282,7 @@ impl<'a> TextFile<'a> {
         }
     }
 
-    fn significant_lines_count_in_a_range(&self, range: Range<usize>) -> usize {
+    fn significant_lines_count_in_a_range(&self, range: &Range<usize>) -> usize {
         match &self.generated_span {
             FileGeneratedSpan::FullyGenerated => 0usize,
             FileGeneratedSpan::PartiallyGenerated(manual_sections) => {

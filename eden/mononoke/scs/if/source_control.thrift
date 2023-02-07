@@ -430,6 +430,9 @@ struct MetadataDiffLinesCount {
 
   /// Number of significant (not generated) lines.
   4: i64 significant_deleted_lines_count;
+
+  /// Line number of the first added line (1-based).
+  5: optional i64 first_added_line_number;
 }
 
 /// Indicates whether the file was copied or moved

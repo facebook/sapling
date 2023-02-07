@@ -52,6 +52,7 @@ struct LinesCount {
     deleted_lines_count: i64,
     significant_added_lines_count: i64,
     significant_deleted_lines_count: i64,
+    first_added_line_number: Option<i64>,
 }
 
 impl From<&thrift::MetadataDiffLinesCount> for LinesCount {
@@ -61,6 +62,7 @@ impl From<&thrift::MetadataDiffLinesCount> for LinesCount {
             deleted_lines_count: lines_count.deleted_lines_count,
             significant_added_lines_count: lines_count.significant_added_lines_count,
             significant_deleted_lines_count: lines_count.significant_deleted_lines_count,
+            first_added_line_number: lines_count.first_added_line_number,
         }
     }
 }
@@ -118,6 +120,9 @@ impl Render for DiffOutput {
                     render_file_info("+++", &diff.new_path, &diff.new_file_info, w)?;
 
                     if let Some(lines_count) = &diff.lines_count {
+                        if let Some(first_added_line_number) = lines_count.first_added_line_number {
+                            write!(w, "first added line number: {}, ", first_added_line_number)?;
+                        }
                         writeln!(
                             w,
                             "{} significant lines ({} added, {} deleted), {} total ({} added, {} deleted)",
