@@ -44,12 +44,6 @@ class WindowsFsckTest(testcase.EdenRepoTest):
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {"eden.fs.inodes.treeoverlay": "DBG9"}
 
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        return {
-            "overlay": ["enable_tree_overlay=true"],
-            "fsck": ["use-thorough-fsck=true"],
-        }
-
     def _eden_status(self, listIgnored: bool = False):
         with self.eden.get_thrift_client_legacy() as client:
             status = client.getScmStatusV2(
@@ -293,9 +287,6 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {"eden.fs.inodes.treeoverlay.TreeOverlayWindowsFsck": "DBG9"}
-
-    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
-        return {"fsck": ["use-thorough-fsck=true"]}
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
