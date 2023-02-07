@@ -334,7 +334,10 @@ impl WorkingCopy {
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
                     match matcher.matches_file(change_type.get_path()) {
-                        Ok(true) => Some(Ok(change_type)),
+                        Ok(true) => {
+                            tracing::trace!(?change_type, "pending change");
+                            Some(Ok(change_type))
+                        }
                         Err(e) => Some(Err(e)),
                         _ => None,
                     }

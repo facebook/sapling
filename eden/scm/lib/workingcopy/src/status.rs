@@ -18,6 +18,7 @@ use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use status::StatusBuilder;
+use tracing::trace;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::HgId;
@@ -74,6 +75,8 @@ pub fn compute_status(
                     .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
                 let exist_next = state.state.contains(StateFlags::EXIST_NEXT);
 
+                trace!(%path, is_deleted, exist_parent, exist_next);
+
                 match (is_deleted, exist_parent, exist_next) {
                     (_, true, false) => removed.push(path),
                     (true, true, true) => deleted.push(path),
@@ -88,6 +91,8 @@ pub fn compute_status(
                 }
             }
             None => {
+                trace!(%path, is_deleted, "not in dirstate");
+
                 // Path not found in the TreeState, so we need to query the manifest
                 // to determine if this is a known or unknown file.
                 manifest_files.insert(path, (is_deleted, false));
@@ -113,6 +118,8 @@ pub fn compute_status(
         // Similarly, if a file doesn't exist in the manifest but did EXIST_NEXT,
         // it would be an "added" file.
         // This is a subset of the logic above.
+        trace!(%path, is_deleted, in_manifest, "manifest file");
+
         match (is_deleted, in_manifest) {
             (true, true) => deleted.push(path),
             (false, true) => modified.push(path),
@@ -143,6 +150,7 @@ pub fn compute_status(
         StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
         |path, state| {
             if matcher.matches_file(&path)? && !seen.contains(&path) {
+                trace!(%path, "deleted (added file not in pending changes)");
                 deleted.push(path);
             }
             Ok(())
@@ -163,6 +171,7 @@ pub fn compute_status(
                 // respect to P1. But since it is marked EXIST_P2, that means P2 changed it and
                 // therefore we should report it as changed.
                 if state.contains(StateFlags::EXIST_P1) {
+                    trace!(%path, "modified (infer p2 modified)");
                     modified.push(path);
                 } else {
                     // Since pending changes is with respect to P1, then if it's not in P1
@@ -170,8 +179,10 @@ pub fn compute_status(
                     // it is in `seen` and was handled), or we didn't see it and therefore
                     // it doesn't exist and is either deleted or removed.
                     if state.contains(StateFlags::EXIST_NEXT) {
+                        trace!(%path, "deleted (in p2, in next, not in pending changes)");
                         deleted.push(path);
                     } else {
+                        trace!(%path, "removed (in p2, not in next, not in pending changes)");
                         removed.push(path);
                     }
                 }
@@ -190,6 +201,7 @@ pub fn compute_status(
         StateFlags::EXIST_NEXT,
         |path, state| {
             if matcher.matches_file(&path)? && !seen.contains(&path) {
+                trace!(%path, "removed (in p1, not in next, not in pending changes)");
                 removed.push(path);
             }
             Ok(())
@@ -204,6 +216,7 @@ pub fn compute_status(
         StateFlags::empty(),
         |path, state| {
             if matcher.matches_file(&path)? && !seen.contains(&path) {
+                trace!(%path, "modified (marked copy, not in pending changes)");
                 modified.push(path);
             }
             Ok(())
