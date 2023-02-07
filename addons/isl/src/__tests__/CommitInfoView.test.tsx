@@ -171,8 +171,8 @@ describe('CommitInfoView', () => {
 
       it('shows uncommitted changes for head commit', () => {
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/file1.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('src/file2.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file1.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file2.js')).toBeInTheDocument();
       });
 
       it('shows file actions on uncommitted changes in commit info view', () => {
@@ -191,27 +191,27 @@ describe('CommitInfoView', () => {
       it("doesn't show uncommitted changes on non-head commits ", () => {
         clickToSelectCommit('a');
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/file1.js')).not.toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('src/file2.js')).not.toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file1.js')).not.toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file2.js')).not.toBeInTheDocument();
       });
 
       it('shows files changed in the commit for head commit', () => {
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/ca.js')).not.toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('src/cb.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('ca.js')).not.toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('cb.js')).toBeInTheDocument();
       });
 
       it('shows files changed in the commit for non-head commit', () => {
         clickToSelectCommit('a');
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/ca.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('src/cb.js')).not.toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('ca.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('cb.js')).not.toBeInTheDocument();
       });
 
       it('enables amend button with uncommitted changes', () => {
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/file1.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('src/file2.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file1.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file2.js')).toBeInTheDocument();
 
         const amendButton: HTMLButtonElement | null = within(
           screen.getByTestId('commit-info-actions-bar'),
@@ -222,8 +222,8 @@ describe('CommitInfoView', () => {
 
       it('runs amend with selected files', () => {
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/file1.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('src/file2.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file1.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('file2.js')).toBeInTheDocument();
 
         act(() => {
           const checkboxes = within(commitInfoView)
@@ -290,7 +290,7 @@ describe('CommitInfoView', () => {
         });
 
         const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('src/cb.js')).toBeInTheDocument();
+        expect(within(commitInfoView).queryByText('cb.js')).toBeInTheDocument();
         expect(screen.queryByText('Amend and Submit')).toBeInTheDocument();
       });
     });

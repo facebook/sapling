@@ -82,11 +82,11 @@ describe('CommitTreeList', () => {
       });
 
       it('renders uncommitted changes', () => {
-        expect(screen.getByText('src/file.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('src/file_add.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('src/file_removed.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('src/file_untracked.js', {exact: false})).toBeInTheDocument();
-        expect(screen.getByText('src/file_missing.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('file.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('file_add.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('file_removed.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('file_untracked.js', {exact: false})).toBeInTheDocument();
+        expect(screen.getByText('file_missing.js', {exact: false})).toBeInTheDocument();
       });
 
       it('shows file actions', () => {

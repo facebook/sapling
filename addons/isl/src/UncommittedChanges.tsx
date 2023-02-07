@@ -41,6 +41,7 @@ import {useEffect, useRef} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
+import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 
 import './UncommittedChanges.css';
 
@@ -53,10 +54,12 @@ export function ChangedFiles({
   deselectedFiles?: Set<string>;
   setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
 }>) {
+  const disambiguousPaths = minimalDisambiguousPaths(files.map(file => file.path));
   return (
     <div className="changed-files">
-      {files.map(file => {
+      {files.map((file, i) => {
         const [statusName, icon] = nameAndIconForFileStatus[file.status];
+        const minimalName = disambiguousPaths[i];
         return (
           <div
             className={`changed-file file-${statusName}`}
@@ -96,7 +99,7 @@ export function ChangedFiles({
               }}
               title={file.path}>
               <Icon icon={icon} />
-              <span className="changed-file-path-text">{file.path}</span>
+              <span className="changed-file-path-text">{minimalName}</span>
             </span>
             {showFileActions ? <FileActions file={file} /> : null}
           </div>

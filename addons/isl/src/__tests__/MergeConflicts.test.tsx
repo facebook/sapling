@@ -82,11 +82,11 @@ describe('CommitTreeList', () => {
     });
 
     it('renders merge conflicts changes', () => {
-      expect(screen.getByText('src/file2.js', {exact: false})).toBeInTheDocument();
-      expect(screen.getByText('src/file3.js', {exact: false})).toBeInTheDocument();
+      expect(screen.getByText('file2.js', {exact: false})).toBeInTheDocument();
+      expect(screen.getByText('file3.js', {exact: false})).toBeInTheDocument();
 
       // uncommitted changes are not there
-      expect(screen.queryByText('src/file1.js', {exact: false})).not.toBeInTheDocument();
+      expect(screen.queryByText('file1.js', {exact: false})).not.toBeInTheDocument();
     });
 
     it("doesn't allow continue until conflicts resolved", () => {
