@@ -6,6 +6,7 @@
 import errno
 import os
 import tempfile
+from typing import Optional
 
 from edenscm import (
     bundle2,
@@ -110,7 +111,14 @@ def getscratchbranchparts(
 
 
 def _getscratchbranchpartsimpl(
-    repo, peer, outgoing, confignonforwardmove, ui, bookmark, create, bookmarknode=None
+    repo,
+    peer,
+    outgoing,
+    confignonforwardmove,
+    ui,
+    bookmark: str,
+    create,
+    bookmarknode: Optional[str] = None,
 ):
     _validaterevset(repo, revsetlang.formatspec("%ln", outgoing.missing), bookmark)
 
