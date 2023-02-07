@@ -28,19 +28,18 @@ from .python import python
 def testsetup(t: TestTmp):
     _checkenvironment()
 
-    hgrc = INITIAL_HGRC
+    testdir = t.getenv("TESTDIR")
 
     # consider run-tests.py --watchman
     use_watchman = os.getenv("HGFSMONITOR_TESTS") == "1"
-    if use_watchman:
-        hgrc += WATCHMAN_HGRC
+
+    hgrc = _get_hgrc(testdir, use_watchman)
 
     hgrcpath = t.path / "hgrc"
-    hgrcpath.write_bytes(hgrc)
+    hgrcpath.write_bytes(hgrc.encode())
 
     # extra hgrc fixup via $TESTDIR/features.py
     testfile = t.getenv("TESTFILE")
-    testdir = t.getenv("TESTDIR")
     featurespy = os.path.join(testdir, "features.py")
 
     if os.path.exists(featurespy):
@@ -280,50 +279,9 @@ def _execpython(path):
     return env
 
 
-INITIAL_HGRC = b"""
-[ui]
-slash = True
-interactive = False
-mergemarkers = detailed
-promptecho = True
-
-[devel]
-all-warnings = true
-collapse-traceback = true
-default-date = 0 0
-
-[web]
-address = localhost
-ipv6 = False
-
-[workingcopy]
-enablerustwalker=True
-
-[extensions]
-treemanifest=
-
-[treemanifest]
-sendtrees=True
-treeonly=True
-rustmanifest=True
-useruststore=True
-
-[remotefilelog]
-reponame=reponame-default
-localdatarepack=True
-cachepath=$TESTTMP/default-hgcache
-
-[mutation]
-record=False
-
-[hint]
-ack-match-full-traversal=True
-"""
-
-WATCHMAN_HGRC = b"""
-[extensions]
-fsmonitor=
-
-[fsmonitor]
-detectrace=True
-"""
+def _get_hgrc(testdir: str, use_watchman: bool) -> str:
+    fpath = os.path.join(testdir, "default_hgrc.py")
+    result = ""
+    if os.path.exists(fpath):
+        result = _execpython(fpath).get("get_content")(use_watchman)
+    return result

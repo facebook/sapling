@@ -213,8 +213,8 @@ Test if listed files have a relative path to current location
   $ mkdir -p b/c
   $ cd b/c
   $ hg status
-  M a
-  ? a.orig
+  M ../../a
+  ? ../../a.orig
   
   # The repository is in an unfinished *merge* state.
   # Unresolved merge conflicts:

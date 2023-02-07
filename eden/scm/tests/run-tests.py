@@ -1585,60 +1585,18 @@ class Test(unittest.TestCase):
 
     def _createhgrc(self, path):
         """Create an hgrc file for this test."""
+        # If you want to update the default hgrc, update `default_hgrc.py`
+        # so it applies to all test runners ideally.
+        import default_hgrc
+
+        # Note: This code path is not run for 'debugruntest' tests.
+        content = default_hgrc.get_content(
+            use_watchman=self._watchman,
+            use_ipv6=self._useipv6,
+            is_run_tests_py=True,
+        )
         with open(path, "w") as hgrc:
-            hgrc.write("[ui]\n")
-            hgrc.write("slash = True\n")
-            hgrc.write("interactive = False\n")
-            hgrc.write("mergemarkers = detailed\n")
-            hgrc.write("promptecho = True\n")
-            hgrc.write("[defaults]\n")
-            hgrc.write("[devel]\n")
-            hgrc.write("all-warnings = true\n")
-            hgrc.write("collapse-traceback = true\n")
-            hgrc.write("default-date = 0 0\n")
-            hgrc.write("[experimental]\n")
-            hgrc.write("metalog = true\n")
-            hgrc.write("[lfs]\n")
-            if self._watchman:
-                hgrc.write("[extensions]\nfsmonitor=\n")
-                hgrc.write("[fsmonitor]\ndetectrace=1\n")
-            hgrc.write("[web]\n")
-            hgrc.write("address = localhost\n")
-            hgrc.write("ipv6 = %s\n" % str(self._useipv6))
-            hgrc.write("[commands]\n")
-            hgrc.write("status.relative=true\n")
-
-            # Rust config
-            hgrc.write("[config]\n")
-            hgrc.write("use-rust=true\n")
-
-            # Rust status
-            hgrc.write("[workingcopy]\n")
-            hgrc.write("enablerustwalker=True\n")
-            hgrc.write("ruststatus=True\n")
-            hgrc.write("use-rust=true\n")
-            hgrc.write("[status]\n")
-            hgrc.write("use-rust=true\n")
-            hgrc.write("[scmstore]\n")
-            hgrc.write("enableshim=True\n")
-            hgrc.write("contentstorefallback=True\n")
-
-            # treemanifest
-            hgrc.write("[extensions]\n")
-            hgrc.write("treemanifest=\n")
-            hgrc.write("[treemanifest]\n")
-            hgrc.write("sendtrees=True\n")
-            hgrc.write("treeonly=True\n")
-            hgrc.write("rustmanifest=True\n")
-            hgrc.write("useruststore=True\n")
-            hgrc.write("[remotefilelog]\n")
-            hgrc.write("reponame=reponame-default\n")
-            hgrc.write("localdatarepack=True\n")
-            hgrc.write("cachepath=%s/default-hgcache\n" % self._testtmp)
-
-            # pre-ack new hints to avoid test fallout from new hints
-            hgrc.write("[hint]\n")
-            hgrc.write("ack-match-full-traversal=true\n")
+            hgrc.write(content)
 
             for opt in self._extraconfigopts:
                 section, key = opt.split(".", 1)

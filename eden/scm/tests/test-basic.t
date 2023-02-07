@@ -1,27 +1,23 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ setconfig workingcopy.ruststatus=False
 
 Create a repository:
 
   $ hg config
-  commands.status.relative=true
-  config.use-rust=true
-  devel.all-warnings=true
-  devel.collapse-traceback=true
+  commands.status.relative=True
+  config.use-rust=True
+  devel.all-warnings=True
+  devel.collapse-traceback=True
   devel.default-date=0 0
-  experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=
-  fsmonitor.detectrace=1 (fsmonitor !)
-  hint.ack-match-full-traversal=true
+  fsmonitor.detectrace=True (fsmonitor !)
+  hint.ack-match-full-traversal=True
   mutation.record=False
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   remotefilelog.localdatarepack=True
   remotefilelog.reponame=reponame-default
-  scmstore.contentstorefallback=True
-  scmstore.enableshim=True
-  status.use-rust=true
   treemanifest.rustmanifest=True
   treemanifest.sendtrees=True
   treemanifest.treeonly=True
@@ -34,7 +30,6 @@ Create a repository:
   web\.ipv6=(?:True|False) (re)
   workingcopy.enablerustwalker=True
   workingcopy.ruststatus=False
-  workingcopy.use-rust=true
 
   $ configure modernclient
   $ newclientrepo t
@@ -54,7 +49,7 @@ Writes to stdio succeed and fail appropriately
   A a
 
   $ hg status >/dev/full
-  abort: Write Error
+  abort: No space left on device
   [255]
 #endif
 
@@ -69,7 +64,7 @@ Commands can succeed without a stdin
 
 #if devfull no-chg
   $ hg status >/dev/full 2>&1
-  [255]
+  [1]
 
   $ hg status ENOENT 2>/dev/full
   [1]
