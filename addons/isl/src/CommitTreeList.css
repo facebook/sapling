@@ -106,8 +106,11 @@
   font-size: 90%;
   opacity: 0.8;
   margin: 0 2px;
+}
+.commit-title .commit-date {
   margin-left: var(--pad);
 }
+
 .commit .unsaved-message-indicator {
   color: var(--button-primary-background);
   display: flex;

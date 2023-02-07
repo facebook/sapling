@@ -151,10 +151,8 @@ export const Commit = memo(
             <div className="commit-avatar" />
             {isPublic ? null : (
               <span className="commit-title">
-                {commit.title}
-                <span className="commit-date">
-                  <RelativeDate date={commit.date} useShortVariant />
-                </span>
+                <span>{commit.title}</span>
+                <CommitDate date={commit.date} />
               </span>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
@@ -164,6 +162,7 @@ export const Commit = memo(
             {commit.remoteBookmarks.map(remoteBookmarks => (
               <VSCodeTag key={remoteBookmarks}>{remoteBookmarks}</VSCodeTag>
             ))}
+            {isPublic ? <CommitDate date={commit.date} /> : null}
             {previewType === CommitPreview.REBASE_OPTIMISTIC_ROOT ? (
               <span className="commit-inline-operation-progress">
                 <Icon icon="loading" /> <T>rebasing...</T>
@@ -228,6 +227,14 @@ export const Commit = memo(
     );
   },
 );
+
+function CommitDate({date}: {date: Date}) {
+  return (
+    <span className="commit-date">
+      <RelativeDate date={date} useShortVariant />
+    </span>
+  );
+}
 
 function DivIfChildren({
   children,
