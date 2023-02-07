@@ -74,17 +74,21 @@ pub fn compute_status(
                     .state
                     .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2);
                 let exist_next = state.state.contains(StateFlags::EXIST_NEXT);
+                let copied = state.state.contains(StateFlags::COPIED);
 
-                trace!(%path, is_deleted, exist_parent, exist_next);
+                trace!(%path, is_deleted, exist_parent, exist_next, copied);
 
-                match (is_deleted, exist_parent, exist_next) {
-                    (_, true, false) => removed.push(path),
-                    (true, true, true) => deleted.push(path),
-                    (false, true, true) => modified.push(path),
-                    (false, false, true) => added.push(path),
-                    (false, false, false) => unknown.push(path),
+                match (is_deleted, exist_parent, exist_next, copied) {
+                    (_, true, false, _) => removed.push(path),
+                    (true, true, true, _) => deleted.push(path),
+                    (false, true, true, _) => modified.push(path),
+                    (false, false, true, _) => added.push(path),
+                    // This happens on EdenFS when a modified file is
+                    // renamed over another existing file.
+                    (false, false, false, true) => modified.push(path),
+                    (false, false, false, false) => unknown.push(path),
                     _ => {
-                        // The remaining case is (T, F, _).
+                        // The remaining case is (T, F, _, _).
                         // If the file is deleted, but didn't exist in a parent commit,
                         // it didn't change.
                     }
