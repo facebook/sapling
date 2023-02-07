@@ -247,10 +247,11 @@ void removeOverlayEntry(
 
 struct FsckFileState {
   bool onDisk = false;
-  // diskMaterialized is true if:
-  //  - a file is full
-  //  - a directory is full or a descendant is materialized or tombstoned.
-  bool diskMaterialized = false;
+  // populatedOrFullOrTomb is true if:
+  //  - a file is full, hydrated or tomstoned
+  //  - a directory is full or a dirty placeholder or a descendant is
+  //  populatedOrFullOrTomb
+  bool populatedOrFullOrTomb = false;
   // diskEmptyPlaceholder is true if:
   //  - a file is virtual or a placeholder
   //  - a directory is a placeholder and has no children (placeholder or
@@ -316,7 +317,7 @@ void populateDiskState(
     // On Windows, EdenFS consider all special files (symlinks, sockets, etc)
     // to be regular.
     state.diskDtype = dtype_t::Regular;
-    state.diskMaterialized = true;
+    state.populatedOrFullOrTomb = true;
     return;
   }
 
@@ -356,11 +357,11 @@ void populateDiskState(
   state.diskDtype = dtype;
   state.diskTombstone = detectedTombstone;
 
-  // It can also be diskMaterialized if a descendant directory is
+  // It can also be populated if a descendant directory is
   // materialized. But that is checked later when processing the children.
-  state.diskMaterialized = detectedFull || detectedTombstone;
+  state.populatedOrFullOrTomb = detectedFull || detectedTombstone;
   // It's an empty placeholder unless it's materialized or it has children.
-  state.diskEmptyPlaceholder = !state.diskMaterialized;
+  state.diskEmptyPlaceholder = !state.populatedOrFullOrTomb;
 
   if (dtype == dtype_t::Dir && !directoryIsEmpty(wPath.c_str())) {
     state.diskEmptyPlaceholder = false;
@@ -437,7 +438,7 @@ std::optional<InodeNumber> fixup(
   } else if (state.diskTombstone) {
     // state.shouldExist defaults to false
   } else { // if file exists normally on disk
-    if (!state.inScm && !state.diskMaterialized) {
+    if (!state.inScm && !state.populatedOrFullOrTomb) {
       // Stop fixing this up since we can't materialize if it's not in scm.
       // TODO: This is likely caused by EdenFS not having called PrjDeleteFile
       // in a previous checkout operation. We should probably call it here or
@@ -447,7 +448,8 @@ std::optional<InodeNumber> fixup(
       return std::nullopt;
     } else {
       state.desiredDtype = state.diskDtype;
-      state.desiredHash = state.diskMaterialized ? std::nullopt : state.scmHash;
+      state.desiredHash =
+          state.populatedOrFullOrTomb ? std::nullopt : state.scmHash;
       state.shouldExist = true;
     }
   }
@@ -460,7 +462,7 @@ std::optional<InodeNumber> fixup(
       state.inOverlay,
       state.inScm,
       state.diskTombstone,
-      state.diskMaterialized);
+      state.populatedOrFullOrTomb);
 
   if (state.shouldExist) {
     bool out_of_sync = !state.inOverlay ||
@@ -592,7 +594,7 @@ bool processChildren(
   }
 
   // Recurse for any children.
-  bool anyChildMaterialized = false;
+  bool anyChildPopulatedOrFullOrTomb = false;
   for (auto& [childName, childState] : children) {
     auto childPath = path + childName;
     XLOGF(DBG9, "process child - {}", childPath);
@@ -604,7 +606,7 @@ bool processChildren(
         inodeNumber,
         insensitiveOverlayDir);
 
-    anyChildMaterialized |= childState.diskMaterialized;
+    anyChildPopulatedOrFullOrTomb |= childState.populatedOrFullOrTomb;
 
     if (childState.desiredDtype == dtype_t::Dir && childState.onDisk &&
         !childState.diskEmptyPlaceholder && childInodeNumberOpt.has_value()) {
@@ -623,8 +625,8 @@ bool processChildren(
       auto childInodeNumber = *childInodeNumberOpt;
       auto childOverlayDir = *inodeCatalog.loadOverlayDir(childInodeNumber);
       auto childInsensitiveOverlayDir = toPathMap(childOverlayDir);
-      bool childMaterialized = childState.diskMaterialized;
-      childMaterialized |= processChildren(
+      bool childPopulatedOrFullOrTomb = childState.populatedOrFullOrTomb;
+      childPopulatedOrFullOrTomb |= processChildren(
           inodeCatalog,
           childPath,
           root,
@@ -634,14 +636,15 @@ bool processChildren(
           callback,
           logFrequency,
           traversedDirectories);
-      anyChildMaterialized |= childMaterialized;
+      anyChildPopulatedOrFullOrTomb |= childPopulatedOrFullOrTomb;
 
-      if (childMaterialized && childState.desiredHash != std::nullopt) {
+      if (childPopulatedOrFullOrTomb &&
+          childState.desiredHash != std::nullopt) {
         XLOGF(
             DBG9,
             "Directory {} has a materialized child, and therefore is materialized too. Marking.",
             childPath);
-        childState.diskMaterialized = true;
+        childState.populatedOrFullOrTomb = true;
         childState.desiredHash = std::nullopt;
         // Refresh the parent state so we see and update the current overlay
         // entry.
@@ -659,7 +662,7 @@ bool processChildren(
     }
   }
 
-  return anyChildMaterialized;
+  return anyChildPopulatedOrFullOrTomb;
 }
 
 void scanCurrentDir(

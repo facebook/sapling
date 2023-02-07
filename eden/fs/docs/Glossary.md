@@ -109,6 +109,30 @@ contents can always be fetched from the source control repository.
 For more details see the
 [Inode Materialization](Inodes.md#inode-materialization) documentation.
 
+In ProjFS mounts, there is an additional special case for materialized files.
+Files that have been renamed are considered materialized inodes. Technically,
+we still know the source control object associated with the inode, however,
+we no longer store this association in the overlay. ProjFS always will
+make a read request for these files with the original path and reads are
+only served from source control objects in ProjFS.
+
+### Populated
+Inodes or files are considered "populated" when their contents have been
+observed by the kernel, but the file has not yet been modified.
+For ProjFS mounts "populated" this means the contents are present on
+the filesystem and reads are going to be directly handled by ProjFS
+until we invalidate the file. In FUSE and NFS mounts this means the kernel
+may have the file contents in its caches, though FUSE or NFS may have
+decided to evict them from cache of its own will.
+
+For ProjFS mounts, "populated" is roughly equivalent to the hydrated
+placeholder state for files. For directories "populated" is roughly equivalent
+to placeholders without materialized children.
+
+No populated files and directories correspond to materialized inodes and
+vice versa. These states are intentionally independent. i.e. populated
+is defined as files the kernel knows about - materialized ones.
+
 ### Overlay
 
 The overlay is where EdenFS stores information about
