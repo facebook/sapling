@@ -159,6 +159,14 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def READ_REPARSE_BUFFER(self) -> str:
+        return self._find_exe(
+            "read_reparse_buffer",
+            env="EDENFS_READ_REPARSE_BUFFER",
+            buck_path="eden/integration/helpers/read_reparse_buffer",
+        )
+
+    @cached_property
     def DROP_PRIVS(self) -> str:
         return self._find_exe(
             "drop_privs",
