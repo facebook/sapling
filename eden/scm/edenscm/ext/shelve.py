@@ -1182,7 +1182,7 @@ def shelvecmd(ui, repo, *pats, **opts):
     the modifications to a bundle (a shelved change), and reverts the
     files to a clean state in the working copy.
 
-    To restore the changes to the working copy, using :prog:`unshelve`,
+    To restore the changes to the working copy, use :prog:`unshelve`
     regardless of your current commit.
 
     When no files are specified, :prog:`shelve` saves all not-clean
