@@ -159,6 +159,14 @@ class FindExeClass(object):
         )
 
     @cached_property
+    def CHECK_WINDOWS_RENAME(self) -> str:
+        return self._find_exe(
+            "check_windows_rename",
+            env="EDENFS_CHECK_WINDOWS_RENAME",
+            buck_path="eden/integration/helpers/check_windows_rename",
+        )
+
+    @cached_property
     def READ_REPARSE_BUFFER(self) -> str:
         return self._find_exe(
             "read_reparse_buffer",

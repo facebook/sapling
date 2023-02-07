@@ -29,4 +29,13 @@ if(WIN32)
       fmt::fmt
       Folly::folly
   )
+
+  add_executable(check_windows_rename CheckWindowsRename.cpp)
+  target_link_libraries(
+    read_reparse_buffer
+      eden_utils
+      edencommon::edencommon_utils
+      fmt::fmt
+      Folly::folly
+  )
 endif()

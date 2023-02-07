@@ -524,3 +524,293 @@ class PrjFSBuffer(testcase.EdenRepoTest):
         self.check_projfs_reparse_buffer_and_attributes_running_and_stopped(
             renamed_abs_path, attributes, buffer
         )
+
+    def check_projfs_rename(
+        self,
+        path: Path,
+        expect_renamed: bool = False,
+        expected_error_code: Optional[int] = None,
+        expected_error_code_when_eden_stoped: Optional[int] = None,
+    ) -> None:
+        self.check_projfs_rename_impl(path, expect_renamed, expected_error_code)
+        self.eden.shutdown()
+        self.check_projfs_rename_impl(
+            path,
+            expect_renamed,
+            expected_error_code=expected_error_code_when_eden_stoped,
+            is_eden_stoped=True,
+        )
+
+    def check_projfs_rename_impl(
+        self,
+        path: Path,
+        expect_renamed: bool = False,
+        expected_error_code: Optional[int] = None,
+        is_eden_stoped: bool = False,
+    ) -> None:
+        command = [FindExe.CHECK_WINDOWS_RENAME, "--path", str(path)]
+        if is_eden_stoped:
+            command.append("--checksparse")
+        result = subprocess.run(command)
+        print(f"exitcode: {result.returncode}")
+        if expect_renamed:
+            self.assertEqual(result.returncode, 0)
+        else:
+            self.assertNotEqual(result.returncode, 0)
+            if expected_error_code is not None:
+                self.assertEqual(result.returncode, expected_error_code)
+
+    def test_rename_detection_virtual_file_is_not_renamed(self) -> None:
+        hello_abs_path = Path(self.mount) / "hello"
+
+        # virtual file does not appear renamed.
+        self.check_projfs_rename(
+            hello_abs_path,
+            expect_renamed=False,
+            expected_error_code=1,
+            expected_error_code_when_eden_stoped=1,
+        )
+
+    def test_rename_detection_virtual_dir_is_not_renamed(self) -> None:
+        somedir_abs_path = Path(self.mount) / "somedir"
+
+        # virtual directory does not appear renamed.
+        self.check_projfs_rename(
+            somedir_abs_path,
+            expect_renamed=False,
+            expected_error_code=1,
+            expected_error_code_when_eden_stoped=4,
+        )
+
+    def test_rename_detection_placeholder_file_is_not_renamed(self) -> None:
+        hello_abs_path = Path(self.mount) / "hello"
+
+        os.listdir(self.mount)
+
+        # file placeholder does not appear renamed
+        self.check_projfs_rename(
+            hello_abs_path,
+            expect_renamed=False,
+            expected_error_code=1,
+            expected_error_code_when_eden_stoped=1,
+        )
+
+    def test_rename_detection_placeholder_dir_is_not_renamed(self) -> None:
+        somedir_abs_path = Path(self.mount) / "somedir"
+        # directory placeholder does not appear renamed
+        self.check_projfs_rename_impl(
+            somedir_abs_path, expect_renamed=False, expected_error_code=1
+        )
+
+        os.listdir(somedir_abs_path)
+
+        # directory "hydrated" placeholder does not appear renamed. directories
+        # can not be hydrated, so this should be the same state as the last
+        # check.
+        self.check_projfs_rename(
+            somedir_abs_path,
+            expect_renamed=False,
+            expected_error_code=1,
+            expected_error_code_when_eden_stoped=4,
+        )
+
+    def test_rename_detection_hydrated_placeholder_is_not_renamed(self) -> None:
+        hello_abs_path = Path(self.mount) / "hello"
+
+        with open(hello_abs_path, "r") as hello_file:
+            # file hydrated placeholder does not appear renamed.
+            self.check_projfs_rename_impl(
+                hello_abs_path, expect_renamed=False, expected_error_code=1
+            )
+
+            hello_file.read()
+
+            # file hydrated placeholder does not appear renamed.
+            self.check_projfs_rename(
+                hello_abs_path,
+                expect_renamed=False,
+                expected_error_code=1,
+                expected_error_code_when_eden_stoped=1,
+            )
+
+    def test_rename_detection_full_file_is_not_renamed(self) -> None:
+        hello_abs_path = Path(self.mount) / "hello"
+
+        # opening in write mode marks the file full
+        with open(hello_abs_path, "w") as hello_file:
+            self.check_projfs_rename_impl(
+                hello_abs_path, expect_renamed=False, expected_error_code=2
+            )
+
+            hello_file.write("bonjour")
+
+            # full file does not appear renamed.
+            self.check_projfs_rename(
+                hello_abs_path,
+                expect_renamed=False,
+                expected_error_code=2,
+                expected_error_code_when_eden_stoped=4,
+            )
+
+    def test_rename_detection_locally_created_file_is_not_renamed(self) -> None:
+        new_file_abs_path = Path(self.mount) / "a_new_file"
+
+        new_file_abs_path.touch()
+
+        self.check_projfs_rename(
+            new_file_abs_path,
+            expect_renamed=False,
+            expected_error_code=2,
+            expected_error_code_when_eden_stoped=4,
+        )
+
+    def test_rename_detection_full_dir_is_not_renamed(self) -> None:
+        anotherdir_abs_path = Path(self.mount) / "anotherdir"
+
+        os.mkdir(anotherdir_abs_path)
+
+        # full directory does not appear renamed
+        self.check_projfs_rename(
+            anotherdir_abs_path,
+            expect_renamed=False,
+            expected_error_code=2,
+            expected_error_code_when_eden_stoped=4,
+        )
+
+    def test_rename_detection_tombstone_is_not_renamed(self) -> None:
+        hello_abs_path = Path(self.mount) / "hello"
+
+        hello_abs_path.unlink()
+
+        # tombstone does not appear renamed
+        self.check_projfs_rename_impl(
+            hello_abs_path, expect_renamed=False, expected_error_code=2
+        )
+
+        self.eden.shutdown()
+
+        self.check_projfs_rename_impl(
+            hello_abs_path,
+            expect_renamed=False,
+            expected_error_code=4,
+            is_eden_stoped=True,
+        )
+
+    def test_rename_detection_renamed_placeholder(self) -> None:
+        hi_abs_path = Path(self.mount) / "hi"
+        renamed_hi_abs_path = Path(self.mount) / "renamedhi"
+
+        # just confirm hi doesn't look renamed before move
+        self.check_projfs_rename_impl(
+            hi_abs_path, expect_renamed=False, expected_error_code=1
+        )
+
+        os.rename(hi_abs_path, renamed_hi_abs_path)
+
+        # renamed file placeholder appears renamed.
+        self.check_projfs_rename(renamed_hi_abs_path, expect_renamed=True)
+
+    def test_rename_detection_renamed_placeholder_then_hydrated(self) -> None:
+        hi_abs_path = Path(self.mount) / "hi"
+        renamed_hi_abs_path = Path(self.mount) / "renamedhi"
+
+        # just confirm hi doesn't look renamed before move
+        self.check_projfs_rename_impl(
+            hi_abs_path, expect_renamed=False, expected_error_code=1
+        )
+
+        os.rename(hi_abs_path, renamed_hi_abs_path)
+
+        # renamed file placeholder appears renamed.
+        self.check_projfs_rename_impl(renamed_hi_abs_path, expect_renamed=True)
+
+        with open(renamed_hi_abs_path, "r") as renamed_hi_file:
+            renamed_hi_file.read()
+
+        # renamed file hydrated placeholder still appears renamed.
+        self.check_projfs_rename(renamed_hi_abs_path, expect_renamed=True)
+
+    def test_rename_detection_hyrated_then_renamed_placeholder(self) -> None:
+        hi_abs_path = Path(self.mount) / "hi"
+        renamed_hi_abs_path = Path(self.mount) / "renamedhi"
+
+        with open(hi_abs_path, "r") as hi_file:
+            hi_file.read()
+
+        # just confirm hi doesn't look renamed before move
+        self.check_projfs_rename_impl(
+            hi_abs_path, expect_renamed=False, expected_error_code=1
+        )
+
+        os.rename(hi_abs_path, renamed_hi_abs_path)
+
+        # renamed file placeholder appears renamed.
+        self.check_projfs_rename(renamed_hi_abs_path, expect_renamed=True)
+
+    def test_rename_detection_renamed_placeholder_then_full(self) -> None:
+        hi_abs_path = Path(self.mount) / "hi"
+        renamed_hi_abs_path = Path(self.mount) / "renamedhi"
+
+        # just confirm hi doesn't look renamed before move
+        self.check_projfs_rename_impl(
+            hi_abs_path, expect_renamed=False, expected_error_code=1
+        )
+
+        os.rename(hi_abs_path, renamed_hi_abs_path)
+
+        # renamed file placeholder appears renamed.
+        self.check_projfs_rename_impl(renamed_hi_abs_path, expect_renamed=True)
+
+        with open(renamed_hi_abs_path, "w") as renamed_hi_file:
+            # full file does not appear renamed (because we can only detect for placeholders).
+            self.check_projfs_rename_impl(
+                renamed_hi_abs_path, expect_renamed=False, expected_error_code=2
+            )
+
+            renamed_hi_file.write("bonjour")
+
+        # full file does not appear renamed (because we can only detect for placeholders).
+        self.check_projfs_rename(
+            renamed_hi_abs_path,
+            expect_renamed=False,
+            expected_error_code=2,
+            expected_error_code_when_eden_stoped=4,
+        )
+
+    def test_rename_detection_full_then_renamed(self) -> None:
+        hi_abs_path = Path(self.mount) / "hi"
+        renamed_hi_abs_path = Path(self.mount) / "renamedhi"
+
+        with open(hi_abs_path, "w") as hi_file:
+            # full file does not appear renamed (because we can only detect for placeholders).
+            self.check_projfs_rename_impl(
+                hi_abs_path, expect_renamed=False, expected_error_code=2
+            )
+
+            hi_file.write("bonjour")
+
+        os.rename(hi_abs_path, renamed_hi_abs_path)
+
+        # full file does not appear renamed (because we can only detect for placeholders).
+        self.check_projfs_rename(
+            renamed_hi_abs_path,
+            expect_renamed=False,
+            expected_error_code=2,
+            expected_error_code_when_eden_stoped=4,
+        )
+
+    def test_rename_detection_locally_create_renamed(self) -> None:
+        new_file_abs_path = Path(self.mount) / "a_new_file"
+        renamed_file_abs_path = Path(self.mount) / "a_new_renamed_file"
+
+        new_file_abs_path.touch()
+
+        os.rename(new_file_abs_path, renamed_file_abs_path)
+
+        # full file does not appear renamed (because we can only detect for placeholders).
+        self.check_projfs_rename(
+            renamed_file_abs_path,
+            expect_renamed=False,
+            expected_error_code=2,
+            expected_error_code_when_eden_stoped=4,
+        )
