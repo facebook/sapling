@@ -5,6 +5,7 @@
 
 import re
 from typing import List, Tuple
+import string
 
 from .gh_submit import Repository
 
@@ -16,6 +17,7 @@ def create_pull_request_title_and_body(
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     pr_numbers_index: int,
     repository: Repository,
+    template: str,
 ) -> Tuple[str, str]:
     r"""Returns (title, body) for the pull request.
 
@@ -48,6 +50,15 @@ def create_pull_request_title_and_body(
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
     reviewstack_url = f"https://reviewstack.dev/{owner}/{name}/pull/{pr}"
+    if not template:
+        body = string.Template(f'''
+$commit_msg
+$horizontal_rule
+Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}). 
+$bulleted_list
+''')
+    else:
+        body = string.Template(template)
     bulleted_list = "\n".join(
         [
             _format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
@@ -55,12 +66,12 @@ def create_pull_request_title_and_body(
         ]
     )
     title = firstline(commit_msg)
-    body = f"""{commit_msg}
-{_HORIZONTAL_RULE}
-Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
-{bulleted_list}
-"""
-    return title, body
+    tbody = body.safe_substitute(
+        commit_msg=commit_msg, 
+        horizontal_rule=_HORIZONTAL_RULE,
+        bulleted_list=bulleted_list,
+    )
+    return title, tbody
 
 
 _STACK_ENTRY = re.compile(r"^\* (__->__ )?#([1-9]\d*).*$")

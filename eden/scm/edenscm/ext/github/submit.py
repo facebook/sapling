@@ -262,11 +262,13 @@ async def rewrite_pull_request_body(
 
     head_commit_data = partition[0]
     commit_msg = head_commit_data.get_msg()
+
     title, body = create_pull_request_title_and_body(
         commit_msg,
         pr_numbers_and_num_commits,
         index,
         repository,
+        template=ui.config("pr", "template", default="")
     )
     pr = head_commit_data.pr
     assert pr
