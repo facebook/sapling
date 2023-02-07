@@ -64,7 +64,7 @@ configitem("blackbox", "logsource", default=False)
 configitem("blackbox", "track", default=lambda: ["*"])
 
 
-def lastui():
+def lastui() -> None:
     return None
 
 
@@ -110,7 +110,7 @@ def _openlogfile(ui, vfs):
     return vfs(name, "a")
 
 
-def wrapui(ui):
+def wrapui(ui) -> None:
     class blackboxui(ui.__class__):
         @property
         def _bbvfs(self):
@@ -216,6 +216,7 @@ def wrapui(ui):
             self._bbrepo = weakref.ref(repo)
 
     ui.__class__ = blackboxui
+    # pyre-fixme[9]: ui has type `Type[ui]`; used as `Type[blackboxui]`.
     uimod.ui = blackboxui
 
 
@@ -226,12 +227,12 @@ def utillog(orig, event, *msg, **opts):
     return orig(event, *msg, **opts)
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     wrapui(ui)
     extensions.wrapfunction(util, "log", utillog)
 
 
-def reposetup(ui, repo):
+def reposetup(ui, repo) -> None:
     # During 'hg pull' a httppeer repo is created to represent the remote repo.
     # It doesn't have a .hg directory to put a blackbox in, so we don't do
     # the blackbox setup for it.
