@@ -46,6 +46,7 @@ import path from 'path';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {exists} from 'shared/fs';
+import {removeLeadingPathSep} from 'shared/pathUtils';
 import {notEmpty, unwrap} from 'shared/utils';
 
 export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
@@ -511,7 +512,10 @@ export class Repository {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
       const proc = await this.runCommand(['status', '-Tjson']);
-      this.uncommittedChanges = JSON.parse(proc.stdout) as UncommittedChanges;
+      this.uncommittedChanges = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
+        ...change,
+        path: removeLeadingPathSep(change.path),
+      }));
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
       this.logger.error('Error fetching files: ', err);
@@ -880,6 +884,6 @@ export function absolutePathForFileInRepo(
   }
 }
 
-function isProcessError(s: any): s is {stderr: string} {
+function isProcessError(s: unknown): s is {stderr: string} {
   return s != null && typeof s === 'object' && 'stderr' in s;
 }
