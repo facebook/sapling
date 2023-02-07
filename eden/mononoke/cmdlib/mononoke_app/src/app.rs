@@ -544,6 +544,7 @@ impl MononokeApp {
             + 'static,
     {
         let repo_filter = self.environment().filter_repos.clone();
+        let service_name = service.clone();
         let repo_names =
             self.repo_configs()
                 .repos
@@ -568,7 +569,8 @@ impl MononokeApp {
                         None
                     }
                 });
-        self.open_named_managed_repos(repo_names).await
+        self.open_named_managed_repos(repo_names, service_name)
+            .await
     }
 
     /// Create a manager for a set of named managed repos.  These repos must
@@ -576,6 +578,7 @@ impl MononokeApp {
     pub async fn open_named_managed_repos<Repo, Names>(
         &self,
         repo_names: Names,
+        service: Option<ShardedService>,
     ) -> Result<MononokeReposManager<Repo>>
     where
         Names: IntoIterator<Item = String>,
@@ -590,6 +593,7 @@ impl MononokeApp {
             self.configs.clone(),
             self.repo_factory().clone(),
             self.logger().clone(),
+            service,
             repo_names,
         )
         .await?;
@@ -615,7 +619,7 @@ impl MononokeApp {
             + 'static,
     {
         let (repo_name, _) = self.repo_config(repo_arg.as_repo_arg())?;
-        self.open_named_managed_repos(Some(repo_name)).await
+        self.open_named_managed_repos(Some(repo_name), None).await
     }
 
     /// Open just the blobstore based on user-provided arguments.

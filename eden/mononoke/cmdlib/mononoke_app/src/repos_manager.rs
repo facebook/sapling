@@ -19,6 +19,7 @@ use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_parser::StorageConfigs;
 use metaconfig_types::RepoConfig;
+use metaconfig_types::ShardedService;
 use mononoke_api::Mononoke;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
@@ -56,6 +57,7 @@ impl<Repo> MononokeReposManager<Repo> {
         configs: Arc<MononokeConfigs>,
         repo_factory: Arc<RepoFactory>,
         logger: Logger,
+        service_name: Option<ShardedService>,
         repo_names: Names,
     ) -> Result<Self>
     where
@@ -77,6 +79,7 @@ impl<Repo> MononokeReposManager<Repo> {
             mgr.repos.clone(),
             mgr.repo_factory.clone(),
             mgr.logger.clone(),
+            service_name,
         );
         mgr.configs
             .register_for_update(Arc::new(update_receiver) as Arc<dyn ConfigUpdateReceiver>);
@@ -198,6 +201,7 @@ pub struct MononokeConfigUpdateReceiver<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     repo_factory: Arc<RepoFactory>,
     logger: Logger,
+    service_name: Option<ShardedService>,
 }
 
 impl<Repo> MononokeConfigUpdateReceiver<Repo> {
@@ -205,11 +209,13 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
         repos: Arc<MononokeRepos<Repo>>,
         repo_factory: Arc<RepoFactory>,
         logger: Logger,
+        service_name: Option<ShardedService>,
     ) -> Self {
         Self {
             repos,
             repo_factory,
             logger,
+            service_name,
         }
     }
 }
@@ -224,38 +230,50 @@ where
         repo_configs: Arc<RepoConfigs>,
         _: Arc<StorageConfigs>,
     ) -> Result<()> {
-        // We need to filter out the name of repos that are present in MononokeRepos (i.e.
-        // currently served by the server) but not in RepoConfigs. This situation can happen
-        // when the name of the repo changes (e.g. whatsapp/server.mirror renamed to whatsapp/server)
-        // or when a repo is added or removed. In such a case, reloading of the repo with the old name
-        // would not be possible based on the new configs.
-        let repos_input = stream::iter(self.repos.iter_names().filter_map(|repo_name| {
-            repo_configs
-                .repos
-                .get(&repo_name)
-                .cloned()
-                .map(|repo_config| (repo_name, repo_config))
-        }))
-        .map(|(repo_name, repo_config)| {
-            let repo_factory = self.repo_factory.clone();
-            let name = repo_name.clone();
-            let logger = self.logger.clone();
-            let common_config = repo_configs.common.clone();
-            async move {
-                let repo_id = repo_config.repoid.id();
-                info!(logger, "Reloading repo: {}", &repo_name);
-                let repo = repo_factory
-                    .build(name, repo_config, common_config)
-                    .await
-                    .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?;
-                info!(logger, "Reloaded repo: {}", &repo_name);
-
-                anyhow::Ok((repo_id, repo_name, repo))
+        let mut repos_to_load = Vec::new();
+        for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {
+            if self.repos.get_by_name(repo_name.as_str()).is_some() {
+                // Repo was already present on the server. Need to reload it.
+                repos_to_load.push((repo_name, repo_config))
             }
-        })
-        // Repo construction can be heavy, 30 at a time is sufficient.
-        .buffered(30)
-        .collect::<Vec<_>>();
+            // If the service name is known, then by default we need to reload or add all repos
+            // that are in RepoConfig AND are shallow-sharded (i.e. NOT deep-sharded).
+            else if let Some(ref service_name) = self.service_name {
+                if let Some(ref config) = repo_config.deep_sharding_config {
+                    // Repo is shallow sharded for this service so should be loaded.
+                    if !config.status.get(service_name).cloned().unwrap_or(false) {
+                        repos_to_load.push((repo_name, repo_config));
+                    }
+                }
+            }
+            // The repos present on the server but not part of RepoConfigs are ignored by
+            // default. This situation can happen when the name of the repo changes
+            // (e.g. whatsapp/server.mirror renamed to whatsapp/server) or when a repo is
+            // added or removed. In such a case, reloading of the repo with the old name
+            // would not be possible based on the new configs.
+        }
+
+        let repos_input = stream::iter(repos_to_load)
+            .map(|(repo_name, repo_config)| {
+                let repo_factory = self.repo_factory.clone();
+                let name = repo_name.clone();
+                let logger = self.logger.clone();
+                let common_config = repo_configs.common.clone();
+                async move {
+                    let repo_id = repo_config.repoid.id();
+                    info!(logger, "Reloading repo: {}", &repo_name);
+                    let repo = repo_factory
+                        .build(name, repo_config, common_config)
+                        .await
+                        .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?;
+                    info!(logger, "Reloaded repo: {}", &repo_name);
+
+                    anyhow::Ok((repo_id, repo_name, repo))
+                }
+            })
+            // Repo construction can be heavy, 30 at a time is sufficient.
+            .buffered(30)
+            .collect::<Vec<_>>();
         // There are lots of deep FuturesUnordered here that have caused inefficient polling with
         // Tokio coop in the past.
         let repos_input = tokio::task::unconstrained(repos_input)
