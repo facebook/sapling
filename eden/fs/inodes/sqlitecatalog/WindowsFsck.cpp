@@ -15,6 +15,7 @@
 #include <ProjectedFSLib.h> // @manual
 #include <winioctl.h> // @manual
 
+#include "eden/common/utils/FileUtils.h"
 #include "eden/common/utils/WinError.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
@@ -58,34 +59,6 @@ std::set<PathComponent> makeEntriesSet(const overlay::OverlayDir& dir) {
 // Reparse tag for UNIX domain socket is not defined in Windows header files.
 const ULONG IO_REPARSE_TAG_SOCKET = 0x80000023;
 
-// This is only defined in Windows Device Driver Kit and it is inconvenient to
-// include. This is copied from Watchman's FileDescriptor.cpp.
-struct REPARSE_DATA_BUFFER {
-  ULONG ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  union {
-    struct {
-      USHORT SubstituteNameOffset;
-      USHORT SubstituteNameLength;
-      USHORT PrintNameOffset;
-      USHORT PrintNameLength;
-      ULONG Flags;
-      WCHAR PathBuffer[1];
-    } SymbolicLinkReparseBuffer;
-    struct {
-      USHORT SubstituteNameOffset;
-      USHORT SubstituteNameLength;
-      USHORT PrintNameOffset;
-      USHORT PrintNameLength;
-      WCHAR PathBuffer[1];
-    } MountPointReparseBuffer;
-    struct {
-      UCHAR DataBuffer[1];
-    } GenericReparseBuffer;
-  };
-};
-
 dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
   if (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
     FileHandle handle{CreateFileW(
@@ -105,37 +78,27 @@ dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
       return dtype_t::Unknown;
     }
 
-    char buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
-    DWORD bytes_written;
+    try {
+      auto reparse_data = getReparseData(handle.get());
 
-    if (!DeviceIoControl(
-            handle.get(),
-            FSCTL_GET_REPARSE_POINT,
-            NULL,
-            0,
-            buffer,
-            MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
-            &bytes_written,
-            NULL)) {
+      if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK ||
+          reparse_data->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
+        return dtype_t::Symlink;
+      } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_SOCKET) {
+        return dtype_t::Socket;
+      }
+
+      // We don't care about other reparse point types, so treating them as
+      // regular files/directories.
+    } catch (const std::system_error& err) {
       XLOGF(
           DBG3,
           "Unable to read reparse point data for {}: {}",
           wideToMultibyteString<std::string>(path),
-          GetLastError());
+          err.code().value());
       return dtype_t::Unknown;
     }
 
-    auto reparse_data = reinterpret_cast<const REPARSE_DATA_BUFFER*>(buffer);
-
-    if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK ||
-        reparse_data->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
-      return dtype_t::Symlink;
-    } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_SOCKET) {
-      return dtype_t::Socket;
-    }
-
-    // We don't care about other reparse point types, so treating them as
-    // regular files/directories.
     if (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
       return dtype_t::Dir;
     } else {
