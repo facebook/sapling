@@ -78,26 +78,26 @@ dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
       return dtype_t::Unknown;
     }
 
-    try {
-      auto reparse_data = getReparseData(handle.get());
-
-      if (reparse_data->ReparseTag == IO_REPARSE_TAG_SYMLINK ||
-          reparse_data->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
-        return dtype_t::Symlink;
-      } else if (reparse_data->ReparseTag == IO_REPARSE_TAG_SOCKET) {
-        return dtype_t::Socket;
-      }
-
-      // We don't care about other reparse point types, so treating them as
-      // regular files/directories.
-    } catch (const std::system_error& err) {
+    auto reparse_data_result = getReparseData(handle.get());
+    if (reparse_data_result.hasException()) {
       XLOGF(
           DBG3,
           "Unable to read reparse point data for {}: {}",
           wideToMultibyteString<std::string>(path),
-          err.code().value());
+          reparse_data_result.exception().what());
       return dtype_t::Unknown;
     }
+
+    if (reparse_data_result.value()->ReparseTag == IO_REPARSE_TAG_SYMLINK ||
+        reparse_data_result.value()->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
+      return dtype_t::Symlink;
+    } else if (
+        reparse_data_result.value()->ReparseTag == IO_REPARSE_TAG_SOCKET) {
+      return dtype_t::Socket;
+    }
+
+    // We don't care about other reparse point types, so treating them as
+    // regular files/directories.
 
     if (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
       return dtype_t::Dir;
