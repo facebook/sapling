@@ -8,6 +8,7 @@
 import type {RepositoryError} from './types';
 import type {AllDrawersState} from 'shared/Drawers';
 
+import serverAPI from './ClientToServerAPI';
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
 import {CommitInfoSidebar} from './CommitInfo';
 import {CommitTreeList} from './CommitTreeList';
@@ -19,7 +20,7 @@ import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
-import {repositoryInfo} from './serverAPIState';
+import {isFetchingAdditionalCommits, repositoryInfo} from './serverAPIState';
 import {ThemeRoot} from './theme';
 import {ModalContainer} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -50,6 +51,29 @@ export default function App() {
         </RecoilRoot>
       </I18nSupport>
     </React.StrictMode>
+  );
+}
+
+function FetchingAdditionalCommitsIndicator() {
+  const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  return isFetching ? <Icon icon="loading" /> : null;
+}
+
+function FetchingAdditionalCommitsButton() {
+  const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  return (
+    <VSCodeButton
+      key="load-more-commit-button"
+      disabled={isFetching}
+      onClick={() => {
+        serverAPI.postMessage({
+          type: 'loadMoreCommits',
+        });
+      }}
+      appearance="icon">
+      <Icon icon="unfold" slot="start" />
+      <T>Load more commits</T>
+    </VSCodeButton>
   );
 }
 
@@ -98,7 +122,13 @@ function MainContent() {
       {repoInfo != null && repoInfo.type !== 'success' ? (
         <ISLNullState repoError={repoInfo} />
       ) : (
-        <CommitTreeList />
+        <>
+          <CommitTreeList />
+          <span className="load-more">
+            <FetchingAdditionalCommitsButton />
+            <FetchingAdditionalCommitsIndicator />
+          </span>
+        </>
       )}
     </div>
   );

@@ -61,3 +61,11 @@ code {
 vscode-button::part(content) {
   white-space: nowrap;
 }
+
+.load-more {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
+  margin: var(--pad);
+  margin-left: var(--halfpad);
+}

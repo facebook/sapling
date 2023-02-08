@@ -171,6 +171,26 @@ export const isFetchingCommits = atom<boolean>({
   ],
 });
 
+export const isFetchingAdditionalCommits = atom<boolean>({
+  key: 'isFetchingAdditionalCommits',
+  default: false,
+  effects: [
+    ({setSelf}) => {
+      const disposables = [
+        serverAPI.onMessageOfType('smartlogCommits', () => {
+          setSelf(false);
+        }),
+        serverAPI.onMessageOfType('beganLoadingMoreCommits', () => {
+          setSelf(true);
+        }),
+      ];
+      return () => {
+        disposables.forEach(d => d.dispose());
+      };
+    },
+  ],
+});
+
 export const isFetchingUncommittedChanges = atom<boolean>({
   key: 'isFetchingUncommittedChanges',
   default: false,

@@ -327,6 +327,7 @@ export type ClientToServerMessage =
       start: number;
       numLines: number;
     }
+  | {type: 'loadMoreCommits'}
   | SubscribeUncommittedChanges
   | SubscribeSmartlogCommits
   | SubscribeMergeConflicts
@@ -345,6 +346,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Array<string>}
+  | {type: 'beganLoadingMoreCommits'}
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages;
 

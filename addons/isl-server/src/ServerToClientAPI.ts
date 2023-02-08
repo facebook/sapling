@@ -413,6 +413,13 @@ export default class ServerToClientAPI {
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         break;
       }
+      case 'loadMoreCommits': {
+        this.postMessage({type: 'beganLoadingMoreCommits'});
+        repo.visibleCommitDayRange *= 2;
+        repo.fetchSmartlogCommits();
+        this.tracker.track('LoadMoreCommits', {extras: {daysToFetch: repo.visibleCommitDayRange}});
+        return;
+      }
       default: {
         this.platform.handleMessageFromClient(repo, data, message => this.postMessage(message));
         break;

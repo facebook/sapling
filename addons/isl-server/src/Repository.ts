@@ -165,6 +165,7 @@ export class Repository {
   private watchForChanges: WatchForChanges;
   private pageFocusTracker = new PageFocusTracker();
   public codeReviewProvider?: CodeReviewProvider;
+  public visibleCommitDayRange: number;
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(public info: ValidatedRepoInfo, public logger: Logger) {
@@ -235,6 +236,7 @@ export class Repository {
     );
 
     // refetch summaries whenever we see new diffIds
+    this.visibleCommitDayRange = 14;
     const seenDiffs = new Set();
     const subscription = this.subscribeToSmartlogCommitsChanges(commits => {
       if (commits.value) {
@@ -583,7 +585,7 @@ export class Repository {
   fetchSmartlogCommits = serializeAsyncCall(async () => {
     try {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
-      const revset = 'smartlog()';
+      const revset = `smartlog() and date(-${this.visibleCommitDayRange})`;
       const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
       this.smartlogCommits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
       this.smartlogCommitsChangesEmitter.emit('change', this.smartlogCommits);
