@@ -89,6 +89,7 @@ describe('run-proxy', () => {
     force: false,
     slVersion: '1.0',
     command: 'sl',
+    cwd: undefined,
   };
 
   it('spawns a server', async () => {
@@ -118,6 +119,20 @@ describe('run-proxy', () => {
         token: expect.stringMatching(/[a-z0-9]{32}/),
         url: expect.stringContaining('http://localhost:3011/'),
         wasServerReused: false,
+      }),
+    );
+  });
+
+  it('can set current working directory manually', async () => {
+    jest
+      .spyOn(startServer, 'startServer')
+      .mockImplementation(() => Promise.resolve({type: 'success', port: 3011, pid: 1000}));
+
+    await runProxyMain({...defaultArgs, json: true, cwd: 'foobar'});
+
+    expect(JSON.parse(allConsoleStdout())).toEqual(
+      expect.objectContaining({
+        cwd: 'foobar',
       }),
     );
   });

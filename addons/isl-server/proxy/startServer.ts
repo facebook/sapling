@@ -41,6 +41,7 @@ optional arguments:
   --force          Kill any existing Sapling Web server on the specified port, then start a new server.
                    Note that this will disrupt other windows still using the previous Sapling Web server.
   --command name   Set which command to run for sl commands (default: sl)
+  --cwd dir        Sets the current working directory, allowing changing the repo.
   --sl-version v   Set version number of sl was used to spawn the server (default: '(dev)')
   --platform       Set which platform implementation to use by changing the resulting URL.
                    Used to embed Sapling Web into non-browser web environments like IDEs.
@@ -79,6 +80,7 @@ type Args = {
   force: boolean;
   slVersion: string;
   command: string;
+  cwd: string | undefined;
 };
 
 // Rudimentary arg parser to avoid the need for a third-party dependency.
@@ -98,6 +100,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
   let kill = false;
   let force = false;
   let command = 'sl';
+  let cwd: string | undefined = undefined;
   let slVersion = '(dev)';
   let platform: string | undefined = undefined;
   let i = 0;
@@ -145,6 +148,10 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
       }
       case '--command': {
         command = consumeArgValue(arg);
+        break;
+      }
+      case '--cwd': {
+        cwd = consumeArgValue(arg);
         break;
       }
       case '--sl-version': {
@@ -208,6 +215,7 @@ export function parseArgs(args: Array<string> = process.argv.slice(2)): Args {
     force,
     slVersion,
     command,
+    cwd,
   };
 }
 
@@ -313,7 +321,7 @@ export async function runProxyMain(args: Args) {
     errorAndExit(HELP_MESSAGE, 0);
   }
 
-  const cwd = process.cwd();
+  const cwd = args.cwd ?? process.cwd();
 
   function info(...args: Parameters<typeof console.log>): void {
     if (json) {
