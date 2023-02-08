@@ -38,7 +38,7 @@ import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
-import {serializeAsyncCall} from './utils';
+import {handleAbortSignalOnProcess, serializeAsyncCall} from './utils';
 import execa from 'execa';
 import {CommandRunner} from 'isl/src/types';
 import os from 'os';
@@ -199,9 +199,14 @@ export class Repository {
 
     this.operationQueue = new OperationQueue(
       this.logger,
-      (operation: RunnableOperation, cwd: string, handleCommandProgress): Promise<void> => {
+      (
+        operation: RunnableOperation,
+        cwd: string,
+        handleCommandProgress,
+        signal: AbortSignal,
+      ): Promise<void> => {
         if (operation.runner === CommandRunner.Sapling) {
-          return this.runOperation(operation, handleCommandProgress, cwd);
+          return this.runOperation(operation, handleCommandProgress, cwd, signal);
         } else if (operation.runner === CommandRunner.CodeReviewProvider) {
           if (operation.args.some(arg => typeof arg === 'object')) {
             return Promise.reject(
@@ -221,6 +226,7 @@ export class Repository {
               cwd,
               normalizedArgs,
               handleCommandProgress,
+              signal,
             ) ?? Promise.resolve()
           );
         }
@@ -447,6 +453,7 @@ export class Repository {
     },
     onProgress: OperationCommandProgressReporter,
     cwd: string,
+    signal: AbortSignal,
   ): Promise<void> {
     const repoRoot = unwrap(this.info.repoRoot);
 
@@ -480,6 +487,10 @@ export class Repository {
     execution.on('exit', exitCode => {
       onProgress('exit', exitCode);
     });
+    signal.addEventListener('abort', () => {
+      this.logger.log('kill operation: ', command, cwdRelativeArgs.join(' '));
+    });
+    handleAbortSignalOnProcess(execution, signal);
     await execution;
   }
 

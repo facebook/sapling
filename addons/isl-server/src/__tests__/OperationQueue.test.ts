@@ -79,6 +79,32 @@ describe('OperationQueue', () => {
     );
   });
 
+  it('sends abort signal', async () => {
+    const runCallback = jest.fn().mockImplementation((_op, _cwd, prog, signal: AbortSignal) => {
+      const p = defer();
+      signal.addEventListener('abort', () => {
+        p.resolve(null);
+        prog('exit', 130);
+      });
+      return p;
+    });
+    const onProgress = jest.fn();
+    const queue = new OperationQueue(mockLogger, runCallback);
+    const id = 'abc';
+    const op = queue.runOrQueueOperation(
+      {args: [], id, runner: CommandRunner.Sapling},
+      onProgress,
+      'cwd',
+    );
+    queue.abortRunningOperation('wrong-id');
+    expect(onProgress).not.toHaveBeenCalled();
+    queue.abortRunningOperation(id);
+    await op;
+    expect(onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({id, kind: 'exit', exitCode: 130}),
+    );
+  });
+
   it('queues up commands', async () => {
     const p1 = defer();
     const p2 = defer();

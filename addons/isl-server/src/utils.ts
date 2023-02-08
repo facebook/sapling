@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ExecaChildProcess} from 'execa';
+
+import os from 'os';
+
 export function sleep(timeMs: number): Promise<void> {
   return new Promise(res => setTimeout(res, timeMs));
 }
@@ -64,4 +68,28 @@ export function serializeAsyncCall<T>(asyncFun: () => Promise<T>): () => Promise
       return scheduleNextCall();
     }
   };
+}
+
+/**
+ * Kill `child` on `AbortSignal`.
+ *
+ * This is slightly more robust than execa 6.0 and nodejs' `signal` support:
+ * if a process was stopped (by `SIGTSTP` or `SIGSTOP`), it can still be killed.
+ */
+export function handleAbortSignalOnProcess(child: ExecaChildProcess, signal: AbortSignal) {
+  signal.addEventListener('abort', () => {
+    if (os.platform() == 'win32') {
+      // Signals are ignored on Windows.
+      // execa's default forceKillAfterTimeout behavior does not
+      // make sense for Windows. Disable it explicitly.
+      child.kill('SIGKILL', {forceKillAfterTimeout: false});
+    } else {
+      // If the process is stopped (ex. Ctrl+Z, kill -STOP), make it
+      // continue first so it can respond to signals including SIGKILL.
+      child.kill('SIGCONT');
+      // A good citizen process should exit soon after recieving SIGTERM.
+      // In case it doesn't, send SIGKILL after 5 seconds.
+      child.kill('SIGTERM', {forceKillAfterTimeout: 5000});
+    }
+  });
 }

@@ -27,6 +27,7 @@ export interface CodeReviewProvider {
     cwd: string,
     args: Array<string>,
     onProgress: OperationCommandProgressReporter,
+    signal: AbortSignal,
   ): Promise<void>;
 
   dispose: () => void;

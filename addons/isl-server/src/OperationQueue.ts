@@ -12,6 +12,8 @@ import type {
   RunnableOperation,
 } from 'isl/src/types';
 
+import {newAbortController} from 'shared/compat';
+
 /**
  * Handle running & queueing all Operations so that only one Operation runs at once.
  * Operations may be run by sl in the Repository or other providers like ghstack in the RemoteRepository.
@@ -23,11 +25,13 @@ export class OperationQueue {
       operation: RunnableOperation,
       cwd: string,
       handleProgress: OperationCommandProgressReporter,
+      signal: AbortSignal,
     ) => Promise<void>,
   ) {}
 
   private queuedOperations: Array<RunnableOperation> = [];
   private runningOperation: RunnableOperation | undefined = undefined;
+  private abortController: AbortController | undefined = undefined;
 
   async runOrQueueOperation(
     operation: RunnableOperation,
@@ -63,7 +67,9 @@ export class OperationQueue {
     };
 
     try {
-      await this.runCallback(operation, cwd, handleCommandProgress);
+      const controller = newAbortController();
+      this.abortController = controller;
+      await this.runCallback(operation, cwd, handleCommandProgress, controller.signal);
       this.runningOperation = undefined;
 
       // now that we successfully ran this operation, dequeue the next
@@ -86,6 +92,17 @@ export class OperationQueue {
       // clear queue to run when we hit an error
       this.queuedOperations = [];
       this.runningOperation = undefined;
+    }
+  }
+
+  /**
+   * Send kill signal to the running operation if the operationId matches.
+   * If the process exits, the exit event will be noticed by the queue.
+   * This function does not block on waiting for the operation process to exit.
+   */
+  abortRunningOperation(operationId: string) {
+    if (this.runningOperation?.id == operationId) {
+      this.abortController?.abort();
     }
   }
 }
