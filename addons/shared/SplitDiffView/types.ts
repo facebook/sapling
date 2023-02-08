@@ -27,4 +27,5 @@ export type Context<T> = {
     lineRange: (params: LineRangeParams<T>) => RecoilValueReadOnly<Array<string>>;
   };
   translate?: (s: string) => string;
+  copy?: (s: string) => void;
 };

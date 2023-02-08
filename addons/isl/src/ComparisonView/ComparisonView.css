@@ -59,3 +59,11 @@
   border-top-width: 0;
   border-radius: 0;
 }
+
+.file-header-copyable-path {
+  cursor: pointer;
+}
+
+.file-header-copyable-path:hover > .file-header-path-element {
+  text-decoration: underline;
+}

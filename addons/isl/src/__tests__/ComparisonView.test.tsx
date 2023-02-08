@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import platform from '../platform';
 import {
   closeCommitInfoSidebar,
   COMMIT,
@@ -22,6 +23,7 @@ import {ComparisonType} from 'shared/Comparison';
 afterEach(cleanup);
 
 jest.mock('../MessageBus');
+jest.mock('../platform');
 
 const UNCOMMITTED_CHANGES_DIFF = `\
 diff --git deletedFile.txt deletedFile.txt
@@ -46,6 +48,12 @@ diff --git someFile.txt someFile.txt
 +line 9 - modified
  line 10
  line 11
+diff --git -r a1b2c3d4e5f6 some/path/foo.go
+--- some/path/foo.go
++++ some/path/foo.go
+@@ -0,1 +0,1 @@
+-println("hi")
++fmt.Println("hi")
 `;
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -302,5 +310,23 @@ describe('ComparisonView', () => {
       });
     });
     expect(inComparisonView().queryByTestId('comparison-loading')).not.toBeInTheDocument();
+  });
+
+  it('copies file path on click', async () => {
+    await openUncommittedChangesComparison();
+
+    // Click on the "foo.go" of "some/path/foo.go".
+    act(() => {
+      fireEvent.click(inComparisonView().getByText('foo.go'));
+    });
+    expect(platform.clipboardCopy).toHaveBeenCalledTimes(1);
+    expect(platform.clipboardCopy).toHaveBeenCalledWith('foo.go');
+
+    // Click on the "some/" of "some/path/foo.go".
+    act(() => {
+      fireEvent.click(inComparisonView().getByText('some/'));
+    });
+    expect(platform.clipboardCopy).toHaveBeenCalledTimes(2);
+    expect(platform.clipboardCopy).toHaveBeenLastCalledWith('some/path/foo.go');
   });
 });

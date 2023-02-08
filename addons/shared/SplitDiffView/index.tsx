@@ -61,7 +61,7 @@ export function SplitDiffView<Id>({
       borderStyle="solid"
       borderColor="border.default"
       borderRadius={2}>
-      <FileHeader path={fileName} diffType={patch.type} />
+      <FileHeader ctx={ctx} path={fileName} diffType={patch.type} />
       <TypedSplitDiffTable ctx={ctx} path={path} patch={patch} preamble={preamble} />
     </Box>
   );
