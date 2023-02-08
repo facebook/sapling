@@ -16,6 +16,7 @@ import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {operationBeingPreviewed} from './previews';
 import {initialParams} from './urlParams';
 import {firstLine} from './utils';
+import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
 
 const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
@@ -202,6 +203,23 @@ export const isFetchingUncommittedChanges = atom<boolean>({
         }),
         serverAPI.onMessageOfType('beganFetchingUncommittedChangesEvent', () => {
           setSelf(true);
+        }),
+      ];
+      return () => {
+        disposables.forEach(d => d.dispose());
+      };
+    },
+  ],
+});
+
+export const commitsShownRange = atom<number>({
+  key: 'commitsShownRange',
+  default: DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
+  effects: [
+    ({setSelf}) => {
+      const disposables = [
+        serverAPI.onMessageOfType('commitsShownRange', event => {
+          setSelf(event.rangeInDays);
         }),
       ];
       return () => {

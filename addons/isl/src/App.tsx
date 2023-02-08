@@ -16,11 +16,12 @@ import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
 import {EmptyState} from './EmptyState';
 import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
+import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
-import {isFetchingAdditionalCommits, repositoryInfo} from './serverAPIState';
+import {commitsShownRange, isFetchingAdditionalCommits, repositoryInfo} from './serverAPIState';
 import {ThemeRoot} from './theme';
 import {ModalContainer} from './useModal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -61,19 +62,25 @@ function FetchingAdditionalCommitsIndicator() {
 
 function FetchingAdditionalCommitsButton() {
   const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  const commitsShownDayRange = useRecoilValue(commitsShownRange);
+  const commitsShownMessage = t('Showing comits from the last $numDays days', {
+    replace: {$numDays: commitsShownDayRange.toString()},
+  });
   return (
-    <VSCodeButton
-      key="load-more-commit-button"
-      disabled={isFetching}
-      onClick={() => {
-        serverAPI.postMessage({
-          type: 'loadMoreCommits',
-        });
-      }}
-      appearance="icon">
-      <Icon icon="unfold" slot="start" />
-      <T>Load more commits</T>
-    </VSCodeButton>
+    <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={commitsShownMessage}>
+      <VSCodeButton
+        key="load-more-commit-button"
+        disabled={isFetching}
+        onClick={() => {
+          serverAPI.postMessage({
+            type: 'loadMoreCommits',
+          });
+        }}
+        appearance="icon">
+        <Icon icon="unfold" slot="start" />
+        <T>Load more commits</T>
+      </VSCodeButton>
+    </Tooltip>
   );
 }
 

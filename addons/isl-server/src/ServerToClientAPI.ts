@@ -414,8 +414,9 @@ export default class ServerToClientAPI {
         break;
       }
       case 'loadMoreCommits': {
-        this.postMessage({type: 'beganLoadingMoreCommits'});
         repo.visibleCommitDayRange *= 2;
+        this.postMessage({type: 'commitsShownRange', rangeInDays: repo.visibleCommitDayRange});
+        this.postMessage({type: 'beganLoadingMoreCommits'});
         repo.fetchSmartlogCommits();
         this.tracker.track('LoadMoreCommits', {extras: {daysToFetch: repo.visibleCommitDayRange}});
         return;
