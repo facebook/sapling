@@ -155,8 +155,7 @@ impl StatusCmd {
             }
             Ok(EdenFsRunningStatus::Starting) => {
                 println!(
-                    "EdenFS is not healthy: EdenFS is {}",
-                    thrift_types::fb303_core::fb303_status::STARTING
+                    "EdenFS is still starting (hint: run `eden status --wait` to watch it's progress)",
                 );
                 1
             }
