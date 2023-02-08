@@ -306,7 +306,9 @@ Ask in the EdenFS (Windows )?Users group if you need help fixing issues with Ede
             out.getvalue(),
             r"""<yellow>- Found problem:<reset>
 EdenFS is currently still starting\.
-Please wait for edenfs to finish starting\.
+Please wait for edenfs to finish starting\. You can watch it's progress with
+`eden status --wait`\.
+
 If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart --force"
 
