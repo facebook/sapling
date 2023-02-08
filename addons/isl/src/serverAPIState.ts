@@ -327,7 +327,7 @@ function startNewOperation(newOperation: Operation, list: OperationList): Operat
     if (list.currentOperation != null) {
       operationHistory.push(list.currentOperation);
     }
-    const currentOperation = {operation: newOperation};
+    const currentOperation = {operation: newOperation, startTime: new Date()};
     return {...list, operationHistory, currentOperation};
   }
 }
