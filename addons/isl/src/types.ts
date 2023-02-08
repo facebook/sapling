@@ -347,7 +347,7 @@ export type ServerToClientMessage =
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Array<string>}
   | {type: 'beganLoadingMoreCommits'}
-  | {type: 'commitsShownRange'; rangeInDays: number}
+  | {type: 'commitsShownRange'; rangeInDays: number | undefined}
   | {type: 'additionalCommitAvailability'; moreAvailable: boolean}
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages;

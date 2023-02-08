@@ -36,6 +36,7 @@ import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
+import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
 import {handleAbortSignalOnProcess, serializeAsyncCall} from './utils';
@@ -165,7 +166,13 @@ export class Repository {
   private watchForChanges: WatchForChanges;
   private pageFocusTracker = new PageFocusTracker();
   public codeReviewProvider?: CodeReviewProvider;
-  public visibleCommitDayRange: number;
+
+  private currentVisibleCommitRangeIndex = 0;
+  private visibleCommitRanges: Array<number | undefined> = [
+    DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
+    60,
+    undefined,
+  ];
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(public info: ValidatedRepoInfo, public logger: Logger) {
@@ -236,7 +243,6 @@ export class Repository {
     );
 
     // refetch summaries whenever we see new diffIds
-    this.visibleCommitDayRange = 14;
     const seenDiffs = new Set();
     const subscription = this.subscribeToSmartlogCommitsChanges(commits => {
       if (commits.value) {
@@ -264,6 +270,13 @@ export class Repository {
     this.checkForMergeConflicts();
 
     this.disposables.push(() => subscription.dispose());
+  }
+
+  public nextVisibleCommitRangeInDays(): number | undefined {
+    if (this.currentVisibleCommitRangeIndex + 1 < this.visibleCommitRanges.length) {
+      this.currentVisibleCommitRangeIndex++;
+    }
+    return this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
   }
 
   /**
@@ -585,7 +598,10 @@ export class Repository {
   fetchSmartlogCommits = serializeAsyncCall(async () => {
     try {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
-      const revset = `smartlog() and date(-${this.visibleCommitDayRange})`;
+      const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
+      const revset = !visibleCommitDayRange
+        ? 'smartlog()'
+        : `smartlog() and date(-${visibleCommitDayRange})`;
       const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
       this.smartlogCommits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
       this.smartlogCommitsChangesEmitter.emit('change', this.smartlogCommits);

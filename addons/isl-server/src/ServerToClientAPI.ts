@@ -414,11 +414,11 @@ export default class ServerToClientAPI {
         break;
       }
       case 'loadMoreCommits': {
-        repo.visibleCommitDayRange *= 2;
-        this.postMessage({type: 'commitsShownRange', rangeInDays: repo.visibleCommitDayRange});
+        const rangeInDays = repo.nextVisibleCommitRangeInDays();
+        this.postMessage({type: 'commitsShownRange', rangeInDays});
         this.postMessage({type: 'beganLoadingMoreCommits'});
         repo.fetchSmartlogCommits();
-        this.tracker.track('LoadMoreCommits', {extras: {daysToFetch: repo.visibleCommitDayRange}});
+        this.tracker.track('LoadMoreCommits', {extras: {daysToFetch: rangeInDays ?? 'Infinity'}});
         return;
       }
       default: {

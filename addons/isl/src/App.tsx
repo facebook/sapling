@@ -61,10 +61,13 @@ function FetchingAdditionalCommitsIndicator() {
 }
 
 function FetchingAdditionalCommitsButton() {
+  const shownRange = useRecoilValue(commitsShownRange);
   const isFetching = useRecoilValue(isFetchingAdditionalCommits);
-  const commitsShownDayRange = useRecoilValue(commitsShownRange);
+  if (shownRange === undefined) {
+    return null;
+  }
   const commitsShownMessage = t('Showing comits from the last $numDays days', {
-    replace: {$numDays: commitsShownDayRange.toString()},
+    replace: {$numDays: shownRange.toString()},
   });
   return (
     <Tooltip placement="bottom" delayMs={DOCUMENTATION_DELAY} title={commitsShownMessage}>

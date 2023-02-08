@@ -212,7 +212,7 @@ export const isFetchingUncommittedChanges = atom<boolean>({
   ],
 });
 
-export const commitsShownRange = atom<number>({
+export const commitsShownRange = atom<number | undefined>({
   key: 'commitsShownRange',
   default: DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
   effects: [
