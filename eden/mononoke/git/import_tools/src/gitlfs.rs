@@ -210,17 +210,17 @@ impl GitImportLfs {
                     }
 
                     attempt += 1;
+                    // Sleep on avarage time_ms_between_attempts between attempts.
+                    let sleep_time_ms =
+                        thread_rng().gen_range(0..inner.time_ms_between_attempts * 2);
                     error!(
                         ctx.logger(),
                         "{}. Attempt {} of {} - Retrying in {} ms",
                         err,
                         attempt,
                         inner.max_attempts,
-                        inner.time_ms_between_attempts,
+                        sleep_time_ms,
                     );
-                    // Sleep on avarage time_ms_between_attempts between attempts.
-                    let sleep_time_ms =
-                        thread_rng().gen_range(0..inner.time_ms_between_attempts * 2);
                     sleep(Duration::from_millis(sleep_time_ms.into())).await;
                 }
             }
