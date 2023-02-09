@@ -1,20 +1,36 @@
 # Changelog
 
+## 0.1.9
+
+- Fix sending messages to disposed webviews which caused ISL to stop working
+- Add context menu support
+- Forget button for added files & delete button for untracked files
+- Button load older commits, only show recent commits at first
+- Show copied/renamed files in the comparison view
+- Double click a commit to open the commit info sidebar
+- `sl hide` commits via context menu action
+- Support aborting operations
+- Use minimal path name for changed files
+- Show commit time next to public commits
+- Disable pull button while pull is running
+- Add color and icon next to filenames in comparison view
+- Fixes for color and wrapping in the changed files list
+
 ## 0.1.8
 
-- ISL no longer crashes when a language other than English is selected in VS Code: https://github.com/facebook/sapling/issues/362.
-- Added an ISL menu button to the source control panel: https://github.com/facebook/sapling/commit/538c6fba11ddfdae9de93bf77cffa688b13458c0.
-- Updated the Sapling icon: https://github.com/facebook/sapling/commit/2f7873e32208d4cd153b7c1c1e27afe19e815cf0.
+- ISL no longer crashes when a language other than English is selected in VS Code: <https://github.com/facebook/sapling/issues/362>.
+- Added an ISL menu button to the source control panel: <https://github.com/facebook/sapling/commit/538c6fba11ddfdae9de93bf77cffa688b13458c0>.
+- Updated the Sapling icon: <https://github.com/facebook/sapling/commit/2f7873e32208d4cd153b7c1c1e27afe19e815cf0>.
 
 ## 0.1.7
 
-- Fixed an issue where we were stripping the trailing newline in the output to `sl cat`, which caused the VS Code extension to constantly report that the user had modified a file by adding a newline to the end: https://github.com/facebook/sapling/commit/f65f499ba95a742444b61cb181adb39d2a3af4c2.
+- Fixed an issue where we were stripping the trailing newline in the output to `sl cat`, which caused the VS Code extension to constantly report that the user had modified a file by adding a newline to the end: <https://github.com/facebook/sapling/commit/f65f499ba95a742444b61cb181adb39d2a3af4c2>.
 
 ## 0.1.6
 
-- Fixed an issue with path normalization that was preventing extension commands from working on Windows because files were not recognized as part of a Sapling repository: https://github.com/facebook/sapling/commit/206c7fbf6bc94e7e5940630b812fba7dcd55140e.
-- Cleaned up the instructions on how to use the extension in the README: https://github.com/facebook/sapling/commit/4ee418ca7aab519b1b4f96edd0991311e8c6b03f
-- Fixed an issue where the **See installation docs** button in ISL failed to open the installation docs: https://github.com/facebook/sapling/issues/282.
+- Fixed an issue with path normalization that was preventing extension commands from working on Windows because files were not recognized as part of a Sapling repository: <https://github.com/facebook/sapling/commit/206c7fbf6bc94e7e5940630b812fba7dcd55140e>.
+- Cleaned up the instructions on how to use the extension in the README: <https://github.com/facebook/sapling/commit/4ee418ca7aab519b1b4f96edd0991311e8c6b03f>
+- Fixed an issue where the **See installation docs** button in ISL failed to open the installation docs: <https://github.com/facebook/sapling/issues/282>.
 
 ## 0.1.5
 
