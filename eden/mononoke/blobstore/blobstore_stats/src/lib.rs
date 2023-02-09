@@ -131,7 +131,9 @@ pub fn record_get_stats(
     match result {
         Ok(Some(data)) => {
             let size = data.as_bytes().len();
-            let size_logging_threshold = tunables().get_blobstore_read_size_logging_threshold();
+            let size_logging_threshold = tunables()
+                .blobstore_read_size_logging_threshold()
+                .unwrap_or_default();
             if size_logging_threshold > 0 && size > size_logging_threshold as usize {
                 scuba.unsampled();
             }

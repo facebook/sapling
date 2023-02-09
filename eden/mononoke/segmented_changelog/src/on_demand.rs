@@ -259,8 +259,9 @@ impl OnDemandUpdateSegmentedChangelog {
     ) -> Result<bool> {
         let changeset_fetcher = self.changeset_fetcher.clone();
         let id_map = self.namedag.read().await.map().clone_idmap();
-        let max_commits =
-            tunables::tunables().get_segmented_changelog_client_max_commits_to_traverse();
+        let max_commits = tunables::tunables()
+            .segmented_changelog_client_max_commits_to_traverse()
+            .unwrap_or_default();
         for cs_id in heads {
             let ancestors =
                 AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, *cs_id).compat();

@@ -164,12 +164,18 @@ impl AffectedChangesets {
             future::ready(!exists)
         });
 
-        let limit = match tunables().get_hooks_additional_changesets_limit() {
+        let limit = match tunables()
+            .hooks_additional_changesets_limit()
+            .unwrap_or_default()
+        {
             limit if limit > 0 => limit as usize,
             _ => std::usize::MAX,
         };
 
-        let additional_changesets = if tunables().get_run_hooks_on_additional_changesets() {
+        let additional_changesets = if tunables()
+            .run_hooks_on_additional_changesets()
+            .unwrap_or_default()
+        {
             let bonsais = range
                 .and_then({
                     let mut count = 0;
@@ -407,7 +413,8 @@ impl AffectedChangesets {
         if (kind == BookmarkKind::Publishing || kind == BookmarkKind::PullDefaultPublishing)
             && should_run_hooks(authz, reason)
         {
-            if reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
+            if reason == BookmarkUpdateReason::Push
+                && tunables().disable_hooks_on_plain_push().unwrap_or_default()
             {
                 // Skip running hooks for this plain push.
                 return Ok(());

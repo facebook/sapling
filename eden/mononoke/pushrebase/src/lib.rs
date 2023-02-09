@@ -480,7 +480,10 @@ async fn maybe_validate_commit(
     bcs_id: &ChangesetId,
     retry_num: PushrebaseRetryNum,
 ) -> Result<(), PushrebaseError> {
-    if tunables().get_pushrebase_disable_rebased_commit_validation() {
+    if tunables()
+        .pushrebase_disable_rebased_commit_validation()
+        .unwrap_or_default()
+    {
         return Ok(());
     }
 

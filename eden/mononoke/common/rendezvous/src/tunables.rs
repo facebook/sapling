@@ -95,7 +95,8 @@ impl RendezVousController for ConfigurableRendezVousController {
 fn max_delay() -> Duration {
     Duration::from_millis(
         ::tunables::tunables()
-            .get_rendezvous_dispatch_delay_ms()
+            .rendezvous_dispatch_delay_ms()
+            .unwrap_or_default()
             .try_into()
             .unwrap_or(0),
     )
@@ -103,7 +104,8 @@ fn max_delay() -> Duration {
 
 fn max_threshold() -> usize {
     ::tunables::tunables()
-        .get_rendezvous_dispatch_max_threshold()
+        .rendezvous_dispatch_max_threshold()
+        .unwrap_or_default()
         .try_into()
         .unwrap_or(0)
 }

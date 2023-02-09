@@ -39,7 +39,9 @@ pub(crate) struct LowGenNumChecker {
 
 impl LowGenNumChecker {
     pub(crate) fn new_from_tunables(highest_gen_num: u64) -> Self {
-        let difference = tunables().get_getbundle_high_low_gen_num_difference_threshold();
+        let difference = tunables()
+            .getbundle_high_low_gen_num_difference_threshold()
+            .unwrap_or_default();
         let low_gen_num_threshold = if difference > 0 {
             let difference = difference as u64;
             Some(highest_gen_num.saturating_sub(difference))
@@ -125,7 +127,9 @@ pub(crate) async fn compute_partial_getbundle(
     excludes: Vec<(ChangesetId, Generation)>,
     low_gen_num_checker: &LowGenNumChecker,
 ) -> Result<PartialGetBundle, Error> {
-    let traversal_limit = tunables().get_getbundle_partial_getbundle_traversal_limit();
+    let traversal_limit = tunables()
+        .getbundle_partial_getbundle_traversal_limit()
+        .unwrap_or_default();
     if traversal_limit == 0 {
         // This optimimization is disabled, just exit quickly
         return Ok(PartialGetBundle::new_no_partial_result(heads, excludes));
@@ -246,7 +250,9 @@ pub(crate) async fn low_gen_num_optimization(
         high_gens_params,
     } = split_params;
 
-    let limit = tunables().get_getbundle_low_gen_optimization_max_traversal_limit();
+    let limit = tunables()
+        .getbundle_low_gen_optimization_max_traversal_limit()
+        .unwrap_or_default();
     let limit = if limit <= 0 {
         DEFAULT_TRAVERSAL_LIMIT
     } else {

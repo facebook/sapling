@@ -26,7 +26,9 @@ use crate::Repo;
 pub(crate) fn should_run_hooks(authz: &AuthorizationContext, reason: BookmarkUpdateReason) -> bool {
     if authz.is_service() {
         reason == BookmarkUpdateReason::Pushrebase
-            && tunables().get_enable_hooks_on_service_pushrebase()
+            && tunables()
+                .enable_hooks_on_service_pushrebase()
+                .unwrap_or_default()
     } else {
         true
     }

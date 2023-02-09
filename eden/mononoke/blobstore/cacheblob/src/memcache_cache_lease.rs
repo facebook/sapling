@@ -138,8 +138,8 @@ impl MemcacheOps {
             backing_store_params.to_string()
         );
 
-        let sitever = if tunables().get_blobstore_memcache_sitever() > 0 {
-            tunables().get_blobstore_memcache_sitever() as u32
+        let sitever = if tunables().blobstore_memcache_sitever().unwrap_or_default() > 0 {
+            tunables().blobstore_memcache_sitever().unwrap_or_default() as u32
         } else {
             MC_SITEVER
         };

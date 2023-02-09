@@ -81,7 +81,7 @@ impl LandService for LandServiceThriftImpl {
             land_changesets.clone(),
         );
 
-        if tunables().get_batching_to_land_service() {
+        if tunables().batching_to_land_service().unwrap_or_default() {
             let (sender, receiver) =
                 oneshot::channel::<Result<LandChangesetsResponse, LandChangesetsError>>();
 

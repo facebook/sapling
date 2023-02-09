@@ -99,7 +99,7 @@ pub async fn lookup_filenode_id<B: Blobstore>(
     blobstore: &B,
     key: FileNodeIdPointer,
 ) -> Result<Option<HgFileNodeId>> {
-    let filenode_lookup_timeout_ms = tunables().get_filenode_lookup_timeout_ms();
+    let filenode_lookup_timeout_ms = tunables().filenode_lookup_timeout_ms().unwrap_or_default();
     let fut = blobstore.get(ctx, &key.0);
     let blob = if filenode_lookup_timeout_ms > 0 {
         let maybe_timed_out = timeout(

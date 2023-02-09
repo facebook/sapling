@@ -511,7 +511,10 @@ pub trait MegarepoOp {
         for (src_path, entry) in entries {
             match (src_path, entry) {
                 (Some(src_path), Entry::Leaf(leaf)) => {
-                    if tunables().get_megarepo_api_dont_set_file_mutable_renames() {
+                    if tunables()
+                        .megarepo_api_dont_set_file_mutable_renames()
+                        .unwrap_or_default()
+                    {
                         continue;
                     }
 
@@ -534,7 +537,10 @@ pub trait MegarepoOp {
                     }
                 }
                 (src_path, Entry::Tree(tree)) => {
-                    if tunables().get_megarepo_api_dont_set_directory_mutable_renames() {
+                    if tunables()
+                        .megarepo_api_dont_set_directory_mutable_renames()
+                        .unwrap_or_default()
+                    {
                         continue;
                     }
 

@@ -269,7 +269,9 @@ lazy_static! {
 }
 
 fn clone_timeout() -> Duration {
-    let timeout = tunables().get_repo_client_clone_timeout_secs();
+    let timeout = tunables()
+        .repo_client_clone_timeout_secs()
+        .unwrap_or_default();
     if timeout > 0 {
         Duration::from_secs(timeout as u64)
     } else {
@@ -278,7 +280,9 @@ fn clone_timeout() -> Duration {
 }
 
 fn default_timeout() -> Duration {
-    let timeout = tunables().get_repo_client_default_timeout_secs();
+    let timeout = tunables()
+        .repo_client_default_timeout_secs()
+        .unwrap_or_default();
     if timeout > 0 {
         Duration::from_secs(timeout as u64)
     } else {
@@ -286,7 +290,9 @@ fn default_timeout() -> Duration {
     }
 }
 fn getbundle_timeout() -> Duration {
-    let timeout = tunables().get_repo_client_getbundle_timeout_secs();
+    let timeout = tunables()
+        .repo_client_getbundle_timeout_secs()
+        .unwrap_or_default();
     if timeout > 0 {
         Duration::from_secs(timeout as u64)
     } else {
@@ -295,7 +301,9 @@ fn getbundle_timeout() -> Duration {
 }
 
 fn getpack_timeout() -> Duration {
-    let timeout = tunables().get_repo_client_getpack_timeout_secs();
+    let timeout = tunables()
+        .repo_client_getpack_timeout_secs()
+        .unwrap_or_default();
     if timeout > 0 {
         Duration::from_secs(timeout as u64)
     } else {
@@ -340,7 +348,10 @@ fn bundle2caps() -> String {
             ("listkeys", vec![]),
         ];
 
-        if tunables().get_mutation_advertise_for_infinitepush() {
+        if tunables()
+            .mutation_advertise_for_infinitepush()
+            .unwrap_or_default()
+        {
             caps.push(("b2x:infinitepushmutation", vec![]));
         }
 
@@ -372,20 +383,37 @@ struct UndesiredPathLogger {
 impl UndesiredPathLogger {
     fn new(ctx: CoreContext, repo: &BlobRepo) -> Result<Self, Error> {
         let tunables = tunables();
-        let repo_needs_logging =
-            repo.repo_identity().name() == tunables.get_undesired_path_repo_name_to_log().as_str();
+        let repo_needs_logging = repo.repo_identity().name()
+            == tunables
+                .undesired_path_repo_name_to_log()
+                .unwrap_or_default()
+                .as_str();
 
         let path_prefix_to_log = if repo_needs_logging {
-            MPath::new_opt(tunables.get_undesired_path_prefix_to_log().as_str())?
+            MPath::new_opt(
+                tunables
+                    .undesired_path_prefix_to_log()
+                    .unwrap_or_default()
+                    .as_str(),
+            )?
         } else {
             None
         };
 
         let path_regex_to_log = if repo_needs_logging
-            && !tunables.get_undesired_path_regex_to_log().is_empty()
+            && !tunables
+                .undesired_path_regex_to_log()
+                .unwrap_or_default()
+                .is_empty()
         {
             Some(
-                Regex::new(tunables.get_undesired_path_regex_to_log().as_str()).map_err(|e| {
+                Regex::new(
+                    tunables
+                        .undesired_path_regex_to_log()
+                        .unwrap_or_default()
+                        .as_str(),
+                )
+                .map_err(|e| {
                     error!(
                         ctx.logger(),
                         "Error initializing undesired path regex for {}: {}",
@@ -663,7 +691,8 @@ impl RepoClient {
         ctx: CoreContext,
         params: GettreepackArgs,
     ) -> BoxStream<BytesOld, Error> {
-        let hash_validation_percentage = tunables().get_hash_validation_percentage();
+        let hash_validation_percentage =
+            tunables().hash_validation_percentage().unwrap_or_default();
         let validate_hash = ((rand::random::<usize>() % 100) as i64) < hash_validation_percentage;
 
         let undesired_path_logger =
@@ -732,7 +761,8 @@ impl RepoClient {
 
             let lfs_params = self.lfs_params();
 
-            let hash_validation_percentage = tunables().get_hash_validation_percentage();
+            let hash_validation_percentage =
+                tunables().hash_validation_percentage().unwrap_or_default();
             let validate_hash =
                 rand::thread_rng().gen_ratio(hash_validation_percentage as u32, 100);
             let getpack_buffer_size = 500;
@@ -1074,7 +1104,8 @@ impl RepoClient {
                 cloned!(ctx);
                 async move {
                     let max_nodes = tunables()
-                        .get_repo_client_max_nodes_in_known_method()
+                        .repo_client_max_nodes_in_known_method()
+                        .unwrap_or_default()
                         .try_into()
                         .unwrap();
                     if max_nodes > 0 {
@@ -2499,7 +2530,11 @@ fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
         let start = Instant::now();
 
         loop {
-            let interval = match tunables().get_command_monitor_interval().try_into() {
+            let interval = match tunables()
+                .command_monitor_interval()
+                .unwrap_or_default()
+                .try_into()
+            {
                 Ok(interval) if interval > 0 => interval,
                 _ => {
                     break;
@@ -2508,7 +2543,11 @@ fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
 
             tokio::time::sleep(Duration::from_secs(interval)).await;
 
-            if tunables().get_command_monitor_remote_logging() != 0 {
+            if tunables()
+                .command_monitor_remote_logging()
+                .unwrap_or_default()
+                != 0
+            {
                 info!(
                     ctx.logger(),
                     "Command in progress. Elapsed: {}s, BlobPuts: {}, BlobGets: {}, SqlWrites: {}, SqlReadsMaster: {}, SqlReadsReplica: {}.",

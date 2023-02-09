@@ -170,7 +170,8 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
 
     pub fn to_scuba_redacted_blob_accessed(&self, ctx: &CoreContext, key: &str, operation: &str) {
         let sampling_rate = tunables()
-            .get_redacted_logging_sampling_rate()
+            .redacted_logging_sampling_rate()
+            .unwrap_or_default()
             .try_into()
             .ok()
             .and_then(NonZeroU64::new);

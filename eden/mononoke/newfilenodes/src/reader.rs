@@ -250,7 +250,9 @@ impl FilenodesReader {
                         }
                     }
 
-                    let ratio = tunables().get_filenodes_master_fallback_ratio();
+                    let ratio = tunables()
+                        .filenodes_master_fallback_ratio()
+                        .unwrap_or_default();
                     if ratio > 0 {
                         let mut rng = thread_rng();
                         let n = rng.gen_range(0..ratio);
@@ -416,7 +418,7 @@ async fn select_filenode_from_sql(
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<FilenodeResult<Option<CachedFilenode>>, ErrorKind> {
-    if tunables().get_filenodes_disabled() {
+    if tunables().filenodes_disabled().unwrap_or_default() {
         STATS::gets_disabled.add_value(1);
         return Ok(FilenodeResult::Disabled);
     }
@@ -500,7 +502,7 @@ async fn select_history_from_sql(
     recorder: &PerfCounterRecorder<'_>,
     limit: Option<u64>,
 ) -> Result<FilenodeRangeResult<CachedHistory>, Error> {
-    if tunables().get_filenodes_disabled() {
+    if tunables().filenodes_disabled().unwrap_or_default() {
         STATS::range_gets_disabled.add_value(1);
         return Ok(FilenodeRangeResult::Disabled);
     }

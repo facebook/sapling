@@ -144,7 +144,8 @@ pub async fn create_getbundle_response(
             create_hg_changeset_part(ctx, blobrepo, commits_to_send.clone(), lfs_params).await?;
         parts.push(cg_part);
 
-        if !draft_commits.is_empty() && tunables().get_mutation_generate_for_draft() {
+        if !draft_commits.is_empty() && tunables().mutation_generate_for_draft().unwrap_or_default()
+        {
             let mutations_fut = {
                 cloned!(ctx);
                 let hg_mutation_store = blobrepo.hg_mutation_store_arc();
@@ -240,7 +241,9 @@ pub async fn find_commits_to_send(
 
     let params = Params { heads, excludes };
 
-    let nodes_to_send = if !tunables().get_getbundle_use_low_gen_optimization()
+    let nodes_to_send = if !tunables()
+        .getbundle_use_low_gen_optimization()
+        .unwrap_or_default()
         || !low_gen_num_checker.is_low_gen_num(lowest_head_gen_num)
     {
         call_difference_of_union_of_ancestors_revset(

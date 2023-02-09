@@ -70,7 +70,10 @@ pub fn log_rewrite(
     duration: Duration,
     sync_result: &Result<Option<ChangesetId>, Error>,
 ) {
-    if !tunables().get_enable_logging_commit_rewrite_data() {
+    if !tunables()
+        .enable_logging_commit_rewrite_data()
+        .unwrap_or_default()
+    {
         return;
     }
 

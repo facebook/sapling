@@ -175,9 +175,13 @@ impl SourceControlServiceImpl {
         }
 
         let sampling_rate = core::num::NonZeroU64::new(if POPULAR_METHODS.contains(name) {
-            tunables().get_scs_popular_methods_sampling_rate() as u64
+            tunables()
+                .scs_popular_methods_sampling_rate()
+                .unwrap_or_default() as u64
         } else {
-            tunables().get_scs_other_methods_sampling_rate() as u64
+            tunables()
+                .scs_other_methods_sampling_rate()
+                .unwrap_or_default() as u64
         });
         if let Some(sampling_rate) = sampling_rate {
             scuba.sampled(sampling_rate);
@@ -288,9 +292,11 @@ impl SourceControlServiceImpl {
         let metadata = self.create_metadata(req_ctxt).await?;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
-            .blobstore_maybe_read_qps_limiter(tunables().get_scs_request_read_qps())
+            .blobstore_maybe_read_qps_limiter(tunables().scs_request_read_qps().unwrap_or_default())
             .await
-            .blobstore_maybe_write_qps_limiter(tunables().get_scs_request_write_qps())
+            .blobstore_maybe_write_qps_limiter(
+                tunables().scs_request_write_qps().unwrap_or_default(),
+            )
             .await
             .build();
         Ok(session)
@@ -570,7 +576,7 @@ fn log_result<T: AddScubaResponse>(
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
-        if !tunables().get_scs_error_log_sampling() {
+        if !tunables().scs_error_log_sampling().unwrap_or_default() {
             scuba.unsampled();
         }
         scuba.add("error", error.as_str());

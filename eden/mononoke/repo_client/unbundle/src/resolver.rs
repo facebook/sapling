@@ -965,7 +965,9 @@ impl<'r> Bundle2Resolver<'r> {
                         .try_collect()
                         .await?;
 
-                let commit_limit = tunables().get_unbundle_limit_num_of_commits_in_push();
+                let commit_limit = tunables()
+                    .unbundle_limit_num_of_commits_in_push()
+                    .unwrap_or_default();
                 // Ignore commit limit if hg sync job is pushing. Hg sync job is used
                 // to mirror one repository into another, and we can't discard a push
                 // even if it's too big
@@ -981,7 +983,9 @@ impl<'r> Bundle2Resolver<'r> {
                 }
 
                 let changesets = if is_infinitepush
-                    && tunables().get_filter_pre_existing_commits_on_infinitepush()
+                    && tunables()
+                        .filter_pre_existing_commits_on_infinitepush()
+                        .unwrap_or_default()
                 {
                     let hg_cs_ids = changesets.iter().map(|(id, _)| *id).collect::<Vec<_>>();
 
@@ -1026,7 +1030,9 @@ impl<'r> Bundle2Resolver<'r> {
 
                 let mut ctx = self.ctx.clone();
                 if is_infinitepush
-                    && tunables::tunables().get_commit_cloud_use_background_session_class()
+                    && tunables::tunables()
+                        .commit_cloud_use_background_session_class()
+                        .unwrap_or_default()
                 {
                     ctx.session_mut()
                         .override_session_class(SessionClass::BackgroundUnlessTooSlow);

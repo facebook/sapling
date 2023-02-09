@@ -75,15 +75,15 @@ pub enum MergeMode {
 
 fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i64>, Option<bool>) {
     let targets = tunables::tunables()
-        .get_by_repo_megarepo_squashing_config_override_targets(repo_name)
+        .by_repo_megarepo_squashing_config_override_targets(repo_name)
         .unwrap_or_default();
     if targets
         .iter()
         .any(|target| target.as_str() == target_bookmark)
     {
         (
-            tunables::tunables().get_by_repo_megarepo_override_squashing_limit(repo_name),
-            tunables::tunables().get_by_repo_megarepo_override_author_check(repo_name),
+            tunables::tunables().by_repo_megarepo_override_squashing_limit(repo_name),
+            tunables::tunables().by_repo_megarepo_override_author_check(repo_name),
         )
     } else {
         (None, None)

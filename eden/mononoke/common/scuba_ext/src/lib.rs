@@ -189,7 +189,11 @@ impl MononokeScubaSampleBuilder {
 
         self.inner.add("log_tag", log_tag);
         if let Some(mut msg) = msg.into() {
-            match tunables().get_max_scuba_msg_length().try_into() {
+            match tunables()
+                .max_scuba_msg_length()
+                .unwrap_or_default()
+                .try_into()
+            {
                 Ok(size) if size > 0 && msg.len() > size => {
                     msg.truncate(size);
                     msg.push_str(" (...)");

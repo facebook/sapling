@@ -70,7 +70,9 @@ impl BookmarkCacheRepo for Arc<Repo> {
 }
 
 fn bookmarks_timeout() -> Duration {
-    let timeout = tunables().get_repo_client_bookmarks_timeout_secs();
+    let timeout = tunables()
+        .repo_client_bookmarks_timeout_secs()
+        .unwrap_or_default();
     if timeout > 0 {
         Duration::from_secs(timeout as u64)
     } else {
@@ -248,7 +250,10 @@ where
 
     fn get_warm_bookmark_cache(&self) -> Option<&Arc<dyn BookmarksCache + Send + Sync>> {
         if self.repo.repo_client_use_warm_bookmarks_cache() {
-            if !tunables().get_disable_repo_client_warm_bookmarks_cache() {
+            if !tunables()
+                .disable_repo_client_warm_bookmarks_cache()
+                .unwrap_or_default()
+            {
                 return Some(self.repo.warm_bookmarks_cache());
             }
         }

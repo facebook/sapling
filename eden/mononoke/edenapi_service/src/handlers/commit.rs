@@ -693,7 +693,7 @@ impl EdenApiHandler for CommitMutationsHandler {
         _query: Self::QueryStringExtractor,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        if !tunables().get_mutation_generate_for_draft() {
+        if !tunables().mutation_generate_for_draft().unwrap_or_default() {
             return Ok(stream::empty().boxed());
         }
         let commits = request

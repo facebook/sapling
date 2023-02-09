@@ -494,17 +494,17 @@ impl DerivedDataManager {
             let mut attempt = 0;
             let started = Instant::now();
             let fallback_timeout = get_duration_from_tunable_or(
-                MononokeTunables::get_remote_derivation_fallback_timeout_secs,
+                MononokeTunables::remote_derivation_fallback_timeout_secs,
                 Duration::from_secs,
                 FALLBACK_TIMEOUT_SECS,
             );
             let retry_delay = get_duration_from_tunable_or(
-                MononokeTunables::get_derivation_request_retry_delay,
+                MononokeTunables::derivation_request_retry_delay,
                 Duration::from_millis,
                 RETRY_DELAY_MS,
             );
             while let Some(true) =
-                tunables::tunables().get_by_repo_enable_remote_derivation(self.repo_name())
+                tunables::tunables().by_repo_enable_remote_derivation(self.repo_name())
             {
                 if started.elapsed() >= fallback_timeout {
                     self.derived_data_scuba::<Derivable>(&None)
@@ -964,7 +964,7 @@ pub(super) struct DerivationOutcome<Derivable> {
 
 fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
     let disabled_for_repo = tunables::tunables()
-        .get_by_repo_all_derived_data_disabled(repo_name)
+        .by_repo_all_derived_data_disabled(repo_name)
         .unwrap_or(false);
 
     if disabled_for_repo {
@@ -972,7 +972,7 @@ fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
     }
 
     let disabled_for_type = tunables::tunables()
-        .get_by_repo_derived_data_types_disabled(repo_name)
+        .by_repo_derived_data_types_disabled(repo_name)
         .unwrap_or_else(Vec::new);
 
     if disabled_for_type
@@ -988,7 +988,7 @@ fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
 
 async fn derivation_disabled_watcher(repo_name: &str, derivable_name: &'static str) {
     let delay_duration = get_duration_from_tunable_or(
-        MononokeTunables::get_derived_data_disabled_watcher_delay_secs,
+        MononokeTunables::derived_data_disabled_watcher_delay_secs,
         Duration::from_secs,
         10,
     );

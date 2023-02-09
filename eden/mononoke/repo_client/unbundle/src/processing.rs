@@ -167,7 +167,10 @@ async fn run_push(
         hook_rejection_remapper,
     } = action;
 
-    if tunables().get_mutation_accept_for_infinitepush() {
+    if tunables()
+        .mutation_accept_for_infinitepush()
+        .unwrap_or_default()
+    {
         repo.hg_mutation_store()
             .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
             .await
@@ -247,7 +250,10 @@ async fn run_infinitepush(
         uploaded_hg_changeset_ids,
     } = action;
 
-    if tunables().get_mutation_accept_for_infinitepush() {
+    if tunables()
+        .mutation_accept_for_infinitepush()
+        .unwrap_or_default()
+    {
         repo.hg_mutation_store()
             .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
             .await
@@ -501,7 +507,7 @@ async fn normal_pushrebase<'a>(
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark_restriction = BookmarkKindRestrictions::OnlyPublishing;
-    let remote_mode = if tunables().get_force_local_pushrebase() {
+    let remote_mode = if tunables().force_local_pushrebase().unwrap_or_default() {
         PushrebaseRemoteMode::Local
     } else {
         repo.repo_config().pushrebase.remote_mode.clone()
@@ -640,7 +646,11 @@ async fn plain_push_bookmark(
                     .with_new_changesets(new_changesets)
                     .with_pushvars(maybe_pushvars)
                     .with_push_source(cross_repo_push_source)
-                    .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
+                    .only_log_acl_checks(
+                        tunables()
+                            .log_only_wireproto_write_acl()
+                            .unwrap_or_default(),
+                    )
                     .run(
                         ctx,
                         &AuthorizationContext::new(ctx),
@@ -684,7 +694,11 @@ async fn plain_push_bookmark(
             .with_new_changesets(new_changesets)
             .with_pushvars(maybe_pushvars)
             .with_push_source(cross_repo_push_source)
-            .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
+            .only_log_acl_checks(
+                tunables()
+                    .log_only_wireproto_write_acl()
+                    .unwrap_or_default(),
+            )
             .run(
                 ctx,
                 &AuthorizationContext::new(ctx),
@@ -721,7 +735,11 @@ async fn plain_push_bookmark(
             bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
-                .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
+                .only_log_acl_checks(
+                    tunables()
+                        .log_only_wireproto_write_acl()
+                        .unwrap_or_default(),
+                )
                 .run(ctx, &AuthorizationContext::new(ctx), repo)
                 .await
                 .context("Failed to delete bookmark")?;
@@ -748,7 +766,11 @@ async fn infinitepush_scratch_bookmark(
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
-        .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
+        .only_log_acl_checks(
+            tunables()
+                .log_only_wireproto_write_acl()
+                .unwrap_or_default(),
+        )
         .run(
             ctx,
             &AuthorizationContext::new(ctx),
@@ -780,7 +802,11 @@ async fn infinitepush_scratch_bookmark(
         )
         .only_if_scratch()
         .with_push_source(cross_repo_push_source)
-        .only_log_acl_checks(tunables().get_log_only_wireproto_write_acl())
+        .only_log_acl_checks(
+            tunables()
+                .log_only_wireproto_write_acl()
+                .unwrap_or_default(),
+        )
         .run(
             ctx,
             &AuthorizationContext::new(ctx),

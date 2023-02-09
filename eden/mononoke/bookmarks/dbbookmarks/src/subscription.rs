@@ -107,7 +107,11 @@ impl SqlBookmarksSubscription {
     }
 
     fn has_aged_out(&self) -> bool {
-        let max_age_ms = match tunables().get_bookmark_subscription_max_age_ms().try_into() {
+        let max_age_ms = match tunables()
+            .bookmark_subscription_max_age_ms()
+            .unwrap_or_default()
+            .try_into()
+        {
             Ok(duration) if duration > 0 => duration,
             _ => DEFAULT_SUBSCRIPTION_MAX_AGE_MS,
         };
@@ -169,7 +173,10 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
                     self.bookmarks.insert(book, value);
                 }
                 None => {
-                    if tunables().get_bookmark_subscription_protect_master() {
+                    if tunables()
+                        .bookmark_subscription_protect_master()
+                        .unwrap_or_default()
+                    {
                         if book.as_str() == "master" {
                             warn!(
                                 ctx.logger(),

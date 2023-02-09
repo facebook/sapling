@@ -413,7 +413,7 @@ where
     T: Send + 'static,
     Fut: Future<Output = Result<T>>,
 {
-    if tunables().get_disable_sql_auto_retries() {
+    if tunables().disable_sql_auto_retries().unwrap_or_default() {
         return do_query().await;
     }
     Ok(retry(
@@ -440,7 +440,7 @@ where
     T: Send + Abomonation + MemcacheEntity + Clone + 'static,
     Fut: Future<Output = Result<T>> + Send,
 {
-    if tunables().get_disable_sql_auto_cache() {
+    if tunables().disable_sql_auto_cache().unwrap_or_default() {
         return query_with_retry_no_cache(&do_query).await;
     }
     let fetch = || query_with_retry_no_cache(&do_query);

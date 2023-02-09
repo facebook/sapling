@@ -108,7 +108,7 @@ impl FilenodesWriter {
         filenodes: Vec<(PathHash, PreparedFilenode)>,
         replace: bool,
     ) -> Result<FilenodeResult<()>, Error> {
-        if tunables().get_filenodes_disabled() {
+        if tunables().filenodes_disabled().unwrap_or_default() {
             STATS::adds_disabled.add_value(1);
             return Ok(FilenodeResult::Disabled);
         }

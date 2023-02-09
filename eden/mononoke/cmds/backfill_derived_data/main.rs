@@ -1078,9 +1078,9 @@ async fn get_batch_ctx(ctx: &CoreContext, limit_qps: bool) -> CoreContext {
         // create new context so each derivation batch has its own trace
         // and is rate-limited
         let session = SessionContainer::builder(ctx.fb)
-            .blobstore_maybe_read_qps_limiter(tunables().get_backfill_read_qps())
+            .blobstore_maybe_read_qps_limiter(tunables().backfill_read_qps().unwrap_or_default())
             .await
-            .blobstore_maybe_write_qps_limiter(tunables().get_backfill_write_qps())
+            .blobstore_maybe_write_qps_limiter(tunables().backfill_write_qps().unwrap_or_default())
             .await
             .build();
         session.new_context(

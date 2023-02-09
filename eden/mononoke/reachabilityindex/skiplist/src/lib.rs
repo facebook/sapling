@@ -449,7 +449,10 @@ struct SkiplistLoader {
 #[async_trait]
 impl Loader<SkiplistEdgeMapping> for SkiplistLoader {
     async fn load(&mut self) -> Result<Option<SkiplistEdgeMapping>> {
-        if tunables::tunables().get_skiplist_reload_disabled() {
+        if tunables::tunables()
+            .skiplist_reload_disabled()
+            .unwrap_or_default()
+        {
             return Ok(None);
         }
         info!(self.ctx.logger(), "Fetching skiplist");
@@ -509,9 +512,11 @@ impl SkiplistIndex {
                     ctx.clone(),
                     move || {
                         std::time::Duration::from_secs(
-                            NonZeroI64::new(tunables.get_skiplist_reload_interval())
-                                .and_then(|n| u64::try_from(n.get()).ok())
-                                .unwrap_or(60 * 15),
+                            NonZeroI64::new(
+                                tunables.skiplist_reload_interval().unwrap_or_default(),
+                            )
+                            .and_then(|n| u64::try_from(n.get()).ok())
+                            .unwrap_or(60 * 15),
                         )
                     },
                     loader,
@@ -870,7 +875,9 @@ async fn process_frontier(
     max_gen: Generation,
     trace: &Option<&SkiplistTraversalTrace>,
 ) -> Result<NodeFrontier, Error> {
-    let max_skips_without_yield = tunables::tunables().get_skiplist_max_skips_without_yield();
+    let max_skips_without_yield = tunables::tunables()
+        .skiplist_max_skips_without_yield()
+        .unwrap_or_default();
     let mut skips_without_yield = 0;
     let mut node_frontier = node_frontier;
 

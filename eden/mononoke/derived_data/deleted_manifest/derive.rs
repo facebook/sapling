@@ -623,7 +623,9 @@ impl<Root: RootDeletedManifestIdCommon> RootDeletedManifestDeriver<Root> {
             .into_iter()
             .map(|bonsai| (bonsai.get_changeset_id(), bonsai))
             .collect();
-        let use_new_parallel = !tunables().get_deleted_manifest_disable_new_parallel_derivation();
+        let use_new_parallel = !tunables()
+            .deleted_manifest_disable_new_parallel_derivation()
+            .unwrap_or_default();
         borrowed!(id_to_bonsai);
         // Map of ids to derived values.
         // We need to be careful to use this for self-references, since the intermediate derived

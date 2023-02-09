@@ -126,7 +126,9 @@ impl NewBlobs {
             }
         };
 
-        let buffer_size = tunables::tunables().get_repo_client_concurrent_blob_uploads();
+        let buffer_size = tunables::tunables()
+            .repo_client_concurrent_blob_uploads()
+            .unwrap_or_default();
         let s = if buffer_size <= 0 {
             entries
                 .into_iter()

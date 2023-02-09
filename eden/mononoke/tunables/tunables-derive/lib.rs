@@ -62,10 +62,10 @@ impl TunableType {
             Self::I64 => quote! { i64 },
             Self::String => quote! { Arc<String> },
             Self::VecOfStrings => quote! { Arc<Vec<String>> },
-            Self::ByRepoBool => quote! { Option<bool> },
-            Self::ByRepoString => quote! { Option<String> },
-            Self::ByRepoI64 => quote! { Option<i64> },
-            Self::ByRepoVecOfStrings => quote! { Option<Vec<String>> },
+            Self::ByRepoBool => quote! { bool },
+            Self::ByRepoString => quote! { String },
+            Self::ByRepoI64 => quote! { i64 },
+            Self::ByRepoVecOfStrings => quote! { Vec<String> },
         }
     }
 
@@ -95,29 +95,27 @@ impl TunableType {
     }
 
     fn generate_getter_method(&self, name: Ident) -> TokenStream {
-        let method = quote::format_ident!("get_{}", name);
-        let by_repo_method = quote::format_ident!("get_by_repo_{}", name);
-
         let external_type = self.external_type();
 
         match &self {
             Self::Bool | Self::I64 => {
                 quote! {
-                    pub fn #method(&self) -> #external_type {
-                        return self.#name.load(std::sync::atomic::Ordering::Relaxed)
+                    pub fn #name(&self) -> Option<#external_type> {
+                        self.#name.load_full().map(|arc_v| *arc_v)
                     }
                 }
             }
             Self::String | Self::VecOfStrings => {
                 quote! {
-                    pub fn #method(&self) -> #external_type {
+                    pub fn #name(&self) -> Option<#external_type> {
                         self.#name.load_full()
                     }
                 }
             }
             Self::ByRepoBool | Self::ByRepoI64 | Self::ByRepoString | Self::ByRepoVecOfStrings => {
+                let by_repo_method = quote::format_ident!("by_repo_{}", name);
                 quote! {
-                    pub fn #by_repo_method(&self, repo: &str) -> #external_type {
+                    pub fn #by_repo_method(&self, repo: &str) -> Option<#external_type> {
                         self.#name.load_full().get(repo).map(|val| (*val).clone())
                     }
                 }
@@ -213,16 +211,15 @@ where
         match ty {
             TunableType::I64 | TunableType::Bool => {
                 body.extend(quote! {
-                    #(self.#names.store(
-                      tunables.get(stringify!(#names)).cloned().unwrap_or_default(),
-                      std::sync::atomic::Ordering::Relaxed
-                    );)*
+                    #(
+                        self.#names.swap(tunables.get(stringify!(#names)).map(|v| Arc::new(*v)));
+                    )*
                 });
             }
             TunableType::String | TunableType::VecOfStrings => {
                 body.extend(quote! {
-                    #(self.#names.swap(
-                      Arc::new(tunables.get(stringify!(#names)).cloned().unwrap_or_default())
+                    #(
+                        self.#names.swap(tunables.get(stringify!(#names)).map(|v| Arc::new(v.clone()))
                     );)*
                 });
             }
@@ -279,8 +276,8 @@ fn resolve_type(ty: Type) -> TunableType {
     if let Type::Path(p) = ty {
         if let Some(ident) = p.path.get_ident() {
             match &ident.to_string()[..] {
-                "AtomicBool" => return TunableType::Bool,
-                "AtomicI64" => return TunableType::I64,
+                "TunableBool" => return TunableType::Bool,
+                "TunableI64" => return TunableType::I64,
                 "TunableVecOfStrings" => return TunableType::VecOfStrings,
                 // TunableString is a type alias of ArcSwap<String>.
                 // p.path.get_ident() returns None for ArcSwap<String>

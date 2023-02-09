@@ -77,7 +77,7 @@ impl ChangesetsCommitGraphCompat {
         css: Vec1<(ChangesetId, ChangesetParents)>,
     ) {
         if !tunables()
-            .get_by_repo_enable_writing_to_new_commit_graph(&self.repo_name)
+            .by_repo_enable_writing_to_new_commit_graph(&self.repo_name)
             .unwrap_or(false)
         {
             return;
@@ -91,7 +91,9 @@ impl ChangesetsCommitGraphCompat {
         scuba.add("changeset_count", css.len());
         scuba.add("repo_name", self.repo_name.as_str());
 
-        let write_timeout = tunables().get_commit_graph_writes_timeout_ms() as u64;
+        let write_timeout = tunables()
+            .commit_graph_writes_timeout_ms()
+            .unwrap_or_default() as u64;
 
         // We use add_recursive because some parents might be missing
         // from the new commit graph.

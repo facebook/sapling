@@ -112,7 +112,9 @@ impl IdMap for IdMapMemWrites {
         if res.is_ok() {
             let new_size = self.mem.len();
             let old_size = new_size - mappings_size;
-            let sampling_rate = tunables().get_segmented_changelog_idmap_log_sampling_rate();
+            let sampling_rate = tunables()
+                .segmented_changelog_idmap_log_sampling_rate()
+                .unwrap_or_default();
             let sampling_rate = if sampling_rate <= 0 {
                 DEFAULT_LOG_SAMPLING_RATE
             } else {

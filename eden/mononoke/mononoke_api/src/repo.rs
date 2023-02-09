@@ -280,7 +280,7 @@ async fn maybe_push_redirector(
     repo: &Arc<Repo>,
     repos: &MononokeRepos<Repo>,
 ) -> Result<Option<PushRedirector<Repo>>, MononokeError> {
-    if tunables().get_disable_scs_pushredirect() {
+    if tunables().disable_scs_pushredirect().unwrap_or_default() {
         return Ok(None);
     }
     let base = match repo.repo_handler_base().maybe_push_redirector_base.as_ref() {

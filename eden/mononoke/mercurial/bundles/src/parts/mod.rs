@@ -315,7 +315,9 @@ where
 
     builder.add_mparam("category", "manifests")?;
 
-    let mut buffer_size = tunables::tunables().get_repo_client_gettreepack_buffer_size();
+    let mut buffer_size = tunables::tunables()
+        .repo_client_gettreepack_buffer_size()
+        .unwrap_or_default();
     if buffer_size <= 0 {
         buffer_size = 1000
     }

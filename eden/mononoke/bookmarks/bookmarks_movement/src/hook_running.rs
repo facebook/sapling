@@ -72,7 +72,10 @@ pub async fn run_hooks(
     push_authored_by: PushAuthoredBy,
 ) -> Result<(), BookmarkMovementError> {
     if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
-        if tunables().get_disable_running_hooks_in_pushredirected_repo() {
+        if tunables()
+            .disable_running_hooks_in_pushredirected_repo()
+            .unwrap_or_default()
+        {
             let cs_ids = take_n_changeset_ids(changesets, 10);
             ctx.scuba()
                 .clone()

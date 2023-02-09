@@ -736,7 +736,10 @@ impl BookmarksCoordinator {
 
         let cur_bookmarks = self.bookmarks.with_read(|bookmarks| bookmarks.clone());
 
-        let new_bookmarks = if tunables().get_warm_bookmark_cache_disable_subscription() {
+        let new_bookmarks = if tunables()
+            .warm_bookmark_cache_disable_subscription()
+            .unwrap_or_default()
+        {
             let books = self
                 .repo
                 .bookmarks()
@@ -864,7 +867,8 @@ impl BookmarksCoordinator {
                     }
 
                     let delay_ms = match tunables()
-                        .get_warm_bookmark_cache_poll_interval_ms()
+                        .warm_bookmark_cache_poll_interval_ms()
+                        .unwrap_or_default()
                         .try_into()
                     {
                         Ok(duration) if duration > 0 => duration,

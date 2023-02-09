@@ -444,7 +444,7 @@ impl RepoFactory {
     ) -> Result<Arc<RedactedBlobs>> {
         self.redacted_blobs
             .get_or_try_init(db_config, || async move {
-                let redacted_blobs = if tunables().get_redaction_config_from_xdb() {
+                let redacted_blobs = if tunables().redaction_config_from_xdb().unwrap_or_default() {
                     let redacted_content_store =
                         self.open::<SqlRedactedContentStore>(db_config).await?;
                     // Fetch redacted blobs in a separate task so that slow polls
@@ -1494,7 +1494,8 @@ impl RepoFactory {
             const KEY_PREFIX: &str = "scm.mononoke.sql";
             const MC_CODEVER: u32 = 0;
             let sitever: u32 = tunables()
-                .get_sql_memcache_sitever()
+                .sql_memcache_sitever()
+                .unwrap_or_default()
                 .try_into()
                 .unwrap_or(0);
             Some(sql_query_config::CachingConfig {

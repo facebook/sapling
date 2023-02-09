@@ -262,7 +262,8 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
         if let Some(duration) = info.duration {
             // If tunables say we should, log high values unsampled
             if let Ok(threshold) = tunables::tunables()
-                .get_edenapi_unsampled_duration_threshold_ms()
+                .edenapi_unsampled_duration_threshold_ms()
+                .unwrap_or_default()
                 .try_into()
             {
                 if duration.as_millis_unchecked() > threshold {

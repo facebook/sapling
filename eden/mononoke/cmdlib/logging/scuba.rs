@@ -67,7 +67,9 @@ impl ScubaLoggingArgs {
         let maybe_scuba = match self.warm_bookmark_cache_scuba_dataset.clone() {
             Some(scuba) => {
                 let hostname = hostname::get_hostname()?;
-                let sampling_pct = tunables().get_warm_bookmark_cache_logging_sampling_pct() as u64;
+                let sampling_pct = tunables()
+                    .warm_bookmark_cache_logging_sampling_pct()
+                    .unwrap_or_default() as u64;
                 let mut hasher = DefaultHasher::new();
                 hostname.hash(&mut hasher);
 

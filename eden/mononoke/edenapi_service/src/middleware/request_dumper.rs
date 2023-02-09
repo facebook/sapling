@@ -136,7 +136,11 @@ impl RequestDumperMiddleware {
 impl Middleware for RequestDumperMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let logger = &RequestContext::borrow_from(state).logger;
-        let sample_ratio: u64 = match tunables().get_edenapi_req_dumper_sample_ratio().try_into() {
+        let sample_ratio: u64 = match tunables()
+            .edenapi_req_dumper_sample_ratio()
+            .unwrap_or_default()
+            .try_into()
+        {
             Ok(n) => n,
             Err(e) => {
                 warn!(

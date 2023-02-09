@@ -41,7 +41,10 @@ impl RepoContext {
         ) -> CreateBookmarkOp<'a> {
             let mut op = CreateBookmarkOp::new(bookmark, target, BookmarkUpdateReason::ApiRequest)
                 .with_pushvars(pushvars);
-            if !tunables().get_disable_commit_scribe_logging_scs() {
+            if !tunables()
+                .disable_commit_scribe_logging_scs()
+                .unwrap_or_default()
+            {
                 op = op.log_new_public_commits_to_scribe();
             }
             op

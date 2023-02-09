@@ -59,7 +59,8 @@ impl CacheHandlers {
         let memcache = MemcacheClient::new(fb)?.into();
         let presence_cachelib = pool.clone().into();
         let sitever = tunables::tunables()
-            .get_mutable_renames_sitever()
+            .mutable_renames_sitever()
+            .unwrap_or_default()
             .try_into()
             .context("While converting from i64 to u32 sitever")?;
         let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, sitever);

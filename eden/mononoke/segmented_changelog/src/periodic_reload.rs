@@ -69,10 +69,11 @@ impl PeriodicReloadSegmentedChangelog {
 
         // This is a future to trigger force reload of segmented changelog
         let fut = async move {
-            let mut force_reload_val =
-                tunables().get_by_repo_segmented_changelog_force_reload(&name);
+            let mut force_reload_val = tunables().by_repo_segmented_changelog_force_reload(&name);
             loop {
-                let mut jitter = tunables().get_segmented_changelog_force_reload_jitter_secs();
+                let mut jitter = tunables()
+                    .segmented_changelog_force_reload_jitter_secs()
+                    .unwrap_or_default();
                 if jitter <= 0 {
                     jitter = 30;
                 }
@@ -82,7 +83,7 @@ impl PeriodicReloadSegmentedChangelog {
                 tokio::time::sleep(jitter).await;
 
                 let new_force_reload_val =
-                    tunables().get_by_repo_segmented_changelog_force_reload(&name);
+                    tunables().by_repo_segmented_changelog_force_reload(&name);
                 if force_reload_val != new_force_reload_val {
                     info!(ctx_clone.logger(), "force reloading segmented changelog");
                     force_reload_notify_clone.notify_waiters();

@@ -166,8 +166,8 @@ impl CachingBonsaiHgMapping {
     fn create_key_gen() -> KeyGen {
         let key_prefix = "scm.mononoke.bonsai_hg_mapping";
 
-        let sitever = if tunables().get_bonsai_hg_mapping_sitever() > 0 {
-            tunables().get_bonsai_hg_mapping_sitever() as u32
+        let sitever = if tunables().bonsai_hg_mapping_sitever().unwrap_or_default() > 0 {
+            tunables().bonsai_hg_mapping_sitever().unwrap_or_default() as u32
         } else {
             thrift::MC_SITEVER as u32
         };

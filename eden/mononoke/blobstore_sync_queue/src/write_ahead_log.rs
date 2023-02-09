@@ -399,7 +399,10 @@ impl BlobstoreWal for SqlBlobstoreWal {
     }
 
     async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
-        if !tunables().get_wal_disable_rendezvous_on_deletes() {
+        if !tunables()
+            .wal_disable_rendezvous_on_deletes()
+            .unwrap_or_default()
+        {
             self.delete_rendezvous
                 .dispatch(ctx.fb, entries.iter().cloned().collect(), || {
                     let connections = self.write_connections.clone();
@@ -429,7 +432,7 @@ impl SqlShardedConstruct for SqlBlobstoreWal {
             mut read_master_connections,
             mut write_connections,
         } = connections;
-        if !tunables().get_disable_wal_read_committed() {
+        if !tunables().disable_wal_read_committed().unwrap_or_default() {
             for conn in read_master_connections
                 .iter_mut()
                 .chain(write_connections.iter_mut())

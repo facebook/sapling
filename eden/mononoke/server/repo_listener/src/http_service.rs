@@ -236,7 +236,8 @@ where
             .map_err(HttpError::BadRequest)?;
 
         let zstd_level: i32 = tunables::tunables()
-            .get_zstd_compression_level()
+            .zstd_compression_level()
+            .unwrap_or_default()
             .try_into()
             .unwrap_or_default();
         let compression = match req.headers().get(HEADER_CLIENT_COMPRESSION) {
@@ -356,7 +357,10 @@ where
         pq: http::uri::PathAndQuery,
         body: Body,
     ) -> Result<Response<Body>, HttpError> {
-        if tunables().get_disable_http_service_edenapi() {
+        if tunables()
+            .disable_http_service_edenapi()
+            .unwrap_or_default()
+        {
             let res = Response::builder()
                 .status(http::StatusCode::SERVICE_UNAVAILABLE)
                 .body("EdenAPI service is killswitched".into())

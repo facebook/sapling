@@ -96,7 +96,10 @@ impl PushrebaseTransactionHook for CrossRepoSyncTransactionHook {
         _ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        if tunables().get_xrepo_sync_disable_all_syncs() {
+        if tunables()
+            .xrepo_sync_disable_all_syncs()
+            .unwrap_or_default()
+        {
             let e: Error = ErrorKind::XRepoSyncDisabled.into();
             return Err(e.into());
         }

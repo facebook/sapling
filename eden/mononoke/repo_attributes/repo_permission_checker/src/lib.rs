@@ -81,8 +81,8 @@ pub trait RepoPermissionChecker: Send + Sync + 'static {
         ctx: &CoreContext,
         identities: &MononokeIdentitySet,
     ) -> bool {
-        let log = tunables().get_log_draft_acl_failures();
-        let enforce = tunables().get_enforce_draft_acl();
+        let log = tunables().log_draft_acl_failures().unwrap_or_default();
+        let enforce = tunables().enforce_draft_acl().unwrap_or_default();
         if log || enforce {
             let (draft_result, write_result) = join!(
                 self.check_if_draft_access_allowed(identities),

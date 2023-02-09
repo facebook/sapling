@@ -48,7 +48,8 @@ async fn should_check_repo_lock(
                         .check_if_read_only_bypass_allowed(idents)
                         .await;
 
-                    let enforce_acl_check = tunables().get_enforce_bypass_readonly_acl();
+                    let enforce_acl_check =
+                        tunables().enforce_bypass_readonly_acl().unwrap_or_default();
 
                     if !bypass_allowed && enforce_acl_check {
                         return true;

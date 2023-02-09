@@ -153,7 +153,9 @@ impl DerivedDataManager {
     }
 
     pub(super) fn should_log_slow_derivation(&self, duration: Duration) -> bool {
-        let threshold = tunables::tunables().get_derived_data_slow_derivation_threshold_secs();
+        let threshold = tunables::tunables()
+            .derived_data_slow_derivation_threshold_secs()
+            .unwrap_or_default();
         let threshold = match threshold.try_into() {
             Ok(t) if t > 0 => t,
             _ => return false,

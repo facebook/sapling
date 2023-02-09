@@ -655,7 +655,7 @@ impl ChangesetContext {
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
         let new_commit_graph_rollout_pct = tunables()
-            .get_by_repo_new_commit_graph_is_ancestor_percentage(self.repo().name())
+            .by_repo_new_commit_graph_is_ancestor_percentage(self.repo().name())
             .unwrap_or(0);
         let use_new_commit_graph =
             ((rand::random::<usize>() % 100) as i64) < new_commit_graph_rollout_pct;
@@ -1199,9 +1199,11 @@ impl ChangesetContext {
         };
         Ok(match basenames_and_suffixes {
             Some(basenames_and_suffixes)
-                if !tunables().get_disable_basename_suffix_skeleton_manifest()
+                if !tunables()
+                    .disable_basename_suffix_skeleton_manifest()
+                    .unwrap_or_default()
                     && (!basenames_and_suffixes.has_right()
-                        || tunables().get_enable_bssm_suffix_query()) =>
+                        || tunables().enable_bssm_suffix_query().unwrap_or_default()) =>
             {
                 self.find_files_with_bssm(prefixes, basenames_and_suffixes, ordering)
                     .await?

@@ -774,7 +774,11 @@ where
                 Ok(())
             };
 
-            if tunables().get_xrepo_disable_commit_sync_lease() || disable_lease {
+            if tunables()
+                .xrepo_disable_commit_sync_lease()
+                .unwrap_or_default()
+                || disable_lease
+            {
                 sync().await?;
             } else {
                 run_with_lease(ctx, &self.x_repo_sync_lease, lease_key, checker, sync).await?;
@@ -1631,7 +1635,10 @@ where
         maybe_target_bcs_id: Option<ChangesetId>,
         version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
-        if tunables().get_xrepo_sync_disable_all_syncs() {
+        if tunables()
+            .xrepo_sync_disable_all_syncs()
+            .unwrap_or_default()
+        {
             return Err(ErrorKind::XRepoSyncDisabled.into());
         }
 
@@ -1731,7 +1738,10 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     syncer: &'a CommitSyncer<M, R>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
-    if tunables().get_xrepo_sync_disable_all_syncs() {
+    if tunables()
+        .xrepo_sync_disable_all_syncs()
+        .unwrap_or_default()
+    {
         return Err(ErrorKind::XRepoSyncDisabled.into());
     }
 
@@ -1860,7 +1870,10 @@ where
             break;
         }
 
-        let leased = if tunables().get_xrepo_disable_commit_sync_lease() {
+        let leased = if tunables()
+            .xrepo_disable_commit_sync_lease()
+            .unwrap_or_default()
+        {
             true
         } else {
             let result = lease.try_add_put_lease(&lease_key).await;

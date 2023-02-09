@@ -344,7 +344,8 @@ fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
 
     let mut scuba = ctx.scuba().clone();
     if let Ok(Some(v)) = tunables()
-        .get_deduplicated_put_sampling_rate()
+        .deduplicated_put_sampling_rate()
+        .unwrap_or_default()
         .try_into()
         .map(NonZeroU64::new)
     {

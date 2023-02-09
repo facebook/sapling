@@ -144,7 +144,10 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlPushrebaseMutationMappingConn
 #[async_trait]
 impl PushrebaseMutationMapping for SqlPushrebaseMutationMapping {
     fn get_hook(&self) -> Option<Box<dyn PushrebaseHook>> {
-        if tunables().get_disable_save_mapping_pushrebase_hook() {
+        if tunables()
+            .disable_save_mapping_pushrebase_hook()
+            .unwrap_or_default()
+        {
             None
         } else {
             Some(SaveMappingPushrebaseHook::new(self.repo_id))

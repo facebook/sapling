@@ -115,7 +115,11 @@ pub struct CachedBookmarks {
 }
 
 fn ttl() -> Option<Duration> {
-    let ttl_ms = match tunables().get_bookmarks_cache_ttl_ms().try_into() {
+    let ttl_ms = match tunables()
+        .bookmarks_cache_ttl_ms()
+        .unwrap_or_default()
+        .try_into()
+    {
         Ok(0) => 2000,            // 0 means default.
         Ok(duration) => duration, // Use provided duration.
         Err(_) => return None,    // Negative values mean no cache.

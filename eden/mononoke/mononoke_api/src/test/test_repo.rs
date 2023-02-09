@@ -654,7 +654,10 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .try_collect()
         .await?;
     // BSSM have different but consistent orders
-    let expected_files = if tunables().get_disable_basename_suffix_skeleton_manifest() {
+    let expected_files = if tunables()
+        .disable_basename_suffix_skeleton_manifest()
+        .unwrap_or_default()
+    {
         vec![
             MononokePath::try_from("1")?,
             MononokePath::try_from("dir1/file_1_in_dir1")?,
@@ -690,7 +693,10 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .try_collect()
         .await?;
-    let expected_files = if tunables().get_disable_basename_suffix_skeleton_manifest() {
+    let expected_files = if tunables()
+        .disable_basename_suffix_skeleton_manifest()
+        .unwrap_or_default()
+    {
         vec![
             MononokePath::try_from("dir1/subdir1/subsubdir2/file_1")?,
             MononokePath::try_from("dir2/file_1_in_dir2")?,

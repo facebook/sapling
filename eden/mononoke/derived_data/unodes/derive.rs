@@ -402,7 +402,7 @@ async fn create_unode_file(
 // But we consider this case is rare enough to not worry about it.
 
 fn can_reuse(unode_version: UnodeVersion) -> bool {
-    unode_version == UnodeVersion::V2 || tunables::tunables().get_force_unode_v2()
+    unode_version == UnodeVersion::V2 || tunables::tunables().force_unode_v2().unwrap_or_default()
 }
 
 async fn reuse_manifest_parent(

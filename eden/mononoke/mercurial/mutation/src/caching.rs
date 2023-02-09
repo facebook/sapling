@@ -147,8 +147,8 @@ impl CachedHgMutationStore {
 
     fn create_key_gen() -> KeyGen {
         let key_prefix = "scm.mononoke.hg_mutation_store";
-        let sitever = if tunables().get_hg_mutation_store_sitever() > 0 {
-            tunables().get_hg_mutation_store_sitever() as u32
+        let sitever = if tunables().hg_mutation_store_sitever().unwrap_or_default() > 0 {
+            tunables().hg_mutation_store_sitever().unwrap_or_default() as u32
         } else {
             thrift::MC_SITEVER as u32
         };
@@ -240,8 +240,14 @@ impl EntityStore<HgMutationCacheEntry> for CacheRequest<'_> {
     }
 
     fn cache_determinator(&self, _: &HgMutationCacheEntry) -> CacheDisposition {
-        let ttl = if tunables().get_hg_mutation_store_caching_ttl_secs() > 0 {
-            tunables().get_hg_mutation_store_caching_ttl_secs() as u64
+        let ttl = if tunables()
+            .hg_mutation_store_caching_ttl_secs()
+            .unwrap_or_default()
+            > 0
+        {
+            tunables()
+                .hg_mutation_store_caching_ttl_secs()
+                .unwrap_or_default() as u64
         } else {
             DEFAULT_TTL_SECS
         };

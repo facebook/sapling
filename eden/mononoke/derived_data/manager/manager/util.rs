@@ -37,7 +37,7 @@ impl DerivedDataManager {
     /// the one that should be used for derivation.
     pub(super) fn set_derivation_session_class(&self, mut ctx: CoreContext) -> CoreContext {
         if tunables::tunables()
-            .get_by_repo_derived_data_use_background_session_class(self.repo_name())
+            .by_repo_derived_data_use_background_session_class(self.repo_name())
             .unwrap_or(false)
         {
             ctx.session_mut()
@@ -79,7 +79,9 @@ impl DerivedDataManager {
     }
 
     pub(super) fn max_parallel_derivations(&self) -> usize {
-        let buffer_size = tunables::tunables().get_derived_data_parallel_derivation_buffer();
+        let buffer_size = tunables::tunables()
+            .derived_data_parallel_derivation_buffer()
+            .unwrap_or_default();
         if buffer_size > 0 {
             buffer_size
                 .try_into()

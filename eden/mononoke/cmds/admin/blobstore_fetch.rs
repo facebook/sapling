@@ -204,7 +204,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let maybe_redacted_blobs_fut = async {
         match redaction {
             Redaction::Enabled => {
-                let redacted_blobs = if tunables().get_redaction_config_from_xdb() {
+                let redacted_blobs = if tunables().redaction_config_from_xdb().unwrap_or_default() {
                     let redacted_blobs_db = args::not_shardmanager_compatible::open_sql::<
                         SqlRedactedContentStore,
                     >(fb, config_store, matches)?;
