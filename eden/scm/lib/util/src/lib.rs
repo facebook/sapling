@@ -21,5 +21,6 @@ pub mod lock;
 pub mod math;
 pub mod path;
 pub mod sys;
+pub mod utf8;
 
 pub use bgprocess::run_background;
