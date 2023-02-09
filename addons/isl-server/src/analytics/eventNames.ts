@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export type TrackEventName = 'Startup' | 'ClickedRefresh' | 'RunOperation' | 'LoadMoreCommits';
+export type TrackEventName =
+  | 'ClientConnection'
+  | 'ClickedRefresh'
+  | 'RunOperation'
+  | 'LoadMoreCommits';
 
 export type TrackErrorName = 'TopLevelError';
