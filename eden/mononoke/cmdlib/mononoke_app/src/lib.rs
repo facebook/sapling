@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![feature(let_chains)]
+
 mod app;
 pub mod args;
 mod builder;

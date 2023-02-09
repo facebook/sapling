@@ -238,12 +238,17 @@ where
             }
             // If the service name is known, then by default we need to reload or add all repos
             // that are in RepoConfig AND are shallow-sharded (i.e. NOT deep-sharded).
-            else if let Some(ref service_name) = self.service_name {
+            else if repo_config.enabled && let Some(ref service_name) = self.service_name {
                 if let Some(ref config) = repo_config.deep_sharding_config {
-                    // Repo is shallow sharded for this service so should be loaded.
-                    if !config.status.get(service_name).cloned().unwrap_or(false) {
+                    // Repo is shallow sharded for this service AND enabled, so should be loaded.
+                    if !config.status.get(service_name).cloned().unwrap_or(false)
+                    {
                         repos_to_load.push((repo_name, repo_config));
                     }
+                } else {
+                    // Service specific sharding config doesn't exist for repo but the repo is
+                    // enabled so should be considered as shallow-sharded.
+                    repos_to_load.push((repo_name, repo_config));
                 }
             }
             // The repos present on the server but not part of RepoConfigs are ignored by
