@@ -14,7 +14,6 @@ use megarepo_api::MegarepoApi;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
-use prettytable::cell;
 use prettytable::format;
 use prettytable::row;
 use prettytable::Table;
