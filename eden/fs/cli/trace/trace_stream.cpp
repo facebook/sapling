@@ -797,12 +797,15 @@ int trace_inode_retroactive(
 
         fmt::print("Last {} inode events\n", events.size());
 
-        int max_inode =
-            *std::max_element(
-                 events.begin(),
-                 events.end(),
-                 [](const auto& a, const auto& b) { return a.ino() < b.ino(); })
-                 ->ino();
+        int max_inode = 0;
+        auto max_inode_event = std::max_element(
+            events.begin(), events.end(), [](const auto& a, const auto& b) {
+              return a.ino() < b.ino();
+            });
+        if (max_inode_event != events.end()) {
+          max_inode = *max_inode_event->ino();
+        }
+
         size_t inode_width = std::max(
             kStartingInodeWidth, folly::to_ascii_size_decimal(max_inode));
 
