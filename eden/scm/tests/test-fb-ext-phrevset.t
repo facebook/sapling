@@ -41,6 +41,13 @@
   $ hg log -r D1234 --config phrevset.callsign=C,CALLSIGN -T '{desc}\n'
   A
 
+# Callsign set by .arcconfig works when phrevset.callsign is absent
+
+  $ echo '{"repository.callsign":"CALLSIGN"}' > .arcconfig
+  $ hg commit -m 'add arcconfig' -A .arcconfig
+  $ hg log -r D1234 --config phrevset.callsign= -T '{desc}\n'
+  A
+
 # Phabricator provides an unknown commit hash.
 
   $ setconfig phrevset.mock-D1234=6008bb23d775556ff6c3528541ca5a2177b4bb92

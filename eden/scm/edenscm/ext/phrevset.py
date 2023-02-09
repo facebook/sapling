@@ -13,7 +13,9 @@ Automatically handles commits already in subversion, or whose hash has
 changed since submitting to Differential (due to amends or rebasing).
 
 Requires arcanist to be installed and properly configured.
-Repositories should include a callsign in their hgrc.
+Repositories should include a callsign in their hgrc, or specified
+in ``.arcconfig`` as ``repository.callsign``.
+
 
 Example for www::
 
@@ -27,7 +29,7 @@ Example for www::
 """
 
 import re
-from typing import Optional, Pattern
+from typing import List, Optional, Pattern
 
 from edenscm import autopull, error, hg, json, namespaces, pycompat, registrar, util
 from edenscm.autopull import pullattempt
@@ -184,7 +186,7 @@ def parsedesc(repo, resp, ignoreparsefailure):
             raise error.Abort("Cannot parse Conduit description '%s'" % desc)
 
     callsign = match.group("callsign")
-    repo_callsigns = repo.ui.configlist("phrevset", "callsign")
+    repo_callsigns = _get_callsigns(repo)
 
     if callsign not in repo_callsigns:
         raise error.Abort(
@@ -203,7 +205,7 @@ def diffidtonode(repo, diffid):
     This function does not raise.
     """
 
-    repo_callsigns = repo.ui.configlist("phrevset", "callsign")
+    repo_callsigns = _get_callsigns(repo)
     if not repo_callsigns:
         msg = _("phrevset.callsign is not set - doing a linear search\n")
         hint = _("This will be slow if the diff was not committed recently\n")
@@ -386,3 +388,15 @@ def _autopullphabdiff(
             # HASH".
             friendlyname = "D%s (%s)" % (diffid, hex(node))
             return autopull.pullattempt(headnodes=[node], friendlyname=friendlyname)
+
+
+def _get_callsigns(repo) -> List[str]:
+    callsigns = repo.ui.configlist("phrevset", "callsign")
+    if not callsigns:
+        # Try to read from '.arcconfig'
+        try:
+            parsed = json.loads(repo["."][".arcconfig"].data())
+            callsigns = [parsed["repository.callsign"]]
+        except Exception:
+            pass
+    return callsigns
