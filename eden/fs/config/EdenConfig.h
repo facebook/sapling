@@ -935,7 +935,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<std::string> overlaySynchronousMode{
       "overlay:synchronous-mode",
-      "normal",
+      folly::kIsWindows ? "off" : "normal",
       this};
 
   /**
