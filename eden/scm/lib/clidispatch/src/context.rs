@@ -15,6 +15,7 @@ use configmodel::ConfigExt;
 use hgplain::is_plain;
 use io::IsTty;
 use io::IO;
+use termlogger::TermLogger;
 
 use crate::global_flags::HgGlobalOpts;
 
@@ -79,5 +80,11 @@ where
         }
 
         Ok(())
+    }
+
+    pub fn logger(&self) -> TermLogger {
+        TermLogger::new(self.io())
+            .with_quiet(self.global_opts().quiet)
+            .with_verbose(self.global_opts().verbose)
     }
 }

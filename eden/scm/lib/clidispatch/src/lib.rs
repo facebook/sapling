@@ -13,9 +13,9 @@ pub mod dispatch;
 pub mod errors;
 pub mod global_flags;
 pub mod optional_repo;
-pub mod output;
 pub mod util;
 
 pub use context::RequestContext as ReqCtx;
 pub use io;
 pub use optional_repo::OptionalRepo;
+pub use termlogger::TermLogger;

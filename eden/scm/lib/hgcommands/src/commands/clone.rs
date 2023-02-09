@@ -14,9 +14,8 @@ use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
-use clidispatch::output::new_logger;
-use clidispatch::output::TermLogger;
 use clidispatch::ReqCtx;
+use clidispatch::TermLogger;
 use cliparser::define_flags;
 use configmodel::ConfigExt;
 use migration::feature::deprecate;
@@ -83,7 +82,7 @@ define_flags! {
 }
 
 pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
-    let mut logger = new_logger(ctx.io(), ctx.global_opts());
+    let mut logger = ctx.logger();
 
     let deprecated_options = [
         ("--rev", "rev-option", ctx.opts.rev.is_empty()),
