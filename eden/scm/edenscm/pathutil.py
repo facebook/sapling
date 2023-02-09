@@ -213,27 +213,56 @@ def canonpath(root, cwd, myname, auditor=None):
         # Determine whether `name' is in the hierarchy at or beneath `root',
         # by iterating name=dirname(name) until that causes no change (can't
         # check name == '/', because that doesn't work on windows). The list
-        # `rel' holds the reversed list of components making up the relative
+        # `tail' holds the reversed list of components making up the relative
         # file name we want.
-        rel = []
+        tail = []
+        head = name
         while True:
             try:
-                s = util.samefile(name, root)
+                s = util.samefile(head, root)
             except OSError:
                 s = False
             if s:
-                if not rel:
+                if not tail:
                     # name was actually the same as root (maybe a symlink)
                     return ""
-                rel.reverse()
-                name = os.path.join(*rel)
+                tail.reverse()
+                name = os.path.join(*tail)
                 auditor(name)
                 return util.pconvert(name)
-            dirname, basename = util.split(name)
-            rel.append(basename)
-            if dirname == name:
+            dirname, basename = util.split(head)
+            if dirname == head:
                 break
-            name = dirname
+            tail.append(basename)
+            head = dirname
+
+        # At this point we know "name" doesn't appear to be under
+        # "root". However, "name" could contain a symlink that points
+        # into a subdirectory of "root". Try resolving the first
+        # symlink and invoking ourself recursively to see if we end up
+        # under "root". We don't want to resolve all symlinks at once
+        # since later symlinks in "name" could by inside the repo, and
+        # we don't want to resolve those.
+        maybesymlink = head
+        while tail:
+            part = tail.pop()
+
+            maybesymlink = os.path.join(maybesymlink, part)
+            if os.path.islink(maybesymlink):
+                # This realpath() call should probably use strict=True when available in Python 3.10.
+                dest = os.path.realpath(maybesymlink)
+                if dest == maybesymlink:
+                    # If realpath couldn't resolve the symlink, bail.
+                    break
+
+                return canonpath(
+                    root,
+                    cwd,
+                    os.path.join(
+                        dest,
+                        *reversed(tail),
+                    ),
+                )
 
         # A common mistake is to use -R, but specify a file relative to the repo
         # instead of cwd.  Detect that case, and provide a hint to the user.
