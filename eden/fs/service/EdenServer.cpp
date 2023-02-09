@@ -184,6 +184,7 @@ std::shared_ptr<Notifier> getPlatformNotifier(
       auto notifier = std::make_shared<WindowsNotifier>(
           config, version, std::chrono::steady_clock::now());
       notifier->initialize();
+      return notifier;
     } catch (const std::exception& ex) {
       auto reason = folly::exceptionStr(ex);
       XLOG(WARN) << "Couldn't start E-Menu: " << reason;
