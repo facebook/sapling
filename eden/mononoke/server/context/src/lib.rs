@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-#![feature(never_type, result_flattening)]
+#![feature(never_type)]
+#![feature(result_flattening)]
 
 pub use session_id::SessionId;
 

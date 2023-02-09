@@ -7,7 +7,8 @@
 
 //! Scaffolding that's generally useful to build CLI tools on top of Mononoke.
 
-#![feature(never_type, trait_alias)]
+#![feature(never_type)]
+#![feature(trait_alias)]
 
 pub mod args;
 pub mod helpers;
