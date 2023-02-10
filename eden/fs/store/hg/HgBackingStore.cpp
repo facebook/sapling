@@ -16,6 +16,7 @@
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/executors/task_queue/UnboundedBlockingQueue.h>
+#include <folly/executors/thread_factory/InitThreadFactory.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -93,34 +94,25 @@ ObjectId hashFromRootId(const RootId& root) {
  * Thread factory that sets thread name and initializes a thread local
  * HgImporter.
  */
-class HgImporterThreadFactory : public folly::ThreadFactory {
+class HgImporterThreadFactory : public folly::InitThreadFactory {
  public:
   HgImporterThreadFactory(
       AbsolutePathPiece repository,
       std::shared_ptr<EdenStats> stats)
-      : delegate_("HgImporter"),
-        repository_(repository),
-        stats_(std::move(stats)) {}
-
-  std::thread newThread(folly::Func&& func) override {
-    return delegate_.newThread([this, func = std::move(func)]() mutable {
-      threadLocalImporter.reset(new HgImporterManager(repository_, stats_));
-      SCOPE_EXIT {
-        if (folly::kIsWindows) {
-          // TODO(T125334969): On Windows, the ThreadLocalPtr doesn't appear to
-          // release its resources when the thread dies, so let's do it
-          // manually here.
-          threadLocalImporter.reset();
-        }
-      };
-      func();
-    });
-  }
-
- private:
-  folly::NamedThreadFactory delegate_;
-  AbsolutePath repository_;
-  std::shared_ptr<EdenStats> stats_;
+      : folly::InitThreadFactory(
+            std::make_shared<folly::NamedThreadFactory>("HgImporter"),
+            [repository = AbsolutePath{repository}, stats = std::move(stats)] {
+              threadLocalImporter.reset(
+                  new HgImporterManager(repository, stats));
+            },
+            [] {
+              if (folly::kIsWindows) {
+                // TODO(T125334969): On Windows, the ThreadLocalPtr doesn't
+                // appear to release its resources when the thread dies, so
+                // let's do it manually here.
+                threadLocalImporter.reset();
+              }
+            }) {}
 };
 
 /**
