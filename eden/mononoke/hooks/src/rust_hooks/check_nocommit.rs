@@ -7,12 +7,15 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use lazy_static::lazy_static;
 use mononoke_types::BasicFileChange;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::MPath;
 use regex::Regex;
 
+use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileContentManager;
 use crate::FileHook;
@@ -86,6 +89,38 @@ impl FileHook for CheckNocommitHook {
             }
             None => HookExecution::Accepted,
         })
+    }
+}
+
+#[async_trait]
+impl ChangesetHook for CheckNocommitHook {
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+        &'this self,
+        _ctx: &'ctx CoreContext,
+        _bookmark: &BookmarkName,
+        changeset: &'cs BonsaiChangeset,
+        _content_manager: &'fetcher dyn FileContentManager,
+        _cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+    ) -> Result<HookExecution, Error> {
+        if push_authored_by.service() {
+            return Ok(HookExecution::Accepted);
+        }
+        let message = changeset.message();
+
+        let execution = if has_nocommit(message.as_bytes()) {
+            HookExecution::Rejected(HookRejectionInfo::new_long(
+                "Commit message contains a nocommit marker",
+                format!(
+                    "Commit message for contains a nocommit marker: {}",
+                    NOCOMMIT_MARKER
+                ),
+            ))
+        } else {
+            HookExecution::Accepted
+        };
+
+        Ok(execution)
     }
 }
 

@@ -53,6 +53,7 @@ pub fn hook_name_to_changeset_hook<'a>(
         Ok(match name {
             "always_fail_changeset" => Some(b(always_fail_changeset::AlwaysFailChangeset::new())),
             "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new())),
+            "check_nocommit_message" => Some(b(check_nocommit::CheckNocommitHook::new(config)?)),
             "limit_commit_message_length" => Some(b(
                 limit_commit_message_length::LimitCommitMessageLength::new(config)?,
             )),

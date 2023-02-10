@@ -1682,15 +1682,16 @@ function hook_test_setup() {
 name="$HOOKBOOKMARK"
 CONFIG
 
-  HOOK_NAME="$1"
-  shift 1
-  EXTRA_CONFIG_DESCRIPTOR=""
-  if [[ $# -gt 0 ]]; then
-    EXTRA_CONFIG_DESCRIPTOR="$1"
-  fi
-
-
-  register_hook "$HOOK_NAME" "$EXTRA_CONFIG_DESCRIPTOR"
+  while [[ "$#" -gt 0 ]]; do
+    HOOK_NAME="$1"
+    shift 1
+    EXTRA_CONFIG_DESCRIPTOR=""
+    if [[ $# -gt 0 ]]; then
+      EXTRA_CONFIG_DESCRIPTOR="$1"
+      shift 1
+    fi
+    register_hook "$HOOK_NAME" "$EXTRA_CONFIG_DESCRIPTOR"
+  done
 
   setup_common_hg_configs
   cd "$TESTTMP" || exit 1
@@ -1724,6 +1725,7 @@ EOF
   cat >> .hg/hgrc <<EOF
 [extensions]
 pushrebase =
+amend=
 remotenames =
 EOF
 }
