@@ -21,6 +21,7 @@ import React, {forwardRef} from 'react';
 // vscode webview-ui-toolkit uses ES Modules, which doesn't play well with jest transpilation yet.
 // We need to provide mock verison of these components for now
 
+export const VSCodeLink = (p: React.PropsWithChildren<typeof VSCodeTagType>) => <a {...p} />;
 export const VSCodeTag = (p: React.PropsWithChildren<typeof VSCodeTagType>) => <div {...p} />;
 export const VSCodeBadge = (p: React.PropsWithChildren<typeof VSCodeBadgeType>) => <div {...p} />;
 export const VSCodeButton = (p: React.PropsWithChildren<typeof VSCodeButtonType>) => (
@@ -33,12 +34,28 @@ export const VSCodeDivider = (p: React.PropsWithChildren<typeof VSCodeDividerTyp
 export const VSCodeCheckbox = (p: React.PropsWithChildren<typeof VSCodeCheckboxType>) => (
   <input type="checkbox" {...p} onChange={() => undefined} />
 );
-export const VSCodeTextField = forwardRef<HTMLInputElement>((p, ref) => (
-  <input type="text" {...p} ref={ref} />
-));
-export const VSCodeTextArea = forwardRef<HTMLTextAreaElement>((p, ref) => (
-  <textarea {...p} ref={ref} />
-));
+export const VSCodeTextField = forwardRef<HTMLInputElement>(
+  (p: {children?: React.ReactNode; onChange?: () => void}, ref) => {
+    const {children, onChange, ...rest} = p;
+    return (
+      <>
+        {children && <label>{children}</label>}
+        <input type="text" {...rest} ref={ref} onChange={onChange ?? (() => undefined)} />
+      </>
+    );
+  },
+);
+export const VSCodeTextArea = forwardRef<HTMLTextAreaElement>(
+  (p: {children?: React.ReactNode; onChange?: () => void}, ref) => {
+    const {children, onChange, ...rest} = p;
+    return (
+      <>
+        {children && <label>{children}</label>}
+        <textarea {...rest} ref={ref} onChange={onChange ?? (() => undefined)} />
+      </>
+    );
+  },
+);
 export const VSCodeDropdown = forwardRef<HTMLSelectElement>((p, ref) => (
   <select {...p} ref={ref} />
 ));

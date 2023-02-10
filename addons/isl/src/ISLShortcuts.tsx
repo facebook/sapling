@@ -8,7 +8,7 @@
 import {makeCommandDispatcher, KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 /* eslint-disable no-bitwise */
-export const [ISLCommandContext, useCommand] = makeCommandDispatcher({
+export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispatcher({
   ToggleSidebar: [Modifier.CMD, KeyCode.Period],
   OpenUncommittedChangesComparisonView: [Modifier.CMD, KeyCode.SingleQuote],
   OpenHeadChangesComparisonView: [Modifier.CMD | Modifier.SHIFT, KeyCode.SingleQuote],
