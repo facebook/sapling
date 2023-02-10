@@ -203,7 +203,7 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fileBugReport': {
-        Internal.fileABug?.(data.data, (progress: FileABugProgress) => {
+        Internal.fileABug?.(data.data, this.tracker, (progress: FileABugProgress) => {
           this.connection.logger?.info('file a bug progress: ', JSON.stringify(progress));
           this.postMessage({type: 'fileBugReportProgress', ...progress});
         });
