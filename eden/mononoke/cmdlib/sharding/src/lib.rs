@@ -78,6 +78,13 @@ pub fn decode_repo_name(encoded_repo_name: &str) -> String {
         .replace(ENCODED_PLUS, "+")
 }
 
+/// Function responsible for SM-compatible encoding of repo-name.
+pub fn encode_repo_name(repo_name: &str) -> String {
+    repo_name
+        .replace('/', ENCODED_SLASH)
+        .replace('+', ENCODED_PLUS)
+}
+
 /// Function responsible for splitting source and target repo name
 /// from combined repo-name string.
 pub fn split_repo_names(combined_repo_names: &str) -> Vec<&str> {
