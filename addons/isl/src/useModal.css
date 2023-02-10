@@ -23,6 +23,8 @@
   flex-direction: column;
   gap: var(--pad);
   justify-content: space-between;
+  --useModalWidth: 500px;
+  width: var(--useModalWidth);
 }
 
 #use-modal-title {

@@ -98,7 +98,6 @@ export function ModalContainer() {
 
   return (
     <Modal
-      width="500px"
       height="fit-content"
       className="use-modal"
       aria-labelledby="use-modal-title"
