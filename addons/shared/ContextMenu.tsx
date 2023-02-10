@@ -115,6 +115,7 @@ export function ContextMenus() {
       className={
         'context-menu-container' + (acceptedSuggestion != null ? ' context-menu-fadeout' : '')
       }
+      data-testid="context-menu-container"
       style={position}>
       {topOrBottom === 'top' ? (
         <div className={`context-menu-arrow-top context-menu-arrow-${leftOrRight}`} />

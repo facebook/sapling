@@ -20,11 +20,11 @@ export class HideOperation extends Operation {
   static opName = 'Hide';
 
   getArgs() {
-    return ['hide', '-r', SucceedableRevset(this.source)];
+    return ['hide', '--rev', SucceedableRevset(this.source)];
   }
 
   makePreviewApplier(_context: PreviewContext): ApplyPreviewsFuncType | undefined {
-    const func: ApplyPreviewsFuncType = (tree, previewType, childPreviewType) => {
+    const func: ApplyPreviewsFuncType = (tree, previewType) => {
       if (tree.info.hash === this.source) {
         return {
           info: tree.info,
@@ -37,7 +37,7 @@ export class HideOperation extends Operation {
         info: tree.info,
         children: tree.children,
         previewType,
-        childPreviewType,
+        childPreviewType: previewType,
       };
     };
     return func;

@@ -138,7 +138,7 @@ export const TEST_COMMIT_HISTORY = [
   COMMIT('e', 'Commit E', 'd', {isHead: true}),
   COMMIT('d', 'Commit D', 'c'),
   COMMIT('c', 'Commit C', 'b'),
-  COMMIT('b', 'Commit b', 'a'),
+  COMMIT('b', 'Commit B', 'a'),
   COMMIT('a', 'Commit A', '1'),
   COMMIT('1', 'some public base', '0', {phase: 'public'}),
 ];
