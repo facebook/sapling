@@ -41,7 +41,7 @@ export class RebaseOperation extends Operation {
     };
     let parentHash: Hash;
 
-    const func: ApplyPreviewsFuncType = (tree, previewType, childPreviewType) => {
+    const func: ApplyPreviewsFuncType = (tree, previewType) => {
       if (tree.info.hash === this.source) {
         if (tree.info.parents[0] === parentHash) {
           // this is the newly added node
@@ -77,7 +77,7 @@ export class RebaseOperation extends Operation {
           children: tree.children,
           previewType,
           // inherit previews so entire subtree is previewed
-          childPreviewType,
+          childPreviewType: previewType,
         };
       }
     };

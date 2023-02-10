@@ -84,6 +84,15 @@ describe('rebase operation', () => {
     ).toEqual(true);
   });
 
+  it('sets all descendants as the right preview type', () => {
+    expect(screen.getAllByText('Commit D')).toHaveLength(1);
+    dragAndDropCommits('a', '2');
+
+    expect(document.querySelectorAll('.commit-preview-rebase-old')).toHaveLength(5);
+    expect(document.querySelectorAll('.commit-preview-rebase-root')).toHaveLength(1);
+    expect(document.querySelectorAll('.commit-preview-rebase-descendant')).toHaveLength(4);
+  });
+
   it('previews onto correct branch', () => {
     expect(screen.getAllByText('Commit D')).toHaveLength(1);
     dragAndDropCommits('d', 'x');
