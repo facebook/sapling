@@ -325,6 +325,11 @@ export default class ServerToClientAPI {
         );
         break;
       }
+      case 'abortRunningOperation': {
+        const {operationId} = data;
+        repo.abortRunningOpeation(operationId);
+        break;
+      }
       case 'deleteFile': {
         const {filePath} = data;
         const absolutePath = absolutePathForFileInRepo(filePath, repo);

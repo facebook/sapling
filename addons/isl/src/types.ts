@@ -317,6 +317,7 @@ export type ClientToServerMessage =
   | {type: 'track'; data: TrackDataWithEventName}
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
+  | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'requestRepoInfo'}

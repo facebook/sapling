@@ -350,6 +350,8 @@ export type OperationInfo = {
   endTime?: Date;
   commandOutput?: Array<string>;
   exitCode?: number | null;
+  /** if true, we have sent "abort" request, the process might have exited or is going to exit soon */
+  aborting?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic commit state to show */
   hasCompletedOptimisticState?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic changes to uncommited changes to show */
@@ -520,6 +522,29 @@ export function useRunOperation() {
       },
     [],
   );
+}
+
+/**
+ * Returns callback to abort the running operation.
+ */
+export function useAbortRunningOperation() {
+  return useRecoilCallback(({snapshot, set}) => (operationId: string) => {
+    serverAPI.postMessage({
+      type: 'abortRunningOperation',
+      operationId,
+    });
+    const ongoing = snapshot.getLoadable(operationList).valueMaybe();
+    if (ongoing?.currentOperation?.operation?.id === operationId) {
+      // Mark 'aborting' as true.
+      set(operationList, list => {
+        const currentOperation = list.currentOperation;
+        if (currentOperation != null) {
+          return {...list, currentOperation: {aborting: true, ...currentOperation}};
+        }
+        return list;
+      });
+    }
+  });
 }
 
 /**

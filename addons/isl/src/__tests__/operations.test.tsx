@@ -30,8 +30,11 @@ const clickGoto = (commit: Hash) => {
   fireEvent.click(gotoButton as Element);
 };
 
+const abortButton = () => screen.queryByTestId('abort-button');
+
 describe('operations', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     resetTestMessages();
     render(<App />);
     act(() => {
@@ -53,6 +56,10 @@ describe('operations', () => {
       .mockImplementationOnce(() => '2')
       .mockImplementationOnce(() => '3')
       .mockImplementationOnce(() => '4');
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('shows running operation', () => {
@@ -129,6 +136,16 @@ describe('operations', () => {
     expect(screen.queryByText('another message')).toBeInTheDocument();
   });
 
+  it('shows abort on long-running commands', () => {
+    clickGoto('c');
+    expect(abortButton()).toBeNull();
+
+    act(() => {
+      jest.advanceTimersByTime(600000);
+    });
+    expect(abortButton()).toBeInTheDocument();
+  });
+
   it('shows successful exit status', () => {
     clickGoto('c');
 
@@ -177,6 +194,31 @@ describe('operations', () => {
     expect(
       within(screen.getByTestId('progress-container')).getByText('sl goto --rev c'),
     ).toBeInTheDocument();
+  });
+
+  it('reacts to abort', () => {
+    clickGoto('c');
+    act(() => {
+      jest.advanceTimersByTime(600000);
+    });
+
+    // Start abort
+    fireEvent.click(abortButton() as Element);
+
+    // During abort
+    expect(abortButton()).toBeDisabled();
+
+    // After abort (process exit)
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        id: '1',
+        kind: 'exit',
+        exitCode: 130,
+      });
+    });
+    expect(abortButton()).toBeNull();
+    expect(screen.queryByLabelText('Command aborted')).toBeInTheDocument();
   });
 
   describe('queued commands', () => {

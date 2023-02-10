@@ -459,6 +459,13 @@ export class Repository {
   }
 
   /**
+   * Abort the running operation if it matches the given id.
+   */
+  abortRunningOpeation(operationId: string) {
+    this.operationQueue.abortRunningOperation(operationId);
+  }
+
+  /**
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
   private async runOperation(
