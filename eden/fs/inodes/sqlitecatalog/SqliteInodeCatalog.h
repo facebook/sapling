@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "eden/fs/inodes/InodeCatalog.h"
+#include "eden/fs/inodes/fscatalog/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteTreeStore.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/ImmediateFuture.h"
@@ -45,11 +46,6 @@ class SqliteInodeCatalog : public InodeCatalog {
 
   SqliteInodeCatalog(SqliteInodeCatalog&&) = delete;
   SqliteInodeCatalog& operator=(SqliteInodeCatalog&&) = delete;
-
-  using LookupCallbackValue =
-      std::variant<std::shared_ptr<const Tree>, TreeEntry>;
-  using LookupCallback =
-      std::function<ImmediateFuture<LookupCallbackValue>(RelativePathPiece)>;
 
   bool supportsSemanticOperations() const override {
     return true;
@@ -100,7 +96,7 @@ class SqliteInodeCatalog : public InodeCatalog {
   InodeNumber scanLocalChanges(
       std::shared_ptr<const EdenConfig> config,
       AbsolutePathPiece mountPath,
-      LookupCallback& callback);
+      OverlayChecker::LookupCallback& callback);
 
   void maintenance() override {
     store_.maintenance();

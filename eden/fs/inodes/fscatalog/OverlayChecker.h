@@ -53,8 +53,9 @@ class OverlayChecker {
   using ProgressCallback = std::function<void(uint16_t)>;
   using LookupCallbackValue =
       std::variant<std::shared_ptr<const Tree>, TreeEntry>;
-  using LookupCallback =
-      std::function<ImmediateFuture<LookupCallbackValue>(RelativePathPiece)>;
+  using LookupCallback = std::function<ImmediateFuture<LookupCallbackValue>(
+      const std::shared_ptr<const Tree>&,
+      RelativePathPiece)>;
 
   /**
    * Create a new OverlayChecker.

@@ -71,6 +71,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
         localDir, config, SqliteTreeStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
+  (void)fileContentStore;
   if (inodeCatalogType == Overlay::InodeCatalogType::Legacy) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");

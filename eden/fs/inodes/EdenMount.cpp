@@ -435,13 +435,18 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
                 getEdenConfig(),
                 getPath(),
                 std::move(progressCallback),
-                [this](RelativePathPiece path) {
+                [this](
+                    const std::shared_ptr<const Tree>& parentTree,
+                    RelativePathPiece path) {
                   auto lookup = std::make_unique<TreeLookupProcessor>(
                       path, objectStore_, context.copy());
+
+                  auto rootTree =
+                      parentTree ? parentTree : getCheckedOutRootTree();
                   // Do the next() and the ensure() on separate lines to make
                   // the order of 'lookup' accesses explicit, so we don't move
                   // it before calling next.
-                  auto future = lookup->next(getCheckedOutRootTree());
+                  auto future = lookup->next(rootTree);
                   // The 'ensure' makes sure the lookup lasts until the future
                   // finishes.
                   return std::move(future).ensure(

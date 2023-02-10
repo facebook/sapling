@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
     XLOG(INFO) << "Overlay was shut down uncleanly";
   }
 
-  OverlayChecker::LookupCallback lookup = [](auto&&) {
+  OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };

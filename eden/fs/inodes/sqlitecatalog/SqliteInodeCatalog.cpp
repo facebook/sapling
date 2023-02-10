@@ -91,7 +91,7 @@ InodeNumber SqliteInodeCatalog::nextInodeNumber() {
 InodeNumber SqliteInodeCatalog::scanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     AbsolutePathPiece mountPath,
-    FOLLY_MAYBE_UNUSED SqliteInodeCatalog::LookupCallback& callback) {
+    FOLLY_MAYBE_UNUSED OverlayChecker::LookupCallback& callback) {
 #ifdef _WIN32
   windowsFsckScanLocalChanges(config, *this, mountPath, callback);
 #else

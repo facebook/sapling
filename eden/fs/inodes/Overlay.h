@@ -124,7 +124,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       OverlayChecker::LookupCallback&& lookupCallback =
-          [](auto) {
+          [](auto, auto) {
             return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
                 std::runtime_error("no lookup callback"));
           });

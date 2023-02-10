@@ -475,7 +475,7 @@ ImmediateFuture<bool> processChildren(
     InodeNumber inodeNumber,
     const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
     const std::shared_ptr<const Tree>& scmTree,
-    const SqliteInodeCatalog::LookupCallback& callback,
+    const OverlayChecker::LookupCallback& callback,
     uint64_t logFrequency,
     std::atomic<uint64_t>& traversedDirectories) {
   XLOGF(DBG9, "processChildren - {}", path);
@@ -536,9 +536,9 @@ ImmediateFuture<bool> processChildren(
         // already.
         childScmTreeFut =
             makeNotReadyImmediateFuture()
-                .thenValue([&callback, childPath = childPath.copy()](auto&&) {
-                  return callback(childPath);
-                })
+                .thenValue(
+                    [&callback, scmTree, childName = RelativePath{childName}](
+                        auto&&) { return callback(scmTree, childName); })
                 .thenValue(
                     [](std::variant<std::shared_ptr<const Tree>, TreeEntry>
                            scmEntry) {
@@ -624,7 +624,7 @@ void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     SqliteInodeCatalog& inodeCatalog,
     AbsolutePathPiece mountPath,
-    SqliteInodeCatalog::LookupCallback& callback) {
+    OverlayChecker::LookupCallback& callback) {
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = inodeCatalog.loadOverlayDir(kRootNodeId)) {
     auto insensitiveOverlayDir = toPathMap(*view);
@@ -636,7 +636,9 @@ void windowsFsckScanLocalChanges(
       executor = folly::SerialExecutor::create();
     }
 
-    folly::via(executor, [&callback]() { return callback(""_relpath).semi(); })
+    folly::via(
+        executor,
+        [&callback]() { return callback(nullptr, ""_relpath).semi(); })
         .thenValue(
             [&inodeCatalog,
              mountPath,

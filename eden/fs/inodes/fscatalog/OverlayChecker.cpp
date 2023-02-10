@@ -892,7 +892,7 @@ OverlayChecker::getInodeInfo(InodeNumber number) {
 
 ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
 OverlayChecker::lookup(RelativePathPiece path) {
-  return impl_->lookupCallback(path);
+  return impl_->lookupCallback(nullptr, path);
 }
 
 OverlayChecker::PathInfo OverlayChecker::computePath(InodeNumber number) {

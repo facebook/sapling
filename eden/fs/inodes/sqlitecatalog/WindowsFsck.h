@@ -54,7 +54,7 @@ void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,
     SqliteInodeCatalog& overlay,
     AbsolutePathPiece mountPath,
-    SqliteInodeCatalog::LookupCallback& callback);
+    OverlayChecker::LookupCallback& callback);
 
 } // namespace facebook::eden
 

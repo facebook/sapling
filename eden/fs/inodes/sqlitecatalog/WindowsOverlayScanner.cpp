@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
   SqliteInodeCatalog inodeCatalog(overlayPath);
   inodeCatalog.initOverlay(true);
   XLOG(INFO) << "start scanning";
-  SqliteInodeCatalog::LookupCallback lookup = [](auto) {
-    return makeImmediateFuture<SqliteInodeCatalog::LookupCallbackValue>(
+  OverlayChecker::LookupCallback lookup = [](auto, auto) {
+    return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
   inodeCatalog.scanLocalChanges(
