@@ -1265,13 +1265,13 @@
   @  6408d34d8180 'commit1'
 
   $ cat >> $TESTTMP/abortupdate.py << 'EOF'
-  > from edenscm import extensions, hg
+  > from edenscm import extensions, hg, error
   > def update(orig, repo, *args, **kwargs):
   >     if not repo.ui.configbool("abortupdate", "abort"):
   >         return orig(repo, *args, **kwargs)
   >     if repo.ui.configbool("abortupdate", "after"):
   >         orig(repo, *args, **kwargs)
-  >     raise KeyboardInterrupt
+  >     raise error.Abort("update aborted!")
   > def extsetup(ui):
   >     extensions.wrapfunction(hg, "update", update)
   > EOF
@@ -1279,7 +1279,7 @@
   $ setconfig extensions.abortcreatemarkers="$TESTTMP/abortupdate.py"
   $ hg shelve --config abortupdate.abort=true
   shelved as default
-  interrupted!
+  abort: update aborted!
   [255]
 
   $ cat file2
@@ -1297,7 +1297,7 @@
   $ hg shelve --config abortupdate.after=true --config abortupdate.abort=true
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  interrupted!
+  abort: update aborted!
   [255]
 
   $ cat file2
