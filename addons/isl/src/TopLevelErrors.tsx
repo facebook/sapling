@@ -5,33 +5,29 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {MessageBusStatus} from './MessageBus';
-
 import {ErrorNotice} from './ErrorNotice';
-import messageBus from './MessageBus';
 import {allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import platform from './platform';
-import {repositoryInfo} from './serverAPIState';
+import {reconnectingStatus, repositoryInfo} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
-import {useEffect, useState} from 'react';
 import {useRecoilValue} from 'recoil';
 
 export function TopLevelErrors() {
-  const reconnectingStatus = useReconnectingStatus();
+  const reconnectStatus = useRecoilValue(reconnectingStatus);
   const repoInfo = useRecoilValue(repositoryInfo);
 
   const diffFetchError = useRecoilValue(allDiffSummaries).error;
 
-  if (reconnectingStatus.type === 'reconnecting') {
+  if (reconnectStatus.type === 'reconnecting') {
     return (
       <ErrorNotice
         title={<T>Connection to server was lost</T>}
         error={new Error(t('Attempting to reconnect...'))}
       />
     );
-  } else if (reconnectingStatus.type === 'error') {
-    if (reconnectingStatus.error === 'Invalid token') {
+  } else if (reconnectStatus.type === 'error') {
+    if (reconnectStatus.error === 'Invalid token') {
       return (
         <ErrorNotice
           title={
@@ -53,7 +49,7 @@ export function TopLevelErrors() {
     return (
       <ErrorNotice
         title={<T>Error connecting to server</T>}
-        error={new Error(reconnectingStatus.error)}
+        error={new Error(reconnectStatus.error)}
       />
     );
   } else if (diffFetchError) {
@@ -96,15 +92,4 @@ export function TopLevelErrors() {
     return <ErrorNotice title={<T>Failed to fetch Diffs</T>} error={diffFetchError} />;
   }
   return null;
-}
-
-function useReconnectingStatus() {
-  const [connectionStatus, setConnectionStatus] = useState<MessageBusStatus>({
-    type: 'initializing',
-  });
-  useEffect(() => {
-    const disposable = messageBus.onChangeStatus(setConnectionStatus);
-    return () => disposable.dispose();
-  }, []);
-  return connectionStatus;
 }

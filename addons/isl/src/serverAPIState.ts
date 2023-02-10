@@ -6,12 +6,14 @@
  */
 
 import type {EditedMessage} from './CommitInfo';
+import type {MessageBusStatus} from './MessageBus';
 import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, RepoInfo} from './types';
 import type {CallbackInterface} from 'recoil';
 
 import serverAPI from './ClientToServerAPI';
+import messageBus from './MessageBus';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {operationBeingPreviewed} from './previews';
 import {initialParams} from './urlParams';
@@ -68,6 +70,17 @@ export const applicationinfo = atom<{platformName: string; version: string} | un
           type: 'requestApplicationInfo',
         }),
       ),
+  ],
+});
+
+export const reconnectingStatus = atom<MessageBusStatus>({
+  key: 'reconnectingStatus',
+  default: {type: 'initializing'},
+  effects: [
+    ({setSelf}) => {
+      const disposable = messageBus.onChangeStatus(setSelf);
+      return () => disposable.dispose();
+    },
   ],
 });
 
