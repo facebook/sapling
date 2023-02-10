@@ -21,6 +21,8 @@ from __future__ import absolute_import
 import errno
 import functools
 
+import bindings
+
 from . import encoding, error, json, pycompat, util
 from .i18n import _
 from .node import bin, hex
@@ -310,7 +312,11 @@ class transaction(util.transactional):
             msg = 'cannot use transaction.addbackup inside "group"'
             raise error.ProgrammingError(msg)
 
-        if file in self.map or file in self._backupmap:
+        if (
+            file in self.map
+            or file in self._backupmap
+            or file in bindings.metalog.tracked()
+        ):
             return
         vfs = self._vfsmap[location]
         dirname, filename = vfs.split(file)
