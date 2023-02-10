@@ -22,6 +22,7 @@ import type {
   MergeConflictsEvent,
   RepositoryError,
   PlatformSpecificClientToServerMessages,
+  FileABugProgress,
 } from 'isl/src/types';
 
 import {Internal} from './Internal';
@@ -202,12 +203,10 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fileBugReport': {
-        const result = Internal.fileABug?.(data.data);
-        if (result) {
-          result.then(() => {
-            this.connection.logger?.log('file a bug result: ', result);
-          });
-        }
+        Internal.fileABug?.(data.data, (progress: FileABugProgress) => {
+          this.connection.logger?.info('file a bug progress: ', JSON.stringify(progress));
+          this.postMessage({type: 'fileBugReportProgress', ...progress});
+        });
         break;
       }
     }

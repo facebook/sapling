@@ -303,6 +303,11 @@ export type PlatformSpecificServerToClientMessages = {
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 
 export type FileABugFields = {title: string; description: string; repro: string};
+export type FileABugProgress =
+  | {status: 'inProgress'; message: string}
+  | {status: 'success'; taskNumber: string; taskLink: string}
+  | {status: 'error'; error: Error};
+export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABugProgress;
 
 export type ClientToServerMessage =
   | {
@@ -342,6 +347,7 @@ export type ServerToClientMessage =
   | MergeConflictsEvent
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
+  | FileABugProgressMessage
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'applicationInfo'; platformName: string; version: string}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
