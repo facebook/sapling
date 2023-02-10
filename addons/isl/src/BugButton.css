@@ -7,6 +7,7 @@
 
 .bug-dropdown {
   max-width: 400px;
+  min-width: 400px;
 }
 
 .bug-dropdown-version {
