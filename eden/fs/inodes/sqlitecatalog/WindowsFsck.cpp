@@ -414,6 +414,52 @@ std::optional<InodeNumber> fixup(
 }
 
 /**
+ * List all the on-disk entries and return a PathMap from them.
+ */
+PathMap<FsckFileState> populateOnDiskChildrenState(
+    AbsolutePathPiece root,
+    RelativePathPiece path) {
+  PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
+  auto absPath = (root + path + "*"_pc).wide();
+
+  WIN32_FIND_DATAW findFileData;
+  // TODO: Should FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY be used?
+  HANDLE h = FindFirstFileExW(
+      absPath.c_str(),
+      FindExInfoBasic,
+      &findFileData,
+      FindExSearchNameMatch,
+      nullptr,
+      0);
+  if (h == INVALID_HANDLE_VALUE) {
+    throw std::runtime_error(
+        fmt::format("unable to iterate over directory - {}", path));
+  }
+  SCOPE_EXIT {
+    FindClose(h);
+  };
+
+  do {
+    if (wcscmp(findFileData.cFileName, L".") == 0 ||
+        wcscmp(findFileData.cFileName, L"..") == 0 ||
+        wcscmp(findFileData.cFileName, L".eden") == 0) {
+      continue;
+    }
+    PathComponent name{findFileData.cFileName};
+    auto& childState = children[name];
+    populateDiskState(root, path + name, childState, findFileData);
+  } while (FindNextFileW(h, &findFileData) != 0);
+
+  auto error = GetLastError();
+  if (error != ERROR_NO_MORE_FILES) {
+    throw std::runtime_error(
+        fmt::format("unable to iterate over directory - {}", path));
+  }
+
+  return children;
+}
+
+/**
  * Recursively crawl the path rooted at root / path.
  *
  * Returns true if the given path is either populated or full or a tombstone.
@@ -442,43 +488,7 @@ ImmediateFuture<bool> processChildren(
     XLOGF(INFO, "{} directories scanned", traversed);
   }
 
-  // Handle children
-  PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
-
-  // Populate children disk information
-  auto absPath = (root + path + "*"_relpath).wide();
-
-  WIN32_FIND_DATAW findFileData;
-  HANDLE h = FindFirstFileExW(
-      absPath.c_str(),
-      FindExInfoBasic,
-      &findFileData,
-      FindExSearchNameMatch,
-      nullptr,
-      0);
-  if (h == INVALID_HANDLE_VALUE) {
-    throw std::runtime_error(
-        fmt::format("unable to iterate over directory - {}", path));
-  }
-
-  do {
-    if (wcscmp(findFileData.cFileName, L".") == 0 ||
-        wcscmp(findFileData.cFileName, L"..") == 0 ||
-        wcscmp(findFileData.cFileName, L".eden") == 0) {
-      continue;
-    }
-    PathComponent name{findFileData.cFileName};
-    auto& childState = children[name];
-    populateDiskState(root, path + name, childState, findFileData);
-  } while (FindNextFileW(h, &findFileData) != 0);
-
-  auto error = GetLastError();
-  if (error != ERROR_NO_MORE_FILES) {
-    throw std::runtime_error(
-        fmt::format("unable to iterate over directory - {}", path));
-  }
-
-  FindClose(h);
+  auto children = populateOnDiskChildrenState(root, path);
 
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
     auto& childState = children[name];
