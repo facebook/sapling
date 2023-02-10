@@ -670,7 +670,13 @@ class transaction(util.transactional):
             trdesc = "Transaction: %s" % self.desc
             message = "\n".join([command, parent, trdesc])
 
-            util.failpoint("transaction-metalog-commit")
+            try:
+                util.failpoint("transaction-metalog-commit")
+            except Exception:
+                # Explicit clean up.
+                # Otherwise cleanup might rely on __del__ and run at a wrong time.
+                self._abort()
+                raise
             metalog.commit(
                 message,
                 int(util.timer()),

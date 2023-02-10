@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ configure modern
 
@@ -126,8 +126,6 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
   DEBUG pull::fastpath: master: 26805aba1e600a82e93661149f2313866a221a7b => 9bc730a19041f9ec7cb33c626e811aa233efb18c
   imported commit graph for 2 commits (1 segment)
   abort: failpoint 'transaction-metalog-commit' set by FAILPOINTS
-  transaction abort!
-  rollback completed
   [255]
 
 Fast path can still be used with stale remotenames:
