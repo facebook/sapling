@@ -42,7 +42,7 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         return "sqlite"
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
-        return {"eden.fs.inodes.treeoverlay": "DBG9"}
+        return {"eden.fs.inodes.sqlitecatalog": "DBG9"}
 
     def _eden_status(self, listIgnored: bool = False):
         with self.eden.get_thrift_client_legacy() as client:

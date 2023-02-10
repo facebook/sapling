@@ -435,8 +435,16 @@ std::optional<InodeNumber> fixup(
   }
 }
 
-// Returns true if the given path is considered materialized.
-bool processChildren(
+/**
+ * Recursively crawl the path rooted at root / path.
+ *
+ * Returns true if the given path is either populated or full or a tombstone.
+ *
+ * The caller must ensure that the inodeCatalog, the root path, the callback
+ * and the traversedDirectories live longer than the returned future. As for
+ * the path and scmTree argument, this function will copy them if needed.
+ */
+ImmediateFuture<bool> processChildren(
     SqliteInodeCatalog& inodeCatalog,
     RelativePathPiece path,
     AbsolutePathPiece root,
@@ -445,15 +453,15 @@ bool processChildren(
     const std::shared_ptr<const Tree>& scmTree,
     const SqliteInodeCatalog::LookupCallback& callback,
     uint64_t logFrequency,
-    uint64_t& traversedDirectories) {
+    std::atomic<uint64_t>& traversedDirectories) {
   XLOGF(DBG9, "processChildren - {}", path);
 
-  traversedDirectories++;
-  if (traversedDirectories % logFrequency == 0) {
+  auto traversed = traversedDirectories.fetch_add(1, std::memory_order_relaxed);
+  if (traversed % logFrequency == 0) {
     // TODO: We could also report the progress to the StartupLogger to be
     // displayed in the user console. That however requires a percent and it's
     // a bit unclear how we can compute this percent.
-    XLOGF(INFO, "{} directories scanned", traversedDirectories);
+    XLOGF(INFO, "{} directories scanned", traversed);
   }
 
   // Handle children
@@ -508,14 +516,15 @@ bool processChildren(
   // Populate children scm information
   if (scmTree) {
     for (const auto& [name, treeEntry] : *scmTree) {
-      PathComponentPiece pathName{name};
-      auto& childState = children[pathName];
+      auto& childState = children[name];
       populateScmState(childState, treeEntry);
     }
   }
 
+  std::vector<ImmediateFuture<folly::Unit>> childFutures;
+  childFutures.reserve(children.size());
+
   // Recurse for any children.
-  bool anyChildPopulatedOrFullOrTomb = false;
   for (auto& [childName, childState] : children) {
     auto childPath = path + childName;
     XLOGF(DBG9, "process child - {}", childPath);
@@ -527,63 +536,87 @@ bool processChildren(
         inodeNumber,
         insensitiveOverlayDir);
 
-    anyChildPopulatedOrFullOrTomb |= childState.populatedOrFullOrTomb;
-
     if (childState.desiredDtype == dtype_t::Dir && childState.onDisk &&
         !childState.diskEmptyPlaceholder && childInodeNumberOpt.has_value()) {
       // Fetch child scm tree.
-      std::shared_ptr<const Tree> childScmTree;
+      ImmediateFuture<std::shared_ptr<const Tree>> childScmTreeFut{
+          std::in_place};
       if (childState.scmDtype == dtype_t::Dir) {
-        // TODO: handle scm failure
-        auto scmEntryTry = callback(childPath).getTry();
-        std::variant<
-            std::shared_ptr<const facebook::eden::Tree>,
-            facebook::eden::TreeEntry>& childScmEntry = scmEntryTry.value();
-        // It's guaranteed to be a Tree since scmDtype is Dir.
-        childScmTree = std::get<std::shared_ptr<const Tree>>(childScmEntry);
+        childScmTreeFut = callback(childPath).thenValue(
+            [](std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
+              // TODO: handle scm failure
+              // It's guaranteed to be a Tree since scmDtype is Dir.
+              return std::move(std::get<std::shared_ptr<const Tree>>(scmEntry));
+            });
       }
 
-      auto childInodeNumber = *childInodeNumberOpt;
-      auto childOverlayDir = *inodeCatalog.loadOverlayDir(childInodeNumber);
-      auto childInsensitiveOverlayDir = toPathMap(childOverlayDir);
-      bool childPopulatedOrFullOrTomb = childState.populatedOrFullOrTomb;
-      childPopulatedOrFullOrTomb |= processChildren(
-          inodeCatalog,
-          childPath,
-          root,
-          childInodeNumber,
-          childInsensitiveOverlayDir,
-          childScmTree,
-          callback,
-          logFrequency,
-          traversedDirectories);
-      anyChildPopulatedOrFullOrTomb |= childPopulatedOrFullOrTomb;
+      childFutures.emplace_back(
+          std::move(childScmTreeFut)
+              .thenValue([&inodeCatalog,
+                          childPath = childPath.copy(),
+                          root,
+                          &callback,
+                          logFrequency,
+                          &traversedDirectories,
+                          childInodeNumber = *childInodeNumberOpt](
+                             const std::shared_ptr<const Tree>& childScmTree) {
+                auto childOverlayDir =
+                    *inodeCatalog.loadOverlayDir(childInodeNumber);
+                auto childInsensitiveOverlayDir = toPathMap(childOverlayDir);
 
-      if (childPopulatedOrFullOrTomb &&
-          childState.desiredHash != std::nullopt) {
-        XLOGF(
-            DBG9,
-            "Directory {} has a materialized child, and therefore is materialized too. Marking.",
-            childPath);
-        childState.populatedOrFullOrTomb = true;
-        childState.desiredHash = std::nullopt;
-        // Refresh the parent state so we see and update the current overlay
-        // entry.
-        auto updatedOverlayDir = *inodeCatalog.loadOverlayDir(inodeNumber);
-        auto updatedInsensitiveOverlayDir = toPathMap(updatedOverlayDir);
-        // Update the overlay entry to remove the scmHash.
-        addOrUpdateOverlay(
-            inodeCatalog,
-            inodeNumber,
-            childName,
-            childState.desiredDtype,
-            childState.desiredHash,
-            updatedInsensitiveOverlayDir);
-      }
+                return processChildren(
+                    inodeCatalog,
+                    childPath,
+                    root,
+                    childInodeNumber,
+                    childInsensitiveOverlayDir,
+                    childScmTree,
+                    callback,
+                    logFrequency,
+                    traversedDirectories);
+              })
+              .thenValue([&childState = childState,
+                          childPath = childPath.copy(),
+                          &inodeCatalog,
+                          inodeNumber](bool childPopulatedOrFullOrTomb) {
+                childState.populatedOrFullOrTomb |= childPopulatedOrFullOrTomb;
+
+                if (childPopulatedOrFullOrTomb &&
+                    childState.desiredHash != std::nullopt) {
+                  XLOGF(
+                      DBG9,
+                      "Directory {} has a materialized child, and therefore is materialized too. Marking.",
+                      childPath);
+                  childState.desiredHash = std::nullopt;
+
+                  auto updatedOverlayDir =
+                      *inodeCatalog.loadOverlayDir(inodeNumber);
+                  auto updatedInsensitiveOverlayDir =
+                      toPathMap(updatedOverlayDir);
+                  // Update the overlay entry to remove the scmHash.
+                  addOrUpdateOverlay(
+                      inodeCatalog,
+                      inodeNumber,
+                      childPath.basename(),
+                      childState.desiredDtype,
+                      childState.desiredHash,
+                      updatedInsensitiveOverlayDir);
+                }
+                return folly::unit;
+              }));
     }
   }
 
-  return anyChildPopulatedOrFullOrTomb;
+  return collectAllSafe(std::move(childFutures))
+      // The futures have references on this PathMap, make sure it stays alive.
+      .thenValue([children = std::move(children)](auto&&) {
+        for (const auto& [childName, childState] : children) {
+          if (childState.populatedOrFullOrTomb) {
+            return true;
+          }
+        }
+        return false;
+      });
 }
 
 } // namespace
@@ -596,24 +629,31 @@ void windowsFsckScanLocalChanges(
   XLOGF(INFO, "Start scanning {}", mountPath);
   if (auto view = inodeCatalog.loadOverlayDir(kRootNodeId)) {
     auto insensitiveOverlayDir = toPathMap(*view);
+    std::atomic<uint64_t> traversedDirectories = 1;
     // TODO: Handler errors or no trees
-    auto scmEntryTry = callback(""_relpath).getTry();
-    std::variant<
-        std::shared_ptr<const facebook::eden::Tree>,
-        facebook::eden::TreeEntry>& scmEntry = scmEntryTry.value();
-    std::shared_ptr<const Tree> scmTree =
-        std::get<std::shared_ptr<const Tree>>(scmEntry);
-    uint64_t traversedDirectories = 1;
-    processChildren(
-        inodeCatalog,
-        ""_relpath,
-        mountPath,
-        kRootNodeId,
-        insensitiveOverlayDir,
-        scmTree,
-        callback,
-        config->fsckLogFrequency.getValue(),
-        traversedDirectories);
+    callback(""_relpath)
+        .thenValue(
+            [&inodeCatalog,
+             mountPath,
+             insensitiveOverlayDir = std::move(insensitiveOverlayDir),
+             &traversedDirectories,
+             &callback,
+             logFrequency = config->fsckLogFrequency.getValue()](
+                std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
+              auto scmTree =
+                  std::get<std::shared_ptr<const Tree>>(std::move(scmEntry));
+              return processChildren(
+                  inodeCatalog,
+                  ""_relpath,
+                  mountPath,
+                  kRootNodeId,
+                  insensitiveOverlayDir,
+                  scmTree,
+                  callback,
+                  logFrequency,
+                  traversedDirectories);
+            })
+        .get();
     XLOGF(INFO, "Scanning complete for {}", mountPath);
   } else {
     XLOG(INFO)
