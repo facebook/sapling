@@ -76,14 +76,16 @@ pub struct FileStore {
 impl FileStore {
     /// Create a new FileStore, overwriting any existing file.
     pub fn create<P: AsRef<Path>>(path: P) -> Result<FileStore> {
-        let mut file = FileReaderWriter::new(BufWriter::new(
+        let path = path.as_ref();
+        let writer = BufWriter::new(
             OpenOptions::new()
                 .read(true)
                 .write(true)
                 .create(true)
                 .truncate(true)
                 .open(&path)?,
-        ));
+        );
+        let mut file = FileReaderWriter::new(writer, path)?;
         file.write(&MAGIC)?;
         file.write_u32::<BigEndian>(VERSION)?;
         let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
@@ -93,7 +95,7 @@ impl FileStore {
             at_end: RefCell::new(true),
             read_only: false,
             cache: None,
-            path: Some(path.as_ref().to_path_buf()),
+            path: Some(path.to_path_buf()),
         })
     }
 
@@ -119,6 +121,7 @@ impl FileStore {
     /// access is not permitted, falls back to opening the file in read-only mode.  When open
     /// in read-only mode, new blocks of data cannot be appended.
     pub fn open<P: AsRef<Path>>(path: P) -> Result<FileStore> {
+        let path = path.as_ref();
         let mut read_only = false;
         let file = OpenOptions::new()
             .read(true)
@@ -128,14 +131,14 @@ impl FileStore {
                 read_only = true;
                 OpenOptions::new().read(true).open(&path)
             })?;
-        let mut file = FileReaderWriter::new(BufWriter::new(file));
+        let mut file = FileReaderWriter::new(BufWriter::new(file), path)?;
 
         // Check the file header is as expected.
         let mut buffer = [0; MAGIC_LEN];
         file.read_exact(&mut buffer)
-            .map_err(|_e| ErrorKind::NotAStoreFile(path.as_ref().to_path_buf()))?;
+            .map_err(|_e| ErrorKind::NotAStoreFile(path.to_path_buf()))?;
         if buffer != MAGIC {
-            bail!(ErrorKind::NotAStoreFile(path.as_ref().to_path_buf()));
+            bail!(ErrorKind::NotAStoreFile(path.to_path_buf()));
         }
         let version = file.read_u32::<BigEndian>()?;
         if version != VERSION {
@@ -152,7 +155,7 @@ impl FileStore {
             at_end: RefCell::new(true),
             read_only,
             cache: None,
-            path: Some(path.as_ref().to_path_buf()),
+            path: Some(path.to_path_buf()),
         })
     }
 

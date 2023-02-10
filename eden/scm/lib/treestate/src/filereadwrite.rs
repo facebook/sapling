@@ -13,6 +13,7 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
+use std::path::Path;
 
 use fs2::FileExt;
 
@@ -49,12 +50,32 @@ pub trait FileReadWrite:
 
 pub struct FileReaderWriter {
     writer: BufWriter<File>,
+    lock_file: Option<File>,
     locked: usize,
 }
 
 impl FileReaderWriter {
-    pub fn new(writer: BufWriter<File>) -> Self {
-        Self { writer, locked: 0 }
+    pub fn new(writer: BufWriter<File>, path: &Path) -> io::Result<Self> {
+        let lock_file = if cfg!(windows) {
+            // On Windows, exclusive file lock prevents read. We only use
+            // lock for protecting racy writes and want read to just work
+            // regardless of locks. Use a separate lock file so locking
+            // does not prevent read.
+            let lock_path = path.with_extension(".lock");
+            let lock_file = std::fs::OpenOptions::new()
+                .create(true)
+                .read(true)
+                .write(true)
+                .open(lock_path)?;
+            Some(lock_file)
+        } else {
+            None
+        };
+        Ok(Self {
+            writer,
+            lock_file,
+            locked: 0,
+        })
     }
 }
 
@@ -89,7 +110,10 @@ impl FileSync for FileReaderWriter {
 impl FileLock for FileReaderWriter {
     fn lock_exclusive(&mut self) -> io::Result<()> {
         if self.locked == 0 {
-            self.writer.get_mut().lock_exclusive()?;
+            match self.lock_file.as_mut() {
+                Some(file) => file.lock_exclusive()?,
+                None => self.writer.get_mut().lock_exclusive()?,
+            }
         }
         self.locked += 1;
         Ok(())
@@ -97,7 +121,10 @@ impl FileLock for FileReaderWriter {
 
     fn unlock(&mut self) -> io::Result<()> {
         if self.locked == 1 {
-            self.writer.get_mut().unlock()?;
+            match self.lock_file.as_mut() {
+                Some(file) => file.unlock()?,
+                None => self.writer.get_mut().unlock()?,
+            }
         }
         if self.locked > 0 {
             self.locked -= 1;
