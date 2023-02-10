@@ -6,9 +6,11 @@
  */
 
 export type TrackEventName =
-  | 'ClientConnection'
   | 'ClickedRefresh'
+  | 'ClientConnection'
+  | 'LoadMoreCommits'
   | 'RunOperation'
-  | 'LoadMoreCommits';
+  | 'StarRating'
+  | 'UnsubmittedStarRating';
 
 export type TrackErrorName = 'TopLevelError';

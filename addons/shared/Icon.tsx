@@ -17,7 +17,7 @@ export function Icon({
   slot?: 'start';
   icon: string;
   size?: 'S' | 'M' | 'L';
-}) {
+} & React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
   return (
     <div slot={slot} className={`codicon codicon-${icon} icon-size-${size ?? 'S'}`} {...other} />
   );
