@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/sqlitecatalog/WindowsFsck.h"
 
 #ifdef _WIN32
+#include <folly/executors/SerialExecutor.h>
 #include <folly/portability/Windows.h>
 
 #include <winioctl.h> // @manual
@@ -542,12 +543,23 @@ ImmediateFuture<bool> processChildren(
       ImmediateFuture<std::shared_ptr<const Tree>> childScmTreeFut{
           std::in_place};
       if (childState.scmDtype == dtype_t::Dir) {
-        childScmTreeFut = callback(childPath).thenValue(
-            [](std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
-              // TODO: handle scm failure
-              // It's guaranteed to be a Tree since scmDtype is Dir.
-              return std::move(std::get<std::shared_ptr<const Tree>>(scmEntry));
-            });
+        // Move the callback to a non-ready ImmediateFuture to make sure that
+        // the disk crawling is performed in a different thread (ie:
+        // not-immediately) in the case where the Tree is in the hgcache
+        // already.
+        childScmTreeFut =
+            makeNotReadyImmediateFuture()
+                .thenValue([&callback, childPath = childPath.copy()](auto&&) {
+                  return callback(childPath);
+                })
+                .thenValue(
+                    [](std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                           scmEntry) {
+                      // TODO: handle scm failure
+                      // It's guaranteed to be a Tree since scmDtype is Dir.
+                      return std::move(
+                          std::get<std::shared_ptr<const Tree>>(scmEntry));
+                    });
       }
 
       childFutures.emplace_back(
@@ -631,7 +643,13 @@ void windowsFsckScanLocalChanges(
     auto insensitiveOverlayDir = toPathMap(*view);
     std::atomic<uint64_t> traversedDirectories = 1;
     // TODO: Handler errors or no trees
-    callback(""_relpath)
+
+    auto executor = folly::getGlobalCPUExecutor();
+    if (!config->multiThreadedFsck.getValue()) {
+      executor = folly::SerialExecutor::create();
+    }
+
+    folly::via(executor, [&callback]() { return callback(""_relpath).semi(); })
         .thenValue(
             [&inodeCatalog,
              mountPath,
@@ -643,15 +661,16 @@ void windowsFsckScanLocalChanges(
               auto scmTree =
                   std::get<std::shared_ptr<const Tree>>(std::move(scmEntry));
               return processChildren(
-                  inodeCatalog,
-                  ""_relpath,
-                  mountPath,
-                  kRootNodeId,
-                  insensitiveOverlayDir,
-                  scmTree,
-                  callback,
-                  logFrequency,
-                  traversedDirectories);
+                         inodeCatalog,
+                         ""_relpath,
+                         mountPath,
+                         kRootNodeId,
+                         insensitiveOverlayDir,
+                         scmTree,
+                         callback,
+                         logFrequency,
+                         traversedDirectories)
+                  .semi();
             })
         .get();
     XLOGF(INFO, "Scanning complete for {}", mountPath);

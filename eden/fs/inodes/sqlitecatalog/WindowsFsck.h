@@ -45,6 +45,10 @@ class EdenConfig;
  *
  * See also: https://docs.microsoft.com/en-us/windows/win32/projfs/cache-state
  *
+ * All of this work is divided per directory, with each directory being handled
+ * in separate threads to speedup FSCK. The work is being executed in Folly's
+ * global CPU executor.
+ *
  */
 void windowsFsckScanLocalChanges(
     std::shared_ptr<const EdenConfig> config,

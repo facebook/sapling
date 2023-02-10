@@ -982,6 +982,11 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> fsckLogFrequency{"fsck:log-frequency", 10000, this};
 
+  /**
+   * Should FSCK be run on multiple threads, or serialized.
+   */
+  ConfigSetting<bool> multiThreadedFsck{"fsck:multi-threaded", false, this};
+
   // [glob]
 
   /**
