@@ -6,7 +6,6 @@
  */
 
 use std::io::Error;
-use std::io::ErrorKind;
 
 ///! Async job scheduling utilities for a blocking application
 ///!
@@ -26,12 +25,9 @@ use std::io::ErrorKind;
 ///!
 ///! TODO(T74221415): monitoring, signal handling
 use futures::future::Future;
-use futures::pin_mut;
-use futures::select;
 use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
-use futures::FutureExt;
 use once_cell::sync::Lazy;
 use tokio::runtime::Builder as RuntimeBuilder;
 use tokio::runtime::Runtime;
@@ -229,13 +225,11 @@ where
 }
 
 async fn unless_interrupted<F: Future>(f: F) -> Result<F::Output, Error> {
-    let f = f.fuse();
-    let ctrlc = tokio::signal::ctrl_c().fuse();
-    pin_mut!(f, ctrlc);
-    select! {
-        _ = ctrlc => Err(ErrorKind::Interrupted.into()),
-        res = f => Ok(res),
-    }
+    // This function used to use tokio::signal::ctrl_c().
+    // However tokio::signal::ctrl_c() cannot revert its side effect.
+    // Since we have a global ctrl_c handler, we can drop the use of
+    // tokio ctrl_c handling here.
+    Ok(f.await)
 }
 
 #[cfg(test)]

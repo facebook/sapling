@@ -552,7 +552,8 @@ def _runcatch(req):
 
     ui = req.ui
     try:
-        for name in "SIGBREAK", "SIGHUP", "SIGTERM":
+        # SIGTERM and SIGHUP are handled by Rust (ctrlc crate).
+        for name in ["SIGBREAK"]:
             num = getattr(signal, name, None)
             if num:
                 util.signal(num, catchterm)

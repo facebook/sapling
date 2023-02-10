@@ -101,6 +101,10 @@ fn main() {
     #[cfg(windows)]
     windows::enable_vt_processing().unwrap();
 
+    // Set up Ctrl+C handler for non-chg cases.
+    // chg has its own signal handler that forwards to the worker process.
+    setup_ctrlc();
+
     let mut io = clidispatch::io::IO::stdio();
 
     let _ = io.setup_term();
@@ -113,6 +117,10 @@ fn main() {
         }
     }
     drop(io);
+
+    // Run atexit handlers.
+    atexit::drop_queued();
+
     std::process::exit(code as i32);
 }
 
@@ -158,4 +166,33 @@ pub fn drop_root(user: &str, group: &str) {
     std::env::set_var("USER", user);
 
     eprintln!("switched user/group to {}/{}", user, group);
+}
+
+fn setup_ctrlc() {
+    // ctrlc with the "termination" feature would register SIGINT, SIGTERM and
+    // SIGHUP handlers.
+    //
+    // If you change this function, ensure to check Ctrl+C and SIGTERM works for
+    // these cases:
+    // - Python, native code released GIL: dbsh -c 'b.sleep(1000, False)'
+    // - Python, native code took GIL: dbsh -c 'b.sleep(1000, True)'
+    // - Rust: debugracyoutput
+    // - Pager, block on `write`: log --pager=always
+    // - Pager, block on `wait`: log -r . --pager=always --config pager.interface=full
+    let _ = ctrlc::set_handler(|| {
+        // Minimal cleanup then just exit. Our main storage (indexedlog,
+        // metalog) is SIGKILL-safe, if "finally" (Python) or "Drop" (Rust) does
+        // not run, it won't corrupt the repo data.
+
+        // Exit pager to restore terminal states (ex. quit raw mode)
+        if let Ok(io) = clidispatch::io::IO::main() {
+            let _ = io.quit_pager();
+        }
+
+        // Run atexit handlers.
+        atexit::drop_queued();
+
+        // "exit" tries to call "Drop"s but we don't rely on "Drop" for data integrity.
+        std::process::exit(128 | libc::SIGINT);
+    });
 }

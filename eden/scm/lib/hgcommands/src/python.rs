@@ -14,7 +14,7 @@ use ffi::PyUnicode_AsWideCharString;
 use ffi::PyUnicode_FromString;
 use ffi::Py_DECREF;
 use ffi::Py_Finalize;
-use ffi::Py_Initialize;
+use ffi::Py_InitializeEx;
 use ffi::Py_IsInitialized;
 use ffi::Py_Main;
 use ffi::Py_SetProgramName;
@@ -70,7 +70,8 @@ pub fn py_set_program_name(name: &str) {
 
 pub fn py_initialize() {
     unsafe {
-        Py_Initialize();
+        // Avoid overriding exiting Ctrl+C signal handlers.
+        Py_InitializeEx(0);
     }
 }
 
