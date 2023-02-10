@@ -94,7 +94,8 @@ class CommandDispatcher<CommandName extends string> extends window.EventTarget {
 /**
  * Add support for commands which are triggered by keyboard shortcuts.
  * return a top-level context provider which listens for global keyboard input,
- * plus a `useCommand` hook that lets you handle commands as they are dispatched.
+ * plus a `useCommand` hook that lets you handle commands as they are dispatched,
+ * plus a callback to dispatch events at any point in code (to simulate keyboard shortcuts).
  *
  * Commands are defined by mapping string command names to a key plus a set of modifiers.
  * CommandNames are statically known so that `useCommand` is type-safe.
@@ -104,7 +105,11 @@ class CommandDispatcher<CommandName extends string> extends window.EventTarget {
  */
 export function makeCommandDispatcher<CommandName extends string>(
   commands: CommandMap<CommandName>,
-): [FunctionComponent<PropsWithChildren>, (command: CommandName, handler: () => void) => void] {
+): [
+  FunctionComponent<PropsWithChildren>,
+  (command: CommandName, handler: () => void) => void,
+  (command: CommandName) => void,
+] {
   const commandDispatcher = new CommandDispatcher(commands);
   const Context = createContext(commandDispatcher);
 
@@ -121,5 +126,6 @@ export function makeCommandDispatcher<CommandName extends string>(
   return [
     ({children}) => <Context.Provider value={commandDispatcher}>{children}</Context.Provider>,
     useCommand,
+    (command: CommandName) => commandDispatcher.dispatchEvent(new Event(command)),
   ];
 }

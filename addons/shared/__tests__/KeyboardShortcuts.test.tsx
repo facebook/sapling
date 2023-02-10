@@ -207,4 +207,30 @@ describe('KeyboardShortcuts', () => {
     });
     expect(value).toBe(2);
   });
+
+  it('allows explicitly dispatching commands', () => {
+    const [ShortcutContext, useCommand, dispatchCommand] = makeCommandDispatcher({
+      foo: [Modifier.CMD, KeyCode.One],
+    });
+
+    function MyComponent() {
+      const [value, setValue] = useState('bad');
+      const onFoo = useCallback(() => {
+        setValue('good');
+      }, [setValue]);
+      useCommand('foo', onFoo);
+      return <div>{value}</div>;
+    }
+    render(
+      <ShortcutContext>
+        <MyComponent />
+      </ShortcutContext>,
+    );
+
+    expect(screen.queryByText('good')).not.toBeInTheDocument();
+    act(() => {
+      dispatchCommand('foo');
+    });
+    expect(screen.queryByText('good')).toBeInTheDocument();
+  });
 });
