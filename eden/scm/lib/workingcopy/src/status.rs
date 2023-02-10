@@ -25,6 +25,7 @@ use types::HgId;
 use types::RepoPathBuf;
 
 use crate::filesystem::ChangeType;
+use crate::util::walk_treestate;
 
 struct FakeTreeResolver {
     pub manifest: Arc<RwLock<TreeManifest>>,
@@ -242,31 +243,6 @@ pub fn compute_status(
         .deleted(deleted)
         .unknown(unknown)
         .invalid(invalid))
-}
-
-/// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
-/// and none of the flags in [`state_none`].
-fn walk_treestate(
-    treestate: &mut TreeState,
-    state_all: StateFlags,
-    state_none: StateFlags,
-    mut callback: impl FnMut(RepoPathBuf, StateFlags) -> Result<()>,
-) -> Result<()> {
-    let file_mask = state_all | state_none;
-    treestate.visit(
-        &mut |components, state| {
-            let path = RepoPathBuf::from_utf8(components.concat())?;
-            (callback)(path, state.state)?;
-            Ok(treestate::tree::VisitorResult::NotChanged)
-        },
-        &|_path, dir| match dir.get_aggregated_state() {
-            Some(state) => {
-                state.union.contains(state_all) && !state.intersection.intersects(state_none)
-            }
-            None => true,
-        },
-        &|_path, file| file.state & file_mask == state_all,
-    )
 }
 
 #[cfg(test)]
