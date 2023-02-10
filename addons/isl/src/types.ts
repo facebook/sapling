@@ -302,11 +302,14 @@ export type PlatformSpecificServerToClientMessages = {
 
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 
+export type FileABugFields = {title: string; description: string; repro: string};
+
 export type ClientToServerMessage =
   | {
       type: 'refresh';
     }
   | {type: 'track'; data: TrackDataWithEventName}
+  | {type: 'fileBugReport'; data: FileABugFields}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}

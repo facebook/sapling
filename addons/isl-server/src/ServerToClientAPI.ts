@@ -24,6 +24,7 @@ import type {
   PlatformSpecificClientToServerMessages,
 } from 'isl/src/types';
 
+import {Internal} from './Internal';
 import {absolutePathForFileInRepo} from './Repository';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
@@ -34,7 +35,7 @@ export type IncomingMessage = ClientToServerMessage;
 export type OutgoingMessage = ServerToClientMessage;
 
 type GeneralMessage = IncomingMessage &
-  ({type: 'requestRepoInfo'} | {type: 'requestApplicationInfo'});
+  ({type: 'requestRepoInfo'} | {type: 'requestApplicationInfo'} | {type: 'fileBugReport'});
 type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
 
 /**
@@ -198,6 +199,10 @@ export default class ServerToClientAPI {
           platformName: this.platform.platformName,
           version: this.connection.version,
         });
+        break;
+      }
+      case 'fileBugReport': {
+        Internal.fileABug?.(data.data);
         break;
       }
     }
