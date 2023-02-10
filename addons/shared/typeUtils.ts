@@ -38,3 +38,5 @@ export type AllUndefined<T> = {[P in keyof T]?: undefined};
  * ```
  */
 export type Writable<T> = {-readonly [P in keyof T]: T[P]};
+
+export type Json = string | number | boolean | null | Json[] | {[key: string]: Json};

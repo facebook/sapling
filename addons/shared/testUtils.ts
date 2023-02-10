@@ -6,6 +6,7 @@
  */
 
 import type {Logger} from '../isl-server/src/logger';
+import type {Json} from './typeUtils';
 
 export const mockLogger: Logger = {
   log: jest.fn(),
@@ -14,8 +15,7 @@ export const mockLogger: Logger = {
   error: jest.fn(),
 };
 
-type json = string | number | boolean | null | json[] | {[key: string]: json};
-export function clone<T extends json>(o: T): T {
+export function clone<T extends Json>(o: T): T {
   return JSON.parse(JSON.stringify(o));
 }
 

@@ -205,6 +205,7 @@ export default class ServerToClientAPI {
       case 'fileBugReport': {
         Internal.fileABug?.(
           data.data,
+          data.uiState,
           this.tracker,
           this.connection.logFileLocation,
           (progress: FileABugProgress) => {

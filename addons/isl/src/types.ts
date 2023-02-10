@@ -9,7 +9,7 @@ import type {InternalTypes} from './InternalTypes';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
-import type {AllUndefined} from 'shared/typeUtils';
+import type {AllUndefined, Json} from 'shared/typeUtils';
 
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
@@ -315,7 +315,7 @@ export type ClientToServerMessage =
       type: 'refresh';
     }
   | {type: 'track'; data: TrackDataWithEventName}
-  | {type: 'fileBugReport'; data: FileABugFields}
+  | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'deleteFile'; filePath: RepoRelativePath}
   | {type: 'fetchCommitMessageTemplate'}
