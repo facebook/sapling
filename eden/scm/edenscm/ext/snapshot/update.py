@@ -12,7 +12,7 @@ from .metalog import storelatest
 
 
 @perftrace.tracefunc("Has any changes")
-def _hasanychanges(repo):
+def _hasanychanges(repo) -> bool:
     wctx = repo[None]
     return (
         bool(wctx.dirty(missing=True)) or len(wctx.status(listunknown=True).unknown) > 0
@@ -20,7 +20,7 @@ def _hasanychanges(repo):
 
 
 @perftrace.tracefunc("Snapshot clean working state")
-def _fullclean(ui, repo, exclude):
+def _fullclean(ui, repo, exclude) -> None:
     start_time = time.perf_counter()
     ui.status(_("cleaning up uncommitted code\n"), component="snapshot")
     # The order of operations to cleanup here is very deliberate, to avoid errors.
@@ -62,7 +62,7 @@ def _fullclean(ui, repo, exclude):
 
 
 @util.timefunction("snapshot_parent_update", 0, None)
-def _parent_update(ui, repo, parent):
+def _parent_update(ui, repo, parent) -> None:
     start_parent_update = time.perf_counter()
     ui.status(
         _("Updating to parent {}\n").format(parent.hex()),
@@ -95,7 +95,7 @@ def fetchsnapshot(repo, csid):
 
 
 @util.timefunction("snapshot_download_files", 0, None)
-def _download_files_and_fix_status(ui, repo, snapshot):
+def _download_files_and_fix_status(ui, repo, snapshot) -> None:
     files2download = []
     pathtype = []
 
@@ -158,7 +158,7 @@ def _download_files_and_fix_status(ui, repo, snapshot):
         )
 
 
-def update(ui, repo, csid, clean=False):
+def update(ui, repo, csid: str, clean: bool = False) -> None:
     ui.status(
         _("Will restore snapshot {}\n").format(csid.format()), component="snapshot"
     )
