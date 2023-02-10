@@ -51,6 +51,10 @@ class SyncState(object):
             if workspacename in states:
                 del states[workspacename]
                 cls.savev2states(repo.svfs, states)
+        # update v1 states
+        filename = cls._v1filename(workspacename)
+        # clean up the current state in force recover mode
+        repo.svfs.tryunlink(filename)
 
     @classmethod
     def movestate(cls, repo, workspacename, new_workspacename):
@@ -60,6 +64,10 @@ class SyncState(object):
             if workspacename in states:
                 states[new_workspacename] = states[workspacename]
                 cls.savev2states(repo.svfs, states)
+        # update v1 states
+        src = cls._v1filename(workspacename)
+        dst = cls._v1filename(new_workspacename)
+        repo.svfs.rename(src, dst)
 
     @classmethod
     def loadv2states(cls, svfs):
@@ -168,6 +176,11 @@ class SyncState(object):
             "omittedremotebookmarks": omittedremotebookmarks,
             "lastupdatetime": time.time(),
         }
+        tr.addfilegenerator(
+            self.v1filename,
+            [self.v1filename],
+            lambda f, data=data: f.write(encodeutf8(json.dumps(data))),
+        )
         svfs = tr._vfsmap[""]
         states = self.loadv2states(svfs)
         states[self.workspacename] = data
