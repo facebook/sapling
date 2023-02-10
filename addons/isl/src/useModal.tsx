@@ -10,18 +10,20 @@ import type {Deferred} from 'shared/utils';
 import {useCommand} from './ISLShortcuts';
 import {Modal} from './Modal';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {useEffect, useRef} from 'react';
 import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 import {Icon} from 'shared/Icon';
 import {defer} from 'shared/utils';
 
 import './useModal.css';
 
+type ButtonConfig = {label: string | React.ReactNode; primary?: boolean};
 type ModalConfig<T> =
   | {
       // hack: using 'confirm' mode requires T to be string.
       // The type inference goes wrong if we try to add this constraint directly to the `buttons` field.
       // By adding the constaint here, we get type checking that T is string in order to use this API.
-      type: T extends string ? 'confirm' : never;
+      type: T extends string ? 'confirm' : T extends ButtonConfig ? 'confirm' : never;
       message: React.ReactNode;
       buttons: ReadonlyArray<T>;
       /** Optional codicon to show next to the title */
@@ -50,6 +52,9 @@ const modalState = atom<ModalState<unknown | string> | null>({
 export function ModalContainer() {
   const [modal, setModal] = useRecoilState(modalState);
 
+  // we expect at most one button is "primary"
+  const primaryButtonRef = useRef(null);
+
   const dismiss = () => {
     if (modal?.visible) {
       modal.deferred.resolve(undefined);
@@ -58,6 +63,13 @@ export function ModalContainer() {
   };
 
   useCommand('Escape', dismiss);
+
+  // focus primary button on mount
+  useEffect(() => {
+    if (modal?.visible && primaryButtonRef.current != null) {
+      (primaryButtonRef.current as HTMLButtonElement).focus();
+    }
+  }, [primaryButtonRef, modal?.visible]);
 
   if (modal?.visible !== true) {
     return null;
@@ -70,17 +82,22 @@ export function ModalContainer() {
       <>
         <div id="use-modal-message">{config.message}</div>
         <div className="use-modal-buttons">
-          {config.buttons.map(button => (
-            <VSCodeButton
-              appearance="secondary"
-              onClick={() => {
-                modal.deferred.resolve(button);
-                setModal({...modal, visible: false});
-              }}
-              key={button}>
-              {button}
-            </VSCodeButton>
-          ))}
+          {config.buttons.map((button: string | ButtonConfig, index: number) => {
+            const label = typeof button === 'object' ? button.label : button;
+            const isPrimary = typeof button === 'object' && button.primary != null;
+            return (
+              <VSCodeButton
+                appearance={isPrimary ? 'primary' : 'secondary'}
+                onClick={() => {
+                  modal.deferred.resolve(button);
+                  setModal({...modal, visible: false});
+                }}
+                ref={isPrimary ? primaryButtonRef : undefined}
+                key={index}>
+                {label}
+              </VSCodeButton>
+            );
+          })}
         </div>
       </>
     );
