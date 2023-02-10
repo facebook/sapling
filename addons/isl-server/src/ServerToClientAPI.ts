@@ -202,7 +202,12 @@ export default class ServerToClientAPI {
         break;
       }
       case 'fileBugReport': {
-        Internal.fileABug?.(data.data);
+        const result = Internal.fileABug?.(data.data);
+        if (result) {
+          result.then(() => {
+            this.connection.logger?.log('file a bug result: ', result);
+          });
+        }
         break;
       }
     }
