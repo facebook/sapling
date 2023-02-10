@@ -10,20 +10,19 @@
   $ newclientrepo foo test:repo_server book
   $ cd ../repo
 
+Journal is cleaned up automatically.
   $ echo something > .hg/store/journal
 
   $ echo foo > a
   $ hg ci -Am0
-  abort: abandoned transaction found!
-  (run 'hg recover' to clean up transaction)
-  [255]
+  couldn't read journal entry 'something\n'!
 
   $ hg recover
-  rolling back interrupted transaction
-  couldn't read journal entry 'something\n'!
+  no interrupted transaction available
+  [1]
 
 Empty journal is cleaned up automatically.
   $ touch .hg/store/journal
   $ hg ci -Am0
-  cleaning up empty abandoned transaction
-  rolling back interrupted transaction
+  nothing changed
+  [1]

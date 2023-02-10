@@ -1698,15 +1698,7 @@ class localrepository(object):
             # No existing transaction - this is the normal case.
             pass
         else:
-            if stat.st_size > 0:
-                # Non-empty transaction already exists - bail.
-                raise errormod.AbandonedTransactionFoundError(
-                    _("abandoned transaction found"),
-                    hint=_("run '@prog@ recover' to clean up transaction"),
-                )
-            else:
-                self.ui.status(_("cleaning up empty abandoned transaction\n"))
-                self.recover()
+            self.recover()
 
         idbase = b"%.40f#%f" % (random.random(), time.time())
         ha = hex(hashlib.sha1(idbase).digest())
@@ -1959,7 +1951,7 @@ class localrepository(object):
     def recover(self):
         with self.lock():
             if self.svfs.exists("journal"):
-                self.ui.status(_("rolling back interrupted transaction\n"))
+                self.ui.debug("rolling back interrupted transaction\n")
                 vfsmap = {
                     "": self.svfs,
                     "shared": self.sharedvfs,
