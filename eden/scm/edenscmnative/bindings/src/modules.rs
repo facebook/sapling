@@ -37,6 +37,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             //     name = os.path.basename(os.path.dirname(path))
             //     cog.outl(f'{name[2:]},')
             // ]]]
+            atexit,
             auth,
             blackbox,
             bytes,
