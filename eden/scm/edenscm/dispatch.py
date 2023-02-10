@@ -441,9 +441,6 @@ def dispatch(req):
         _formatparse(ferr.write, inst)
         return -1
 
-    if req.ui.configbool("ui", "threaded"):
-        util.preregistersighandlers()
-
     cmdmsg = _formatargs(req.args)
     starttime = util.timer()
     ret = None
@@ -696,19 +693,7 @@ def _runcatch(req):
                 os._exit(255)
             raise
 
-    # IPython (debugshell) has some background (sqlite?) threads that is incompatible
-    # with util.threaded. But "debugshell -c" should use util.threaded.
-    if (
-        ui.configbool("ui", "threaded")
-        and req.args not in [["dbsh"], ["debugsh"], ["debugshell"]]
-        and realcmd != "serve"
-    ):
-        # Run command (and maybe start ipdb) in a background thread for
-        # better Ctrl+C handling of long native logic.
-        return util.threaded(_callcatch)(ui, req, _runcatchfunc)
-    else:
-        # Run in the main thread.
-        return _callcatch(ui, req, _runcatchfunc)
+    return _callcatch(ui, req, _runcatchfunc)
 
 
 def _callcatch(ui, req, func):

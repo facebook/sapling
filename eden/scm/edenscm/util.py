@@ -73,6 +73,9 @@ from . import blackbox, encoding, error, fscap, i18n, pycompat, urllibcompat
 from .pycompat import decodeutf8, encodeutf8, range
 
 
+getsignal = signalmod.getsignal
+signal = signalmod.signal
+
 b85decode = base85.b85decode
 b85encode = base85.b85encode
 
@@ -4236,72 +4239,6 @@ class traced(object):
         tracer.exit(self.spanid)
 
 
-def threaded(func):
-    """Decorator that spawns a new Python thread to run the wrapped function.
-
-    This is useful for FFI calls to allow the Python interpreter to handle
-    signals during the FFI call. For example, without this it would not be
-    possible to interrupt the process with Ctrl-C during a long-running FFI
-    call.
-    """
-
-    def wrapped(*args, **kwargs):
-        result = ["err", error.Abort(_("thread aborted unexpectedly"))]
-
-        def target(*args, **kwargs):
-            try:
-                result[:] = ["ok", func(*args, **kwargs)]
-            except BaseException as e:
-                tb = sys.exc_info()[2]
-                e.__traceback__ = tb
-                result[:] = ["err", e]
-
-        thread = threading.Thread(target=target, args=args, kwargs=kwargs)
-        # If the main program decides to exit, do not wait for the thread.
-        thread.daemon = True
-        thread.start()
-
-        # XXX: Need to repeatedly poll the thread because blocking
-        # indefinitely on join() would prevent the interpreter from
-        # handling signals.
-        while thread.is_alive():
-            try:
-                thread.join(1)
-            except KeyboardInterrupt as e:
-                # Exceptions from the signal handlers are sent to the
-                # main thread (here). The 'thread' won't get exceptions
-                # from signal handlers therefore will continue run.
-                # Attempt to interrupt it to make it stop.
-                interrupt(thread, type(e))
-
-                # Give the thread some time to run 'finally' blocks.
-                try:
-                    thread.join(5)
-                except KeyboardInterrupt:
-                    # Ctrl+C is pressed again. The user becomes inpatient.
-                    pass
-
-                # Re-raise. This returns control to callsite if the background
-                # thread is still blocking. It might potentially miss some
-                # 'finally' blocks, but our storage should be generally fine.
-                # 'hg recover' might be needed to recover from an aborted
-                # transaction. In the future if we migrate off legacy revlog,
-                # we might be able to remove the file-truncation-based
-                # transaction layer.
-                raise
-
-        variant, value = result
-        if variant == "err":
-            tb = getattr(value, "__traceback__", None)
-            if tb is not None:
-                pycompat.raisewithtb(value, tb)
-            raise value
-
-        return value
-
-    return wrapped
-
-
 def interrupt(thread, exc):
     """Interrupt a thread using the given exception"""
     # See https://github.com/python/cpython/blob/fbf43f051e7bf479709e122efa4b6edd4b09d4df/Lib/test/test_threading.py#L189
@@ -4873,105 +4810,6 @@ def spawndetached(args, cwd=None, env=None):
     if env is not None:
         cmd.envclear().envs(sorted(env.items()))
     return cmd.spawndetached().id()
-
-
-_handlersregistered = False
-_sighandlers = {}
-
-
-def signal(signum, handler):
-    """Set the handler for signal signalnum to the function handler.
-
-    Unlike the stdlib signal.signal, this can work from non-main thread
-    if _handlersregistered is set.
-    """
-    if _handlersregistered:
-        oldhandler = _sighandlers.get(signum)
-        if signum not in _sighandlers:
-            raise error.ProgrammingError(
-                "signal %d cannot be registered - add it in preregistersighandlers first"
-                % signum
-            )
-        _sighandlers[signum] = handler
-        return oldhandler
-    else:
-        return signalmod.signal(signum, handler)
-
-
-def getsignal(signum):
-    """Get the signal handler for signum registered by 'util.signal'.
-
-    Note: if 'util' gets reloaded, the returned function might be a wrapper
-    (specialsighandler) instead of what's set by 'util.signal'.
-    """
-    if _handlersregistered:
-        return _sighandlers.get(signum)
-    else:
-        return signalmod.getsignal(signum)
-
-
-def preregistersighandlers():
-    """Pre-register signal handlers so 'util.signal' can work.
-
-    This works by registering a special signal handler that reads
-    '_sighandlers' to decide what to do. Other threads can modify
-    '_sighandlers' via 'util.signal' to control what the signal
-    handler does.
-    """
-    global _handlersregistered
-    if _handlersregistered:
-        return
-
-    _handlersregistered = True
-
-    def term(signum, frame):
-        raise error.SignalInterrupt
-
-    def ignore(signum, frame):
-        pass
-
-    def stop(signum, frame):
-        os.kill(0, signalmod.SIGSTOP)
-
-    # Signals used by the program.
-    # If a new signal is used, it should be added here.
-    # See 'man 7 signal' for defaults.
-    defaultbyname = {
-        # SIGBREAK is Windows-only.
-        "SIGBREAK": term,
-        # Following POSIX-ish signals can be missing on Windows,
-        # or some POSIX platforms.
-        "SIGCHLD": ignore,
-        "SIGHUP": term,
-        "SIGINT": term,
-        "SIGPIPE": term,
-        "SIGPROF": term,
-        "SIGTERM": term,
-        "SIGTSTP": stop,
-        "SIGUSR1": term,
-        "SIGUSR2": term,
-        "SIGWINCH": ignore,
-    }
-    defaultbynum = {}
-
-    def specialsighandler(signum, frame):
-        handler = _sighandlers.get(signum, signalmod.SIG_DFL)
-        if handler == signalmod.SIG_DFL or handler is None:
-            handler = defaultbynum.get(signum, term)
-        elif handler == signalmod.SIG_IGN:
-            handler = ignore
-        return handler(signum, frame)
-
-    for name, action in defaultbyname.items():
-        signum = getattr(signalmod, name, None)
-        if signum is None:
-            continue
-        defaultbynum[signum] = action
-        try:
-            _sighandlers[signum] = signalmod.signal(signum, specialsighandler)
-        except ValueError:
-            # Not all signals are supported on Windows.
-            pass
 
 
 def formatduration(time):

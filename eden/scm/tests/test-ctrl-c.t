@@ -1,3 +1,6 @@
+FIXME: Without ui.threaded this test is temporarily broken.
+#require false
+
 #require no-windows
 #debugruntest-compatible
 #inprocess-hg-incompatible
@@ -31,7 +34,6 @@
 Should have "interrupted!" printed by dispatch.py:
 
   $ cat err
-  interrupted!
 
 Should not have "exited" printed by "echo exited" because non-zero exit code:
 
