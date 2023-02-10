@@ -95,6 +95,16 @@ pub enum ParseError {
     InvalidUnicode(String),
 }
 
+impl ParseError {
+    pub fn into_path_bytes(self) -> Vec<u8> {
+        match self {
+            ParseError::ValidationError(s, _) => s.into_bytes(),
+            ParseError::InvalidUtf8(b, _) => b,
+            ParseError::InvalidUnicode(s) => s.into_bytes(),
+        }
+    }
+}
+
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {

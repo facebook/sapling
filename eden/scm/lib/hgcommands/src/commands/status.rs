@@ -223,6 +223,14 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
         Box::new(ctx.io().output()),
     )?;
 
+    let mut lgr = ctx.logger();
+    for invalid in status.invalid() {
+        lgr.warn(format!(
+            "skipping invalid utf-8 filename: '{}'",
+            util::utf8::escape_non_utf8(invalid)
+        ));
+    }
+
     ctx.maybe_start_pager(repo.config())?;
 
     print::print_status(formatter, relativizer, &print_config, &status, &copymap)?;

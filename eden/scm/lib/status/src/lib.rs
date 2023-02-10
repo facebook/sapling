@@ -16,6 +16,9 @@ use types::RepoPathBuf;
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Status {
     all: HashMap<RepoPathBuf, FileStatus>,
+
+    // Non-utf8 or otherwise invalid paths. Up to the caller how to handle these, if at all.
+    invalid: Vec<Vec<u8>>,
 }
 
 pub struct StatusBuilder(Status);
@@ -61,6 +64,11 @@ impl StatusBuilder {
 
     pub fn clean(mut self, clean: Vec<RepoPathBuf>) -> Self {
         Self::index(&mut self.0.all, clean, FileStatus::Clean);
+        self
+    }
+
+    pub fn invalid(mut self, invalid: Vec<Vec<u8>>) -> Self {
+        self.0.invalid = invalid;
         self
     }
 
@@ -110,6 +118,10 @@ impl Status {
 
     pub fn clean(&self) -> impl Iterator<Item = &RepoPathBuf> {
         self.filter_status(FileStatus::Clean)
+    }
+
+    pub fn invalid(&self) -> &[Vec<u8>] {
+        &self.invalid
     }
 
     pub fn status(&self, file: &RepoPath) -> Option<FileStatus> {

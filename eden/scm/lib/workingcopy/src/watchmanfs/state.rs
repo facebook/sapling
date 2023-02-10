@@ -26,7 +26,7 @@ use crate::filesystem::PendingChangeResult;
 
 query_result_type! {
     pub struct StatusQuery {
-        name: NameField,
+        name: BytesNameField,
         exists: ExistsField,
     }
 }
@@ -81,7 +81,7 @@ impl WatchmanState {
             .files
             .unwrap_or_default()
             .into_iter()
-            .map(|query| RepoPathBuf::try_from(query.name.into_inner()))
+            .map(|query| RepoPathBuf::from_utf8(query.name.into_inner().into_bytes()))
             .partition(Result::is_ok);
 
         let mut needs_check = needs_check
@@ -319,11 +319,11 @@ mod tests {
                         .iter()
                         .filter_map(|(path, _state, event)| match event {
                             Event::Changed | Event::Reverted => Some(StatusQuery {
-                                name: NameField::new(path.to_path()),
+                                name: BytesNameField::new(path.to_string().into()),
                                 exists: ExistsField::new(true),
                             }),
                             Event::Deleted => Some(StatusQuery {
-                                name: NameField::new(path.to_path()),
+                                name: BytesNameField::new(path.to_string().into()),
                                 exists: ExistsField::new(false),
                             }),
                             Event::Nothing => None,

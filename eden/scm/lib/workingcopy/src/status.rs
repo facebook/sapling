@@ -49,6 +49,7 @@ pub fn compute_status(
     let mut removed = vec![];
     let mut deleted = vec![];
     let mut unknown = vec![];
+    let mut invalid = vec![];
 
     // Step 1: get the tree state for each pending change in the working copy.
     // We may have a TreeState that only holds files that are being added/removed
@@ -61,7 +62,14 @@ pub fn compute_status(
         let (path, is_deleted) = match change {
             Ok(ChangeType::Changed(path)) => (path, false),
             Ok(ChangeType::Deleted(path)) => (path, true),
-            Err(e) => return Err(e),
+            Err(e) => {
+                match e.downcast::<types::path::ParseError>() {
+                    Ok(parse_err) => invalid.push(parse_err.into_path_bytes()),
+                    Err(e) => return Err(e),
+                }
+
+                continue;
+            }
         };
 
         let mut treestate = treestate.lock();
@@ -232,7 +240,8 @@ pub fn compute_status(
         .added(added)
         .removed(removed)
         .deleted(deleted)
-        .unknown(unknown))
+        .unknown(unknown)
+        .invalid(invalid))
 }
 
 /// Walk the TreeState, calling the callback for files that have all flags in [`state_all`]
