@@ -6,11 +6,13 @@
  */
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use serde::Deserialize;
 use types::path::ParseError;
@@ -39,8 +41,12 @@ pub struct WatchmanState {
 }
 
 impl WatchmanState {
-    pub fn new(config: &dyn Config, mut treestate: impl WatchmanTreeStateRead) -> Result<Self> {
-        let (needs_check, parse_errs) = treestate.list_needs_check()?;
+    pub fn new(
+        config: &dyn Config,
+        mut treestate: impl WatchmanTreeStateRead,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<Self> {
+        let (needs_check, parse_errs) = treestate.list_needs_check(matcher)?;
 
         Ok(WatchmanState {
             treestate_needs_check: needs_check.into_iter().collect(),
@@ -197,9 +203,17 @@ impl IntoIterator for WatchmanPendingChanges {
 mod tests {
     use std::collections::BTreeMap;
     use std::collections::HashSet;
+    use std::sync::Arc;
 
     use anyhow::Result;
+    use parking_lot::Mutex;
+    use pathmatcher::AlwaysMatcher;
+    use pathmatcher::ExactMatcher;
+    use pathmatcher::Matcher;
     use repolock::RepoLocker;
+    use treestate::filestate::FileStateV2;
+    use treestate::filestate::StateFlags;
+    use treestate::treestate::TreeState;
     use types::path::ParseError;
     use types::RepoPath;
     use types::RepoPathBuf;
@@ -214,6 +228,7 @@ mod tests {
     use crate::filechangedetector::ResolvedFileChangeResult;
     use crate::filesystem::ChangeType;
     use crate::filesystem::PendingChangeResult;
+    use crate::watchmanfs::treestate::WatchmanTreeState;
 
     #[derive(Clone)]
     enum Event {
@@ -235,7 +250,10 @@ mod tests {
     }
 
     impl WatchmanTreeStateRead for WatchmanStateTestTreeState {
-        fn list_needs_check(&mut self) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
+        fn list_needs_check(
+            &mut self,
+            _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        ) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
             Ok((self.needs_check.clone(), Vec::new()))
         }
 
@@ -416,7 +434,12 @@ mod tests {
         ];
 
         let test = WatchmanStateTest::new(events);
-        let state = WatchmanState::new(&BTreeMap::<&str, &str>::new(), test.treestate()).unwrap();
+        let state = WatchmanState::new(
+            &BTreeMap::<&str, &str>::new(),
+            test.treestate(),
+            Arc::new(AlwaysMatcher::new()),
+        )
+        .unwrap();
 
         let pending_changes = state
             .merge(test.query_result(), test.file_change_detector())
@@ -440,5 +463,47 @@ mod tests {
             _ => panic!("Unexpected pending change result"),
         });
         serde_json::to_string(&results).unwrap()
+    }
+
+    #[test]
+    fn test_skip_ignored_files() -> Result<()> {
+        // Show that we respect the matcher to skip treestate files we don't care about.
+
+        let fs = FileStateV2 {
+            mode: 0,
+            size: 0,
+            mtime: 0,
+            state: StateFlags::NEED_CHECK,
+            copied: None,
+        };
+
+        let dir = tempfile::tempdir()?;
+
+        let mut ts = TreeState::new(dir.path(), false)?.0;
+        ts.insert("include_me", &fs)?;
+        ts.insert("ignore_me", &fs)?;
+
+        let matcher = Arc::new(ExactMatcher::new(
+            [RepoPath::from_str("include_me")?].iter(),
+            false,
+        ));
+
+        let state = WatchmanState::new(
+            &BTreeMap::<&str, &str>::new(),
+            WatchmanTreeState {
+                treestate: Arc::new(Mutex::new(ts)),
+                root: "/dev/null".as_ref(),
+            },
+            matcher,
+        )?;
+
+        assert_eq!(
+            state.treestate_needs_check,
+            [RepoPathBuf::from_string("include_me".to_string())?]
+                .into_iter()
+                .collect()
+        );
+
+        Ok(())
     }
 }

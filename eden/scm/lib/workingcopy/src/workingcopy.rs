@@ -419,12 +419,15 @@ impl WorkingCopy {
         Ok(status_builder)
     }
 
-    pub fn copymap(&self) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
+    pub fn copymap(
+        &self,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
         let mut copied: Vec<(RepoPathBuf, RepoPathBuf)> = Vec::new();
 
         walk_treestate(
             &mut self.treestate.lock(),
-            Arc::new(AlwaysMatcher::new()),
+            matcher,
             StateFlags::COPIED,
             StateFlags::empty(),
             |path, state| {

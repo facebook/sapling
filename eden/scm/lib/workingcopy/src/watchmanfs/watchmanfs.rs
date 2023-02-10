@@ -98,7 +98,7 @@ impl PendingChanges for WatchmanFileSystem {
     #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
-        _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
@@ -109,6 +109,7 @@ impl PendingChanges for WatchmanFileSystem {
                 treestate: self.treestate.clone(),
                 root: self.vfs.root(),
             },
+            matcher,
         )?;
 
         let result = async_runtime::block_on(self.query_result(&state))?;

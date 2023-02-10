@@ -171,8 +171,18 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
             tracing::debug!(target: "status_info", status_mode="rust");
 
             let matcher = Arc::new(AlwaysMatcher::new());
-            let status = wc.status(matcher, SystemTime::UNIX_EPOCH, repo.config(), ctx.io())?;
-            let copymap = wc.copymap()?.into_iter().collect();
+            let status = wc.status(
+                matcher.clone(),
+                SystemTime::UNIX_EPOCH,
+                repo.config(),
+                ctx.io(),
+            )?;
+
+            // This should be passed the "full" matcher including
+            // ignores, sparse, etc., but in practice probably doesn't
+            // make a difference.
+            let copymap = wc.copymap(matcher)?.into_iter().collect();
+
             (status, copymap)
         }
         false => {

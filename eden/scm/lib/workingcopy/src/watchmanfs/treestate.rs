@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use parking_lot::Mutex;
-use pathmatcher::AlwaysMatcher;
+use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
@@ -37,7 +37,10 @@ pub trait WatchmanTreeStateWrite {
 }
 
 pub trait WatchmanTreeStateRead {
-    fn list_needs_check(&mut self) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)>;
+    fn list_needs_check(
+        &mut self,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)>;
 
     fn get_clock(&self) -> Result<Option<Clock>>;
 }
@@ -133,12 +136,15 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
 }
 
 impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
-    fn list_needs_check(&mut self) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
+    fn list_needs_check(
+        &mut self,
+        matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
         let mut needs_check = Vec::new();
 
         let parse_errs = walk_treestate(
             &mut self.treestate.lock(),
-            Arc::new(AlwaysMatcher::new()),
+            matcher,
             StateFlags::NEED_CHECK,
             StateFlags::empty(),
             |path, _state| {
