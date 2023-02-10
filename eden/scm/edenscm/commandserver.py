@@ -23,6 +23,8 @@ import sys
 import traceback
 from typing import Any, BinaryIO, List, Tuple
 
+import bindings
+
 from . import encoding, error, pycompat, util
 from .i18n import _
 
@@ -604,4 +606,7 @@ class unixforkingservice(object):
             # os._exit here. So let's explicitly clear the progress before
             # os._exit.
             util.mainio.disable_progress()
+            # os._exit bypasses Rust `atexit::drop_queued`. Call `drop_queued`
+            # explicitly.
+            bindings.atexit.drop_queued()
             gc.collect()  # trigger __del__ since worker process uses os._exit

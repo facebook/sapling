@@ -12,6 +12,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "atexit"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<AtExit>(py)?;
+    m.add(py, "drop_queued", py_fn!(py, drop_queued()))?;
     Ok(m)
 }
 
@@ -63,4 +64,9 @@ impl AtExit {
         let inner = inner.queued();
         Self::create_instance(py, inner)
     }
+}
+
+fn drop_queued(_py: Python) -> PyResult<PyNone> {
+    atexit::drop_queued();
+    Ok(PyNone)
 }

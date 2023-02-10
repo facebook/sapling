@@ -487,21 +487,19 @@ def clone(
             raise error.Abort(_("destination '%s' already exists") % dest)
         elif destvfs.listdir():
             raise error.Abort(_("destination '%s' is not empty") % dest)
-    else:
         cleanup_path = os.path.join(dest, ui.identity.dotdir())
 
-    # Create the destination repo before we even open the connection to the
-    # source, so we can use any repo-specific configuration for the connection.
-    try:
-        # Note: This triggers hgrc.dynamic generation with empty repo hgrc.
-        destpeer = repository(ui, dest, create=True)
-    except OSError as inst:
-        if inst.errno == errno.EEXIST:
-            cleandir = None
-            raise error.Abort(_("destination '%s' already exists") % dest)
-        raise
+    with bindings.atexit.AtExit.rmtree(cleanup_path) as atexit_rmtree:
+        # Create the destination repo before we even open the connection to the
+        # source, so we can use any repo-specific configuration for the connection.
+        try:
+            # Note: This triggers hgrc.dynamic generation with empty repo hgrc.
+            destpeer = repository(ui, dest, create=True)
+        except OSError as inst:
+            if inst.errno == errno.EEXIST:
+                raise error.Abort(_("destination '%s' already exists") % dest)
+            raise
 
-    with bindings.atexit.AtExit.rmtree(cleanup_path):
         destrepo = destpeer.local()
 
         # Get the source url, so we can write it into the dest hgrc
@@ -541,265 +539,257 @@ def clone(
 
         # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
         # configs.
+        if isinstance(source, str):
+            source, mayberevs = parseurl(origsource)
+            if len(mayberevs) == 1:
+                rev = rev or mayberevs[0]
+            srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
+
+        branch = (None, [])
+        # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
+        rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
+
+        source = util.urllocalpath(source)
+
+        srclock = destlock = destlockw = None
+        srcrepo = srcpeer.local()
         try:
-            if isinstance(source, str):
-                source, mayberevs = parseurl(origsource)
-                if len(mayberevs) == 1:
-                    rev = rev or mayberevs[0]
-                srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
-        except Exception:
-            raise
-
-    branch = (None, [])
-    # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
-    rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
-
-    source = util.urllocalpath(source)
-
-    srclock = destlock = destlockw = cleandir = None
-    srcrepo = srcpeer.local()
-    try:
-        if islocal(dest):
-            cleandir = dest
-
-        copy = False
-        if (
-            srcrepo
-            and srcrepo.cancopy()
-            and islocal(dest)
-            and not phases.hassecret(srcrepo)
-        ):
-            copy = not pull and not rev
-
-        if copy:
-            try:
-                # we use a lock here because if we race with commit, we
-                # can end up with extra data in the cloned revlogs that's
-                # not pointed to by changesets, thus causing verify to
-                # fail
-                srclock = srcrepo.lock(wait=False)
-            except error.LockError:
-                copy = False
-
-        if copy:
-            clonecodepath = "copy"
-
-            srcrepo.hook("preoutgoing", throw=True, source="clone")
-            hgdir = os.path.realpath(os.path.join(dest, ui.identity.dotdir()))
-            if not os.path.exists(dest):
-                os.mkdir(dest)
-            else:
-                # only clean up directories we create ourselves
-                cleandir = hgdir
-            try:
-                destpath = hgdir
-            except OSError as inst:
-                if inst.errno == errno.EEXIST:
-                    cleandir = None
-                    raise error.Abort(_("destination '%s' already exists") % dest)
-                raise
-
-            # Drop the existing destrepo so Windows releases the files.
-            # Manually gc to ensure the objects are dropped.
-            destpeer = destrepo = None
-            import gc
-
-            gc.collect()
-
-            destlock = copystore(ui, srcrepo, destpath)
-            # repo initialization might also take a lock. Keeping destlock
-            # outside the repo object can cause deadlock. To avoid deadlock,
-            # we just release destlock here. The lock will be re-acquired
-            # soon by `destpeer`, or `local.lock()` below.
-            if destlock is not None:
-                destlock.release()
-
-            # copy bookmarks over
-            srcbookmarks = srcrepo.svfs.join("bookmarks")
-            dstbookmarks = os.path.join(destpath, "store", "bookmarks")
-            if os.path.exists(srcbookmarks):
-                util.copyfile(srcbookmarks, dstbookmarks)
-
-            # we need to re-init the repo after manually copying the data
-            # into it
-            destpeer = peer(srcrepo, peeropts, dest)
-            destrepo = destpeer.local()
-            srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
-        else:
-            clonecodepath = "legacy-pull"
-
-            revs = None
-            if rev:
-                if not srcpeer.capable("lookup"):
-                    raise error.Abort(
-                        _(
-                            "src repository does not support "
-                            "revision lookup and so doesn't "
-                            "support clone by revision"
-                        )
-                    )
-                revs = [srcpeer.lookup(r) for r in rev]
-                checkout = revs[0]
-
-            # Can we use EdenAPI CloneData provided by a separate EdenAPI
-            # client?
+            copy = False
             if (
-                getattr(destrepo, "nullableedenapi", None)
-                and destrepo.name
-                and (
-                    (
-                        ui.configbool("clone", "force-edenapi-clonedata")
-                        or destrepo.ui.configbool("clone", "force-edenapi-clonedata")
-                    )
-                    or (
-                        (
-                            ui.configbool("clone", "prefer-edenapi-clonedata")
-                            or destrepo.ui.configbool(
-                                "clone", "prefer-edenapi-clonedata"
+                srcrepo
+                and srcrepo.cancopy()
+                and islocal(dest)
+                and not phases.hassecret(srcrepo)
+            ):
+                copy = not pull and not rev
+
+            if copy:
+                try:
+                    # we use a lock here because if we race with commit, we
+                    # can end up with extra data in the cloned revlogs that's
+                    # not pointed to by changesets, thus causing verify to
+                    # fail
+                    srclock = srcrepo.lock(wait=False)
+                except error.LockError:
+                    copy = False
+
+            if copy:
+                clonecodepath = "copy"
+
+                srcrepo.hook("preoutgoing", throw=True, source="clone")
+                hgdir = os.path.realpath(os.path.join(dest, ui.identity.dotdir()))
+                if not os.path.exists(dest):
+                    os.mkdir(dest)
+                destpath = hgdir
+
+                # Drop the existing destrepo so Windows releases the files.
+                # Manually gc to ensure the objects are dropped.
+                destpeer = destrepo = None
+                import gc
+
+                gc.collect()
+
+                destlock = copystore(ui, srcrepo, destpath)
+                # repo initialization might also take a lock. Keeping destlock
+                # outside the repo object can cause deadlock. To avoid deadlock,
+                # we just release destlock here. The lock will be re-acquired
+                # soon by `destpeer`, or `local.lock()` below.
+                if destlock is not None:
+                    destlock.release()
+
+                # copy bookmarks over
+                srcbookmarks = srcrepo.svfs.join("bookmarks")
+                dstbookmarks = os.path.join(destpath, "store", "bookmarks")
+                if os.path.exists(srcbookmarks):
+                    util.copyfile(srcbookmarks, dstbookmarks)
+
+                # we need to re-init the repo after manually copying the data
+                # into it
+                destpeer = peer(srcrepo, peeropts, dest)
+                destrepo = destpeer.local()
+                srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
+            else:
+                clonecodepath = "legacy-pull"
+
+                revs = None
+                if rev:
+                    if not srcpeer.capable("lookup"):
+                        raise error.Abort(
+                            _(
+                                "src repository does not support "
+                                "revision lookup and so doesn't "
+                                "support clone by revision"
                             )
                         )
-                        and "segmented-changelog" in destrepo.edenapi.capabilities()
-                    )
-                )
-            ):
-                clonecodepath = "segments"
-                ui.status(_("fetching lazy changelog\n"))
-                clonemod.segmentsclone(srcpeer.url(), destrepo)
-            # Can we use the new code path (stream clone + shallow + no
-            # update + selective pull)?
-            elif (
-                destrepo
-                and not pull
-                and not update
-                and not rev
-                and shallow
-                and stream is not False
-                and ui.configbool("remotenames", "selectivepull")
-            ):
-                if ui.configbool("unsafe", "emergency-clone"):
-                    clonecodepath = "emergency"
-                    clonemod.emergencyclone(srcpeer.url(), destrepo)
-                else:
-                    clonecodepath = "revlog"
-                    clonemod.revlogclone(srcpeer.url(), destrepo)
-            elif destrepo:
-                reasons = []
-                if pull:
-                    reasons.append("pull")
-                if update:
-                    reasons.append("update")
-                if rev:
-                    reasons.append("rev")
-                if not shallow:
-                    reasons.append("not-shallow")
-                if stream is False:
-                    reasons.append("not-stream")
-                if not ui.configbool("remotenames", "selectivepull"):
-                    reasons.append("not-selectivepull")
-                ui.log(
-                    "features",
-                    fullargs=repr(pycompat.sysargv),
-                    feature="legacy-clone",
-                    traceback=util.smarttraceback(),
-                    reason=" ".join(reasons),
-                )
-                with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
-                    if not stream:
-                        if pull:
-                            stream = False
-                        else:
-                            stream = None
+                    revs = [srcpeer.lookup(r) for r in rev]
+                    checkout = revs[0]
 
-                    overrides = {
-                        # internal config: ui.quietbookmarkmove
-                        ("ui", "quietbookmarkmove"): True,
-                        # the normal pull process each commit and so is more expensive
-                        # than streaming bytes from disk to the wire.
-                        # disabling selectivepull allows to run a streamclone
-                        ("remotenames", "selectivepull"): False,
-                    }
-                    opargs = {}
-                    if shallow:
-                        opargs["extras"] = {"shallow": True}
-                    with destrepo.ui.configoverride(overrides, "clone"):
-                        exchange.pull(
-                            destrepo,
-                            # pyre-fixme[61]: `srcpeer` is undefined, or not always
-                            #  defined.
-                            srcpeer,
-                            revs,
-                            streamclonerequested=stream,
-                            opargs=opargs,
+                # Can we use EdenAPI CloneData provided by a separate EdenAPI
+                # client?
+                if (
+                    getattr(destrepo, "nullableedenapi", None)
+                    and destrepo.name
+                    and (
+                        (
+                            ui.configbool("clone", "force-edenapi-clonedata")
+                            or destrepo.ui.configbool(
+                                "clone", "force-edenapi-clonedata"
+                            )
                         )
-            elif srcrepo:
-                exchange.push(
-                    srcrepo, destpeer, revs=revs, bookmarks=srcrepo._bookmarks.keys()
-                )
-            else:
-                raise error.Abort(_("clone from remote to remote not supported"))
-
-        cleandir = None
-
-        if destrepo:
-            with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
-                if update:
-                    if update is not True:
-                        checkout = srcpeer.lookup(update)
-                    uprev = None
-                    status = None
-                    if checkout is not None:
-                        try:
-                            uprev = destrepo.lookup(checkout)
-                        except error.RepoLookupError:
-                            if update is not True:
-                                try:
-                                    uprev = destrepo.lookup(update)
-                                except error.RepoLookupError:
-                                    pass
-                    if uprev is None:
-                        try:
-                            uprev = destrepo._bookmarks["@"]
-                            update = "@"
-                            bn = destrepo[uprev].branch()
-                            if bn == "default":
-                                status = _("updating to bookmark @\n")
+                        or (
+                            (
+                                ui.configbool("clone", "prefer-edenapi-clonedata")
+                                or destrepo.ui.configbool(
+                                    "clone", "prefer-edenapi-clonedata"
+                                )
+                            )
+                            and "segmented-changelog" in destrepo.edenapi.capabilities()
+                        )
+                    )
+                ):
+                    clonecodepath = "segments"
+                    ui.status(_("fetching lazy changelog\n"))
+                    clonemod.segmentsclone(srcpeer.url(), destrepo)
+                # Can we use the new code path (stream clone + shallow + no
+                # update + selective pull)?
+                elif (
+                    destrepo
+                    and not pull
+                    and not update
+                    and not rev
+                    and shallow
+                    and stream is not False
+                    and ui.configbool("remotenames", "selectivepull")
+                ):
+                    if ui.configbool("unsafe", "emergency-clone"):
+                        clonecodepath = "emergency"
+                        clonemod.emergencyclone(srcpeer.url(), destrepo)
+                    else:
+                        clonecodepath = "revlog"
+                        clonemod.revlogclone(srcpeer.url(), destrepo)
+                elif destrepo:
+                    reasons = []
+                    if pull:
+                        reasons.append("pull")
+                    if update:
+                        reasons.append("update")
+                    if rev:
+                        reasons.append("rev")
+                    if not shallow:
+                        reasons.append("not-shallow")
+                    if stream is False:
+                        reasons.append("not-stream")
+                    if not ui.configbool("remotenames", "selectivepull"):
+                        reasons.append("not-selectivepull")
+                    ui.log(
+                        "features",
+                        fullargs=repr(pycompat.sysargv),
+                        feature="legacy-clone",
+                        traceback=util.smarttraceback(),
+                        reason=" ".join(reasons),
+                    )
+                    with destrepo.wlock(), destrepo.lock(), destrepo.transaction(
+                        "clone"
+                    ):
+                        if not stream:
+                            if pull:
+                                stream = False
                             else:
-                                status = _("updating to bookmark @ on branch %s\n") % bn
-                        except KeyError:
+                                stream = None
+
+                        overrides = {
+                            # internal config: ui.quietbookmarkmove
+                            ("ui", "quietbookmarkmove"): True,
+                            # the normal pull process each commit and so is more expensive
+                            # than streaming bytes from disk to the wire.
+                            # disabling selectivepull allows to run a streamclone
+                            ("remotenames", "selectivepull"): False,
+                        }
+                        opargs = {}
+                        if shallow:
+                            opargs["extras"] = {"shallow": True}
+                        with destrepo.ui.configoverride(overrides, "clone"):
+                            exchange.pull(
+                                destrepo,
+                                # pyre-fixme[61]: `srcpeer` is undefined, or not always
+                                #  defined.
+                                srcpeer,
+                                revs,
+                                streamclonerequested=stream,
+                                opargs=opargs,
+                            )
+                elif srcrepo:
+                    exchange.push(
+                        srcrepo,
+                        destpeer,
+                        revs=revs,
+                        bookmarks=srcrepo._bookmarks.keys(),
+                    )
+                else:
+                    raise error.Abort(_("clone from remote to remote not supported"))
+
+            atexit_rmtree.cancel()
+
+            if destrepo:
+                with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
+                    if update:
+                        if update is not True:
+                            checkout = srcpeer.lookup(update)
+                        uprev = None
+                        status = None
+                        if checkout is not None:
                             try:
-                                uprev = destrepo.branchtip("default")
+                                uprev = destrepo.lookup(checkout)
                             except error.RepoLookupError:
-                                uprev = destrepo.lookup("tip")
-                    if not status:
-                        bn = destrepo[uprev].branch()
-                        status = _("updating to branch %s\n") % bn
-                    destrepo.ui.status(status)
-                    _update(destrepo, uprev)
-                    if update in destrepo._bookmarks:
-                        bookmarks.activate(destrepo, update)
-        clonepreclose(
-            ui,
-            peeropts,
-            source,
-            dest,
-            pull,
-            rev,
-            update,
-            stream,
+                                if update is not True:
+                                    try:
+                                        uprev = destrepo.lookup(update)
+                                    except error.RepoLookupError:
+                                        pass
+                        if uprev is None:
+                            try:
+                                uprev = destrepo._bookmarks["@"]
+                                update = "@"
+                                bn = destrepo[uprev].branch()
+                                if bn == "default":
+                                    status = _("updating to bookmark @\n")
+                                else:
+                                    status = (
+                                        _("updating to bookmark @ on branch %s\n") % bn
+                                    )
+                            except KeyError:
+                                try:
+                                    uprev = destrepo.branchtip("default")
+                                except error.RepoLookupError:
+                                    uprev = destrepo.lookup("tip")
+                        if not status:
+                            bn = destrepo[uprev].branch()
+                            status = _("updating to branch %s\n") % bn
+                        destrepo.ui.status(status)
+                        _update(destrepo, uprev)
+                        if update in destrepo._bookmarks:
+                            bookmarks.activate(destrepo, update)
+            clonepreclose(
+                ui,
+                peeropts,
+                source,
+                dest,
+                pull,
+                rev,
+                update,
+                stream,
+                # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
+                srcpeer,
+                destpeer,
+                clonecodepath=clonecodepath,
+            )
+        finally:
+            release(srclock, destlockw, destlock)
             # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
-            srcpeer,
-            destpeer,
-            clonecodepath=clonecodepath,
-        )
-    finally:
-        release(srclock, destlockw, destlock)
-        # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
-        if srcpeer is not None:
-            srcpeer.close()
-        if destpeer is not None:
-            destpeer.close()
-        if cleandir is not None:
-            shutil.rmtree(cleandir, True)
+            if srcpeer is not None:
+                srcpeer.close()
+            if destpeer is not None:
+                destpeer.close()
     return destpeer
 
 
