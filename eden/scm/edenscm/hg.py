@@ -18,6 +18,8 @@ import os
 import shutil
 from typing import Iterable, Optional, Union
 
+import bindings
+
 from . import (
     bookmarks,
     bundlerepo,
@@ -478,7 +480,7 @@ def clone(
     if not dest:
         raise error.Abort(_("empty destination path is not valid"))
 
-    destcreated = False
+    cleanup_path = dest
     destvfs = vfsmod.vfs(dest, expandpath=True)
     if destvfs.lexists():
         if not destvfs.isdir():
@@ -486,7 +488,7 @@ def clone(
         elif destvfs.listdir():
             raise error.Abort(_("destination '%s' is not empty") % dest)
     else:
-        destcreated = True
+        cleanup_path = os.path.join(dest, ui.identity.dotdir())
 
     # Create the destination repo before we even open the connection to the
     # source, so we can use any repo-specific configuration for the connection.
@@ -498,59 +500,55 @@ def clone(
             cleandir = None
             raise error.Abort(_("destination '%s' already exists") % dest)
         raise
-    destrepo = destpeer.local()
 
-    # Get the source url, so we can write it into the dest hgrc
-    if isinstance(source, str):
-        origsource = ui.expandpath(source)
-    else:
-        srcpeer = source.peer()  # in case we were called with a localrepo
-        origsource = source = source.peer().url()
+    with bindings.atexit.AtExit.rmtree(cleanup_path):
+        destrepo = destpeer.local()
 
-    abspath = origsource
-    if islocal(origsource):
-        abspath = os.path.abspath(util.urllocalpath(origsource))
-
-    if destrepo:
-        _writehgrc(destrepo, abspath, ui.configlist("_configs", "configfiles"))
-        # Reload hgrc to pick up `%include` configs. We don't need to
-        # regenerate dynamicconfig here, unless the hgrc contains reponame or
-        # username overrides (unlikely).
-        destrepo.ui.reloadconfigs(destrepo.root)
-
-        if shallow:
-            from edenscm.ext.remotefilelog.shallowrepo import requirement
-
-            if requirement not in destrepo.requirements:
-                with destrepo.lock():
-                    destrepo.requirements.add(requirement)
-                    destrepo._writerequirements()
-                # Reopen the repo so reposetup in extensions can see the added
-                # requirement.
-                # To keep command line config overrides, reuse the ui from the
-                # old repo object. A cleaner way might be figuring out the
-                # overrides and then set them, in case extensions changes the
-                # class of the ui object.
-                origui = destrepo.ui
-                destrepo = repository(ui, dest)
-                destrepo.ui = origui
-
-    # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
-    # configs.
-    try:
+        # Get the source url, so we can write it into the dest hgrc
         if isinstance(source, str):
-            source, mayberevs = parseurl(origsource)
-            if len(mayberevs) == 1:
-                rev = rev or mayberevs[0]
-            srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
-    except (Exception, KeyboardInterrupt):
-        if destcreated:
-            # Clean up the entire repo directory we made.
-            shutil.rmtree(dest, True)
+            origsource = ui.expandpath(source)
         else:
-            # Clean up just the .hg directory we made.
-            shutil.rmtree(os.path.join(dest, ui.identity.dotdir()), True)
-        raise
+            srcpeer = source.peer()  # in case we were called with a localrepo
+            origsource = source = source.peer().url()
+
+        abspath = origsource
+        if islocal(origsource):
+            abspath = os.path.abspath(util.urllocalpath(origsource))
+
+        if destrepo:
+            _writehgrc(destrepo, abspath, ui.configlist("_configs", "configfiles"))
+            # Reload hgrc to pick up `%include` configs. We don't need to
+            # regenerate dynamicconfig here, unless the hgrc contains reponame or
+            # username overrides (unlikely).
+            destrepo.ui.reloadconfigs(destrepo.root)
+
+            if shallow:
+                from edenscm.ext.remotefilelog.shallowrepo import requirement
+
+                if requirement not in destrepo.requirements:
+                    with destrepo.lock():
+                        destrepo.requirements.add(requirement)
+                        destrepo._writerequirements()
+                    # Reopen the repo so reposetup in extensions can see the added
+                    # requirement.
+                    # To keep command line config overrides, reuse the ui from the
+                    # old repo object. A cleaner way might be figuring out the
+                    # overrides and then set them, in case extensions changes the
+                    # class of the ui object.
+                    origui = destrepo.ui
+                    destrepo = repository(ui, dest)
+                    destrepo.ui = origui
+
+        # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
+        # configs.
+        try:
+            if isinstance(source, str):
+                source, mayberevs = parseurl(origsource)
+                if len(mayberevs) == 1:
+                    rev = rev or mayberevs[0]
+                srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
+        except Exception:
+            raise
 
     branch = (None, [])
     # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.

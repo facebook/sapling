@@ -408,8 +408,6 @@ def _serverequest(ui, repo, conn, createcmdserver):
         except IOError as inst:
             if inst.errno != errno.EPIPE:
                 raise
-        except KeyboardInterrupt:
-            pass
         finally:
             sv.cleanup()
     except:  # re-raises

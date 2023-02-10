@@ -80,13 +80,6 @@ def _cleanuplanded(repo, dryrun=False):
         difftopublic, difftolocal = client.getlandednodes(
             repo, list(difftodraft.keys())
         )
-    except KeyboardInterrupt:
-        ui.warn(
-            _(
-                "reading from Phabricator was interrupted, not marking commits as landed\n"
-            )
-        )
-        return
     except Exception as ex:
         ui.warn(
             _(

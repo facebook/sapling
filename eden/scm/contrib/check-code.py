@@ -294,6 +294,10 @@ pypats = [
         ),
         (r"[\x80-\xff]", "non-ASCII character literal"),
         (r'("\')\.format\(', "str.format() has no bytes counterpart, use %"),
+        (
+            r"except.*KeyboardInterrupt",
+            "KeyboardInterrupt is ineffective (see D42909987)",
+        ),
         (r"raise Exception", "don't raise generic exceptions"),
         (
             r"raise [^,(]+, (\([^\)]+\)|[^,\(\)]+)$",

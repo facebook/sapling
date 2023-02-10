@@ -112,7 +112,7 @@ class threadedstderr(object):
         while True:
             try:
                 buf = self._stderr.readline()
-            except (Exception, KeyboardInterrupt):
+            except Exception:
                 # Not fatal. Treat it as if the stderr stream has ended.
                 break
             if len(buf) == 0:

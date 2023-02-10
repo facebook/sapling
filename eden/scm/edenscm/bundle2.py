@@ -1287,7 +1287,7 @@ class interrupthandler(unpackermixin):
         hardabort = False
         try:
             _processpart(op, part)
-        except (SystemExit, KeyboardInterrupt):
+        except SystemExit:
             hardabort = True
             raise
         finally:

@@ -121,55 +121,55 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         else:
             raise error.Abort(_("destination '%s' already exists") % destpath)
 
-    try:
-        repo = createrepo(ui, url, destpath)
-        ret = initgitbare(ui, repo.svfs.join("git"))
-        if ret != 0:
-            raise error.Abort(_("git clone was not successful"))
-        initgit(repo, "git", url)
-        if url:
-            if pullnames is None:
-                ls_remote_args = ["ls-remote", "--symref", url, "HEAD"]
-                symref_head_output = callgit(repo, ls_remote_args).decode("utf-8")
-                default_branch = parse_symref_head(symref_head_output)
-                if default_branch:
-                    pullnames = [default_branch]
-                elif not symref_head_output:
-                    # Empty string: may be empty repo?
-                    pass
-                else:
-                    ui.status_err(
-                        _("could not parse output of '%s': %s")
-                        % (
-                            " ".join(ls_remote_args),
-                            symref_head_output,
-                        )
-                    )
-
-            if pullnames is None:
-                # If `git ls-remote --symref <url> HEAD` failed to yield a name,
-                # fall back to the using the names in the config.
-                pullnames = bookmod.selectivepullbookmarknames(repo)
-
-            # Make sure we pull "update". If it looks like a hash, add to
-            # "nodes", otherwise to "names".
-            nodes = []
-            if update and update is not True:
-                if len(update) == 40:
-                    try:
-                        nodes.append(bin(update))
-                    except TypeError:
+    with bindings.atexit.AtExit.rmtree(destpath):
+        try:
+            repo = createrepo(ui, url, destpath)
+            ret = initgitbare(ui, repo.svfs.join("git"))
+            if ret != 0:
+                raise error.Abort(_("git clone was not successful"))
+            initgit(repo, "git", url)
+            if url:
+                if pullnames is None:
+                    ls_remote_args = ["ls-remote", "--symref", url, "HEAD"]
+                    symref_head_output = callgit(repo, ls_remote_args).decode("utf-8")
+                    default_branch = parse_symref_head(symref_head_output)
+                    if default_branch:
+                        pullnames = [default_branch]
+                    elif not symref_head_output:
+                        # Empty string: may be empty repo?
                         pass
+                    else:
+                        ui.status_err(
+                            _("could not parse output of '%s': %s")
+                            % (
+                                " ".join(ls_remote_args),
+                                symref_head_output,
+                            )
+                        )
 
-                if not nodes:
-                    pullnames.append(update)
+                if pullnames is None:
+                    # If `git ls-remote --symref <url> HEAD` failed to yield a name,
+                    # fall back to the using the names in the config.
+                    pullnames = bookmod.selectivepullbookmarknames(repo)
 
-            pullnames = util.dedup(pullnames)
-            pull(repo, "default", names=pullnames, nodes=nodes)
-    except (Exception, KeyboardInterrupt):
-        repo = None
-        shutil.rmtree(destpath, ignore_errors=True)
-        raise
+                # Make sure we pull "update". If it looks like a hash, add to
+                # "nodes", otherwise to "names".
+                nodes = []
+                if update and update is not True:
+                    if len(update) == 40:
+                        try:
+                            nodes.append(bin(update))
+                        except TypeError:
+                            pass
+
+                    if not nodes:
+                        pullnames.append(update)
+
+                pullnames = util.dedup(pullnames)
+                pull(repo, "default", names=pullnames, nodes=nodes)
+        except Exception:
+            repo = None
+            raise
 
     if update is not False:
         if update is True:

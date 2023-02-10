@@ -502,20 +502,10 @@ def dispatch(req):
         if inst.hint:
             req.ui.warn(_("** (%s)\n") % inst.hint)
         raise
-    except KeyboardInterrupt as inst:
-        try:
-            if isinstance(inst, error.SignalInterrupt):
-                msg = _("killed!\n")
-            else:
-                msg = _("interrupted!\n")
-            req.ui.warn(msg)
-        except error.SignalInterrupt:
-            # maybe pager would quit without consuming all the output, and
-            # SIGPIPE was raised. we cannot print anything in this case.
-            pass
-        except IOError as inst:
-            if inst.errno != errno.EPIPE:
-                raise
+    except error.SignalInterrupt:
+        # maybe pager would quit without consuming all the output, and
+        # SIGPIPE was raised. we cannot print anything in this case.
+        pass
         ret = -1
     except IOError as inst:
         # Windows does not have SIGPIPE, so pager exit does not
@@ -740,8 +730,6 @@ def _callcatch(ui, req, func):
             nosubcmdmsg = _("@prog@ %s: subcommand required\n") % cmd
         ui.warn(nosubcmdmsg)
     except IOError:
-        raise
-    except KeyboardInterrupt:
         raise
     except:  # probably re-raises
         # Potentially enter ipdb debugger when we hit an uncaught exception

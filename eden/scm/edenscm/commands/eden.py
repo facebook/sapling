@@ -978,11 +978,7 @@ def runedenimporthelper(repo: localrepo.localrepository, **opts: str) -> int:
     if not opts.get("out_fd"):
         raise error.Abort(_("the --out-fd argument is required"))
 
-    try:
-        return server.serve()
-    except KeyboardInterrupt:
-        logging.debug("hg_import_helper received interrupt; shutting down")
-        return 0
+    return server.serve()
 
 
 @command(

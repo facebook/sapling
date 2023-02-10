@@ -39,11 +39,6 @@ def cleanup_landed_pr(repo, dry_run=False):
         to_hide, mutation_entries = _get_landed_commits(
             repo, pr_to_draft, github_repo.hostname
         )
-    except KeyboardInterrupt:
-        ui.warn(
-            _("reading from GitHub was interrupted, not marking commits as landed\n")
-        )
-        return
     except Exception as e:
         ui.warn(
             _(

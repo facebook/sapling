@@ -561,56 +561,53 @@ def chistedit(ui, repo, *freeargs, **opts):
     # disable color
     ui._colormode = None
 
-    try:
-        keep = opts.get("keep")
-        revs = opts.get("rev", [])[:]
-        cmdutil.checkunfinished(repo)
-        cmdutil.bailifchanged(repo)
+    keep = opts.get("keep")
+    revs = opts.get("rev", [])[:]
+    cmdutil.checkunfinished(repo)
+    cmdutil.bailifchanged(repo)
 
-        if os.path.exists(os.path.join(repo.path, "histedit-state")):
-            raise error.Abort(
-                _("history edit already in progress, try " "--continue or --abort")
-            )
-        revs.extend(freeargs)
-        if not revs:
-            defaultrev = destutil.desthistedit(ui, repo)
-            if defaultrev is not None:
-                revs.append(defaultrev)
-        if len(revs) != 1:
-            raise error.Abort(_("histedit requires exactly one ancestor revision"))
+    if os.path.exists(os.path.join(repo.path, "histedit-state")):
+        raise error.Abort(
+            _("history edit already in progress, try " "--continue or --abort")
+        )
+    revs.extend(freeargs)
+    if not revs:
+        defaultrev = destutil.desthistedit(ui, repo)
+        if defaultrev is not None:
+            revs.append(defaultrev)
+    if len(revs) != 1:
+        raise error.Abort(_("histedit requires exactly one ancestor revision"))
 
-        rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
-        if len(rr) != 1:
-            raise error.Abort(
-                _("The specified revisions must have " "exactly one common root")
-            )
-        root = rr[0].node()
+    rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
+    if len(rr) != 1:
+        raise error.Abort(
+            _("The specified revisions must have " "exactly one common root")
+        )
+    root = rr[0].node()
 
-        topmost, empty = repo.dirstate.parents()
-        revs = histedit.between(repo, root, topmost, keep)
-        if not revs:
-            raise error.Abort(
-                _("%s is not an ancestor of working directory") % node.short(root)
-            )
+    topmost, empty = repo.dirstate.parents()
+    revs = histedit.between(repo, root, topmost, keep)
+    if not revs:
+        raise error.Abort(
+            _("%s is not an ancestor of working directory") % node.short(root)
+        )
 
-        ctxs = []
-        for i, r in enumerate(revs):
-            ctxs.append(histeditrule(repo[r], i))
-        rc = curses.wrapper(functools.partial(main, repo, ctxs))
-        curses.echo()
-        curses.endwin()
-        if rc is False:
-            ui.write(_("chistedit aborted\n"))
-            return 0
-        if type(rc) is list:
-            ui.status(_("running histedit\n"))
-            rules = makecommands(rc)
-            filename = repo.localvfs.join("chistedit")
-            with open(filename, "w+") as fp:
-                for r in rules:
-                    fp.write(r)
-            opts["commands"] = filename
-            return histedit.histedit(ui, repo, *freeargs, **opts)
-    except KeyboardInterrupt:
-        pass
+    ctxs = []
+    for i, r in enumerate(revs):
+        ctxs.append(histeditrule(repo[r], i))
+    rc = curses.wrapper(functools.partial(main, repo, ctxs))
+    curses.echo()
+    curses.endwin()
+    if rc is False:
+        ui.write(_("chistedit aborted\n"))
+        return 0
+    if type(rc) is list:
+        ui.status(_("running histedit\n"))
+        rules = makecommands(rc)
+        filename = repo.localvfs.join("chistedit")
+        with open(filename, "w+") as fp:
+            for r in rules:
+                fp.write(r)
+        opts["commands"] = filename
+        return histedit.histedit(ui, repo, *freeargs, **opts)
     return -1

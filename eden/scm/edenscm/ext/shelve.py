@@ -516,7 +516,7 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
                 return 1
 
             _hidenodes(repo, [node])
-    except (KeyboardInterrupt, Exception):
+    except Exception:
         if activebookmark:
             bookmarks.activate(repo, activebookmark)
         raise
@@ -532,7 +532,7 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
     # reuses it
     try:
         hg.update(repo, parent.node())
-    except (KeyboardInterrupt, Exception):
+    except Exception:
         # failed to update to the original revision, which has left us on the
         # (hidden) shelve commit.  Move directly to the original commit by
         # updating the dirstate parents.

@@ -53,8 +53,6 @@ def _silentexception(terminate=False):
     exitcode = 0
     try:
         yield
-    except KeyboardInterrupt:
-        exitcode = 1
     except Exception:
         exitcode = 2
     if terminate:
@@ -133,8 +131,6 @@ def _killprocess(pid):
     os.kill(pid, signal.SIGTERM)
     try:
         os.waitpid(pid, 0)
-    except KeyboardInterrupt:
-        pass
     except Exception:
         pass
 
