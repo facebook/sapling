@@ -19,8 +19,11 @@ use treestate::metadata::Metadata;
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use treestate::ErrorKind;
+use types::path::ParseError;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
+
+use crate::util::walk_treestate;
 
 pub trait WatchmanTreeStateWrite {
     fn mark_needs_check(&mut self, path: &RepoPathBuf) -> Result<bool>;
@@ -33,7 +36,7 @@ pub trait WatchmanTreeStateWrite {
 }
 
 pub trait WatchmanTreeStateRead {
-    fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>>;
+    fn list_needs_check(&mut self) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)>;
 
     fn get_clock(&self) -> Result<Option<Clock>>;
 }
@@ -129,14 +132,20 @@ impl WatchmanTreeStateWrite for WatchmanTreeState<'_> {
 }
 
 impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
-    fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
-        Ok(self
-            .treestate
-            .lock()
-            .visit_by_state(StateFlags::NEED_CHECK)?
-            .into_iter()
-            .map(|(path, _state)| RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e)))
-            .collect())
+    fn list_needs_check(&mut self) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
+        let mut needs_check = Vec::new();
+
+        let parse_errs = walk_treestate(
+            &mut self.treestate.lock(),
+            StateFlags::NEED_CHECK,
+            StateFlags::empty(),
+            |path, _state| {
+                needs_check.push(path);
+                Ok(())
+            },
+        )?;
+
+        Ok((needs_check, parse_errs))
     }
 
     fn get_clock(&self) -> Result<Option<Clock>> {

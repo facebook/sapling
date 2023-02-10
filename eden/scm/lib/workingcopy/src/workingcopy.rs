@@ -50,6 +50,7 @@ use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
 use crate::physicalfs::PhysicalFileSystem;
 use crate::status::compute_status;
+use crate::util::walk_treestate;
 use crate::watchmanfs::WatchmanFileSystem;
 
 type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
@@ -419,21 +420,26 @@ impl WorkingCopy {
     }
 
     pub fn copymap(&self) -> Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
-        self.treestate
-            .lock()
-            .visit_by_state(StateFlags::COPIED)?
-            .into_iter()
-            .map(|(path, state)| {
+        let mut copied: Vec<(RepoPathBuf, RepoPathBuf)> = Vec::new();
+
+        walk_treestate(
+            &mut self.treestate.lock(),
+            StateFlags::COPIED,
+            StateFlags::empty(),
+            |path, state| {
                 let copied_path = state
                     .copied
-                    .ok_or_else(|| anyhow!("Invalid treestate entry for {}: missing copied from path on file with COPIED flag", String::from_utf8_lossy(&path)))
+                    .clone()
+                    .ok_or_else(|| anyhow!("Invalid treestate entry for {}: missing copied from path on file with COPIED flag", path))
                     .map(|p| p.into_vec())
                     .and_then(|p| RepoPathBuf::from_utf8(p).map_err(|e| anyhow!(e)))?;
-                Ok((
-                    RepoPathBuf::from_utf8(path).map_err(|e| anyhow!(e))?,
-                    copied_path,
-                ))
-            })
-            .collect()
+
+                copied.push((path, copied_path));
+
+                Ok(())
+            },
+        )?;
+
+        Ok(copied)
     }
 }

@@ -95,6 +95,7 @@ impl WatchmanFileSystem {
 }
 
 impl PendingChanges for WatchmanFileSystem {
+    #[tracing::instrument(skip_all)]
     fn pending_changes(
         &self,
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,

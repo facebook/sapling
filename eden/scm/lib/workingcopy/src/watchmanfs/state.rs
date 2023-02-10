@@ -8,12 +8,12 @@
 use std::collections::HashSet;
 
 use anyhow::anyhow;
-use anyhow::Error;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use repolock::RepoLocker;
 use serde::Deserialize;
+use types::path::ParseError;
 use types::RepoPathBuf;
 use watchman_client::prelude::*;
 
@@ -34,27 +34,18 @@ query_result_type! {
 pub struct WatchmanState {
     treestate_needs_check: HashSet<RepoPathBuf>,
     clock: Option<Clock>,
-    treestate_errors: Vec<Error>,
+    treestate_errors: Vec<ParseError>,
     timeout: Option<std::time::Duration>,
 }
 
 impl WatchmanState {
     pub fn new(config: &dyn Config, mut treestate: impl WatchmanTreeStateRead) -> Result<Self> {
-        let (needs_check, errors): (Vec<_>, Vec<_>) = treestate
-            .list_needs_check()?
-            .into_iter()
-            .partition(Result::is_ok);
-
-        let needs_check = needs_check
-            .into_iter()
-            .map(Result::unwrap)
-            .collect::<HashSet<_>>();
-        let errors = errors.into_iter().map(Result::unwrap_err).collect();
+        let (needs_check, parse_errs) = treestate.list_needs_check()?;
 
         Ok(WatchmanState {
-            treestate_needs_check: needs_check,
+            treestate_needs_check: needs_check.into_iter().collect(),
             clock: treestate.get_clock()?,
-            treestate_errors: errors,
+            treestate_errors: parse_errs,
             timeout: config
                 .get_opt::<u64>("fsmonitor", "timeout")?
                 .map(std::time::Duration::from_millis),
@@ -72,6 +63,7 @@ impl WatchmanState {
         }
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn merge(
         self,
         result: QueryResult<StatusQuery>,
@@ -88,13 +80,21 @@ impl WatchmanState {
             .into_iter()
             .map(Result::unwrap)
             .collect::<HashSet<_>>();
+
+        tracing::debug!(
+            watchman_needs_check = needs_check.len(),
+            treestate_needs_check = self.treestate_needs_check.len(),
+            watchman_errors = errors.len(),
+            treestate_errors = self.treestate_errors.len(),
+        );
+
         needs_check.extend(self.treestate_needs_check.iter().cloned());
 
-        let mut errors = errors
+        let errors = errors
             .into_iter()
             .map(|e| anyhow!(e.unwrap_err()))
+            .chain(self.treestate_errors.into_iter().map(|e| anyhow!(e)))
             .collect::<Vec<_>>();
-        errors.extend(self.treestate_errors.into_iter());
 
         let mut needs_clear: Vec<RepoPathBuf> = vec![];
         let mut needs_mark: Vec<RepoPathBuf> = vec![];
@@ -149,6 +149,7 @@ pub struct WatchmanPendingChanges {
 }
 
 impl WatchmanPendingChanges {
+    #[tracing::instrument(skip_all)]
     pub fn persist(
         &mut self,
         mut treestate: impl WatchmanTreeStateWrite,
@@ -199,6 +200,7 @@ mod tests {
 
     use anyhow::Result;
     use repolock::RepoLocker;
+    use types::path::ParseError;
     use types::RepoPath;
     use types::RepoPathBuf;
     use watchman_client::prelude::*;
@@ -233,13 +235,8 @@ mod tests {
     }
 
     impl WatchmanTreeStateRead for WatchmanStateTestTreeState {
-        fn list_needs_check(&mut self) -> Result<Vec<Result<RepoPathBuf>>> {
-            Ok(self
-                .needs_check
-                .iter()
-                .cloned()
-                .map(|path| Ok(path))
-                .collect())
+        fn list_needs_check(&mut self) -> Result<(Vec<RepoPathBuf>, Vec<ParseError>)> {
+            Ok((self.needs_check.clone(), Vec::new()))
         }
 
         fn get_clock(&self) -> Result<Option<Clock>> {

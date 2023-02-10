@@ -183,7 +183,7 @@ pub fn compute_status(
                 // If it's in P1 but we didn't see it earlier, that means it didn't change with
                 // respect to P1. But since it is marked EXIST_P2, that means P2 changed it and
                 // therefore we should report it as changed.
-                if state.contains(StateFlags::EXIST_P1) {
+                if state.state.contains(StateFlags::EXIST_P1) {
                     trace!(%path, "modified (infer p2 modified)");
                     modified.push(path);
                 } else {
@@ -191,7 +191,7 @@ pub fn compute_status(
                     // we either saw it in the pending changes loop earlier (in which case
                     // it is in `seen` and was handled), or we didn't see it and therefore
                     // it doesn't exist and is either deleted or removed.
-                    if state.contains(StateFlags::EXIST_NEXT) {
+                    if state.state.contains(StateFlags::EXIST_NEXT) {
                         trace!(%path, "deleted (in p2, in next, not in pending changes)");
                         deleted.push(path);
                     } else {
