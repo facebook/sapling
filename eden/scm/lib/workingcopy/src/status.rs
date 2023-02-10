@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -15,6 +14,7 @@ use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use pathmatcher::DifferenceMatcher;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use status::StatusBuilder;
@@ -149,9 +149,13 @@ pub fn compute_status(
         .chain(added.iter())
         .chain(removed.iter())
         .chain(deleted.iter())
-        .chain(unknown.iter())
-        .cloned()
-        .collect::<HashSet<RepoPathBuf>>();
+        .chain(unknown.iter());
+
+    // Augment matcher to skip "seen" files since they have already been handled above.
+    let matcher = Arc::new(DifferenceMatcher::new(
+        matcher,
+        ExactMatcher::new(seen, true),
+    ));
 
     let mut treestate = treestate.lock();
 
@@ -159,13 +163,12 @@ pub fn compute_status(
     // commit) but isn't in "pending changes" must have been deleted on the filesystem.
     walk_treestate(
         &mut treestate,
+        matcher.clone(),
         StateFlags::EXIST_NEXT,
         StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
         |path, state| {
-            if matcher.matches_file(&path)? && !seen.contains(&path) {
-                trace!(%path, "deleted (added file not in pending changes)");
-                deleted.push(path);
-            }
+            trace!(%path, "deleted (added file not in pending changes)");
+            deleted.push(path);
             Ok(())
         },
     )?;
@@ -174,30 +177,27 @@ pub fn compute_status(
     // Thus, we need to specially handle files that are in P2.
     walk_treestate(
         &mut treestate,
+        matcher.clone(),
         StateFlags::EXIST_P2,
         StateFlags::empty(),
         |path, state| {
-            // If we saw it in the pending_changes loop earlier, then it's already processed and
-            // done.
-            if matcher.matches_file(&path)? && !seen.contains(&path) {
-                // If it's in P1 but we didn't see it earlier, that means it didn't change with
-                // respect to P1. But since it is marked EXIST_P2, that means P2 changed it and
-                // therefore we should report it as changed.
-                if state.state.contains(StateFlags::EXIST_P1) {
-                    trace!(%path, "modified (infer p2 modified)");
-                    modified.push(path);
+            // If it's in P1 but we didn't see it earlier, that means it didn't change with
+            // respect to P1. But since it is marked EXIST_P2, that means P2 changed it and
+            // therefore we should report it as changed.
+            if state.state.contains(StateFlags::EXIST_P1) {
+                trace!(%path, "modified (infer p2 modified)");
+                modified.push(path);
+            } else {
+                // Since pending changes is with respect to P1, then if it's not in P1
+                // we either saw it in the pending changes loop earlier (in which case
+                // it is in `seen` and was handled), or we didn't see it and therefore
+                // it doesn't exist and is either deleted or removed.
+                if state.state.contains(StateFlags::EXIST_NEXT) {
+                    trace!(%path, "deleted (in p2, in next, not in pending changes)");
+                    deleted.push(path);
                 } else {
-                    // Since pending changes is with respect to P1, then if it's not in P1
-                    // we either saw it in the pending changes loop earlier (in which case
-                    // it is in `seen` and was handled), or we didn't see it and therefore
-                    // it doesn't exist and is either deleted or removed.
-                    if state.state.contains(StateFlags::EXIST_NEXT) {
-                        trace!(%path, "deleted (in p2, in next, not in pending changes)");
-                        deleted.push(path);
-                    } else {
-                        trace!(%path, "removed (in p2, not in next, not in pending changes)");
-                        removed.push(path);
-                    }
+                    trace!(%path, "removed (in p2, not in next, not in pending changes)");
+                    removed.push(path);
                 }
             }
             Ok(())
@@ -210,13 +210,12 @@ pub fn compute_status(
     // not P1 are handled above, so we only need to handle files in P1 here.
     walk_treestate(
         &mut treestate,
+        matcher.clone(),
         StateFlags::EXIST_P1,
         StateFlags::EXIST_NEXT,
         |path, state| {
-            if matcher.matches_file(&path)? && !seen.contains(&path) {
-                trace!(%path, "removed (in p1, not in next, not in pending changes)");
-                removed.push(path);
-            }
+            trace!(%path, "removed (in p1, not in next, not in pending changes)");
+            removed.push(path);
             Ok(())
         },
     )?;
@@ -225,13 +224,12 @@ pub fn compute_status(
     // from another file. These files should be marked as "modified".
     walk_treestate(
         &mut treestate,
+        matcher.clone(),
         StateFlags::COPIED,
         StateFlags::empty(),
         |path, state| {
-            if matcher.matches_file(&path)? && !seen.contains(&path) {
-                trace!(%path, "modified (marked copy, not in pending changes)");
-                modified.push(path);
-            }
+            trace!(%path, "modified (marked copy, not in pending changes)");
+            modified.push(path);
             Ok(())
         },
     )?;

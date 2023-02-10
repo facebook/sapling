@@ -424,6 +424,7 @@ impl WorkingCopy {
 
         walk_treestate(
             &mut self.treestate.lock(),
+            Arc::new(AlwaysMatcher::new()),
             StateFlags::COPIED,
             StateFlags::empty(),
             |path, state| {

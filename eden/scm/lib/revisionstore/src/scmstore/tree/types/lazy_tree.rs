@@ -6,6 +6,8 @@
  */
 
 use anyhow::Result;
+use edenapi_types::EdenApiServerError;
+use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;

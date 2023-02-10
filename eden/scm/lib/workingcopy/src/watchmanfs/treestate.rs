@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Result;
 use parking_lot::Mutex;
+use pathmatcher::AlwaysMatcher;
 use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
@@ -137,6 +138,7 @@ impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
 
         let parse_errs = walk_treestate(
             &mut self.treestate.lock(),
+            Arc::new(AlwaysMatcher::new()),
             StateFlags::NEED_CHECK,
             StateFlags::empty(),
             |path, _state| {
