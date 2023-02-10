@@ -34,6 +34,10 @@ export function expectMessageNOTSentToServer(message: Partial<ClientToServerMess
   expect(testMessageBus.sent.map(deserializeFromString)).not.toContainEqual(message);
 }
 
+export function simulateServerDisconnected(): void {
+  testMessageBus.simulateServerStatusChange({type: 'error', error: 'server disconnected'});
+}
+
 export function simulateCommits(commits: Result<SmartlogCommits>) {
   simulateMessageFromServer({
     type: 'smartlogCommits',

@@ -22,12 +22,18 @@ export class TestingEventBus implements MessageBus {
     this.sent.push(message);
   }
 
+  public statusChangeHandlers = new Set<(status: MessageBusStatus) => unknown>();
   onChangeStatus(handler: (status: MessageBusStatus) => unknown): Disposable {
     // pretend connection opens immediately
     handler({type: 'open'});
+    this.statusChangeHandlers.add(handler);
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    return {dispose: () => {}};
+    return {
+      dispose: () => {
+        this.statusChangeHandlers.delete(handler);
+      },
+    };
   }
 
   // additional methods for testing
@@ -38,6 +44,12 @@ export class TestingEventBus implements MessageBus {
 
   resetTestMessages() {
     this.sent = [];
+  }
+
+  simulateServerStatusChange(newStatus: MessageBusStatus) {
+    for (const handler of this.statusChangeHandlers) {
+      handler(newStatus);
+    }
   }
 }
 
