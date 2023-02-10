@@ -370,26 +370,6 @@ impl TreeState {
             .visit_advanced(&self.store, visitor, visit_dir, visit_file)
     }
 
-    pub fn visit_by_state(
-        &mut self,
-        state_required_any: StateFlags,
-    ) -> Result<Vec<(Vec<u8>, FileStateV2)>> {
-        let mut result = Vec::new();
-        self.visit(
-            &mut |path_components, state| {
-                result.push((path_components.concat(), state.clone()));
-                Ok(VisitorResult::NotChanged)
-            },
-            &|_, dir| match dir.get_aggregated_state() {
-                None => true,
-                Some(aggregated_state) => aggregated_state.union.intersects(state_required_any),
-            },
-            &|_, file| file.state.intersects(state_required_any),
-        )?;
-
-        Ok(result)
-    }
-
     pub fn get_filtered_key<F>(
         &mut self,
         name: KeyRef,
@@ -687,104 +667,6 @@ mod tests {
         assert!(!state.has_dir(b"ext4th/").unwrap());
         assert!(state.has_dir(b"rust/radixbuf/.git/objects/").unwrap());
         assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
-    }
-
-    #[test]
-    fn test_visit_query_by_flags() {
-        let dir = tempdir().expect("tempdir");
-        let mut state = TreeState::new(dir.path(), true).expect("open").0;
-        let mut rng = ChaChaRng::from_seed([0; 32]);
-        let mut file: FileStateV2 = rng.gen();
-        file.state = StateFlags::IGNORED | StateFlags::NEED_CHECK;
-        state.insert(b"a/b/1", &file).expect("insert");
-        file.state = StateFlags::IGNORED | StateFlags::EXIST_P2;
-        state.insert(b"a/b/2", &file).expect("insert");
-        file.state = StateFlags::COPIED | StateFlags::EXIST_P2;
-        state.insert(b"a/c/3", &file).expect("insert");
-
-        let files: Vec<Vec<u8>> = state
-            .visit_by_state(StateFlags::IGNORED)
-            .unwrap()
-            .into_iter()
-            .map(|e| e.0)
-            .collect();
-        assert_eq!(files, vec![b"a/b/1", b"a/b/2"]);
-
-        let files: Vec<Vec<u8>> = state
-            .visit_by_state(StateFlags::EXIST_P2)
-            .unwrap()
-            .into_iter()
-            .map(|e| e.0)
-            .collect();
-        assert_eq!(files, vec![b"a/b/2", b"a/c/3"]);
-    }
-
-    #[test]
-    fn test_visit_state_change_propagation() {
-        let paths: [&[u8]; 5] = [b"a/b/1", b"a/b/2", b"a/c/d/3", b"b/5", b"c"];
-
-        // Only care about 1 bit (IGNORED), since other bits will propagate to parent trees in a
-        // same way.
-        //
-        // Enumerate transition from all possible start states to end states. Make sure `visit`
-        // querying that bit would return the expected result.
-        //
-        // 2 states for each file - IGNORED is set, or not set. With 5 files, that's (1 << 5 = 32)
-        // start states, and 32 end states. 32 ** 2 = 1024 transitions to test.
-        let bit = StateFlags::IGNORED;
-        for start_bits in 0..(1 << paths.len()) {
-            let dir = tempdir().expect("tempdir");
-            // First, write the start state.
-            let mut state = TreeState::new(dir.path(), true).expect("open").0;
-            let file_name = state.file_name().unwrap();
-            let mut rng = ChaChaRng::from_seed([0; 32]);
-            for (i, path) in paths.iter().enumerate() {
-                let mut file: FileStateV2 = rng.gen();
-                if ((1 << i) & start_bits) == 0 {
-                    file.state -= bit;
-                } else {
-                    file.state |= bit;
-                }
-                state.insert(path, &file).expect("insert");
-            }
-            let block_id = state.flush().expect("flush");
-
-            // Then test end states.
-            for end_bits in 0..(1 << paths.len()) {
-                let mut state =
-                    TreeState::open(dir.path().join(&file_name), block_id, true).expect("open");
-                let mut i: usize = 0;
-                let mut expected = vec![];
-                state
-                    .visit(
-                        &mut |ref _path, ref mut file| {
-                            let old_state = file.state;
-                            if ((1 << i) & end_bits) == 0 {
-                                file.state -= bit;
-                            } else {
-                                file.state |= bit;
-                                expected.push(paths[i]);
-                            }
-                            i += 1;
-                            if old_state == file.state {
-                                Ok(VisitorResult::NotChanged)
-                            } else {
-                                Ok(VisitorResult::Changed)
-                            }
-                        },
-                        &|_, _| true,
-                        &|_, _| true,
-                    )
-                    .expect("visit");
-                let files: Vec<Vec<u8>> = state
-                    .visit_by_state(bit)
-                    .unwrap()
-                    .into_iter()
-                    .map(|e| e.0)
-                    .collect();
-                assert_eq!(files, expected);
-            }
-        }
     }
 
     #[test]
