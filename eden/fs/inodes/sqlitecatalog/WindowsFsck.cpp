@@ -33,40 +33,14 @@ namespace {
 // Reparse tag for UNIX domain socket is not defined in Windows header files.
 const ULONG IO_REPARSE_TAG_SOCKET = 0x80000023;
 
-dtype_t dtypeFromAttrs(const wchar_t* path, DWORD dwFileAttributes) {
+dtype_t dtypeFromAttrs(DWORD dwFileAttributes, DWORD dwReserved0) {
   if (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-    FileHandle handle{CreateFileW(
-        path,
-        FILE_GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-        NULL)};
-    if (handle.get() == INVALID_HANDLE_VALUE) {
-      XLOGF(
-          DBG3,
-          "Unable to determine reparse point type for {}: {}",
-          wideToMultibyteString<std::string>(path),
-          GetLastError());
-      return dtype_t::Unknown;
-    }
-
-    auto reparse_data_result = getReparseData(handle.get());
-    if (reparse_data_result.hasException()) {
-      XLOGF(
-          DBG3,
-          "Unable to read reparse point data for {}: {}",
-          wideToMultibyteString<std::string>(path),
-          reparse_data_result.exception().what());
-      return dtype_t::Unknown;
-    }
-
-    if (reparse_data_result.value()->ReparseTag == IO_REPARSE_TAG_SYMLINK ||
-        reparse_data_result.value()->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
+    // Microsoft documents the dwReserved0 member as holding the reparse tag:
+    // https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-win32_find_dataw
+    if (dwReserved0 == IO_REPARSE_TAG_SYMLINK ||
+        dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT) {
       return dtype_t::Symlink;
-    } else if (
-        reparse_data_result.value()->ReparseTag == IO_REPARSE_TAG_SOCKET) {
+    } else if (dwReserved0 == IO_REPARSE_TAG_SOCKET) {
       return dtype_t::Socket;
     }
 
@@ -231,9 +205,8 @@ void populateDiskState(
     RelativePathPiece path,
     FsckFileState& state,
     const WIN32_FIND_DATAW& findFileData) {
-  auto absPath = root + path;
-  auto wPath = absPath.wide();
-  dtype_t dtype = dtypeFromAttrs(wPath.c_str(), findFileData.dwFileAttributes);
+  dtype_t dtype =
+      dtypeFromAttrs(findFileData.dwFileAttributes, findFileData.dwReserved0);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
     state.onDisk = true;
     // On Windows, EdenFS consider all special files (symlinks, sockets, etc)
@@ -285,8 +258,12 @@ void populateDiskState(
   // It's an empty placeholder unless it's materialized or it has children.
   state.diskEmptyPlaceholder = !state.populatedOrFullOrTomb;
 
-  if (dtype == dtype_t::Dir && !directoryIsEmpty(wPath.c_str())) {
-    state.diskEmptyPlaceholder = false;
+  if (dtype == dtype_t::Dir) {
+    auto absPath = root + path;
+    auto wPath = absPath.wide();
+    if (!directoryIsEmpty(wPath.c_str())) {
+      state.diskEmptyPlaceholder = false;
+    }
   }
 }
 
