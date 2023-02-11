@@ -437,6 +437,13 @@ describe('extractRepoInfoFromUrl', () => {
         hostname: 'github.com',
       });
     });
+    it('handles ssh with slash', () => {
+      expect(extractRepoInfoFromUrl('ssh://git@github.com/myUsername/myRepo.git')).toEqual({
+        owner: 'myUsername',
+        repo: 'myRepo',
+        hostname: 'github.com',
+      });
+    });
     it('handles git+ssh', () => {
       expect(extractRepoInfoFromUrl('git+ssh://git@github.com:myUsername/myRepo.git')).toEqual({
         owner: 'myUsername',
