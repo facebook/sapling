@@ -8,12 +8,20 @@
 import type {CommitTreeWithPreviews} from './getCommitTree';
 import type {Hash} from './types';
 
+import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {ErrorNotice} from './ErrorNotice';
+import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
-import {t} from './i18n';
+import {T, t} from './i18n';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
-import {commitFetchError, latestUncommittedChanges} from './serverAPIState';
+import {
+  commitFetchError,
+  commitsShownRange,
+  isFetchingAdditionalCommits,
+  latestUncommittedChanges,
+} from './serverAPIState';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
@@ -41,7 +49,10 @@ export function CommitTreeList() {
       <div className="commit-tree-root commit-group">
         <MainLineEllipsis />
         {trees.map(tree => createSubtree(tree))}
-        <MainLineEllipsis />
+        <MainLineEllipsis>
+          <FetchingAdditionalCommitsButton />
+          <FetchingAdditionalCommitsIndicator />
+        </MainLineEllipsis>
       </div>
     </>
   );
@@ -105,10 +116,6 @@ function Branch({
   );
 }
 
-function MainLineEllipsis() {
-  return <div className="commit-ellipsis" />;
-}
-
 const COMPONENT_PADDING = 10;
 export const BranchIndicator = () => {
   const width = COMPONENT_PADDING * 2;
@@ -134,3 +141,47 @@ export const BranchIndicator = () => {
     </svg>
   );
 };
+
+/**
+ * Vertical ellipsis to be rendered on top of the branch line.
+ * Expects to rendered as a child of commit-tree-root.
+ * Optionally accepts children to render next to the "..."
+ */
+function MainLineEllipsis({children}: {children?: React.ReactNode}) {
+  return (
+    <div className="commit-ellipsis">
+      <Icon icon="kebab-vertical" />
+      <div className="commit-ellipsis-children">{children}</div>
+    </div>
+  );
+}
+
+function FetchingAdditionalCommitsIndicator() {
+  const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  return isFetching ? <Icon icon="loading" /> : null;
+}
+
+function FetchingAdditionalCommitsButton() {
+  const shownRange = useRecoilValue(commitsShownRange);
+  const isFetching = useRecoilValue(isFetchingAdditionalCommits);
+  if (shownRange === undefined) {
+    return null;
+  }
+  const commitsShownMessage = t('Showing comits from the last $numDays days', {
+    replace: {$numDays: shownRange.toString()},
+  });
+  return (
+    <Tooltip placement="top" delayMs={DOCUMENTATION_DELAY} title={commitsShownMessage}>
+      <VSCodeButton
+        disabled={isFetching}
+        onClick={() => {
+          serverAPI.postMessage({
+            type: 'loadMoreCommits',
+          });
+        }}
+        appearance="icon">
+        <T>Load more commits</T>
+      </VSCodeButton>
+    </Tooltip>
+  );
+}

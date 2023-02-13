@@ -26,6 +26,9 @@
   --pad: 10px;
   --halfpad: 5px;
 
+  --vscode-button-height: 26px; /* height of vscode-button */
+  --vscode-icon-button-height: 22px; /* height of vscode-button with appearance="icon" */
+
   height: 100vh;
   max-height: 100vh;
   display: flex;
@@ -60,12 +63,4 @@ code {
 
 vscode-button::part(content) {
   white-space: nowrap;
-}
-
-.load-more {
-  display: flex;
-  gap: var(--pad);
-  align-items: center;
-  margin: var(--pad);
-  margin-left: var(--halfpad);
 }

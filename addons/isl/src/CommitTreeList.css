@@ -35,10 +35,39 @@
 .commit {
   position: relative;
 }
+
 .commit-ellipsis {
-  height: 20px;
-  margin-left: -10px;
-  border-left: 2px dashed;
+  display: flex;
+  align-items: center;
+  /* funky alignment to get it exactly on top of the branch line, including half pixel to align icon width */
+  margin-left: calc(-3.5 * var(--halfpad) + 0.5px);
+  position: relative;
+  min-height: var(--vscode-icon-button-height);
+}
+
+/*
+ * ellipsis is inside the commit tree, so it would have a left border,
+ * unless we add a blank :before on top
+ */
+.commit-ellipsis::before {
+  display: block;
+  position: absolute;
+  background-color: var(--background);
+  content: ' ';
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* Above border */
+}
+.commit-ellipsis > * {
+  z-index: 2; /* Above :before */
+}
+
+.commit-ellipsis-children {
+  display: flex;
+  gap: var(--pad);
+  align-items: center;
 }
 
 .commit-avatar {
