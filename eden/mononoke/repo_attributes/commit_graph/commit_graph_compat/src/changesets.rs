@@ -22,7 +22,7 @@ use commit_graph_types::ChangesetParents;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::BoxStream;
-use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -75,12 +75,12 @@ impl ChangesetsCommitGraphCompat {
         &self,
         ctx: &CoreContext,
         css: Vec1<(ChangesetId, ChangesetParents)>,
-    ) {
+    ) -> Result<()> {
         if !tunables()
             .by_repo_enable_writing_to_new_commit_graph(&self.repo_name)
             .unwrap_or(false)
         {
-            return;
+            return Ok(());
         }
 
         let mut scuba = self.scuba.clone();
@@ -91,39 +91,31 @@ impl ChangesetsCommitGraphCompat {
         scuba.add("changeset_count", css.len());
         scuba.add("repo_name", self.repo_name.as_str());
 
-        let write_timeout = tunables()
-            .commit_graph_writes_timeout_ms()
-            .unwrap_or_default() as u64;
-
         // We use add_recursive because some parents might be missing
         // from the new commit graph.
-        match tokio::time::timeout(
-            tokio::time::Duration::from_millis(write_timeout),
-            self.commit_graph
-                .add_recursive(ctx, self.changeset_fetcher.clone(), css)
-                .timed(),
-        )
-        .await
+        match self
+            .commit_graph
+            .add_recursive(ctx, self.changeset_fetcher.clone(), css)
+            .try_timed()
+            .await
         {
-            Err(_) => {
-                scuba.add("timeout_ms", write_timeout);
-                scuba.log_with_msg("Insertion timed out", None);
-            }
-            Ok((stats, Err(err))) => {
+            Err(err) => {
                 scuba.add("error", err.to_string());
-                scuba.add("time_s", stats.completion_time.as_secs_f64());
-
                 scuba.log_with_msg("Insertion failed", None);
+
+                Err(err)
             }
-            Ok((stats, Ok(added_to_commit_graph))) => {
+            Ok((stats, added_to_commit_graph)) => {
                 scuba.add("time_s", stats.completion_time.as_secs_f64());
                 scuba.add("num_added", added_to_commit_graph);
 
                 if added_to_commit_graph > 0 {
                     scuba.log_with_msg("Insertion succeeded", None);
                 } else {
-                    scuba.log_with_msg("Changeset already stored", None);
+                    scuba.log_with_msg("Changesets already stored", None);
                 }
+
+                Ok(())
             }
         }
     }
@@ -136,15 +128,13 @@ impl Changesets for ChangesetsCommitGraphCompat {
     }
 
     async fn add(&self, ctx: &CoreContext, cs: ChangesetInsert) -> Result<bool> {
-        let (added_to_changesets, ()) =
-            futures::try_join!(self.changesets.add(ctx, cs.clone()), async move {
-                self.maybe_write_to_new_commit_graph(
-                    ctx,
-                    vec1![(cs.cs_id, SmallVec::from_vec(cs.parents))],
-                )
-                .await;
-                Ok(())
-            })?;
+        let (added_to_changesets, _) = futures::try_join!(
+            self.changesets.add(ctx, cs.clone()),
+            self.maybe_write_to_new_commit_graph(
+                ctx,
+                vec1![(cs.cs_id, SmallVec::from_vec(cs.parents))],
+            )
+        )?;
         Ok(added_to_changesets)
     }
 
@@ -153,14 +143,13 @@ impl Changesets for ChangesetsCommitGraphCompat {
         ctx: &CoreContext,
         css: Vec1<(ChangesetInsert, Generation)>,
     ) -> Result<()> {
-        futures::try_join!(self.changesets.add_many(ctx, css.clone()), async move {
+        futures::try_join!(
+            self.changesets.add_many(ctx, css.clone()),
             self.maybe_write_to_new_commit_graph(
                 ctx,
                 css.mapped(|(cs, _)| (cs.cs_id, SmallVec::from_vec(cs.parents))),
             )
-            .await;
-            Ok(())
-        })?;
+        )?;
         Ok(())
     }
 

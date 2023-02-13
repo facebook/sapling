@@ -21,6 +21,5 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../../tunables" }
 vec1 = { version = "1", features = ["serde"] }
