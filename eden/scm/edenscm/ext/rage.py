@@ -241,7 +241,10 @@ def readbackedupheads(repo) -> str:
 
 def readcommitcloudstate(repo) -> str:
     prefixpath = repo.svfs.join("commitcloudstate")
+    newcloudsyncstate = repo.svfs.join("cloudsyncstate")
     files = glob.glob(prefixpath + "*")
+    if os.path.exists(newcloudsyncstate):
+        files.append(newcloudsyncstate)
     if not files:
         return "no any commitcloudstate file in the repo\n"
     lines = []
