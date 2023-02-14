@@ -116,6 +116,10 @@ class EdenFS(object):
     def system_rc_path(self) -> Path:
         return self._etc_eden_dir / "edenfs.rc"
 
+    @property
+    def system_rollout_path(self) -> Path:
+        return self._etc_eden_dir / "edenfsctl_rollout.json"
+
     def __enter__(self) -> "EdenFS":
         return self
 

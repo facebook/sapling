@@ -147,6 +147,12 @@ class EdenTestCase(EdenTestCaseBase):
                     for setting in values:
                         edenfsrc.write(f"{setting}\n")
 
+        # Default to using the Rust version of commands when running
+        # integration tests. An empty edenfsctl_rollout file means that all
+        # subcommands should use the Rust implementation if available.
+        with open(self.eden.system_rollout_path, "w") as edenfsctl_rollout:
+            edenfsctl_rollout.write("{}")
+
         self.eden.start()
         # Store a lambda in case self.eden is replaced during the test.
         self.addCleanup(lambda: self.eden.cleanup())
