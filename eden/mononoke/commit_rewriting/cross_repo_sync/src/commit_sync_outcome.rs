@@ -32,7 +32,7 @@ use crate::Repo;
 /// The state of a source repo commit in a target repo, assuming
 /// that any multiple `RewrittenAs` options have been resolved
 /// into a single one
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate(CommitSyncConfigVersion),

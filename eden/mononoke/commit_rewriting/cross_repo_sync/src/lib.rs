@@ -950,30 +950,9 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint<R>,
+        mut parent_mapping_selection_hint: CandidateSelectionHint<R>,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
-        self.unsafe_sync_commit_in_memory(
-            ctx,
-            source_cs_id,
-            parent_mapping_selection_hint,
-            expected_version,
-        )
-        .await?
-        .write(ctx, self)
-        .await
-    }
-
-    async fn unsafe_sync_commit_in_memory<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint<R>,
-        expected_version: Option<CommitSyncConfigVersion>,
-    ) -> Result<CommitSyncInMemoryResult, Error> {
-        // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
-        let (source_repo, _) = self.get_source_target();
-
         debug!(
             ctx.logger(),
             "{:?}: unsafe_sync_commit called for {}, with hint: {:?}",
@@ -981,11 +960,42 @@ where
             source_cs_id,
             parent_mapping_selection_hint
         );
-
+        let (source_repo, _) = self.get_source_target();
         let cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
-        let parents: Vec<_> = cs.parents().collect();
+        if cs.parents().count() > 1 {
+            parent_mapping_selection_hint = CandidateSelectionHint::Only;
+        }
+        let mapped_parents = stream::iter(cs.parents().map(|p| {
+            self.get_commit_sync_outcome_with_hint(
+                ctx,
+                Source(p),
+                parent_mapping_selection_hint.clone(),
+            )
+            .and_then(move |maybe_outcome| match maybe_outcome {
+                Some(outcome) => future::ok((p, outcome)),
+                None => future::err(format_err!("{} does not have CommitSyncOutcome", p)),
+            })
+        }))
+        .buffered(100)
+        .try_collect()
+        .await?;
+        self.unsafe_sync_commit_in_memory(ctx, cs, &mapped_parents, expected_version)
+            .await?
+            .write(ctx, self)
+            .await
+    }
 
-        if parents.is_empty() {
+    async fn unsafe_sync_commit_in_memory<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        cs: BonsaiChangeset,
+        mapped_parents: &HashMap<ChangesetId, CommitSyncOutcome>,
+        expected_version: Option<CommitSyncConfigVersion>,
+    ) -> Result<CommitSyncInMemoryResult, Error> {
+        // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
+
+        let parent_count = cs.parents().count();
+        if parent_count == 0 {
             match expected_version {
                 Some(version) => {
                     self.sync_commit_no_parents_in_memory(ctx, cs, version)
@@ -993,19 +1003,15 @@ where
                 }
                 None => bail!(
                     "no version specified for remapping commit {} with no parents",
-                    source_cs_id
+                    cs.get_changeset_id(),
                 ),
             }
-        } else if parents.len() == 1 {
-            self.sync_commit_single_parent_in_memory(
-                ctx,
-                cs,
-                parent_mapping_selection_hint,
-                expected_version,
-            )
-            .await
+        } else if parent_count == 1 {
+            self.sync_commit_single_parent_in_memory(ctx, cs, mapped_parents, expected_version)
+                .await
         } else {
-            self.sync_merge_in_memory(ctx, cs, expected_version).await
+            self.sync_merge_in_memory(ctx, cs, mapped_parents, expected_version)
+                .await
         }
     }
 
@@ -1344,7 +1350,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
-        parent_mapping_selection_hint: CandidateSelectionHint<R>,
+        mapped_parents: &HashMap<ChangesetId, CommitSyncOutcome>,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         let source_cs_id = cs.get_changeset_id();
@@ -1352,12 +1358,10 @@ where
         let p = cs.parents[0];
         let (source_repo, _) = self.get_source_target();
 
-        let maybe_parent_sync_outcome = self
-            .get_commit_sync_outcome_with_hint(ctx, Source(p), parent_mapping_selection_hint)
-            .await?;
-
-        let parent_sync_outcome = maybe_parent_sync_outcome
-            .ok_or_else(|| format_err!("Parent commit {} is not synced yet", p))?;
+        let parent_sync_outcome = mapped_parents
+            .get(&p)
+            .with_context(|| format!("Parent commit {} is not synced yet", p))?
+            .clone();
 
         use CommitSyncOutcome::*;
         match parent_sync_outcome {
@@ -1468,6 +1472,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
+        mapped_parents: &HashMap<ChangesetId, CommitSyncOutcome>,
         expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<CommitSyncInMemoryResult, Error> {
         if let CommitSyncRepos::SmallToLarge { .. } = self.repos {
@@ -1477,19 +1482,19 @@ where
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
 
-        let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
-            self.get_commit_sync_outcome(ctx, p).and_then(
-                move |maybe_outcome| match maybe_outcome {
-                    Some(outcome) => future::ok((p, outcome)),
-                    None => future::err(format_err!("{} does not have CommitSyncOutcome", p)),
-                },
-            )
-        }));
-
-        let sync_outcomes = parent_outcomes
-            .buffered(100)
-            .try_collect::<Vec<_>>()
-            .await?;
+        let sync_outcomes: Vec<_> = cs
+            .parents
+            .iter()
+            .map(|id| {
+                anyhow::Ok((
+                    *id,
+                    mapped_parents
+                        .get(id)
+                        .with_context(|| format!("Missing parent {}", id))?
+                        .clone(),
+                ))
+            })
+            .collect::<Result<_, Error>>()?;
 
         // At this point we know that there's at least one parent after big merge. However we still
         // might have a parent that's NotSyncCandidate
