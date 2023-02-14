@@ -17,6 +17,7 @@ use anyhow::Result;
 use sql::mysql;
 
 use crate::BonsaiChangeset;
+use crate::BonsaiChangesetMut;
 
 pub const GLOBALREV_EXTRA: &str = "global_rev";
 
@@ -32,6 +33,10 @@ pub const START_COMMIT_GLOBALREV: u64 = 1000147970;
 pub struct Globalrev(u64);
 
 impl Globalrev {
+    pub const fn start_commit() -> Self {
+        Self(START_COMMIT_GLOBALREV)
+    }
+
     #[inline]
     pub const fn new(rev: u64) -> Self {
         Self(rev)
@@ -79,6 +84,18 @@ impl Globalrev {
             }
             (None, None) => bail!("Bonsai cs {:?} without globalrev", bcs),
         }
+    }
+
+    pub fn set_on_changeset(&self, bcs: &mut BonsaiChangesetMut) {
+        bcs.hg_extra.insert(
+            GLOBALREV_EXTRA.into(),
+            format!("{}", self.id()).into_bytes(),
+        );
+    }
+
+    #[must_use = "increment does not modify the generation object"]
+    pub fn increment(self) -> Self {
+        Self(self.0 + 1)
     }
 }
 

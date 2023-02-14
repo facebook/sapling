@@ -18,8 +18,6 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use mononoke_types::globalrev::Globalrev;
-use mononoke_types::globalrev::GLOBALREV_EXTRA;
-use mononoke_types::globalrev::START_COMMIT_GLOBALREV;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -59,8 +57,8 @@ impl PushrebaseHook for GlobalrevPushrebaseHook {
         let max = self.mapping.get_max(&self.ctx).await?;
 
         let next_rev = match max {
-            None => START_COMMIT_GLOBALREV,
-            Some(max) => max.id() + 1,
+            None => Globalrev::start_commit(),
+            Some(max) => Globalrev::new(max.id() + 1),
         };
 
         let hook = Box::new(GlobalrevCommitHook {
@@ -76,7 +74,7 @@ impl PushrebaseHook for GlobalrevPushrebaseHook {
 struct GlobalrevCommitHook {
     repository_id: RepositoryId,
     assignments: HashMap<ChangesetId, Globalrev>,
-    next_rev: u64,
+    next_rev: Globalrev,
 }
 
 #[async_trait]
@@ -86,15 +84,11 @@ impl PushrebaseCommitHook for GlobalrevCommitHook {
         bcs_old: ChangesetId,
         bcs_new: &mut BonsaiChangesetMut,
     ) -> Result<(), Error> {
-        bcs_new.hg_extra.insert(
-            GLOBALREV_EXTRA.into(),
-            format!("{}", self.next_rev).into_bytes(),
-        );
+        self.next_rev.set_on_changeset(bcs_new);
 
-        self.assignments
-            .insert(bcs_old, Globalrev::new(self.next_rev));
+        self.assignments.insert(bcs_old, self.next_rev);
 
-        self.next_rev += 1;
+        self.next_rev = self.next_rev.increment();
 
         Ok(())
     }
