@@ -11,6 +11,8 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -43,6 +45,8 @@ use tokio_uds_compat::UnixStream;
 use tracing::event;
 use tracing::Level;
 
+#[cfg(target_os = "macos")]
+use crate::redirect::DarwinBindRedirectionType;
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
@@ -110,6 +114,24 @@ impl EdenFsInstance {
             .ok()
             .and_then(|config| config.prefetch_profiles)
             .map_or(false, |config| config.predictive_prefetching_enabled)
+    }
+
+    /// Determine what bind redirection type should be used on macOS. There are currently only 2
+    /// options: apfs or dmg. We default to the old behavior, apfs.
+    #[cfg(target_os = "macos")]
+    pub fn determine_bind_redirection_type(&self) -> DarwinBindRedirectionType {
+        let config_value = self
+            .get_config()
+            .ok()
+            .and_then(|config| config.redirections)
+            .map_or("apfs".to_string(), |config| config.darwin_redirection_type);
+        match DarwinBindRedirectionType::from_str(&config_value) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("{}. Defaulting to apfs.", e);
+                DarwinBindRedirectionType::APFS
+            }
+        }
     }
 
     async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsClient> {

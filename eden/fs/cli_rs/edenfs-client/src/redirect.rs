@@ -46,7 +46,6 @@ use util::path::absolute;
 
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
-#[cfg(target_os = "linux")]
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
 
@@ -97,6 +96,47 @@ impl FromStr for RedirectionType {
         }
     }
 }
+
+#[cfg(target_os = "macos")]
+#[derive(PartialEq, Debug)]
+pub enum DarwinBindRedirectionType {
+    APFS,
+    DMG,
+}
+
+#[cfg(target_os = "macos")]
+impl fmt::Display for DarwinBindRedirectionType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                DarwinBindRedirectionType::APFS => "apfs",
+                DarwinBindRedirectionType::DMG => "dmg",
+            }
+        )
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl FromStr for DarwinBindRedirectionType {
+    type Err = EdenFsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.to_lowercase() == "apfs" || s.is_empty() {
+            Ok(DarwinBindRedirectionType::APFS)
+        } else if s.to_lowercase() == "dmg" {
+            Ok(DarwinBindRedirectionType::DMG)
+        } else {
+            // deliberately did not implement "Unknown"
+            Err(EdenFsError::ConfigurationError(format!(
+                "Unknown darwin bind redirection type: {}. Must be one of: apfs, dmg",
+                s
+            )))
+        }
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub enum RepoPathDisposition {
     DoesNotExist,
@@ -482,10 +522,14 @@ impl Redirection {
 
     #[cfg(target_os = "macos")]
     fn _bind_mount_darwin(&self, checkout_path: &Path, target: &Path) -> Result<()> {
-        if Redirection::have_apfs_helper()? {
-            self._bind_mount_darwin_apfs(checkout_path)
-        } else {
+        // We default to APFS since DMG redirections are experimental at this point
+        if !Redirection::have_apfs_helper()?
+            || EdenFsInstance::global().determine_bind_redirection_type()
+                == DarwinBindRedirectionType::DMG
+        {
             self._bind_mount_darwin_dmg(checkout_path, target)
+        } else {
+            self._bind_mount_darwin_apfs(checkout_path)
         }
     }
 

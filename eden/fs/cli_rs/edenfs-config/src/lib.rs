@@ -39,6 +39,17 @@ pub struct PrefetchProfiles {
 }
 
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct Redirections {
+    #[stack(default)]
+    pub darwin_redirection_type: String,
+
+    #[stack(merge = "merge_table")]
+    #[serde(flatten)]
+    pub other: toml::value::Table,
+}
+
+#[derive(Serialize, Deserialize, StackConfig, Debug)]
 pub struct EdenFsConfig {
     #[stack(nested)]
     pub core: Core,
@@ -46,6 +57,9 @@ pub struct EdenFsConfig {
     #[stack(nested)]
     #[serde(rename = "prefetch-profiles")]
     pub prefetch_profiles: Option<PrefetchProfiles>,
+
+    #[stack(nested)]
+    pub redirections: Option<Redirections>,
 
     #[stack(merge = "merge_table")]
     #[serde(flatten)]
