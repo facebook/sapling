@@ -307,19 +307,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newbookmarks = newbookmarks or {}
         oldremotebookmarks = oldremotebookmarks or []
         newremotebookmarks = newremotebookmarks or {}
-        self.ui.log(
-            "commitcloud_updates",
-            version=version,
-            repo=reponame,
-            workspace=workspace,
-            oldheadcount=len(oldheads),
-            newheadcount=len(newheads),
-            oldbookmarkcount=len(oldremotebookmarks),
-            newbookmarkcount=len(newbookmarks),
-            oldremotebookmarkcount=len(oldremotebookmarks),
-            newremotebookmarkcount=len(newremotebookmarks),
-            **logopts,
-        )
 
         # remove duplicates, must preserve order in the newheads list
         newheadsset = set(newheads)
@@ -327,6 +314,20 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
         newheads = [h for h in newheads if h not in commonset]
         oldheads = [h for h in oldheads if h not in commonset]
+
+        self.ui.log(
+            "commitcloud_updates",
+            version=version,
+            repo=reponame,
+            workspace=workspace,
+            oldheadcount=len(oldheads),
+            newheadcount=len(newheads),
+            oldbookmarkcount=len(oldbookmarks),
+            newbookmarkcount=len(newbookmarks),
+            oldremotebookmarkcount=len(oldremotebookmarks),
+            newremotebookmarkcount=len(newremotebookmarks),
+            **logopts,
+        )
 
         # send request
         path = "/commit_cloud/update_references"
