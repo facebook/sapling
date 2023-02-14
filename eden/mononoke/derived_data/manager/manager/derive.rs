@@ -22,7 +22,9 @@ use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_service_if::DerivationType;
+use derived_data_service_if::DeriveRequest;
 use derived_data_service_if::DeriveUnderived;
+use derived_data_service_if::DerivedDataType;
 use futures::future::try_join;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
@@ -503,6 +505,15 @@ impl DerivedDataManager {
                 Duration::from_millis,
                 RETRY_DELAY_MS,
             );
+            let request = DeriveRequest {
+                repo_name: self.repo_name().to_string(),
+                derived_data_type: DerivedDataType {
+                    type_name: Derivable::NAME.to_string(),
+                },
+                changeset_id: csid.as_ref().to_vec(),
+                config_name: self.config_name(),
+                derivation_type: DerivationType::derive_underived(DeriveUnderived {}),
+            };
             while let Some(true) =
                 tunables::tunables().by_repo_enable_remote_derivation(self.repo_name())
             {
@@ -515,22 +526,11 @@ impl DerivedDataManager {
                         );
                     break;
                 }
-                match client
-                    .derive_remotely(
-                        self.repo_name().to_string(),
-                        Derivable::NAME.to_string(),
-                        csid,
-                        self.config_name(),
-                        DerivationType::derive_underived(DeriveUnderived {}),
-                    )
-                    .await
-                {
-                    Ok(Some(data)) => {
-                        return Ok(Derivable::from_thrift(data)?);
-                    }
-                    Ok(None) => {
-                        tokio::time::sleep(retry_delay).await;
-                    }
+                match client.derive_remotely(&request).await {
+                    Ok(response) => match response.data {
+                        Some(data) => return Ok(Derivable::from_thrift(data)?),
+                        None => tokio::time::sleep(retry_delay).await,
+                    },
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
                             self.derived_data_scuba::<Derivable>(&None)

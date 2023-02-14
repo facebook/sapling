@@ -9,8 +9,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Args;
 use derived_data_service_if::types as thrift;
-use derived_data_service_if::types::DerivationType;
-use mononoke_types::ChangesetId;
 
 #[derive(Clone, Debug)]
 pub struct RemoteDerivationOptions {
@@ -59,10 +57,6 @@ impl From<RemoteDerivationArgs> for RemoteDerivationOptions {
 pub trait DerivationClient: Send + Sync {
     async fn derive_remotely(
         &self,
-        repo_name: String,
-        derived_data_type: String,
-        cs_id: ChangesetId,
-        config_name: String,
-        derivation_type: DerivationType,
-    ) -> Result<Option<thrift::DerivedData>>;
+        request: &thrift::DeriveRequest,
+    ) -> Result<thrift::DeriveResponse>;
 }
