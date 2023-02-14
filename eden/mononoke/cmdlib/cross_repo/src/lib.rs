@@ -21,6 +21,7 @@ use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Syncers;
+use futures::future;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_app::args::AsRepoArg;
@@ -38,8 +39,25 @@ pub async fn create_commit_syncers_from_app<R: CrossRepo>(
     app: &MononokeApp,
     repo_args: &SourceAndTargetRepoArgs,
 ) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
+    create_commit_syncers_from_app_impl(ctx, app, repo_args, false).await
+}
+
+pub async fn create_commit_syncers_from_app_unredacted<R: CrossRepo>(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    repo_args: &SourceAndTargetRepoArgs,
+) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
+    create_commit_syncers_from_app_impl(ctx, app, repo_args, true).await
+}
+
+async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    repo_args: &SourceAndTargetRepoArgs,
+    unredacted: bool,
+) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
     let (source_repo, target_repo, mapping, live_commit_sync_config) =
-        get_things_from_app::<R>(ctx, app, repo_args).await?;
+        get_things_from_app::<R>(ctx, app, repo_args, unredacted).await?;
 
     let common_config =
         live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
@@ -97,6 +115,7 @@ async fn get_things_from_app<R: CrossRepo>(
     ctx: &CoreContext,
     app: &MononokeApp,
     repo_args: &SourceAndTargetRepoArgs,
+    unredacted: bool,
 ) -> Result<
     (
         Source<R>,
@@ -128,7 +147,15 @@ async fn get_things_from_app<R: CrossRepo>(
         readonly_storage.0,
     )?;
 
-    let (source_repo, target_repo) = app.open_source_and_target_repos(repo_args).await?;
+    let (source_repo, target_repo) = if !unredacted {
+        app.open_source_and_target_repos(repo_args).await?
+    } else {
+        future::try_join(
+            app.open_repo_unredacted(&repo_args.source_repo),
+            app.open_repo_unredacted(&repo_args.target_repo),
+        )
+        .await?
+    };
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?);
@@ -152,7 +179,7 @@ async fn create_commit_syncer_from_app_impl<R: CrossRepo>(
     repo_args: &SourceAndTargetRepoArgs,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
     let (source_repo, target_repo, mapping, live_commit_sync_config) =
-        get_things_from_app(ctx, app, repo_args).await?;
+        get_things_from_app(ctx, app, repo_args, false).await?;
 
     let (source_repo, target_repo) = if reverse {
         flip_direction(source_repo, target_repo)
