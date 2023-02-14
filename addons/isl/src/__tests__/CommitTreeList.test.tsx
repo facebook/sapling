@@ -89,6 +89,25 @@ describe('CommitTreeList', () => {
         expect(screen.getByText('file_missing.js', {exact: false})).toBeInTheDocument();
       });
 
+      it('shows quick commit button', () => {
+        expect(screen.getByText('Commit')).toBeInTheDocument();
+      });
+      it('shows quick amend button only on non-public commits', () => {
+        expect(screen.getByText('Amend')).toBeInTheDocument();
+        // checkout a public commit
+        act(() => {
+          simulateCommits({
+            value: [
+              COMMIT('1', 'some public base', '0', {phase: 'public', isHead: true}),
+              COMMIT('a', 'My Commit', '1', {successorInfo: {hash: 'a2', type: 'land'}}),
+              COMMIT('b', 'Another Commit', 'a'),
+            ],
+          });
+        });
+        // no longer see quick amend
+        expect(screen.queryByText('Amend')).not.toBeInTheDocument();
+      });
+
       it('shows file actions', () => {
         const fileActions = screen.getAllByTestId('file-actions');
         expect(fileActions).toHaveLength(5); // 5 files

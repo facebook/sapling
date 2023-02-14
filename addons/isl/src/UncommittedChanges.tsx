@@ -348,35 +348,37 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
               <T>Commit as...</T>
             </VSCodeButton>
           </div>
-          <div className="button-row">
-            <VSCodeButton
-              appearance="icon"
-              disabled={noFilesSelected}
-              data-testid="uncommitted-changes-quick-amend-button"
-              onClick={() => {
-                const filesToCommit =
-                  deselectedFiles.size === 0
-                    ? // all files
-                      undefined
-                    : // only files not unchecked
-                      uncommittedChanges
-                        .filter(file => !deselectedFiles.has(file.path))
-                        .map(file => file.path);
-                runOperation(new AmendOperation(filesToCommit));
-              }}>
-              <Icon slot="start" icon="debug-step-into" />
-              <T>Amend</T>
-            </VSCodeButton>
-            <VSCodeButton
-              appearance="icon"
-              className="show-on-hover"
-              onClick={() => {
-                openCommitForm('amend');
-              }}>
-              <Icon slot="start" icon="edit" />
-              <T>Amend as...</T>
-            </VSCodeButton>
-          </div>
+          {headCommit?.phase === 'public' ? null : (
+            <div className="button-row">
+              <VSCodeButton
+                appearance="icon"
+                disabled={noFilesSelected}
+                data-testid="uncommitted-changes-quick-amend-button"
+                onClick={() => {
+                  const filesToCommit =
+                    deselectedFiles.size === 0
+                      ? // all files
+                        undefined
+                      : // only files not unchecked
+                        uncommittedChanges
+                          .filter(file => !deselectedFiles.has(file.path))
+                          .map(file => file.path);
+                  runOperation(new AmendOperation(filesToCommit));
+                }}>
+                <Icon slot="start" icon="debug-step-into" />
+                <T>Amend</T>
+              </VSCodeButton>
+              <VSCodeButton
+                appearance="icon"
+                className="show-on-hover"
+                onClick={() => {
+                  openCommitForm('amend');
+                }}>
+                <Icon slot="start" icon="edit" />
+                <T>Amend as...</T>
+              </VSCodeButton>
+            </div>
+          )}
         </div>
       )}
     </div>
