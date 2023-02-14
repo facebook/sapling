@@ -21,7 +21,7 @@ futures = { version = "0.3.22", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4.30"
-sha-1 = "0.10"
+sha1 = "0.10.5"
 sha2 = "0.10"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.36"

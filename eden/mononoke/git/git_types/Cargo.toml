@@ -24,7 +24,7 @@ futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git_types_thrift = { version = "0.1.0", path = "if" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-sha-1 = "0.10"
+sha1 = "0.10.5"
 thiserror = "1.0.36"
 
 [dev-dependencies]

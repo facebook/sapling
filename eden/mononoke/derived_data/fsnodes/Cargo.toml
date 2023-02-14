@@ -28,7 +28,7 @@ futures = { version = "0.3.22", features = ["async-await", "compat"] }
 itertools = "0.10.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-sha-1 = "0.10"
+sha1 = "0.10.5"
 sha2 = "0.10"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
