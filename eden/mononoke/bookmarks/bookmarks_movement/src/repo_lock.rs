@@ -111,7 +111,7 @@ impl RepoLockPushrebaseHook {
 
 #[async_trait]
 impl PushrebaseHook for RepoLockPushrebaseHook {
-    async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>> {
+    async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>> {
         let hook = Box::new(RepoLockCommitTransactionHook {
             transaction_repo_lock: self.transaction_repo_lock,
         });

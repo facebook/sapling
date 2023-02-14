@@ -55,7 +55,7 @@ impl GlobalrevPushrebaseHook {
 
 #[async_trait]
 impl PushrebaseHook for GlobalrevPushrebaseHook {
-    async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+    async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let max = self.mapping.get_max(&self.ctx).await?;
 
         let next_rev = match max {

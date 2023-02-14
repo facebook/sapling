@@ -49,7 +49,7 @@ impl<R: Repo + 'static> CrossRepoSyncPushrebaseHook<R> {
 
 #[async_trait]
 impl<R: Repo + 'static> PushrebaseHook for CrossRepoSyncPushrebaseHook<R> {
-    async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+    async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let hook = Box::new(self.clone()) as Box<dyn PushrebaseCommitHook>;
         Ok(hook)
     }
