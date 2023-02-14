@@ -28,6 +28,16 @@ struct DeriveUnderived {} (rust.exhaustive)
 
 struct Rederivation {} (rust.exhaustive)
 
+/// Represents status of derivation request
+enum RequestStatus {
+  /// Derivation succeeded
+  SUCCESS = 0,
+  /// Derivation was request but still in progress
+  IN_PROGRESS = 1,
+  /// Derivation either wasn't requested or finished
+  DOES_NOT_EXIST = 2,
+}
+
 struct DeriveRequest {
   1: string repo_name;
   2: DerivedDataType derived_data_type;
@@ -38,6 +48,11 @@ struct DeriveRequest {
 
 struct DeriveResponse {
   1: optional DerivedData data;
+  2: RequestStatus status;
+} (rust.exhaustive)
+
+struct PollRequest {
+  1: DeriveRequest original_request;
 } (rust.exhaustive)
 
 union DerivedData {
@@ -165,9 +180,16 @@ safe permanent server exception InternalError {
 } (rust.exhaustive)
 
 service DerivedDataService extends fb303_core.BaseService {
-  # At first stage of the project this method requires that
-  # parents of the commit have to be derived already
+  /// Request derivation for given commit. Service will find all underived commits
+  /// and dependency for other derived data types
   DeriveResponse derive(1: DeriveRequest request) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+  );
+
+  /// If derivation took longer than initial request timeout clients should poll
+  /// using this method. This method will not trigger derivation.
+  DeriveResponse poll(1: PollRequest request) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
   );
