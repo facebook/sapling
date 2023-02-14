@@ -42,6 +42,7 @@ tempfile = "3.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 nix = "0.25"
+psutil = "3.2.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 mkscratch = { version = "0.1.0", path = "../../../scm/exec/scratch" }

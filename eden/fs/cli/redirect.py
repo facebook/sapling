@@ -50,6 +50,29 @@ def have_apfs_helper() -> bool:
         return False
 
 
+def determine_bind_redirection_type(instance: EdenInstance) -> str:
+    """Determine what bind redirection type should be used on macOS.
+    There are currently only 2 options: "apfs" or "dmg". We default
+    to the old behavior, "apfs"."""
+    config_value = instance.get_config_value(
+        "redirections.darwin-redirection-type", "apfs"
+    )
+    default_type = "apfs" if have_apfs_helper() else "dmg"
+    if config_value not in ["apfs", "dmg"]:
+        print(
+            f'darwin redirection type {config_value} must be either "apfs" or "dmg". Defaulting to {default_type}.'
+        )
+        config_value = default_type
+
+    if config_value == "apfs" and not have_apfs_helper():
+        print(
+            f"cannot use apfs redirections since apfs_helper '{APFS_HELPER}' is not available. Defaulting to {default_type} redirections."
+        )
+        config_value = default_type
+
+    return config_value
+
+
 def is_bind_mount(path: Path) -> bool:
     """Detect the most common form of a bind mount in the repo;
     its parent directory will have a different device number than
@@ -188,7 +211,10 @@ class Redirection:
 
     def expand_target_abspath(self, checkout: EdenCheckout) -> Optional[Path]:
         if self.type == RedirectionType.BIND:
-            if have_apfs_helper():
+            if (
+                sys.platform == "darwin"
+                and determine_bind_redirection_type(checkout.instance) == "apfs"
+            ):
                 # Ideally we'd return information about the backing, but
                 # it is a bit awkward to determine this in all contexts;
                 # prior to creating the volume we don't know anything
@@ -226,10 +252,10 @@ class Redirection:
     def _bind_mount_darwin(
         self, instance: EdenInstance, checkout_path: Path, target: Path
     ) -> None:
-        if have_apfs_helper():
-            return self._bind_mount_darwin_apfs(instance, checkout_path, target)
-        else:
+        if determine_bind_redirection_type(instance) == "dmg":
             return self._bind_mount_darwin_dmg(instance, checkout_path, target)
+        else:
+            return self._bind_mount_darwin_apfs(instance, checkout_path, target)
 
     def _bind_mount_darwin_apfs(
         self, instance: EdenInstance, checkout_path: Path, target: Path
@@ -254,6 +280,8 @@ class Redirection:
         total_kb = total / 1024
         mount_path = checkout_path / self.repo_path
         if not image_file_name.exists():
+            if not image_file_name.parent.exists():
+                image_file_name.parent.mkdir(exist_ok=True, parents=True)
             run_cmd_quietly(
                 [
                     "hdiutil",
@@ -270,6 +298,8 @@ class Redirection:
                 ]
             )
 
+        if not mount_path.parent.exists():
+            mount_path.parent.mkdir(exist_ok=True, parents=True)
         run_cmd_quietly(
             [
                 "hdiutil",
@@ -283,8 +313,11 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout) -> None:
         mount_path = checkout.path / self.repo_path
-        # This will unmount/detach both disk images and apfs volumes
-        run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
+        # This will unmount/detach both disk images and apfs volumes.
+        # `diskutil eject` fully removes the image from the list of disk
+        # partitions while `diskutil unmount` leaves leftover state for some
+        # reason. We will use `eject` since they're essentially the same.
+        run_cmd_quietly(["diskutil", "eject", mount_path])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: Path, target: Path

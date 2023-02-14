@@ -256,6 +256,11 @@ class EdenTestCase(EdenTestCaseBase):
         configs = {"experimental": ["enable-nfs-server = true"]}
         if self.use_nfs():
             configs["clone"] = ['default-mount-protocol = "NFS"']
+        # The number of concurrent APFS volumes we can create on macOS
+        # Sandcastle hosts is extremely limited. Therefore, let's use disk
+        # image redirections instead of APFS volume redirections.
+        if sys.platform == "darwin":
+            configs["redirections"] = ['darwin-redirection-type = "dmg"']
         return configs
 
     def create_hg_repo(

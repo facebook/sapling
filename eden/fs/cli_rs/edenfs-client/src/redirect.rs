@@ -35,9 +35,9 @@ use edenfs_utils::stop_buckd_for_repo;
 use fbinit::expect_init;
 #[cfg(target_os = "windows")]
 use mkscratch::zzencode;
-#[cfg(target_os = "macos")]
-use nix::sys::stat::stat;
 use pathdiff::diff_paths;
+#[cfg(target_os = "macos")]
+use psutil::disk::disk_usage;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -352,8 +352,9 @@ impl Redirection {
 
     pub fn expand_target_abspath(&self, checkout: &EdenFsCheckout) -> Result<Option<PathBuf>> {
         match self.redir_type {
+            #[cfg(target_os = "macos")]
             RedirectionType::Bind => {
-                if Redirection::have_apfs_helper()? {
+                if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::APFS {
                     // Ideally we'd return information about the backing, but
                     // it is a bit awkward to determine this in all contexts;
                     // prior to creating the volume we don't know anything
@@ -380,6 +381,11 @@ impl Redirection {
                     )?))
                 }
             }
+            #[cfg(not(target_os = "macos"))]
+            RedirectionType::Bind => Ok(Some(Redirection::make_scratch_dir(
+                checkout,
+                &self.repo_path,
+            )?)),
             RedirectionType::Symlink => Ok(Some(Redirection::make_scratch_dir(
                 checkout,
                 &self.repo_path,
@@ -477,31 +483,44 @@ impl Redirection {
         // Since we don't have bind mounts, we set up a disk image file
         // and mount that instead.
         let image_file_path = self._dmg_file_name(target);
-        let target_stat = stat(target)
+        let target_stat = disk_usage(target)
             .from_err()
             .with_context(|| format!("Failed to stat target {}", target.display()))?;
 
         // Specify the size in kb because the disk utilities have weird
         // defaults if the units are unspecified, and `b` doesn't mean
         // bytes!
-        let total_kb = target_stat.st_size / 1024;
+        let total_kib = target_stat.total() / 1024;
         let mount_path = checkout_path.join(&self.repo_path());
 
-        if !image_file_path.exists() {
-            // We need to convert paths -> strings for the hdiutil commands
-            let image_file_name = image_file_path.to_string_lossy();
-            let mount_name = mount_path.to_string_lossy();
+        // We need to convert paths -> strings for the hdiutil commands
+        let image_file_name = image_file_path.to_string_lossy();
+        let mount_name = mount_path.to_string_lossy();
 
+        if !image_file_path.exists() {
+            let image_file_dir = image_file_path.parent().with_context(|| {
+                format!(
+                    "image file {} must exist in some parent directory",
+                    &image_file_path.display()
+                )
+            })?;
+            if !image_file_dir.exists() {
+                std::fs::create_dir_all(&image_file_dir)
+                    .from_err()
+                    .with_context(|| {
+                        format!("Failed to create directory {}", &image_file_dir.display())
+                    })?;
+            }
             let args = &[
                 "create",
-                "--size",
-                &format!("{}k", total_kb),
-                "--type",
+                "-size",
+                &format!("{}k", total_kib),
+                "-type",
                 "SPARSE",
-                "--fs",
+                "-fs",
                 "HFS+",
-                "--volname",
-                &format!("EdenFS redirection for {}", &mount_name),
+                "-volname",
+                &format!("'EdenFS redirection for {}'", &mount_name),
                 &image_file_name,
             ];
             let create_output = Command::new("hdiutil")
@@ -520,30 +539,38 @@ impl Redirection {
                     String::from_utf8_lossy(&create_output.stdout)
                 )));
             }
-
-            let args = &[
-                "attach",
-                &image_file_name,
-                "--nobrowse",
-                "--mountpoint",
-                &mount_name,
-            ];
-            let attach_output = Command::new("hdiutil")
-                .args(args)
-                .output()
+        }
+        let args = &[
+            "attach",
+            &image_file_name,
+            "-nobrowse",
+            "-mountpoint",
+            &mount_name,
+        ];
+        let mount_path = mount_path.parent().with_context(|| {
+            format!(
+                "mount path {} must exist in some parent directory",
+                &mount_path.display()
+            )
+        })?;
+        if !mount_path.exists() {
+            std::fs::create_dir_all(&mount_path)
                 .from_err()
-                .with_context(|| {
-                    format!("Failed to execute command `hdiutil {}`", args.join(" "))
-                })?;
-            if !attach_output.status.success() {
-                return Err(EdenFsError::Other(anyhow!(
-                    "failed to attach dmg volume {} for mount {}. stderr: {}\n stdout: {}",
-                    &image_file_name,
-                    &mount_name,
-                    String::from_utf8_lossy(&attach_output.stderr),
-                    String::from_utf8_lossy(&attach_output.stdout)
-                )));
-            }
+                .with_context(|| format!("Failed to create directory {}", &mount_path.display()))?;
+        }
+        let attach_output = Command::new("hdiutil")
+            .args(args)
+            .output()
+            .from_err()
+            .with_context(|| format!("Failed to execute command `hdiutil {}`", args.join(" ")))?;
+        if !attach_output.status.success() {
+            return Err(EdenFsError::Other(anyhow!(
+                "failed to attach dmg volume {} for mount {}. stderr: {}\n stdout: {}",
+                &image_file_name,
+                &mount_name,
+                String::from_utf8_lossy(&attach_output.stderr),
+                String::from_utf8_lossy(&attach_output.stdout)
+            )));
         }
         Ok(())
     }
@@ -606,7 +633,10 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let mount_path = checkout.path().join(&self.repo_path);
-        let args = &["unmount", "force", &mount_path.to_string_lossy()];
+        // `diskutil eject` fully removes the image from the list of disk partitions while
+        // `diskutil unmount` leaves leftover state for some reason. We will use `eject` since
+        //  they're essentially the same.
+        let args = &["eject", &mount_path.to_string_lossy()];
         let output = Command::new("diskutil")
             .args(args)
             .output()
