@@ -184,7 +184,21 @@ pub trait TestRepoFixture {
     >(
         fb: FacebookInit,
     ) -> R {
-        let repo: R = test_repo_factory::build_empty(fb).unwrap();
+        Self::get_custom_test_repo_with_id(fb, RepositoryId::new(0)).await
+    }
+
+    async fn get_custom_test_repo_with_id<
+        R: Repo + for<'builder> facet::Buildable<TestRepoFactoryBuilder<'builder>>,
+    >(
+        fb: FacebookInit,
+        id: RepositoryId,
+    ) -> R {
+        let repo: R = TestRepoFactory::new(fb)
+            .unwrap()
+            .with_id(id)
+            .with_name(Self::REPO_NAME.to_string())
+            .build()
+            .unwrap();
         Self::initrepo(fb, &repo).await;
         repo
     }

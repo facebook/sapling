@@ -61,7 +61,7 @@ const SM_SERVICE_SCOPE: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 const APP_NAME: &str = "megarepo_bookmarks_validator";
 
-type Repo = blobrepo::BlobRepo;
+type Repo = cross_repo_sync::ConcreteRepo;
 
 /// Struct representing the Bookmark Validate BP.
 pub struct BookmarkValidateProcess {

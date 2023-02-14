@@ -21,17 +21,24 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogRef;
+use bookmarks::Bookmarks;
+use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
+use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use changeset_info::ChangesetInfo;
+use changesets::Changesets;
 use changesets::ChangesetsRef;
 use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
 use commit_transformation::upload_commits;
@@ -41,6 +48,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use environment::Caching;
 use fbinit::FacebookInit;
+use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 use futures::channel::oneshot;
 use futures::future;
@@ -57,6 +65,8 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::PushrebaseFlags;
+use metaconfig_types::RepoConfig;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -64,19 +74,26 @@ use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
+use mutable_counters::MutableCounters;
+use mutable_counters::MutableCountersArc;
+use phases::Phases;
 use phases::PhasesRef;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use reporting::log_rewrite;
 pub use reporting::CommitSyncContext;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::info;
+use static_assertions::assert_impl_all;
 use sync_config_version_utils::get_mapping_change_version;
 use sync_config_version_utils::get_version;
 use sync_config_version_utils::get_version_for_merge;
@@ -392,22 +409,69 @@ where
     ))
 }
 
-pub trait Repo = BookmarksRef
+pub trait Repo = BookmarksArc
+    + BookmarksRef
+    + BookmarkUpdateLogArc
     + BookmarkUpdateLogRef
     + RepoBlobstoreArc
     + BonsaiHgMappingRef
     + FilestoreConfigRef
     + ChangesetsRef
     + RepoIdentityRef
+    + MutableCountersArc
     + PhasesRef
     + ChangesetFetcherArc
     + ChangesetFetcherRef
     + RepoBlobstoreRef
+    + RepoConfigRef
     + RepoDerivedDataRef
     + Send
     + Sync
     + Clone
     + 'static;
+
+/// Simplest repo that implements cross_repo_sync::Repo trait
+#[facet::container]
+#[derive(Clone)]
+pub struct ConcreteRepo {
+    #[facet]
+    bookmarks: dyn Bookmarks,
+
+    #[facet]
+    bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    filestore_config: FilestoreConfig,
+
+    #[facet]
+    changesets: dyn Changesets,
+
+    #[facet]
+    id: RepoIdentity,
+
+    #[facet]
+    phases: dyn Phases,
+
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    config: RepoConfig,
+
+    #[facet]
+    derived_data: RepoDerivedData,
+
+    #[facet]
+    blobstore: RepoBlobstore,
+
+    #[facet]
+    mutable_counters: dyn MutableCounters,
+}
+
+assert_impl_all!(ConcreteRepo: Repo);
 
 #[derive(Clone)]
 pub enum CommitSyncRepos<R> {

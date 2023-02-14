@@ -479,7 +479,7 @@ async fn run(
             MononokeScubaSampleBuilder::with_discard(),
         )
         .clone_with_repo_name(&repo_tag);
-    let commit_syncer = create_commit_syncer_from_matches::<blobrepo::BlobRepo>(
+    let commit_syncer = create_commit_syncer_from_matches::<cross_repo_sync::ConcreteRepo>(
         &ctx,
         &matches,
         Some((source_repo.id, target_repo.id)),
@@ -505,7 +505,7 @@ async fn run(
             let target_repo_dbs = Arc::new(
                 open_backsyncer_dbs(
                     ctx.clone(),
-                    commit_syncer.get_target_repo().clone(),
+                    commit_syncer.get_target_repo(),
                     db_config,
                     mysql_options.clone(),
                     *readonly_storage,
@@ -534,7 +534,7 @@ async fn run(
             let target_repo_dbs = Arc::new(
                 open_backsyncer_dbs(
                     ctx,
-                    commit_syncer.get_target_repo().clone(),
+                    commit_syncer.get_target_repo(),
                     db_config,
                     mysql_options.clone(),
                     *readonly_storage,

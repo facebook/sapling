@@ -958,11 +958,11 @@ pub async fn prepare_entry(
 
 /// Validate that parents of a changeset in a small repo are
 /// ancestors of it's equivalent in the large repo
-async fn validate_topological_order<'a>(
+async fn validate_topological_order<'a, R: ChangesetFetcherArc + RepoIdentityRef>(
     ctx: &'a CoreContext,
-    large_repo: &'a Large<BlobRepo>,
+    large_repo: &'a Large<R>,
     large_cs_id: Large<ChangesetId>,
-    small_repo: &'a Small<BlobRepo>,
+    small_repo: &'a Small<R>,
     small_cs_id: Small<ChangesetId>,
     large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     mapping: &'a SqlSyncedCommitMapping,
@@ -1579,6 +1579,7 @@ mod tests {
     use cross_repo_sync::update_mapping_with_version;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use cross_repo_sync_test_utils::xrepo_mapping_version_with_small_repo;
+    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use skiplist::SkiplistIndex;
@@ -1591,7 +1592,7 @@ mod tests {
     async fn add_commits_to_repo(
         ctx: &CoreContext,
         spec: Vec<HashMap<&str, &str>>,
-        repo: &BlobRepo,
+        repo: &TestRepo,
     ) -> Result<Vec<ChangesetId>, Error> {
         let mut parent: CommitIdentifier = "master".into();
         let mut commits: Vec<ChangesetId> = vec![];

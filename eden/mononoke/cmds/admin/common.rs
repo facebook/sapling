@@ -18,6 +18,7 @@ use bookmarks::BookmarksRef;
 use cmdlib::args;
 use cmdlib::helpers;
 use context::CoreContext;
+use facet::AsyncBuildable;
 use fbinit::FacebookInit;
 use futures::try_join;
 use futures::TryStreamExt;
@@ -31,6 +32,7 @@ use mononoke_types::FileChange;
 use mononoke_types::Timestamp;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_factory::RepoFactoryBuilder;
 use repo_identity::RepoIdentityRef;
 use serde_json::json;
 use serde_json::to_string_pretty;
@@ -148,11 +150,14 @@ pub async fn get_file_nodes(
     }
 }
 
-pub async fn get_source_target_repos_and_mapping<'a>(
+pub async fn get_source_target_repos_and_mapping<'a, R>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a args::MononokeMatches<'_>,
-) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
+) -> Result<(R, R, SqlSyncedCommitMapping), Error>
+where
+    for<'builder> R: AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     let config_store = matches.config_store();
 
     let source_repo_id =

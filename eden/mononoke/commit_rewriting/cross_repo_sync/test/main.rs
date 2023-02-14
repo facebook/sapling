@@ -16,7 +16,6 @@ use anyhow::Error;
 use ascii::AsciiString;
 use assert_matches::assert_matches;
 use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkName;
@@ -37,6 +36,7 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::ErrorKind;
 use cross_repo_sync::PluralCommitSyncOutcome;
 use cross_repo_sync_test_utils::rebase_root_on_master;
+use cross_repo_sync_test_utils::TestRepo;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::ManyFilesDirs;
@@ -79,8 +79,6 @@ use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 use tunables::with_tunables_async;
 use tunables::MononokeTunables;
-
-type TestRepo = BlobRepo;
 
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
@@ -443,7 +441,7 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
         .build()?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
-    let linear = Linear::getrepo(fb).await;
+    let linear: TestRepo = Linear::get_custom_test_repo(fb).await;
     let linear_config = create_small_to_large_commit_syncer(
         &ctx,
         linear.clone(),

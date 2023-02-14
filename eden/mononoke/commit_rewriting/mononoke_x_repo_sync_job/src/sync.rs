@@ -641,12 +641,12 @@ async fn move_or_create_bookmark(
 
 #[cfg(test)]
 mod test {
-    use blobrepo::BlobRepo;
     use bookmarks::BookmarkUpdateLogRef;
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::Freshness;
     use cross_repo_sync::validation;
     use cross_repo_sync_test_utils::init_small_large_repo;
+    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
     use maplit::hashset;
@@ -1009,7 +1009,7 @@ mod test {
 
     async fn sync_and_validate(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
     ) -> Result<(), Error> {
         sync_and_validate_with_common_bookmarks(
             ctx,
@@ -1022,7 +1022,7 @@ mod test {
 
     async fn sync_and_validate_with_common_bookmarks(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
         should_be_missing: &HashSet<BookmarkName>,
     ) -> Result<(), Error> {
@@ -1052,7 +1052,7 @@ mod test {
 
     async fn sync(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     ) -> Result<Vec<SyncResult>, Error> {
         let smallrepo = commit_syncer.get_source_repo();

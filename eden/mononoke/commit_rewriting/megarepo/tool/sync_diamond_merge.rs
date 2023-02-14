@@ -17,6 +17,7 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
+use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
@@ -117,7 +118,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 pub async fn do_sync_diamond_merge(
     ctx: &CoreContext,
     small_repo: InnerRepo,
-    large_repo: BlobRepo,
+    large_repo: InnerRepo,
     small_merge_cs_id: ChangesetId,
     mapping: SqlSyncedCommitMapping,
     onto_bookmark: BookmarkName,
@@ -141,7 +142,7 @@ pub async fn do_sync_diamond_merge(
 
     let syncers = create_commit_syncers(
         &ctx,
-        small_repo.blob_repo.clone(),
+        small_repo.clone(),
         large_repo.clone(),
         mapping,
         live_commit_sync_config,
@@ -191,7 +192,7 @@ pub async fn do_sync_diamond_merge(
     let (rewritten, version_for_merge) = create_rewritten_merge_commit(
         ctx.clone(),
         small_merge_cs_id,
-        &small_repo.blob_repo,
+        &small_repo,
         &large_repo,
         &syncers,
         small_root,
@@ -229,9 +230,9 @@ pub async fn do_sync_diamond_merge(
 async fn create_rewritten_merge_commit(
     ctx: CoreContext,
     small_merge_cs_id: ChangesetId,
-    small_repo: &BlobRepo,
-    large_repo: &BlobRepo,
-    syncers: &Syncers<SqlSyncedCommitMapping, BlobRepo>,
+    small_repo: &InnerRepo,
+    large_repo: &InnerRepo,
+    syncers: &Syncers<SqlSyncedCommitMapping, InnerRepo>,
     small_root: ChangesetId,
     onto_value: ChangesetId,
 ) -> Result<(BonsaiChangeset, CommitSyncConfigVersion), Error> {
@@ -315,12 +316,12 @@ async fn create_rewritten_merge_commit(
 async fn generate_additional_file_changes(
     ctx: CoreContext,
     root: ChangesetId,
-    large_repo: &BlobRepo,
-    large_to_small: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
+    large_repo: &(impl AsBlobRepo + RepoBlobstoreRef),
+    large_to_small: &CommitSyncer<SqlSyncedCommitMapping, InnerRepo>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
 ) -> Result<SortedVectorMap<MPath, FileChange>, Error> {
-    let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo, root, onto_value)
+    let bonsai_diff = find_bonsai_diff(ctx.clone(), large_repo.as_blob_repo(), root, onto_value)
         .collect()
         .compat()
         .await?;
@@ -349,7 +350,7 @@ async fn generate_additional_file_changes(
 
 async fn remap_commit(
     ctx: CoreContext,
-    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, BlobRepo>,
+    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, InnerRepo>,
     cs_id: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer

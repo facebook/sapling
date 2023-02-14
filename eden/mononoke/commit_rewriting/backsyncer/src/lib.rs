@@ -31,14 +31,11 @@ use std::time::Instant;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore_factory::make_metadata_sql_factory;
 use blobstore_factory::ReadOnlyStorage;
 use bookmarks::BookmarkTransactionError;
-use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks::BookmarksArc;
 use bookmarks::Freshness;
 use cloned::cloned;
 use context::CoreContext;
@@ -47,12 +44,12 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::Repo;
 use futures::FutureExt;
 use futures::TryStreamExt;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
 use slog::debug;
 use slog::info;
@@ -435,7 +432,7 @@ where
 
 pub async fn open_backsyncer_dbs(
     ctx: CoreContext,
-    blobrepo: BlobRepo,
+    blobrepo: &impl Repo,
     db_config: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,

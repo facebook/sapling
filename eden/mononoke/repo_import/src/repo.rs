@@ -15,6 +15,7 @@ use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use filestore::FilestoreConfig;
+use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
@@ -50,6 +51,9 @@ pub struct Repo {
 
     #[facet]
     repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    config: RepoConfig,
 }
 
 impl Repo {

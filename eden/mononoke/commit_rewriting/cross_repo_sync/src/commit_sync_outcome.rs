@@ -667,8 +667,8 @@ impl PluralCommitSyncOutcome {
 
 #[cfg(test)]
 mod tests {
-    use blobrepo::BlobRepo;
     use bookmarks::BookmarkUpdateReason;
+    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use live_commit_sync_config::TestLiveCommitSyncConfig;
     use mononoke_types_mocks::changesetid::FOURS_CSID;
@@ -690,7 +690,6 @@ mod tests {
 
     const SMALL_REPO_ID: RepositoryId = RepositoryId::new(0);
     const LARGE_REPO_ID: RepositoryId = RepositoryId::new(1);
-    type TestRepo = BlobRepo;
 
     fn test_version() -> CommitSyncConfigVersion {
         CommitSyncConfigVersion("test_version".to_string())
@@ -785,7 +784,7 @@ mod tests {
     #[fbinit::test]
     async fn test_ancestor_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo: BlobRepo = TestRepoFactory::new(fb)?.with_id(LARGE_REPO_ID).build()?;
+        let blob_repo: TestRepo = TestRepoFactory::new(fb)?.with_id(LARGE_REPO_ID).build()?;
         let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
             Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
@@ -868,7 +867,7 @@ mod tests {
     #[fbinit::test]
     async fn test_descendant_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let blob_repo: TestRepo = test_repo_factory::build_empty(fb)?;
         let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
             Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
@@ -984,7 +983,7 @@ mod tests {
 
     async fn set_bookmark(
         ctx: &CoreContext,
-        blob_repo: &BlobRepo,
+        blob_repo: &TestRepo,
         bcs_id: ChangesetId,
         book: &BookmarkName,
     ) -> Result<(), Error> {
@@ -998,7 +997,7 @@ mod tests {
     #[fbinit::test]
     async fn test_bookmark_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo: BlobRepo = TestRepoFactory::new(fb)?.with_id(LARGE_REPO_ID).build()?;
+        let blob_repo: TestRepo = TestRepoFactory::new(fb)?.with_id(LARGE_REPO_ID).build()?;
         let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
             Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
@@ -1064,7 +1063,7 @@ mod tests {
     #[fbinit::test]
     async fn test_only_hint(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo: BlobRepo = TestRepoFactory::new(fb)?.with_id(LARGE_REPO_ID).build()?;
+        let blob_repo: TestRepo = TestRepoFactory::new(fb)?.with_id(LARGE_REPO_ID).build()?;
         let dag = create_from_dag(
             &ctx,
             &blob_repo,

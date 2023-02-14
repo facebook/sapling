@@ -21,6 +21,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../changesets" }
 clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
@@ -49,6 +50,7 @@ pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 regex = "1.6.0"
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 revset = { version = "0.1.0", path = "../../revset" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

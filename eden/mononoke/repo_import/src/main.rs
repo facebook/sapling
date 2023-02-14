@@ -1024,7 +1024,7 @@ async fn repo_import(
         dest_bookmark,
     };
 
-    let (_, mut repo_config) = get_config_by_repoid(configs, repo.repo_id())?;
+    let mut repo_config = repo.repo_config().clone();
 
     let mut call_sign = repo_config.phabricator_callsign.clone();
     if !recovery_fields.phab_check_disabled && call_sign.is_none() {
@@ -1066,7 +1066,7 @@ async fn repo_import(
 
         let target_repo_dbs = open_backsyncer_dbs(
             ctx.clone(),
-            repo.as_blob_repo().clone(),
+            &repo,
             repo_config.storage_config.metadata,
             env.mysql_options.clone(),
             env.readonly_storage.clone(),

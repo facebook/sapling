@@ -16,6 +16,8 @@ use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::Changesets;
 use ephemeral_blobstore::RepoEphemeralStore;
+use filenodes::Filenodes;
+use filestore::FilestoreConfig;
 use mercurial_mutation::HgMutationStore;
 use metaconfig_types::RepoConfig;
 use mutable_counters::MutableCounters;
@@ -41,6 +43,7 @@ use streaming_clone::StreamingClone;
 #[derive(Clone)]
 pub struct InnerRepo {
     #[delegate(
+        FilestoreConfig,
         RepoBlobstore,
         RepoBookmarkAttrs,
         RepoDerivedData,
@@ -52,6 +55,7 @@ pub struct InnerRepo {
         dyn Bookmarks,
         dyn ChangesetFetcher,
         dyn Changesets,
+        dyn Filenodes,
         dyn Phases,
         dyn PushrebaseMutationMapping,
         dyn HgMutationStore,

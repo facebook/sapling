@@ -50,7 +50,6 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
-use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogRef;
@@ -68,6 +67,7 @@ use context::CoreContext;
 use cross_repo_sync::types::Source;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::ConcreteRepo as CrossRepo;
 use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
 use filenodes::FilenodesArc;
@@ -455,7 +455,7 @@ async fn run<'a>(
     let (source_repo, target_repo): (InnerRepo, InnerRepo) =
         try_join(source_repo, target_repo).await?;
 
-    let commit_syncer = create_commit_syncer_from_matches::<BlobRepo>(&ctx, matches, None).await?;
+    let commit_syncer = create_commit_syncer_from_matches::<InnerRepo>(&ctx, matches, None).await?;
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(logger, config_store)?);
     let common_commit_sync_config =
@@ -551,7 +551,7 @@ fn context_and_matches<'a>(
 }
 
 struct BackpressureParams {
-    backsync_repos: Vec<BlobRepo>,
+    backsync_repos: Vec<CrossRepo>,
     wait_for_target_repo_hg_sync: bool,
 }
 

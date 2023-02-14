@@ -8,10 +8,10 @@
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
-use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use changesets::ChangesetsRef;
 use context::CoreContext;
 use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
@@ -22,10 +22,15 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use phases::PhasesRef;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::chunking::Chunker;
+
+pub trait Repo =
+    ChangesetsRef + RepoBlobstoreRef + PhasesRef + BookmarksRef + RepoDerivedDataRef + Send + Sync;
 
 #[derive(Clone, Debug)]
 pub struct ChangesetArgs {
@@ -44,7 +49,7 @@ pub trait ChangesetArgsFactory = Fn(StackPosition) -> ChangesetArgs;
 
 pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     parents: Vec<ChangesetId>,
     file_changes: SortedVectorMap<MPath, FileChange>,
     changeset_args: ChangesetArgs,
@@ -55,7 +60,7 @@ pub async fn create_save_and_generate_hg_changeset(
 
 pub async fn create_and_save_bonsai(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     parents: Vec<ChangesetId>,
     file_changes: SortedVectorMap<MPath, FileChange>,
     changeset_args: ChangesetArgs,
@@ -79,7 +84,7 @@ pub async fn create_and_save_bonsai(
 
 async fn save_and_maybe_mark_public(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs: BonsaiChangeset,
     mark_public: bool,
 ) -> Result<ChangesetId, Error> {
@@ -97,7 +102,7 @@ async fn save_and_maybe_mark_public(
 
 async fn generate_hg_changeset(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl Repo,
     bcs_id: ChangesetId,
 ) -> Result<HgChangesetId, Error> {
     info!(ctx.logger(), "Generating an HG equivalent of {:?}", bcs_id);
@@ -112,7 +117,7 @@ async fn generate_hg_changeset(
 
 async fn create_bookmark(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl BookmarksRef,
     bookmark: BookmarkName,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
@@ -159,7 +164,7 @@ fn create_bonsai_changeset_only(
 
 pub async fn delete_files_in_chunks<'a>(
     ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+    repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
     mpaths: Vec<MPath>,
     chunker: &Chunker<MPath>,

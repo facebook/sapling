@@ -17,14 +17,24 @@ blobrepo = { version = "0.1.0", path = "../../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
+changeset_fetcher = { version = "0.1.0", path = "../../../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../../changesets" }
 commit_transformation = { version = "0.1.0", path = "../../../megarepo_api/commit_transformation" }
 context = { version = "0.1.0", path = "../../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = ".." }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filenodes = { version = "0.1.0", path = "../../../filenodes" }
+filestore = { version = "0.1.0", path = "../../../filestore" }
 live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_config" }
 maplit = "1.0"
 megarepolib = { version = "0.1.0", path = "../../megarepo" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../../../mutable_counters" }
+phases = { version = "0.1.0", path = "../../../phases" }
+repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 synced_commit_mapping = { version = "0.1.0", path = "../../synced_commit_mapping" }
 test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }

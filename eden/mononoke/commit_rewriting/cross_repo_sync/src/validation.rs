@@ -796,11 +796,11 @@ mod test {
     use std::sync::Arc;
 
     use ascii::AsciiString;
-    use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use changeset_fetcher::ChangesetFetcherArc;
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
+    use cross_repo_sync_test_utils::TestRepo;
     use fbinit::FacebookInit;
     use fixtures::Linear;
     use fixtures::TestRepoFixture;
@@ -823,8 +823,6 @@ mod test {
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::CreateCommitContext;
-
-    type TestRepo = BlobRepo;
 
     use super::*;
     use crate::CommitSyncDataProvider;
@@ -1142,8 +1140,10 @@ mod test {
         direction: CommitSyncDirection,
     ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo = Linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
-        let large_repo = Linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
+        let small_repo: TestRepo =
+            Linear::get_custom_test_repo_with_id(fb, RepositoryId::new(0)).await;
+        let large_repo: TestRepo =
+            Linear::get_custom_test_repo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkName::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
