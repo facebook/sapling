@@ -371,7 +371,9 @@ def _makerage(ui, repo, **opts) -> str:
         ),
         (
             'first 20 lines of "hg status"',
-            lambda: "\n".join(hgcmd("status").splitlines()[:20]),
+            lambda: "\n".join(
+                shcmd(f"{ui.identity.cliname()} status").splitlines()[:20]
+            ),
         ),
         (
             "hg debugmutation -r 'draft() & date(-4)' -t 'since 4d ago'",
