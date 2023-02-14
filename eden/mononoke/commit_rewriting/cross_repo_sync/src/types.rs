@@ -67,6 +67,16 @@ macro_rules! generic_newtype_with_obvious_impls {
                 &self.0
             }
         }
+
+        impl<T> $name<T> {
+            pub const fn as_ref(&self) -> $name<&T> {
+                $name(&self.0)
+            }
+
+            pub fn as_mut(&mut self) -> $name<&mut T> {
+                $name(&mut self.0)
+            }
+        }
     };
 }
 
