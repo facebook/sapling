@@ -919,6 +919,19 @@ class EdenConfig : private ConfigSettingManager {
       1500,
       this};
 
+  // [redirections]
+
+  /**
+   * Whether to use APFS volumes or disk images for bind
+   * redirections on macOS.
+   */
+  ConfigSetting<std::string> darwinRedirectionType{
+      "redirections:darwin-redirection-type",
+      "apfs",
+      this};
+
+  // [overlay]
+
   /**
    * DANGER: this option will put overlay into memory and skip persisting any
    * actual data to disk. This will guarantee to cause EdenFS corruption after
