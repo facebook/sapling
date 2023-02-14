@@ -118,15 +118,16 @@ EdenConfig::EdenConfig(
     AbsolutePathPiece userHomePath,
     AbsolutePathPiece systemConfigDir,
     SourceVector configSources)
-    : substitutions_{
-          std::make_shared<ConfigVariables>(std::move(substitutions))} {
+    : substitutions_{std::make_shared<ConfigVariables>(
+          std::move(substitutions))},
+      systemConfigDir_{std::move(systemConfigDir)} {
   // Force set defaults that require passed arguments
   edenDir.setValue(
       userHomePath + kDefaultEdenDirectory, ConfigSourceType::Default, true);
   userIgnoreFile.setValue(
       userHomePath + kDefaultUserIgnoreFile, ConfigSourceType::Default, true);
   systemIgnoreFile.setValue(
-      systemConfigDir + kDefaultSystemIgnoreFile,
+      systemConfigDir_ + kDefaultSystemIgnoreFile,
       ConfigSourceType::Default,
       true);
 

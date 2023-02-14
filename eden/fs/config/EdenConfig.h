@@ -113,6 +113,14 @@ class EdenConfig : private ConfigSettingManager {
    */
   std::shared_ptr<const EdenConfig> maybeReload() const;
 
+  /**
+   * Returns the system config dir (--etc-eden-dir) path that EdenFS was passed
+   * during startup.
+   */
+  const AbsolutePath& getSystemConfigDir() const {
+    return systemConfigDir_;
+  }
+
  private:
   /**
    * Utility method for converting ConfigSourceType to the filename (or cli).
@@ -148,6 +156,14 @@ class EdenConfig : private ConfigSettingManager {
    */
   std::array<std::shared_ptr<ConfigSource>, kConfigSourceLastIndex + 1>
       configSources_;
+
+  /**
+   * The daemon sometimes needs to invoke the CLI. In doing so, it needs to pass
+   * information about which system config dir (--etc-eden-dir) it's using.
+   * Without this information, the CLI cannot properly load configs and will
+   * default to using the default system config location.
+   */
+  const AbsolutePath systemConfigDir_;
 
   /*
    * Settings follow. Their initialization registers themselves with the

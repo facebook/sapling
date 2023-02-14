@@ -661,13 +661,16 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
 
 folly::SemiFuture<Unit> EdenMount::performBindMounts() {
   auto mountPath = getPath();
-  return folly::makeSemiFutureWith([argv =
-                                        std::vector<std::string>{
-                                            FLAGS_edenfsctlPath,
-                                            "redirect",
-                                            "fixup",
-                                            "--mount",
-                                            mountPath.c_str()}] {
+  auto systemConfigDir = getEdenConfig()->getSystemConfigDir();
+  return folly::makeSemiFutureWith([&] {
+           std::vector<std::string> argv{
+               FLAGS_edenfsctlPath,
+               "--etc-eden-dir",
+               systemConfigDir.c_str(),
+               "redirect",
+               "fixup",
+               "--mount",
+               mountPath.c_str()};
            return SpawnedProcess(argv).future_wait();
          })
       .deferValue([mountPath](ProcessStatus returnCode) {
