@@ -28,7 +28,6 @@ use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
-use crate::mutable_counters::subcommand_mutable_counters;
 use crate::redaction::subcommand_redaction;
 use crate::skiplist_subcommand::subcommand_skiplist;
 
@@ -45,7 +44,6 @@ mod error;
 mod filenodes;
 mod hash_convert;
 mod hg_changeset;
-mod mutable_counters;
 mod redaction;
 mod rsync;
 mod skiplist_subcommand;
@@ -74,7 +72,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(skiplist_subcommand::build_subcommand())
         .subcommand(hash_convert::build_subcommand())
-        .subcommand(mutable_counters::build_subcommand())
         .subcommand(redaction::build_subcommand())
         .subcommand(filenodes::build_subcommand())
         .subcommand(subcommand_phases::build_subcommand())
@@ -132,9 +129,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (hash_convert::HASH_CONVERT, Some(sub_m)) => {
                 subcommand_hash_convert(fb, logger, &matches, sub_m).await
-            }
-            (mutable_counters::MUTABLE_COUNTERS, Some(sub_m)) => {
-                subcommand_mutable_counters(fb, sub_m, &matches, logger.clone()).await
             }
             (redaction::REDACTION, Some(sub_m)) => {
                 subcommand_redaction(fb, logger, &matches, sub_m).await

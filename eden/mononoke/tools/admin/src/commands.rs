@@ -24,4 +24,5 @@ mononoke_app::subcommands! {
     mod ephemeral_store;
     mod dump_changesets;
     mod async_requests;
+    mod mutable_counters;
 }
