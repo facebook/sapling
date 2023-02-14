@@ -24,7 +24,7 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 /// be rewritten with a particular commit sync config version.
 pub const CHANGE_XREPO_MAPPING_EXTRA: &str = "change-xrepo-mapping-to-version";
 
-/// For merge commit `source_cs_is` and `parent_outcomes` for
+/// For merge commit `source_cs_id` and `parent_outcomes` for
 /// its parents, get the version to use to construct a mover
 pub async fn get_version_for_merge<'a>(
     ctx: &CoreContext,
@@ -32,24 +32,35 @@ pub async fn get_version_for_merge<'a>(
     source_cs_id: ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
-    if let Some(version) = get_mapping_change_version(ctx, repo, source_cs_id).await? {
+    let cs_info = ChangesetInfo::derive(ctx, repo, source_cs_id).await?;
+    get_version_for_merge_with_info(ctx, &cs_info, parent_outcomes)
+}
+
+pub fn get_version_for_merge_with_info<'a>(
+    ctx: &CoreContext,
+    cs_info: &ChangesetInfo,
+    parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
+) -> Result<CommitSyncConfigVersion, Error> {
+    if let Some(version) = get_mapping_change_version(cs_info)? {
         info!(
             ctx.logger(),
-            "force using mapping {} to rewrite {}", version, source_cs_id
+            "force using mapping {} to rewrite {}",
+            version,
+            cs_info.changeset_id()
         );
         return Ok(version);
     }
 
-    get_version_for_merge_impl(source_cs_id, parent_outcomes)
+    get_version_for_merge_impl(cs_info.changeset_id(), parent_outcomes)
 }
 
 fn get_version_for_merge_impl<'a>(
-    source_cs_id: ChangesetId,
+    source_cs_id: &ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
     use CommitSyncOutcome::*;
     let maybe_version = get_version_impl(
-        source_cs_id,
+        *source_cs_id,
         parent_outcomes
             .into_iter()
             .filter_map(|parent_outcome| match parent_outcome {
@@ -74,15 +85,26 @@ pub async fn get_version<'a>(
     source_cs_id: ChangesetId,
     parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    if let Some(version) = get_mapping_change_version(ctx, repo, source_cs_id).await? {
+    let cs_info = ChangesetInfo::derive(ctx, repo, source_cs_id).await?;
+    get_version_with_info(ctx, &cs_info, parent_versions)
+}
+
+pub fn get_version_with_info<'a>(
+    ctx: &CoreContext,
+    cs_info: &ChangesetInfo,
+    parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
+) -> Result<Option<CommitSyncConfigVersion>, Error> {
+    if let Some(version) = get_mapping_change_version(cs_info)? {
         info!(
             ctx.logger(),
-            "force using mapping {} to rewrite {}", version, source_cs_id
+            "force using mapping {} to rewrite {}",
+            version,
+            cs_info.changeset_id()
         );
         return Ok(Some(version));
     }
 
-    get_version_impl(source_cs_id, parent_versions)
+    get_version_impl(*cs_info.changeset_id(), parent_versions)
 }
 
 fn get_version_impl<'a>(
@@ -107,23 +129,20 @@ fn get_version_impl<'a>(
 /// Some changesets are used as "boundaries" to change CommmitSyncConfigVersion
 /// used in syncing. This is determined by the `CHANGE_XREPO_MAPPING_EXTRA`'s
 /// value.
-pub async fn get_mapping_change_version(
-    ctx: &CoreContext,
-    repo: &(impl RepoDerivedDataRef + Send + Sync),
-    source_cs_id: ChangesetId,
+pub fn get_mapping_change_version(
+    cs_info: &ChangesetInfo,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     if tunables::tunables()
         .allow_change_xrepo_mapping_extra()
-        .unwrap_or_default()
+        .unwrap_or(false)
     {
-        let cs_info = ChangesetInfo::derive(ctx, repo, source_cs_id).await?;
-
         let maybe_mapping = cs_info
             .extra()
             .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);
         if let Some((_, version)) = maybe_mapping {
-            let version = String::from_utf8(version.to_vec())
-                .with_context(|| format!("non-utf8 version is set in {}", source_cs_id))?;
+            let version = String::from_utf8(version.to_vec()).with_context(|| {
+                format!("non-utf8 version is set in {}", cs_info.changeset_id())
+            })?;
 
             let version = CommitSyncConfigVersion(version);
             return Ok(Some(version));
@@ -150,7 +169,7 @@ mod tests {
             RewrittenAs(bonsai::FOURS_CSID, v1.clone()),
         ];
 
-        let rv = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap();
+        let rv = get_version_for_merge_impl(&bonsai::ONES_CSID, &parent_outcomes).unwrap();
         assert_eq!(rv, v1);
     }
 
@@ -165,7 +184,7 @@ mod tests {
             RewrittenAs(bonsai::THREES_CSID, v1.clone()),
         ];
 
-        let rv = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap();
+        let rv = get_version_for_merge_impl(&bonsai::ONES_CSID, &parent_outcomes).unwrap();
         assert_eq!(rv, v1);
     }
 
@@ -181,7 +200,7 @@ mod tests {
             RewrittenAs(bonsai::THREES_CSID, v2),
         ];
 
-        let e = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
+        let e = get_version_for_merge_impl(&bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(
             format!("{}", e).contains("too many CommitSyncConfig versions used to remap parents")
         );
@@ -194,7 +213,7 @@ mod tests {
         let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
         let parent_outcomes = [NotSyncCandidate(v1.clone()), NotSyncCandidate(v1)];
 
-        let e = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
+        let e = get_version_for_merge_impl(&bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(format!("{}", e).contains("unexpected absence of rewritten parents"));
     }
 }

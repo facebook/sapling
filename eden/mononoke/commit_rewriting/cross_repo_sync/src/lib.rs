@@ -31,12 +31,14 @@ use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
+use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use commit_transformation::rewrite_commit as multi_mover_rewrite_commit;
 use commit_transformation::upload_commits;
 pub use commit_transformation::CommitRewrittenToEmpty;
 use commit_transformation::MultiMover;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
 use environment::Caching;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfigRef;
@@ -357,8 +359,11 @@ where
                 continue;
             }
             None => {
-                let maybe_mapping_change =
-                    get_mapping_change_version(ctx, commit_syncer.get_source_repo(), cs_id);
+                let maybe_mapping_change = async move {
+                    get_mapping_change_version(
+                        &ChangesetInfo::derive(ctx, commit_syncer.get_source_repo(), cs_id).await?,
+                    )
+                };
                 let parents = source_repo.changeset_fetcher().get_parents(ctx, cs_id);
                 let (maybe_mapping_change, parents) =
                     try_join(maybe_mapping_change, parents).await?;
@@ -985,7 +990,7 @@ where
             .await
     }
 
-    async fn unsafe_sync_commit_in_memory<'a>(
+    pub async fn unsafe_sync_commit_in_memory<'a>(
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
@@ -1401,8 +1406,9 @@ where
                 // small repo regardless if outcome is empty. This is to ensure
                 // that efter changing mapping there's a commit in small repo
                 // with new mapping on top.
-                let maybe_mapping_change_version =
-                    get_mapping_change_version(ctx, self.get_source_repo(), source_cs_id).await?;
+                let maybe_mapping_change_version = get_mapping_change_version(
+                    &ChangesetInfo::derive(ctx, self.get_source_repo(), source_cs_id).await?,
+                )?;
                 let discard_commits_rewriting_to_empty = if maybe_mapping_change_version.is_some() {
                     CommitRewrittenToEmpty::Keep
                 } else {
