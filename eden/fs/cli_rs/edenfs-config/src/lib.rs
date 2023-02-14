@@ -24,7 +24,7 @@ pub struct Core {
     eden_directory: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, StackConfig, Debug)]
+#[derive(Serialize, Deserialize, StackConfig, Debug, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct PrefetchProfiles {
     #[stack(default)]
@@ -33,7 +33,7 @@ pub struct PrefetchProfiles {
     #[stack(default)]
     pub predictive_prefetching_enabled: bool,
 
-    #[stack(merge = "merge_table")]
+    #[stack(merge = "merge_table", default)]
     #[serde(flatten)]
     pub other: toml::value::Table,
 }
@@ -44,9 +44,18 @@ pub struct Redirections {
     #[stack(default)]
     pub darwin_redirection_type: String,
 
-    #[stack(merge = "merge_table")]
+    #[stack(merge = "merge_table", default)]
     #[serde(flatten)]
     pub other: toml::value::Table,
+}
+
+impl Default for Redirections {
+    fn default() -> Self {
+        Redirections {
+            darwin_redirection_type: "apfs".to_string(),
+            other: Default::default(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
@@ -56,10 +65,10 @@ pub struct EdenFsConfig {
 
     #[stack(nested)]
     #[serde(rename = "prefetch-profiles")]
-    pub prefetch_profiles: Option<PrefetchProfiles>,
+    pub prefetch_profiles: PrefetchProfiles,
 
     #[stack(nested)]
-    pub redirections: Option<Redirections>,
+    pub redirections: Redirections,
 
     #[stack(merge = "merge_table")]
     #[serde(flatten)]

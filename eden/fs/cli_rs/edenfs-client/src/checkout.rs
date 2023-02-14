@@ -785,7 +785,10 @@ impl EdenFsCheckout {
     ) -> Result<Vec<Glob>> {
         let mut profiles_to_fetch = profiles.clone();
 
-        if predictive && !instance.should_prefetch_predictive_profiles() {
+        let config = instance
+            .get_config()
+            .context("unable to load configuration")?;
+        if predictive && !config.prefetch_profiles.predictive_prefetching_enabled {
             if !silent {
                 eprintln!(
                     "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
@@ -796,7 +799,8 @@ impl EdenFsCheckout {
                 return Ok(vec![Glob::default()]);
             }
         }
-        if !instance.should_prefetch_profiles() && !predictive {
+
+        if !config.prefetch_profiles.prefetching_enabled && !predictive {
             if !silent {
                 eprintln!(
                     "Skipping Prefetch Profiles fetch due to global kill switch. \

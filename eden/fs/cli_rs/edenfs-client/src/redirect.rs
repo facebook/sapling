@@ -266,6 +266,34 @@ impl Redirection {
         .from_err()
     }
 
+    /// Determine what bind redirection type should be used on macOS. There are currently only 2
+    /// options: apfs or dmg. We default to the old behavior, apfs.
+    #[cfg(target_os = "macos")]
+    pub fn determine_bind_redirection_type() -> DarwinBindRedirectionType {
+        let config_value = EdenFsInstance::global()
+            .get_config()
+            .map(|config| config.redirections.darwin_redirection_type)
+            .and_then(|ty| DarwinBindRedirectionType::from_str(&ty));
+        let has_apfs_helper = Self::have_apfs_helper().unwrap_or(false);
+        match config_value {
+            Ok(v) if !has_apfs_helper && v == DarwinBindRedirectionType::APFS => {
+                eprintln!(
+                    "cannot use apfs redirections since apfs_helper '{APFS_HELPER}' is not available. Defaulting to dmg redirections."
+                );
+                DarwinBindRedirectionType::DMG
+            }
+            Ok(v) => v,
+            Err(e) if has_apfs_helper => {
+                eprintln!("{}. Defaulting to apfs.", e);
+                DarwinBindRedirectionType::APFS
+            }
+            Err(e) => {
+                eprintln!("{}. Defaulting to dmg.", e);
+                DarwinBindRedirectionType::DMG
+            }
+        }
+    }
+
     pub fn mkscratch_bin() -> PathBuf {
         // mkscratch is provided by the hg deployment at facebook, which has a
         // different installation prefix on macOS vs Linux, so we need to resolve
@@ -523,10 +551,7 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     fn _bind_mount_darwin(&self, checkout_path: &Path, target: &Path) -> Result<()> {
         // We default to APFS since DMG redirections are experimental at this point
-        if !Redirection::have_apfs_helper()?
-            || EdenFsInstance::global().determine_bind_redirection_type()
-                == DarwinBindRedirectionType::DMG
-        {
+        if Self::determine_bind_redirection_type() == DarwinBindRedirectionType::DMG {
             self._bind_mount_darwin_dmg(checkout_path, target)
         } else {
             self._bind_mount_darwin_apfs(checkout_path)
