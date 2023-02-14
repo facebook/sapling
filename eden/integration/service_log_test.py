@@ -6,11 +6,7 @@
 
 import pathlib
 
-from .lib.service_test_case import (
-    ManagedFakeEdenFSMixin,
-    service_test,
-    ServiceTestCaseBase,
-)
+from .lib.service_test_case import fake_service_test, service_test, ServiceTestCaseBase
 from .lib.start import run_eden_start_with_real_daemon
 
 
@@ -48,7 +44,8 @@ class ServiceLogFakeEdenFSTest(ServiceLogTestBase):
         self.assertIn("test log messages", self.log_file_path.read_text())
 
 
-class ServiceLogRealEdenFSTest(ManagedFakeEdenFSMixin, ServiceLogTestBase):
+@fake_service_test
+class ServiceLogRealEdenFSTest(ServiceLogTestBase):
     def test_real_edenfs_writes_logs_to_file_in_eden_dir(self) -> None:
         self.assertFalse(
             self.log_file_path.exists(),
