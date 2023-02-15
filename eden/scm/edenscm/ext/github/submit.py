@@ -66,7 +66,9 @@ class SubmitWorkflow(Enum):
 
     @staticmethod
     def from_config(ui) -> "SubmitWorkflow":
-        workflow = ui.config("github", "pr_workflow")
+        workflow = ui.config(
+            "github", "pr-workflow", ui.config("github", "pr_workflow")
+        )
         if not workflow or workflow == "overlap":
             # For now, default to OVERLAP.
             return SubmitWorkflow.OVERLAP
@@ -209,6 +211,7 @@ async def update_commits_in_stack(
             assert isinstance(params, SerialStrategyParams)
             await create_pull_requests_serially(
                 params.pull_requests_to_create,
+                workflow,
                 repository,
                 store,
                 ui,
@@ -228,7 +231,7 @@ async def update_commits_in_stack(
         repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
-            partitions, index, pr_numbers_and_num_commits, repository, ui
+            partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
         )
         for index in range(len(partitions))
     ] + [
@@ -247,6 +250,7 @@ async def update_commits_in_stack(
 async def rewrite_pull_request_body(
     partitions: List[List[CommitData]],
     index: int,
+    workflow: SubmitWorkflow,
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     repository: Repository,
     ui,
@@ -255,9 +259,8 @@ async def rewrite_pull_request_body(
     # of this branch. Recall that partitions is ordered from the top of the
     # stack to the bottom.
     partition = partitions[index]
-    if index == len(partitions) - 1:
-        base = repository.get_base_branch()
-    else:
+    base = repository.get_base_branch()
+    if workflow == SubmitWorkflow.SINGLE and index < len(partitions) - 1:
         base = none_throws(partitions[index + 1][0].head_branch_name)
 
     head_commit_data = partition[0]
@@ -353,6 +356,7 @@ async def create_serial_strategy_params(
 
 async def create_pull_requests_serially(
     commits: List[Tuple[CommitData, str]],
+    workflow: SubmitWorkflow,
     repository: Repository,
     store: PullRequestStore,
     ui,
@@ -365,15 +369,17 @@ async def create_pull_requests_serially(
     """
     head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
     owner, name = repository.get_upstream_owner_and_name()
-    # Because these will be "overlapping" pull requests, all share the same
-    # base.
-    base = repository.get_base_branch()
     hostname = repository.hostname
 
     # Create the pull requests in order serially to give us the best chance of
     # the number in the branch name matching that of the actual pull request.
     commits_to_update = []
+    parent = None
     for commit, branch_name in commits:
+        base = repository.get_base_branch()
+        if workflow == SubmitWorkflow.SINGLE and parent:
+            base = none_throws(parent.head_branch_name)
+
         body = commit.get_msg()
         title = firstline(body)
         result = await gh_submit.create_pull_request(
@@ -404,6 +410,8 @@ async def create_pull_requests_serially(
         pr_id = PullRequestId(hostname=hostname, owner=owner, name=name, number=number)
         store.map_commit_to_pull_request(commit.node, pr_id)
         commits_to_update.append((commit, pr_id))
+
+        parent = commit
 
     # Now that all of the pull requests have been created, update the .pr field
     # on each CommitData. We prioritize the create_pull_request() calls to try

@@ -14,7 +14,7 @@ from ghstack import github_gh_cli
 # function for how wrapper functions are registered.
 
 
-def setup_mock_github_server() -> MockGitHubServer:
+def setup_mock_github_server(ui) -> MockGitHubServer:
     """Setup mock GitHub Server for testing happy case of `sl pr submit` command."""
     github_server = MockGitHubServer()
 
@@ -27,18 +27,26 @@ def setup_mock_github_server() -> MockGitHubServer:
         (43, "two\n"),
     ]
 
+    single = ui.config("github", "pr-workflow") == "single"
+
     for idx, (num, body) in enumerate(prs):
         title = firstline(body)
         head = f"pr{num}"
 
+        base = "main"
+        if single and idx > 0:
+            base = "pr%d" % prs[idx - 1][0]
+
         github_server.expect_create_pr_request(
-            body=body, title=title, head=head
+            body=body,
+            title=title,
+            head=head,
+            base=base,
         ).and_respond(number=num)
 
         pr_id = f"PR_id_{num}"
         github_server.expect_get_pr_details_request(num).and_respond(pr_id)
 
-        base = "main" if idx == 0 else "pr%d" % prs[idx - 1][0]
         github_server.expect_update_pr_request(
             pr_id, num, body, base=base, stack_pr_ids=[pr[0] for pr in prs]
         ).and_respond()
@@ -52,7 +60,7 @@ def setup_mock_github_server() -> MockGitHubServer:
 
 
 def uisetup(ui):
-    mock_github_server = setup_mock_github_server()
+    mock_github_server = setup_mock_github_server(ui)
     extensions.wrapfunction(
         github_gh_cli, "_make_request", mock_github_server.make_request
     )
