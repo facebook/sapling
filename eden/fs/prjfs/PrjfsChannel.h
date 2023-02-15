@@ -303,6 +303,15 @@ class PrjfsChannelInner {
       bool isDirectory,
       const ObjectFetchContextPtr& context);
 
+  /**
+   * Notification sent prior to a file being converted to a full file.
+   */
+  ImmediateFuture<folly::Unit> preConvertToFull(
+      RelativePath relpath,
+      RelativePath destPath,
+      bool isDirectory,
+      const ObjectFetchContextPtr& context);
+
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
   }
@@ -423,7 +432,10 @@ class PrjfsChannel {
 
   virtual ~PrjfsChannel();
 
-  void start(bool readOnly, bool useNegativePathCaching);
+  void start(
+      bool readOnly,
+      bool useNegativePathCaching,
+      bool prjfsListenToPreConvertToFull);
 
   /**
    * Wait for all the received notifications to be fully handled.
@@ -499,6 +511,8 @@ class PrjfsChannel {
   folly::Promise<StopData> stopPromise_;
 
   ProcessAccessLog processAccessLog_;
+
+  std::shared_ptr<ReloadableConfig> config_;
 
   folly::AtomicReadMostlyMainPtr<PrjfsChannelInner> inner_;
   folly::SemiFuture<folly::Unit> innerDeleted_;

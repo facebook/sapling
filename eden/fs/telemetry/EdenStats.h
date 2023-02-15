@@ -248,6 +248,7 @@ struct PrjfsStats : StatsGroup<PrjfsStats> {
   Duration preRenamed{"prjfs.preRenamed_us"};
   Duration fileHandleClosedFileDeleted{"prjfs.fileHandleClosedFileDeleted_us"};
   Duration preSetHardlink{"prjfs.preSetHardlink_us"};
+  Duration preConvertToFull{"prjfs.preConvertToFull_us"};
 
   Duration openDir{"prjfs.opendir_us"};
   Duration readDir{"prjfs.readdir_us"};

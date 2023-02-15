@@ -158,6 +158,13 @@ class PrjfsDispatcher {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
+   * Notification sent when a file is about to be converted to a full file.
+   */
+  virtual ImmediateFuture<folly::Unit> preFileConvertedToFull(
+      RelativePath relPath,
+      const ObjectFetchContextPtr& context) = 0;
+
+  /**
    * Wait for all received notifications to complete.
    */
   virtual ImmediateFuture<folly::Unit> waitForPendingNotifications() = 0;

@@ -1750,7 +1750,7 @@ class FakePrjfsChannel : public PrjfsChannel {
         &mount->getStraceLogger(),
         mount->getServerState()->getProcessNameCache(),
         mount->getCheckoutConfig()->getRepoGuid());
-    channel->start(false, false);
+    channel->start(false, false, true);
     mount->setTestPrjfsChannel(std::move(channel));
   }
 

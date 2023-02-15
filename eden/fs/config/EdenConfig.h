@@ -570,6 +570,18 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::milliseconds(100),
       this};
 
+  /**
+   * Listen to pre convert to full notifications from ProjFS. By the spec these
+   * should not give us any information that the other notifications all ready
+   * cover. However, ProjFS currently (Feb 2023) has a bug: we do not receive
+   * the file closed and modified notification. We can listen to this instead
+   * to ensure our in memory state reflects file truncations.
+   */
+  ConfigSetting<bool> prjfsListenToPreConvertToFull{
+      "prjfs:listen-to-pre-convert-to-full",
+      false,
+      this};
+
   // [hg]
 
   /**

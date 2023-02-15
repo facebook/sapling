@@ -284,7 +284,8 @@ const std::unordered_map<PRJ_NOTIFICATION, PrjfsTraceCallType>
          PrjfsTraceCallType::FILE_HANDLE_CLOSED_FILE_DELETED},
         {PRJ_NOTIFICATION_PRE_SET_HARDLINK,
          PrjfsTraceCallType::PRE_SET_HARDLINK},
-};
+        {PRJ_NOTIFICATION_FILE_PRE_CONVERT_TO_FULL,
+         PrjfsTraceCallType::FILE_PRE_CONVERT_TO_FULL}};
 } // namespace
 
 HRESULT notification(
@@ -932,6 +933,14 @@ std::string preSetHardlinkRenderer(
   return fmt::format(FMT_STRING("link({} -> {})"), oldPath, newPath);
 }
 
+std::string preConvertToFullRenderer(
+    RelativePathPiece relPath,
+    RelativePathPiece /*destPath*/,
+    bool isDirectory) {
+  return fmt::format(
+      FMT_STRING("preConvertToFull({}, isDirectory={})"), relPath, isDirectory);
+}
+
 const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
     notificationHandlerMap = {
         {
@@ -981,6 +990,12 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
             {&PrjfsChannelInner::preSetHardlink,
              preSetHardlinkRenderer,
              &PrjfsStats::preSetHardlink},
+        },
+        {
+            PRJ_NOTIFICATION_FILE_PRE_CONVERT_TO_FULL,
+            {&PrjfsChannelInner::preConvertToFull,
+             preConvertToFullRenderer,
+             &PrjfsStats::preConvertToFull},
         },
 };
 } // namespace
@@ -1080,6 +1095,14 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::preSetHardlink(
       fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
 }
 
+ImmediateFuture<folly::Unit> PrjfsChannelInner::preConvertToFull(
+    RelativePath relpath,
+    RelativePath /*destPath*/,
+    bool /*isDirectory*/,
+    const ObjectFetchContextPtr& context) {
+  return dispatcher_->preFileConvertedToFull(std::move(relpath), context);
+}
+
 HRESULT PrjfsChannelInner::notification(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
@@ -1175,7 +1198,10 @@ PrjfsChannel::~PrjfsChannel() {
       << "stop() must be called before destroying the channel";
 }
 
-void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
+void PrjfsChannel::start(
+    bool readOnly,
+    bool useNegativePathCaching,
+    bool prjfsListenToPreConvertToFull) {
   if (readOnly) {
     NOT_IMPLEMENTED();
   }
@@ -1199,6 +1225,11 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
            PRJ_NOTIFY_PRE_SET_HARDLINK,
        L""},
   };
+
+  if (prjfsListenToPreConvertToFull) {
+    notificationMappings[0].NotificationBitMask |=
+        PRJ_NOTIFY_FILE_PRE_CONVERT_TO_FULL;
+  }
 
   auto startOpts = PRJ_STARTVIRTUALIZING_OPTIONS();
   startOpts.NotificationMappings = notificationMappings;

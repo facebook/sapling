@@ -798,6 +798,15 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
   return folly::unit;
 }
 
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preFileConvertedToFull(
+    RelativePath path,
+    const ObjectFetchContextPtr& context) {
+  // this is an asynchonous notification, so we have to treat this just like
+  // all the other write notifications.
+  return fileNotification(
+      *mount_, std::move(path), notificationExecutor_, context);
+}
+
 ImmediateFuture<folly::Unit>
 PrjfsDispatcherImpl::waitForPendingNotifications() {
   // Since the executor is a SequencedExecutor, and the fileNotification

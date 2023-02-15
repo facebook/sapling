@@ -6,9 +6,10 @@
 
 import os
 import stat
+import subprocess
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Generator, Optional, Set, Tuple
+from typing import Dict, Generator, List, Optional, Set, Tuple
 
 from eden.fs.cli import util
 from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
@@ -22,12 +23,12 @@ from facebook.eden.ttypes import (
 from .lib import testcase
 
 
-@testcase.eden_repo_test
-class PrjFSStress(testcase.EdenRepoTest):
+class PrjFSStressBase(testcase.EdenRepoTest):
     enable_fault_injection: bool = True
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
+        self.repo.write_file("adir/file", "foo!\n")
         self.repo.commit("Initial commit.")
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
@@ -125,6 +126,14 @@ class PrjFSStress(testcase.EdenRepoTest):
                     )
                 )
 
+
+@testcase.eden_repo_test
+class PrjFSStress(PrjFSStressBase):
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("prjfs", []).append("listen-to-pre-convert-to-full = true")
+        return result
+
     def test_create_and_remove_file(self) -> None:
         with self.run_with_fault():
             self.touch("foo")
@@ -214,6 +223,7 @@ class PrjFSStress(testcase.EdenRepoTest):
 
             self.assertAllMaterialized(
                 {
+                    ("adir", stat.S_IFDIR),
                     ("bar", stat.S_IFDIR),
                     ("bar/bar", stat.S_IFREG),
                     ("bar/baz", stat.S_IFREG),
@@ -249,6 +259,7 @@ class PrjFSStress(testcase.EdenRepoTest):
                 {
                     ("a/b", stat.S_IFREG),
                     ("a", stat.S_IFDIR),
+                    ("adir", stat.S_IFDIR),
                     ("hello", stat.S_IFREG),
                 },
                 waitTime=0,
@@ -259,6 +270,7 @@ class PrjFSStress(testcase.EdenRepoTest):
                 {
                     ("a/b", stat.S_IFREG),
                     ("a", stat.S_IFDIR),
+                    ("adir", stat.S_IFDIR),
                     ("hello", stat.S_IFREG),
                 }
             )
@@ -292,6 +304,7 @@ class PrjFSStress(testcase.EdenRepoTest):
                 {
                     ("a/b", stat.S_IFDIR),
                     ("a", stat.S_IFDIR),
+                    ("adir", stat.S_IFDIR),
                     ("hello", stat.S_IFREG),
                     ("z", stat.S_IFDIR),
                     ("z/x", stat.S_IFREG),
@@ -307,6 +320,7 @@ class PrjFSStress(testcase.EdenRepoTest):
                     ("a/b/y", stat.S_IFREG),
                     ("a/b", stat.S_IFDIR),
                     ("a", stat.S_IFDIR),
+                    ("adir", stat.S_IFDIR),
                     ("hello", stat.S_IFREG),
                 }
             )
@@ -329,6 +343,7 @@ class PrjFSStress(testcase.EdenRepoTest):
 
             self.assertAllMaterialized(
                 {
+                    ("adir", stat.S_IFDIR),
                     ("first", stat.S_IFDIR),
                     ("first/c", stat.S_IFREG),
                     ("first/d", stat.S_IFREG),
@@ -338,3 +353,47 @@ class PrjFSStress(testcase.EdenRepoTest):
                     ("hello", stat.S_IFREG),
                 }
             )
+
+    def test_truncate(self) -> None:
+        rel_path = "adir/file"
+        path = self.mount_path / rel_path
+
+        self.assertNotMaterialized(rel_path)
+        subprocess.run(["powershell.exe", "Clear-Content", str(path)])
+
+        # file should be materialized at this point.
+        self.assertMaterialized(rel_path, stat.S_IFREG)
+
+        st = os.lstat(path)
+        with path.open("rb") as f:
+            read_back = f.read().decode()
+        self.assertEqual("", read_back)
+
+        self.assertEqual(0, st.st_size)
+
+
+@testcase.eden_repo_test
+class PrjfsStressNoListenToFull(PrjFSStressBase):
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("prjfs", []).append("listen-to-pre-convert-to-full = false")
+        return result
+
+    # this test should start failing once msft fixes the bug on their side.
+    # i.e. once truncation starts to send file closed and modified notifications.
+    def test_truncate(self) -> None:
+        rel_path = "adir/file"
+        path = self.mount_path / rel_path
+
+        self.assertNotMaterialized(rel_path)
+        subprocess.run(["powershell.exe", "Clear-Content", str(path)])
+
+        # file should be materialized at this point.
+        self.assertNotMaterialized(rel_path, stat.S_IFREG)
+
+        st = os.lstat(path)
+        with path.open("rb") as f:
+            read_back = f.read().decode()
+        self.assertEqual("", read_back)
+
+        self.assertEqual(0, st.st_size)

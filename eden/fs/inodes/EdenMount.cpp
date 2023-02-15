@@ -2028,7 +2028,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                      this->getServerState()->getNotifier());
                  channel->start(
                      readOnly,
-                     edenConfig->prjfsUseNegativePathCaching.getValue());
+                     edenConfig->prjfsUseNegativePathCaching.getValue(),
+                     edenConfig->prjfsListenToPreConvertToFull.getValue());
                  return channel;
                })
             .thenTry([this, mountPromise](
