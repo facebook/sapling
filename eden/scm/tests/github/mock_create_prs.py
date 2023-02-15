@@ -20,23 +20,32 @@ def setup_mock_github_server() -> MockGitHubServer:
 
     github_server.expect_get_repository_request().and_respond()
 
-    next_pr_number = 42
     github_server.expect_guess_next_pull_request_number().and_respond()
 
-    body = "addfile\n"
-    title = firstline(body)
-    head = f"pr{next_pr_number}"
-    github_server.expect_create_pr_request(
-        body=body, title=title, head=head
-    ).and_respond(number=next_pr_number)
+    prs = [
+        (42, "one\n"),
+        (43, "two\n"),
+    ]
 
-    pr_id = f"PR_id_{next_pr_number}"
-    github_server.expect_get_pr_details_request(next_pr_number).and_respond(pr_id)
+    for idx, (num, body) in enumerate(prs):
+        title = firstline(body)
+        head = f"pr{num}"
 
-    github_server.expect_update_pr_request(pr_id, next_pr_number, body).and_respond()
+        github_server.expect_create_pr_request(
+            body=body, title=title, head=head
+        ).and_respond(number=num)
+
+        pr_id = f"PR_id_{num}"
+        github_server.expect_get_pr_details_request(num).and_respond(pr_id)
+
+        base = "main" if idx == 0 else "pr%d" % prs[idx - 1][0]
+        github_server.expect_update_pr_request(
+            pr_id, num, body, base=base, stack_pr_ids=[pr[0] for pr in prs]
+        ).and_respond()
+
     github_server.expect_get_username_request().and_respond()
 
-    head = "3a120a3a153f7d2960967ce6f1d52698a4d3a436"
+    head = "1a67244b0a776bfcc3be6bf811e98c993d78ce47"
     github_server.expect_merge_into_branch(head).and_respond()
 
     return github_server

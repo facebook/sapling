@@ -345,6 +345,7 @@ async def create_serial_strategy_params(
             # Consider including username in branch_name?
             branch_name = f"pr{next_pull_request_number}"
             refs_to_update.append(f"{hex(top.node)}:refs/heads/{branch_name}")
+            top.head_branch_name = branch_name
             pull_requests_to_create.append((top, branch_name))
 
     return SerialStrategyParams(refs_to_update, pull_requests_to_create, repository)

@@ -285,7 +285,16 @@ class MockGitHubServer:
         base: str = "main",
         owner: str = OWNER,
         name: str = REPO_NAME,
+        stack_pr_ids: Optional[List[int]] = None,
     ) -> "UpdatePrRequest":
+        if not stack_pr_ids:
+            stack_pr_ids = [pr_number]
+        stack_pr_ids = list(reversed(sorted(stack_pr_ids)))
+
+        pr_list = [
+            f"* __->__ #{n}\n" if n == pr_number else f"* #{n}\n" for n in stack_pr_ids
+        ]
+
         title = firstline(body)
         params: ParamsType = {
             "query": query.GRAPHQL_UPDATE_PULL_REQUEST,
@@ -296,7 +305,7 @@ class MockGitHubServer:
                 "---\n"
                 "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
                 f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
-                f"* __->__ #{pr_number}\n"
+                + "".join(pr_list)
             ),
             "base": base,
         }
