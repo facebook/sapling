@@ -11,7 +11,14 @@ export type TrackEventName =
   | 'LoadMoreCommits'
   | 'RunOperation'
   | 'StarRating'
+  | 'TopLevelErrorShown'
   | 'UIEmptyState'
   | 'UnsubmittedStarRating';
 
-export type TrackErrorName = 'TopLevelError' | 'InvalidCwd' | 'InvalidCommand' | 'RepositoryError';
+export type TrackErrorName =
+  | 'DiffFetchFailed'
+  | 'InvalidCwd'
+  | 'InvalidCommand'
+  | 'GhCliNotAuthenticated'
+  | 'GhCliNotInstalled'
+  | 'RepositoryError';

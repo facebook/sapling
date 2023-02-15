@@ -103,11 +103,11 @@ describe('track', () => {
 
   describe('trackError', () => {
     it('handles synchronous operations throwing', () => {
-      tracker.error('ClickedRefresh', 'TopLevelError', new Error('uh oh'), {});
+      tracker.error('ClickedRefresh', 'RepositoryError', new Error('uh oh'), {});
       expect(mockSendData).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: 'ClickedRefresh',
-          errorName: 'TopLevelError',
+          errorName: 'RepositoryError',
           errorMessage: 'uh oh',
         }),
         mockLogger,
@@ -118,7 +118,7 @@ describe('track', () => {
   describe('trackOperation', () => {
     it('handles synchronous operations', () => {
       const op = jest.fn();
-      tracker.operation('ClickedRefresh', 'TopLevelError', {}, op);
+      tracker.operation('ClickedRefresh', 'RepositoryError', {}, op);
       expect(mockSendData).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: 'ClickedRefresh',
@@ -140,11 +140,11 @@ describe('track', () => {
       const op = jest.fn().mockImplementation(() => {
         throw new Error('uh oh');
       });
-      expect(() => tracker.operation('ClickedRefresh', 'TopLevelError', {}, op)).toThrow();
+      expect(() => tracker.operation('ClickedRefresh', 'RepositoryError', {}, op)).toThrow();
       expect(mockSendData).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: 'ClickedRefresh',
-          errorName: 'TopLevelError',
+          errorName: 'RepositoryError',
           errorMessage: 'uh oh',
         }),
         mockLogger,
@@ -158,7 +158,7 @@ describe('track', () => {
         return d.promise;
       });
 
-      const promise = tracker.operation('ClickedRefresh', 'TopLevelError', {}, op);
+      const promise = tracker.operation('ClickedRefresh', 'RepositoryError', {}, op);
       expect(mockSendData).not.toHaveBeenCalled();
 
       d.resolve(1);
@@ -188,7 +188,7 @@ describe('track', () => {
         return d.promise;
       });
 
-      const promise = tracker.operation('ClickedRefresh', 'TopLevelError', {}, op);
+      const promise = tracker.operation('ClickedRefresh', 'RepositoryError', {}, op);
       expect(mockSendData).not.toHaveBeenCalled();
 
       d.reject(new Error('oh no'));
@@ -198,7 +198,7 @@ describe('track', () => {
       expect(mockSendData).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: 'ClickedRefresh',
-          errorName: 'TopLevelError',
+          errorName: 'RepositoryError',
           errorMessage: 'oh no',
         }),
         mockLogger,
