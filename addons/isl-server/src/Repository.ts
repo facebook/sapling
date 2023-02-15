@@ -877,6 +877,7 @@ function splitLine(line: string): Array<string> {
  * https://github.com/owner/repo.git
  * git@github.com:owner/repo.git
  * ssh:git@github.com:owner/repo.git
+ * ssh://git@github.com/owner/repo.git
  * git+ssh:git@github.com:owner/repo.git
  *
  * or similar urls with GitHub Enterprise hostnames:
@@ -886,7 +887,9 @@ export function extractRepoInfoFromUrl(
   url: string,
 ): {repo: string; owner: string; hostname: string} | null {
   const match =
-    /(?:https:\/\/(.*)\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@(.*):)([^/]+)\/(.+?)(?:\.git)?$/.exec(url);
+    /(?:https:\/\/(.*)\/|(?:git\+ssh:\/\/|ssh:\/\/)?git@([^:/]*)[:/])([^/]+)\/(.+?)(?:\.git)?$/.exec(
+      url,
+    );
 
   if (match == null) {
     return null;

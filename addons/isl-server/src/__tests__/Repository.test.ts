@@ -430,10 +430,10 @@ describe('extractRepoInfoFromUrl', () => {
         hostname: 'github.com',
       });
     });
-    it('handles ssh', () => {
-      expect(extractRepoInfoFromUrl('ssh://git@github.com:myUsername/myRepo.git')).toEqual({
+    it('handles ssh with slashes', () => {
+      expect(extractRepoInfoFromUrl('ssh://git@github.com/myUsername/my-repo.git')).toEqual({
         owner: 'myUsername',
-        repo: 'myRepo',
+        repo: 'my-repo',
         hostname: 'github.com',
       });
     });
@@ -475,10 +475,10 @@ describe('extractRepoInfoFromUrl', () => {
         hostname: 'ghe.company.com',
       });
     });
-    it('handles ssh', () => {
-      expect(extractRepoInfoFromUrl('ssh://git@ghe.company.com:myUsername/myRepo.git')).toEqual({
+    it('handles ssh with slashes', () => {
+      expect(extractRepoInfoFromUrl('ssh://git@ghe.company.com/myUsername/my-repo.git')).toEqual({
         owner: 'myUsername',
-        repo: 'myRepo',
+        repo: 'my-repo',
         hostname: 'ghe.company.com',
       });
     });
