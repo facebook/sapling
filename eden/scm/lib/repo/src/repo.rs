@@ -346,14 +346,8 @@ impl Repo {
             return Ok(Arc::new(fs.clone()));
         }
 
-        if self.store_requirements.contains("git") {
-            let git_store = Arc::new(
-                gitstore::GitStore::open(&self.git_dir()?).context("opening git file store")?,
-            );
-            // Set both stores to share underlying git store.
-            self.file_store = Some(git_store.clone());
-            self.tree_store = Some(git_store.clone());
-            return Ok(git_store);
+        if let Some((store, _)) = self.try_construct_file_tree_store()? {
+            return Ok(store);
         }
 
         tracing::trace!(target: "repo::file_store", "creating edenapi");
@@ -404,14 +398,8 @@ impl Repo {
             return Ok(Arc::new(ts.clone()));
         }
 
-        if self.store_requirements.contains("git") {
-            let git_store = Arc::new(
-                gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,
-            );
-            // Set both stores to share underlying git store.
-            self.file_store = Some(git_store.clone());
-            self.tree_store = Some(git_store.clone());
-            return Ok(git_store);
+        if let Some((_, store)) = self.try_construct_file_tree_store()? {
+            return Ok(store);
         }
 
         let eden_api = match self.eden_api() {
@@ -559,6 +547,29 @@ impl Repo {
         let commit_store = self.dag_commits()?.read().to_dyn_read_root_tree_ids();
         let tree_ids = commit_store.read_root_tree_ids(vec![commit_id]).await?;
         Ok(tree_ids[0].1)
+    }
+
+    /// Construct both file and tree store if they are backed by the same storage.
+    /// Return None if they are not backed by the same storage.
+    /// Return Some((file_store, tree_store)) if they are constructed.
+    fn try_construct_file_tree_store(
+        &mut self,
+    ) -> Result<
+        Option<(
+            Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+            Arc<dyn TreeStore + Send + Sync>,
+        )>,
+    > {
+        if self.store_requirements.contains("git") {
+            let git_store = Arc::new(
+                gitstore::GitStore::open(&self.git_dir()?).context("opening git tree store")?,
+            );
+            // Set both stores to share underlying git store.
+            self.file_store = Some(git_store.clone());
+            self.tree_store = Some(git_store.clone());
+            return Ok(Some((git_store.clone(), git_store)));
+        }
+        return Ok(None);
     }
 }
 
