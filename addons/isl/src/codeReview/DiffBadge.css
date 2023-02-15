@@ -49,6 +49,6 @@
 .diff-signal-pass {
   color: var(--scm-added-foreground);
 }
-.diff-signal-fail {
+.diff-signal-failed {
   color: var(--scm-removed-foreground);
 }
