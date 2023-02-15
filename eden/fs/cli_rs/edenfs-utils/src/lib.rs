@@ -20,8 +20,6 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use glob::glob;
-use subprocess::Exec;
-use subprocess::Redirection;
 use sysinfo::Pid;
 use sysinfo::ProcessExt;
 use sysinfo::SystemExt;
@@ -102,21 +100,25 @@ pub fn get_env_with_buck_version(path: &Path) -> Result<Vec<(OsString, OsString)
             Ok("last".to_string())
         } else {
             // On Windows, "last" doesn't work, fallback to reading the .buck-java11 file.
-            let output = Exec::cmd(get_buck_command())
-                .arg("--version-fast")
-                .stdout(Redirection::Pipe)
-                .stderr(Redirection::Pipe)
-                .cwd(path)
-                .capture()
+            let mut version_cmd = Command::new(get_buck_command());
+            version_cmd.arg("--version-fast");
+            let canonical_path = path.canonicalize().from_err()?;
+            #[cfg(windows)]
+            let canonical_path = strip_unc_prefix(canonical_path);
+            let output = version_cmd
+                .current_dir(canonical_path)
+                .output()
                 .from_err()?;
-
-            if output.success() {
-                Ok(output.stdout_str().trim().to_string())
+            if output.status.success() {
+                Ok(std::str::from_utf8(&output.stdout)
+                    .from_err()?
+                    .trim_end()
+                    .to_string())
             } else {
                 Err(EdenFsError::Other(anyhow!(
-                    "Failed to execute command to get buck version, stderr: {}, exit status: {:?}",
-                    output.stderr_str().trim(),
-                    output.exit_status,
+                    "Failed to get buck version, stderr: {}, exit status: {:?}",
+                    String::from_utf8_lossy(&output.stderr),
+                    output.status,
                 )))
             }
         }?;
@@ -234,8 +236,10 @@ pub fn stop_buckd_for_path(path: &Path) -> Result<()> {
     println!("Stopping buck in {}...", path.display());
     let mut kill_cmd = Command::new(get_buck_command());
     kill_cmd.arg("kill");
-    let can_path = path.canonicalize().from_err()?;
-    let out = run_buck_command(&mut kill_cmd, &can_path)?;
+    let canonical_path = path.canonicalize().from_err()?;
+    #[cfg(windows)]
+    let canonical_path = strip_unc_prefix(canonical_path);
+    let out = run_buck_command(&mut kill_cmd, &canonical_path)?;
     if out.status.success() {
         Ok(())
     } else {
