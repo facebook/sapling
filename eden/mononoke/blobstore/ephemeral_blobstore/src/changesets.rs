@@ -213,7 +213,7 @@ impl Changesets for EphemeralChangesets {
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>> {
-        let ephemeral = self.get_ephemeral(&ctx, &cs_ids);
+        let ephemeral = self.get_ephemeral(ctx, &cs_ids);
         let persistent = self.persistent_changesets.get_many(ctx, cs_ids.clone());
         let (mut ephemeral, persistent) = try_join!(ephemeral, persistent)?;
         ephemeral.extend(persistent);

@@ -76,14 +76,15 @@ impl GenManifest {
     }
 
     pub fn size(&self) -> Size {
-        let children_size = self.dirs.iter().map(|(_, child)| child.size()).fold(
-            Size::default(),
-            |acc_size, size| Size {
-                files: acc_size.files + size.files,
-                depth: std::cmp::max(acc_size.depth, size.depth),
-                width: std::cmp::max(acc_size.width, size.width),
-            },
-        );
+        let children_size =
+            self.dirs
+                .values()
+                .map(|child| child.size())
+                .fold(Size::default(), |acc_size, size| Size {
+                    files: acc_size.files + size.files,
+                    depth: std::cmp::max(acc_size.depth, size.depth),
+                    width: std::cmp::max(acc_size.width, size.width),
+                });
         Size {
             depth: children_size.depth + 1,
             width: std::cmp::max(children_size.width, self.files.len() + self.dirs.len()),
@@ -122,7 +123,7 @@ impl GenManifest {
                             store_changes.push(blob.store(&ctx, blobstore));
                             file_changes.insert(
                                 path,
-                                FileChange::tracked(id, FileType::Regular, size as u64, None),
+                                FileChange::tracked(id, FileType::Regular, size, None),
                             );
                         }
                     }

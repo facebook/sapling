@@ -155,16 +155,16 @@ impl BonsaiSvnrevMapping for CachingBonsaiSvnrevMapping {
                 get_or_fill(cache_request, cs_ids.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching svnrevs via cache")?
-                    .into_iter()
-                    .map(|(_, val)| val.into_entry(repo_id))
+                    .into_values()
+                    .map(|val| val.into_entry(repo_id))
                     .collect::<Result<_>>()?
             }
             BonsaisOrSvnrevs::Svnrev(svnrevs) => {
                 get_or_fill(cache_request, svnrevs.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching bonsais via cache")?
-                    .into_iter()
-                    .map(|(_, val)| val.into_entry(repo_id))
+                    .into_values()
+                    .map(|val| val.into_entry(repo_id))
                     .collect::<Result<_>>()?
             }
         };

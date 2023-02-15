@@ -929,7 +929,7 @@ fn report_delay_and_remove_finished_updaters(
         *live_updaters = new_updaters;
     });
 
-    STATS::max_staleness_secs.set_value(ctx.fb, max_staleness as i64, (reponame.to_owned(),));
+    STATS::max_staleness_secs.set_value(ctx.fb, max_staleness, (reponame.to_owned(),));
 }
 
 #[derive(Clone)]

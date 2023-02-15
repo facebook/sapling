@@ -272,8 +272,9 @@ mod test {
         sub.refresh(&ctx).await?;
         assert_eq!(*sub.bookmarks(), hashmap! {});
 
-        sub.last_refresh =
-            Instant::now() - Duration::from_millis(DEFAULT_SUBSCRIPTION_MAX_AGE_MS + 1);
+        sub.last_refresh = Instant::now()
+            .checked_sub(Duration::from_millis(DEFAULT_SUBSCRIPTION_MAX_AGE_MS + 1))
+            .ok_or(anyhow::anyhow!("Invalid duration subtraction"))?;
 
         sub.refresh(&ctx).await?;
         assert_eq!(

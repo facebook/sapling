@@ -153,10 +153,7 @@ async fn find_file_changes(
                     )
                     .await
                     .context("While fetching copy information")?;
-                    Ok((
-                        path,
-                        FileChange::tracked(content_id, ty, size as u64, copyinfo),
-                    ))
+                    Ok((path, FileChange::tracked(content_id, ty, size, copyinfo)))
                 }
                 BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
                     let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
@@ -168,7 +165,7 @@ async fn find_file_changes(
                     let content_id = envelope.content_id();
 
                     // Reused ID means copy info is *not* stored.
-                    Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
+                    Ok((path, FileChange::tracked(content_id, ty, size, None)))
                 }
                 BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
             }

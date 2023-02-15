@@ -217,8 +217,8 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
                 PARALLEL_CHUNKS,
             )
             .await?
-            .into_iter()
-            .map(|(_, val)| val.into_entry(repo_id))
+            .into_values()
+            .map(|val| val.into_entry(repo_id))
             .collect::<Result<_>>()?,
             BonsaiOrHgChangesetIds::Hg(hg_ids) => get_or_fill_chunked(
                 cache_request,
@@ -227,8 +227,8 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
                 PARALLEL_CHUNKS,
             )
             .await?
-            .into_iter()
-            .map(|(_, val)| val.into_entry(repo_id))
+            .into_values()
+            .map(|val| val.into_entry(repo_id))
             .collect::<Result<_>>()?,
         };
 

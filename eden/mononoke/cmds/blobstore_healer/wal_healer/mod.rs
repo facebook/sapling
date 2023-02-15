@@ -337,10 +337,7 @@ async fn heal_blob(
             // no blobstore failed, the blob is missing
             return HealBlobOutcome::MissingBlob(key);
         }
-        return HealBlobOutcome::MissingBlobstores(
-            key,
-            missing_blobstores.into_iter().map(|(bid, _)| bid).collect(),
-        );
+        return HealBlobOutcome::MissingBlobstores(key, missing_blobstores.into_keys().collect());
     };
 
     let missing = try_heal(ctx, key.clone(), blob, missing_blobstores).await;

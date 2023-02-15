@@ -127,7 +127,7 @@ mod test {
         fn verify(&self, trie: &PrefixTrieWithRules) {
             let rules = trie.associated_rules(self.path.as_ref());
             assert_eq!(
-                rules.into_iter().map(|(k, _)| k).collect::<HashSet<_>>(),
+                rules.into_keys().collect::<HashSet<_>>(),
                 self.expected_regions
             );
         }

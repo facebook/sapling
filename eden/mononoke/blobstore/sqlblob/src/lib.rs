@@ -319,7 +319,7 @@ impl Sqlblob {
             put_behaviour,
             move |shard_id| {
                 let con = open_sqlite_path(
-                    &pathbuf.join(format!("shard_{}.sqlite", shard_id)),
+                    pathbuf.join(format!("shard_{}.sqlite", shard_id)),
                     readonly_storage,
                 )?;
                 con.execute_batch(Self::CREATION_QUERY)?;

@@ -160,7 +160,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
     let runtime = matches.runtime();
     let config_store = matches.config_store();
 
-    let scheduled_max = args::get_usize_opt(&matches, ARG_SCHEDULED_MAX).unwrap_or(100) as usize;
+    let scheduled_max = args::get_usize_opt(&matches, ARG_SCHEDULED_MAX).unwrap_or(100);
 
     let storage_config = args::load_storage_configs(config_store, &matches)
         .context("Could not read storage configs")?
