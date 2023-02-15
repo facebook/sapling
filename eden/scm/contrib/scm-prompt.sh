@@ -243,6 +243,9 @@ _scm_prompt() {
     elif [[ -d "$dir/.hg" ]]; then
       br="$(_hg_prompt "$dir/.hg")"
       break
+    elif [[ -d "$dir/.sl" ]]; then
+      br="$(_hg_prompt "$dir/.sl")"
+      break
     fi
     [[ "$dir" = "/" ]] && break
     # portable "realpath" equivalent
