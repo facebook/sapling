@@ -17,6 +17,7 @@ import {ErrorBoundary, ErrorNotice} from './ErrorNotice';
 import {ISLCommandContext, useCommand} from './ISLShortcuts';
 import {TopBar} from './TopBar';
 import {TopLevelErrors} from './TopLevelErrors';
+import {tracker} from './analytics';
 import {I18nSupport, t, T} from './i18n';
 import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
@@ -28,6 +29,7 @@ import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
 import {ContextMenus} from 'shared/ContextMenu';
 import {Drawers} from 'shared/Drawers';
 import {Icon} from 'shared/Icon';
+import {useThrottledEffect} from 'shared/hooks';
 
 import './index.css';
 
@@ -105,6 +107,28 @@ function MainContent() {
 }
 
 function ISLNullState({repoError}: {repoError: RepositoryError}) {
+  useThrottledEffect(
+    () => {
+      if (repoError != null) {
+        switch (repoError.type) {
+          case 'cwdNotARepository':
+            tracker.track('UIEmptyState', {extras: {cwd: repoError.cwd}, errorName: 'InvalidCwd'});
+            break;
+          case 'invalidCommand':
+            tracker.track('UIEmptyState', {
+              extras: {command: repoError.command},
+              errorName: 'InvalidCommand',
+            });
+            break;
+          case 'unknownError':
+            tracker.error('UIEmptyState', 'RepositoryError', repoError.error);
+            break;
+        }
+      }
+    },
+    1_000,
+    [repoError],
+  );
   let content;
   if (repoError != null) {
     if (repoError.type === 'cwdNotARepository') {

@@ -36,7 +36,12 @@ export type IncomingMessage = ClientToServerMessage;
 export type OutgoingMessage = ServerToClientMessage;
 
 type GeneralMessage = IncomingMessage &
-  ({type: 'requestRepoInfo'} | {type: 'requestApplicationInfo'} | {type: 'fileBugReport'});
+  (
+    | {type: 'requestRepoInfo'}
+    | {type: 'requestApplicationInfo'}
+    | {type: 'fileBugReport'}
+    | {type: 'track'}
+  );
 type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
 
 /**
@@ -179,6 +184,10 @@ export default class ServerToClientAPI {
    */
   private handleIncomingGeneralMessage(data: GeneralMessage) {
     switch (data.type) {
+      case 'track': {
+        this.tracker.trackData(data.data);
+        break;
+      }
       case 'requestRepoInfo': {
         switch (this.currentState.type) {
           case 'repo':
@@ -224,10 +233,6 @@ export default class ServerToClientAPI {
   private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
     const {logger} = repo;
     switch (data.type) {
-      case 'track': {
-        this.tracker.trackData(data.data);
-        break;
-      }
       case 'subscribeUncommittedChanges': {
         if (this.hasSubscribedToUncommittedChanges) {
           break;

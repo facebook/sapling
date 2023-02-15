@@ -17,8 +17,8 @@ export const tracker = new Tracker(sendDataToServer, {});
  * The client side sends data to the server-side to actually get tracked.
  */
 // prettier-ignore
-function sendDataToServer(_data: TrackDataWithEventName) {
+function sendDataToServer(data: TrackDataWithEventName) {
   // In open source, we don't even need to bother sending these messages to the server,
   // since we don't track anything anyway.
-  Internal.sendAnalyticsDataToServer?.(_data);
+  Internal.sendAnalyticsDataToServer?.(data);
 }

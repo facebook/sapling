@@ -11,6 +11,7 @@ export type TrackEventName =
   | 'LoadMoreCommits'
   | 'RunOperation'
   | 'StarRating'
+  | 'UIEmptyState'
   | 'UnsubmittedStarRating';
 
-export type TrackErrorName = 'TopLevelError';
+export type TrackErrorName = 'TopLevelError' | 'InvalidCwd' | 'InvalidCommand' | 'RepositoryError';
