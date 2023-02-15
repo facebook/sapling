@@ -578,23 +578,3 @@ Hidden revset
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     commit1
   
-
-Migration down
-  $ setconfig visibility.enabled=false
-  $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
-  reverting to tracking visibility through obsmarkers
-  4e7eb8574ed56675aa89d2b5abbced12d5688cef
-
-Migration up
-  $ setconfig visibility.enabled=true
-
- (Test if the repo contains an abandoned transaction, the auto migration does not crash)
-  $ echo something > .hg/store/journal
-  $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
-  switching to explicit tracking of visible commits
-  4e7eb8574ed56675aa89d2b5abbced12d5688cef
-  $ rm .hg/store/journal
-
-  $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
-  switching to explicit tracking of visible commits
-  4e7eb8574ed56675aa89d2b5abbced12d5688cef
