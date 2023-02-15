@@ -818,8 +818,13 @@ PrjfsDispatcherImpl::waitForPendingNotifications() {
   // made by a concurrent process or a different thread may still be in
   // ProjectedFS queue and therefore may still be pending when the future
   // complete. This is expected and therefore not a bug.
+  folly::stop_watch<std::chrono::microseconds> timer{};
   return ImmediateFuture{
-      folly::via(notificationExecutor_, []() { return folly::unit; }).semi()};
+      folly::via(notificationExecutor_, [this, timer = std::move(timer)]() {
+        this->mount_->getStats()->addDuration(
+            &PrjfsStats::filesystemSync, timer.elapsed());
+        return folly::unit;
+      }).semi()};
 }
 
 } // namespace facebook::eden

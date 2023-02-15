@@ -238,6 +238,7 @@ struct NfsStats : StatsGroup<NfsStats> {
 struct PrjfsStats : StatsGroup<PrjfsStats> {
   Counter outOfOrderCreate{"prjfs.out_of_order_create"};
   Duration queuedFileNotification{"prjfs.queued_file_notification_us"};
+  Duration filesystemSync{"prjfs.filesystem_sync_us"};
 
   Duration newFileCreated{"prjfs.newFileCreated_us"};
   Duration fileOverwritten{"prjfs.fileOverwritten_us"};
