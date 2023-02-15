@@ -61,7 +61,7 @@ impl FileReaderWriter {
             // lock for protecting racy writes and want read to just work
             // regardless of locks. Use a separate lock file so locking
             // does not prevent read.
-            let lock_path = path.with_extension(".lock");
+            let lock_path = path.with_extension("lock");
             let lock_file = std::fs::OpenOptions::new()
                 .create(true)
                 .read(true)

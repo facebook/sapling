@@ -380,6 +380,9 @@ class treestatemap(object):
         for name in self._vfs.listdir("treestate"):
             if name in fileinuse:
                 continue
+            if name.endswith(".lock"):
+                # .lock files are removed later.
+                continue
             try:
                 if self._vfs.stat("treestate/%s" % name).st_mtime > maxmtime:
                     continue
@@ -388,6 +391,15 @@ class treestatemap(object):
             self._ui.log("treestate", "removing old unreferenced treestate/%s\n" % name)
             self._ui.debug("removing old unreferenced treestate/%s\n" % name)
             self._vfs.tryunlink("treestate/%s" % name)
+        # Remove .lock files if their basename file is removed.
+        # .lock files are used on Windows (D43198797).
+        filelist = set(self._vfs.listdir("treestate"))
+        for name in sorted(filelist):
+            if not name.endswith(".lock"):
+                continue
+            basename = name.split(".", 1)[0]
+            if basename not in filelist:
+                self._vfs.tryunlink("treestate/%s" % name)
 
     def write(self, st, now):
         # write .hg/treestate/<uuid>
