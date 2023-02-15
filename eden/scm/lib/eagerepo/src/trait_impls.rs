@@ -12,6 +12,8 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use storemodel::types;
 use storemodel::ReadFileContents;
+use storemodel::RefreshableReadFileContents;
+use storemodel::RefreshableTreeStore;
 use storemodel::TreeFormat;
 use storemodel::TreeStore;
 use types::HgId;
@@ -57,5 +59,21 @@ impl TreeStore for EagerRepoStore {
 
     fn format(&self) -> TreeFormat {
         TreeFormat::Hg
+    }
+}
+
+impl RefreshableReadFileContents for EagerRepoStore {
+    fn refresh(&self) -> Result<(), Self::Error> {
+        let mut inner = self.inner.write();
+        inner.flush()?;
+        Ok(())
+    }
+}
+
+impl RefreshableTreeStore for EagerRepoStore {
+    fn refresh(&self) -> anyhow::Result<()> {
+        let mut inner = self.inner.write();
+        inner.flush()?;
+        Ok(())
     }
 }

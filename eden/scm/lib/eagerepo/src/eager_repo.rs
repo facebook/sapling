@@ -88,7 +88,7 @@ pub struct EagerRepo {
 /// zstore delta-compress features, and don't store different types separately.
 #[derive(Clone)]
 pub struct EagerRepoStore {
-    inner: Arc<RwLock<Zstore>>,
+    pub(crate) inner: Arc<RwLock<Zstore>>,
 }
 
 impl EagerRepoStore {
