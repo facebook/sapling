@@ -53,6 +53,7 @@ impl WalMultiplexedBlobstore {
                     key,
                     OperationType::ScrubGet,
                     &scuba,
+                    self.inflight_ops_counter.clone(),
                 )
                 .collect::<Vec<_>>()
             },
@@ -63,6 +64,7 @@ impl WalMultiplexedBlobstore {
                     key,
                     OperationType::ScrubGet,
                     &scuba,
+                    self.inflight_ops_counter.clone(),
                 )
                 .collect::<Vec<_>>()
             },

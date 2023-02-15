@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -149,6 +151,20 @@ pub struct WalMultiplexedBlobstore {
 
     /// Scuba table to log status of the underlying single blobstore queries.
     pub(crate) scuba: Scuba,
+
+    /// Counter keeping track of the yet-to-complete blobstore operations in flight.
+    pub(crate) inflight_ops_counter: Arc<AtomicU64>,
+}
+
+impl Drop for WalMultiplexedBlobstore {
+    fn drop(&mut self) {
+        // If there are any inflight get/put/is_present request to the blobstores,
+        // wait a while before exiting. This is required to prevent the UAF issue
+        // in Manifold. Reference: https://fburl.com/y5o44ed6
+        if self.inflight_ops_counter.load(Ordering::Relaxed) > 0 {
+            std::thread::sleep(std::time::Duration::from_secs(5))
+        }
+    }
 }
 
 impl std::fmt::Display for WalMultiplexedBlobstore {
@@ -189,7 +205,7 @@ impl WalMultiplexedBlobstore {
         let to = timeout.unwrap_or_default();
         let blobstores = with_timed_stores(blobstores, to.clone()).into();
         let write_only_blobstores = with_timed_stores(write_only_blobstores, to).into();
-
+        let inflight_ops_counter = Arc::new(AtomicU64::new(0));
         Ok(Self {
             multiplex_id,
             wal_queue,
@@ -197,6 +213,7 @@ impl WalMultiplexedBlobstore {
             write_only_blobstores,
             quorum,
             scuba,
+            inflight_ops_counter,
         })
     }
 
@@ -243,6 +260,7 @@ impl WalMultiplexedBlobstore {
             &value,
             put_behaviour,
             scuba,
+            self.inflight_ops_counter.clone(),
         );
 
         // Wait for the quorum successful writes
@@ -267,6 +285,7 @@ impl WalMultiplexedBlobstore {
                                 &value,
                                 put_behaviour,
                                 scuba,
+                                self.inflight_ops_counter.clone(),
                             );
                             let write_only_puts =
                                 spawn_stream_completion(write_only_puts.map_err(|(_id, err)| err));
@@ -327,8 +346,14 @@ impl WalMultiplexedBlobstore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
-        let mut get_futs =
-            inner_multi_get(ctx, self.blobstores.clone(), key, OperationType::Get, scuba);
+        let mut get_futs = inner_multi_get(
+            ctx,
+            self.blobstores.clone(),
+            key,
+            OperationType::Get,
+            scuba,
+            self.inflight_ops_counter.clone(),
+        );
 
         // Wait for the quorum successful "Not Found" reads before
         // returning Ok(None).
@@ -398,7 +423,13 @@ impl WalMultiplexedBlobstore {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
 
-        let mut futs = inner_multi_is_present(ctx, self.blobstores.clone(), key, scuba);
+        let mut futs = inner_multi_is_present(
+            ctx,
+            self.blobstores.clone(),
+            key,
+            scuba,
+            self.inflight_ops_counter.clone(),
+        );
 
         // Wait for the quorum successful "Not Found" reads before
         // returning Ok(None).
@@ -575,6 +606,7 @@ fn inner_multi_put(
     value: &BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,
     scuba: &Scuba,
+    counter: Arc<AtomicU64>,
 ) -> FuturesUnordered<impl Future<Output = Result<OverwriteStatus, (BlobstoreId, Error)>>> {
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
@@ -585,11 +617,16 @@ fn inner_multi_put(
                 key,
                 value,
                 put_behaviour,
-                scuba.inner_blobstores_scuba
+                scuba.inner_blobstores_scuba,
+                counter
             );
             async move {
-                bs.put(&ctx, key, value, put_behaviour, inner_blobstores_scuba)
-                    .await
+                counter.fetch_add(1, Ordering::Relaxed);
+                let result = bs
+                    .put(&ctx, key, value, put_behaviour, inner_blobstores_scuba)
+                    .await;
+                counter.fetch_sub(1, Ordering::Relaxed);
+                result
             }
         })
         .collect();
@@ -604,16 +641,19 @@ pub(crate) fn inner_multi_get<'a>(
     key: &'a str,
     operation: OperationType,
     scuba: &Scuba,
+    counter: Arc<AtomicU64>,
 ) -> FuturesUnordered<impl Future<Output = GetResult> + 'a> {
     let get_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs, scuba.inner_blobstores_scuba);
+            cloned!(bs, scuba.inner_blobstores_scuba, counter);
             async move {
-                (
-                    *bs.id(),
-                    bs.get(ctx, key, operation, inner_blobstores_scuba).await,
-                )
+                (*bs.id(), {
+                    counter.fetch_add(1, Ordering::Relaxed);
+                    let result = bs.get(ctx, key, operation, inner_blobstores_scuba).await;
+                    counter.fetch_sub(1, Ordering::Relaxed);
+                    result
+                })
             }
         })
         .collect();
@@ -625,12 +665,18 @@ fn inner_multi_is_present<'a>(
     blobstores: Arc<[TimedStore]>,
     key: &'a str,
     scuba: &Scuba,
+    counter: Arc<AtomicU64>,
 ) -> FuturesUnordered<impl Future<Output = (BlobstoreId, Result<BlobstoreIsPresent, Error>)> + 'a> {
     let futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
-            cloned!(bs, scuba.inner_blobstores_scuba);
-            async move { bs.is_present(ctx, key, inner_blobstores_scuba).await }
+            cloned!(bs, scuba.inner_blobstores_scuba, counter);
+            async move {
+                counter.fetch_add(1, Ordering::Relaxed);
+                let result = bs.is_present(ctx, key, inner_blobstores_scuba).await;
+                counter.fetch_sub(1, Ordering::Relaxed);
+                result
+            }
         })
         .collect();
     futs
