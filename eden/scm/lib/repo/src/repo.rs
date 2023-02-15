@@ -18,6 +18,7 @@ use anyhow::Result;
 use configloader::config::ConfigSet;
 use configloader::Config;
 use configmodel::ConfigExt;
+use eagerepo::EagerRepoStore;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
@@ -568,6 +569,13 @@ impl Repo {
             self.file_store = Some(git_store.clone());
             self.tree_store = Some(git_store.clone());
             return Ok(Some((git_store.clone(), git_store)));
+        }
+        if self.store_requirements.contains("eagerepo") {
+            let store = EagerRepoStore::open(&self.store_path.join("hgcommits").join("v1"))?;
+            let store = Arc::new(store);
+            self.file_store = Some(store.clone());
+            self.tree_store = Some(store.clone());
+            return Ok(Some((store.clone(), store)));
         }
         return Ok(None);
     }
