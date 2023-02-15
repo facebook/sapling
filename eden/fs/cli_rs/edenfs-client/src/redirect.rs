@@ -326,7 +326,7 @@ impl Redirection {
                 format!(
                     "Failed to execute mkscratch cmd: `{} {}`",
                     &mkscratch.display(),
-                    args.join(" ")
+                    shlex::join(args.iter().copied()),
                 )
             })?;
         if output.status.success() {
@@ -343,7 +343,7 @@ impl Redirection {
             Err(EdenFsError::Other(anyhow!(
                 "Failed to execute `{} {}`, stderr: {}, exit status: {:?}",
                 &mkscratch.display(),
-                args.join(" "),
+                shlex::join(args.iter().copied()),
                 String::from_utf8_lossy(&output.stderr),
                 output.status,
             )))
@@ -463,7 +463,7 @@ impl Redirection {
                 format!(
                     "Failed to execute command `{} {}`",
                     APFS_HELPER,
-                    args.join(" ")
+                    shlex::join(args.iter().copied())
                 )
             })?;
         if output.status.success() {
@@ -528,7 +528,10 @@ impl Redirection {
                 .output()
                 .from_err()
                 .with_context(|| {
-                    format!("Failed to execute command `hdiutil {}`", args.join(" "))
+                    format!(
+                        "Failed to execute command `hdiutil {}`",
+                        shlex::join(args.iter().copied())
+                    )
                 })?;
             if !create_output.status.success() {
                 return Err(EdenFsError::Other(anyhow!(
@@ -562,7 +565,12 @@ impl Redirection {
             .args(args)
             .output()
             .from_err()
-            .with_context(|| format!("Failed to execute command `hdiutil {}`", args.join(" ")))?;
+            .with_context(|| {
+                format!(
+                    "Failed to execute command `hdiutil {}`",
+                    shlex::join(args.iter().copied())
+                )
+            })?;
         if !attach_output.status.success() {
             return Err(EdenFsError::Other(anyhow!(
                 "failed to attach dmg volume {} for mount {}. stderr: {}\n stdout: {}",
@@ -641,7 +649,12 @@ impl Redirection {
             .args(args)
             .output()
             .from_err()
-            .with_context(|| format!("Failed to execute command `diskutil {}`", args.join(" ")))?;
+            .with_context(|| {
+                format!(
+                    "Failed to execute command `diskutil {}`",
+                    shlex::join(args.iter().copied())
+                )
+            })?;
         if output.status.success() {
             Ok(())
         } else {

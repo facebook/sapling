@@ -503,7 +503,7 @@ impl RedirectCmd {
                         format!(
                             "Failed to execute apfs_helper cmd: `{} {}`.",
                             APFS_HELPER,
-                            args.join(" "),
+                            shlex::join(args.iter().copied()),
                         )
                     })?;
                 if !output.status.success() {
