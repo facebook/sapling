@@ -41,6 +41,16 @@ namespacepredicate = registrar.namespacepredicate()
 autopullpredicate = registrar.autopullpredicate()
 
 
+hint = registrar.hint()
+
+
+@hint("unlink-closed-pr")
+def unlink_closed_pr_hint() -> str:
+    return _(
+        "to create a new PR, disassociate commit(s) using '@prog@ pr unlink' then re-run '@prog@ pr submit'"
+    )
+
+
 def extsetup(ui):
     pr_status.setup_smartset_prefetch()
 

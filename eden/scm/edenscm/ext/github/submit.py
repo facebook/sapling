@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List, Optional, Tuple
 
-from edenscm import error, git
+from edenscm import error, git, hintutil
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
 from edenscm.result import Result
@@ -273,6 +273,14 @@ async def rewrite_pull_request_body(
     )
     pr = head_commit_data.pr
     assert pr
+
+    if pr.state != PullRequestState.OPEN:
+        ui.status_err(
+            _("warning, not updating #%d because it isn't open\n") % pr.number
+        )
+        hintutil.triggershow(ui, "unlink-closed-pr")
+        return
+
     result = await gh_submit.update_pull_request(
         repository.hostname, pr.node_id, title, body, base
     )
