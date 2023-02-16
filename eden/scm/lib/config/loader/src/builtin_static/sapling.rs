@@ -153,7 +153,6 @@ morestatus=
 myparent=
 obsshelve=
 patchrmdir=!
-prmarker=
 progressfile=
 pullcreatemarkers=
 pushrebase=!

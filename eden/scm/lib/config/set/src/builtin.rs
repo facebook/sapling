@@ -17,7 +17,6 @@ infinitepush=!
 remotenames=
 treemanifest=
 autopullhoisthotfix=!
-prmarker=
 
 [commitcloud]
 automigrate=false

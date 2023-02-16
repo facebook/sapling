@@ -11,6 +11,8 @@ import sys
 
 if os.path.exists(".hg"):
     hgrcpath = ".hg/hgrc"
+elif os.path.exists(".sl"):
+    hgrcpath = ".sl/config"
 else:
     hgrcpath = os.getenv("HGRCPATH")
     if os.pathsep in hgrcpath:

@@ -9,7 +9,7 @@
 import asyncio
 from typing import Optional
 
-from edenscm import autopull, error, namespaces, registrar, util
+from edenscm import autopull, commands, error, namespaces, registrar, util
 from edenscm.autopull import pullattempt
 from edenscm.i18n import _
 from edenscm.namespaces import namespace
@@ -20,6 +20,7 @@ from . import (
     github_repo_util,
     import_pull_request,
     link,
+    pr_marker,
     pr_status,
     submit,
     templates,
@@ -239,6 +240,14 @@ def list_cmd(ui, repo, *args, **opts) -> int:
     cmd = " ".join([util.shellquote(arg) for arg in gh_args(args, repo)])
     rc = ui.system(cmd)
     return rc
+
+
+@command("debugprmarker", commands.dryrunopts)
+def debug_pr_marker(ui, repo, **opts):
+    dry_run = opts.get("dry_run")
+    pr_marker.cleanup_landed_pr(repo, dry_run=dry_run)
+    if dry_run:
+        ui.status(_("(this is a dry-run, nothing was actually done)\n"))
 
 
 @templatekeyword("github_repo")
