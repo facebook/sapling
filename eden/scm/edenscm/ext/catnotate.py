@@ -22,7 +22,7 @@ testedwith = "ships-with-fb-ext"
     ],
     _("[OPTION]... FILE..."),
 )
-def catnotate(ui, repo, file1, *args, **opts):
+def catnotate(ui, repo, file1, *args, **opts) -> int:
     """output the current or given revision of files annotated with filename
     and line number.
 
