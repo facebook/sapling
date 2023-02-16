@@ -129,6 +129,7 @@ describe('CommitTreeList', () => {
               args: ['revert', {path: 'src/file.js', type: 'repo-relative-file'}],
               id: expect.anything(),
               runner: CommandRunner.Sapling,
+              trackEventName: 'RevertOperation',
             },
           });
         });
@@ -173,6 +174,7 @@ describe('CommitTreeList', () => {
                 args: ['addremove'],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
+                trackEventName: 'AddRemoveOperation',
               },
             });
           });
@@ -190,6 +192,7 @@ describe('CommitTreeList', () => {
                 args: ['addremove'],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
+                trackEventName: 'AddRemoveOperation',
               },
             });
           });
@@ -220,6 +223,7 @@ describe('CommitTreeList', () => {
                 args: ['addremove', {path: 'src/file_untracked.js', type: 'repo-relative-file'}],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
+                trackEventName: 'AddRemoveOperation',
               },
             });
           });

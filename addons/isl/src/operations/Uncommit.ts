@@ -20,7 +20,7 @@ export class UncommitOperation extends Operation {
    * @param originalHeadCommit the current head commit, needed to track when optimistic state is resolved and get the list of files that will be uncommitted
    */
   constructor(private originalHeadCommit: CommitInfo) {
-    super();
+    super('UncommitOperation');
   }
 
   static opName = 'Uncommit';

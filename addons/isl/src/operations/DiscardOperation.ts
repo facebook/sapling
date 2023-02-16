@@ -20,6 +20,10 @@ import {Operation} from './Operation';
 export class DiscardOperation extends Operation {
   static opName = 'Discard';
 
+  constructor() {
+    super('DiscardOperation');
+  }
+
   getArgs() {
     const args = ['goto', '--clean', '.'];
     return args;

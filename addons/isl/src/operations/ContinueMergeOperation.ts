@@ -10,6 +10,10 @@ import {Operation} from './Operation';
 export class ContinueOperation extends Operation {
   static opName = 'Continue';
 
+  constructor() {
+    super('ContinueMergeOperation');
+  }
+
   getArgs() {
     return ['continue'];
   }

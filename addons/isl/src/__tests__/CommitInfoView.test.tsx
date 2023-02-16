@@ -252,6 +252,7 @@ describe('CommitInfoView', () => {
             ],
             id: expect.anything(),
             runner: CommandRunner.Sapling,
+            trackEventName: 'AmendOperation',
           },
         });
       });
@@ -611,6 +612,7 @@ describe('CommitInfoView', () => {
                 ],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
+                trackEventName: 'AmendMessageOperation',
               },
             });
           });
@@ -640,6 +642,7 @@ describe('CommitInfoView', () => {
                 ],
                 id: expect.anything(),
                 runner: CommandRunner.Sapling,
+                trackEventName: 'AmendOperation',
               },
             });
           });
@@ -793,6 +796,7 @@ describe('CommitInfoView', () => {
               args: ['commit', '--message', 'new commit title\nmy description'],
               id: expect.anything(),
               runner: CommandRunner.Sapling,
+              trackEventName: 'CommitOperation',
             },
           });
         });

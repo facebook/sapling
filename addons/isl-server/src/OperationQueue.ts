@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {
   OperationCommandProgressReporter,
@@ -29,17 +30,18 @@ export class OperationQueue {
     ) => Promise<void>,
   ) {}
 
-  private queuedOperations: Array<RunnableOperation> = [];
+  private queuedOperations: Array<RunnableOperation & {tracker: ServerSideTracker}> = [];
   private runningOperation: RunnableOperation | undefined = undefined;
   private abortController: AbortController | undefined = undefined;
 
   async runOrQueueOperation(
     operation: RunnableOperation,
     onProgress: (progress: OperationProgress) => void,
+    tracker: ServerSideTracker,
     cwd: string,
   ): Promise<void> {
     if (this.runningOperation != null) {
-      this.queuedOperations.push(operation);
+      this.queuedOperations.push({...operation, tracker});
       onProgress({id: operation.id, kind: 'queue', queue: this.queuedOperations.map(o => o.id)});
       return;
     }
@@ -69,7 +71,12 @@ export class OperationQueue {
     try {
       const controller = newAbortController();
       this.abortController = controller;
-      await this.runCallback(operation, cwd, handleCommandProgress, controller.signal);
+      await tracker.operation(
+        operation.trackEventName,
+        'RunOperationError',
+        {extras: {args: operation.args, runner: operation.runner}},
+        _p => this.runCallback(operation, cwd, handleCommandProgress, controller.signal),
+      );
       this.runningOperation = undefined;
 
       // now that we successfully ran this operation, dequeue the next
@@ -81,6 +88,7 @@ export class OperationQueue {
             op,
             // TODO: we're using the onProgress from the LAST `runOperation`... should we be keeping the newer onProgress in the queued operation?
             onProgress,
+            op.tracker,
             cwd,
           );
         }

@@ -40,7 +40,7 @@ export class Tracker<T> {
    * If the function throws (or rejects for async), the error is tracked.
    * The execution time is measured and included in the `duration` field.
    */
-  operation<T>(
+  public operation<T>(
     eventName: TrackEventName,
     errorName: TrackErrorName,
     data: TrackData | undefined,

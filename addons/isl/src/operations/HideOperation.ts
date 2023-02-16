@@ -14,7 +14,7 @@ import {Operation} from './Operation';
 
 export class HideOperation extends Operation {
   constructor(private source: Hash) {
-    super();
+    super('HideOperation');
   }
 
   static opName = 'Hide';

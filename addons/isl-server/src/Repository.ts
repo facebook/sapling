@@ -6,6 +6,7 @@
  */
 
 import type {CodeReviewProvider} from './CodeReviewProvider';
+import type {ServerSideTracker} from './analytics/serverSideTracker';
 import type {Logger} from './logger';
 import type {
   CommitInfo,
@@ -449,9 +450,10 @@ export class Repository {
   async runOrQueueOperation(
     operation: RunnableOperation,
     onProgress: (progress: OperationProgress) => void,
+    tracker: ServerSideTracker,
     cwd: string,
   ): Promise<void> {
-    await this.operationQueue.runOrQueueOperation(operation, onProgress, cwd);
+    await this.operationQueue.runOrQueueOperation(operation, onProgress, tracker, cwd);
 
     // After any operation finishes, make sure we poll right away,
     // so the UI is guarnateed to get the latest data.

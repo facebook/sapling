@@ -326,6 +326,7 @@ export default class ServerToClientAPI {
           progress => {
             this.postMessage({type: 'operationProgress', ...progress});
           },
+          this.tracker,
           cwd,
         );
         break;

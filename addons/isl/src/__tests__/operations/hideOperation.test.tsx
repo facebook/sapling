@@ -68,6 +68,7 @@ describe('hide operation', () => {
         args: ['hide', '--rev', SucceedableRevset('b')],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
+        trackEventName: 'HideOperation',
       },
     });
   });

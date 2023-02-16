@@ -496,7 +496,12 @@ function runOperationImpl(
   // and mark those to not be rewritten.
   serverAPI.postMessage({
     type: 'runOperation',
-    operation: {args: operation.getArgs(), id: operation.id, runner: operation.runner},
+    operation: {
+      args: operation.getArgs(),
+      id: operation.id,
+      runner: operation.runner,
+      trackEventName: operation.trackEventName,
+    },
   });
   operationsById.set(operation.id, operation);
   const ongoing = snapshot.getLoadable(operationList).valueMaybe();

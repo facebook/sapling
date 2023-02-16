@@ -10,6 +10,10 @@ import {Operation} from './Operation';
 export class GhStackSubmitOperation extends Operation {
   static opName = 'ghstack submit';
 
+  constructor() {
+    super('GhStackSubmitOperation');
+  }
+
   getArgs() {
     return ['ghstack', 'submit'];
   }

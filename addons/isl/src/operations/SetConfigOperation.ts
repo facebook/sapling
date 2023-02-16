@@ -13,7 +13,7 @@ export class SetConfigOperation extends Operation {
     private configName: string,
     private value: string,
   ) {
-    super();
+    super('SetConfigOperation');
   }
 
   static opName = 'Add';

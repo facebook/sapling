@@ -20,7 +20,7 @@ import {Operation} from './Operation';
  */
 export class AddRemoveOperation extends Operation {
   constructor(private paths: Array<RepoRelativePath>) {
-    super();
+    super('AddRemoveOperation');
   }
 
   static opName = 'AddRemove';

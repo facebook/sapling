@@ -12,6 +12,7 @@ import type {
   UncommittedChangesPreviewContext,
 } from '../previews';
 import type {CommandArg} from '../types';
+import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 
 import {CommandRunner} from '../types';
 import {randomId} from 'shared/utils';
@@ -25,6 +26,8 @@ import {randomId} from 'shared/utils';
 export abstract class Operation {
   static operationName: string;
   public id: string = randomId();
+
+  constructor(public trackEventName: TrackEventName) {}
 
   abstract getArgs(): Array<CommandArg>;
 

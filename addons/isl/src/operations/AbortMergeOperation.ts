@@ -11,7 +11,7 @@ import {Operation} from './Operation';
 
 export class AbortMergeOperation extends Operation {
   constructor(private conflicts: MergeConflicts) {
-    super();
+    super('AbortMergeOperation');
   }
 
   static opName = 'Abort';

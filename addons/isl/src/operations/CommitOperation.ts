@@ -28,7 +28,7 @@ export class CommitOperation extends Operation {
     private originalHeadHash: Hash,
     private filesPathsToCommit?: Array<RepoRelativePath>,
   ) {
-    super();
+    super('CommitOperation');
   }
 
   static opName = 'Commit';

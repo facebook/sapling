@@ -59,6 +59,7 @@ describe('GotoOperation', () => {
         args: ['goto', '--rev', SucceedableRevset('a')],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
+        trackEventName: 'GotoOperation',
       },
     });
   });
@@ -103,6 +104,7 @@ describe('GotoOperation', () => {
           args: ['goto', '--rev', SucceedableRevset('remote/master')],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
+          trackEventName: 'GotoOperation',
         },
       });
     });

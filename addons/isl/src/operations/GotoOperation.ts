@@ -14,7 +14,7 @@ import {Operation} from './Operation';
 
 export class GotoOperation extends Operation {
   constructor(private destination: Hash) {
-    super();
+    super('GotoOperation');
   }
 
   static opName = 'Goto';

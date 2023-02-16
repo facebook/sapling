@@ -10,6 +10,10 @@ import {Operation} from './Operation';
 export class PrSubmitOperation extends Operation {
   static opName = 'pr submit';
 
+  constructor() {
+    super('PrSubmitOperation');
+  }
+
   getArgs() {
     return ['pr', 'submit'];
   }

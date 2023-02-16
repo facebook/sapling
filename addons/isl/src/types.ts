@@ -6,6 +6,7 @@
  */
 
 import type {InternalTypes} from './InternalTypes';
+import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import type {TrackDataWithEventName} from 'isl-server/src/analytics/types';
 import type {GitHubDiffSummary} from 'isl-server/src/github/githubCodeReviewProvider';
 import type {Comparison} from 'shared/Comparison';
@@ -262,6 +263,7 @@ export type RunnableOperation = {
   args: Array<CommandArg>;
   id: string;
   runner: CommandRunner;
+  trackEventName: TrackEventName;
 };
 
 export type OperationProgress =

@@ -122,6 +122,7 @@ describe('rebase operation', () => {
         args: ['rebase', '-s', SucceedableRevset('d'), '-d', SucceedableRevset('remote/master')],
         id: expect.anything(),
         runner: CommandRunner.Sapling,
+        trackEventName: 'RebaseOperation',
       },
     });
   });

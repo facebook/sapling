@@ -14,7 +14,7 @@ import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
   constructor(private hash: Hash, private message: EditedMessage) {
-    super();
+    super('AmendMessageOperation');
   }
 
   static opName = 'Metaedit';

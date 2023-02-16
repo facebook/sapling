@@ -14,7 +14,7 @@ import {Operation} from './Operation';
 
 export class RebaseOperation extends Operation {
   constructor(private source: Hash, private destination: Revset) {
-    super();
+    super('RebaseOperation');
   }
 
   static opName = 'Rebase';

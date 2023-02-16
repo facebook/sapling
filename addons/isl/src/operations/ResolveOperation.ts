@@ -23,7 +23,7 @@ export enum ResolveTool {
 
 export class ResolveOperation extends Operation {
   constructor(private filePath: RepoRelativePath, private tool: ResolveTool) {
-    super();
+    super('ResolveOperation');
   }
 
   static opName = 'Resolve';

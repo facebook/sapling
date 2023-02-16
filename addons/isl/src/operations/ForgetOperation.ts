@@ -15,7 +15,7 @@ import {Operation} from './Operation';
 
 export class ForgetOperation extends Operation {
   constructor(private filePath: RepoRelativePath) {
-    super();
+    super('ForgetOperation');
   }
 
   static opName = 'Forget';
