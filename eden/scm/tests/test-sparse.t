@@ -183,7 +183,7 @@ Verify adding sparseness hides files
   M show
 
   $ hg up -qC .
-  $ hg purge --all
+  $ rm hide*
   $ ls
   show
   show2

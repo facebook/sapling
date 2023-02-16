@@ -1,6 +1,13 @@
 #chg-compatible
 #debugruntest-compatible
-  $ setconfig workingcopy.ruststatus=False
+
+#testcases pythonstatus ruststatus
+#if pythonstatus
+  $ setconfig status.use-rust=false workingcopy.use-rust=false
+#else
+  $ setconfig status.use-rust=true workingcopy.use-rust=true
+#endif
+
   $ configure modernclient
 
   $ enable sparse
@@ -13,9 +20,5 @@
   > a
   > EOF
 
-  $ hg status --config status.use-rust=true --config workingcopy.use-rust=true
-
-# XXX fixme - Python status should skip file not in sparse profile.
-  $ hg status --config status.use-rust=false --config workingcopy.use-rust=false
-  R a
-
+We should filter out "a" since it isn't included in the sparse profile.
+  $ hg status

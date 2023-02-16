@@ -723,6 +723,27 @@ def _setupdirstate(ui) -> None:
 
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
 
+    # dirstate.status should exclude files outside sparse profile
+    def _status(
+        orig,
+        self,
+        match: "Callable[[str], bool]",
+        ignored: bool,
+        clean: bool,
+        unknown: bool,
+    ) -> "scmutil.status":
+        st = orig(self, match, ignored, clean, unknown)
+        if util.safehasattr(self, "repo"):
+            repo = self.repo
+            if util.safehasattr(repo, "sparsematch"):
+                sparsematch = repo.sparsematch()
+                st = scmutil.status(
+                    *([f for f in files if sparsematch(f)] for files in st)
+                )
+        return st
+
+    extensions.wrapfunction(dirstate.dirstate, "status", _status)
+
 
 def _setupdiff(ui) -> None:
     entry = cmdutil.findcmd("diff", commands.table)[1]

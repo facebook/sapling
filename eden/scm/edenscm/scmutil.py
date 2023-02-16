@@ -61,13 +61,9 @@ class status(tuple):
     __slots__ = ()
 
     def __new__(cls, modified, added, removed, deleted, unknown, ignored, clean):
-        assert all(isinstance(f, str) for f in modified)
-        assert all(isinstance(f, str) for f in added)
-        assert all(isinstance(f, str) for f in removed)
-        assert all(isinstance(f, str) for f in deleted)
-        assert all(isinstance(f, str) for f in unknown)
-        assert all(isinstance(f, str) for f in ignored)
-        assert all(isinstance(f, str) for f in clean)
+        for files in (modified, added, removed, deleted, unknown, ignored, clean):
+            assert all(isinstance(f, str) for f in files)
+
         return tuple.__new__(
             cls, (modified, added, removed, deleted, unknown, ignored, clean)
         )
