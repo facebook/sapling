@@ -82,9 +82,16 @@ impl RepoContext {
         };
         // Check if the bytes actually correspond to a valid Git object
         let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
-        let _git_obj = git_object::ObjectRef::from_loose(bytes.as_ref())
+        let git_obj = git_object::ObjectRef::from_loose(bytes.as_ref())
             .with_context(|| format!("Invalid git object data for {}", git_hash))?;
-
+        // Check if the git object is not a raw content blob. Raw content blobs are uploaded directly through
+        // LFS. This method supports git commits, trees, tags, notes and similar pointer objects.
+        if let git_object::ObjectRef::Blob(_) = git_obj {
+            anyhow::bail!(
+                "Received blob with hash {}. upload_git_object cannot be used to upload raw file content.",
+                git_hash
+            )
+        }
         // The bytes are valid, upload to blobstore with the key:
         // git_object_{hex-value-of-hash}
         let blobstore_key = format!("git_object_{}", git_hash.to_hex());

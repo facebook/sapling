@@ -8,6 +8,7 @@
 mod test_blame;
 mod test_changeset_diff;
 mod test_file_diff;
+mod test_git;
 mod test_history;
 mod test_repo;
 mod test_repo_bookmarks;
