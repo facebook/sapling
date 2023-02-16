@@ -684,6 +684,11 @@ ImmediateFuture<folly::Unit> fileNotification(
             &PrjfsStats::queuedFileNotification, watch.elapsed());
       })
       .thenError([path](const folly::exception_wrapper& ew) {
+        if (ew.get_exception<QuietFault>()) {
+          XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
+          return folly::unit;
+        }
+
         // These should in theory never happen, but they sometimes happen
         // due to filesystem errors, antivirus scanning, etc. During
         // test, these should be treated as fatal errors, so we don't let

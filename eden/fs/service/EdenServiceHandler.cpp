@@ -4016,6 +4016,8 @@ std::optional<folly::exception_wrapper> getFaultError(
     } else if (type.startsWith("errno:")) {
       auto errnum = folly::to<int>(type.subpiece(6));
       return std::system_error(errnum, std::generic_category(), msg);
+    } else if (type == "quiet") {
+      return QuietFault(msg);
     }
     // If we want to support other error types in the future they should
     // be added here.

@@ -23,6 +23,7 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/ProjfsUtil.h"
 
 namespace facebook::eden {
 namespace {
@@ -152,6 +153,9 @@ struct FsckFileState {
   //  - a file is virtual or a placeholder
   //  - a directory is a placeholder and has no children (placeholder or
   //  otherwise)
+
+  bool renamedPlaceholder = false;
+
   bool diskEmptyPlaceholder = false;
   bool diskTombstone = false;
   dtype_t diskDtype = dtype_t::Unknown;
@@ -204,7 +208,8 @@ void populateDiskState(
     AbsolutePathPiece root,
     RelativePathPiece path,
     FsckFileState& state,
-    const WIN32_FIND_DATAW& findFileData) {
+    const WIN32_FIND_DATAW& findFileData,
+    bool fsckRenamedFiles) {
   dtype_t dtype =
       dtypeFromAttrs(findFileData.dwFileAttributes, findFileData.dwReserved0);
   if (dtype != dtype_t::Dir && dtype != dtype_t::Regular) {
@@ -244,6 +249,8 @@ void populateDiskState(
       FILE_ATTRIBUTE_HIDDEN;
   auto system = (findFileData.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) ==
       FILE_ATTRIBUTE_SYSTEM;
+  auto sparse = (findFileData.dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) ==
+      FILE_ATTRIBUTE_SPARSE_FILE;
 
   bool detectedTombstone = reparse && !recall && hidden && system;
   bool detectedFull = !reparse && !recall;
@@ -257,6 +264,19 @@ void populateDiskState(
   state.populatedOrFullOrTomb = detectedFull || detectedTombstone;
   // It's an empty placeholder unless it's materialized or it has children.
   state.diskEmptyPlaceholder = !state.populatedOrFullOrTomb;
+
+  state.renamedPlaceholder = false;
+
+  if (fsckRenamedFiles && sparse) {
+    auto renamedPlaceholderResult =
+        isRenamedPlaceholder((root + path).wide().c_str());
+    if (renamedPlaceholderResult.hasValue()) {
+      state.renamedPlaceholder = renamedPlaceholderResult.value();
+    } else {
+      XLOG(DBG9) << "Error checking rename: "
+                 << renamedPlaceholderResult.exception();
+    }
+  }
 
   if (dtype == dtype_t::Dir) {
     auto absPath = root + path;
@@ -333,12 +353,30 @@ std::optional<InodeNumber> fixup(
       state.desiredDtype = state.scmDtype;
       state.desiredHash = state.scmHash;
       state.shouldExist = true;
+      // Files removed from disk while eden was stopped fall into this
+      // case. If the file was materialized, we will detect it's out of sync.
+      // We will just update the overlay to have the inode. Eden will
+      // have the file present, disk will not.
+      // TODO(kmancini): fix that.
     }
   } else if (state.diskTombstone) {
     // state.shouldExist defaults to false
+  } else if (state.renamedPlaceholder && !state.populatedOrFullOrTomb) {
+    // renamed files are special snowflakes in EdenFS, they are the only inodes
+    // that can be regular placeholders in projfs and represented by
+    // materialized inodes on disk.
+    state.desiredDtype = state.diskDtype;
+    state.desiredHash =
+        std::nullopt; // renamed files should always be materialized in EdenFS.
+    // This could cause hg status and hg diff to make recersive calls in EdenFS,
+    // but this is ok because the read will be served out of source control
+    // (i.e. no infinite recursion yay!). and eden knows how to make sure these
+    // things don't happen on the same thread (i.e. no deadlock double yay!).
+    state.shouldExist = true;
   } else { // if file exists normally on disk
     if (!state.inScm && !state.populatedOrFullOrTomb) {
       // Stop fixing this up since we can't materialize if it's not in scm.
+      // (except for when it's a renamed file, see the case above)
       // TODO: This is likely caused by EdenFS not having called PrjDeleteFile
       // in a previous checkout operation. We should probably call it here or
       // as a post-PrjfsChannel initialization.
@@ -418,7 +456,8 @@ std::optional<InodeNumber> fixup(
  */
 PathMap<FsckFileState> populateOnDiskChildrenState(
     AbsolutePathPiece root,
-    RelativePathPiece path) {
+    RelativePathPiece path,
+    bool fsckRenamedFiles) {
   PathMap<FsckFileState> children{CaseSensitivity::Insensitive};
   auto absPath = (root + path + "*"_pc).wide();
 
@@ -447,7 +486,8 @@ PathMap<FsckFileState> populateOnDiskChildrenState(
     }
     PathComponent name{findFileData.cFileName};
     auto& childState = children[name];
-    populateDiskState(root, path + name, childState, findFileData);
+    populateDiskState(
+        root, path + name, childState, findFileData, fsckRenamedFiles);
   } while (FindNextFileW(h, &findFileData) != 0);
 
   auto error = GetLastError();
@@ -477,7 +517,8 @@ ImmediateFuture<bool> processChildren(
     const std::shared_ptr<const Tree>& scmTree,
     const OverlayChecker::LookupCallback& callback,
     uint64_t logFrequency,
-    std::atomic<uint64_t>& traversedDirectories) {
+    std::atomic<uint64_t>& traversedDirectories,
+    bool fsckRenamedFiles) {
   XLOGF(DBG9, "processChildren - {}", path);
 
   auto traversed = traversedDirectories.fetch_add(1, std::memory_order_relaxed);
@@ -488,7 +529,7 @@ ImmediateFuture<bool> processChildren(
     XLOGF(INFO, "{} directories scanned", traversed);
   }
 
-  auto children = populateOnDiskChildrenState(root, path);
+  auto children = populateOnDiskChildrenState(root, path, fsckRenamedFiles);
 
   for (const auto& [name, overlayEntry] : insensitiveOverlayDir) {
     auto& childState = children[name];
@@ -557,7 +598,8 @@ ImmediateFuture<bool> processChildren(
                           &callback,
                           logFrequency,
                           &traversedDirectories,
-                          childInodeNumber = *childInodeNumberOpt](
+                          childInodeNumber = *childInodeNumberOpt,
+                          fsckRenamedFiles](
                              const std::shared_ptr<const Tree>& childScmTree) {
                 auto childOverlayDir =
                     *inodeCatalog.loadOverlayDir(childInodeNumber);
@@ -572,7 +614,8 @@ ImmediateFuture<bool> processChildren(
                     childScmTree,
                     callback,
                     logFrequency,
-                    traversedDirectories);
+                    traversedDirectories,
+                    fsckRenamedFiles);
               })
               .thenValue([&childState = childState,
                           childPath = childPath.copy(),
@@ -645,7 +688,8 @@ void windowsFsckScanLocalChanges(
              insensitiveOverlayDir = std::move(insensitiveOverlayDir),
              &traversedDirectories,
              &callback,
-             logFrequency = config->fsckLogFrequency.getValue()](
+             logFrequency = config->fsckLogFrequency.getValue(),
+             fsckRenamedFiles = config->prjfsFsckDetectRenames.getValue()](
                 std::variant<std::shared_ptr<const Tree>, TreeEntry> scmEntry) {
               auto scmTree =
                   std::get<std::shared_ptr<const Tree>>(std::move(scmEntry));
@@ -658,7 +702,8 @@ void windowsFsckScanLocalChanges(
                          scmTree,
                          callback,
                          logFrequency,
-                         traversedDirectories)
+                         traversedDirectories,
+                         fsckRenamedFiles)
                   .semi();
             })
         .get();

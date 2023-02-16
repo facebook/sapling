@@ -302,4 +302,20 @@ class FaultInjector {
   folly::Synchronized<State> state_;
 };
 
+/**
+ * An error type that can be injected and is intended to cause the operation
+ * to silently fail. This might be used to mimic EdenFS missing a request.
+ *
+ * For example, we want to test EdenFS missing notifications from ProjFS before
+ * it exits in some tests. Blocking them will make it hard to kill eden since
+ * part of Eden will be busy. Erroring will make Eden crash in debug mode. So
+ * we want an error that EdenFS can catch, not crash on and thus pretend to have
+ * missed the notification.
+ */
+class QuietFault : public std::runtime_error {
+ public:
+  explicit QuietFault(const std::string& what_arg)
+      : std::runtime_error(what_arg) {}
+};
+
 } // namespace facebook::eden

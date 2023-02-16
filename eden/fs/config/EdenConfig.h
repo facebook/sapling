@@ -582,6 +582,16 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * With out this FSCK will not attempt to "fix" renamed files. This can
+   * leave EdenFS out of sync with the filesystem. However this make FSCK
+   * slower.
+   */
+  ConfigSetting<bool> prjfsFsckDetectRenames{
+      "prjfs:fsck-detect-renames",
+      false,
+      this};
+
   // [hg]
 
   /**

@@ -16,7 +16,9 @@ from facebook.eden.ttypes import (
     CheckoutConflict,
     CheckoutMode,
     CheckOutRevisionParams,
+    FaultDefinition,
     GetScmStatusParams,
+    ScmFileStatus,
     SyncBehavior,
     TreeInodeDebugInfo,
 )
@@ -29,6 +31,12 @@ class WindowsFsckTest(testcase.EdenRepoTest):
     """Windows fsck integration tests"""
 
     initial_commit: str = ""
+    enable_fault_injection: bool = True
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        result = super().edenfs_extra_config() or {}
+        result.setdefault("prjfs", []).append("fsck-detect-renames = true")
+        return result
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
@@ -104,6 +112,26 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         foo.unlink()
         self.eden.start()
         self._assertNotInStatus(b"foobar/foo")
+
+    # this test is currently broken :(
+    # def test_detect_removed_file_from_placeholder_directory(self) -> None:
+    #     """Remove a file in placeholder directory when EdenFS is not running."""
+
+    #     # Materialize the file and its parent by removing and re-creating them.
+    #     self.rm("adir/file")
+    #     self.rmdir("adir")
+    #     self.write_file("adir/file", "foo!\n")
+
+    #     self.assertEqual(self._eden_status(), {})
+
+    #     afile = self.mount_path / "adir" / "file"
+    #     self.eden.shutdown()
+    #     afile.unlink()
+    #     self.eden.start()
+    #     self.assertEqual(
+    #         self._eden_status(),
+    #         {b"adir/file": ScmFileStatus.REMOVED},
+    #     )
 
     def test_fsck_not_readding_tombstone(self) -> None:
         """
@@ -212,6 +240,190 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.start()
 
         self.assertEqual(self._eden_status(), {})
+
+    def test_fsck_rename(self) -> None:
+        afile = self.mount_path / "adir" / "file"
+        afile.rename(self.mount_path / "adir" / "file-1")
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
+        )
+
+    def test_fsck_rename_hydrated(self) -> None:
+        afile = self.mount_path / "adir" / "file"
+        moved_file = self.mount_path / "adir" / "file-1"
+        afile.rename(moved_file)
+        moved_file.read_bytes()
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
+        )
+
+    def test_fsck_rename_full(self) -> None:
+        afile = self.mount_path / "adir" / "file"
+        moved_file = self.mount_path / "adir" / "file-1"
+        afile.rename(moved_file)
+        moved_file.write_bytes(b"blah")
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
+        )
+
+    # this test is currently broken :( for the same reason as the
+    # remove test above.
+    # def test_fsck_rename_while_stopped_materialized(self) -> None:
+    #     # Materialize the file and its parent by removing and re-creating them.
+    #     self.rm("adir/file")
+    #     self.rmdir("adir")
+    #     self.write_file("adir/file", "foo!\n")
+
+    #     self.assertEqual(self._eden_status(), {})
+
+    #     afile = self.mount_path / "adir" / "file"
+
+    #     self.eden.shutdown()
+    #     afile.rename(self.mount_path / "adir" / "file-1")
+    #     self.eden.start()
+
+    #     result = subprocess.run(
+    #         ["eden", "debug", "prjfs-state", str(afile)], capture_output=True
+    #     )
+    #     print(result)
+
+    #     self.assertEqual(
+    #         self._eden_status(),
+    #         {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
+    #     )
+
+    def block_notification_processing(
+        self, keyClass="PrjfsDispatcherImpl::fileNotification", keyValueRegex=".*"
+    ) -> None:
+        with self.eden.get_thrift_client_legacy() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass=keyClass,
+                    keyValueRegex=keyValueRegex,
+                    errorMessage="Blocked",
+                    errorType="quiet",
+                )
+            )
+
+    def test_fsck_miss_rename(self) -> None:
+        adir = self.mount_path / "adir"
+        afile = adir / "file"
+
+        os.listdir(adir)
+
+        self.block_notification_processing()
+
+        afile.rename(adir / "file-1")
+
+        self.eden.shutdown()
+
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
+        )
+
+    def test_fsck_miss_remove_and_replace_with_rename(self) -> None:
+        hello = self.mount_path / "hello"
+        afile = self.mount_path / "adir" / "file"
+
+        self.block_notification_processing()
+
+        hello.unlink()
+        afile.rename(hello)
+
+        self.eden.shutdown()
+
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"hello": ScmFileStatus.MODIFIED},
+        )
+
+    def test_fsck_miss_remove_and_replace_with_rename_loaded(self) -> None:
+        hello = self.mount_path / "hello"
+        afile = self.mount_path / "adir" / "file"
+
+        with hello.open() as f:
+            f.read()
+
+        self.block_notification_processing()
+
+        hello.unlink()
+        afile.rename(hello)
+
+        self.eden.shutdown()
+
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"hello": ScmFileStatus.MODIFIED},
+        )
+
+    def test_fsck_miss_remove_and_replace_with_rename_materialized(self) -> None:
+        hello = self.mount_path / "hello"
+        afile = self.mount_path / "adir" / "file"
+
+        with hello.open("w") as f:
+            f.write("")
+
+        self.block_notification_processing()
+
+        hello.unlink()
+        afile.rename(hello)
+
+        self.eden.shutdown()
+
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"hello": ScmFileStatus.MODIFIED},
+        )
+
+    def test_fsck_miss_remove_dir_and_replace_with_rename(self) -> None:
+        hello = self.mount_path / "hello"
+        adir = self.mount_path / "adir"
+        afile = adir / "file"
+
+        os.listdir(adir)
+
+        self.block_notification_processing()
+
+        afile.unlink()
+        adir.rmdir()
+        hello.rename(adir)
+
+        self.eden.shutdown()
+
+        self.eden.start()
+
+        self.assertEqual(
+            self._eden_status(),
+            {
+                b"adir": ScmFileStatus.ADDED,
+                b"adir/file": ScmFileStatus.REMOVED,
+                b"hello": ScmFileStatus.REMOVED,
+            },
+        )
 
     def _update_clean(self) -> List[CheckoutConflict]:
         with self.eden.get_thrift_client_legacy() as client:
