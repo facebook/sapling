@@ -52,7 +52,7 @@ mkdir_p(manifestFolder);
 const manifestPath = `${manifestFolder}/TextMateGrammarManifest.ts`;
 
 const node = 'node --experimental-specifier-resolution=node';
-child_process.execSync(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
+console.log(`${node} ${textmateModule}/dist/index.js ${manifestPath} ${grammarsFolder}`);
 
 fs.copyFileSync(
   '../node_modules/vscode-oniguruma/release/onig.wasm',

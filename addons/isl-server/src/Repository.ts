@@ -131,7 +131,7 @@ const FETCH_TEMPLATE = [...Object.values(FIELDS), COMMIT_END_MARK].join('\n');
  *
  * A Repository may be reused by multiple connections, not just one ISL window.
  * This is so we don't duplicate watchman subscriptions and calls to status/log.
- * A Repository does not have a pre-defined `cwd`, so it may be re-used across cwds.
+ * A Repositsanoeh unsathe ory does not have a pre-defined `cwd`, so it may be re-used across cwds.
  *
  * Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s.
  */
