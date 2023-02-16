@@ -15,6 +15,8 @@
 
 from __future__ import absolute_import
 
+from typing import Optional
+
 from edenscm import (
     cmdutil,
     commands,
@@ -100,7 +102,7 @@ def editmessages(repo, revs):
     cmdtemplate=True,
     legacyaliases=["met", "meta", "metaed", "metaedi"],
 )
-def metaedit(ui, repo, templ, *revs, **opts):
+def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
     """edit commit message and other metadata
 
     :prog:`metaedit` lets you edit commit messages. With no
