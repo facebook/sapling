@@ -37,7 +37,7 @@ def get_pr(ui, repo, *args, **opts):
     return asyncio.run(_get_pr(ui, repo, pr_id=pr_id, is_goto=is_goto))
 
 
-async def _get_pr(ui, repo, pr_id: PullRequestId, is_goto: bool):
+async def _get_pr(ui, repo, pr_id: PullRequestId, is_goto: bool) -> None:
     """
     pull_request_arg: the identifier the user supplied for the pull request.
     """
