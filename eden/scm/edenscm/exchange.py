@@ -1777,7 +1777,6 @@ def _pullcommitgraph(pullop, version):
         items = repo.edenapi.commitgraph2(heads, pullop.common)
     else:
         items = repo.edenapi.commitgraph(heads, pullop.common)
-    traceenabled = tracing.isenabled(tracing.LEVEL_DEBUG, target="pull::httpgraph")
     graphnodes = []
     draftnodes = []
     allphasesreturned = True
@@ -1788,13 +1787,12 @@ def _pullcommitgraph(pullop, version):
             allphasesreturned = False
         elif item["is_draft"]:
             draftnodes.append(node)
-        if traceenabled:
-            tracing.debug(
-                "edenapi fetched graph node: %s %r"
-                % (hex(node), [hex(n) for n in parents]),
-                target="pull::httpgraph",
-            )
         graphnodes.append((node, parents))
+
+    tracing.debug(
+        "edenapi fetched %d graph nodes" % len(graphnodes),
+        target="pull::httpgraph",
+    )
 
     if graphnodes:
         commits.addgraphnodes(graphnodes)

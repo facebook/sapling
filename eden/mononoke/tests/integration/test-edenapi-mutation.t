@@ -153,13 +153,12 @@ Test how they are propagated to client 2
   $ hgedenapi pull -r f643b098cd18 -q
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   DEBUG pull::httphashlookup: edenapi hash lookups: ['f643b098cd183f085ba3e6107b6867ca472e87d1']
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched 2 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 1 draft commits
   $ hgedenapi pull -r 929f2b9071cf -q
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   DEBUG pull::httphashlookup: edenapi hash lookups: ['929f2b9071cf032d9422b3cce9773cbe1c574822']
-  DEBUG pull::httpgraph: edenapi fetched graph node: 929f2b9071cf032d9422b3cce9773cbe1c574822 ['8b2dca0c8a726d66bf26d47835a356cc4286facd']
+  DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 1 draft commits
   $ sl
   x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)

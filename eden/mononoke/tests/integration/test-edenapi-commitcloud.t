@@ -170,9 +170,7 @@ Sync from the second client - the commits should appear
   commitcloud: nothing to upload
   pulling c4f3cf0b6f49 from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched 3 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 3 draft commits
   commitcloud: commits synchronized
   finished in * (glob)
@@ -215,9 +213,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   commitcloud: nothing to upload
   pulling c981069f3f05 from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched 3 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 3 draft commits
   commitcloud: commits synchronized
   finished in * (glob)
@@ -265,9 +261,7 @@ On the second client sync it
   commitcloud: nothing to upload
   pulling f5aa28a22f7b from mononoke://$LOCALIP:$LOCAL_PORT/repo
   searching for changes
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
-  DEBUG pull::httpgraph: edenapi fetched graph node: * (glob)
+  DEBUG pull::httpgraph: edenapi fetched 3 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 3 draft commits
   commitcloud: commits synchronized
   finished in * (glob)
