@@ -141,7 +141,6 @@ fbhistedit=
 fsmonitor=
 ghstack=
 githelp=
-github=
 gitrevset=!
 hgsubversion=!
 histedit=
@@ -619,9 +618,6 @@ pager=internal:streampager
 
 [config]
 use-rust=true
-
-[hooks]
-post-pull.prmarker=sl debugprmarker
 
 [init]
 prefer-git=True

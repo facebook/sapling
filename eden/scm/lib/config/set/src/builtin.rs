@@ -13,6 +13,7 @@ new-pull=true
 
 [extensions]
 commitcloud=!
+github=
 infinitepush=!
 remotenames=
 treemanifest=
