@@ -125,6 +125,7 @@ impl Loggable for PlainBookmarkInfo {
             .set_operation(self.operation.clone())
             .set_update_reason(self.update_reason.clone());
 
+        logger.attach_raw_scribe_write_cat()?;
         logger.log_async()?;
 
         Ok(())
