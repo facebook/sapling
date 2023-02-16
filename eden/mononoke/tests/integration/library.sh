@@ -37,7 +37,7 @@ else
   # First scsc call takes a while as scs server is doing derivation
   MONONOKE_SCS_DEFAULT_START_TIMEOUT=120
   MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
-  MONONOKE_DDS_DEFAULT_START_TIMEOUT=60
+  MONONOKE_DDS_DEFAULT_START_TIMEOUT=120
 fi
 VI_SERVICE_DEFAULT_START_TIMEOUT=60
 
@@ -50,6 +50,7 @@ REPONAME=${REPONAME:-repo}
 
 # Where we write host:port information after servers bind to :0
 MONONOKE_SERVER_ADDR_FILE="$TESTTMP/mononoke_server_addr.txt"
+DDS_SERVER_ADDR_FILE="$TESTTMP/dds_server_addr.txt"
 
 export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
 mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
@@ -2188,8 +2189,9 @@ function check_git_wc() {
 
 function derived_data_service() {
   export DDS_PORT
-  local DDS_SERVER_ADDR_FILE
-  DDS_SERVER_ADDR_FILE="$TESTTMP/dds_server_addr.txt"
+
+  rm -rf "$DDS_SERVER_ADDR_FILE"
+
   THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
   THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
@@ -2202,7 +2204,15 @@ function derived_data_service() {
 
   pid=$!
   echo "$pid" >> "$DAEMON_PIDS"
+}
 
+function start_and_wait_for_dds() {
+  derived_data_service "$@"
+  wait_for_dds
+}
+
+function wait_for_dds() {
+  export DDS_PORT
   wait_for_server "Derived data service" DDS_PORT "$TESTTMP/derived_data_service.out" \
     "${MONONOKE_DDS_START_TIMEOUT:-"$MONONOKE_DDS_DEFAULT_START_TIMEOUT"}" "$DDS_SERVER_ADDR_FILE" \
     derived_data_client get-status

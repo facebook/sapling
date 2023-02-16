@@ -59,4 +59,6 @@ pub trait DerivationClient: Send + Sync {
         &self,
         request: &thrift::DeriveRequest,
     ) -> Result<thrift::DeriveResponse>;
+
+    async fn poll(&self, request: &thrift::DeriveRequest) -> Result<thrift::DeriveResponse>;
 }
