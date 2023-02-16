@@ -9,7 +9,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Pattern
 
 from edenscm import error, git, util
 from edenscm.ext.github.consts import query
@@ -20,7 +20,7 @@ from ghstack import github_gh_cli as gh_cli
 
 from .pullrequeststore import PullRequestStore
 
-_PULL_REQUEST_ID_RE = re.compile(r"^PR(\d+)$", re.IGNORECASE)
+_PULL_REQUEST_ID_RE: Pattern[str] = re.compile(r"^PR(\d+)$", re.IGNORECASE)
 
 
 class NotGitHubRepoError:
