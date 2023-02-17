@@ -18,6 +18,8 @@ import os
 import re
 import stat
 import tempfile
+import typing
+from enum import Enum
 from typing import Dict
 
 import bindings
@@ -60,6 +62,10 @@ from . import (
 from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
 from .pycompat import ensureunicode, range
+
+if typing.TYPE_CHECKING:
+    from .ui import ui
+    from .uiconfig import uiconfig
 
 
 stringio = util.stringio
@@ -3188,6 +3194,7 @@ def displaygraph(
         for rev in reserved:
             renderer.reserve(rev)
 
+    show_abbreviated_ancestors = ShowAbbreviatedAncestorsWhen.load_from_config(repo.ui)
     for (rev, _type, ctx, parents) in dag:
         char = formatnode(repo, ctx)
         copies = None
@@ -3200,6 +3207,11 @@ def displaygraph(
         revmatchfn = None
         if filematcher is not None:
             revmatchfn = filematcher(ctx.rev())
+        if show_abbreviated_ancestors is ShowAbbreviatedAncestorsWhen.ONLYMERGE:
+            if len(parents) == 1 and parents[0][0] == graphmod.MISSINGPARENT:
+                parents = []
+        elif show_abbreviated_ancestors is ShowAbbreviatedAncestorsWhen.NEVER:
+            parents = [p for p in parents if p[0] != graphmod.MISSINGPARENT]
         width = renderer.width(rev, parents)
         displayer.show(
             ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
@@ -3217,6 +3229,39 @@ def displaygraph(
         displayer.flush(ctx)
 
     displayer.close()
+
+
+class ShowAbbreviatedAncestorsWhen(Enum):
+    ALWAYS = "always"
+    ONLYMERGE = "onlymerge"
+    NEVER = "never"
+
+    @staticmethod
+    def load_from_config(
+        config: "typing.Union[ui, uiconfig]",
+    ) -> "ShowAbbreviatedAncestorsWhen":
+        section = "experimental"
+        setting_name = "graph.show-abbreviated-ancestors"
+        value = config.config(section, setting_name)
+        if value is None:
+            return ShowAbbreviatedAncestorsWhen.ALWAYS
+        try:
+            return ShowAbbreviatedAncestorsWhen(value)
+        except ValueError:
+            pass
+        b = util.parsebool(value)
+        if b is not None:
+            return (
+                ShowAbbreviatedAncestorsWhen.ALWAYS
+                if b
+                else ShowAbbreviatedAncestorsWhen.NEVER
+            )
+        raise error.ConfigError(
+            _(
+                "%s.%s is invalid; expected 'always' or 'never' or 'onlymerge', but got '%s'"
+            )
+            % (section, setting_name, value)
+        )
 
 
 def graphlog(ui, repo, pats, opts):
