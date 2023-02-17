@@ -298,7 +298,7 @@ Test clone when destination is a file:
 
   $ touch "$TESTTMP/already_exists"
   $ hg clone -q --git "$TESTTMP/gitrepo" "$TESTTMP/already_exists"
-  abort: destination '$TESTTMP/already_exists' already exists
+  abort: destination '$TESTTMP/already_exists' exists and is not a directory
   [255]
 
 Test clone when folder is not empty:
