@@ -8,17 +8,30 @@ from __future__ import absolute_import
 
 import struct
 import time
-from typing import cast, Dict, Generator, IO, Iterable, List, Optional, Sequence, Tuple
+from typing import (
+    cast,
+    Dict,
+    Generator,
+    IO,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TYPE_CHECKING,
+)
 
 from edenscm import perftrace, progress, pycompat
 from edenscm.i18n import _
 from edenscm.node import hex, nullid
 from edenscm.pycompat import range
-from edenscm.types import UI
 
 from . import constants
 from .mutablestores import mutabledatastore, mutablehistorystore
 from .shallowutil import buildpackmeta, parsepackmeta, readexactly, readpath, readunpack
+
+if TYPE_CHECKING:
+    import edenscm
 
 
 def sendpackpart(
@@ -90,7 +103,7 @@ def closepart() -> bytes:
 
 
 def receivepack(
-    ui: "UI",
+    ui: "edenscm.ui.ui",
     fh: "IO[bytes]",
     dpack: "mutabledatastore",
     hpack: "mutablehistorystore",

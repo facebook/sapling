@@ -26,7 +26,7 @@ from .pycompat import encodeutf8, range
 
 
 if TYPE_CHECKING:
-    from .types import UI
+    import edenscm
 
 
 _missing_newline_marker = b"\\ No newline at end of file\n"
@@ -42,7 +42,7 @@ wordsplitter: Pattern[bytes] = re.compile(
 )
 
 # called by dispatch.py
-def init(ui: "UI") -> None:
+def init(ui: "edenscm.ui.ui") -> None:
     if ui.configbool("experimental", "xdiff"):
         global blocks
         # pyre-fixme[9]: blocks has type `(a: str, b: str) -> List[Tuple[int, int,
