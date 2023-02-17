@@ -2160,7 +2160,7 @@ class RageCmd(Subcmd):
             # to produce any stdout until they've taken all of their stdin. But if they
             # violate that, then the proc.wait() could fail if its stdout pipe was full,
             # since we don't consume it until afterwards.
-            if rage_processor:
+            if rage_processor and not args.stdout and not args.stderr:
                 proc = subprocess.Popen(
                     shlex.split(rage_processor),
                     stdin=subprocess.PIPE,
