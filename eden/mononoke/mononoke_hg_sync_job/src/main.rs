@@ -12,6 +12,7 @@
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -60,6 +61,7 @@ use futures::future::try_join3;
 use futures::future::BoxFuture;
 use futures::future::FutureExt as _;
 use futures::future::TryFutureExt;
+use futures::lock::Mutex;
 use futures::pin_mut;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -367,7 +369,17 @@ impl HgSyncProcess {
                     .long("bundle-prefetch")
                     .takes_value(true)
                     .required(false)
-                    .help("How many bundles to prefetch"),
+                    .help("How many bundles to prefetch (NOOP left for backwards compat)"),
+            )
+            .arg(
+                Arg::with_name("bundle-buffer-size")
+                    .long("bundle-buffer-size")
+                    .takes_value(true)
+                    .required(false)
+                    .help(
+                        "How many bundles should be gnererated and buffered in \
+                        advance of replaying (min 1, default 5)",
+                    ),
             )
             .arg(
                 Arg::with_name("exit-file")
@@ -1264,7 +1276,7 @@ async fn run<'a>(
             let start_id = args::get_usize_opt(&sub_m, "start-id")
                 .ok_or_else(|| Error::msg("--start-id must be specified"))?;
 
-            let (maybe_log_entry, (bundle_preparer, mut overlay, globalrev_syncer)) = try_join(
+            let (maybe_log_entry, (bundle_preparer, overlay, globalrev_syncer)) = try_join(
                 bookmarks
                     .read_next_bookmark_log_entries(
                         ctx.clone(),
@@ -1279,7 +1291,11 @@ async fn run<'a>(
             if let Some(log_entry) = maybe_log_entry {
                 let (stats, res) = async {
                     let batches = bundle_preparer
-                        .prepare_batches(ctx, &mut overlay, vec![log_entry.clone()])
+                        .prepare_batches(
+                            &ctx.clone(),
+                            Arc::new(Mutex::new(overlay)),
+                            vec![log_entry.clone()],
+                        )
                         .await?;
                     let mut combined_entries = bundle_preparer
                         .prepare_bundles(ctx.clone(), batches, filter_changesets)
@@ -1314,13 +1330,14 @@ async fn run<'a>(
         }
         (MODE_SYNC_LOOP, Some(sub_m)) => {
             let start_id = args::get_i64_opt(&sub_m, "start-id");
+            let bundle_buffer_size = args::get_usize_opt(&sub_m, "bundle-buffer-size").unwrap_or(5);
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let loop_forever = sub_m.is_present("loop-forever");
             let replayed_sync_counter = LatestReplayedSyncCounter::new(
                 &repo,
                 maybe_darkstorm_backup_repo.as_ref().map(|r| r.as_ref()),
             )?;
-            let exit_path = sub_m
+            let exit_path: Option<PathBuf> = sub_m
                 .value_of("exit-file")
                 .map(|name| Path::new(name).to_path_buf());
 
@@ -1352,14 +1369,12 @@ async fn run<'a>(
                     }))
                 });
 
-            let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
+            let (start_id, (bundle_preparer, overlay, globalrev_syncer)) =
                 try_join(counter, repo_parts).watched(ctx.logger()).await?;
 
             let outcome_handler = build_outcome_handler(ctx, lock_via);
 
-            borrowed!(bundle_preparer: &BundlePreparer);
-            let overlay = &mut overlay;
-            let mut seen_first = false;
+            cloned!(filter_changesets);
             let s = loop_over_log_entries(
                 ctx,
                 &bookmarks,
@@ -1368,46 +1383,62 @@ async fn run<'a>(
                 &scuba_sample,
                 combine_bundles,
                 unlock_via,
-            );
-            pin_mut!(s);
-            while let Some(entries) = s.try_next().await? {
-                if !can_continue() {
-                    break;
+            )
+            .try_filter(|entries| future::ready(!entries.is_empty()))
+            .scan(Arc::new(Mutex::new(overlay)), |overlay, entries_res| {
+                cloned!(ctx, overlay, bundle_preparer);
+                async move {
+                    let entries = match entries_res {
+                        Ok(entries) => entries,
+                        Err(err) => {
+                            return Some(Err(AnonymousError { cause: err }));
+                        }
+                    };
+                    let batches = bundle_preparer
+                        .prepare_batches(&ctx, overlay, entries)
+                        .await
+                        .map_err(|cause| AnonymousError { cause });
+                    Some(batches)
                 }
-
-                if entries.is_empty() {
-                    continue;
-                }
-
-                let mut batches = bundle_preparer
-                    .prepare_batches(ctx, overlay, entries)
-                    .watched(ctx.logger())
-                    .await
-                    .map_err(|cause| AnonymousError { cause })?;
-
-                if batches.is_empty() {
-                    continue;
-                }
-
-                if !seen_first {
-                    // In the case that the sync job failed to update the
-                    // "latest-replayed-request" counter during its previous
-                    // run, the first batch might contain entries that were
-                    // already synced to the hg server. Syncing them again
-                    // would result in an error. Let's try to detect this case
-                    // and adjust the first batch to skip the already-synced
-                    // commits, if possible.
-                    if let Some(first) = batches.first_mut() {
-                        first.maybe_adjust(ctx);
-                        seen_first = true;
+            })
+            .try_filter(|batches| future::ready(!batches.is_empty()))
+            .scan(false, move |seen_first, mut batches_res| {
+                if let Ok(batches) = batches_res.as_mut() {
+                    if !*seen_first {
+                        // In the case that the sync job failed to update the
+                        // "latest-replayed-request" counter during its previous
+                        // run, the first batch might contain entries that were
+                        // already synced to the hg server. Syncing them again
+                        // would result in an error. Let's try to detect this case
+                        // and adjust the first batch to skip the already-synced
+                        // commits, if possible.
+                        if let Some(first) = batches.first_mut() {
+                            first.maybe_adjust(ctx);
+                            *seen_first = true;
+                        }
                     }
                 }
-
-                let bundles = bundle_preparer
-                    .prepare_bundles(ctx.clone(), batches, filter_changesets.clone())
-                    .watched(ctx.logger())
-                    .await?;
-
+                future::ready(Some(batches_res))
+            })
+            .map_ok(|batches| {
+                cloned!(filter_changesets, bundle_preparer, ctx);
+                // Spawn is here so the bundling makes progress even when the
+                // latter sync stages are going on.
+                tokio::spawn(async move {
+                    let bundles = bundle_preparer
+                        .prepare_bundles(ctx.clone(), batches, filter_changesets)
+                        .watched(ctx.logger())
+                        .await?;
+                    Ok::<_, PipelineError>(bundles)
+                })
+                .map_err(|cause| AnonymousError {
+                    cause: cause.into(),
+                })
+            })
+            .try_buffered(bundle_buffer_size);
+            pin_mut!(s);
+            while let Some(bundles) = s.try_next().await? {
+                let bundles: Vec<CombinedBookmarkUpdateLogEntry> = bundles?;
                 for bundle in bundles {
                     if !can_continue() {
                         break;

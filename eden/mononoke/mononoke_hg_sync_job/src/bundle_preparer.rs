@@ -22,6 +22,7 @@ use futures::future::try_join_all;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::lock::Mutex;
 use futures_watchdog::WatchdogExt;
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
@@ -89,7 +90,7 @@ impl BundlePreparer {
     pub async fn prepare_batches(
         &self,
         ctx: &CoreContext,
-        overlay: &mut BookmarkOverlay,
+        overlay: Arc<Mutex<BookmarkOverlay>>,
         entries: Vec<BookmarkUpdateLogEntry>,
     ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
         use BookmarkUpdateReason::*;
@@ -423,15 +424,16 @@ async fn split_in_batches(
     ctx: &CoreContext,
     lca_hint: &dyn LeastCommonAncestorsHint,
     changeset_fetcher: &ArcChangesetFetcher,
-    overlay: &mut BookmarkOverlay,
+    overlay: Arc<Mutex<BookmarkOverlay>>,
     entries: Vec<BookmarkUpdateLogEntry>,
 ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
     let mut batches: Vec<BookmarkLogEntryBatch> = vec![];
+    let mut overlay = overlay.lock().await;
 
     for entry in entries {
         let entry = match batches.last_mut() {
             Some(batch) => match batch
-                .try_append(ctx, lca_hint, changeset_fetcher, overlay, entry)
+                .try_append(ctx, lca_hint, changeset_fetcher, &mut overlay, entry)
                 .watched(ctx.logger())
                 .await?
             {
@@ -442,7 +444,7 @@ async fn split_in_batches(
             },
             None => entry,
         };
-        batches.push(BookmarkLogEntryBatch::new(overlay, entry));
+        batches.push(BookmarkLogEntryBatch::new(&mut overlay, entry));
     }
 
     Ok(batches)
@@ -515,6 +517,7 @@ impl BookmarkLogEntryBatch {
 
 #[cfg(test)]
 mod test {
+
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
@@ -548,12 +551,12 @@ mod test {
             None,
             Some(commit),
         )];
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let overlay = Arc::new(Mutex::new(BookmarkOverlay::new(Arc::new(hashmap! {}))));
         let res = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            overlay.clone(),
             entries.clone(),
         )
         .await?;
@@ -566,6 +569,7 @@ mod test {
 
         // The overlay should've been mutated so that the bookmark points to
         // the latest value.
+        let overlay = overlay.lock().await;
         assert_eq!(overlay.get(&main), Some(commit));
 
         Ok(())
@@ -596,12 +600,12 @@ mod test {
             create_bookmark_log_entry(1, main.clone(), Some(commit_a), Some(commit_b)),
             create_bookmark_log_entry(2, main.clone(), Some(commit_b), Some(commit_c)),
         ];
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?;
@@ -645,12 +649,12 @@ mod test {
             log_entry_2.clone(),
             log_entry_3.clone(),
         ];
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?;
@@ -704,12 +708,12 @@ mod test {
             log_entry_2.clone(),
             log_entry_3.clone(),
         ];
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?;
@@ -752,12 +756,12 @@ mod test {
         let log_entry_2 =
             create_bookmark_log_entry(1, main.clone(), Some(commit_b), Some(commit_c));
         let entries = vec![log_entry_1.clone(), log_entry_2.clone()];
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let res = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?;
@@ -806,12 +810,12 @@ mod test {
         let entries = vec![log_entry_1, log_entry_2.clone(), log_entry_3.clone()];
 
         // Default case: no adjustment
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
         let mut batch = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?
@@ -823,14 +827,14 @@ mod test {
         assert_eq!(batch, original);
 
         // Skip a single entry
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main.clone() => commit_a,
         }));
         let mut batch = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?
@@ -845,14 +849,14 @@ mod test {
         assert_eq!(batch.entries, vec![log_entry_2, log_entry_3.clone()]);
 
         // Skip two entries
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main.clone() => commit_b,
         }));
         let mut batch = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?
@@ -867,14 +871,14 @@ mod test {
         assert_eq!(batch.entries, vec![log_entry_3]);
 
         // The whole batch was already synced - nothing to do!
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main.clone() => commit_c,
         }));
         let mut batch = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?
@@ -888,14 +892,14 @@ mod test {
 
         // Bookmark is not in the batch at all - in that case just do nothing and
         // return existing bundle
-        let mut overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
           main => commit_d,
         }));
         let mut batch = split_in_batches(
             &ctx,
             &sli,
             &repo.changeset_fetcher_arc(),
-            &mut overlay,
+            Arc::new(Mutex::new(overlay)),
             entries.clone(),
         )
         .await?
