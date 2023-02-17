@@ -187,7 +187,14 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
     target_repo: &(impl RepoIdentityRef + MutableCountersRef),
     sleep_duration: Duration,
 ) -> Result<(), Error> {
-    let target_repo_id = target_repo.repo_identity().id();
+    let largest_id = latest_id_for_repo(ctx, repo).await?;
+    wait_for_log_id_for_repo_to_be_synced(ctx, repo, target_repo, largest_id, sleep_duration).await
+}
+
+pub async fn latest_id_for_repo(
+    ctx: &CoreContext,
+    repo: &impl BookmarkUpdateLogRef,
+) -> Result<u64, Error> {
     let largest_id = match repo
         .bookmark_update_log()
         .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
@@ -196,13 +203,23 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
         Some(id) => id,
         None => return Err(format_err!("Couldn't fetch id from bookmarks update log")),
     };
+    Ok(largest_id)
+}
 
+pub async fn wait_for_log_id_for_repo_to_be_synced(
+    ctx: &CoreContext,
+    repo: &impl BookmarkUpdateLogRef,
+    target_repo: &(impl RepoIdentityRef + MutableCountersRef),
+    log_id: u64,
+    sleep_duration: Duration,
+) -> Result<(), Error> {
+    let target_repo_id = target_repo.repo_identity().id();
     /*
-        In mutable counters table we store the latest bookmark id replayed by mercurial with
-        LATEST_REPLAYED_REQUEST_KEY key. We use this key to extract the latest replayed id
-        and compare it with the largest bookmark log id after we move the bookmark.
-        If the replayed id is larger or equal to the bookmark id, we can try to move the bookmark
-        to the next batch of commits
+        In mutable counters table we store the latest bookmark id replayed by
+        mercurial with LATEST_REPLAYED_REQUEST_KEY key. We use this key to
+        extract the latest replayed id and compare it with the bookmark log id
+        provided as argument If the replayed id is larger or equal to log_id id,
+        we can try to move the bookmark to the next batch of commits
     */
     // Force first log
     let mut time_since_log = Duration::from_secs(60);
@@ -218,13 +235,13 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
                     target_repo_id
                 )
             })?;
-        if largest_id > mut_counters_value.try_into().unwrap() {
+        if log_id > mut_counters_value.try_into().unwrap() {
             if time_since_log.as_secs() >= 60 {
                 time_since_log = Duration::ZERO;
                 info!(
                     ctx.logger(),
                     "Waiting for {} to be replayed to hg, the latest replayed is {}, repo: {}",
-                    largest_id,
+                    log_id,
                     mut_counters_value,
                     target_repo.repo_identity().name(),
                 );
