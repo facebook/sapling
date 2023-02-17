@@ -27,7 +27,7 @@ def _filtercommits(repo, nodes):
             return [
                 item["hgid"] for item in stream if item["known"].get("Ok") is not True
             ]
-    except (error.RustError, error.HttpError) as e:
+    except (error.UncategorizedNativeError, error.HttpError) as e:
         raise error.Abort(e)
 
 
@@ -64,7 +64,7 @@ def _filteruploaded(repo, files, trees):
             ]
 
             return missingfiles, missingtrees
-    except (error.RustError, error.HttpError) as e:
+    except (error.UncategorizedNativeError, error.HttpError) as e:
         raise error.Abort(e)
 
 
@@ -91,7 +91,7 @@ def _uploadfilenodes(repo, fctxs):
                 component="edenapi",
             )
 
-    except (error.RustError, error.HttpError) as e:
+    except (error.UncategorizedNativeError, error.HttpError) as e:
         raise error.Abort(e)
 
 
@@ -113,7 +113,7 @@ def _uploadtrees(repo, trees):
                 % len(trees),
                 component="edenapi",
             )
-    except (error.RustError, error.HttpError) as e:
+    except (error.UncategorizedNativeError, error.HttpError) as e:
         raise error.Abort(e)
 
 
@@ -145,7 +145,7 @@ def _uploadchangesets(repo, changesets, mutations):
                 "edenapi_uploaded_changesets", edenapi_uploaded_changesets=len(uploaded)
             )
             return uploaded, failed
-    except (error.RustError, error.HttpError) as e:
+    except (error.UncategorizedNativeError, error.HttpError) as e:
         raise error.Abort(e)
 
 

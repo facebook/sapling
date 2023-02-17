@@ -8,7 +8,7 @@ Make sure that Windows is unable to check out paths with `..\` in their path.
   $ tar -xf $TESTDIR/brokengitrepo.tar.gz -C $TESTTMP/brokengitrepo
 #if windows
   $ hg clone --git "$TESTTMP/brokengitrepo" brokencopy 2>&1 | tail -8
-  error.RustError: Can't write 'RepoPath("..\\windowstroublemaker.txt")' after handling error "Can't write into ..\windowstroublemaker.txt
+  error.UncategorizedNativeError: Can't write 'RepoPath("..\\windowstroublemaker.txt")' after handling error "Can't write into ..\windowstroublemaker.txt
   
   Caused by:
       Invalid component .. in path ..\windowstroublemaker.txt"

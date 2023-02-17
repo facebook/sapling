@@ -301,7 +301,7 @@ def _builddynmatcher(
             badfn=badfn,
         )
         return m
-    except (error.RustError, ValueError):
+    except (error.UncategorizedNativeError, ValueError):
         # possible exceptions:
         #   * TreeMatcher: Regex("Compiled regex exceeds size limit of 10485760 bytes.")
         #   * RegexMatcher: doesn't support '\b' and '\B'
@@ -1264,7 +1264,7 @@ def _buildpatternmatcher(
             try:
                 m1 = _buildtreematcher(root, cwd, globs, badfn=badfn)
                 m2 = _buildregexmatcher(root, cwd, regexs, badfn=badfn)
-            except (error.RustError, ValueError):
+            except (error.UncategorizedNativeError, ValueError):
                 # just fallback to patternmatcher.
                 # possible exceptions:
                 #   * disable XXX matcher, but their coresponding pats are not empty
@@ -1292,7 +1292,7 @@ def _buildtreematcher(root, cwd, rules, badfn) -> Optional[treematcher]:
     >>> rules = ['a/b/*/c/d/e/f/g/%s/**' % i for i in range(10000)]
     >>> try:
     ...     _buildtreematcher(os.getcwd(), '', rules, None)
-    ... except error.RustError as e:
+    ... except error.UncategorizedNativeError as e:
     ...     print("got expected exception")
     got expected exception
     """

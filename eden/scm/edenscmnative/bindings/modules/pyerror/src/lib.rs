@@ -20,7 +20,7 @@ py_exception!(error, NonUTF8Path);
 py_exception!(error, WorkingCopyError);
 py_exception!(error, RepoInitError);
 py_exception!(error, RevisionstoreError);
-py_exception!(error, RustError);
+py_exception!(error, UncategorizedNativeError);
 py_exception!(error, TlsError);
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -39,7 +39,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     )?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "NeedSlowPathError", py.get_type::<NeedSlowPathError>())?;
-    m.add(py, "RustError", py.get_type::<RustError>())?;
+    m.add(
+        py,
+        "UncategorizedNativeError",
+        py.get_type::<UncategorizedNativeError>(),
+    )?;
     m.add(py, "WorkingCopyError", py.get_type::<WorkingCopyError>())?;
     m.add(py, "RepoInitError", py.get_type::<RepoInitError>())?;
     m.add(
@@ -225,7 +229,10 @@ fn register_error_handlers() {
     }
 
     fn fallback_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
-        Some(PyErr::new::<RustError, _>(py, format!("{:?}", e)))
+        Some(PyErr::new::<UncategorizedNativeError, _>(
+            py,
+            format!("{:?}", e),
+        ))
     }
 
     error::register("010-specific", specific_error_handler);

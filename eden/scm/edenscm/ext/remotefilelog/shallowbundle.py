@@ -626,7 +626,7 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         # The server may not always have the manifests (like when we need to do
         # a conversion from a flat manifest to a tree), so eat it and let the
         # later fetch fail if necessary.
-        # XXX: This doesn't work at all since the missing nodes error is RustError now
+        # XXX: This doesn't work at all since the missing nodes error is UncategorizedNativeError now
         pass
 
     return result

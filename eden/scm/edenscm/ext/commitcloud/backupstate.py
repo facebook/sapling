@@ -69,7 +69,7 @@ class BackupState(object):
                 nodes = {
                     item["hgid"] for item in stream if item["known"].get("Ok") is True
                 }
-            except (error.RustError, error.HttpError) as e:
+            except (error.UncategorizedNativeError, error.HttpError) as e:
                 raise error.Abort(e)
         else:
 

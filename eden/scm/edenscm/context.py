@@ -480,7 +480,7 @@ class changectx(basectx):
                     OverflowError,
                     IndexError,
                     TypeError,
-                    error.RustError,
+                    error.UncategorizedNativeError,
                 ):
                     pass
 
@@ -1345,7 +1345,7 @@ class filectx(basefilectx):
     def size(self) -> int:
         try:
             return self._filelog.size(self._filerev)
-        except error.RustError:
+        except error.UncategorizedNativeError:
             # For submodule, this raises "object not found" error.
             # Let's just return a dummy size.
             if self.flags() == "m":

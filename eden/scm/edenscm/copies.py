@@ -186,7 +186,7 @@ def _gitfindcopies(repo, oldnode, newnode):
     try:
         gitcopytrace = _newgitcopytrace(repo)
         return gitcopytrace.findcopies(oldnode, newnode)
-    except error.RustError:
+    except error.UncategorizedNativeError:
         return {}
 
 
