@@ -38,6 +38,21 @@ Linear stack:
   $ sl log -r 'bottom()'
   E
 
+With revset aliases:
+
+  $ sl config -q --local 'revsetalias.prev=previous' 'revsetalias.previous=previous()'
+
+  $ sl log -r prev
+  F
+  $ sl log -r 'prev(2)'
+  E
+  $ sl log -r 'previous'
+  F
+  $ sl log -r 'previous()'
+  F
+  $ sl log -r 'previous(2)'
+  E
+
 Multiple choices:
 
   $ newclientrepo

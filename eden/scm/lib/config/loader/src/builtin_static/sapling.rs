@@ -426,8 +426,11 @@ style=sl_default
 [revsetalias]
 sb(n)=first(sort(bookmark(), -rev), n)
 sba=sort(bookmark(), -rev)
-top=heads(. ::)
-bottom=first(draft() & ::.)
+top=top()
+bottom=bottom()
+next=next()
+prev=previous
+previous=previous()
 base=last(public() & ::.)
 obsrelated(x)=mutrelated(x)
 focusedsmartlog(x)=focusedbranch(x) + draftbranch(x)^ + present(master)
