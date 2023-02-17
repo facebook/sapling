@@ -18,6 +18,7 @@ py_exception!(error, MetaLogError);
 py_exception!(error, NeedSlowPathError);
 py_exception!(error, NonUTF8Path);
 py_exception!(error, WorkingCopyError);
+py_exception!(error, RepoInitError);
 py_exception!(error, RevisionstoreError);
 py_exception!(error, RustError);
 py_exception!(error, TlsError);
@@ -40,6 +41,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "NeedSlowPathError", py.get_type::<NeedSlowPathError>())?;
     m.add(py, "RustError", py.get_type::<RustError>())?;
     m.add(py, "WorkingCopyError", py.get_type::<WorkingCopyError>())?;
+    m.add(py, "RepoInitError", py.get_type::<RepoInitError>())?;
     m.add(
         py,
         "RevisionstoreError",
@@ -155,6 +157,11 @@ fn register_error_handlers() {
             Some(dag::Error::VertexNotFound(_)) | Some(dag::Error::IdNotFound(_))
         ) {
             Some(PyErr::new::<CommitLookupError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
+            ))
+        } else if e.is::<repo::errors::InitError>() {
+            Some(PyErr::new::<RepoInitError, _>(
                 py,
                 cpython_ext::Str::from(e.to_string()),
             ))
