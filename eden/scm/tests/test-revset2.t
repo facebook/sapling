@@ -1187,13 +1187,13 @@ test unknown reference:
   (func
     (symbol 'rs')
     None)
-  hg: parse error: invalid number of arguments: 0
+  hg: parse error: unknown identifier: rs
   [255]
   $ try 'rs(2)'
   (func
     (symbol 'rs')
     (symbol '2'))
-  hg: parse error: invalid number of arguments: 1
+  hg: parse error: unknown identifier: rs
   [255]
   $ try 'rs(2, data, 7)'
   (func
@@ -1202,7 +1202,7 @@ test unknown reference:
       (symbol '2')
       (symbol 'data')
       (symbol '7')))
-  hg: parse error: invalid number of arguments: 3
+  hg: parse error: unknown identifier: rs
   [255]
   $ try 'rs4(2 or 3, x, x, date)'
   (func

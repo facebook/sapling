@@ -666,10 +666,13 @@ class basealiasrules(object):
     def buildmap(cls, items):
         """Parse a list of alias (name, replacement) pairs into a dict of
         alias objects"""
+        # Support overloading by using different arg counts
+        # {(name, arg_count | None): alias}
         aliases = {}
         for decl, defn in items:
             a = cls.build(decl, defn)
-            aliases[a.name] = a
+            arg_count = None if a.args is None else len(a.args)
+            aliases[(a.name, arg_count)] = a
         return aliases
 
     @classmethod
@@ -681,13 +684,13 @@ class basealiasrules(object):
             return None
         if tree[0] == cls._symbolnode:
             name = tree[1]
-            a = aliases.get(name)
+            a = aliases.get((name, None))
             if a and a.args is None:
                 return a, None
         func = cls._trygetfunc(tree)
         if func:
             name, args = func
-            a = aliases.get(name)
+            a = aliases.get((name, len(args)))
             if a and a.args is not None:
                 return a, args
         return None
@@ -705,25 +708,46 @@ class basealiasrules(object):
         return tuple(cls._expandargs(t, args) for t in tree)
 
     @classmethod
-    def _expand(cls, aliases, tree, expanding, cache):
+    def _expand(cls, aliases, tree, expanding, cache, isfuncname: bool = False):
         if not isinstance(tree, tuple):
             return tree
         r = cls._getalias(aliases, tree)
         if r is None:
-            return tuple(cls._expand(aliases, t, expanding, cache) for t in tree)
+            if tree[0] == "func":
+                # ex. ('func', ('symbol', 'funcname'), None)
+                # Set isfuncname for ('symbol', 'funcname')
+                return tuple(
+                    cls._expand(aliases, t, expanding, cache, isfuncname=i == 1)
+                    for i, t in enumerate(tree)
+                )
+            else:
+                return tuple(cls._expand(aliases, t, expanding, cache) for t in tree)
         a, l = r
+        # Do not expand a function name ('symbol', 'name') to a function.
+        # This allows aliases that converts a symbol to a function with the same name:
+        # foo = foo(x)
+        # It won't be expanded to (foo(x))(x) or infinitely (foo(foo(x))(x))(x) ...
+        if (
+            isfuncname
+            and isinstance(a.replacement, tuple)
+            and a.replacement[0] == "func"
+        ):
+            return tree
+        key = (a.name, None if a.args is None else len(a.args))
         if a.error:
             raise error.Abort(a.error)
-        if a in expanding:
+        if key in expanding:
             raise error.ParseError(
                 _("infinite expansion of %(section)s " '"%(name)s" detected')
                 % {"section": cls._section, "name": a.name}
             )
         # get cacheable replacement tree by expanding aliases recursively
-        expanding.append(a)
-        if a.name not in cache:
-            cache[a.name] = cls._expand(aliases, a.replacement, expanding, cache)
-        result = cache[a.name]
+        expanding.append(key)
+        if key not in cache:
+            cache[key] = cls._expand(
+                aliases, a.replacement, expanding, cache, isfuncname=isfuncname
+            )
+        result = cache[key]
         expanding.pop()
         if a.args is None:
             return result

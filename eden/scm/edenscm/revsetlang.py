@@ -533,12 +533,57 @@ class _aliasrules(parser.basealiasrules):
 
 
 def expandaliases(tree, aliases, warn=None):
-    """Expand aliases in a tree, aliases is a list of (name, value) tuples"""
+    """Expand aliases in a tree, aliases is a list of (name, value) tuples
+
+    Simple expansion:
+
+        >>> expandaliases(('symbol', 'foo'), [('foo', 'bar')])
+        ('symbol', 'bar')
+
+    Last definition wins:
+
+        >>> expandaliases(('symbol', 'foo'), [('foo', 'bar1'), ('foo', 'bar2')])
+        ('symbol', 'bar2')
+
+    Function name replacement:
+
+        >>> expandaliases(parse('foo()'), [('foo', 'bar')])
+        ('func', ('symbol', 'bar'), None)
+
+    Overloading using the same name:
+
+        >>> expandaliases(parse('foo'), [('foo', 'foo(1)'), ('foo(x)', 'foo(x,2)')])
+        ('func', ('symbol', 'foo'), ('list', ('symbol', '1'), ('symbol', '2')))
+
+        >>> expandaliases(parse('foo'), [('foo', 'foo()')])
+        ('func', ('symbol', 'foo'), None)
+
+        >>> expandaliases(parse('foo(2)'), [('foo', 'bar'), ('bar', 'bar()')])
+        ('func', ('symbol', 'bar'), ('symbol', '2'))
+
+        >>> expandaliases(parse('foo'), [('foo(x)', 'foo'), ('foo', 'foo(1,2)')])
+        ('func', ('symbol', 'foo'), ('list', ('symbol', '1'), ('symbol', '2')))
+
+        >>> expandaliases(parse('foo(3)'), [('foo(x)', 'foo'), ('foo', 'foo(1,2)')])
+        ('func', ('symbol', 'foo'), ('list', ('symbol', '1'), ('symbol', '2')))
+
+    Alias loop:
+
+        >>> expandaliases(parse('foo(3)'), [('foo(x)', 'foo'), ('foo', 'foo(1)')])
+        Traceback (most recent call last):
+          ...
+        edenscm.error.ParseError: infinite expansion of revset alias "foo" detected
+
+        >>> expandaliases(parse('foo'), [('foo', 'foo()'), ('foo()', 'foo(1)'), ('foo(x)', 'foo')])
+        Traceback (most recent call last):
+          ...
+        edenscm.error.ParseError: infinite expansion of revset alias "foo" detected
+    """
     aliases = _aliasrules.buildmap(aliases)
     tree = _aliasrules.expand(aliases, tree)
     # warn about problematic (but not referred) aliases
     if warn is not None:
-        for name, alias in sorted(pycompat.iteritems(aliases)):
+        for (name, _args), alias in sorted(pycompat.iteritems(aliases)):
             if alias.error and not alias.warned:
                 warn(_("warning: %s\n") % (alias.error))
                 alias.warned = True
