@@ -288,16 +288,23 @@ impl PrefetchCmd {
         let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
         let result = checkout_config
             .and_then(|mut config| config.activate_profile(profile_name, config_dir, force_fetch));
-        if let Err(e) = result {
-            #[cfg(fbcode_build)]
-            {
-                sample.fail(&e.to_string());
+        match result {
+            Ok(res) => {
+                #[cfg(fbcode_build)]
                 send(sample.builder);
+                if !res {
+                    return Ok(0);
+                }
             }
-            return Err(anyhow::Error::new(e));
-        }
-        #[cfg(fbcode_build)]
-        send(sample.builder);
+            Err(e) => {
+                #[cfg(fbcode_build)]
+                {
+                    sample.fail(&e.to_string());
+                    send(sample.builder);
+                }
+                return Err(anyhow::Error::new(e));
+            }
+        };
 
         let checkout = find_checkout(instance, &options.checkout).with_context(|| {
             anyhow!(
