@@ -854,7 +854,9 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     dest, opts = adjust_push_dest_opts(ui, dest, opts)
     if git.isgitpeer(repo):
         if dest is None:
-            dest = "default"
+            dest = "default-push"
+            if dest not in ui.paths:
+                dest = "default"
         force = opts.get("force")
         delete = opts.get("delete")
         if delete:
