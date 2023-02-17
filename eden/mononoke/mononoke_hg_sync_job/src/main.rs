@@ -397,6 +397,13 @@ impl HgSyncProcess {
                     .takes_value(true)
                     .required(false)
                     .help("How many bundles to combine into a single bundle before sending to hg"),
+            )
+            .arg(
+                Arg::with_name("max-commits-per-combined-bundle")
+                    .long("max-commits-per-combined-bundle")
+                    .takes_value(true)
+                    .required(false)
+                    .help("How many commits should be maximally put in combined bundle (takes precednce over the number of bundles)"),
             );
         let app = app.subcommand(sync_once).subcommand(sync_loop);
 
@@ -1295,6 +1302,7 @@ async fn run<'a>(
                             &ctx.clone(),
                             Arc::new(Mutex::new(overlay)),
                             vec![log_entry.clone()],
+                            1, // Won't be respected anyway since we're batching a single entry.
                         )
                         .await?;
                     let mut combined_entries = bundle_preparer
@@ -1332,6 +1340,8 @@ async fn run<'a>(
             let start_id = args::get_i64_opt(&sub_m, "start-id");
             let bundle_buffer_size = args::get_usize_opt(&sub_m, "bundle-buffer-size").unwrap_or(5);
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
+            let max_commits_per_combined_bundle =
+                args::get_u64_opt(&sub_m, "max-commits-per-combined-bundle").unwrap_or(100);
             let loop_forever = sub_m.is_present("loop-forever");
             let replayed_sync_counter = LatestReplayedSyncCounter::new(
                 &repo,
@@ -1395,7 +1405,7 @@ async fn run<'a>(
                         }
                     };
                     let batches = bundle_preparer
-                        .prepare_batches(&ctx, overlay, entries)
+                        .prepare_batches(&ctx, overlay, entries, max_commits_per_combined_bundle)
                         .await
                         .map_err(|cause| AnonymousError { cause });
                     Some(batches)

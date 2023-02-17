@@ -33,6 +33,7 @@ use mononoke_hg_sync_job_helper_lib::save_bytes_to_temp_file;
 use mononoke_hg_sync_job_helper_lib::write_to_named_temp_file;
 use mononoke_types::datetime::Timestamp;
 use mononoke_types::ChangesetId;
+use mononoke_types::Generation;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use slog::info;
@@ -92,6 +93,7 @@ impl BundlePreparer {
         ctx: &CoreContext,
         overlay: Arc<Mutex<BookmarkOverlay>>,
         entries: Vec<BookmarkUpdateLogEntry>,
+        commit_limit: u64,
     ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
         use BookmarkUpdateReason::*;
 
@@ -111,6 +113,7 @@ impl BundlePreparer {
             &self.repo.changeset_fetcher_arc(),
             overlay,
             entries,
+            commit_limit,
         )
         .await
     }
@@ -363,6 +366,7 @@ impl BookmarkLogEntryBatch {
         changeset_fetcher: &ArcChangesetFetcher,
         overlay: &mut BookmarkOverlay,
         entry: BookmarkUpdateLogEntry,
+        commit_limit: u64,
     ) -> Result<Result<(), BookmarkUpdateLogEntry>, Error> {
         // Combine two bookmark update log entries only if bookmark names are the same
         if self.bookmark_name != entry.bookmark_name {
@@ -404,6 +408,30 @@ impl BookmarkLogEntryBatch {
         if self.to_cs_id != entry.from_changeset_id {
             return Ok(Err(entry));
         }
+        match entry.to_changeset_id {
+            Some(to_cs_id) => {
+                let (from_gen, to_gen) = try_join(
+                    async {
+                        match self.from_cs_id {
+                            Some(from_cs_id) => {
+                                changeset_fetcher
+                                    .get_generation_number(ctx, from_cs_id)
+                                    .await
+                            }
+                            None => Ok(Generation::new(0)),
+                        }
+                    },
+                    changeset_fetcher.get_generation_number(ctx, to_cs_id),
+                )
+                .await?;
+                if let Some(diff) = to_gen.difference_from(from_gen) {
+                    if diff > commit_limit {
+                        return Ok(Err(entry));
+                    }
+                }
+            }
+            _ => {}
+        }
 
         self.push(overlay, entry);
         Ok(Ok(()))
@@ -426,6 +454,7 @@ async fn split_in_batches(
     changeset_fetcher: &ArcChangesetFetcher,
     overlay: Arc<Mutex<BookmarkOverlay>>,
     entries: Vec<BookmarkUpdateLogEntry>,
+    commit_limit: u64,
 ) -> Result<Vec<BookmarkLogEntryBatch>, Error> {
     let mut batches: Vec<BookmarkLogEntryBatch> = vec![];
     let mut overlay = overlay.lock().await;
@@ -433,7 +462,14 @@ async fn split_in_batches(
     for entry in entries {
         let entry = match batches.last_mut() {
             Some(batch) => match batch
-                .try_append(ctx, lca_hint, changeset_fetcher, &mut overlay, entry)
+                .try_append(
+                    ctx,
+                    lca_hint,
+                    changeset_fetcher,
+                    &mut overlay,
+                    entry,
+                    commit_limit,
+                )
                 .watched(ctx.logger())
                 .await?
             {
@@ -558,6 +594,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             overlay.clone(),
             entries.clone(),
+            1000,
         )
         .await?;
 
@@ -607,6 +644,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?;
 
@@ -615,6 +653,56 @@ mod test {
         assert_eq!(res[0].bookmark_name, main);
         assert_eq!(res[0].from_cs_id, None);
         assert_eq!(res[0].to_cs_id, Some(commit_c));
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_split_in_batches_commit_limit(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
+
+        let commits = create_from_dag(
+            &ctx,
+            &repo,
+            r##"
+                A-B-C
+            "##,
+        )
+        .await?;
+
+        let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
+
+        let main = BookmarkName::new("main")?;
+        let commit_a = commits.get("A").cloned().unwrap();
+        let commit_b = commits.get("B").cloned().unwrap();
+        let commit_c = commits.get("C").cloned().unwrap();
+        let entries = vec![
+            create_bookmark_log_entry(0, main.clone(), None, Some(commit_a)),
+            create_bookmark_log_entry(1, main.clone(), Some(commit_a), Some(commit_b)),
+            create_bookmark_log_entry(2, main.clone(), Some(commit_b), Some(commit_c)),
+        ];
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let res = split_in_batches(
+            &ctx,
+            &sli,
+            &repo.changeset_fetcher_arc(),
+            Arc::new(Mutex::new(overlay)),
+            entries.clone(),
+            2,
+        )
+        .await?;
+
+        assert_eq!(res.len(), 2);
+        assert_eq!(res[0].entries[..], entries[..=1]);
+        assert_eq!(res[0].bookmark_name, main);
+        assert_eq!(res[0].from_cs_id, None);
+        assert_eq!(res[0].to_cs_id, Some(commit_b));
+
+        assert_eq!(res[1].entries[..], entries[2..]);
+        assert_eq!(res[1].bookmark_name, main);
+        assert_eq!(res[1].from_cs_id, Some(commit_b));
+        assert_eq!(res[1].to_cs_id, Some(commit_c));
 
         Ok(())
     }
@@ -656,6 +744,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?;
 
@@ -715,6 +804,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?;
 
@@ -763,6 +853,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?;
 
@@ -817,6 +908,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?
         .into_iter()
@@ -836,6 +928,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?
         .into_iter()
@@ -858,6 +951,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?
         .into_iter()
@@ -880,6 +974,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?
         .into_iter()
@@ -901,6 +996,7 @@ mod test {
             &repo.changeset_fetcher_arc(),
             Arc::new(Mutex::new(overlay)),
             entries.clone(),
+            1000,
         )
         .await?
         .into_iter()
