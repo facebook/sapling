@@ -179,9 +179,6 @@ class CheckoutConfig(typing.NamedTuple):
     require_utf8_path: bool
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
-    active_prefetch_profiles: List[str]
-    predictive_prefetch_profiles_active: bool
-    predictive_prefetch_num_dirs: int
     enable_tree_overlay: bool
     use_write_back_cache: bool
     re_use_case: str
@@ -1235,21 +1232,10 @@ class EdenCheckout:
                 "use-write-back-cache": checkout_config.use_write_back_cache,
             },
             "redirections": redirections,
-            "profiles": {
-                "active": checkout_config.active_prefetch_profiles,
-            },
-            "predictive-prefetch": {
-                "predictive-prefetch-active": checkout_config.predictive_prefetch_profiles_active,
-            },
             "recas": {
                 "use-case": checkout_config.re_use_case,
             },
         }
-
-        if checkout_config.predictive_prefetch_num_dirs:
-            config_data["predictive-prefetch"][
-                "predictive-prefetch-num-dirs"
-            ] = checkout_config.predictive_prefetch_num_dirs
 
         util.write_file_atomically(
             self._config_path(), toml.dumps(config_data).encode()
@@ -1338,39 +1324,6 @@ class EdenCheckout:
                         f"{str(exc)}"
                     )
 
-        prefetch_profiles = []
-        prefetch_profiles_list = config.get("profiles")
-
-        if prefetch_profiles_list is not None:
-            prefetch_profiles_list = prefetch_profiles_list.get("active")
-            if prefetch_profiles_list is not None:
-                if not isinstance(prefetch_profiles_list, list):
-                    raise Exception(f"{config_path} has an invalid [profiles] section")
-                for profile in prefetch_profiles_list:
-                    if not isinstance(profile, str):
-                        raise Exception(
-                            f"{config_path} has invalid value in "
-                            f"[profiles] {profile} (string expected)"
-                        )
-
-                    prefetch_profiles.append(profile)
-
-        predictive_prefetch_active = False
-        predictive_num_dirs = 0
-        predictive_prefetch_profiles_config = config.get("predictive-prefetch")
-
-        if predictive_prefetch_profiles_config is not None:
-            predictive_prefetch_active = predictive_prefetch_profiles_config.get(
-                "predictive-prefetch-active"
-            )
-            predictive_num_dirs = predictive_prefetch_profiles_config.get(
-                "predictive-prefetch-num-dirs"
-            )
-            # if predictive-prefetch-num-dirs is not set in config.toml, set
-            # predictive_num_dirs to 0 to avoid None != 0 comparisons elsewhere
-            if predictive_num_dirs is None:
-                predictive_num_dirs = 0
-
         enable_tree_overlay = repository.get("enable-tree-overlay")
         # Older mount that doesn't have tree overlay setting should remain disabled.
         if not isinstance(enable_tree_overlay, bool):
@@ -1397,9 +1350,6 @@ class EdenCheckout:
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
-            active_prefetch_profiles=prefetch_profiles,
-            predictive_prefetch_profiles_active=predictive_prefetch_active,
-            predictive_prefetch_num_dirs=predictive_num_dirs,
             enable_tree_overlay=enable_tree_overlay,
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
@@ -1471,123 +1421,6 @@ class EdenCheckout:
 
     def get_backing_repo_path(self) -> Path:
         return self.get_config().backing_repo
-
-    def activate_profile(
-        self,
-        profile: str,
-        telemetry_sample: telemetry.TelemetrySample,
-        force_fetch: bool,
-    ) -> int:
-        """Add a profile to the config (read the config file and write it back
-        with profile added). Returns 0 on sucess and anything else on failure.
-        Note this should print information on why it failed if this is not
-        returning 0."""
-
-        old_config = self.get_config()
-        old_active_profiles = old_config.active_prefetch_profiles
-        if profile in old_active_profiles:
-            # The profile is already activated so we don't need to update the profile list,
-            # but we want to return zero so we continue with the fetch
-            if force_fetch:
-                return 0
-            print(f"Profile {profile} already activated.")
-            telemetry_sample.fail(f"Profile {profile} already activated.")
-            return 1
-
-        new_active_profiles = old_active_profiles.copy()
-        new_active_profiles.append(profile)
-
-        new_config = old_config._replace(
-            active_prefetch_profiles=new_active_profiles,
-        )
-
-        self.save_config(new_config)
-        return 0
-
-    def deactivate_profile(
-        self, profile: str, telemetry_sample: telemetry.TelemetrySample
-    ) -> int:
-        """Remove a profile to the config (read the config file and write it back
-        with profile added). Returns 0 on sucess and anything else on failure.
-        Note this should print information on why it failed if this is not
-        returning 0."""
-
-        old_config = self.get_config()
-        old_active_profiles = old_config.active_prefetch_profiles
-        if profile not in old_active_profiles:
-            print(f"Profile {profile} was not deactivated since it wasn't active.")
-            telemetry_sample.fail(
-                f"Profile {profile} was not deactivated since it wasn't active."
-            )
-            return 1
-
-        new_active_profiles = old_active_profiles.copy()
-        new_active_profiles.remove(profile)
-
-        new_config = old_config._replace(
-            active_prefetch_profiles=new_active_profiles,
-        )
-
-        self.save_config(new_config)
-        return 0
-
-    def activate_predictive_profile(
-        self, num_dirs: int, telemetry_sample: telemetry.TelemetrySample
-    ) -> int:
-        """Switch on predictive prefetch profiles (read the config file and write it back
-        with predictive_prefetch_profiles_active set to True, set or update predictive_prefetch
-        _num_dirs if specified). Returns 0 on sucess and anything else on failure.
-        Note this should print information on why it failed if this is not
-        returning 0."""
-
-        old_config = self.get_config()
-        # if predictive prefetch is already activated and num_dirs matches the config, skip activation
-        if (
-            old_config.predictive_prefetch_profiles_active
-            and num_dirs == old_config.predictive_prefetch_num_dirs
-        ):
-            if num_dirs:
-                msg = f"Predictive prefetch profile is already activated with {num_dirs} directories configured."
-            else:
-                msg = (
-                    "Predictive prefetch profile is already activated by default args."
-                )
-            print(msg)
-            telemetry_sample.fail(msg)
-            return 1
-
-        new_config = old_config._replace(
-            predictive_prefetch_profiles_active=True,
-            predictive_prefetch_num_dirs=num_dirs,
-        )
-
-        self.save_config(new_config)
-        return 0
-
-    def deactivate_predictive_profile(
-        self, telemetry_sample: telemetry.TelemetrySample
-    ) -> int:
-        """Switch off predictive prefetch profiles (read the config file and write it back
-        with predictive_profile_profiles_active set to False, unset predictive_prefetch_num_dirs).
-        Returns 0 on sucess and anything else on failure. Note this should print information
-        on why it failed if this is not returning 0."""
-
-        old_config = self.get_config()
-        if not old_config.predictive_prefetch_profiles_active:
-            print(
-                "Predictive prefetch profile was not deactivated since it wasn't active."
-            )
-            telemetry_sample.fail(
-                "Predictive prefetch profile was not deactivated since it wasn't active."
-            )
-            return 1
-
-        new_config = old_config._replace(
-            predictive_prefetch_profiles_active=False, predictive_prefetch_num_dirs=0
-        )
-
-        self.save_config(new_config)
-        return 0
 
     def migrate_mount_protocol(self, new_mount_protocol: str) -> None:
         """
