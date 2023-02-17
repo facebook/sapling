@@ -212,7 +212,7 @@ def _reposnames(ui):
 @revsetpredicate("smartlog([heads], [master])")
 def smartlogrevset(repo, subset, x):
     """``smartlog([heads], [master])``
-    Changesets relevent to you.
+    Changesets relevant to you.
 
     'heads' overrides what feature branches to include.
     (default: 'interestingbookmarks() + heads(draft()) + .')

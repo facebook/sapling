@@ -9,15 +9,26 @@ from __future__ import absolute_import
 
 from itertools import count
 
-from edenscm import bookmarks, cmdutil, commands, error, phases, registrar, scmutil
+from edenscm import (
+    bookmarks,
+    cmdutil,
+    commands,
+    error,
+    phases,
+    registrar,
+    revsetlang,
+    scmutil,
+)
 from edenscm.i18n import _
 from edenscm.node import hex, nullrev, short
 
-from . import common
+from . import common, revsets
 
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+revsetpredicate = revsets.revsetpredicate
 
 moveopts = [
     ("C", "clean", False, _("discard uncommitted changes (no backup)")),
@@ -520,3 +531,52 @@ def _activate(ui, repo, node):
         b = ui.label(marks[0], "bookmarks.active")
         ui.status(_("(activating bookmark %s)\n") % b)
         bookmarks.activate(repo, marks[0])
+
+
+@revsetpredicate("next([n])")
+def _next(repo, subset, x):
+    """``next([n=1])``
+    The next commit in the stack.
+    Similar to ``.~-n``, except prompting for ambiguous choices.
+    """
+    args = revsetlang.getargs(x, 0, 1, _("next takes at most one argument"))
+    n = args and revsetlang.getinteger(args[0], _("next requires an integer")) or 1
+    node = _findnexttarget(repo.ui, repo, n=n)
+    return _torevset(repo, subset, node)
+
+
+@revsetpredicate("previous([n])")
+def _previous(repo, subset, x):
+    """``previous([n=1])``
+    The previous commit.
+    Similar to ``.~n``, except prompting for ambiguous choices.
+    """
+    args = revsetlang.getargs(x, 0, 1, _("previous takes at most one argument"))
+    n = args and revsetlang.getinteger(args[0], _("previous requires an integer")) or 1
+    node = _findprevtarget(repo.ui, repo, n=n)
+    return _torevset(repo, subset, node)
+
+
+@revsetpredicate("top()")
+def _top(repo, subset, x):
+    """``top()``
+    Top of the draft stack.
+    """
+    revsetlang.getargs(x, 0, 0, _("top takes no arguments"))
+    node = _findstacktop(repo.ui, repo)
+    return _torevset(repo, subset, node)
+
+
+@revsetpredicate("bottom()")
+def _bottom(repo, subset, x):
+    """``top()``
+    Bottom of the draft stack.
+    """
+    revsetlang.getargs(x, 0, 0, _("bottom takes no arguments"))
+    node = _findstackbottom(repo.ui, repo)
+    return _torevset(repo, subset, node)
+
+
+def _torevset(repo, subset, node):
+    cl = repo.changelog
+    return subset & cl.torevset(cl.dag.sort([node]))
