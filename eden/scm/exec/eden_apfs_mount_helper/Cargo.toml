@@ -17,7 +17,7 @@ once_cell = "1.12"
 plist = "0.5"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
-sha2 = "0.10"
+sha2 = "0.10.6"
 structopt = "0.3.23"
 
 [dev-dependencies]

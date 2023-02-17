@@ -53,7 +53,7 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-sha2 = "0.10"
+sha2 = "0.10.6"
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
