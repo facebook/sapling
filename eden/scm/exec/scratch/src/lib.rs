@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use sha2::digest::Digest;
+use sha2::Sha256;
+
 /// Normalizes various path format on Windows. This function will convert
 /// various Windows path format to full path form. Note this function does not
 /// canonicalize the given path. So it does not collapse dots nor expand
@@ -72,6 +75,20 @@ pub fn zzencode(path: &str) -> String {
     result
 }
 
+/// When the user needs a shorter path, we allow them to get a hash instead of zz-encoding.
+pub fn hashencode(path: &str) -> String {
+    #[cfg(windows)]
+    let path = &normalize_windows_path(path);
+
+    let mut hasher = Sha256::new();
+    hasher.update(path.as_bytes());
+
+    let hash = hasher.finalize();
+
+    // Don't take the full hash, since the point is to be shorter.
+    hex::encode(&hash[0..8])
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -114,5 +131,11 @@ mod test {
             normalize_windows_path(r"\\?\UNC\server\foo\bar"),
             r"\\server\foo\bar"
         );
+    }
+
+    #[test]
+    fn test_hash() {
+        // A smoke test to make sure we don't accidentally change the hash.
+        assert_eq!(hashencode("test"), "9f86d081884c7d65");
     }
 }

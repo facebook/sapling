@@ -32,6 +32,7 @@ use clap::App;
 use clap::AppSettings;
 use clap::Arg;
 use clap::SubCommand;
+use mkscratch::hashencode;
 use mkscratch::zzencode;
 use serde::Deserialize;
 
@@ -232,6 +233,11 @@ fn run() -> Result<()> {
                         .value_name("PATH"),
                 )
                 .arg(
+                    Arg::with_name("hash")
+                        .long("hash")
+                        .help("don't zzencode the path, and use a hash instead (for shorter but less intelligible paths)"),
+                )
+                .arg(
                     Arg::with_name("watchable")
                         .long("watchable")
                         .help("the returned scratch space needs to be watchable by watchman"),
@@ -256,7 +262,12 @@ fn run() -> Result<()> {
             let subdir = cmd.value_of("subdir");
             let watchable = cmd.is_present("watchable");
             let repo = cmd.value_of("REPO");
-            path_command(&config, no_create, subdir, watchable, repo)
+            let encoder = if cmd.is_present("hash") {
+                &hashencode as _
+            } else {
+                &zzencode as _
+            };
+            path_command(&config, no_create, subdir, watchable, repo, encoder)
         }
         // AppSettings::SubcommandRequired should mean that this is unpossible
         _ => unreachable!("wut?"),
@@ -411,7 +422,7 @@ fn get_file_owner(_path: &Path) -> Result<String> {
 /// Resolves the root directory to use as the scratch space for a given
 /// repository path.  This is the function that performs expansion of
 /// the $USER and $HOME placeholder tokens in the configured template.
-fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf> {
+fn scratch_root(config: &Config, path: &Path, encoder: &dyn Fn(&str) -> String) -> Result<PathBuf> {
     let repo_owner = get_file_owner(path)?;
     let template = config.template_for_path(path, &repo_owner);
 
@@ -427,7 +438,7 @@ fn scratch_root(config: &Config, path: &Path) -> Result<PathBuf> {
             .replace("$HOME", &home),
     );
 
-    root.push(zzencode(
+    root.push(encoder(
         path.to_str()
             .ok_or(format_err!("{:?} cannot be converted to utf8", path))?,
     ));
@@ -496,6 +507,7 @@ fn path_command(
     subdir: Option<&str>,
     watchable: bool,
     path: Option<&str>,
+    encoder: &dyn Fn(&str) -> String,
 ) -> Result<()> {
     // Canonicalize the provided path.  If no path was provided, fall
     // back to the cwd.
@@ -510,7 +522,7 @@ fn path_command(
     let repo_root = locate_repo_root(&path)?.unwrap_or(&path);
 
     // Get the base scratch path for this repo
-    let mut result = scratch_root(&config, repo_root)?;
+    let mut result = scratch_root(&config, repo_root, encoder)?;
     readme_in_scratch_path(&result)?;
     let repo_owner = get_file_owner(repo_root)?;
 
@@ -527,7 +539,7 @@ fn path_command(
                 bail!("subdir path contains parent component: {:?}", subdir);
             }
         } else {
-            result.push(zzencode(subdir));
+            result.push(encoder(subdir));
         }
     }
 
