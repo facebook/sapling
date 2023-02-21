@@ -26,26 +26,40 @@ use crate::repo::RepoContext;
 const HGGIT_MARKER_EXTRA: &str = "hg-git-rename-source";
 const HGGIT_MARKER_VALUE: &[u8] = b"git";
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
+const GIT_OBJECT_PREFIX: &str = "git_object";
+const SEPARATOR: &str = ".";
 
 #[derive(Clone, Debug, Error)]
-pub enum GitObjectError {
+pub enum GitError {
     /// The provided hash and the derived hash do not match for the given content.
     #[error("Input hash {0} does not match the SHA1 hash {1} of the content")]
     HashMismatch(String, String),
 
+    #[error("Input hash {0} is not a valid SHA1 git hash")]
+    InvalidHash(String),
+
     /// A new bubble could not be created.
-    #[error("Invalid git object content provided for object ID (hash) {0}. Cause: {1}")]
+    #[error("Invalid git object content provided for object ID {0}. Cause: {1}")]
     InvalidContent(String, GitInternalError),
 
     /// The requested bubble does not exist.  Either it was never created or has expired.
     #[error(
-        "The object corresponding to object ID {0} is a git blob. Cannot upload raw blob content."
+        "The object corresponding to object ID {0} is a git blob. Cannot upload raw blob content"
     )]
     DisallowedBlobObject(String),
 
-    /// Failed to store the git object in Mononoke store.
-    #[error("Failed to store the git object (ID: {0}) in blobstore. Cause: {1}")]
+    /// Failed to get or store the git object in Mononoke store.
+    #[error("Failed to get or store the git object (ID: {0}) in blobstore. Cause: {1}")]
     StorageFailure(String, GitInternalError),
+
+    /// The git object doesn't exist in the Mononoke store.
+    #[error("The object corresponding to object ID {0} does not exist in the data store")]
+    NonExistentObject(String),
+
+    #[error(
+        "Validation failure while persisting git object (ID: {0}) as a bonsai changeset. Cause: {1}"
+    )]
+    InvalidBonsai(String, GitInternalError),
 }
 
 cloneable_error!(GitInternalError);
@@ -96,12 +110,12 @@ impl RepoContext {
         &self,
         git_hash: &git_hash::oid,
         serialized_representation: Vec<u8>,
-    ) -> anyhow::Result<(), GitObjectError> {
+    ) -> anyhow::Result<(), GitError> {
         // Check if the provided Sha1 hash (i.e. ObjectId) of the bytes actually corresponds to the hash of the bytes
         let bytes = bytes::Bytes::from(serialized_representation);
         let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
         if sha1_hash.as_ref() != git_hash.as_bytes() {
-            return Err(GitObjectError::HashMismatch(
+            return Err(GitError::HashMismatch(
                 git_hash.to_hex().to_string(),
                 sha1_hash.to_hex().to_string(),
             ));
@@ -109,7 +123,7 @@ impl RepoContext {
         // Check if the bytes actually correspond to a valid Git object
         let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
         let git_obj = git_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
-            GitObjectError::InvalidContent(
+            GitError::InvalidContent(
                 git_hash.to_hex().to_string(),
                 anyhow::anyhow!(e.to_string()).into(),
             )
@@ -117,35 +131,53 @@ impl RepoContext {
         // Check if the git object is not a raw content blob. Raw content blobs are uploaded directly through
         // LFS. This method supports git commits, trees, tags, notes and similar pointer objects.
         if let git_object::ObjectRef::Blob(_) = git_obj {
-            return Err(GitObjectError::DisallowedBlobObject(
+            return Err(GitError::DisallowedBlobObject(
                 git_hash.to_hex().to_string(),
             ));
         }
         // The bytes are valid, upload to blobstore with the key:
         // git_object_{hex-value-of-hash}
-        let blobstore_key = format!("git_object_{}", git_hash.to_hex());
+        let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
         self.repo_blobstore()
             .put(&self.ctx, blobstore_key, blobstore_bytes)
             .await
-            .map_err(|e| GitObjectError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
+            .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
     }
 
     /// Create Mononoke counterpart of Git tree object
-    pub async fn create_git_tree(&self, git_tree_hash: &git_hash::oid) -> anyhow::Result<()> {
+    pub async fn create_git_tree(
+        &self,
+        git_tree_hash: &git_hash::oid,
+    ) -> anyhow::Result<(), GitError> {
+        let blobstore_key = format!(
+            "{}{}{}",
+            GIT_OBJECT_PREFIX,
+            SEPARATOR,
+            git_tree_hash.to_hex()
+        );
+        // Before creating the Mononoke version of the git tree, validate if the raw git
+        // tree is stored in the blobstore
+        let get_result = self
+            .repo_blobstore()
+            .get(&self.ctx, &blobstore_key)
+            .await
+            .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))?;
+        if get_result.is_none() {
+            return Err(GitError::NonExistentObject(
+                git_tree_hash.to_hex().to_string(),
+            ));
+        }
         let mut changeset = BonsaiChangesetMut::default();
         // Get git hash from tree object ID
-        let git_hash = GitSha1::from_bytes(git_tree_hash.as_bytes()).with_context(|| {
-            format!(
-                "Invalid GitSha1 hash {:?} provided for the Git tree",
-                git_tree_hash
-            )
-        })?;
+        let git_hash = GitSha1::from_bytes(git_tree_hash.as_bytes())
+            .map_err(|_| GitError::InvalidHash(git_tree_hash.to_hex().to_string()))?;
         // Store hash in the changeset
         changeset.git_tree_hash = Some(git_hash);
         // Freeze the changeset to determine if there are any errors
-        let changeset = changeset.freeze().map_err(|e| {
-            MononokeError::InvalidRequest(format!("Changes create invalid bonsai changeset: {}", e))
-        })?;
+        let changeset = changeset
+            .freeze()
+            .map_err(|e| GitError::InvalidBonsai(git_tree_hash.to_hex().to_string(), e.into()))?;
+
         // Store the created changeset
         blobrepo::save_bonsai_changesets(
             vec![changeset.clone()],
@@ -153,11 +185,6 @@ impl RepoContext {
             self.inner_repo(),
         )
         .await
-        .with_context(|| {
-            format!(
-                "Failure in saving bonsai changeset for git tree {:?}",
-                git_tree_hash
-            )
-        })
+        .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
     }
 }

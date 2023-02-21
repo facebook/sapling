@@ -17,7 +17,7 @@ use git_hash::ObjectId;
 use git_object::Tag;
 use git_object::WriteTo;
 
-use crate::repo::git::GitObjectError;
+use crate::repo::git::GitError;
 use crate::CoreContext;
 use crate::Repo;
 use crate::RepoContext;
@@ -73,7 +73,7 @@ async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
-        GitObjectError::DisallowedBlobObject(_)
+        GitError::DisallowedBlobObject(_)
     ));
     Ok(())
 }
@@ -101,7 +101,7 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
-        GitObjectError::InvalidContent(..)
+        GitError::InvalidContent(..)
     ));
     Ok(())
 }
@@ -127,7 +127,7 @@ async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
         .await;
     assert!(matches!(
         output.expect_err("Expected error during git object upload"),
-        GitObjectError::HashMismatch(..)
+        GitError::HashMismatch(..)
     ));
     Ok(())
 }
@@ -150,7 +150,7 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
 
     let bytes_to_hash = bytes::Bytes::from(bytes.clone());
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
-    let blobstore_key = format!("git_object_{}", sha1_hash.to_hex());
+    let blobstore_key = format!("git_object.{}", sha1_hash.to_hex());
     repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await?;
@@ -166,8 +166,32 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
 async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo_ctx = init_repo(&ctx).await?;
-    let git_tree_hash = ObjectId::empty_tree(git_hash::Kind::Sha1);
+
+    let tree = git_object::Tree { entries: vec![] };
+    let mut bytes = tree.loose_header().into_vec();
+    tree.write_to(bytes.by_ref())?;
+
+    let bytes_to_hash = bytes::Bytes::from(bytes.clone());
+    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
+    let git_tree_hash = git_hash::oid::try_from_bytes(sha1_hash.as_ref())?;
+    repo_ctx.upload_git_object(git_tree_hash, bytes).await?;
+
     let output = repo_ctx.create_git_tree(&git_tree_hash).await;
     output.expect("Expected git tree to be created successfully");
+    Ok(())
+}
+
+#[fbinit::test]
+/// Validate the create git tree method fails when the tree doesn't exist in Mononoke store.
+async fn invalid_create_git_tree(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo_ctx = init_repo(&ctx).await?;
+    let git_tree_hash = git_hash::ObjectId::empty_tree(git_hash::Kind::Sha1);
+
+    let output = repo_ctx.create_git_tree(&git_tree_hash).await;
+    assert!(matches!(
+        output.expect_err("Expected error during create git tree"),
+        GitError::NonExistentObject(..)
+    ));
     Ok(())
 }
