@@ -8,7 +8,7 @@
 import type {CommitInfo, SuccessorInfo} from './types';
 
 import {islDrawerState} from './App';
-import {hasUnsavedEditedCommitMessage} from './CommitInfo';
+import {hasUnsavedEditedCommitMessage} from './CommitInfoState';
 import {BranchIndicator} from './CommitTreeList';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
