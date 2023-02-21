@@ -14,6 +14,7 @@ import type {
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
+import {defer} from 'shared/utils';
 
 export type IncomingMessage = ServerToClientMessage;
 export type OutgoingMessage = ClientToServerMessage | ClientToServerMessageWithPayload;
@@ -70,6 +71,25 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
         }
       },
     };
+  }
+
+  /**
+   * Returns the next message in the stream of `type` that also matches the given predicate.
+   */
+  nextMessageMatching<T extends IncomingMessage['type']>(
+    type: T,
+    test: (message: IncomingMessage & {type: T}) => boolean,
+  ): Promise<IncomingMessage & {type: T}> {
+    const deferred = defer<IncomingMessage & {type: T}>();
+    let dispose: Disposable | null = this.onMessageOfType(type, message => {
+      if (test(message)) {
+        dispose?.dispose();
+        dispose = null;
+        deferred.resolve(message);
+      }
+    });
+
+    return deferred.promise;
   }
 
   postMessage(message: ClientToServerMessage) {
