@@ -7,6 +7,7 @@
 
 import type {ThemeColor} from './theme';
 import type {Disposable, PlatformName, RepoRelativePath} from './types';
+import type {Comparison} from 'shared/Comparison';
 
 import {browserPlatform} from './BrowserPlatform';
 
@@ -19,6 +20,7 @@ export interface Platform {
   platformName: PlatformName;
   confirm(message: string, details?: string): Promise<boolean>;
   openFile(path: RepoRelativePath): void;
+  openDiff?(path: RepoRelativePath, comparison: Comparison): void;
   openExternalLink(url: string): void;
   clipboardCopy(value: string): void;
 

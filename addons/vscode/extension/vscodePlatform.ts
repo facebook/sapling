@@ -35,6 +35,15 @@ export const VSCodePlatform: ServerPlatform = {
           vscode.window.showTextDocument(uri);
           break;
         }
+        case 'platform/openDiff': {
+          if (repo == null) {
+            break;
+          }
+          const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
+          const uri = vscode.Uri.file(path);
+          vscode.commands.executeCommand('sapling.open-file-diff', uri, message.comparison);
+          break;
+        }
         case 'platform/openExternal': {
           vscode.env.openExternal(vscode.Uri.parse(message.url));
           break;

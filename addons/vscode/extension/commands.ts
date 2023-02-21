@@ -47,6 +47,14 @@ export function registerCommands(): Array<vscode.Disposable> {
       makeDiffHandler({type: ComparisonType.StackChanges}),
     ),
   );
+  disposables.push(
+    vscode.commands.registerCommand(
+      'sapling.open-file-diff',
+      (uri: vscode.Uri, comparison: Comparison) => {
+        openDiffView(uri, comparison);
+      },
+    ),
+  );
 
   return disposables;
 }

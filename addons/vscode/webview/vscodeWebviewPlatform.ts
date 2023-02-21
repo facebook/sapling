@@ -7,6 +7,8 @@
 
 import type {Platform} from 'isl/src/platform';
 import type {ThemeColor} from 'isl/src/theme';
+import type {RepoRelativePath} from 'isl/src/types';
+import type {Comparison} from 'shared/Comparison';
 
 export const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
@@ -25,6 +27,8 @@ export const vscodeWebviewPlatform: Platform = {
     });
   },
   openFile: path => window.clientToServerAPI?.postMessage({type: 'platform/openFile', path}),
+  openDiff: (path: RepoRelativePath, comparison: Comparison) =>
+    window.clientToServerAPI?.postMessage({type: 'platform/openDiff', path, comparison}),
   openExternalLink: url => {
     window.clientToServerAPI?.postMessage({type: 'platform/openExternal', url});
   },

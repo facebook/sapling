@@ -389,6 +389,27 @@ const revertableStatues = new Set(['M', 'R', '!']);
 function FileActions({file}: {file: ChangedFile}) {
   const runOperation = useRunOperation();
   const actions: Array<React.ReactNode> = [];
+
+  if (platform.openDiff != null) {
+    actions.push(
+      <Tooltip title={t('Open diff view')} key="revert" delayMs={1000}>
+        <VSCodeButton
+          className="file-show-on-hover"
+          appearance="icon"
+          data-testid="file-revert-button"
+          onClick={() => {
+            platform.openDiff?.(
+              file.path,
+              // TODO: also show diff button on other commits
+              {type: ComparisonType.UncommittedChanges},
+            );
+          }}>
+          <Icon icon="git-pull-request-go-to-changes" />
+        </VSCodeButton>
+      </Tooltip>,
+    );
+  }
+
   if (revertableStatues.has(file.status)) {
     actions.push(
       <Tooltip title={t('Revert back to original')} key="revert" delayMs={1000}>
