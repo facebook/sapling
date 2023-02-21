@@ -287,15 +287,32 @@ export const CommitInfoTestUtils = {
     });
   },
 
-  getTitleEditor(): HTMLInputElement {
-    const title = screen.getByTestId('commit-info-title-field') as HTMLInputElement;
+  /** Get the outer custom element for the title editor (actually just a div in tests) */
+  getTitleWrapper(): HTMLDivElement {
+    const title = screen.getByTestId('commit-info-title-field') as HTMLDivElement;
     expect(title).toBeInTheDocument();
     return title;
   },
-  getDescriptionEditor(): HTMLTextAreaElement {
-    const description = screen.getByTestId('commit-info-description-field') as HTMLTextAreaElement;
+  /** Get the inner textarea for the title editor (inside the fake shadow dom) */
+  getTitleEditor(): HTMLTextAreaElement {
+    const textarea = CommitInfoTestUtils.getTitleWrapper();
+    return (textarea as unknown as {control: HTMLTextAreaElement}).control;
+  },
+
+  /** Get the outer custom element for the description editor (actually just a div in tests) */
+  getDescriptionWrapper(): HTMLDivElement {
+    const description = screen.getByTestId('commit-info-description-field') as HTMLDivElement;
     expect(description).toBeInTheDocument();
     return description;
+  },
+  /** Get the inner textarea for the description editor (inside the fake shadow dom) */
+  getDescriptionEditor(): HTMLTextAreaElement {
+    const textarea = CommitInfoTestUtils.getDescriptionWrapper();
+    return (textarea as unknown as {control: HTMLTextAreaElement}).control;
+  },
+
+  descriptionTextContent() {
+    return CommitInfoTestUtils.getDescriptionEditor().value;
   },
 
   clickToEditTitle() {

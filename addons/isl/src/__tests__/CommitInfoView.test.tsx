@@ -391,8 +391,7 @@ describe('CommitInfoView', () => {
           clickToEditTitle();
 
           await waitFor(() => {
-            const titleEditor: HTMLInputElement = screen.getByTestId('commit-info-title-field');
-            expect(titleEditor).toHaveFocus();
+            expect(getTitleEditor()).toHaveFocus();
           });
         });
 
@@ -1201,8 +1200,7 @@ describe('CommitInfoView', () => {
             await clickAmendAs();
 
             await waitFor(() => {
-              const titleEditor: HTMLInputElement = screen.getByTestId('commit-info-title-field');
-              expect(titleEditor).toHaveFocus();
+              expect(getTitleEditor()).toHaveFocus();
             });
           });
         });
@@ -1221,8 +1219,7 @@ describe('CommitInfoView', () => {
             clickCommitAs();
 
             await waitFor(() => {
-              const titleEditor: HTMLInputElement = screen.getByTestId('commit-info-title-field');
-              expect(titleEditor).toHaveFocus();
+              expect(getTitleEditor()).toHaveFocus();
             });
           });
 
@@ -1230,8 +1227,7 @@ describe('CommitInfoView', () => {
             await clickAmendAs();
 
             await waitFor(() => {
-              const titleEditor: HTMLInputElement = screen.getByTestId('commit-info-title-field');
-              expect(titleEditor).toHaveFocus();
+              expect(getTitleEditor()).toHaveFocus();
             });
             expect(getTitleEditor().value).toEqual('Head Commit');
 
@@ -1245,8 +1241,7 @@ describe('CommitInfoView', () => {
             await waitFor(() => {
               expect(getTitleEditor().value).toEqual('');
             });
-            const titleEditor: HTMLInputElement = screen.getByTestId('commit-info-title-field');
-            expect(titleEditor).toHaveFocus();
+            expect(getTitleEditor()).toHaveFocus();
           });
         });
       });

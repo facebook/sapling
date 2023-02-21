@@ -22,6 +22,16 @@ import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect, type FormEvent} from 'react';
 
 /**
+ * VSCodeTextArea elements use custom components, which renders in a shadow DOM.
+ * Most often, we want to access the inner <textarea>, which acts like a normal textarea.
+ */
+export function getInnerTextareaForVSCodeTextArea(
+  outer: HTMLElement | null,
+): HTMLTextAreaElement | null {
+  return outer == null ? null : (outer as unknown as {control: HTMLTextAreaElement}).control;
+}
+
+/**
  * Wrap `VSCodeTextArea` to auto-resize to minimum height and disallow newlines.
  * Like a `VSCodeTextField` that has text wrap inside.
  */
@@ -85,7 +95,8 @@ export function CommitInfoField({
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current && autoFocus) {
-      (ref.current as HTMLInputElement | null)?.focus();
+      const inner = getInnerTextareaForVSCodeTextArea(ref.current as HTMLElement);
+      inner?.focus();
     }
   }, [autoFocus, ref]);
   const Component = which === 'title' ? MinHeightTextField : VSCodeTextArea;

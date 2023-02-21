@@ -6,6 +6,7 @@
  */
 
 import clientToServerAPI from './ClientToServerAPI';
+import {getInnerTextareaForVSCodeTextArea} from './TextArea';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -91,10 +92,7 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObjec
         ) as Record<number, ImageUploadStatus>,
       };
 
-      const textArea =
-        textAreaRef.current == null
-          ? null
-          : (textAreaRef.current as {control: HTMLInputElement}).control;
+      const textArea = getInnerTextareaForVSCodeTextArea(textAreaRef.current as HTMLElement | null);
       if (textArea) {
         for (const id of canceledIds) {
           const placeholder = placeholderForImageUpload(id);
@@ -162,9 +160,8 @@ export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
   return useRecoilCallback(({snapshot, set}) => async (files: Array<File>) => {
     let {next} = snapshot.getLoadable(imageUploadState).valueOrThrow();
 
-    const textArea =
-      ref.current == null ? null : (ref.current as {control: HTMLInputElement}).control;
-    if (textArea) {
+    const textArea = getInnerTextareaForVSCodeTextArea(ref.current as HTMLElement);
+    if (textArea != null) {
       // capture snapshot of next before doing async work
       // we need to account for all files in this batch
 
@@ -261,7 +258,7 @@ function PaperclipIcon() {
  * Replace text in a text area.
  * Re-adjust cursor & selection to be the same as before the replacement.
  */
-function replaceInTextArea(textArea: HTMLInputElement, oldText: string, newText: string) {
+function replaceInTextArea(textArea: HTMLTextAreaElement, oldText: string, newText: string) {
   const {selectionStart, selectionEnd} = textArea;
   const insertionSpot = textArea.value.indexOf(oldText);
   textArea.value = textArea.value.replace(oldText, newText);
@@ -287,7 +284,7 @@ function replaceInTextArea(textArea: HTMLInputElement, oldText: string, newText:
  * If text is selected, replace the selected text with the new text.
  * If nothing is selected, append to the end.
  */
-function insertAtCursor(textArea: HTMLInputElement, text: string) {
+function insertAtCursor(textArea: HTMLTextAreaElement, text: string) {
   if (textArea.selectionStart != null) {
     const startPos = textArea.selectionStart;
     const endPos = textArea.selectionEnd;

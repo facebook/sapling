@@ -14,9 +14,9 @@ import type {
   VSCodeRadio as VSCodeRadioType,
   VSCodeRadioGroup as VSCodeRadioGroupType,
 } from '@vscode/webview-ui-toolkit/react';
-import type {FormEvent, JSXElementConstructor} from 'react';
+import type {FormEvent, JSXElementConstructor, MutableRefObject} from 'react';
 
-import React, {forwardRef} from 'react';
+import React, {useEffect, useRef, forwardRef} from 'react';
 
 // vscode webview-ui-toolkit uses ES Modules, which doesn't play well with jest transpilation yet.
 // We need to provide mock verison of these components for now
@@ -45,14 +45,45 @@ export const VSCodeTextField = forwardRef<HTMLInputElement>(
     );
   },
 );
-export const VSCodeTextArea = forwardRef<HTMLTextAreaElement>(
-  (p: {children?: React.ReactNode; onChange?: () => void}, ref) => {
-    const {children, onChange, ...rest} = p;
+
+export const VSCodeTextArea = forwardRef<HTMLDivElement>(
+  (
+    p: {
+      children?: React.ReactNode;
+      onChange?: () => void;
+      className?: string;
+      'data-testid'?: string;
+    },
+    ref,
+  ) => {
+    const {children, className, ['data-testid']: dataid, ...innerProps} = p;
+    const outerProps = {className, ['data-testid']: dataid};
+
+    const backupOuterRef = useRef(null);
+    const outerRef = (ref ?? backupOuterRef) as MutableRefObject<HTMLDivElement>;
+    const innerRef = useRef(null);
+
+    // The actual VSCodeTextArea is a shadow element.
+    // jest and react testing library don't handle those well,
+    // so we mimic it with a div and a nested textarea.
+    // we need to take care to be able to reference the inner textarea part via `.control`,
+    // or else our testing code wouldn't match production.
+    useEffect(() => {
+      if (outerRef?.current && innerRef.current) {
+        (outerRef.current as HTMLDivElement & {control: HTMLElement}).control = innerRef.current;
+      }
+    }, [outerRef, innerRef]);
     return (
-      <>
-        {children && <label>{children}</label>}
-        <textarea {...rest} ref={ref} onChange={onChange ?? (() => undefined)} />
-      </>
+      <div ref={outerRef} {...outerProps}>
+        <label>{children}</label>
+        <textarea
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - part is not usually allowed
+          part="control"
+          ref={innerRef}
+          {...innerProps}
+          onChange={innerProps.onChange ?? (() => undefined)}></textarea>
+      </div>
     );
   },
 );
