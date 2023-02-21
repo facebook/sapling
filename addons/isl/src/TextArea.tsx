@@ -109,6 +109,15 @@ export function CommitInfoField({
       <Component
         ref={ref}
         {...props}
+        onPaste={
+          !supportsImageUpload
+            ? null
+            : (event: ClipboardEvent) => {
+                if (event.clipboardData != null && event.clipboardData.files.length > 0) {
+                  uploadFiles([...event.clipboardData.files]);
+                }
+              }
+        }
         value={editedMessage[which]}
         data-testid={`commit-info-${which}-field`}
         onInput={(event: FormEvent) => {
