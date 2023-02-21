@@ -1027,13 +1027,13 @@ def supportedoutgoingversions(repo) -> Set[str]:
     return versions
 
 
-def localversion(repo):
+def localversion(repo) -> str:
     # Finds the best version to use for bundles that are meant to be used
     # locally, such as those from strip and shelve, and temporary bundles.
     return max(supportedoutgoingversions(repo))
 
 
-def safeversion(repo):
+def safeversion(repo) -> str:
     # Finds the smallest version that it's safe to assume clients of the repo
     # will support. For example, all hg versions that support generaldelta also
     # support changegroup 02.
