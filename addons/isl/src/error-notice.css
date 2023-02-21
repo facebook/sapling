@@ -7,14 +7,15 @@
 
 .error-notice {
   --errpadding: 20px;
+
   margin: var(--errpadding);
   padding: var(--errpadding);
-  border: 2px solid var(--scm-removed-foreground);
-  color: var(--scm-removed-foreground);
-  border-radius: 1px;
+  border-radius: var(--pad);
+  background-color: var(--error-bg-color);
+  color: var(--error-fg-color);
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: var(--pad);
   cursor: pointer;
   flex-wrap: wrap;
 }
@@ -51,5 +52,22 @@
   flex-direction: row;
   flex-grow: 1;
   overflow: hidden;
-  gap: 10px;
+  gap: var(--pad);
+}
+
+.inline-error-badge .tooltip-creator {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+
+  background-color: var(--error-bg-color);
+  color: var(--error-fg-color);
+  font-weight: 600;
+  border-radius: var(--halfpad);
+  padding: var(--halfpad) var(--pad);
+}
+
+.inline-error-tooltip {
+  max-width: 500px;
 }

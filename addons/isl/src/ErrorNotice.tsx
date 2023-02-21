@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ReactNode} from 'react';
+
+import {Tooltip} from './Tooltip';
 import React, {useState, Component} from 'react';
 import {Icon} from 'shared/Icon';
 
@@ -60,4 +63,36 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+/**
+ * One-line error message, which shows the full ErrorNotice in a tooltip on hover.
+ */
+export function InlineErrorBadge({
+  children,
+  error,
+  title,
+}: {
+  children: ReactNode;
+  error: Error;
+  title?: ReactNode;
+}) {
+  return (
+    <div className="inline-error-badge">
+      <Tooltip component={TooltipErrorDetails(error, title)}>
+        <Icon icon="error" slot="start" />
+        <span>{children}</span>
+      </Tooltip>
+    </div>
+  );
+}
+
+function TooltipErrorDetails(error: Error, title?: ReactNode) {
+  return function Component() {
+    return (
+      <div className="inline-error-tooltip">
+        <ErrorNotice title={title ?? error.message} error={error} />
+      </div>
+    );
+  };
 }

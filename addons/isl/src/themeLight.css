@@ -15,6 +15,9 @@
   --tooltip-background: var(--vscode-editorWidget-background, #f3f3f3);
   --tooltip-border: var(--vscode-editorWidget-border, #c8c8c8);
 
+  --error-fg-color: #e35941ff;
+  --error-bg-color: #e3594120;
+
   --hover-darken: rgba(0, 0, 0, 0.1);
 
   /* github PR colors */

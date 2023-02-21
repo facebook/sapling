@@ -9,8 +9,11 @@
 .vscode-dark {
   --scm-modified-foreground: #e2c08d;
   --scm-added-foreground: #73c991;
-  --scm-removed-foreground: #e35941;
+  --scm-removed-foreground: #f3674f;
   --selected-commit-background: rgba(255, 255, 255, 0.1);
+
+  --error-fg-color: #f3674f;
+  --error-bg-color: #f3674f20;
 
   --tooltip-background: var(--vscode-editorWidget-background, #252526);
   --tooltip-border: var(--vscode-editorWidget-border, #454545);
