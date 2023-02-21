@@ -190,10 +190,25 @@
   display: none;
 }
 
-.cancel-image-upload {
+.upload-status {
   cursor: pointer;
   user-select: none;
   min-height: 22px;
+  display: flex;
+}
+
+.upload-status-error {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+}
+
+.upload-status-error vscode-button {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.upload-status-error:hover vscode-button {
+  opacity: 1;
 }
 
 .image-drop-zone {

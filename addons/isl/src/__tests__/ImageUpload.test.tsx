@@ -230,6 +230,14 @@ describe('Image upload inside TextArea ', () => {
       expect(screen.queryByText('Uploading 1 file')).toBeInTheDocument();
     });
 
+    it('shows upload errors', async () => {
+      await startFileUpload('1111');
+      await simulateUploadFailed('1111');
+      expect(screen.getByText('1 file upload failed')).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('dismiss-upload-errors'));
+      expect(screen.queryByText('1 file upload failed')).not.toBeInTheDocument();
+    });
+
     it('handles multiple placeholders', async () => {
       await startFileUpload('1111');
       expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();

@@ -6,6 +6,7 @@
  */
 
 import clientToServerAPI from './ClientToServerAPI';
+import {InlineErrorBadge} from './ErrorNotice';
 import {getInnerTextareaForVSCodeTextArea} from './TextArea';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
@@ -18,7 +19,7 @@ import {randomId} from 'shared/utils';
 export type ImageUploadStatus = {id: number} & (
   | {status: 'pending'}
   | {status: 'complete'}
-  | {status: 'error'}
+  | {status: 'error'; error: Error; resolved: boolean}
   | {status: 'canceled'}
 );
 export const imageUploadState = atom<{next: number; states: Record<number, ImageUploadStatus>}>({
@@ -30,6 +31,17 @@ export const numPendingImageUploads = selector({
   get: ({get}): number => {
     const state = get(imageUploadState);
     return Object.values(state.states).filter(state => state.status === 'pending').length;
+  },
+});
+type UnresolvedErrorImageUploadStatus = ImageUploadStatus & {status: 'error'; resolved: false};
+export const unresolvedErroredImagedUploads = selector({
+  key: 'unresolvedErroredImagedUploads',
+  get: ({get}): Array<UnresolvedErrorImageUploadStatus> => {
+    const state = get(imageUploadState);
+    return Object.values(state.states).filter(
+      (state): state is UnresolvedErrorImageUploadStatus =>
+        state.status === 'error' && !state.resolved,
+    );
   },
 });
 
@@ -68,6 +80,7 @@ export async function uploadFile(file: File): Promise<string> {
  */
 export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObject<unknown>}) {
   const numPending = useRecoilValue(numPendingImageUploads);
+  const unresolvedErrors = useRecoilValue(unresolvedErroredImagedUploads);
   const [isHovering, setIsHovering] = useState(false);
   const onCancel = useRecoilCallback(({set}) => () => {
     setIsHovering(false);
@@ -103,25 +116,64 @@ export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObjec
     });
   });
 
-  return numPending === 0 ? null : (
+  const onDismissErrors = useRecoilCallback(({set}) => () => {
+    set(imageUploadState, value => ({
+      ...value,
+      states: Object.fromEntries(
+        Object.entries(value.states).map(([id, state]) => [
+          id,
+          state.status === 'error' ? {...state, resolved: true} : state,
+        ]),
+      ),
+    }));
+  });
+
+  if (unresolvedErrors.length === 0 && numPending === 0) {
+    return null;
+  }
+
+  let content;
+  if (unresolvedErrors.length > 0) {
+    content = (
+      <span className="upload-status-error">
+        <Tooltip title={t('Click to dismiss error')}>
+          <VSCodeButton
+            appearance="icon"
+            onClick={onDismissErrors}
+            data-testid="dismiss-upload-errors">
+            <Icon icon="close" />
+          </VSCodeButton>
+        </Tooltip>
+        <InlineErrorBadge error={unresolvedErrors[0].error} title={<T>Image upload failed</T>}>
+          <T count={unresolvedErrors.length}>imageUploadFailed</T>
+        </InlineErrorBadge>
+      </span>
+    );
+  } else if (numPending > 0) {
+    if (isHovering) {
+      content = (
+        <VSCodeButton appearance="icon">
+          <Icon icon="stop-circle" slot="start" />
+          <T>Click to cancel</T>
+        </VSCodeButton>
+      );
+    } else {
+      content = (
+        <VSCodeButton appearance="icon">
+          <Icon icon="loading" slot="start" />
+          <T count={numPending}>numImagesUploading</T>
+        </VSCodeButton>
+      );
+    }
+  }
+
+  return (
     <span
-      className="cancel-image-upload"
+      className="upload-status"
       onClick={onCancel}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}>
-      <VSCodeButton appearance="icon">
-        {isHovering ? (
-          <>
-            <Icon icon="stop-circle" slot="start" />
-            <T>Click to cancel</T>
-          </>
-        ) : (
-          <>
-            <Icon icon="loading" slot="start" />
-            <T count={numPending}>numImagesUploading</T>
-          </>
-        )}
-      </VSCodeButton>
+      {content}
     </span>
   );
 }
@@ -185,10 +237,13 @@ export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
               states: {...v.states, [id]: {status: 'complete' as const, id}},
             }));
             replaceInTextArea(textArea, placeholder, uploadedFileText);
-          } catch (err) {
+          } catch (error) {
             set(imageUploadState, v => ({
               next,
-              states: {...v.states, [id]: {status: 'error' as const, id}},
+              states: {
+                ...v.states,
+                [id]: {status: 'error' as const, id, error: error as Error, resolved: false},
+              },
             }));
             replaceInTextArea(textArea, placeholder, ''); // delete placeholder
           }
