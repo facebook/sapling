@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from typing import Optional
+
 from edenscm import error, scmutil
 from edenscm.cmdutil import changeset_printer, jsonchangeset
 from edenscm.context import memctx, memfilectx
@@ -10,7 +12,7 @@ from edenscm.i18n import _
 from edenscm.util import pickle
 
 
-def _snapshot2ctx(repo, snapshot):
+def _snapshot2ctx(repo, snapshot) -> memctx:
     """Build a memctx for this snapshot.
 
     This is not precisely correct as it doesn't differentiate untracked/added
@@ -73,7 +75,7 @@ def _snapshot2ctx(repo, snapshot):
     return ctx
 
 
-def show(ui, repo, csid=None, **opts):
+def show(ui, repo, csid: Optional[str] = None, **opts) -> None:
     if csid is None:
         raise error.CommandError("snapshot show", _("missing snapshot id"))
     try:
