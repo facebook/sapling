@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CodeReviewSystem} from '../types';
+
 import App from '../App';
 import {
   COMMIT,
@@ -16,6 +18,7 @@ import {
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
+  simulateUncommittedChangedFiles,
 } from '../testUtils';
 import {fireEvent, render, waitFor, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -40,7 +43,8 @@ describe('Image upload inside TextArea ', () => {
       simulateCommits({
         value: [
           COMMIT('1', 'some public base', '0', {phase: 'public'}),
-          COMMIT('a', 'My Commit', '1', {isHead: true}),
+          COMMIT('b', 'My Commit', '1'),
+          COMMIT('a', 'My Commit', 'b', {isHead: true}),
         ],
       });
     });
@@ -323,6 +327,80 @@ describe('Image upload inside TextArea ', () => {
       expect(getDescriptionEditor().selectionEnd).toEqual(40);
       expect(descriptionTextContent()[getDescriptionEditor().selectionStart]).toEqual('b');
       expect(descriptionTextContent()[getDescriptionEditor().selectionEnd]).toEqual('a');
+    });
+
+    describe('disable commit info view buttons while uploading', () => {
+      beforeEach(() => {
+        act(() => {
+          simulateUncommittedChangedFiles({
+            value: [{path: 'src/file1.js', status: 'M'}],
+          });
+        });
+      });
+
+      it('disables amend message button', async () => {
+        CommitInfoTestUtils.clickToSelectCommit('b');
+        CommitInfoTestUtils.clickToEditDescription();
+        expect(
+          CommitInfoTestUtils.withinCommitActionBar().getByText('Amend Message'),
+        ).not.toBeDisabled();
+        await startFileUpload('1111');
+        expect(
+          CommitInfoTestUtils.withinCommitActionBar().getByText('Amend Message'),
+        ).toBeDisabled();
+        await simulateUploadSucceeded('1111');
+        expect(
+          CommitInfoTestUtils.withinCommitActionBar().getByText('Amend Message'),
+        ).not.toBeDisabled();
+      });
+
+      it('disables amend button', async () => {
+        CommitInfoTestUtils.clickAmendMode();
+        CommitInfoTestUtils.clickToEditDescription();
+        expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).not.toBeDisabled();
+        await startFileUpload('1111');
+        expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).toBeDisabled();
+        await simulateUploadSucceeded('1111');
+        expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Amend')).not.toBeDisabled();
+      });
+
+      it('disables commit button', async () => {
+        CommitInfoTestUtils.clickCommitMode();
+        expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).not.toBeDisabled();
+        await startFileUpload('1111');
+        expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).toBeDisabled();
+        await simulateUploadSucceeded('1111');
+        expect(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit')).not.toBeDisabled();
+      });
+
+      it('disables commit and submit button', async () => {
+        act(() => {
+          simulateMessageFromServer({
+            type: 'repoInfo',
+            info: {
+              codeReviewSystem: {type: 'github'} as CodeReviewSystem,
+              command: 'sl',
+              repoRoot: '/repo',
+              dotdir: '/repo/.sl',
+              type: 'success',
+              pullRequestDomain: undefined,
+              preferredSubmitCommand: undefined,
+            },
+          });
+        });
+        CommitInfoTestUtils.clickCommitMode();
+        expect(
+          CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),
+        ).not.toBeDisabled();
+        await startFileUpload('1111');
+        expect(
+          CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),
+        ).toBeDisabled();
+        await simulateUploadSucceeded('1111');
+        expect(
+          CommitInfoTestUtils.withinCommitActionBar().getByText('Commit and Submit'),
+        ).not.toBeDisabled();
+      });
     });
   });
 });

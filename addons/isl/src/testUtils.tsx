@@ -272,6 +272,10 @@ export const CommitInfoTestUtils = {
     return within(screen.getByTestId('commit-info-view'));
   },
 
+  withinCommitActionBar() {
+    return within(screen.getByTestId('commit-info-actions-bar'));
+  },
+
   clickToSelectCommit(hash: string) {
     const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
     expect(commit).toBeInTheDocument();
@@ -283,6 +287,15 @@ export const CommitInfoTestUtils = {
   clickCommitMode() {
     const commitRadioChoice = within(screen.getByTestId('commit-info-toolbar-top')).getByText(
       'Commit',
+    );
+    act(() => {
+      fireEvent.click(commitRadioChoice);
+    });
+  },
+
+  clickAmendMode() {
+    const commitRadioChoice = within(screen.getByTestId('commit-info-toolbar-top')).getByText(
+      'Amend',
     );
     act(() => {
       fireEvent.click(commitRadioChoice);

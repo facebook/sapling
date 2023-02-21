@@ -23,6 +23,7 @@ import {
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
+import {numPendingImageUploads} from './ImageUpload';
 import {Subtle} from './Subtle';
 import {CommitInfoField} from './TextArea';
 import {Tooltip} from './Tooltip';
@@ -355,6 +356,9 @@ function ActionsBar({
   const canSubmitWithCodeReviewProvider =
     codeReviewProviderName !== 'none' && codeReviewProviderName !== 'unknown';
 
+  const ongoingImageUploads = useRecoilValue(numPendingImageUploads);
+  const areImageUploadsOngoing = ongoingImageUploads > 0;
+
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       {isAnythingBeingEdited && !isCommitMode ? (
@@ -366,7 +370,9 @@ function ActionsBar({
       {commit.isHead ? (
         <Tooltip
           title={
-            isCommitMode
+            areImageUploadsOngoing
+              ? t('Image uploads are still pending')
+              : isCommitMode
               ? deselected.size === 0
                 ? t('No changes to commit')
                 : t('No selected changes to commit')
@@ -374,31 +380,37 @@ function ActionsBar({
               ? t('No changes to amend')
               : t('No selected changes to amend')
           }
-          trigger={anythingToCommit ? 'disabled' : 'hover'}>
+          trigger={areImageUploadsOngoing || !anythingToCommit ? 'hover' : 'disabled'}>
           <VSCodeButton
             appearance="secondary"
-            disabled={!anythingToCommit || editedMessage == null}
+            disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
             onClick={doAmendOrCommit}>
             {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
           </VSCodeButton>
         </Tooltip>
       ) : (
-        <VSCodeButton
-          appearance="secondary"
-          disabled={!isAnythingBeingEdited || editedMessage == null}
-          onClick={() => {
-            runOperation(
-              new AmendMessageOperation(commit.hash, assertNonOptimistic(editedMessage)),
-            );
-            clearEditedCommitMessage(/* skip confirmation */ true);
-          }}>
-          <T>Amend Message</T>
-        </VSCodeButton>
+        <Tooltip
+          title={t('Image uploads are still pending')}
+          trigger={areImageUploadsOngoing ? 'hover' : 'disabled'}>
+          <VSCodeButton
+            appearance="secondary"
+            disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
+            onClick={() => {
+              runOperation(
+                new AmendMessageOperation(commit.hash, assertNonOptimistic(editedMessage)),
+              );
+              clearEditedCommitMessage(/* skip confirmation */ true);
+            }}>
+            <T>Amend Message</T>
+          </VSCodeButton>
+        </Tooltip>
       )}
       {commit.isHead ? (
         <Tooltip
           title={
-            canSubmitWithCodeReviewProvider
+            areImageUploadsOngoing
+              ? t('Image uploads are still pending')
+              : canSubmitWithCodeReviewProvider
               ? t('Submit for code review with $provider', {
                   replace: {$provider: codeReviewProviderName},
                 })
@@ -406,7 +418,7 @@ function ActionsBar({
           }
           placement="top">
           <VSCodeButton
-            disabled={!canSubmitWithCodeReviewProvider}
+            disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
             onClick={async () => {
               if (anythingToCommit) {
                 doAmendOrCommit();
