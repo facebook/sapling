@@ -188,7 +188,7 @@ pub async fn wait_for_latest_log_id_for_repo_to_be_synced(
     sleep_duration: Duration,
 ) -> Result<(), Error> {
     let largest_id = latest_id_for_repo(ctx, repo).await?;
-    wait_for_log_id_for_repo_to_be_synced(ctx, repo, target_repo, largest_id, sleep_duration).await
+    wait_for_log_id_for_repo_to_be_synced(ctx, target_repo, largest_id, sleep_duration).await
 }
 
 pub async fn latest_id_for_repo(
@@ -208,7 +208,6 @@ pub async fn latest_id_for_repo(
 
 pub async fn wait_for_log_id_for_repo_to_be_synced(
     ctx: &CoreContext,
-    repo: &impl BookmarkUpdateLogRef,
     target_repo: &(impl RepoIdentityRef + MutableCountersRef),
     log_id: u64,
     sleep_duration: Duration,
