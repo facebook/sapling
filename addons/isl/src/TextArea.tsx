@@ -6,11 +6,11 @@
  */
 
 import type {EditedMessage, EditedMessageUnlessOptimistic} from './CommitInfoState';
-import type {ForwardedRef, MutableRefObject} from 'react';
+import type {ForwardedRef, MutableRefObject, ReactNode} from 'react';
 import type {SetterOrUpdater} from 'recoil';
 
 import {assertNonOptimistic} from './CommitInfoState';
-import {useUploadFilesCallback, ImageDropZone} from './ImageUpload';
+import {useUploadFilesCallback, ImageDropZone, FilePicker} from './ImageUpload';
 import {assert} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect, type FormEvent} from 'react';
@@ -97,6 +97,10 @@ export function CommitInfoField({
 
   const rendered = (
     <div className="commit-info-field">
+      <EditorToolbar
+        uploadFiles={supportsImageUpload ? uploadFiles : undefined}
+        textAreaRef={ref}
+      />
       <Component
         ref={ref}
         {...props}
@@ -116,4 +120,23 @@ export function CommitInfoField({
   ) : (
     <ImageDropZone onDrop={uploadFiles}>{rendered}</ImageDropZone>
   );
+}
+
+/**
+ * Floating button list at the bottom corner of the text area
+ */
+export function EditorToolbar({
+  uploadFiles,
+}: {
+  uploadFiles?: (files: Array<File>) => unknown;
+  textAreaRef: MutableRefObject<unknown>;
+}) {
+  const parts: Array<ReactNode> = [];
+  if (uploadFiles != null) {
+    parts.push(<FilePicker key="picker" uploadFiles={uploadFiles} />);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return <div className="text-area-toolbar">{parts}</div>;
 }

@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {type MutableRefObject, useState, type ReactNode} from 'react';
+import {Tooltip} from './Tooltip';
+import {t} from './i18n';
+import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {type MutableRefObject, useState, type ReactNode, useId} from 'react';
 import {atom, useRecoilCallback} from 'recoil';
 
 export type ImageUploadStatus = {id: number} & (
@@ -36,6 +39,36 @@ export async function uploadFile(file: File): Promise<string> {
   await new Promise(res => setTimeout(res, 30_000)); // temporary testing
 
   return file.name;
+}
+
+export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => unknown}) {
+  const id = useId();
+  return (
+    <span key="choose-file">
+      <input
+        type="file"
+        accept="image/*,video/*"
+        className="choose-file"
+        id={id}
+        multiple
+        onChange={event => {
+          if (event.target.files) {
+            uploadFiles([...event.target.files]);
+          }
+        }}
+      />
+      <label htmlFor={id}>
+        <Tooltip
+          title={t(
+            'Choose image or video files to upload. Drag & Drop and Pasting images or videos is also supported.',
+          )}>
+          <VSCodeButton appearance="icon">
+            <PaperclipIcon />
+          </VSCodeButton>
+        </Tooltip>
+      </label>
+    </span>
+  );
 }
 
 export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
@@ -116,6 +149,24 @@ export function ImageDropZone({
       }}>
       {children}
     </div>
+  );
+}
+
+/**
+ * Codicon-like 16x16 paperclip icon.
+ * This seems to be the standard iconographic way to attach files to a text area.
+ * Can you belive codicons don't have a paperclip icon?
+ */
+function PaperclipIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M5.795 9.25053L8.43233 6.58103C8.72536 6.35421 9.44589 6.03666 9.9837 6.58103C10.5215 7.1254 10.2078 7.78492 9.9837 8.04664L5.49998 12.5C4.99998 13 3.91267 13.2914 3.00253 12.2864C2.0924 11.2814 2.49999 10 3.00253 9.4599L8.89774 3.64982C9.51829 3.12638 11.111 2.42499 12.5176 3.80685C13.9242 5.1887 13.5 7 12.5 8L8.43233 12.2864"
+        stroke="currentColor"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
