@@ -312,6 +312,14 @@ export type FileABugProgress =
   | {status: 'error'; error: Error};
 export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABugProgress;
 
+/**
+ * Like ClientToServerMessage, but these messages will be followed
+ * on the message bus by an additional binary ArrayBuffer payload message.
+ */
+export type ClientToServerMessageWithPayload = {
+  type: 'uploadFile';
+} & {hasBinaryPayload: true};
+
 export type ClientToServerMessage =
   | {
       type: 'refresh';
@@ -357,6 +365,7 @@ export type ServerToClientMessage =
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'uploadFileResult'; result: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Array<string>}
   | {type: 'beganLoadingMoreCommits'}

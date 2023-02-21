@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import clientToServerAPI from './ClientToServerAPI';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -40,13 +41,14 @@ function placeholderForImageUpload(id: number): string {
 }
 
 /**
- * Upload a file to the given file upload service,
+ * Send a File's contents to the server to get uploaded by an upload service,
  * and return the link to embed in the textArea.
  */
 export async function uploadFile(file: File): Promise<string> {
-  await new Promise(res => setTimeout(res, 30_000)); // temporary testing
+  const payload = await file.arrayBuffer();
+  clientToServerAPI.postMessageWithPayload({type: 'uploadFile'}, payload);
 
-  return file.name;
+  return file.name; // TODO: get response from server
 }
 
 /**

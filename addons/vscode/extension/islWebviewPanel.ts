@@ -100,7 +100,8 @@ function populateAndSetISLWebview(
     },
     onDidReceiveMessage(handler) {
       return panel.webview.onDidReceiveMessage(m => {
-        handler(m);
+        const isBinary = m instanceof ArrayBuffer;
+        handler(m, isBinary);
       });
     },
     cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(), // TODO

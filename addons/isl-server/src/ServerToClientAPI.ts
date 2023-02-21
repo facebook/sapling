@@ -23,6 +23,7 @@ import type {
   RepositoryError,
   PlatformSpecificClientToServerMessages,
   FileABugProgress,
+  ClientToServerMessageWithPayload,
 } from 'isl/src/types';
 
 import {Internal} from './Internal';
@@ -33,6 +34,7 @@ import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
 import {randomId} from 'shared/utils';
 
 export type IncomingMessage = ClientToServerMessage;
+type IncomingMessageWithPayload = ClientToServerMessageWithPayload;
 export type OutgoingMessage = ServerToClientMessage;
 
 type GeneralMessage = IncomingMessage &
@@ -43,6 +45,17 @@ type GeneralMessage = IncomingMessage &
     | {type: 'track'}
   );
 type WithRepoMessage = Exclude<IncomingMessage, GeneralMessage>;
+
+/**
+ * Return true if a ClientToServerMessage is a ClientToServerMessageWithPayload
+ */
+function expectsBinaryPayload(message: unknown): message is ClientToServerMessageWithPayload {
+  return (
+    message != null &&
+    typeof message === 'object' &&
+    (message as ClientToServerMessageWithPayload).hasBinaryPayload === true
+  );
+}
 
 /**
  * Message passing channel built on top of ClientConnection.
@@ -81,9 +94,35 @@ export default class ServerToClientAPI {
     private connection: ClientConnection,
     private tracker: ServerSideTracker,
   ) {
-    this.incomingListener = this.connection.onDidReceiveMessage(buf => {
+    // messages with binary payloads are sent as two post calls. We first get the JSON message, then the binary payload,
+    // which we will reconstruct together.
+    let messageExpectingBinaryFollowup: ClientToServerMessageWithPayload | null = null;
+    this.incomingListener = this.connection.onDidReceiveMessage((buf, isBinary) => {
+      if (isBinary) {
+        connection.logger?.log('Got binary message!');
+        if (messageExpectingBinaryFollowup == null) {
+          connection.logger?.error('Error: got a binary message when not expecting one');
+          return;
+        }
+        // TODO: we don't handle queueing up messages with payloads...
+        this.handleIncomingMessageWithPayload(messageExpectingBinaryFollowup, buf);
+        messageExpectingBinaryFollowup = null;
+        return;
+      } else if (messageExpectingBinaryFollowup != null) {
+        connection.logger?.error(
+          'Error: didnt get binary payload after a message that requires one',
+        );
+        messageExpectingBinaryFollowup = null;
+        return;
+      }
+
       const message = buf.toString('utf-8');
       const data = deserializeFromString(message) as IncomingMessage;
+      if (expectsBinaryPayload(data)) {
+        // remember this message, and wait to get the binary payload before handling it
+        messageExpectingBinaryFollowup = data;
+        return;
+      }
 
       // When the client is connected, we want to immediately start listening to messages.
       // However, we can't properly respond to these messages until we have a repository set up.
@@ -151,6 +190,22 @@ export default class ServerToClientAPI {
       }
     }
     this.queuedMessages = [];
+  }
+
+  private handleIncomingMessageWithPayload(
+    message: IncomingMessageWithPayload,
+    payload: ArrayBuffer,
+  ) {
+    switch (message.type) {
+      case 'uploadFile': {
+        this.connection.logger?.log(
+          'Got an uploadFile message with a payload!',
+          message,
+          payload.byteLength,
+        );
+        break;
+      }
+    }
   }
 
   private handleIncomingMessage(data: IncomingMessage) {

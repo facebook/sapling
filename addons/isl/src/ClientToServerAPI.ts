@@ -5,13 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ServerToClientMessage, ClientToServerMessage, Disposable} from './types';
+import type {
+  ServerToClientMessage,
+  ClientToServerMessage,
+  Disposable,
+  ClientToServerMessageWithPayload,
+} from './types';
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
 
 export type IncomingMessage = ServerToClientMessage;
-export type OutgoingMessage = ClientToServerMessage;
+export type OutgoingMessage = ClientToServerMessage | ClientToServerMessageWithPayload;
 
 export interface ClientToServerAPI {
   dispose(): void;
@@ -67,8 +72,24 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
     };
   }
 
-  postMessage(message: OutgoingMessage) {
+  postMessage(message: ClientToServerMessage) {
     messageBus.postMessage(serializeToString(message));
+  }
+
+  /**
+   * Post a message with an ArrayBuffer binary payload.
+   * No need to specify `hasBinaryPayload: true` in your message.
+   * This actually sends two messages: the JSON text message, then the binary payload, and reconnects them on the server.
+   */
+  postMessageWithPayload(
+    // Omit lets callers not include hasBinaryPayload themselves, since it's implicit in calling postMessageWithPayload.
+    message: Omit<ClientToServerMessageWithPayload, 'hasBinaryPayload'>,
+    payload: ArrayBuffer,
+  ) {
+    messageBus.postMessage(
+      serializeToString({...message, hasBinaryPayload: true} as ClientToServerMessageWithPayload),
+    );
+    messageBus.postMessage(payload);
   }
 
   onConnectOrReconnect(callback: () => unknown): () => void {

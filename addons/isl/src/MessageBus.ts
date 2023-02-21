@@ -26,6 +26,7 @@ export type MessageBusStatus =
 export interface MessageBus {
   onMessage(handler: (event: MessageEvent) => void | Promise<void>): Disposable;
   onChangeStatus(handler: (newStatus: MessageBusStatus) => void | Promise<void>): Disposable;
+  // post message accepts string or ArrayBuffer (to send binary data)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   postMessage(message: any): void;
 }
@@ -46,7 +47,7 @@ class VSCodeMessageBus {
     return {dispose: () => {}};
   }
 
-  postMessage(message: string) {
+  postMessage(message: string | ArrayBuffer) {
     this.vscode.postMessage(message);
   }
 }
@@ -58,7 +59,7 @@ export class LocalWebSocketEventBus {
   private websocket: WebSocket;
   private status: MessageBusStatus = {type: 'initializing'};
   private exponentialReconnectDelay = LocalWebSocketEventBus.DEFAULT_RECONNECT_CHECK_TIME_MS;
-  private queuedMessages: Array<string> = [];
+  private queuedMessages: Array<string | ArrayBuffer> = [];
 
   private handlers: Array<(event: MessageEvent<string>) => void | Promise<void>> = [];
   private statusChangeHandlers: Array<(newStatus: MessageBusStatus) => unknown> = [];
@@ -166,7 +167,7 @@ export class LocalWebSocketEventBus {
     return {dispose};
   }
 
-  postMessage(message: string) {
+  postMessage(message: string | ArrayBuffer) {
     if (this.status.type === 'open') {
       this.websocket.send(message);
     } else {

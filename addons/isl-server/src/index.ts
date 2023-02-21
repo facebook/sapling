@@ -28,7 +28,9 @@ export interface ClientConnection {
    * Designed to match
    * https://code.visualstudio.com/api/references/vscode-api#Webview.onDidReceiveMessage
    */
-  onDidReceiveMessage(hander: (event: Buffer) => void | Promise<void>): {dispose(): void};
+  onDidReceiveMessage(hander: (event: Buffer, isBinary: boolean) => void | Promise<void>): {
+    dispose(): void;
+  };
 
   /**
    * Which command to use to run `sl`
