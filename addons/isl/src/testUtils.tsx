@@ -19,7 +19,8 @@ import type {Writable} from 'shared/typeUtils';
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
-import {screen, act, within} from '@testing-library/react';
+import {screen, act, within, fireEvent} from '@testing-library/react';
+import {unwrap} from 'shared/utils';
 
 const testMessageBus = messageBus as TestingEventBus;
 
@@ -233,3 +234,104 @@ export function suppressReactErrorBoundaryErrorMessages() {
     jest.restoreAllMocks();
   });
 }
+
+export const CommitInfoTestUtils = {
+  withinCommitInfo() {
+    return within(screen.getByTestId('commit-info-view'));
+  },
+
+  clickToSelectCommit(hash: string) {
+    const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
+    expect(commit).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(unwrap(commit));
+    });
+  },
+
+  clickCommitMode() {
+    const commitRadioChoice = within(screen.getByTestId('commit-info-toolbar-top')).getByText(
+      'Commit',
+    );
+    act(() => {
+      fireEvent.click(commitRadioChoice);
+    });
+  },
+
+  clickAmendButton() {
+    const amendButton: HTMLButtonElement | null = within(
+      screen.getByTestId('commit-info-actions-bar'),
+    ).queryByText('Amend');
+    expect(amendButton).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(unwrap(amendButton));
+    });
+  },
+
+  clickCommitButton() {
+    const commitButton: HTMLButtonElement | null = within(
+      screen.getByTestId('commit-info-actions-bar'),
+    ).queryByText('Commit');
+    expect(commitButton).toBeInTheDocument();
+    act(() => {
+      fireEvent.click(unwrap(commitButton));
+    });
+  },
+
+  clickCancel() {
+    const cancelButton: HTMLButtonElement | null =
+      CommitInfoTestUtils.withinCommitInfo().queryByText('Cancel');
+    expect(cancelButton).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(unwrap(cancelButton));
+    });
+  },
+
+  getTitleEditor(): HTMLInputElement {
+    const title = screen.getByTestId('commit-info-title-field') as HTMLInputElement;
+    expect(title).toBeInTheDocument();
+    return title;
+  },
+  getDescriptionEditor(): HTMLTextAreaElement {
+    const description = screen.getByTestId('commit-info-description-field') as HTMLTextAreaElement;
+    expect(description).toBeInTheDocument();
+    return description;
+  },
+
+  clickToEditTitle() {
+    act(() => {
+      const title = screen.getByTestId('commit-info-rendered-title');
+      expect(title).toBeInTheDocument();
+      fireEvent.click(title);
+    });
+  },
+  clickToEditDescription() {
+    act(() => {
+      const description = screen.getByTestId('commit-info-rendered-description');
+      expect(description).toBeInTheDocument();
+      fireEvent.click(description);
+    });
+  },
+
+  expectIsEditingTitle() {
+    const titleEditor = screen.queryByTestId('commit-info-title-field') as HTMLInputElement;
+    expect(titleEditor).toBeInTheDocument();
+  },
+  expectIsNOTEditingTitle() {
+    const titleEditor = screen.queryByTestId('commit-info-title-field') as HTMLInputElement;
+    expect(titleEditor).not.toBeInTheDocument();
+  },
+
+  expectIsEditingDescription() {
+    const descriptionEditor = screen.queryByTestId(
+      'commit-info-description-field',
+    ) as HTMLTextAreaElement;
+    expect(descriptionEditor).toBeInTheDocument();
+  },
+  expectIsNOTEditingDescription() {
+    const descriptionEditor = screen.queryByTestId(
+      'commit-info-description-field',
+    ) as HTMLTextAreaElement;
+    expect(descriptionEditor).not.toBeInTheDocument();
+  },
+};

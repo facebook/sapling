@@ -17,6 +17,7 @@ import {
   closeCommitInfoSidebar,
   simulateUncommittedChangedFiles,
   simulateMessageFromServer,
+  CommitInfoTestUtils,
 } from '../testUtils';
 import {CommandRunner, SucceedableRevset} from '../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
@@ -26,6 +27,23 @@ import {act} from 'react-dom/test-utils';
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 jest.mock('../MessageBus');
+
+const {
+  withinCommitInfo,
+  clickAmendButton,
+  clickCancel,
+  clickCommitButton,
+  clickCommitMode,
+  clickToSelectCommit,
+  getTitleEditor,
+  getDescriptionEditor,
+  clickToEditTitle,
+  clickToEditDescription,
+  expectIsEditingTitle,
+  expectIsNOTEditingTitle,
+  expectIsEditingDescription,
+  expectIsNOTEditingDescription,
+} = CommitInfoTestUtils;
 
 describe('CommitInfoView', () => {
   beforeEach(() => {
@@ -37,54 +55,6 @@ describe('CommitInfoView', () => {
 
     expect(screen.getByTestId('commit-info-view-loading')).toBeInTheDocument();
   });
-
-  function clickToSelectCommit(hash: string) {
-    const commit = within(screen.getByTestId(`commit-${hash}`)).queryByTestId('draggable-commit');
-    expect(commit).toBeInTheDocument();
-    act(() => {
-      fireEvent.click(commit!);
-    });
-  }
-
-  const clickCommitMode = () => {
-    const commitRadioChoice = within(screen.getByTestId('commit-info-toolbar-top')).getByText(
-      'Commit',
-    );
-    act(() => {
-      fireEvent.click(commitRadioChoice);
-    });
-  };
-
-  const clickAmendButton = () => {
-    const amendButton: HTMLButtonElement | null = within(
-      screen.getByTestId('commit-info-actions-bar'),
-    ).queryByText('Amend');
-    expect(amendButton).toBeInTheDocument();
-    act(() => {
-      fireEvent.click(amendButton!);
-    });
-  };
-
-  const clickCommitButton = () => {
-    const commitButton: HTMLButtonElement | null = within(
-      screen.getByTestId('commit-info-actions-bar'),
-    ).queryByText('Commit');
-    expect(commitButton).toBeInTheDocument();
-    act(() => {
-      fireEvent.click(commitButton!);
-    });
-  };
-
-  const clickCancel = () => {
-    const cancelButton: HTMLButtonElement | null = within(
-      screen.getByTestId('commit-info-view'),
-    ).queryByText('Cancel');
-    expect(cancelButton).toBeInTheDocument();
-
-    act(() => {
-      fireEvent.click(cancelButton!);
-    });
-  };
 
   describe('after commits loaded', () => {
     beforeEach(() => {
@@ -123,26 +93,23 @@ describe('CommitInfoView', () => {
 
     describe('commit selection', () => {
       it('shows head commit by default', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('Head Commit')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
       });
 
       it('can click to select commit', () => {
         clickToSelectCommit('a');
 
         // now commit info view shows selected commit
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('My Commit')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('Head Commit')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('My Commit')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('Head Commit')).not.toBeInTheDocument();
       });
 
       it('cannot select public commits', () => {
         clickToSelectCommit('1');
 
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('some public base')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('some public base')).not.toBeInTheDocument();
         // stays on head commit
-        expect(within(commitInfoView).queryByText('Head Commit')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
       });
     });
 
@@ -170,48 +137,41 @@ describe('CommitInfoView', () => {
       });
 
       it('shows uncommitted changes for head commit', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('file1.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('file2.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file1.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file2.js')).toBeInTheDocument();
       });
 
       it('shows file actions on uncommitted changes in commit info view', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryAllByTestId('file-actions')).toHaveLength(2);
+        expect(withinCommitInfo().queryAllByTestId('file-actions')).toHaveLength(2);
       });
 
       it('does not show file actions on committed changes in commit info view', () => {
         clickToSelectCommit('a'); // non-head commit doesn't have uncommitted changes
 
         // now commit info view shows selected commit
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByTestId('file-actions')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByTestId('file-actions')).not.toBeInTheDocument();
       });
 
       it("doesn't show uncommitted changes on non-head commits ", () => {
         clickToSelectCommit('a');
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('file1.js')).not.toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('file2.js')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file1.js')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file2.js')).not.toBeInTheDocument();
       });
 
       it('shows files changed in the commit for head commit', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('ca.js')).not.toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('cb.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('ca.js')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('cb.js')).toBeInTheDocument();
       });
 
       it('shows files changed in the commit for non-head commit', () => {
         clickToSelectCommit('a');
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('ca.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('cb.js')).not.toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('ca.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('cb.js')).not.toBeInTheDocument();
       });
 
       it('enables amend button with uncommitted changes', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('file1.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('file2.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file1.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file2.js')).toBeInTheDocument();
 
         const amendButton: HTMLButtonElement | null = within(
           screen.getByTestId('commit-info-actions-bar'),
@@ -221,12 +181,11 @@ describe('CommitInfoView', () => {
       });
 
       it('runs amend with selected files', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('file1.js')).toBeInTheDocument();
-        expect(within(commitInfoView).queryByText('file2.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file1.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('file2.js')).toBeInTheDocument();
 
         act(() => {
-          const checkboxes = within(commitInfoView)
+          const checkboxes = withinCommitInfo()
             .queryByTestId('changes-to-amend')!
             .querySelectorAll('input[type="checkbox"]');
           fireEvent.click(checkboxes[0]);
@@ -259,11 +218,9 @@ describe('CommitInfoView', () => {
       });
 
       it('disallows amending when all uncommitted changes deselected', () => {
-        const commitInfoView = screen.getByTestId('commit-info-view');
-
         // click every checkbox in changes to amend
         act(() => {
-          const checkboxes = within(commitInfoView)
+          const checkboxes = withinCommitInfo()
             .queryByTestId('changes-to-amend')
             ?.querySelectorAll('input[type="checkbox"]');
           checkboxes?.forEach(checkbox => {
@@ -291,8 +248,7 @@ describe('CommitInfoView', () => {
           fireEvent.click(screen.getByText('Uncommit'));
         });
 
-        const commitInfoView = screen.getByTestId('commit-info-view');
-        expect(within(commitInfoView).queryByText('cb.js')).toBeInTheDocument();
+        expect(withinCommitInfo().queryByText('cb.js')).toBeInTheDocument();
         expect(screen.queryByText('Amend and Submit')).toBeInTheDocument();
       });
     });
@@ -313,56 +269,6 @@ describe('CommitInfoView', () => {
         });
       });
 
-      const getTitleEditor = (): HTMLInputElement => {
-        const title = screen.getByTestId('commit-info-title-field') as HTMLInputElement;
-        expect(title).toBeInTheDocument();
-        return title;
-      };
-      const getDescriptionEditor = (): HTMLTextAreaElement => {
-        const description = screen.getByTestId(
-          'commit-info-description-field',
-        ) as HTMLTextAreaElement;
-        expect(description).toBeInTheDocument();
-        return description;
-      };
-
-      const clickToEditTitle = () => {
-        act(() => {
-          const title = screen.getByTestId('commit-info-rendered-title');
-          expect(title).toBeInTheDocument();
-          fireEvent.click(title);
-        });
-      };
-      const clickToEditDescription = () => {
-        act(() => {
-          const description = screen.getByTestId('commit-info-rendered-description');
-          expect(description).toBeInTheDocument();
-          fireEvent.click(description);
-        });
-      };
-
-      const expectIsEditingTitle = () => {
-        const titleEditor = screen.queryByTestId('commit-info-title-field') as HTMLInputElement;
-        expect(titleEditor).toBeInTheDocument();
-      };
-      const expectIsNOTEditingTitle = () => {
-        const titleEditor = screen.queryByTestId('commit-info-title-field') as HTMLInputElement;
-        expect(titleEditor).not.toBeInTheDocument();
-      };
-
-      const expectIsEditingDescription = () => {
-        const descriptionEditor = screen.queryByTestId(
-          'commit-info-description-field',
-        ) as HTMLTextAreaElement;
-        expect(descriptionEditor).toBeInTheDocument();
-      };
-      const expectIsNOTEditingDescription = () => {
-        const descriptionEditor = screen.queryByTestId(
-          'commit-info-description-field',
-        ) as HTMLTextAreaElement;
-        expect(descriptionEditor).not.toBeInTheDocument();
-      };
-
       it('starts editing title when clicked', () => {
         expectIsNOTEditingTitle();
         clickToEditTitle();
@@ -381,9 +287,7 @@ describe('CommitInfoView', () => {
         expectIsEditingTitle();
         expectIsEditingDescription();
 
-        const cancelButton: HTMLButtonElement | null = within(
-          screen.getByTestId('commit-info-view'),
-        ).queryByText('Cancel');
+        const cancelButton: HTMLButtonElement | null = withinCommitInfo().queryByText('Cancel');
         expect(cancelButton).toBeInTheDocument();
 
         act(() => {
@@ -542,23 +446,17 @@ describe('CommitInfoView', () => {
         });
 
         it('has "You are here" on head commit', () => {
-          expect(
-            within(screen.getByTestId('commit-info-view')).queryByText('You are here'),
-          ).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
         it('does not have "You are here" on non-head commit', () => {
           clickToSelectCommit('a');
-          expect(
-            within(screen.getByTestId('commit-info-view')).queryByText('You are here'),
-          ).not.toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).not.toBeInTheDocument();
         });
 
         it('does not have "You are here" in commit mode', () => {
           clickCommitMode();
-          expect(
-            within(screen.getByTestId('commit-info-view')).queryByText('You are here'),
-          ).not.toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).not.toBeInTheDocument();
         });
       });
 
@@ -831,9 +729,7 @@ describe('CommitInfoView', () => {
         it('does not have cancel button', () => {
           clickCommitMode();
 
-          const cancelButton: HTMLButtonElement | null = within(
-            screen.getByTestId('commit-info-view'),
-          ).queryByText('Cancel');
+          const cancelButton: HTMLButtonElement | null = withinCommitInfo().queryByText('Cancel');
           expect(cancelButton).not.toBeInTheDocument();
         });
       });
@@ -1063,20 +959,18 @@ describe('CommitInfoView', () => {
           clickGotoCommit('a');
           // while optimistic state happening...
           // show new commit in commit info without clicking it (because head is auto-selected)
-          const commitInfoView = screen.getByTestId('commit-info-view');
-          expect(within(commitInfoView).queryByText('My Commit')).toBeInTheDocument();
-          expect(within(commitInfoView).queryByText('You are here')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('My Commit')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
         it('takes previews into account when rendering non-head commit', () => {
           clickToSelectCommit('b'); // explicitly select, so we show even while goto runs
           clickGotoCommit('a');
 
-          const commitInfoView = screen.getByTestId('commit-info-view');
           // we still show the other commit
-          expect(within(commitInfoView).queryByText('Head Commit')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
           // but its not the head commit anymore, according to optimistic state
-          expect(within(commitInfoView).queryByText('You are here')).not.toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).not.toBeInTheDocument();
         });
 
         it('renders metaedit operation smoothly', () => {
@@ -1099,10 +993,9 @@ describe('CommitInfoView', () => {
           expectIsNOTEditingTitle();
           expectIsNOTEditingDescription();
 
-          const commitInfoView = screen.getByTestId('commit-info-view');
-          expect(within(commitInfoView).getByText('My Commit with change!')).toBeInTheDocument();
+          expect(withinCommitInfo().getByText('My Commit with change!')).toBeInTheDocument();
           expect(
-            within(commitInfoView).getByText('Summary: First commit in the stack\nmore stuff!', {
+            withinCommitInfo().getByText('Summary: First commit in the stack\nmore stuff!', {
               collapseWhitespace: false,
             }),
           ).toBeInTheDocument();
@@ -1129,10 +1022,9 @@ describe('CommitInfoView', () => {
           expectIsNOTEditingTitle();
           expectIsNOTEditingDescription();
 
-          const commitInfoView = screen.getByTestId('commit-info-view');
-          expect(within(commitInfoView).queryByText('New Commit')).toBeInTheDocument();
-          expect(within(commitInfoView).queryByText('Message!')).toBeInTheDocument();
-          expect(within(commitInfoView).queryByText('You are here')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('New Commit')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('Message!')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
 
           // finish commit operation with hg log
           act(() => {
@@ -1145,9 +1037,9 @@ describe('CommitInfoView', () => {
               ],
             });
           });
-          expect(within(commitInfoView).queryByText('New Commit')).toBeInTheDocument();
-          expect(within(commitInfoView).queryByText('Message!')).toBeInTheDocument();
-          expect(within(commitInfoView).queryByText('You are here')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('New Commit')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('Message!')).toBeInTheDocument();
+          expect(withinCommitInfo().queryByText('You are here')).toBeInTheDocument();
         });
 
         it('doesnt let you edit on optimistic commit', () => {
@@ -1205,14 +1097,13 @@ describe('CommitInfoView', () => {
           expectIsNOTEditingTitle();
           expectIsNOTEditingDescription();
 
-          const commitInfoView = screen.getByTestId('commit-info-view');
-          expect(within(commitInfoView).getByText('Head Commit Hey')).toBeInTheDocument();
+          expect(withinCommitInfo().getByText('Head Commit Hey')).toBeInTheDocument();
           expect(
-            within(commitInfoView).getByText('Summary: stacked commit\nHello', {
+            withinCommitInfo().getByText('Summary: stacked commit\nHello', {
               collapseWhitespace: false,
             }),
           ).toBeInTheDocument();
-          expect(within(commitInfoView).getByText('You are here')).toBeInTheDocument();
+          expect(withinCommitInfo().getByText('You are here')).toBeInTheDocument();
 
           // finish amend operation with hg log
           act(() => {
@@ -1227,13 +1118,13 @@ describe('CommitInfoView', () => {
               ],
             });
           });
-          expect(within(commitInfoView).getByText('Head Commit Hey')).toBeInTheDocument();
+          expect(withinCommitInfo().getByText('Head Commit Hey')).toBeInTheDocument();
           expect(
-            within(commitInfoView).getByText('Summary: stacked commit\nHello', {
+            withinCommitInfo().getByText('Summary: stacked commit\nHello', {
               collapseWhitespace: false,
             }),
           ).toBeInTheDocument();
-          expect(within(commitInfoView).getByText('You are here')).toBeInTheDocument();
+          expect(withinCommitInfo().getByText('You are here')).toBeInTheDocument();
         });
       });
 
@@ -1281,9 +1172,7 @@ describe('CommitInfoView', () => {
           await waitFor(() => {
             // no commit is selected anymore
             expect(screen.queryByTestId('selected-commit')).not.toBeInTheDocument();
-            expect(
-              within(screen.getByTestId('commit-info-view')).queryByText('Head Commit'),
-            ).toBeInTheDocument();
+            expect(withinCommitInfo().queryByText('Head Commit')).toBeInTheDocument();
           });
         });
 
