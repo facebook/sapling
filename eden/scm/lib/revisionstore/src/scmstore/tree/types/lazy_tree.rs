@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Result;
+use edenapi_types::TreeChildEntry;
 use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
@@ -15,6 +18,7 @@ use types::Key;
 
 use crate::indexedlogdatastore::Entry;
 use crate::memcache::McData;
+use crate::scmstore::file::FileAuxData;
 use crate::Metadata;
 
 /// A minimal tree enum that simply wraps the possible underlying tree types,
@@ -81,5 +85,49 @@ impl LazyTree {
             self.hg_content()?.into_vec().into(),
             format,
         ))
+    }
+
+    pub fn aux_data(&self) -> HashMap<HgId, FileAuxData> {
+        use LazyTree::*;
+        match self {
+            EdenApi(entry) => entry
+                .children
+                .as_ref()
+                .map_or_else(HashMap::new, |childrens| {
+                    childrens
+                        .iter()
+                        .filter_map(|entry| {
+                            let child_entry = match entry {
+                                Err(err) => {
+                                    tracing::warn!("Error fetching child entry: {:?}", err);
+                                    return None;
+                                }
+                                Ok(file_entry) => file_entry,
+                            };
+                            // TODO: Also return directory aux data.
+                            if let TreeChildEntry::File(file_entry) = child_entry {
+                                file_entry.file_metadata.map(|file_metadata| {
+                                    (
+                                        file_entry.key.hgid,
+                                        FileAuxData {
+                                            total_size: file_metadata.size.unwrap(),
+                                            content_id: file_metadata.content_id.unwrap(),
+                                            content_sha1: file_metadata.content_sha1.unwrap(),
+                                            content_sha256: file_metadata
+                                                .content_sha256
+                                                .unwrap()
+                                                .into_byte_array()
+                                                .into(),
+                                        },
+                                    )
+                                })
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<HashMap<_, _>>()
+                }),
+            _ => HashMap::new(),
+        }
     }
 }

@@ -18,7 +18,6 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use crossbeam::channel::unbounded;
-use edenapi_types::TreeChildEntry;
 use minibytes::Bytes;
 use tracing::field;
 
@@ -215,49 +214,18 @@ impl TreeStore {
                         for entry in response.entries {
                             let entry = entry?;
                             let key = entry.key.clone();
+                            let entry = LazyTree::EdenApi(entry);
+
                             if let Some(ref aux_local) = aux_local {
-                                if let Some(ref children) = entry.children {
-                                    for file_entry in children {
-                                        let file_entry = match file_entry {
-                                            Ok(file_entry) => file_entry,
-                                            Err(err) => {
-                                                // not failing tree fetching for aux related problems
-                                                tracing::warn!(
-                                                    "Error fetching child entry: {:?}",
-                                                    err
-                                                );
-                                                continue;
-                                            }
-                                        };
-                                        if let TreeChildEntry::File(file_entry) = file_entry {
-                                            if let Some(metadata) = file_entry.file_metadata {
-                                                let aux_entry = crate::indexedlogauxstore::Entry {
-                                                    total_size: metadata.size.unwrap(),
-                                                    content_id: metadata.content_id.unwrap(),
-                                                    content_sha1: metadata.content_sha1.unwrap(),
-                                                    content_sha256: metadata
-                                                        .content_sha256
-                                                        .unwrap(),
-                                                };
-                                                if let Some(ref aux_cache) = aux_cache {
-                                                    aux_cache
-                                                        .put(file_entry.key.hgid, &aux_entry)?;
-                                                } else {
-                                                    aux_local
-                                                        .put(file_entry.key.hgid, &aux_entry)?;
-                                                }
-                                            }
-                                        }
+                                let aux_data = entry.aux_data();
+                                for (hgid, aux) in aux_data.into_iter() {
+                                    if let Some(ref aux_cache) = aux_cache {
+                                        aux_cache.put(hgid, &aux.into())?;
+                                    } else {
+                                        aux_local.put(hgid, &aux.into())?;
                                     }
-                                } else {
-                                    // this is odd, need to log
-                                    tracing::warn!(
-                                        "No children returned when requested tree {}",
-                                        entry.key.hgid
-                                    );
                                 }
                             }
-                            let entry = LazyTree::EdenApi(entry);
                             if indexedlog_cache.is_some() && cache_to_local_cache {
                                 if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
                                     indexedlog_cache.as_ref().unwrap().put_entry(entry)?;

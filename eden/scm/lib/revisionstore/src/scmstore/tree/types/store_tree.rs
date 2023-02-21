@@ -5,17 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::ops::BitOr;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
+use types::HgId;
 
+use crate::scmstore::file::FileAuxData;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::TreeAttributes;
 use crate::scmstore::value::StoreValue;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StoreTree {
     pub(crate) content: Option<LazyTree>,
 }
@@ -26,6 +29,14 @@ impl StoreTree {
             .as_mut()
             .ok_or_else(|| anyhow!("no content available"))?
             .manifest_tree_entry()
+    }
+
+    pub fn aux_data(&self) -> Result<HashMap<HgId, FileAuxData>> {
+        Ok(self
+            .content
+            .as_ref()
+            .ok_or_else(|| anyhow!("no content available"))?
+            .aux_data())
     }
 }
 
@@ -54,12 +65,6 @@ impl BitOr for StoreTree {
         StoreTree {
             content: self.content.or(rhs.content),
         }
-    }
-}
-
-impl Default for StoreTree {
-    fn default() -> Self {
-        StoreTree { content: None }
     }
 }
 
