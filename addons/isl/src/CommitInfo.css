@@ -161,3 +161,33 @@
   gap: var(--pad);
   flex-direction: column;
 }
+
+.commit-info-view .image-drop-zone {
+  margin: var(--halfpad) 0;
+}
+.commit-info-view .image-drop-zone vscode-text-area {
+  margin: 0;
+}
+
+.commit-info-field {
+  position: relative;
+}
+
+.image-drop-zone {
+  position: relative;
+}
+.image-drop-zone.hovering-to-drop:before {
+  width: 100%;
+  height: calc(100% - 4px);
+  display: flex;
+  content: 'Drop here to upload';
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  right: 0;
+  justify-content: center;
+  align-items: center;
+  font-size: 120%;
+  background-color: rgba(0, 0, 0, 0.1);
+}

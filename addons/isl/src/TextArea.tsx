@@ -10,6 +10,7 @@ import type {ForwardedRef, MutableRefObject} from 'react';
 import type {SetterOrUpdater} from 'recoil';
 
 import {assertNonOptimistic} from './CommitInfoState';
+import {useUploadFilesCallback, ImageDropZone} from './ImageUpload';
 import {assert} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect, type FormEvent} from 'react';
@@ -90,6 +91,10 @@ export function CommitInfoField({
           resize: 'vertical',
         };
 
+  const supportsImageUpload = which === 'description';
+
+  const uploadFiles = useUploadFilesCallback(ref);
+
   const rendered = (
     <div className="commit-info-field">
       <Component
@@ -106,5 +111,9 @@ export function CommitInfoField({
       />
     </div>
   );
-  return rendered;
+  return !supportsImageUpload ? (
+    rendered
+  ) : (
+    <ImageDropZone onDrop={uploadFiles}>{rendered}</ImageDropZone>
+  );
 }
