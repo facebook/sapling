@@ -90,6 +90,14 @@ py_class!(pub class repo |py| {
         PyEdenApi::create_instance(py, edenapi_ref)
     }
 
+    def nullableedenapi(&self) -> PyResult<Option<PyEdenApi>> {
+        let mut repo_ref = self.inner(py).write();
+        match repo_ref.optional_eden_api().map_pyerr(py)? {
+            Some(api) => Ok(Some(PyEdenApi::create_instance(py, api)?)),
+            None => Ok(None),
+        }
+    }
+
     def changelog(&self) -> PyResult<PyCommits> {
         let mut repo_ref = self.inner(py).write();
         let changelog_ref = py
