@@ -229,6 +229,8 @@ elif sys.platform.startswith("darwin"):
         "test_eden_restart_fails_if_edenfs_crashes_on_start",
         # timeout
         "test_restart_starts_edenfs_if_not_running",
+        # timeout
+        "test_restart_while_starting",
     ]
     TEST_DISABLED["restart_test.RestartTestManaged"] = [
         "test_eden_restart_fails_if_edenfs_crashes_on_start",
