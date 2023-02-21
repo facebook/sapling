@@ -36,7 +36,8 @@ export type TrackEventName =
   | 'SetConfigOperation'
   | 'UncommitOperation'
   // @fb-only
-  | 'UnsubmittedStarRating';
+  | 'UnsubmittedStarRating'
+  | 'UploadImage';
 
 export type TrackErrorName =
   | 'DiffFetchFailed'
@@ -46,4 +47,5 @@ export type TrackErrorName =
   | 'GhCliNotInstalled'
   | 'TopLevelError'
   | 'RunOperationError'
-  | 'RepositoryError';
+  | 'RepositoryError'
+  | 'UploadImageError';

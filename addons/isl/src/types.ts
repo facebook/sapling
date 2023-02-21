@@ -318,6 +318,8 @@ export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABug
  */
 export type ClientToServerMessageWithPayload = {
   type: 'uploadFile';
+  filename: string;
+  id: string;
 } & {hasBinaryPayload: true};
 
 export type ClientToServerMessage =
@@ -365,7 +367,7 @@ export type ServerToClientMessage =
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
-  | {type: 'uploadFileResult'; result: Result<string>}
+  | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'comparison'; comparison: Comparison; data: ComparisonData}
   | {type: 'comparisonContextLines'; path: RepoRelativePath; lines: Array<string>}
   | {type: 'beganLoadingMoreCommits'}

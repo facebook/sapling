@@ -31,7 +31,7 @@ import {absolutePathForFileInRepo} from './Repository';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
-import {randomId} from 'shared/utils';
+import {randomId, unwrap} from 'shared/utils';
 
 export type IncomingMessage = ClientToServerMessage;
 type IncomingMessageWithPayload = ClientToServerMessageWithPayload;
@@ -99,7 +99,6 @@ export default class ServerToClientAPI {
     let messageExpectingBinaryFollowup: ClientToServerMessageWithPayload | null = null;
     this.incomingListener = this.connection.onDidReceiveMessage((buf, isBinary) => {
       if (isBinary) {
-        connection.logger?.log('Got binary message!');
         if (messageExpectingBinaryFollowup == null) {
           connection.logger?.error('Error: got a binary message when not expecting one');
           return;
@@ -198,11 +197,23 @@ export default class ServerToClientAPI {
   ) {
     switch (message.type) {
       case 'uploadFile': {
-        this.connection.logger?.log(
-          'Got an uploadFile message with a payload!',
-          message,
-          payload.byteLength,
-        );
+        const {id, filename} = message;
+        const uploadFile = Internal.uploadFile;
+        if (uploadFile == null) {
+          return;
+        }
+        this.tracker
+          .operation('UploadImage', 'UploadImageError', {}, () =>
+            uploadFile(unwrap(this.connection.logger), {filename, data: payload}),
+          )
+          .then((result: string) => {
+            this.connection.logger?.info('sucessfully uploaded file', filename, result);
+            this.postMessage({type: 'uploadFileResult', id, result: {value: result}});
+          })
+          .catch((error: Error) => {
+            this.connection.logger?.info('error uploading file', filename, error);
+            this.postMessage({type: 'uploadFileResult', id, result: {error}});
+          });
         break;
       }
     }

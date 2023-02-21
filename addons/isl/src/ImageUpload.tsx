@@ -12,6 +12,7 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {type MutableRefObject, useState, type ReactNode, useId} from 'react';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {randomId} from 'shared/utils';
 
 export type ImageUploadStatus = {id: number} & (
   | {status: 'pending'}
@@ -46,9 +47,19 @@ function placeholderForImageUpload(id: number): string {
  */
 export async function uploadFile(file: File): Promise<string> {
   const payload = await file.arrayBuffer();
-  clientToServerAPI.postMessageWithPayload({type: 'uploadFile'}, payload);
+  const id = randomId();
+  clientToServerAPI.postMessageWithPayload({type: 'uploadFile', filename: file.name, id}, payload);
+  const result = await clientToServerAPI.nextMessageMatching(
+    'uploadFileResult',
+    message => message.id === id,
+  );
 
-  return file.name; // TODO: get response from server
+  if (result.result.error) {
+    throw result.result.error;
+  }
+
+  const uploadedUrl = result.result.value;
+  return uploadedUrl;
 }
 
 /**
