@@ -1205,46 +1205,10 @@ class localrepository(object):
         return cl
 
     def _getedenapi(self, nullable=True):
-        def absent(reason):
-            if nullable:
-                return None
-            else:
-                raise errormod.Abort(
-                    _("edenapi is required but disabled by %s") % reason
-                )
-
-        # `edenapi.enable` is a manual override option that allows the user to
-        # force EdenAPI to be enabled or disabled, primarily useful for testing.
-        # This is intended as a manual override only; normal usage should rely
-        # on the logic below to determine whether or not to enable EdenAPI.
-        enabled = self.ui.config("edenapi", "enable")
-        if enabled is not None:
-            if not enabled:
-                return absent(_("edenapi.enable being empty"))
+        if nullable:
+            return self._rsrepo.nullableedenapi()
+        else:
             return self._rsrepo.edenapi()
-
-        path = self.ui.paths.get("default")
-        if path is None:
-            return absent(_("empty paths.default"))
-        scheme = path.url.scheme
-
-        # Legacy tests are incomplete with EdenAPI.
-        # They are using either: None or file scheme, or ssh scheme with
-        # dummyssh.
-        if scheme in {None, "file"}:
-            return absent(_("paths.default being 'file:'"))
-
-        if scheme == "ssh" and "dummyssh" in self.ui.config("ui", "ssh"):
-            return absent(_("paths.default being 'ssh:' and dummyssh in use"))
-
-        if self.ui.config("edenapi", "url") and getattr(self, "name", None):
-            return self._rsrepo.edenapi()
-
-        # If remote path is an EagerRepo, use EdenApi provided by it.
-        if scheme in ("eager", "test"):
-            return self._rsrepo.edenapi()
-
-        return absent(_("missing edenapi.url config or repo name"))
 
     @util.propertycache
     def edenapi(self):
