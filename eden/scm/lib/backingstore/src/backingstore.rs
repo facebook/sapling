@@ -223,7 +223,7 @@ impl BackingStore {
     #[instrument(level = "debug", skip(self, resolve))]
     pub fn get_tree_batch<F>(&self, keys: Vec<Key>, fetch_mode: FetchMode, resolve: F)
     where
-        F: Fn(usize, Result<Option<List>>) -> (),
+        F: Fn(usize, Result<Option<(List, HashMap<HgId, FileAuxData>)>>),
     {
         // Handle key errors
         let requests = keys.into_iter().enumerate();
@@ -258,8 +258,11 @@ impl BackingStore {
                     if let Some(index) = indexes.remove(&key) {
                         resolve(
                             index,
-                            Some(value.manifest_tree_entry().and_then(|t| t.try_into()))
-                                .transpose(),
+                            Some(value.manifest_tree_entry().and_then(|tree| {
+                                let aux_data = value.aux_data()?;
+                                Ok((tree.try_into()?, aux_data))
+                            }))
+                            .transpose(),
                         );
                     }
                 }
