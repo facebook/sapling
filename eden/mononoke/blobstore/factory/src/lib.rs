@@ -25,7 +25,7 @@ pub use delayblob::DelayOptions;
 #[cfg(fbcode_build)]
 pub use facebook::ManifoldArgs;
 #[cfg(fbcode_build)]
-pub use facebook::ManifoldOptions;
+pub use manifoldblob::ManifoldOptions;
 pub use multiplexedblob::scrub::default_scrub_handler;
 pub use multiplexedblob::scrub::ScrubOptions;
 pub use multiplexedblob::scrub::SrubWriteOnly;

@@ -35,6 +35,8 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures_watchdog::WatchdogExt;
 use logblob::LogBlob;
+#[cfg(fbcode_build)]
+use manifoldblob::ManifoldOptions;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexId;
@@ -71,7 +73,7 @@ pub struct BlobstoreOptions {
     pub delay_options: DelayOptions,
     pub throttle_options: ThrottleOptions,
     #[cfg(fbcode_build)]
-    pub manifold_options: crate::facebook::ManifoldOptions,
+    pub manifold_options: ManifoldOptions,
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
@@ -84,7 +86,7 @@ impl BlobstoreOptions {
         chaos_options: ChaosOptions,
         delay_options: DelayOptions,
         throttle_options: ThrottleOptions,
-        #[cfg(fbcode_build)] manifold_options: crate::facebook::ManifoldOptions,
+        #[cfg(fbcode_build)] manifold_options: ManifoldOptions,
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,

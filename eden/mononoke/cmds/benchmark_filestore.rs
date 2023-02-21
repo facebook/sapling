@@ -204,9 +204,7 @@ async fn get_blob<'a>(
                     fb,
                     bucket,
                     TEST_DATA_TTL,
-                    blobstore_options.manifold_options.api_key.as_deref(),
-                    blobstore_options.manifold_options.weak_consistency_ms,
-                    blobstore_options.manifold_options.request_priority,
+                    blobstore_options.manifold_options.clone(),
                     put_behaviour,
                 )?;
                 let blobstore = PrefixBlobstore::new(manifold, format!("{}.", NAME));
