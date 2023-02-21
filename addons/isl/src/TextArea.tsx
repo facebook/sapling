@@ -10,7 +10,12 @@ import type {ForwardedRef, MutableRefObject, ReactNode} from 'react';
 import type {SetterOrUpdater} from 'recoil';
 
 import {assertNonOptimistic} from './CommitInfoState';
-import {useUploadFilesCallback, ImageDropZone, FilePicker} from './ImageUpload';
+import {
+  useUploadFilesCallback,
+  ImageDropZone,
+  FilePicker,
+  PendingImageUploads,
+} from './ImageUpload';
 import {assert} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect, type FormEvent} from 'react';
@@ -126,6 +131,7 @@ export function CommitInfoField({
  * Floating button list at the bottom corner of the text area
  */
 export function EditorToolbar({
+  textAreaRef,
   uploadFiles,
 }: {
   uploadFiles?: (files: Array<File>) => unknown;
@@ -133,6 +139,7 @@ export function EditorToolbar({
 }) {
   const parts: Array<ReactNode> = [];
   if (uploadFiles != null) {
+    parts.push(<PendingImageUploads key="pending-uploads" textAreaRef={textAreaRef} />);
     parts.push(<FilePicker key="picker" uploadFiles={uploadFiles} />);
   }
   if (parts.length === 0) {

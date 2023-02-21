@@ -6,10 +6,11 @@
  */
 
 import {Tooltip} from './Tooltip';
-import {t} from './i18n';
+import {T, t} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {type MutableRefObject, useState, type ReactNode, useId} from 'react';
-import {atom, useRecoilCallback} from 'recoil';
+import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
+import {Icon} from 'shared/Icon';
 
 export type ImageUploadStatus = {id: number} & (
   | {status: 'pending'}
@@ -20,6 +21,13 @@ export type ImageUploadStatus = {id: number} & (
 export const imageUploadState = atom<{next: number; states: Record<number, ImageUploadStatus>}>({
   key: 'imageUploadState',
   default: {next: 1, states: {}},
+});
+export const numPendingImageUploads = selector({
+  key: 'numPendingImageUploads',
+  get: ({get}): number => {
+    const state = get(imageUploadState);
+    return Object.values(state.states).filter(state => state.status === 'pending').length;
+  },
 });
 
 function placeholderForImageUpload(id: number): string {
@@ -39,6 +47,72 @@ export async function uploadFile(file: File): Promise<string> {
   await new Promise(res => setTimeout(res, 30_000)); // temporary testing
 
   return file.name;
+}
+
+/**
+ * Summary of ongoing image uploads. Click to cancel all ongoing uploads.
+ */
+export function PendingImageUploads({textAreaRef}: {textAreaRef: MutableRefObject<unknown>}) {
+  const numPending = useRecoilValue(numPendingImageUploads);
+  const [isHovering, setIsHovering] = useState(false);
+  const onCancel = useRecoilCallback(({set}) => () => {
+    setIsHovering(false);
+    // Canceling ongoing uploads doesn't actualy interrupt the async work for the uploads,
+    // it just deletes the tracking state, by replacing 'pending' uploads as 'cancelled'.
+    set(imageUploadState, current => {
+      const canceledIds: Array<number> = [];
+      // TODO: This cancels ALL ongoing uploads, even from other text areas, if any exist.
+      // imageUploadStates should contain a unique id per text area,
+      // so we can cancel just this text area's uploads
+      const newState = {
+        ...current,
+        states: Object.fromEntries(
+          Object.entries(current.states).map(([idStr, state]) => {
+            const id = Number(idStr);
+            if (state.status === 'pending') {
+              canceledIds.push(id);
+              return [id, {state: 'cancelled', id}];
+            }
+            return [id, state];
+          }),
+        ) as Record<number, ImageUploadStatus>,
+      };
+
+      const textArea =
+        textAreaRef.current == null
+          ? null
+          : (textAreaRef.current as {control: HTMLInputElement}).control;
+      if (textArea) {
+        for (const id of canceledIds) {
+          const placeholder = placeholderForImageUpload(id);
+          replaceInTextArea(textArea, placeholder, ''); // delete placeholder
+        }
+      }
+      return newState;
+    });
+  });
+
+  return numPending === 0 ? null : (
+    <span
+      className="cancel-image-upload"
+      onClick={onCancel}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}>
+      <VSCodeButton appearance="icon">
+        {isHovering ? (
+          <>
+            <Icon icon="stop-circle" slot="start" />
+            <T>Click to cancel</T>
+          </>
+        ) : (
+          <>
+            <Icon icon="loading" slot="start" />
+            <T count={numPending}>numImagesUploading</T>
+          </>
+        )}
+      </VSCodeButton>
+    </span>
+  );
 }
 
 export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => unknown}) {
