@@ -59,7 +59,11 @@ export function registerCommands(): Array<vscode.Disposable> {
   return disposables;
 }
 
-function openDiffView(uri: vscode.Uri, comparison: Comparison): void {
+function openDiffView(
+  uriOrResource: vscode.Uri | vscode.SourceControlResourceState,
+  comparison: Comparison,
+): void {
+  const uri = uriOrResource instanceof vscode.Uri ? uriOrResource : uriOrResource.resourceUri;
   const {fsPath} = uri;
   const repo = repositoryCache.cachedRepositoryForPath(fsPath);
   if (repo == null) {

@@ -54,7 +54,8 @@
       {
         "command": "sapling.open-file-diff-uncommitted",
         "title": "%sapling.open-diff-uncommitted-command%",
-        "category": "%sapling.command-category%"
+        "category": "%sapling.command-category%",
+        "icon": "$(git-pull-request-go-to-changes)"
       },
       {
         "command": "sapling.open-file-diff-head",
@@ -68,6 +69,13 @@
       }
     ],
     "menus": {
+      "scm/resourceState/context": [
+        {
+          "command": "sapling.open-file-diff-uncommitted",
+          "group": "inline",
+          "when": "scmProvider == sapling && scmResourceGroup == changes"
+        }
+      ],
       "scm/title": [
         {
           "command": "sapling.open-isl",
