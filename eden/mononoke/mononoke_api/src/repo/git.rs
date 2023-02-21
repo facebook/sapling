@@ -13,7 +13,9 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::BlobstoreBytes;
+use mononoke_types::BonsaiChangesetMut;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -99,5 +101,36 @@ impl RepoContext {
             .put(&self.ctx, blobstore_key, blobstore_bytes)
             .await
             .with_context(|| format!("Failed to store git object {} in blobstore", git_hash))
+    }
+
+    /// Create Mononoke counterpart of Git tree object
+    pub async fn create_git_tree(&self, git_tree_hash: &git_hash::oid) -> anyhow::Result<()> {
+        let mut changeset = BonsaiChangesetMut::default();
+        // Get git hash from tree object ID
+        let git_hash = GitSha1::from_bytes(git_tree_hash.as_bytes()).with_context(|| {
+            format!(
+                "Invalid GitSha1 hash {:?} provided for the Git tree",
+                git_tree_hash
+            )
+        })?;
+        // Store hash in the changeset
+        changeset.git_tree_hash = Some(git_hash);
+        // Freeze the changeset to determine if there are any errors
+        let changeset = changeset.freeze().map_err(|e| {
+            MononokeError::InvalidRequest(format!("Changes create invalid bonsai changeset: {}", e))
+        })?;
+        // Store the created changeset
+        blobrepo::save_bonsai_changesets(
+            vec![changeset.clone()],
+            self.ctx().clone(),
+            self.inner_repo(),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in saving bonsai changeset for git tree {:?}",
+                git_tree_hash
+            )
+        })
     }
 }

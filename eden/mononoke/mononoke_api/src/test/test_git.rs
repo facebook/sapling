@@ -28,6 +28,8 @@ async fn init_repo(ctx: &CoreContext) -> Result<RepoContext> {
     Ok(repo_context)
 }
 
+/// upload_git_object tests
+
 #[fbinit::test]
 /// Validate the basic git upload object functionality works.
 async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
@@ -160,5 +162,18 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
         .await?;
     let output = repo_ctx.repo_blobstore().get(&ctx, &blobstore_key).await?;
     assert!(output.is_some());
+    Ok(())
+}
+
+/// create_git_tree tests
+
+#[fbinit::test]
+/// Validate the basic create git tree functionality works.
+async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo_ctx = init_repo(&ctx).await?;
+    let git_tree_hash = ObjectId::empty_tree(git_hash::Kind::Sha1);
+    let output = repo_ctx.create_git_tree(&git_tree_hash).await;
+    assert!(output.is_ok());
     Ok(())
 }

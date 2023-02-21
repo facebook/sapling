@@ -657,8 +657,6 @@ impl RepoContext {
         // Create the new Bonsai Changeset. The `freeze` method validates
         // that the bonsai changeset is internally consistent.
 
-        // TODO(rajshar): Populate the below git_extra_headers and git_tree_hash values
-        // using appropriate metadata
         let new_changeset = BonsaiChangesetMut {
             parents,
             author,
