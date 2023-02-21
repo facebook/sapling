@@ -7,6 +7,7 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
+use std::collections::HashMap;
 use std::str;
 
 use anyhow::Error;
@@ -15,6 +16,7 @@ use libc::c_void;
 use manifest::List;
 use revisionstore::scmstore::FetchMode;
 use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
+use types::HgId;
 use types::Key;
 
 use crate::backingstore::BackingStore;
@@ -70,7 +72,7 @@ pub extern "C" fn sapling_backingstore_get_tree(
         store
             .get_tree(node.slice(), fetch_mode_from_local(local))
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
-            .and_then(|list| list.try_into())
+            .and_then(|list| (list, HashMap::new()).try_into())
     })
     .into()
 }
@@ -86,10 +88,8 @@ pub extern "C" fn sapling_backingstore_get_tree_batch(
     let keys: Vec<Key> = requests.slice().iter().map(|req| req.key()).collect();
 
     store.get_tree_batch(keys, fetch_mode_from_local(local), |idx, result| {
-        let result: Result<List> = result.and_then(|opt| {
-            opt.ok_or_else(|| Error::msg("no tree found"))
-                .map(|tree_and_metadata| tree_and_metadata.0)
-        });
+        let result: Result<(List, HashMap<HgId, ScmStoreFileAuxData>)> =
+            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")));
         let result: Result<Tree> = result.and_then(|list| list.try_into());
         let result: CFallible<Tree> = result.into();
         unsafe { resolve(data, idx, result.into()) };
