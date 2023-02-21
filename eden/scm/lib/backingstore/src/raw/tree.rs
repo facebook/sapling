@@ -81,7 +81,6 @@ pub struct Tree {
     /// This makes sure `entries` above is pointing to a valid memory.
     entries_ptr: *mut Vec<TreeEntry>,
     length: usize,
-    hash: CBytes,
 }
 
 impl TryFrom<List> for Tree {
@@ -103,7 +102,6 @@ impl TryFrom<List> for Tree {
                     entries: entries.as_ptr(),
                     entries_ptr: Box::into_raw(entries),
                     length,
-                    hash: Vec::new().into(),
                 })
             }
         }
