@@ -1,0 +1,320 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import App from '../App';
+import {
+  COMMIT,
+  CommitInfoTestUtils,
+  expectMessageNOTSentToServer,
+  expectMessageSentToServer,
+  fireMouseEvent,
+  getLastBinaryMessageSentToServer,
+  resetTestMessages,
+  simulateCommits,
+  simulateMessageFromServer,
+} from '../testUtils';
+import {fireEvent, render, waitFor, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {act} from 'react-dom/test-utils';
+import {nextTick} from 'shared/testUtils';
+import * as utils from 'shared/utils';
+
+jest.mock('../MessageBus');
+
+describe('Image upload inside TextArea ', () => {
+  beforeEach(() => {
+    resetTestMessages();
+  });
+
+  beforeEach(() => {
+    render(<App />);
+    act(() => {
+      expectMessageSentToServer({
+        type: 'subscribeSmartlogCommits',
+        subscriptionID: expect.anything(),
+      });
+      simulateCommits({
+        value: [
+          COMMIT('1', 'some public base', '0', {phase: 'public'}),
+          COMMIT('a', 'My Commit', '1', {isHead: true}),
+        ],
+      });
+    });
+    act(() => {
+      CommitInfoTestUtils.clickCommitMode();
+    });
+  });
+
+  const mockFile = {
+    name: 'file.png',
+    arrayBuffer: () => Promise.resolve(new Uint8Array([0, 1, 2]).buffer),
+  } as File;
+
+  const dataTransfer = {
+    files: [mockFile] as unknown as FileList,
+  } as DataTransfer;
+
+  describe('Drag and drop image', () => {
+    it('renders highlight while dragging image', () => {
+      const textarea = CommitInfoTestUtils.getDescriptionEditor();
+
+      act(() => void fireMouseEvent('dragenter', textarea, 0, 0, {dataTransfer}));
+      expect(document.querySelector('.hovering-to-drop')).not.toBeNull();
+      act(() => void fireMouseEvent('dragleave', textarea, 0, 0, {dataTransfer}));
+      expect(document.querySelector('.hovering-to-drop')).toBeNull();
+    });
+
+    it('does not try to upload other things being dragged', () => {
+      const textarea = CommitInfoTestUtils.getDescriptionEditor();
+      act(() => {
+        fireMouseEvent('dragenter', textarea, 0, 0, {
+          dataTransfer: {
+            files: [],
+            items: [],
+          } as unknown as DataTransfer,
+        });
+      }); // drag without files is ignored
+      expect(document.querySelector('.hovering-to-drop')).toBeNull();
+    });
+
+    it('lets you drag an image to upload it', async () => {
+      const textarea = CommitInfoTestUtils.getDescriptionEditor();
+      act(() => void fireMouseEvent('dragenter', textarea, 0, 0, {dataTransfer}));
+      act(() => {
+        fireMouseEvent('drop', textarea, 0, 0, {dataTransfer});
+      });
+
+      await waitFor(() => {
+        expectMessageSentToServer(expect.objectContaining({type: 'uploadFile'}));
+      });
+    });
+  });
+
+  describe('Paste image to upload', () => {
+    it('lets you paste an image to upload it', async () => {
+      const textarea = CommitInfoTestUtils.getDescriptionEditor();
+      act(() => {
+        fireEvent.paste(textarea, {clipboardData: dataTransfer});
+      });
+      await waitFor(() => {
+        expectMessageSentToServer(expect.objectContaining({type: 'uploadFile'}));
+      });
+    });
+    it('pastes without images are handled normally', async () => {
+      const textarea = CommitInfoTestUtils.getDescriptionEditor();
+      act(() => void fireEvent.paste(textarea));
+      await nextTick(); // allow file upload to await arrayBuffer()
+      expectMessageNOTSentToServer(expect.objectContaining({type: 'uploadFile'}));
+    });
+  });
+
+  describe('file picker to upload file', () => {
+    it('lets you pick a file to upload', async () => {
+      const uploadButton = screen.getByTestId('attach-file-input');
+      act(() => {
+        userEvent.upload(uploadButton, [mockFile]);
+      });
+
+      await waitFor(() => {
+        expectMessageSentToServer(expect.objectContaining({type: 'uploadFile'}));
+      });
+    });
+  });
+
+  describe('Image upload UI', () => {
+    let randomIdSpy: jest.SpyInstance;
+    beforeEach(() => {
+      randomIdSpy = jest.spyOn(utils, 'randomId');
+    });
+    afterEach(() => {
+      randomIdSpy.mockClear();
+    });
+
+    async function startFileUpload(id: string) {
+      randomIdSpy.mockImplementationOnce(() => id);
+      const uploadButton = screen.getByTestId('attach-file-input');
+      act(() => void userEvent.upload(uploadButton, [mockFile]));
+      await waitFor(() =>
+        expectMessageSentToServer(expect.objectContaining({type: 'uploadFile', id})),
+      );
+    }
+
+    async function simulateUploadSucceeded(id: string) {
+      await act(async () => {
+        simulateMessageFromServer({
+          type: 'uploadFileResult',
+          id,
+          result: {value: `https://image.example.com/${id}`},
+        });
+        await nextTick();
+      });
+    }
+
+    async function simulateUploadFailed(id: string) {
+      await act(async () => {
+        simulateMessageFromServer({
+          type: 'uploadFileResult',
+          id,
+          result: {error: new Error('upload failed')},
+        });
+        await nextTick();
+      });
+    }
+
+    const {descriptionTextContent, getDescriptionEditor} = CommitInfoTestUtils;
+
+    it('shows placeholder when uploading an image', async () => {
+      expect(descriptionTextContent()).not.toContain('Uploading');
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toContain('Uploading #1');
+    });
+
+    it('sends a message to the server to upload the file', async () => {
+      jest.spyOn(utils, 'randomId').mockImplementation(() => '1111');
+      await startFileUpload('1111');
+      expectMessageSentToServer({
+        type: 'uploadFile',
+        filename: 'file.png',
+        hasBinaryPayload: true,
+        id: '1111',
+      });
+      const binary = getLastBinaryMessageSentToServer();
+      expect(binary).toEqual(new Uint8Array([1, 2, 3, 4]).buffer);
+    });
+
+    it('removes placeholder when upload succeeds', async () => {
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toContain('Uploading #1');
+      await simulateUploadSucceeded('1111');
+      expect(descriptionTextContent()).not.toContain('Uploading #1');
+      expect(descriptionTextContent()).toContain('https://image.example.com/1111');
+    });
+
+    it('removes placeholder when upload fails', async () => {
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toContain('Uploading #1');
+      await simulateUploadFailed('1111');
+      expect(descriptionTextContent()).not.toContain('Uploading #1');
+      expect(descriptionTextContent()).not.toContain('https://image.example.com');
+    });
+
+    it('shows progress of ongoing uploads', async () => {
+      await startFileUpload('1111');
+      expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();
+    });
+
+    it('click to cancel upload', async () => {
+      await startFileUpload('1111');
+      expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();
+      act(() => {
+        fireEvent.mouseOver(screen.getByText('Uploading 1 file'));
+      });
+      expect(screen.getByText('Click to cancel')).toBeInTheDocument();
+      act(() => {
+        fireEvent.click(screen.getByText('Click to cancel'));
+      });
+
+      expect(descriptionTextContent()).not.toContain('Uploading #1');
+      expect(screen.queryByText('Uploading 1 file')).not.toBeInTheDocument();
+    });
+
+    it('clears hover state when cancelling', async () => {
+      await startFileUpload('1111');
+      act(() => void fireEvent.mouseOver(screen.getByText('Uploading 1 file')));
+      act(() => void fireEvent.click(screen.getByText('Click to cancel')));
+      await startFileUpload('2222');
+      expect(screen.queryByText('Uploading 1 file')).toBeInTheDocument();
+    });
+
+    it('handles multiple placeholders', async () => {
+      await startFileUpload('1111');
+      expect(screen.getByText('Uploading 1 file')).toBeInTheDocument();
+      await startFileUpload('2222');
+      expect(screen.getByText('Uploading 2 files')).toBeInTheDocument();
+
+      expect(descriptionTextContent()).toContain('Uploading #1');
+      expect(descriptionTextContent()).toContain('Uploading #2');
+      await simulateUploadSucceeded('1111');
+      expect(descriptionTextContent()).not.toContain('Uploading #1');
+      expect(descriptionTextContent()).toContain('Uploading #2');
+
+      expect(descriptionTextContent()).toContain('https://image.example.com/1111');
+      expect(descriptionTextContent()).not.toContain('https://image.example.com/2222');
+
+      await simulateUploadSucceeded('2222');
+      expect(descriptionTextContent()).not.toContain('Uploading #2');
+      expect(descriptionTextContent()).toContain('https://image.example.com/2222');
+    });
+
+    it('inserts whitespace before inserted placeholder when necessary', async () => {
+      act(() => {
+        userEvent.type(getDescriptionEditor(), 'Hello!\n');
+        //                                     ^ cursor
+        getDescriptionEditor().selectionStart = 6;
+        getDescriptionEditor().selectionEnd = 6;
+      });
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toEqual('Hello! 【 Uploading #1 】\n');
+      //                                       ^ inserted space  ^ no extra space
+    });
+
+    it('inserts whitespace after inserted placeholder when necessary', async () => {
+      act(() => {
+        userEvent.type(getDescriptionEditor(), 'Hello!\n');
+        //                                          ^ cursor
+        getDescriptionEditor().selectionStart = 0;
+        getDescriptionEditor().selectionEnd = 0;
+      });
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toEqual('【 Uploading #1 】 Hello!\n');
+      //                                        ^ no space       ^ inserted space
+    });
+
+    it('preserves selection when setting placeholders', async () => {
+      act(() => {
+        userEvent.type(getDescriptionEditor(), 'Hello, world!\n');
+        //                                            ^-----^ selection
+        getDescriptionEditor().selectionStart = 2;
+        getDescriptionEditor().selectionEnd = 8;
+      });
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toEqual('He 【 Uploading #1 】 orld!\n');
+      //                                          ^ inserted spaces ^
+
+      // now cursor is after Uploading
+      expect(getDescriptionEditor().selectionStart).toEqual(20);
+      expect(getDescriptionEditor().selectionEnd).toEqual(20);
+    });
+
+    it('preserves selection when replacing placeholders', async () => {
+      act(() => {
+        userEvent.type(getDescriptionEditor(), 'fob\nbar\nbaz');
+        //                                               ^ cursor
+        getDescriptionEditor().selectionStart = 4;
+        getDescriptionEditor().selectionEnd = 4;
+      });
+      await startFileUpload('1111');
+      expect(descriptionTextContent()).toEqual('fob\n【 Uploading #1 】 bar\nbaz');
+      //                     start new selection: ^--------------------------^
+      getDescriptionEditor().selectionStart = 2;
+      getDescriptionEditor().selectionEnd = 26;
+      // make sure my indices are correct
+      expect(descriptionTextContent()[getDescriptionEditor().selectionStart]).toEqual('b');
+      expect(descriptionTextContent()[getDescriptionEditor().selectionEnd]).toEqual('a');
+
+      await simulateUploadSucceeded('1111');
+      expect(descriptionTextContent()).toEqual('fob\nhttps://image.example.com/1111 bar\nbaz');
+      //                 selection is preserved:  ^---------------------------------------^
+
+      // now cursor is after Uploading
+      expect(getDescriptionEditor().selectionStart).toEqual(2);
+      expect(getDescriptionEditor().selectionEnd).toEqual(40);
+      expect(descriptionTextContent()[getDescriptionEditor().selectionStart]).toEqual('b');
+      expect(descriptionTextContent()[getDescriptionEditor().selectionEnd]).toEqual('a');
+    });
+  });
+});

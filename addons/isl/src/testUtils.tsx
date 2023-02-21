@@ -8,6 +8,7 @@
 import type {TestingEventBus} from './__mocks__/MessageBus';
 import type {
   ClientToServerMessage,
+  ClientToServerMessageWithPayload,
   CommitInfo,
   Hash,
   Result,
@@ -28,11 +29,36 @@ export function simulateMessageFromServer(message: ServerToClientMessage): void 
   testMessageBus.simulateMessage(serializeToString(message));
 }
 
-export function expectMessageSentToServer(message: Partial<ClientToServerMessage>): void {
-  expect(testMessageBus.sent.map(deserializeFromString)).toContainEqual(message);
+export function expectMessageSentToServer(
+  message: Partial<ClientToServerMessage | ClientToServerMessageWithPayload>,
+): void {
+  expect(
+    testMessageBus.sent
+      .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
+      .map(deserializeFromString),
+  ).toContainEqual(message);
 }
 export function expectMessageNOTSentToServer(message: Partial<ClientToServerMessage>): void {
-  expect(testMessageBus.sent.map(deserializeFromString)).not.toContainEqual(message);
+  expect(
+    testMessageBus.sent
+      .filter((msg: unknown): msg is string => !(msg instanceof ArrayBuffer))
+      .map(deserializeFromString),
+  ).not.toContainEqual(message);
+}
+
+/**
+ * Return last `num` raw messages sent to the server.
+ * Normal messages will be stingified JSON.
+ * Binary messages with be ArrayBuffers.
+ */
+export function getLastMessagesSentToServer(num: number): Array<string | ArrayBuffer> {
+  return testMessageBus.sent.slice(-num);
+}
+
+export function getLastBinaryMessageSentToServer(): ArrayBuffer | undefined {
+  return testMessageBus.sent.find(
+    (message): message is ArrayBuffer => message instanceof ArrayBuffer,
+  );
 }
 
 export function simulateServerDisconnected(): void {
@@ -144,13 +170,14 @@ export const TEST_COMMIT_HISTORY = [
   COMMIT('1', 'some public base', '0', {phase: 'public'}),
 ];
 
-const fireMouseEvent = function (
+export const fireMouseEvent = function (
   type: string,
   elem: EventTarget,
   centerX: number,
   centerY: number,
+  additionalProperties?: Partial<MouseEvent | InputEvent>,
 ) {
-  const evt = document.createEvent('MouseEvents');
+  const evt = document.createEvent('MouseEvents') as Writable<MouseEvent & InputEvent>;
   evt.initMouseEvent(
     type,
     true,
@@ -168,7 +195,12 @@ const fireMouseEvent = function (
     0,
     elem,
   );
-  (evt as Writable<DragEvent>).dataTransfer = {} as DataTransfer;
+  evt.dataTransfer = {} as DataTransfer;
+  if (additionalProperties != null) {
+    for (const [key, value] of Object.entries(additionalProperties)) {
+      (evt as Record<string, unknown>)[key] = value;
+    }
+  }
   return elem.dispatchEvent(evt);
 };
 

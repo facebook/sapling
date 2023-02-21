@@ -111,7 +111,11 @@ export function CommitInfoField({
   // The gh cli does not support uploading images for commit messages,
   // see https://github.com/cli/cli/issues/1895#issuecomment-718899617
   // for now, this is internal-only.
-  const supportsImageUpload = which === 'description' && Internal.supportsImageUpload === true;
+  const supportsImageUpload =
+    which === 'description' &&
+    (Internal.supportsImageUpload === true ||
+      // image upload is always enabled in tests
+      process.env.NODE_ENV === 'test');
 
   const uploadFiles = useUploadFilesCallback(ref);
 

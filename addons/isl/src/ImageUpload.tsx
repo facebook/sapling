@@ -134,12 +134,14 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
         type="file"
         accept="image/*,video/*"
         className="choose-file"
+        data-testid="attach-file-input"
         id={id}
         multiple
         onChange={event => {
           if (event.target.files) {
             uploadFiles([...event.target.files]);
           }
+          event.target.files = null;
         }}
       />
       <label htmlFor={id}>
@@ -147,7 +149,7 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
           title={t(
             'Choose image or video files to upload. Drag & Drop and Pasting images or videos is also supported.',
           )}>
-          <VSCodeButton appearance="icon">
+          <VSCodeButton appearance="icon" data-testid="attach-file-button">
             <PaperclipIcon />
           </VSCodeButton>
         </Tooltip>
