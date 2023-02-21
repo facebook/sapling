@@ -125,6 +125,10 @@ impl EagerRepoStore {
     pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
         // Prefix in bytes of the hg SHA1s in the eagerepo data.
         const HG_SHA1_PREFIX: usize = Id20::len() * 2;
+        // Special null case.
+        if id.is_null() {
+            return Ok(Some(Bytes::default()));
+        }
         match self.get_sha1_blob(id)? {
             None => Ok(None),
             Some(data) => Ok(Some(data.slice(HG_SHA1_PREFIX..))),
