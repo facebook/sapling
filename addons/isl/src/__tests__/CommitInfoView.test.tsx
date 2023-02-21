@@ -246,6 +246,7 @@ describe('CommitInfoView', () => {
           operation: {
             args: [
               'amend',
+              '--addremove',
               {type: 'repo-relative-file', path: 'src/file2.js'},
               '--message',
               'Head Commit\n',
@@ -637,6 +638,7 @@ describe('CommitInfoView', () => {
               operation: {
                 args: [
                   'amend',
+                  '--addremove',
                   '--message',
                   'Head Commit hello new title\nSummary: stacked commit\nhello new text',
                 ],
@@ -793,7 +795,7 @@ describe('CommitInfoView', () => {
           expectMessageSentToServer({
             type: 'runOperation',
             operation: {
-              args: ['commit', '--message', 'new commit title\nmy description'],
+              args: ['commit', '--addremove', '--message', 'new commit title\nmy description'],
               id: expect.anything(),
               runner: CommandRunner.Sapling,
               trackEventName: 'CommitOperation',

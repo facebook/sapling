@@ -28,7 +28,7 @@ export class AmendOperation extends Operation {
   static opName = 'Amend';
 
   getArgs() {
-    const args: Array<CommandArg> = ['amend'];
+    const args: Array<CommandArg> = ['amend', '--addremove'];
     if (this.filePathsToAmend) {
       args.push(
         ...this.filePathsToAmend.map(file =>

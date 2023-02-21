@@ -36,6 +36,7 @@ export class CommitOperation extends Operation {
   getArgs() {
     const args: Array<CommandArg> = [
       'commit',
+      '--addremove',
       '--message',
       `${this.message.title}\n${this.message.description}`,
     ];
