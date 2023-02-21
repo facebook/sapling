@@ -16,6 +16,7 @@ import {
   FilePicker,
   PendingImageUploads,
 } from './ImageUpload';
+import {Internal} from './Internal';
 import {assert} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect, type FormEvent} from 'react';
@@ -96,7 +97,10 @@ export function CommitInfoField({
           resize: 'vertical',
         };
 
-  const supportsImageUpload = which === 'description';
+  // The gh cli does not support uploading images for commit messages,
+  // see https://github.com/cli/cli/issues/1895#issuecomment-718899617
+  // for now, this is internal-only.
+  const supportsImageUpload = which === 'description' && Internal.supportsImageUpload === true;
 
   const uploadFiles = useUploadFilesCallback(ref);
 
