@@ -8,12 +8,9 @@
 #![feature(error_generic_member_access)]
 #![feature(provide_any)]
 
-use std::any::Demand;
-use std::backtrace::Backtrace;
 use std::backtrace::BacktraceStatus;
 use std::convert::Infallible;
 use std::error::Error as StdError;
-use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -25,36 +22,37 @@ pub mod macro_reexport {
     pub use anyhow::anyhow;
 }
 
+#[macro_export]
 macro_rules! cloneable_error {
     ($name: ident) => {
         #[derive(Clone, Debug)]
-        pub struct $name(pub ::std::sync::Arc<Error>);
+        pub struct $name(pub ::std::sync::Arc<anyhow::Error>);
 
         impl $name {
-            pub fn backtrace(&self) -> &Backtrace {
+            pub fn backtrace(&self) -> &::std::backtrace::Backtrace {
                 self.0.backtrace()
             }
         }
 
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 self.0.fmt(f)
             }
         }
 
-        impl From<Error> for $name {
-            fn from(error: Error) -> Self {
+        impl From<anyhow::Error> for $name {
+            fn from(error: anyhow::Error) -> Self {
                 Self(::std::sync::Arc::new(error))
             }
         }
 
-        impl StdError for $name {
-            fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        impl ::std::error::Error for $name {
+            fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
                 Some(&**self.0)
             }
 
-            fn provide<'a>(&'a self, demand: &mut Demand<'a>) {
-                demand.provide_ref::<Backtrace>(self.backtrace());
+            fn provide<'a>(&'a self, demand: &mut ::std::any::Demand<'a>) {
+                demand.provide_ref::<::std::backtrace::Backtrace>(self.backtrace());
             }
         }
     };

@@ -17,6 +17,7 @@ use git_hash::ObjectId;
 use git_object::Tag;
 use git_object::WriteTo;
 
+use crate::repo::git::GitObjectError;
 use crate::CoreContext;
 use crate::Repo;
 use crate::RepoContext;
@@ -48,9 +49,11 @@ async fn basic_upload_git_object(fb: FacebookInit) -> Result<()> {
 
     let bytes_to_hash = bytes::Bytes::from(bytes.clone());
     let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes_to_hash);
-    repo_ctx
+    let output = repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
-        .await
+        .await;
+    output.expect("Expected git object to be uploaded successfully");
+    Ok(())
 }
 
 #[fbinit::test]
@@ -68,13 +71,10 @@ async fn blob_upload_git_object(fb: FacebookInit) -> Result<()> {
     let output = repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
-    assert!(output.is_err());
-    assert!(
-        output
-            .unwrap_err()
-            .to_string()
-            .contains("upload_git_object cannot be used to upload raw file content.")
-    );
+    assert!(matches!(
+        output.expect_err("Expected error during git object upload"),
+        GitObjectError::DisallowedBlobObject(_)
+    ));
     Ok(())
 }
 
@@ -99,13 +99,10 @@ async fn invalid_bytes_upload_git_object(fb: FacebookInit) -> Result<()> {
     let output = repo_ctx
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await;
-    assert!(output.is_err());
-    assert!(
-        output
-            .unwrap_err()
-            .to_string()
-            .contains("Invalid git object data for")
-    );
+    assert!(matches!(
+        output.expect_err("Expected error during git object upload"),
+        GitObjectError::InvalidContent(..)
+    ));
     Ok(())
 }
 
@@ -128,13 +125,10 @@ async fn invalid_hash_upload_git_object(fb: FacebookInit) -> Result<()> {
     let output = repo_ctx
         .upload_git_object(&ObjectId::empty_tree(git_hash::Kind::Sha1), bytes)
         .await;
-    assert!(output.is_err());
-    assert!(
-        output
-            .unwrap_err()
-            .to_string()
-            .contains("does not match hash of bytes")
-    );
+    assert!(matches!(
+        output.expect_err("Expected error during git object upload"),
+        GitObjectError::HashMismatch(..)
+    ));
     Ok(())
 }
 
@@ -161,7 +155,7 @@ async fn blobstore_check_upload_git_object(fb: FacebookInit) -> Result<()> {
         .upload_git_object(git_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
         .await?;
     let output = repo_ctx.repo_blobstore().get(&ctx, &blobstore_key).await?;
-    assert!(output.is_some());
+    output.expect("Expected git object to be uploaded successfully");
     Ok(())
 }
 
@@ -174,6 +168,6 @@ async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
     let repo_ctx = init_repo(&ctx).await?;
     let git_tree_hash = ObjectId::empty_tree(git_hash::Kind::Sha1);
     let output = repo_ctx.create_git_tree(&git_tree_hash).await;
-    assert!(output.is_ok());
+    output.expect("Expected git tree to be created successfully");
     Ok(())
 }
