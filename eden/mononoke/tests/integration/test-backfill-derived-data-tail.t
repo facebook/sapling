@@ -48,8 +48,7 @@ build the skiplist that will be used to slice the repository
   $ mononoke_newadmin skiplist -R repo -k skiplist_4 build --exponent 2
   *] creating a skiplist from scratch (glob)
   *] built 5 skiplist nodes (glob)
-  *] Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.. (glob)
-  *] ...done! (glob)
+  *] Skiplist successfully stored in blobstore. (glob)
 
 enable some more derived data types for normal usage and backfilling
   $ SKIPLIST_INDEX_BLOBSTORE_KEY=skiplist_4 \

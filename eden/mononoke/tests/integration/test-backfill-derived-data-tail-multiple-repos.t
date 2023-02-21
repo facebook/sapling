@@ -76,8 +76,7 @@ build the skiplist that will be used to slice the repository
   *] using repo "repo" repoid RepositoryId(0) (glob)
   *] creating a skiplist from scratch (glob)
   *] build 5 skiplist nodes (glob)
-  *] Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.. (glob)
-  *] ...done! (glob)
+  *] Skiplist successfully stored in blobstore. (glob)
 
   $ cd "$TESTTMP"
   $ REPOID=1 REPONAME=backup setup_common_config
@@ -89,8 +88,7 @@ build the skiplist that will be used to slice the repository
   *] using repo "backup" repoid RepositoryId(1) (glob)
   *] creating a skiplist from scratch (glob)
   *] build 5 skiplist nodes (glob)
-  *] Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.. (glob)
-  *] ...done! (glob)
+  *] Skiplist successfully stored in blobstore. (glob)
 
 start the tailer with tailing and backfilling some different types
 normally the tailer runs forever, but for this test we will make it

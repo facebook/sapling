@@ -42,8 +42,6 @@ use skiplist::SkiplistNodeType;
 use slog::debug;
 use slog::info;
 use slog::Logger;
-use tokio::time::sleep;
-use tokio::time::Duration;
 
 use super::read::get_skiplist_index;
 use super::Repo;
@@ -138,15 +136,7 @@ pub async fn build_skiplist(
             BlobstoreBytes::from_bytes(bytes),
         )
         .await?;
-    // XXX: We're seeing crashes if we exit too fast after storing skiplist.
-    // This is clowny but works as temporary mitigation.
-    // See more in: https://fburl.com/c4izaz4y
-    info!(
-        logger,
-        "Skiplist successfully stored in blobstore, sleeping for 10s to avoid crash.."
-    );
-    sleep(Duration::from_millis(10000)).await;
-    info!(logger, "...done!",);
+    info!(logger, "Skiplist successfully stored in blobstore.");
     Ok(())
 }
 
