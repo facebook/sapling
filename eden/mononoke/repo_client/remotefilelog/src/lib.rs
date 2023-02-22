@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::fmt;
 
 use anyhow::Result;
-use blobrepo::BlobRepo;
+use blobrepo::AsBlobRepo;
 use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -38,9 +38,14 @@ use mercurial_types::HgParents;
 use mercurial_types::MPath;
 use mercurial_types::RevFlags;
 use redactedblobstore::has_redaction_root_cause;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use revisionstore_types::Metadata;
 use thiserror::Error;
+
+#[facet::container]
+pub struct Repo(RepoBlobstore);
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -104,8 +109,8 @@ fn rescue_redacted(res: Result<(Bytes, FileBytes)>) -> Result<(Bytes, FileBytes)
 /// this blob (this is NOT trying to be correct, it's just a rough estimate!), and the blob's
 /// bytes.
 pub async fn create_getpack_v1_blob(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &impl RepoLike,
     node: HgFileNodeId,
     validate_hash: bool,
 ) -> Result<(
@@ -113,8 +118,8 @@ pub async fn create_getpack_v1_blob(
     impl Future<Output = Result<(HgFileNodeId, Bytes)>>,
 )> {
     let RemotefilelogBlob { kind, data } = prepare_blob(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         node,
         SessionLfsParams { threshold: None },
         validate_hash,
@@ -146,8 +151,8 @@ pub async fn create_getpack_v1_blob(
 /// Create a blob for getpack v2. See v1 above for general details. This also returns Metadata,
 /// which is present in the v2 version of the protocol.
 pub async fn create_getpack_v2_blob(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &impl RepoLike,
     node: HgFileNodeId,
     lfs_params: SessionLfsParams,
     validate_hash: bool,
@@ -156,7 +161,7 @@ pub async fn create_getpack_v2_blob(
     impl Future<Output = Result<(HgFileNodeId, Bytes, Metadata)>>,
 )> {
     let RemotefilelogBlob { kind, data } =
-        prepare_blob(&ctx, &repo, node, lfs_params, validate_hash).await?;
+        prepare_blob(ctx, repo, node, lfs_params, validate_hash).await?;
     use RemotefilelogBlobKind::*;
 
     let (weight, metadata) = match kind {
@@ -199,14 +204,14 @@ pub async fn create_getpack_v2_blob(
 /// Retrieve the raw contents of a filenode. This does not substitute redacted content
 /// (it'll just let the redacted error fall through).
 pub async fn create_raw_filenode_blob(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &impl RepoLike,
     node: HgFileNodeId,
     validate_hash: bool,
 ) -> Result<Bytes> {
     let RemotefilelogBlob { kind, data } = prepare_blob(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         node,
         SessionLfsParams { threshold: None },
         validate_hash,
@@ -229,8 +234,8 @@ pub async fn create_raw_filenode_blob(
 /// Current implementation might be inefficient because it might re-fetch the same filenode a few
 /// times
 pub fn get_unordered_file_history_for_multiple_nodes(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &(impl RepoLike + AsBlobRepo),
     filenodes: HashSet<HgFileNodeId>,
     path: &MPath,
     allow_short_getpack_history: bool,
@@ -244,8 +249,14 @@ pub fn get_unordered_file_history_for_multiple_nodes(
         None
     };
     select_all(filenodes.into_iter().map(|filenode| {
-        get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), limit)
-            .boxed()
+        get_file_history_maybe_incomplete(
+            ctx.clone(),
+            repo.as_blob_repo().clone(),
+            filenode,
+            path.clone(),
+            limit,
+        )
+        .boxed()
     }))
     .try_filter({
         let mut used_filenodes = HashSet::new();
@@ -255,7 +266,7 @@ pub fn get_unordered_file_history_for_multiple_nodes(
 
 async fn prepare_blob(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl RepoLike,
     node: HgFileNodeId,
     lfs_params: SessionLfsParams,
     validate_hash: bool,
@@ -287,16 +298,16 @@ async fn prepare_blob(
 fn prepare_blob_inline_file(
     envelope: HgFileEnvelope,
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl RepoLike,
     node: HgFileNodeId,
     validate_hash: bool,
 ) -> RemotefilelogBlob {
     cloned!(ctx, repo);
     let kind = RemotefilelogBlobKind::Inline(envelope.content_size());
+    let blobstore = repo.repo_blobstore_arc();
     let data = async move {
-        let file_bytes = FileBytes(
-            filestore::fetch_concat(repo.repo_blobstore(), &ctx, envelope.content_id()).await?,
-        );
+        let file_bytes =
+            FileBytes(filestore::fetch_concat(&blobstore, &ctx, envelope.content_id()).await?);
 
         let HgFileEnvelopeMut {
             p1, p2, metadata, ..
@@ -336,14 +347,15 @@ fn prepare_blob_inline_file(
 fn prepare_blob_lfs_file(
     envelope: HgFileEnvelope,
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &impl RepoLike,
 ) -> RemotefilelogBlob {
-    cloned!(ctx, repo);
+    cloned!(ctx);
     let file_size = envelope.content_size();
     let kind = RemotefilelogBlobKind::Lfs(file_size);
+    let blobstore = repo.repo_blobstore_arc();
     let data = async move {
         let key = FetchKey::from(envelope.content_id());
-        let oid = filestore::get_metadata(repo.repo_blobstore(), &ctx, &key)
+        let oid = filestore::get_metadata(&blobstore, &ctx, &key)
             .await?
             .ok_or(ErrorKind::MissingContent(key))?
             .sha256;
@@ -368,13 +380,14 @@ mod test {
     use metaconfig_types::FilestoreParams;
     use mononoke_types::MPathElement;
     use test_repo_factory::TestRepoFactory;
+    use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
     use super::*;
 
     async fn roundtrip_blob(
         fb: FacebookInit,
-        repo: &BlobRepo,
+        repo: &BasicTestRepo,
         content: &str,
         threshold: Option<u64>,
     ) -> Result<RemotefilelogBlobKind> {
@@ -418,7 +431,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob(fb: FacebookInit) -> Result<()> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(3)).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
         Ok(())
@@ -426,7 +439,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<()> {
-        let repo: BlobRepo = TestRepoFactory::new(fb)?
+        let repo: BasicTestRepo = TestRepoFactory::new(fb)?
             .with_config_override(|config| {
                 config.filestore = Some(FilestoreParams {
                     chunk_size: 1,
@@ -442,7 +455,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_lfs(fb: FacebookInit) -> Result<()> {
-        let repo: BlobRepo = test_repo_factory::build_empty(fb)?;
+        let repo: BasicTestRepo = test_repo_factory::build_empty(fb)?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(2)).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Lfs(3));
         Ok(())

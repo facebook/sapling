@@ -167,8 +167,8 @@ impl HgDataContext for HgFileContext {
     /// should not assume that the data returned by this function only contains
     /// file content.
     async fn content(&self) -> Result<(Bytes, Metadata), MononokeError> {
-        let ctx = self.repo.ctx().clone();
-        let blob_repo = self.repo.blob_repo().clone();
+        let ctx = self.repo.ctx();
+        let blob_repo = self.repo.blob_repo();
         let filenode_id = self.node_id();
         let lfs_params = SessionLfsParams {
             threshold: self.repo.config().lfs.threshold,

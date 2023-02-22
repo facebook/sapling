@@ -262,7 +262,7 @@ impl DeltaCache {
                 Some(bytes) => bytes.clone().await?,
                 None => {
                     let validate_hash = false;
-                    create_raw_filenode_blob(ctx, repo, HgFileNodeId::new(base), validate_hash)
+                    create_raw_filenode_blob(&ctx, &repo, HgFileNodeId::new(base), validate_hash)
                         .await?
                 }
             };

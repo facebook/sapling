@@ -817,8 +817,8 @@ impl RepoClient {
                                     // before we have resoved hg filenodes.
                                     let history_fut = tokio::task::spawn(
                                         get_unordered_file_history_for_multiple_nodes(
-                                            ctx.clone(),
-                                            repo.clone(),
+                                            &ctx,
+                                            &repo,
                                             filenodes.into_iter().collect(),
                                             &path,
                                             allow_short_getpack_history,
@@ -2093,7 +2093,7 @@ impl HgCommands for RepoClient {
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
-                create_getpack_v1_blob(ctx, repo, node, validate_hash)
+                async move { create_getpack_v1_blob(&ctx, &repo, node, validate_hash).await }
                     .boxed()
                     .compat()
                     .map(|(size, fut)| {
@@ -2114,17 +2114,19 @@ impl HgCommands for RepoClient {
         self.getpack(
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
-                create_getpack_v2_blob(ctx, repo, node, lfs_thresold, validate_hash)
-                    .boxed()
-                    .compat()
-                    .map(|(size, fut)| {
-                        // GetpackV2 always has metadata.
-                        let fut = fut
-                            .boxed()
-                            .compat()
-                            .map(|(id, bytes, metadata)| (id, bytes, Some(metadata)));
-                        (size, fut)
-                    })
+                async move {
+                    create_getpack_v2_blob(&ctx, &repo, node, lfs_thresold, validate_hash).await
+                }
+                .boxed()
+                .compat()
+                .map(|(size, fut)| {
+                    // GetpackV2 always has metadata.
+                    let fut = fut
+                        .boxed()
+                        .compat()
+                        .map(|(id, bytes, metadata)| (id, bytes, Some(metadata)));
+                    (size, fut)
+                })
             },
             ops::GETPACKV2,
         )
