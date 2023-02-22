@@ -85,12 +85,14 @@ def _handlecommandexception(orig, ui):
         p = subprocess.Popen(script, shell=shell, stdin=subprocess.PIPE, env=env)
         p.communicate(pycompat.encodeutf8(trace))
     except Exception:
+        ui.write("EXC\n")
         # The binary cannot be executed, or some other issues. For example,
         # "script" is not in PATH, and shell is False; or the peer closes the
         # pipe early. Fallback to the plain error reporting.
         return _printtrace(ui, warning)
     else:
         ret = p.returncode
+        ui.write(f"RET: {ret}\n")
 
         # Python returns negative exit code for signal-terminated process. The
         # shell converts singal-terminated process to a positive exit code by

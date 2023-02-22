@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ setconfig config.use-rust=True
   $ setconfig workingcopy.use-rust=True
@@ -42,39 +42,39 @@ Test config:
   testsection.subsection1=foo
   testsection.subsection2=bar
   $ hg config testsection --debug
-  *.hgrc:*: testsection.subsection1=foo (glob)
-  *.hgrc:*: testsection.subsection2=bar (glob)
+  *hgrc:*: testsection.subsection1=foo (glob)
+  *hgrc:*: testsection.subsection2=bar (glob)
   $ hg config testsection -Tdebug
   config = [
-      {'source': '*.hgrc:*', 'name': 'testsection.subsection1', 'value': 'foo'}, (glob)
-      {'source': '*.hgrc:*', 'name': 'testsection.subsection2', 'value': 'bar'}, (glob)
+      {'source': '*hgrc:*', 'name': 'testsection.subsection1', 'value': 'foo'}, (glob)
+      {'source': '*hgrc:*', 'name': 'testsection.subsection2', 'value': 'bar'}, (glob)
   ]
   $ hg config testsection -Tjson
   [
   {
     "name": "testsection.subsection1",
-    "source": "*.hgrc:*", (glob)
+    "source": "*hgrc:*", (glob)
     "value": "foo"
   },
   {
     "name": "testsection.subsection2",
-    "source": "*.hgrc:*", (glob)
+    "source": "*hgrc:*", (glob)
     "value": "bar"
   }
   ]
   $ hg config testsection.subsection1
   foo
   $ hg config testsection.subsection1 --debug
-  *.hgrc:* foo (glob)
+  *hgrc:* foo (glob)
   $ hg config testsection.subsection1 -Tdebug
   config = [
-      {'source': '*.hgrc:*', 'value': 'foo', 'name': 'testsection.subsection1'}, (glob)
+      {'source': '*hgrc:*', 'value': 'foo', 'name': 'testsection.subsection1'}, (glob)
   ]
   $ hg config testsection.subsection1 -Tjson
   [
   {
     "name": "testsection.subsection1",
-    "source": "*.hgrc:*", (glob)
+    "source": "*hgrc:*", (glob)
     "value": "foo"
   }
   ]

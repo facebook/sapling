@@ -1,4 +1,5 @@
 #chg-compatible
+#require /bin/echo /bin/sh /bin/false /bin/kill
 
   $ newext crash <<EOF
   > from edenscm import registrar
@@ -17,27 +18,29 @@ Test errorredirect will respect original behavior by default
   crashed
 
 Test the errorredirect script will override stack trace output
-  $ hg crash --config errorredirect.script='echo overridden-message'
+  $ hg crash --config errorredirect.script='/bin/echo overridden-message'
   overridden-message
   [255]
 
 If the script returns non-zero, print the trace
-  $ hg crash --config errorredirect.script='echo It works && exit 1' 2>&1 | grep '^[IT]'
+  $ hg crash --config errorredirect.script='/bin/echo It works && exit 1' 2>out
+  [1]
+  $ grep '^[IT]' out
   It works
-  Traceback (most recent call last):
 
-  $ printf '#!%sbin/sh\necho It works && false' '/' > a.sh
+  $ printf '#!%sbin/sh\n/bin/echo It works && /bin/false' '/' > a.sh
   $ chmod +x $TESTTMP/a.sh
-  $ PATH=$TESTTMP:$PATH hg crash --config errorredirect.script=a.sh 2>&1 | grep '^[IT]'
+  $ PATH=$TESTTMP:$PATH hg crash --config errorredirect.script=a.sh 2>out
+  [1]
+  $ grep '^[IT]' out
   It works
-  Traceback (most recent call last):
 
 If the script is terminated by SIGTERM (Ctrl+C), do not print the trace
-  $ hg crash --config errorredirect.script='echo It works && kill -TERM $$' 2>&1
+  $ hg crash --config errorredirect.script='/bin/echo It works && /bin/kill -TERM $$' 2>&1
   It works
   [255]
 
-  $ printf '#!%sbin/sh\necho It works && kill -TERM $$' '/' > a.sh
+  $ printf '#!%sbin/sh\n/bin/echo It works && /bin/kill -TERM $$' '/' > a.sh
   $ chmod +x $TESTTMP/a.sh
   $ PATH=$TESTTMP:$PATH hg crash --config errorredirect.script=a.sh 2>&1
   It works
@@ -58,7 +61,7 @@ Traces are logged in blackbox
   > logsource = 1
   > EOF
 
-  $ hg crash --config errorredirect.script='echo Works'
+  $ hg crash --config errorredirect.script='/bin/echo Works'
   Works
   [255]
   $ hg blackbox --pattern '{"legacy_log":{"service":"command_exception"}}' 2>&1 | head -n 1
