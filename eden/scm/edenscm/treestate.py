@@ -627,7 +627,7 @@ def migrate(ui, repo, version):
                 ui,
                 vfs,
                 repo.root,
-                repo._rsrepo().workingcopy().treestate(),
+                repo._rsrepo.workingcopy().treestate(),
                 importdirstate=repo.dirstate,
             )
             repo.requirements.add("treestate")
