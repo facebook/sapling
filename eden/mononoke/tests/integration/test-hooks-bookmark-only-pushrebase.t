@@ -123,7 +123,7 @@ attempt a non-fast-forward move, it should fail
   remote:         source: Error {
   remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
   remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "main",
   remote:                 },
   remote:                 from: ChangesetId(

@@ -12,7 +12,7 @@ use anyhow::Context as _;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use bookmarks::ArcBookmarks;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
@@ -79,7 +79,7 @@ impl FileContentManager for RepoFileContentManager {
     async fn find_content<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         let changeset_id = self
@@ -179,7 +179,7 @@ impl FileContentManager for RepoFileContentManager {
     async fn latest_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
         let changeset_id = self

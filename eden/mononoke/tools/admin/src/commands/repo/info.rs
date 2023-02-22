@@ -7,7 +7,7 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::Args;
 use context::CoreContext;
@@ -21,7 +21,7 @@ pub struct RepoInfoArgs {}
 pub async fn repo_info(ctx: &CoreContext, repo: &Repo, _args: RepoInfoArgs) -> Result<()> {
     println!("Repo: {}", repo.repo_identity().name());
     println!("Repo-Id: {}", repo.repo_identity().id());
-    let main_bookmark = BookmarkName::new("master")?;
+    let main_bookmark = BookmarkKey::new("master")?;
     let main_bookmark_value = repo
         .bookmarks()
         .get(ctx.clone(), &main_bookmark)

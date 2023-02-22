@@ -7,7 +7,7 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::Args;
 use context::CoreContext;
@@ -19,7 +19,7 @@ use crate::commit_id::IdentityScheme;
 #[derive(Args)]
 pub struct BookmarksGetArgs {
     /// Name of the bookmark to get
-    name: BookmarkName,
+    name: BookmarkKey,
 
     /// Commit identity schemes to display
     #[clap(long, short='S', arg_enum, default_values = &["bonsai"], use_value_delimiter = true)]

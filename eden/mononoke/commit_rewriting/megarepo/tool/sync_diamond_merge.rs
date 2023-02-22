@@ -21,7 +21,7 @@ use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::LeaseOps;
@@ -121,7 +121,7 @@ pub async fn do_sync_diamond_merge(
     large_repo: InnerRepo,
     small_merge_cs_id: ChangesetId,
     mapping: SqlSyncedCommitMapping,
-    onto_bookmark: BookmarkName,
+    onto_bookmark: BookmarkKey,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     lease: Arc<dyn LeaseOps>,
 ) -> Result<(), Error> {

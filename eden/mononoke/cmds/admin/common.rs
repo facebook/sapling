@@ -12,7 +12,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cmdlib::args;
@@ -83,7 +83,7 @@ pub fn format_bookmark_log_entry(
     reason: BookmarkUpdateReason,
     timestamp: Timestamp,
     changeset_type: &str,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     bundle_id: Option<u64>,
 ) -> String {
     let reason_str = reason.to_string();

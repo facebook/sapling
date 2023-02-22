@@ -25,7 +25,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use ascii::AsciiString;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use derive_more::From;
 use derive_more::Into;
 use mononoke_types::BonsaiChangeset;
@@ -447,7 +447,7 @@ impl Default for RepoReadOnly {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CacheWarmupParams {
     /// Bookmark to warmup cache for at the startup. If not set then the cache will be cold.
-    pub bookmark: BookmarkName,
+    pub bookmark: BookmarkKey,
     /// Max number to fetch during commit warmup. If not set in the config, then set to a default
     /// value.
     pub commit_limit: usize,
@@ -470,14 +470,14 @@ pub struct HookManagerParams {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BookmarkOrRegex {
     /// Matches a single bookmark
-    Bookmark(BookmarkName),
+    Bookmark(BookmarkKey),
     /// Matches bookmarks with a regex
     Regex(ComparableRegex),
 }
 
 impl BookmarkOrRegex {
     /// Checks whether a given Bookmark matches this bookmark or regex
-    pub fn matches(&self, bookmark: &BookmarkName) -> bool {
+    pub fn matches(&self, bookmark: &BookmarkKey) -> bool {
         match self {
             BookmarkOrRegex::Bookmark(ref bm) => bm.eq(bookmark),
             BookmarkOrRegex::Regex(ref re) => re.is_match(&bookmark.to_string()),
@@ -485,8 +485,8 @@ impl BookmarkOrRegex {
     }
 }
 
-impl From<BookmarkName> for BookmarkOrRegex {
-    fn from(b: BookmarkName) -> Self {
+impl From<BookmarkKey> for BookmarkOrRegex {
+    fn from(b: BookmarkKey) -> Self {
         BookmarkOrRegex::Bookmark(b)
     }
 }
@@ -516,11 +516,11 @@ pub struct BookmarkParams {
     pub allowed_hipster_group: Option<String>,
     /// Skip hooks for changesets that are already ancestors of these
     /// bookmarks
-    pub hooks_skip_ancestors_of: Vec<BookmarkName>,
+    pub hooks_skip_ancestors_of: Vec<BookmarkKey>,
     /// Ensure that given bookmark(s) are ancestors of `ensure_ancestors_of`
     /// bookmark. That also implies that it's not longer possible to
     /// pushrebase to these bookmarks.
-    pub ensure_ancestor_of: Option<BookmarkName>,
+    pub ensure_ancestor_of: Option<BookmarkKey>,
     /// This option allows moving a bookmark to a commit that's already
     /// public while bypassing all the hooks. Note that should be fine,
     /// because commit is already public, meaning that hooks already
@@ -703,7 +703,7 @@ pub struct PushrebaseParams {
     /// Whether to do emit obsmarkers after pushrebase
     pub emit_obsmarkers: bool,
     /// Whether Globalrevs should be assigned
-    pub globalrevs_publishing_bookmark: Option<BookmarkName>,
+    pub globalrevs_publishing_bookmark: Option<BookmarkKey>,
     /// Whether Git Mapping should be populated from extras (affects also blobimport)
     pub populate_git_mapping: bool,
     /// For the case when one repo is linked to another (a.k.a. megarepo)
@@ -1135,7 +1135,7 @@ impl InfinitepushNamespace {
     }
 
     /// Returns whether a given Bookmark matches this namespace.
-    pub fn matches_bookmark(&self, bookmark: &BookmarkName) -> bool {
+    pub fn matches_bookmark(&self, bookmark: &BookmarkKey) -> bool {
         self.0.is_match(bookmark.as_str())
     }
 
@@ -1252,7 +1252,7 @@ pub struct CommitSyncConfig {
     /// Large repository id
     pub large_repo_id: RepositoryId,
     /// Common pushrebase bookmarks
-    pub common_pushrebase_bookmarks: Vec<BookmarkName>,
+    pub common_pushrebase_bookmarks: Vec<BookmarkKey>,
     /// Corresponding small repo configs
     pub small_repos: HashMap<RepositoryId, SmallRepoCommitSyncConfig>,
     /// Version name of the commit sync config
@@ -1265,7 +1265,7 @@ pub struct CommonCommitSyncConfig {
     /// Large repository id
     pub large_repo_id: RepositoryId,
     /// Common pushrebase bookmarks
-    pub common_pushrebase_bookmarks: Vec<BookmarkName>,
+    pub common_pushrebase_bookmarks: Vec<BookmarkKey>,
     /// Small repos configs
     pub small_repos: HashMap<RepositoryId, SmallRepoPermanentConfig>,
 }
@@ -1318,7 +1318,7 @@ impl SourceControlServiceParams {
     pub fn service_write_bookmark_permitted(
         &self,
         service_identity: impl AsRef<str>,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> bool {
         if let Some(restrictions) = self
             .service_write_restrictions
@@ -1402,7 +1402,7 @@ pub struct SourceControlServiceMonitoring {
     /// age values to monitoring counters. For example,
     /// a freshness value may be the `now - author_date` of
     /// the commit, to which the bookmark points
-    pub bookmarks_to_report_age: Vec<BookmarkName>,
+    pub bookmarks_to_report_age: Vec<BookmarkKey>,
 }
 
 /// Represents the repository name for this repository in Hgsql.
@@ -1441,15 +1441,15 @@ impl AsRef<String> for HgsqlGlobalrevsName {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SegmentedChangelogHeadConfig {
     /// All public bookmarks with exceptions.
-    AllPublicBookmarksExcept(Vec<BookmarkName>),
+    AllPublicBookmarksExcept(Vec<BookmarkKey>),
     /// A single bookmark.
-    Bookmark(BookmarkName),
+    Bookmark(BookmarkKey),
     /// A single changeset.
     Changeset(ChangesetId),
 }
 
-impl From<Option<BookmarkName>> for SegmentedChangelogHeadConfig {
-    fn from(f: Option<BookmarkName>) -> Self {
+impl From<Option<BookmarkKey>> for SegmentedChangelogHeadConfig {
+    fn from(f: Option<BookmarkKey>) -> Self {
         match f {
             None => Self::AllPublicBookmarksExcept(vec![]),
             Some(n) => Self::Bookmark(n),
@@ -1457,8 +1457,8 @@ impl From<Option<BookmarkName>> for SegmentedChangelogHeadConfig {
     }
 }
 
-impl From<BookmarkName> for SegmentedChangelogHeadConfig {
-    fn from(n: BookmarkName) -> Self {
+impl From<BookmarkKey> for SegmentedChangelogHeadConfig {
+    fn from(n: BookmarkKey) -> Self {
         Self::Bookmark(n)
     }
 }
@@ -1686,7 +1686,7 @@ pub struct CrossRepoCommitValidation {
     /// A set of bookmarks whose changelog entries are deemed to be valid
     /// Commits that are only found via the changelog for this named bookmark
     /// are skipped for validation (e.g. import bookmarks can be skipped)
-    pub skip_bookmarks: HashSet<BookmarkName>,
+    pub skip_bookmarks: HashSet<BookmarkKey>,
 }
 
 /// Configuration for sparse profile monitoring

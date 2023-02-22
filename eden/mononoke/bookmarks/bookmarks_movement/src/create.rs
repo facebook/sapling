@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
@@ -36,7 +36,7 @@ use crate::Repo;
 
 #[must_use = "CreateBookmarkOp must be run to have an effect"]
 pub struct CreateBookmarkOp<'op> {
-    bookmark: &'op BookmarkName,
+    bookmark: &'op BookmarkKey,
     target: ChangesetId,
     reason: BookmarkUpdateReason,
     kind_restrictions: BookmarkKindRestrictions,
@@ -49,7 +49,7 @@ pub struct CreateBookmarkOp<'op> {
 
 impl<'op> CreateBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkName,
+        bookmark: &'op BookmarkKey,
         target: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> CreateBookmarkOp<'op> {

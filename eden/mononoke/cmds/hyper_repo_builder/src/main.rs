@@ -24,7 +24,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -205,7 +205,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'_>) -> Result<(
 
 fn parse_bookmarks(
     matches: &MononokeMatches<'_>,
-) -> Result<(Source<BookmarkName>, Target<BookmarkName>), Error> {
+) -> Result<(Source<BookmarkKey>, Target<BookmarkKey>), Error> {
     let hyper_repo_bookmark = matches
         .value_of(ARG_HYPER_REPO_BOOKMARK_NAME)
         .ok_or_else(|| anyhow!("{} is not set", ARG_HYPER_REPO_BOOKMARK_NAME))?;
@@ -214,8 +214,8 @@ fn parse_bookmarks(
         .value_of(ARG_SOURCE_REPO_BOOKMARK_NAME)
         .ok_or_else(|| anyhow!("{} is not set", ARG_SOURCE_REPO_BOOKMARK_NAME))?;
     Ok((
-        Source(BookmarkName::new(source_bookmark)?),
-        Target(BookmarkName::new(hyper_repo_bookmark)?),
+        Source(BookmarkKey::new(source_bookmark)?),
+        Target(BookmarkKey::new(hyper_repo_bookmark)?),
     ))
 }
 

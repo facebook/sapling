@@ -13,8 +13,8 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
@@ -500,7 +500,7 @@ async fn normal_pushrebase<'a>(
     repo: &'a impl Repo,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     changesets: HashSet<BonsaiChangeset>,
-    bookmark: &'a BookmarkName,
+    bookmark: &'a BookmarkKey,
     maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
     hook_manager: &'a HookManager,
     hook_rejection_remapper: &'a dyn HookRejectionRemapper,

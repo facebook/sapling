@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use clap::Args;
 use context::CoreContext;
 use futures::stream;
@@ -27,7 +27,7 @@ use crate::commit_id::parse_commit_id;
 pub struct CommitPushrebaseArgs {
     /// Destination Bookmark to pushrebase onto
     #[clap(long, short = 'B')]
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
 
     /// Source Commit ID to pushrebase (bottom of the stack if pushrebasing a stack)
     #[clap(long, short = 's')]

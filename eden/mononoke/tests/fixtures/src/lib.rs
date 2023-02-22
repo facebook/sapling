@@ -11,7 +11,7 @@ use std::str::FromStr;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -147,7 +147,7 @@ pub async fn set_bookmark(
     fb: FacebookInit,
     repo: &impl Repo,
     hg_cs_id: &str,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
 ) {
     let ctx = CoreContext::test_mock(fb);
     let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
@@ -382,7 +382,7 @@ impl TestRepoFixture for Linear {
             fb,
             repo,
             "79a13814c5ce7330173ec04d279bf95ab3f652fb",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -483,7 +483,7 @@ impl TestRepoFixture for BranchEven {
             fb,
             repo,
             "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -644,7 +644,7 @@ impl TestRepoFixture for BranchUneven {
             fb,
             repo,
             "264f01429683b3dd8042cb3979e8bf37007118bc",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -745,7 +745,7 @@ impl TestRepoFixture for BranchWide {
             fb,
             repo,
             "49f53ab171171b3180e125b918bd1cf0af7e5449",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -866,7 +866,7 @@ impl TestRepoFixture for MergeEven {
             fb,
             repo,
             "1f6bc010883e397abeca773192f3370558ee1320",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -937,7 +937,7 @@ impl TestRepoFixture for ManyFilesDirs {
             fb,
             repo,
             "051946ed218061e925fb120dac02634f9ad40ae2",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
 
@@ -956,7 +956,7 @@ impl TestRepoFixture for ManyFilesDirs {
             fb,
             repo,
             "5a28e25f924a5d209b82ce0713d8d83e68982bc8",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -1142,7 +1142,7 @@ impl TestRepoFixture for MergeUneven {
             fb,
             repo,
             "d35b1875cdd1ed2c687e86f1604b9d7e989450cb",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -1326,7 +1326,7 @@ impl TestRepoFixture for UnsharedMergeEven {
             fb,
             repo,
             "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -1575,7 +1575,7 @@ impl TestRepoFixture for UnsharedMergeUneven {
             fb,
             repo,
             "dd993aab2bed7276e17c88470286ba8459ba6d94",
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
         )
         .await;
     }
@@ -1693,7 +1693,7 @@ impl TestRepoFixture for ManyDiamonds {
         let ctx = CoreContext::test_mock(fb);
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.force_set(
-            &BookmarkName::new("master").unwrap(),
+            &BookmarkKey::new("master").unwrap(),
             last_bcs_id,
             BookmarkUpdateReason::TestMove,
         )

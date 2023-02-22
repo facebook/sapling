@@ -24,7 +24,7 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmark_renaming::BookmarkRenamer;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogRef;
@@ -709,8 +709,8 @@ where
 
     pub async fn rename_bookmark(
         &self,
-        bookmark: &BookmarkName,
-    ) -> Result<Option<BookmarkName>, Error> {
+        bookmark: &BookmarkKey,
+    ) -> Result<Option<BookmarkKey>, Error> {
         Ok(self.get_bookmark_renamer().await?(bookmark))
     }
 
@@ -1165,7 +1165,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
         commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -1188,7 +1188,7 @@ where
         res
     }
 
-    pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkName>, Error> {
+    pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkKey>, Error> {
         self.commit_sync_data_provider
             .get_common_pushrebase_bookmarks(self.get_small_repo().repo_identity().id())
             .await
@@ -1198,7 +1198,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();

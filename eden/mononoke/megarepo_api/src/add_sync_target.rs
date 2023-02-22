@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
@@ -199,7 +199,7 @@ impl<'a> AddSyncTarget<'a> {
         repo: &RepoContext,
     ) -> Result<Option<ChangesetId>, MegarepoError> {
         let bookmark_name = &sync_target_config.target.bookmark;
-        let bookmark = BookmarkName::new(bookmark_name).map_err(MegarepoError::request)?;
+        let bookmark = BookmarkKey::new(bookmark_name).map_err(MegarepoError::request)?;
 
         let maybe_cs_id = repo
             .blob_repo()

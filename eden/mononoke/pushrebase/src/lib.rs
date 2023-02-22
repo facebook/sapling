@@ -63,7 +63,7 @@ use anyhow::Result;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
@@ -130,11 +130,11 @@ pub enum PushrebaseInternalError {
     #[error("Bonsai not found for hg changeset: {0}")]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
     #[error("Pushrebase onto bookmark not found: {0}")]
-    PushrebaseBookmarkNotFound(BookmarkName),
+    PushrebaseBookmarkNotFound(BookmarkKey),
     #[error("Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
     #[error("No common pushrebase root for {0}, all possible roots: {1:?}")]
-    PushrebaseNoCommonRoot(BookmarkName, HashSet<ChangesetId>),
+    PushrebaseNoCommonRoot(BookmarkKey, HashSet<ChangesetId>),
     #[error("Internal error: root changeset {0} not found")]
     RootNotFound(ChangesetId),
     #[error("No pushrebase roots found")]
@@ -142,7 +142,7 @@ pub enum PushrebaseInternalError {
     #[error("Pushrebase failed after too many unsuccessful rebases")]
     TooManyRebaseAttempts,
     #[error("Forbid pushrebase because root ({0}) is not a p1 of {1} bookmark")]
-    P2RootRebaseForbidden(HgChangesetId, BookmarkName),
+    P2RootRebaseForbidden(HgChangesetId, BookmarkKey),
     #[error("Unexpected file conflicts when adding new file changes to {0}")]
     NewFileChangesConflict(ChangesetId),
 }
@@ -254,7 +254,7 @@ pub async fn do_pushrebase_bonsai(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
-    onto_bookmark: &BookmarkName,
+    onto_bookmark: &BookmarkKey,
     pushed: &HashSet<BonsaiChangeset>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
@@ -316,7 +316,7 @@ async fn rebase_in_loop(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
-    onto_bookmark: &BookmarkName,
+    onto_bookmark: &BookmarkKey,
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
@@ -436,7 +436,7 @@ async fn do_rebase(
     root: ChangesetId,
     head: ChangesetId,
     old_bookmark_value: Option<ChangesetId>,
-    onto_bookmark: &BookmarkName,
+    onto_bookmark: &BookmarkKey,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
     retry_num: PushrebaseRetryNum,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
@@ -563,7 +563,7 @@ async fn find_closest_root(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     roots: &HashMap<ChangesetId, ChildIndex>,
 ) -> Result<ChangesetId, PushrebaseError> {
     let maybe_id = get_bookmark_value(ctx, repo, bookmark).await?;
@@ -598,7 +598,7 @@ async fn find_closest_ancestor_root(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     roots: &HashMap<ChangesetId, ChildIndex>,
     onto_bookmark_cs_id: ChangesetId,
 ) -> Result<ChangesetId, PushrebaseError> {
@@ -875,7 +875,7 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
 async fn get_bookmark_value(
     ctx: &CoreContext,
     repo: &impl BookmarksRef,
-    bookmark_name: &BookmarkName,
+    bookmark_name: &BookmarkKey,
 ) -> Result<Option<ChangesetId>, PushrebaseError> {
     let maybe_cs_id = repo.bookmarks().get(ctx.clone(), bookmark_name).await?;
 
@@ -1207,7 +1207,7 @@ async fn find_rebased_set(
 async fn try_move_bookmark(
     ctx: CoreContext,
     repo: &impl Repo,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     old_value: Option<ChangesetId>,
     new_value: ChangesetId,
     rebased_changesets: RebasedChangesets,
@@ -1332,7 +1332,7 @@ mod tests {
         ctx: &CoreContext,
         repo: &impl Repo,
         config: &PushrebaseFlags,
-        onto_bookmark: &BookmarkName,
+        onto_bookmark: &BookmarkKey,
         pushed_set: &HashSet<HgChangesetId>,
     ) -> Result<PushrebaseOutcome, PushrebaseError> {
         let pushed = fetch_bonsai_changesets(ctx, repo, pushed_set).await?;
@@ -1345,7 +1345,7 @@ mod tests {
     async fn set_bookmark(
         ctx: CoreContext,
         repo: BlobRepo,
-        book: &BookmarkName,
+        book: &BookmarkKey,
         cs_id: &str,
     ) -> Result<(), Error> {
         let head = HgChangesetId::from_str(cs_id)?;
@@ -1366,15 +1366,15 @@ mod tests {
         paths.unwrap()
     }
 
-    fn master_bookmark() -> BookmarkName {
-        BookmarkName::new("master").unwrap()
+    fn master_bookmark() -> BookmarkKey {
+        BookmarkKey::new("master").unwrap()
     }
 
     async fn push_and_verify(
         ctx: &CoreContext,
         repo: &(impl Repo + FilestoreConfigRef),
         parent: ChangesetId,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         content: BTreeMap<&str, Option<&str>>,
         should_succeed: bool,
     ) -> Result<(), Error> {
@@ -1530,7 +1530,7 @@ mod tests {
 
             // Now do the same with another non-existent bookmark,
             // make sure cs id is created.
-            book = BookmarkName::new("newbook")?;
+            book = BookmarkKey::new("newbook")?;
             do_pushrebase_bonsai(
                 &ctx,
                 &repo,
@@ -2263,7 +2263,7 @@ mod tests {
         ctx: CoreContext,
         repo: BlobRepo,
         ancestor: HgChangesetId,
-        descendant: BookmarkName,
+        descendant: BookmarkKey,
     ) -> Result<usize, Error> {
         let ancestor = repo
             .bonsai_hg_mapping()
@@ -2431,7 +2431,7 @@ mod tests {
 
             let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
 
-            let book = BookmarkName::new("newbook")?;
+            let book = BookmarkKey::new("newbook")?;
             do_pushrebase(&ctx, &repo, &Default::default(), &book, &hashset![hg_cs]).await?;
             Ok(())
         })
@@ -2452,7 +2452,7 @@ mod tests {
                 .ok_or_else(|| Error::msg("Root is missing"))?;
             let parents = vec![p];
 
-            let book = BookmarkName::new("newbook")?;
+            let book = BookmarkKey::new("newbook")?;
 
             let num_pushes = 10;
             let mut futs = vec![];
@@ -2839,7 +2839,7 @@ mod tests {
 
             do_pushrebase(&ctx, &repo, &PushrebaseFlags::default(), &book, &hgcss).await?;
 
-            let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
+            let new_master = get_bookmark_value(&ctx, &repo, &BookmarkKey::new("master")?)
                 .await?
                 .ok_or_else(|| Error::msg("master not set"))?;
 
@@ -2913,7 +2913,7 @@ mod tests {
 
             do_pushrebase(&ctx, &repo, &PushrebaseFlags::default(), &book, &hgcss).await?;
 
-            let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
+            let new_master = get_bookmark_value(&ctx, &repo, &BookmarkKey::new("master")?)
                 .await?
                 .ok_or_else(|| Error::msg("master not set"))?;
 
@@ -2997,7 +2997,7 @@ mod tests {
 
             do_pushrebase(&ctx, &repo, &PushrebaseFlags::default(), &book, &hgcss).await?;
 
-            let new_master = get_bookmark_value(&ctx, &repo.clone(), &BookmarkName::new("master")?)
+            let new_master = get_bookmark_value(&ctx, &repo.clone(), &BookmarkKey::new("master")?)
                 .await?
                 .ok_or_else(|| Error::msg("master is not set"))?;
 
@@ -3210,7 +3210,7 @@ mod tests {
             &ctx,
             &repo,
             &Default::default(),
-            &BookmarkName::new("head")?,
+            &BookmarkKey::new("head")?,
             &hashset![hg_cs],
         )
         .await;
@@ -3237,7 +3237,7 @@ mod tests {
             &ctx,
             &repo,
             &Default::default(),
-            &BookmarkName::new("head")?,
+            &BookmarkKey::new("head")?,
             &hashset![hg_cs],
         )
         .map_err(|err| format_err!("{:?}", err))

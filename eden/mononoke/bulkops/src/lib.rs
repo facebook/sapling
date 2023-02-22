@@ -306,7 +306,7 @@ mod tests {
     use std::str::FromStr;
 
     use blobrepo::BlobRepo;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use changesets::ChangesetsArc;
     use fbinit::FacebookInit;
@@ -323,7 +323,7 @@ mod tests {
 
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data
-        let master = BookmarkName::new("master")?;
+        let master = BookmarkKey::new("master")?;
         let master = blobrepo
             .bookmarks()
             .get(ctx.clone(), &master)

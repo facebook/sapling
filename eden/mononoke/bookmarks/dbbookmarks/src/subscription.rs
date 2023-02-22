@@ -13,8 +13,8 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
 use context::CoreContext;
@@ -43,7 +43,7 @@ pub struct SqlBookmarksSubscription {
     sql_bookmarks: SqlBookmarks,
     freshness: Freshness,
     log_id: u64,
-    bookmarks: HashMap<BookmarkName, (ChangesetId, BookmarkKind)>,
+    bookmarks: HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>,
     last_refresh: Instant,
 }
 
@@ -201,7 +201,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
         Ok(())
     }
 
-    fn bookmarks(&self) -> &HashMap<BookmarkName, (ChangesetId, BookmarkKind)> {
+    fn bookmarks(&self) -> &HashMap<BookmarkKey, (ChangesetId, BookmarkKind)> {
         &self.bookmarks
     }
 }
@@ -210,7 +210,7 @@ mononoke_queries! {
     read SelectUpdatedBookmarks(
         repo_id: RepositoryId,
         log_id: u64
-    ) -> (u64, BookmarkName, Option<BookmarkKind>, Option<ChangesetId>) {
+    ) -> (u64, BookmarkKey, Option<BookmarkKind>, Option<ChangesetId>) {
         mysql("
         SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks.hg_kind, bookmarks.changeset_id
         FROM bookmarks_update_log
@@ -260,7 +260,7 @@ mod test {
         // Insert a bookmark, but without going throguh the log. This won't happen in prod.
         // However, for the purposes of this test, it makes the update invisible to the
         // subscription, and only a full refresh will find it.
-        let book = BookmarkName::new("book")?;
+        let book = BookmarkKey::new("book")?;
         let rows = vec![(
             &bookmarks.repo_id,
             &book,
@@ -295,7 +295,7 @@ mod test {
         let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
         let conn = bookmarks.connections.write_connection.clone();
 
-        let book = BookmarkName::new("master")?;
+        let book = BookmarkKey::new("master")?;
 
         let rows = vec![(
             &bookmarks.repo_id,

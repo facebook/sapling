@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 use futures::future::BoxFuture;
@@ -214,7 +214,7 @@ async fn process_land_changesets_request(
 
     let lca_hint: Arc<dyn LeastCommonAncestorsHint> = repo.skiplist_index_arc();
 
-    let bookmark = BookmarkName::new(request.bookmark)?;
+    let bookmark = BookmarkKey::new(request.bookmark)?;
     let changesets: HashSet<BonsaiChangeset> =
         conversion_helpers::convert_bonsai_changesets(request.changesets, &ctx, &repo).await?;
 

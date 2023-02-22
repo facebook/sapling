@@ -13,7 +13,7 @@ use anyhow::anyhow;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bookmarks::BookmarkUpdateReason;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
@@ -47,7 +47,7 @@ use crate::Repo;
 
 #[must_use = "PushrebaseOntoBookmarkOp must be run to have an effect"]
 pub struct PushrebaseOntoBookmarkOp<'op> {
-    bookmark: &'op BookmarkName,
+    bookmark: &'op BookmarkKey,
     affected_changesets: AffectedChangesets,
     bookmark_restrictions: BookmarkKindRestrictions,
     cross_repo_push_source: CrossRepoPushSource,
@@ -58,7 +58,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
 
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkName,
+        bookmark: &'op BookmarkKey,
         changesets: HashSet<BonsaiChangeset>,
     ) -> PushrebaseOntoBookmarkOp<'op> {
         PushrebaseOntoBookmarkOp {
@@ -284,7 +284,7 @@ pub fn get_pushrebase_hooks(
          + RepoBookmarkAttrsRef
          + RepoIdentityRef
      ),
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     pushrebase_params: &PushrebaseParams,
 ) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
     let mut pushrebase_hooks = Vec::new();

@@ -10,7 +10,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks_movement::check_bookmark_sync_config;
@@ -24,7 +24,7 @@ use crate::commit_id::parse_commit_id;
 #[derive(Args)]
 pub struct BookmarksDeleteArgs {
     /// Name of the bookmark to delete
-    name: BookmarkName,
+    name: BookmarkKey,
 
     /// Force deleting of bookmark in repos with pushredirection enabled
     /// (WARNING: this may break megarepo sync)

@@ -22,7 +22,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_hg::ChangesetHandle;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
 use context::SessionClass;
@@ -96,8 +96,8 @@ pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 // the force pushrebase is done, so we need to look for it and make sure we
 // do the right thing here too.
 lazy_static! {
-    static ref DONOTREBASEBOOKMARK: BookmarkName =
-        BookmarkName::new("__pushrebase_donotrebase__").unwrap();
+    static ref DONOTREBASEBOOKMARK: BookmarkKey =
+        BookmarkKey::new("__pushrebase_donotrebase__").unwrap();
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -571,12 +571,12 @@ fn get_post_resolve_push(
 // and respondin purposes is treated like a pushrebase
 #[derive(Clone)]
 pub enum PushrebaseBookmarkSpec<T: Copy> {
-    NormalPushrebase(BookmarkName),
+    NormalPushrebase(BookmarkKey),
     ForcePushrebase(PlainBookmarkPush<T>),
 }
 
 impl<T: Copy> PushrebaseBookmarkSpec<T> {
-    pub fn get_bookmark_name(&self) -> &BookmarkName {
+    pub fn get_bookmark_name(&self) -> &BookmarkKey {
         match self {
             PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => onto_bookmark,
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => &plain_push.name,
@@ -607,7 +607,7 @@ async fn resolve_pushrebase<'r>(
             let v = Vec::from(onto_bookmark.as_ref());
             let onto_bookmark = String::from_utf8(v).map_err(Error::from)?;
 
-            BookmarkName::new(onto_bookmark)?
+            BookmarkKey::new(onto_bookmark)?
         }
         None => return Err(format_err!("onto is not specified").into()),
     };
@@ -745,7 +745,7 @@ enum AllBookmarkPushes<T: Copy> {
 #[derive(Debug, Clone)]
 pub struct PlainBookmarkPush<T: Copy> {
     pub part_id: PartId,
-    pub name: BookmarkName,
+    pub name: BookmarkKey,
     pub old: Option<T>,
     pub new: Option<T>,
 }
@@ -753,7 +753,7 @@ pub struct PlainBookmarkPush<T: Copy> {
 /// Represents an infinitepush bookmark push
 #[derive(Debug, Clone)]
 pub struct InfiniteBookmarkPush<T> {
-    pub name: BookmarkName,
+    pub name: BookmarkKey,
     pub create: bool,
     pub force: bool,
     pub old: Option<T>,
@@ -1081,7 +1081,7 @@ impl<'r> Bundle2Resolver<'r> {
                         let part_id = header.part_id();
                         let mparams = header.mparams();
                         let name = get_ascii_param(mparams, "key")?;
-                        let name = BookmarkName::new_ascii(name);
+                        let name = BookmarkKey::new_ascii(name);
                         let old = get_optional_changeset_param(mparams, "old")?;
                         let new = get_optional_changeset_param(mparams, "new")?;
 
@@ -1345,7 +1345,7 @@ async fn build_changegroup_push(
         PartHeaderType::B2xInfinitepush => {
             let maybe_name_res = get_optional_ascii_param(&aparams, "bookmark")
                 .transpose()
-                .map(|maybe_name| maybe_name.map(BookmarkName::new_ascii));
+                .map(|maybe_name| maybe_name.map(BookmarkKey::new_ascii));
 
             let bookmark_push = match maybe_name_res {
                 Err(e) => return Err(e),

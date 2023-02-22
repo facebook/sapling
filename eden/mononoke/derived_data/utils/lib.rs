@@ -1049,7 +1049,7 @@ mod tests {
     use std::sync::atomic::Ordering;
 
     use bonsai_hg_mapping::BonsaiHgMapping;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
     use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
@@ -1119,7 +1119,7 @@ mod tests {
         let thin_out = ThinOut::new_keep_all();
         let master = repo
             .bookmarks
-            .get(ctx.clone(), &BookmarkName::new("master").unwrap())
+            .get(ctx.clone(), &BookmarkKey::new("master").unwrap())
             .await?
             .unwrap();
         let blame_deriver = derived_data_utils(ctx.fb, &repo, "blame")?;

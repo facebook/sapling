@@ -8,7 +8,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
@@ -34,7 +34,7 @@ pub struct ChangesetArgs {
 
     /// Bookmark name
     #[clap(long, short = 'B')]
-    bookmark: Option<BookmarkName>,
+    bookmark: Option<BookmarkKey>,
 }
 
 impl ChangesetArgs {

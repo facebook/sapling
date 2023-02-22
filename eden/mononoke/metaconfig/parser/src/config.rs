@@ -485,7 +485,7 @@ mod test {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use bookmarks_types::BookmarkName;
+    use bookmarks_types::BookmarkKey;
     use cached_config::TestSource;
     use maplit::btreemap;
     use maplit::hashmap;
@@ -633,7 +633,7 @@ mod test {
         let expected = hashmap! {
             "mega".to_owned() => CommitSyncConfig {
                 large_repo_id: RepositoryId::new(1),
-                common_pushrebase_bookmarks: vec![BookmarkName::new("master").unwrap()],
+                common_pushrebase_bookmarks: vec![BookmarkKey::new("master").unwrap()],
                 small_repos: hashmap! {
                     RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
@@ -1074,7 +1074,7 @@ mod test {
                 scuba_table_hooks: Some("scm_hooks".to_string()),
                 scuba_local_path_hooks: None,
                 cache_warmup: Some(CacheWarmupParams {
-                    bookmark: BookmarkName::new("master").unwrap(),
+                    bookmark: BookmarkKey::new("master").unwrap(),
                     commit_limit: 100,
                     microwave_preload: false,
                 }),
@@ -1085,7 +1085,7 @@ mod test {
                 }),
                 bookmarks: vec![
                     BookmarkParams {
-                        bookmark: BookmarkName::new("master").unwrap().into(),
+                        bookmark: BookmarkKey::new("master").unwrap().into(),
                         hooks: vec!["hook1".to_string(), "rust:rusthook".to_string()],
                         only_fast_forward: false,
                         allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap().into()),
@@ -1103,7 +1103,7 @@ mod test {
                         allowed_hipster_group: None,
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
-                        ensure_ancestor_of: Some(BookmarkName::new("master").unwrap()),
+                        ensure_ancestor_of: Some(BookmarkKey::new("master").unwrap()),
                         allow_move_to_public_commits_without_hooks: true,
                     },
                 ],
@@ -1190,8 +1190,8 @@ mod test {
                 },
                 source_control_service_monitoring: Some(SourceControlServiceMonitoring {
                     bookmarks_to_report_age: vec![
-                        BookmarkName::new("master").unwrap(),
-                        BookmarkName::new("master2").unwrap(),
+                        BookmarkKey::new("master").unwrap(),
+                        BookmarkKey::new("master2").unwrap(),
                     ],
                 }),
                 derived_data_config: DerivedDataConfig {
@@ -1219,7 +1219,7 @@ mod test {
                     reload_dag_save_period: None,
                     update_to_master_bookmark_period: Some(Duration::from_secs(120)),
                     heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
-                        BookmarkName::new("test_bookmark").unwrap(),
+                        BookmarkKey::new("test_bookmark").unwrap(),
                     )],
                     extra_heads_to_include_in_background_jobs: vec![],
                 },
@@ -1247,7 +1247,7 @@ mod test {
                     params: None,
                 }),
                 cross_repo_commit_validation_config: Some(CrossRepoCommitValidation {
-                    skip_bookmarks: [BookmarkName::new("weirdy").unwrap()].into(),
+                    skip_bookmarks: [BookmarkKey::new("weirdy").unwrap()].into(),
                 }),
                 sparse_profiles_config: Some(SparseProfilesConfig {
                     sparse_profiles_location: "sparse".to_string(),

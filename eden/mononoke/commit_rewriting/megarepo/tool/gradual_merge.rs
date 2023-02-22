@@ -12,7 +12,7 @@ use std::collections::VecDeque;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use cmdlib::helpers;
@@ -37,7 +37,7 @@ use slog::info;
 pub struct GradualMergeParams {
     pub pre_deletion_commit: ChangesetId,
     pub last_deletion_commit: ChangesetId,
-    pub bookmark_to_merge_into: BookmarkName,
+    pub bookmark_to_merge_into: BookmarkKey,
     pub merge_changeset_args_factory: Box<dyn ChangesetArgsFactory>,
     pub limit: Option<usize>,
     pub dry_run: bool,
@@ -50,7 +50,7 @@ async fn get_unmerged_commits_with_total_count(
     repo: &InnerRepo,
     pre_deletion_commit: &ChangesetId,
     last_deletion_commit: &ChangesetId,
-    bookmark_to_merge_into: &BookmarkName,
+    bookmark_to_merge_into: &BookmarkKey,
 ) -> Result<(usize, Vec<(ChangesetId, StackPosition)>), Error> {
     let commits_to_merge = find_all_commits_to_merge(
         ctx,
@@ -86,7 +86,7 @@ pub async fn gradual_merge_progress(
     repo: &InnerRepo,
     pre_deletion_commit: &ChangesetId,
     last_deletion_commit: &ChangesetId,
-    bookmark_to_merge_into: &BookmarkName,
+    bookmark_to_merge_into: &BookmarkKey,
 ) -> Result<(usize, usize), Error> {
     let (to_merge_count, unmerged_commits) = get_unmerged_commits_with_total_count(
         ctx,
@@ -210,7 +210,7 @@ async fn find_unmerged_commits(
     ctx: &CoreContext,
     repo: &InnerRepo,
     mut commits_to_merge: Vec<(ChangesetId, StackPosition)>,
-    bookmark_to_merge_into: &BookmarkName,
+    bookmark_to_merge_into: &BookmarkKey,
 ) -> Result<Vec<(ChangesetId, StackPosition)>, Error> {
     info!(
         ctx.logger(),
@@ -301,7 +301,7 @@ async fn push_merge_commit(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id_to_merge: ChangesetId,
-    bookmark_to_merge_into: &BookmarkName,
+    bookmark_to_merge_into: &BookmarkKey,
     merge_changeset_args: ChangesetArgs,
     pushrebase_flags: &PushrebaseFlags,
 ) -> Result<ChangesetId, Error> {
@@ -389,7 +389,7 @@ mod test {
             .enumerate()
             .map(|(idx, cs_id)| (cs_id, StackPosition(idx)))
             .collect::<Vec<_>>();
-        let head = BookmarkName::new("head")?;
+        let head = BookmarkKey::new("head")?;
         let unmerged_commits =
             find_unmerged_commits(&ctx, &repo, commits_to_merge.clone(), &head).await?;
 
@@ -448,7 +448,7 @@ mod test {
         let mut params = GradualMergeParams {
             pre_deletion_commit,
             last_deletion_commit: *deletion_commits.last().unwrap(),
-            bookmark_to_merge_into: BookmarkName::new("head")?,
+            bookmark_to_merge_into: BookmarkKey::new("head")?,
             merge_changeset_args_factory: args_factory,
             limit: None,
             dry_run: false,
@@ -490,7 +490,7 @@ mod test {
         let params = GradualMergeParams {
             pre_deletion_commit,
             last_deletion_commit: *deletion_commits.last().unwrap(),
-            bookmark_to_merge_into: BookmarkName::new("head")?,
+            bookmark_to_merge_into: BookmarkKey::new("head")?,
             merge_changeset_args_factory: args_factory,
             limit: Some(1),
             dry_run: false,
@@ -537,7 +537,7 @@ mod test {
         let params = GradualMergeParams {
             pre_deletion_commit,
             last_deletion_commit: *deletion_commits.last().unwrap(),
-            bookmark_to_merge_into: BookmarkName::new("head")?,
+            bookmark_to_merge_into: BookmarkKey::new("head")?,
             merge_changeset_args_factory: args_factory,
             limit: Some(1),
             dry_run: false,

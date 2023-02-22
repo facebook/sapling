@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkTransaction;
 use bookmarks::BookmarkTransactionError;
 use bookmarks::BookmarkTransactionHook;
@@ -48,14 +48,14 @@ define_stats! {
 
 mononoke_queries! {
     write ReplaceBookmarks(
-        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, changeset_id: ChangesetId)
+        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkKey, changeset_id: ChangesetId)
     ) {
         none,
         "REPLACE INTO bookmarks (repo_id, log_id, name, changeset_id) VALUES {values}"
     }
 
     write InsertBookmarks(
-        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, changeset_id: ChangesetId, kind: BookmarkKind)
+        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkKey, changeset_id: ChangesetId, kind: BookmarkKind)
     ) {
         insert_or_ignore,
         "{insert_or_ignore} INTO bookmarks (repo_id, log_id, name, changeset_id, hg_kind) VALUES {values}"
@@ -64,7 +64,7 @@ mononoke_queries! {
     write UpdateBookmark(
         repo_id: RepositoryId,
         log_id: Option<u64>,
-        name: BookmarkName,
+        name: BookmarkKey,
         old_id: ChangesetId,
         new_id: ChangesetId,
         >list kinds: BookmarkKind
@@ -78,14 +78,14 @@ mononoke_queries! {
            AND hg_kind IN {kinds}"
     }
 
-    write DeleteBookmark(repo_id: RepositoryId, name: BookmarkName) {
+    write DeleteBookmark(repo_id: RepositoryId, name: BookmarkKey) {
         none,
         "DELETE FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name = {name}"
     }
 
-    write DeleteBookmarkIf(repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId) {
+    write DeleteBookmarkIf(repo_id: RepositoryId, name: BookmarkKey, changeset_id: ChangesetId) {
         none,
         "DELETE FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -101,7 +101,7 @@ mononoke_queries! {
         values: (
             id: u64,
             repo_id: RepositoryId,
-            name: BookmarkName,
+            name: BookmarkKey,
             from_changeset_id: Option<ChangesetId>,
             to_changeset_id: Option<ChangesetId>,
             reason: BookmarkUpdateReason,
@@ -142,11 +142,11 @@ struct SqlBookmarksTransactionPayload {
     repo_id: RepositoryId,
 
     /// Operations to force-set a bookmark to a changeset.
-    force_sets: Vec<(BookmarkName, ChangesetId, NewUpdateLogEntry)>,
+    force_sets: Vec<(BookmarkKey, ChangesetId, NewUpdateLogEntry)>,
 
     /// Operations to create a bookmark.
     creates: Vec<(
-        BookmarkName,
+        BookmarkKey,
         ChangesetId,
         BookmarkKind,
         Option<NewUpdateLogEntry>,
@@ -155,7 +155,7 @@ struct SqlBookmarksTransactionPayload {
     /// Operations to update a bookmark from an old id to a new id, provided
     /// it has a matching kind.
     updates: Vec<(
-        BookmarkName,
+        BookmarkKey,
         ChangesetId,
         ChangesetId,
         &'static [BookmarkKind],
@@ -163,17 +163,17 @@ struct SqlBookmarksTransactionPayload {
     )>,
 
     /// Operations to force-delete a bookmark.
-    force_deletes: Vec<(BookmarkName, NewUpdateLogEntry)>,
+    force_deletes: Vec<(BookmarkKey, NewUpdateLogEntry)>,
 
     /// Operations to delete a bookmark with an old id.
-    deletes: Vec<(BookmarkName, ChangesetId, Option<NewUpdateLogEntry>)>,
+    deletes: Vec<(BookmarkKey, ChangesetId, Option<NewUpdateLogEntry>)>,
 }
 
 /// Structure representing the log entries to insert when executing a
 /// SqlBookmarksTransactionPayload.
 struct TransactionLogUpdates<'a> {
     next_log_id: u64,
-    log_entries: Vec<(u64, &'a BookmarkName, &'a NewUpdateLogEntry)>,
+    log_entries: Vec<(u64, &'a BookmarkKey, &'a NewUpdateLogEntry)>,
 }
 
 impl<'a> TransactionLogUpdates<'a> {
@@ -184,7 +184,7 @@ impl<'a> TransactionLogUpdates<'a> {
         }
     }
 
-    fn push_log_entry(&mut self, bookmark: &'a BookmarkName, entry: &'a NewUpdateLogEntry) -> u64 {
+    fn push_log_entry(&mut self, bookmark: &'a BookmarkKey, entry: &'a NewUpdateLogEntry) -> u64 {
         let id = self.next_log_id;
         self.log_entries.push((id, bookmark, entry));
         self.next_log_id += 1;
@@ -393,7 +393,7 @@ pub struct SqlBookmarksTransaction {
     ctx: CoreContext,
 
     /// Bookmarks that have been seen already in this transaction.
-    seen: HashSet<BookmarkName>,
+    seen: HashSet<BookmarkKey>,
 
     /// Transaction updates.  A separate struct so that they can be
     /// moved into the future that will perform the database
@@ -415,7 +415,7 @@ impl SqlBookmarksTransaction {
         }
     }
 
-    pub fn check_not_seen(&mut self, bookmark: &BookmarkName) -> Result<()> {
+    pub fn check_not_seen(&mut self, bookmark: &BookmarkKey) -> Result<()> {
         if !self.seen.insert(bookmark.clone()) {
             return Err(anyhow!("{} bookmark was already used", bookmark));
         }
@@ -426,7 +426,7 @@ impl SqlBookmarksTransaction {
 impl BookmarkTransaction for SqlBookmarksTransaction {
     fn update(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
@@ -445,7 +445,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
     fn update_scratch(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
     ) -> Result<()> {
@@ -462,7 +462,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
     fn create(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -479,7 +479,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
     fn create_publishing(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -494,7 +494,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+    fn create_scratch(&mut self, bookmark: &BookmarkKey, new_cs: ChangesetId) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.creates.push((
             bookmark.clone(),
@@ -507,7 +507,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
     fn force_set(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -521,7 +521,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 
     fn delete(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -533,18 +533,14 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn force_delete(
-        &mut self,
-        bookmark: &BookmarkName,
-        reason: BookmarkUpdateReason,
-    ) -> Result<()> {
+    fn force_delete(&mut self, bookmark: &BookmarkKey, reason: BookmarkUpdateReason) -> Result<()> {
         self.check_not_seen(bookmark)?;
         let log = NewUpdateLogEntry::new(None, None, reason)?;
         self.payload.force_deletes.push((bookmark.clone(), log));
         Ok(())
     }
 
-    fn delete_scratch(&mut self, bookmark: &BookmarkName, old_cs: ChangesetId) -> Result<()> {
+    fn delete_scratch(&mut self, bookmark: &BookmarkKey, old_cs: ChangesetId) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.deletes.push((
             bookmark.clone(),
@@ -651,7 +647,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
 #[cfg(test)]
 pub(crate) async fn insert_bookmarks(
     conn: &Connection,
-    rows: impl IntoIterator<Item = (&RepositoryId, &BookmarkName, &ChangesetId, &BookmarkKind)>,
+    rows: impl IntoIterator<Item = (&RepositoryId, &BookmarkKey, &ChangesetId, &BookmarkKind)>,
 ) -> Result<()> {
     let none = None;
     let rows = rows

@@ -34,8 +34,8 @@ use blobrepo_errors::ErrorKind;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
@@ -100,7 +100,7 @@ pub trait BlobRepoHg: Send + Sync {
     async fn get_bookmark_hg(
         &self,
         ctx: CoreContext,
-        name: &BookmarkName,
+        name: &BookmarkKey,
     ) -> Result<Option<HgChangesetId>, Error>
     where
         Self: BookmarksRef + RepoDerivedDataRef;
@@ -315,7 +315,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
     async fn get_bookmark_hg(
         &self,
         ctx: CoreContext,
-        name: &BookmarkName,
+        name: &BookmarkKey,
     ) -> Result<Option<HgChangesetId>, Error>
     where
         Self: BookmarksRef + RepoDerivedDataRef,

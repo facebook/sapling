@@ -186,7 +186,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:         source: Error {
   remote:             context: "Failed to fast-forward scratch bookmark (try --force?)",
   remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "scratch/123",
   remote:                 },
   remote:                 from: ChangesetId(
@@ -234,7 +234,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:         source: Error {
   remote:             context: "Failed to create bookmark",
   remote:             source: InvalidPublishingBookmark {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "scratch/124",
   remote:                 },
   remote:                 pattern: "^scratch/.+$",

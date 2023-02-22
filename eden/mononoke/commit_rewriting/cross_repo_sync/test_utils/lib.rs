@@ -17,7 +17,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
@@ -110,7 +110,7 @@ where
     M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
 {
-    let bookmark_name = BookmarkName::new("master").unwrap();
+    let bookmark_name = BookmarkKey::new("master").unwrap();
     let source_bcs = source_bcs_id
         .load(&ctx, commit_syncer.get_source_repo().repo_blobstore())
         .await
@@ -208,7 +208,7 @@ pub async fn init_small_large_repo(
 
     let noop_version_config = CommitSyncConfig {
         large_repo_id: RepositoryId::new(1),
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             RepositoryId::new(0) => get_small_repo_sync_config_noop(),
         },
@@ -217,7 +217,7 @@ pub async fn init_small_large_repo(
 
     let version_with_small_repo_config = CommitSyncConfig {
         large_repo_id: RepositoryId::new(1),
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             RepositoryId::new(0) => get_small_repo_sync_config_1(),
         },

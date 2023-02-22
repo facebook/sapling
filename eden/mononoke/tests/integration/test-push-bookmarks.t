@@ -101,7 +101,7 @@ Try non fastforward moves (backwards and across branches)
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "master_bookmark",
   remote:                 },
   remote:                 from: ChangesetId(
@@ -137,7 +137,7 @@ Try non fastforward moves (backwards and across branches)
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "master_bookmark",
   remote:                 },
   remote:                 from: ChangesetId(
@@ -186,7 +186,7 @@ Try non fastfoward moves on regex bookmark
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: NonFastForwardMove {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "ffonly_bookmark",
   remote:                 },
   remote:                 from: ChangesetId(
@@ -225,7 +225,7 @@ Try to delete master
   remote:         source: Error {
   remote:             context: "Failed to delete bookmark",
   remote:             source: DeletionProhibited {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "master_bookmark",
   remote:                 },
   remote:             },

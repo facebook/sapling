@@ -9,7 +9,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksMaybeStaleExt;
@@ -184,7 +184,7 @@ fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) ->
 
 async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
-    let bookmark = BookmarkName::new(bookmark_name).unwrap();
+    let bookmark = BookmarkKey::new(bookmark_name).unwrap();
     let changeset_type = args.value_of(ARG_CHANGESET_TYPE).unwrap_or("hg");
     let json_flag = args.is_present("json");
 
@@ -215,7 +215,7 @@ async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
 
 async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
-    let bookmark = BookmarkName::new(bookmark_name).unwrap();
+    let bookmark = BookmarkKey::new(bookmark_name).unwrap();
     let changeset_type = args.value_of(ARG_CHANGESET_TYPE).unwrap_or("hg");
     let json_flag = args.is_present("json");
     let output_limit_as_string = args.value_of(ARG_LIMIT).unwrap_or("25");
@@ -354,7 +354,7 @@ async fn handle_list(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) ->
 async fn handle_set(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let rev = args.value_of("HG_CHANGESET_ID").unwrap().to_string();
-    let bookmark = BookmarkName::new(bookmark_name).unwrap();
+    let bookmark = BookmarkKey::new(bookmark_name).unwrap();
     let new_bcs = fetch_bonsai_changeset(ctx.clone(), &rev, &repo, repo.repo_blobstore()).await?;
     let maybe_old_bcs_id = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
     info!(
@@ -389,7 +389,7 @@ async fn handle_delete(
     repo: BlobRepo,
 ) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
-    let bookmark = BookmarkName::new(bookmark_name).unwrap();
+    let bookmark = BookmarkKey::new(bookmark_name).unwrap();
     let maybe_bcs_id = repo.bookmarks().get(ctx.clone(), &bookmark).await?;
     info!(
         ctx.logger(),

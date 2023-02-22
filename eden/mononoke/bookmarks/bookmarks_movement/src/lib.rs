@@ -13,7 +13,7 @@ use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarksRef;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use changeset_fetcher::ChangesetFetcherArc;
 use changesets::ChangesetsRef;
 use itertools::Itertools;
@@ -87,13 +87,13 @@ pub trait Repo = AsBlobRepo
 pub enum BookmarkMovementError {
     #[error("Non fast-forward bookmark move of '{bookmark}' from {from} to {to}")]
     NonFastForwardMove {
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         from: ChangesetId,
         to: ChangesetId,
     },
 
     #[error("Deletion of '{bookmark}' is prohibited")]
-    DeletionProhibited { bookmark: BookmarkName },
+    DeletionProhibited { bookmark: BookmarkKey },
 
     #[error(transparent)]
     AuthorizationError(#[from] AuthorizationError),
@@ -102,7 +102,7 @@ pub enum BookmarkMovementError {
         "Invalid scratch bookmark: {bookmark} (scratch bookmarks must match pattern {pattern})"
     )]
     InvalidScratchBookmark {
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         pattern: String,
     },
 
@@ -110,14 +110,14 @@ pub enum BookmarkMovementError {
         "Invalid publishing bookmark: {bookmark} (only scratch bookmarks may match pattern {pattern})"
     )]
     InvalidPublishingBookmark {
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         pattern: String,
     },
 
     #[error(
         "Invalid scratch bookmark: {bookmark} (scratch bookmarks are not enabled for this repo)"
     )]
-    ScratchBookmarksDisabled { bookmark: BookmarkName },
+    ScratchBookmarksDisabled { bookmark: BookmarkKey },
 
     #[error("Bookmark transaction failed")]
     TransactionFailed,
@@ -144,8 +144,8 @@ pub enum BookmarkMovementError {
         .bookmark
     )]
     PushrebaseInvalidGlobalrevsBookmark {
-        bookmark: BookmarkName,
-        globalrevs_publishing_bookmark: BookmarkName,
+        bookmark: BookmarkKey,
+        globalrevs_publishing_bookmark: BookmarkKey,
     },
 
     #[error(
@@ -154,25 +154,25 @@ pub enum BookmarkMovementError {
         .descendant_bookmark,
     )]
     PushrebaseNotAllowedRequiresAncestorsOf {
-        bookmark: BookmarkName,
-        descendant_bookmark: BookmarkName,
+        bookmark: BookmarkKey,
+        descendant_bookmark: BookmarkKey,
     },
 
     #[error("Bookmark '{bookmark}' can only be moved to ancestors of '{descendant_bookmark}'")]
     RequiresAncestorOf {
-        bookmark: BookmarkName,
-        descendant_bookmark: BookmarkName,
+        bookmark: BookmarkKey,
+        descendant_bookmark: BookmarkKey,
     },
 
     #[error(
         "Bookmark '{bookmark}' cannot be moved because publishing bookmarks are being redirected"
     )]
-    PushRedirectorEnabledForPublishing { bookmark: BookmarkName },
+    PushRedirectorEnabledForPublishing { bookmark: BookmarkKey },
 
     #[error(
         "Bookmark '{bookmark}' cannot be moved because scratch bookmarks are being redirected"
     )]
-    PushRedirectorEnabledForScratch { bookmark: BookmarkName },
+    PushRedirectorEnabledForScratch { bookmark: BookmarkKey },
 
     #[error(transparent)]
     Error(#[from] anyhow::Error),

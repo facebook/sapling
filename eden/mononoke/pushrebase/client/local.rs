@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::PushrebaseOntoBookmarkOp;
@@ -37,7 +37,7 @@ pub struct LocalPushrebaseClient<'a, R: Repo> {
 impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
     async fn pushrebase(
         &self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         changesets: HashSet<BonsaiChangeset>,
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,

@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
@@ -37,12 +37,12 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     .await?;
     let mut txn = blob_repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(
-        &BookmarkName::new("trunk")?,
+        &BookmarkKey::new("trunk")?,
         changesets["E"],
         BookmarkUpdateReason::TestMove,
     )?;
-    txn.create_scratch(&BookmarkName::new("scratch/branch")?, changesets["G"])?;
-    txn.create_scratch(&BookmarkName::new("scratch/branchpoint")?, changesets["B"])?;
+    txn.create_scratch(&BookmarkKey::new("scratch/branch")?, changesets["G"])?;
+    txn.create_scratch(&BookmarkKey::new("scratch/branchpoint")?, changesets["B"])?;
     txn.commit().await?;
 
     let repo = Repo::new_test(ctx.clone(), blob_repo).await?;

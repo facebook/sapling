@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks_movement::BookmarkUpdatePolicy;
@@ -38,7 +38,7 @@ impl RepoContext {
         self.start_write()?;
 
         let bookmark = bookmark.as_ref();
-        let bookmark = BookmarkName::new(bookmark)?;
+        let bookmark = BookmarkKey::new(bookmark)?;
 
         // We need to find out where the bookmark currently points to in order
         // to move it.  Make sure to bypass any out-of-date caches.
@@ -56,7 +56,7 @@ impl RepoContext {
         };
 
         fn make_move_op<'a>(
-            bookmark: &'a BookmarkName,
+            bookmark: &'a BookmarkKey,
             target: ChangesetId,
             old_target: ChangesetId,
             allow_non_fast_forward: bool,

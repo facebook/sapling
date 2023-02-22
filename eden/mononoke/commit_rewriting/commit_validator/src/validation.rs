@@ -16,7 +16,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
@@ -74,7 +74,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 use crate::reporting::log_validation_result_to_scuba;
 use crate::tail::QueueSize;
 
-type LargeBookmarkName = Large<BookmarkName>;
+type LargeBookmarkKey = Large<BookmarkKey>;
 type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
 
 define_stats! {
@@ -479,7 +479,7 @@ pub struct ValidationHelpers {
     /// we are unfolding an entry, which creates a new bookmark. Such entry
     /// does not have `from_changeset_id`, so instead we using the `to_changeset_id % master`
     /// revset to unfold an entry.
-    large_repo_master_bookmark: BookmarkName,
+    large_repo_master_bookmark: BookmarkKey,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
     mapping: SqlSyncedCommitMapping,
 }
@@ -491,7 +491,7 @@ impl ValidationHelpers {
             RepositoryId,
             (Large<BlobRepo>, Small<BlobRepo>, MononokeScubaSampleBuilder),
         >,
-        large_repo_master_bookmark: BookmarkName,
+        large_repo_master_bookmark: BookmarkKey,
         mapping: SqlSyncedCommitMapping,
         live_commit_sync_config: CfgrLiveCommitSyncConfig,
     ) -> Self {
@@ -697,7 +697,7 @@ impl ValidationHelpers {
 #[derive(Debug)]
 pub struct CommitEntry {
     entry_id: EntryCommitId,
-    bookmark_name: BookmarkName,
+    bookmark_name: BookmarkKey,
     cs_id: ChangesetId,
     queue_size: QueueSize,
 }
@@ -860,7 +860,7 @@ pub async fn unfold_bookmarks_update_log_entry(
 #[derive(Debug)]
 pub struct CommitEntryWithSmallReposMapped {
     entry_id: EntryCommitId,
-    bookmark_name: LargeBookmarkName,
+    bookmark_name: LargeBookmarkKey,
     cs_id: Large<ChangesetId>,
     small_repo_cs_ids: HashMap<Small<RepositoryId>, (Small<ChangesetId>, CommitSyncConfigVersion)>,
     queue_size: QueueSize,

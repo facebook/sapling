@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -42,7 +42,7 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         ctx: &CoreContext,
         request_type: &RequestType,
         repo_id: &RepositoryId,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId>;
 

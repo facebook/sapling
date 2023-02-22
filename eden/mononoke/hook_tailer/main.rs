@@ -15,7 +15,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use clap::Arg;
 use cmdlib::args::MononokeClapApp;
 use cmdlib::args::MononokeMatches;
@@ -104,7 +104,7 @@ async fn run_hook_tailer<'a>(
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
     let bookmark_name = matches.value_of("bookmark").unwrap();
-    let bookmark = BookmarkName::new(bookmark_name)?;
+    let bookmark = BookmarkKey::new(bookmark_name)?;
     let common_config = cmdlib::args::load_common_config(config_store, matches)?;
     let limit = cmdlib::args::get_usize(matches, "limit", 1000);
     let concurrency = cmdlib::args::get_usize(matches, "concurrency", 20);

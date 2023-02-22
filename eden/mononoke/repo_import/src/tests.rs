@@ -16,7 +16,7 @@ mod tests {
     use ascii::AsciiString;
     use blobrepo::AsBlobRepo;
     use blobstore::Loadable;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateLogRef;
     use bookmarks::BookmarkUpdateReason;
     use bookmarks::BookmarksRef;
@@ -90,8 +90,8 @@ mod tests {
     use crate::Repo;
     use crate::RepoImportSetting;
 
-    fn create_bookmark_name(book: &str) -> BookmarkName {
-        BookmarkName::new(book).unwrap()
+    fn create_bookmark_name(book: &str) -> BookmarkKey {
+        BookmarkKey::new(book).unwrap()
     }
 
     fn mp(s: &'static str) -> MPath {
@@ -167,7 +167,7 @@ mod tests {
         .await?;
 
         let bcs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
-        let importing_bookmark = BookmarkName::new("repo_import_test_repo")?;
+        let importing_bookmark = BookmarkKey::new("repo_import_test_repo")?;
         move_bookmark(
             &ctx,
             &repo,
@@ -184,7 +184,7 @@ mod tests {
             .bookmark_update_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
-                BookmarkName::new("repo_import_test_repo")?,
+                BookmarkKey::new("repo_import_test_repo")?,
                 5,
                 None,
                 Freshness::MostRecent,
@@ -226,7 +226,7 @@ mod tests {
         .await?;
 
         let bcs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
-        let importing_bookmark = BookmarkName::new("repo_import_test_repo")?;
+        let importing_bookmark = BookmarkKey::new("repo_import_test_repo")?;
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.create(
             &importing_bookmark,
@@ -250,7 +250,7 @@ mod tests {
             .bookmark_update_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
-                BookmarkName::new("repo_import_test_repo")?,
+                BookmarkKey::new("repo_import_test_repo")?,
                 5,
                 None,
                 Freshness::MostRecent,
@@ -371,7 +371,7 @@ mod tests {
 
         let repo_config = RepoConfig {
             pushrebase: PushrebaseParams {
-                globalrevs_publishing_bookmark: Some(BookmarkName::new("master")?),
+                globalrevs_publishing_bookmark: Some(BookmarkKey::new("master")?),
                 ..Default::default()
             },
             ..Default::default()
@@ -1003,7 +1003,7 @@ mod tests {
             find_mapping_version(
                 &ctx,
                 &large_to_small_syncer,
-                &BookmarkName::new("before_mapping_change")?,
+                &BookmarkKey::new("before_mapping_change")?,
             )
             .await?,
             Some(CommitSyncConfigVersion("TEST_VERSION".to_string()))
@@ -1013,7 +1013,7 @@ mod tests {
             find_mapping_version(
                 &ctx,
                 &large_to_small_syncer,
-                &BookmarkName::new("after_mapping_change")?,
+                &BookmarkKey::new("after_mapping_change")?,
             )
             .await?,
             Some(CommitSyncConfigVersion("TEST_VERSION2".to_string()))

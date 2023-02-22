@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
@@ -51,7 +51,7 @@ pub struct UnbundlePushRebaseResponse {
     pub commonheads: CommonHeads,
     pub pushrebased_rev: ChangesetId,
     pub pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
-    pub onto: BookmarkName,
+    pub onto: BookmarkKey,
     pub bookmark_push_part_id: Option<PartId>,
 }
 

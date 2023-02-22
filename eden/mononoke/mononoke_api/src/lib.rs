@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
-pub use bookmarks::BookmarkName;
+pub use bookmarks::BookmarkKey;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentityRef;

@@ -51,7 +51,7 @@ use anyhow::Error;
 use anyhow::Result;
 use backsyncer::format_counter as format_backsyncer_counter;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
@@ -144,8 +144,8 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static, R: 
     scuba_sample: MononokeScubaSampleBuilder,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
-    maybe_bookmark: Option<BookmarkName>,
-    common_bookmarks: HashSet<BookmarkName>,
+    maybe_bookmark: Option<BookmarkKey>,
+    common_bookmarks: HashSet<BookmarkKey>,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -191,7 +191,7 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     target_mutable_counters: ArcMutableCounters,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
-    common_pushrebase_bookmarks: HashSet<BookmarkName>,
+    common_pushrebase_bookmarks: HashSet<BookmarkKey>,
     base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
     derived_data_types: Vec<String>,
@@ -267,7 +267,7 @@ async fn tail<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     commit_syncer: &CommitSyncer<M, R>,
     target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
-    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     backpressure_params: &BackpressureParams,
@@ -475,7 +475,7 @@ async fn run<'a>(
             add_common_fields(&mut scuba_sample, &commit_syncer);
             let maybe_target_bookmark = sub_m
                 .value_of(ARG_TARGET_BOOKMARK)
-                .map(BookmarkName::new)
+                .map(BookmarkKey::new)
                 .transpose()?;
             let bcs = get_starting_commit(&ctx, sub_m, source_repo.blob_repo.clone()).await?;
 

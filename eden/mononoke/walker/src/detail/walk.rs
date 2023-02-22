@@ -24,8 +24,8 @@ use blobstore::LoadableError;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
@@ -289,8 +289,8 @@ async fn bookmark_step<V: VisitOne>(
     ctx: CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    b: BookmarkName,
-    published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
+    b: BookmarkKey,
+    published_bookmarks: Arc<HashMap<BookmarkKey, ChangesetId>>,
 ) -> Result<StepOutput, StepError> {
     let bcs_opt = match published_bookmarks.get(&b) {
         Some(csid) => Some(csid.clone()),
@@ -322,7 +322,7 @@ async fn bookmark_step<V: VisitOne>(
 }
 
 async fn published_bookmarks_step<V: VisitOne>(
-    published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
+    published_bookmarks: Arc<HashMap<BookmarkKey, ChangesetId>>,
     checker: &Checker<V>,
 ) -> Result<StepOutput, StepError> {
     let mut edges = vec![];
@@ -2111,7 +2111,7 @@ async fn walk_one<V, VOut, Route>(
     error_as_data_node_types: HashSet<NodeType>,
     error_as_data_edge_types: HashSet<EdgeType>,
     mut scuba: MononokeScubaSampleBuilder,
-    published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
+    published_bookmarks: Arc<HashMap<BookmarkKey, ChangesetId>>,
     checker: Arc<Checker<V>>,
 ) -> Result<
     Option<(

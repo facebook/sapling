@@ -41,7 +41,7 @@
   $ mononoke_admin bookmarks set master 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Current position of BookmarkName { bookmark: "master" } is None (glob)
+  * Current position of BookmarkKey { bookmark: "master" } is None (glob)
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server

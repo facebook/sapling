@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bytes::Bytes;
@@ -89,7 +89,7 @@ async fn derive_for_master(
 ) -> Result<()> {
     let master = repo
         .bookmarks()
-        .get(ctx.clone(), &BookmarkName::new("master")?)
+        .get(ctx.clone(), &BookmarkKey::new("master")?)
         .await?
         .expect("master should be set");
     let expected = repo
@@ -167,7 +167,7 @@ async fn test_gapped_derivation(fb: FacebookInit) -> Result<()> {
 
     let master = repo
         .bookmarks()
-        .get(ctx.clone(), &BookmarkName::new("master")?)
+        .get(ctx.clone(), &BookmarkKey::new("master")?)
         .await?
         .expect("master should be set");
     let master_anc1 = repo
@@ -224,7 +224,7 @@ async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
 
     let master = repo
         .bookmarks()
-        .get(ctx.clone(), &BookmarkName::new("master")?)
+        .get(ctx.clone(), &BookmarkKey::new("master")?)
         .await?
         .expect("master should be set");
 
@@ -325,7 +325,7 @@ async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
 
     let master = repo
         .bookmarks()
-        .get(ctx.clone(), &BookmarkName::new("master")?)
+        .get(ctx.clone(), &BookmarkKey::new("master")?)
         .await?
         .expect("master should be set");
 

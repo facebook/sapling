@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 use regex::Regex;
@@ -150,7 +150,7 @@ impl ChangesetHook for LimitCommitsize {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         cross_repo_push_source: CrossRepoPushSource,
@@ -261,7 +261,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -277,7 +277,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -300,7 +300,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -346,7 +346,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -362,7 +362,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -409,7 +409,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -454,7 +454,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,
@@ -504,7 +504,7 @@ mod test {
         let hook_execution = hook
             .run(
                 ctx,
-                &BookmarkName::new("book")?,
+                &BookmarkKey::new("book")?,
                 &bcs,
                 &content_manager,
                 CrossRepoPushSource::NativeToThisRepo,

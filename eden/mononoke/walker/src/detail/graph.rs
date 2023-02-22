@@ -18,7 +18,7 @@ use bitflags::bitflags;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobstore_factory::SqlTierInfo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
@@ -379,7 +379,7 @@ create_graph!(
         ]
     ),
     // Bonsai
-    (Bookmark, BookmarkName, [Changeset, BonsaiHgMapping]),
+    (Bookmark, BookmarkKey, [Changeset, BonsaiHgMapping]),
     (
         Changeset,
         ChangesetKey<ChangesetId>,

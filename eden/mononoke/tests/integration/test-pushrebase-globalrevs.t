@@ -67,10 +67,10 @@ Check that we cannot pushrebase on that bookmark
   remote: 
   remote:   Debug context:
   remote:     PushrebaseInvalidGlobalrevsBookmark {
-  remote:         bookmark: BookmarkName {
+  remote:         bookmark: BookmarkKey {
   remote:             bookmark: "other_bookmark",
   remote:         },
-  remote:         globalrevs_publishing_bookmark: BookmarkName {
+  remote:         globalrevs_publishing_bookmark: BookmarkKey {
   remote:             bookmark: "master_bookmark",
   remote:         },
   remote:     }
@@ -102,10 +102,10 @@ Check that we cannot push to that bookmark if the commit is not a descendant
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: RequiresAncestorOf {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "other_bookmark",
   remote:                 },
-  remote:                 descendant_bookmark: BookmarkName {
+  remote:                 descendant_bookmark: BookmarkKey {
   remote:                     bookmark: "master_bookmark",
   remote:                 },
   remote:             },
@@ -136,10 +136,10 @@ Check that we cannot do a regular push to the globalrev bookmark either
   remote:         source: Error {
   remote:             context: "Failed to move bookmark",
   remote:             source: RequiresAncestorOf {
-  remote:                 bookmark: BookmarkName {
+  remote:                 bookmark: BookmarkKey {
   remote:                     bookmark: "master_bookmark",
   remote:                 },
-  remote:                 descendant_bookmark: BookmarkName {
+  remote:                 descendant_bookmark: BookmarkKey {
   remote:                     bookmark: "master_bookmark",
   remote:                 },
   remote:             },

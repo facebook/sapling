@@ -19,7 +19,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogRef;
@@ -103,7 +103,7 @@ fn validate_stream<'a>(
 async fn run_in_tailing_mode(
     ctx: &CoreContext,
     blobrepo: BlobRepo,
-    skip_bookmarks: HashSet<BookmarkName>,
+    skip_bookmarks: HashSet<BookmarkKey>,
     validation_helpers: ValidationHelpers,
     start_id: u64,
     scuba_sample: MononokeScubaSampleBuilder,

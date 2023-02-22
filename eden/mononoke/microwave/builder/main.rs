@@ -18,7 +18,7 @@ use anyhow::Error;
 use blobrepo_override::DangerousOverride;
 use blobstore_factory::BlobstoreArgDefaults;
 use blobstore_factory::PutBehaviour;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
 use cache_warmup::CacheWarmupRequest;
@@ -55,7 +55,7 @@ use crate::filenodes::MicrowaveFilenodes;
 async fn cache_warmup_target(
     ctx: &CoreContext,
     repo: &InnerRepo,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
 ) -> Result<CacheWarmupTarget, Error> {
     let warmers = vec![
         create_derived_data_warmer::<MappedHgChangesetId>(ctx, repo.repo_derived_data_arc()),

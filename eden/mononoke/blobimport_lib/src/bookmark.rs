@@ -14,7 +14,7 @@ use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cloned::cloned;
@@ -53,14 +53,13 @@ pub fn read_bookmarks(revlogrepo: &RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChan
         .boxify()
 }
 
-pub type BookmarkNameTransformer =
-    Box<dyn Fn(BookmarkName) -> BookmarkName + Send + Sync + 'static>;
+pub type BookmarkKeyTransformer = Box<dyn Fn(BookmarkKey) -> BookmarkKey + Send + Sync + 'static>;
 
-pub fn get_bookmark_prefixer(prefix: AsciiString) -> BookmarkNameTransformer {
+pub fn get_bookmark_prefixer(prefix: AsciiString) -> BookmarkKeyTransformer {
     Box::new(move |bookmark| {
         let mut name = prefix.clone();
         name.push_str(bookmark.as_ascii());
-        BookmarkName::new_ascii(name)
+        BookmarkKey::new_ascii(name)
     })
 }
 
@@ -70,8 +69,8 @@ pub fn upload_bookmarks(
     revlogrepo: RevlogRepo,
     blobrepo: BlobRepo,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
-    mononoke_bookmarks: Vec<(BookmarkName, ChangesetId)>,
-    bookmark_name_transformer: BookmarkNameTransformer,
+    mononoke_bookmarks: Vec<(BookmarkKey, ChangesetId)>,
+    bookmark_name_transformer: BookmarkKeyTransformer,
 ) -> BoxFuture<(), Error> {
     let logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
@@ -148,7 +147,7 @@ pub fn upload_bookmarks(
 
                 let mut count = 0;
                 for (key, value) in vec {
-                    let bookmark_name = BookmarkName::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
+                    let bookmark_name = BookmarkKey::new_ascii(try_boxfuture!(AsciiString::from_ascii(key)));
                     let bookmark_name = bookmark_name_transformer(bookmark_name);
                     if mononoke_bookmarks.get(&bookmark_name) != Some(&value) {
                         count += 1;

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::format_err;
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -85,7 +85,7 @@ impl FileContentManager for InMemoryFileContentManager {
     async fn find_content<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        _bookmark: BookmarkName,
+        _bookmark: BookmarkKey,
         _paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         Err(
@@ -109,7 +109,7 @@ impl FileContentManager for InMemoryFileContentManager {
     async fn latest_changes<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        _bookmark: BookmarkName,
+        _bookmark: BookmarkKey,
         _paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
         Err(

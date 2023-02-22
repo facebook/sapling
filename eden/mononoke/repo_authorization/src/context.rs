@@ -8,8 +8,8 @@
 use acl_regions::AclRegionsRef;
 use anyhow::anyhow;
 use anyhow::Result;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use context::CoreContext;
 use metaconfig_types::RepoConfigRef;
 use mononoke_types::BonsaiChangeset;
@@ -358,7 +358,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> AuthorizationCheckOutcome {
         let permitted = match self {
             AuthorizationContext::FullAccess => true,
@@ -387,7 +387,7 @@ impl AuthorizationContext {
         &self,
         ctx: &CoreContext,
         repo: &(impl RepoConfigRef + RepoBookmarkAttrsRef),
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> Result<(), AuthorizationError> {
         self.check_bookmark_modify(ctx, repo, bookmark)
             .await

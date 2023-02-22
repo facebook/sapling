@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use mononoke_types::ChangesetId;
@@ -49,18 +49,18 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// committing the transaction will fail. The Bookmark should also not be Scratch.
     fn update(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
 
     /// Adds create() operation to the transaction set.
-    /// Creates a bookmark. BookmarkName should not already exist, otherwise committing the
+    /// Creates a bookmark. BookmarkKey should not already exist, otherwise committing the
     /// transaction will fail. The resulting Bookmark will be PullDefault.
     fn create(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
@@ -70,7 +70,7 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// exists or not.
     fn force_set(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
@@ -79,38 +79,37 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// Deletes bookmark only if it currently points to `old_cs`.
     fn delete(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
 
     /// Adds force_delete operation to the transaction set.
     /// Deletes bookmark unconditionally.
-    fn force_delete(&mut self, bookmark: &BookmarkName, reason: BookmarkUpdateReason)
-    -> Result<()>;
+    fn force_delete(&mut self, bookmark: &BookmarkKey, reason: BookmarkUpdateReason) -> Result<()>;
 
     /// Adds a scratch bookmark update operation to the transaction set.
     /// Updates the changeset referenced by the bookmark, if it is already a scratch bookmark.
     fn update_scratch(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
     ) -> Result<()>;
 
     /// Adds a scratch bookmark create operation to the transaction set.
     /// Creates a new bookmark, configured as scratch. It should not exist already.
-    fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
+    fn create_scratch(&mut self, bookmark: &BookmarkKey, new_cs: ChangesetId) -> Result<()>;
 
     /// Adds a scratch bookmark delete operation to the transaction set.
     /// Deletes bookmark only if it currently points to `old_cs`.
-    fn delete_scratch(&mut self, bookmark: &BookmarkName, old_cs: ChangesetId) -> Result<()>;
+    fn delete_scratch(&mut self, bookmark: &BookmarkKey, old_cs: ChangesetId) -> Result<()>;
 
     /// Adds a publishing bookmark create operation to the transaction set.
     /// Creates a new bookmark, configured as publishing. It should not exist already.
     fn create_publishing(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;

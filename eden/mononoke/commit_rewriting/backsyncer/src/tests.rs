@@ -19,7 +19,7 @@ use blobrepo::save_bonsai_changesets;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
@@ -315,7 +315,7 @@ async fn backsync_linear_with_mover_that_removes_single_file(
 
 #[fbinit::test]
 async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Result<(), Error> {
-    let master = BookmarkName::new("master")?;
+    let master = BookmarkKey::new("master")?;
     let (commit_syncer, target_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::Only(master)).await?;
 
@@ -347,7 +347,7 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
     assert_eq!(
         commit_syncer
             .get_target_repo()
-            .get_bookmark_hg(ctx, &BookmarkName::new("anotherbookmark")?)
+            .get_bookmark_hg(ctx, &BookmarkKey::new("anotherbookmark")?)
             .await?,
         None
     );
@@ -367,7 +367,7 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     assert_eq!(
         commit_syncer
             .get_target_repo()
-            .get_bookmark_hg(ctx.clone(), &BookmarkName::new("master")?)
+            .get_bookmark_hg(ctx.clone(), &BookmarkKey::new("master")?)
             .await?,
         None
     );
@@ -375,7 +375,7 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     assert_eq!(
         commit_syncer
             .get_target_repo()
-            .get_bookmark_hg(ctx, &BookmarkName::new("anotherbookmark")?)
+            .get_bookmark_hg(ctx, &BookmarkKey::new("anotherbookmark")?)
             .await?,
         None
     );
@@ -606,7 +606,7 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
 
 #[fbinit::test]
 async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
-    let master = BookmarkName::new("master")?;
+    let master = BookmarkKey::new("master")?;
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
         MoverType::Except(vec!["unrelated_branch".to_string()]),
@@ -622,7 +622,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     move_bookmark(
         ctx.clone(),
         source_repo.clone(),
-        &BookmarkName::new("otherrepo/somebook")?,
+        &BookmarkKey::new("otherrepo/somebook")?,
         merge,
     )
     .await?;
@@ -652,7 +652,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     move_bookmark(
         ctx.clone(),
         source_repo.clone(),
-        &BookmarkName::new("master")?,
+        &BookmarkKey::new("master")?,
         new_master,
     )
     .await?;
@@ -712,7 +712,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let current_version_config = CommitSyncConfig {
         large_repo_id: source_repo.repo_identity().id(),
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             target_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
@@ -729,7 +729,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let new_version_config = CommitSyncConfig {
         large_repo_id: source_repo.repo_identity().id(),
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             target_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
@@ -1172,8 +1172,8 @@ async fn list_content(
 }
 
 enum BookmarkRenamerType {
-    CommonAndPrefix(BookmarkName, String),
-    Only(BookmarkName),
+    CommonAndPrefix(BookmarkKey, String),
+    Only(BookmarkKey),
     RemoveAll,
     Noop,
 }
@@ -1317,7 +1317,7 @@ async fn init_repos(
     let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     let version_config = CommitSyncConfig {
         large_repo_id: source_repo.repo_identity().id(),
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             target_repo.repo_identity().id() => mover_type.get_small_repo_config(),
         },
@@ -1385,7 +1385,7 @@ async fn init_repos(
 
     // Create a few new commits on top of master
 
-    let master = BookmarkName::new("master")?;
+    let master = BookmarkKey::new("master")?;
     let master_val = source_repo
         .bookmarks()
         .get(ctx.clone(), &master)
@@ -1429,7 +1429,7 @@ async fn init_repos(
     move_bookmark(ctx.clone(), source_repo.clone(), &master, second_bcs_id).await?;
 
     // Create new bookmark
-    let master = BookmarkName::new("anotherbookmark")?;
+    let master = BookmarkKey::new("anotherbookmark")?;
     move_bookmark(ctx.clone(), source_repo.clone(), &master, first_bcs_id).await?;
 
     // Merge new repo into master
@@ -1605,7 +1605,7 @@ async fn init_merged_repos(
 
         let new_version_config = CommitSyncConfig {
             large_repo_id: large_repo.repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
@@ -1623,7 +1623,7 @@ async fn init_merged_repos(
         let mover_type = MoverType::Noop;
         let noop_version_config = CommitSyncConfig {
             large_repo_id: large_repo.repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => mover_type.get_small_repo_config(),
             },
@@ -1632,7 +1632,7 @@ async fn init_merged_repos(
         lv_cfg_src.add_config(noop_version_config);
 
         let bookmark_renamer_type = BookmarkRenamerType::CommonAndPrefix(
-            BookmarkName::new("master")?,
+            BookmarkKey::new("master")?,
             format!("smallrepo{}", repoid.id()),
         );
 
@@ -1767,7 +1767,7 @@ async fn init_merged_repos(
     // Create new commit in large repo
     let mut latest_log_id = 0;
     {
-        let master = BookmarkName::new("master")?;
+        let master = BookmarkKey::new("master")?;
         let mut prev_master = None;
         for repo_id in 0..num_repos {
             let filename = format!("smallrepo{}/newfile", repo_id);
@@ -1791,7 +1791,7 @@ async fn init_merged_repos(
         }
 
         // Create bookmark on premerge commit from first repo
-        let premerge_book = BookmarkName::new("smallrepo0/premerge_book")?;
+        let premerge_book = BookmarkKey::new("smallrepo0/premerge_book")?;
         latest_log_id += 1;
         move_bookmark(
             ctx.clone(),
@@ -1802,7 +1802,7 @@ async fn init_merged_repos(
         .await?;
 
         // Now on second repo and move it to rewritten changeset
-        let premerge_book = BookmarkName::new("smallrepo1/premerge_book")?;
+        let premerge_book = BookmarkKey::new("smallrepo1/premerge_book")?;
         latest_log_id += 1;
         move_bookmark(
             ctx.clone(),
@@ -1845,7 +1845,7 @@ async fn init_merged_repos(
         move_bookmark(ctx.clone(), large_repo.clone(), &master, new_commit).await?;
 
         // Create a Preserved commit
-        let premerge_book = BookmarkName::new("smallrepo0/preserved_commit")?;
+        let premerge_book = BookmarkKey::new("smallrepo0/preserved_commit")?;
         let filename = "smallrepo1/newfile";
         let new_commit = create_commit(
             ctx.clone(),
@@ -1910,7 +1910,7 @@ async fn preserve_premerge_commit(
 
         let version_config = CommitSyncConfig {
             large_repo_id: large_repo.repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => mover_type.get_small_repo_config(),
             },
@@ -1958,7 +1958,7 @@ async fn preserve_premerge_commit(
 async fn move_bookmark(
     ctx: CoreContext,
     repo: TestRepo,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());

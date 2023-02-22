@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
 pub use bookmarks_movement::PushrebaseOutcome;
 use bytes::Bytes;
@@ -117,7 +117,7 @@ impl RepoContext {
         self.start_write()?;
 
         let bookmark = bookmark.as_ref();
-        let bookmark = BookmarkName::new(bookmark)?;
+        let bookmark = BookmarkKey::new(bookmark)?;
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index_arc();
 

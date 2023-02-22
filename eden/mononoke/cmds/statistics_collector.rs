@@ -19,7 +19,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use changesets::deserialize_cs_entries;
 use changesets::ChangesetEntry;
@@ -457,7 +457,7 @@ async fn run_statistics<'a>(
     scuba_logger: MononokeScubaSampleBuilder,
     matches: &'a MononokeMatches<'a>,
     repo_name: String,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
 ) -> Result<(), Error> {
     let repo = args::not_shardmanager_compatible::open_repo(fb, logger, matches).await?;
 
@@ -563,7 +563,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         Some(name) => name.to_string(),
         None => String::from("master"),
     };
-    let bookmark = BookmarkName::new(bookmark)?;
+    let bookmark = BookmarkKey::new(bookmark)?;
     let repo_name = args::not_shardmanager_compatible::get_repo_name(config_store, &matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
         MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)?

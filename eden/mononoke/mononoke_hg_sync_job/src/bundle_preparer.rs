@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use changeset_fetcher::ArcChangesetFetcher;
@@ -253,7 +253,7 @@ impl BundlePreparer {
         session_lfs_params: SessionLfsParams,
         hg_server_heads: &'a [ChangesetId],
         bookmark_change: &'a BookmarkChange,
-        bookmark_name: &'a BookmarkName,
+        bookmark_name: &'a BookmarkKey,
         push_vars: Option<HashMap<String, bytes::Bytes>>,
         filter_changesets: Arc<dyn FilterExistingChangesets>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
@@ -288,7 +288,7 @@ impl BundlePreparer {
         Ok((bundle, timestamps, CommitsInBundle::Commits(bcs_ids)))
     }
 
-    fn session_lfs_params(&self, ctx: &CoreContext, bookmark: &BookmarkName) -> SessionLfsParams {
+    fn session_lfs_params(&self, ctx: &CoreContext, bookmark: &BookmarkKey) -> SessionLfsParams {
         let lfs_params = &self.repo.repo_config().lfs;
 
         if let Some(regex) = &self.bookmark_regex_force_lfs {
@@ -327,7 +327,7 @@ async fn save_timestamps_to_file(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BookmarkLogEntryBatch {
     entries: Vec<BookmarkUpdateLogEntry>,
-    bookmark_name: BookmarkName,
+    bookmark_name: BookmarkKey,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: Option<ChangesetId>,
     server_old_value: Option<ChangesetId>,
@@ -579,7 +579,7 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
+        let main = BookmarkKey::new("main")?;
         let commit = commits.get("A").cloned().unwrap();
         let entries = vec![create_bookmark_log_entry(
             0,
@@ -628,7 +628,7 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
+        let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
         let commit_c = commits.get("C").cloned().unwrap();
@@ -673,7 +673,7 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
+        let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
         let commit_c = commits.get("C").cloned().unwrap();
@@ -723,8 +723,8 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
-        let another = BookmarkName::new("another")?;
+        let main = BookmarkKey::new("main")?;
+        let another = BookmarkKey::new("another")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
         let commit_c = commits.get("C").cloned().unwrap();
@@ -783,7 +783,7 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
+        let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
         let commit_c = commits.get("C").cloned().unwrap();
@@ -838,7 +838,7 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
+        let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
         let commit_c = commits.get("C").cloned().unwrap();
@@ -888,7 +888,7 @@ mod test {
 
         let sli: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
 
-        let main = BookmarkName::new("main")?;
+        let main = BookmarkKey::new("main")?;
         let commit_a = commits.get("A").cloned().unwrap();
         let commit_b = commits.get("B").cloned().unwrap();
         let commit_c = commits.get("C").cloned().unwrap();
@@ -1010,7 +1010,7 @@ mod test {
 
     fn create_bookmark_log_entry(
         id: i64,
-        bookmark_name: BookmarkName,
+        bookmark_name: BookmarkKey,
         from_changeset_id: Option<ChangesetId>,
         to_changeset_id: Option<ChangesetId>,
     ) -> BookmarkUpdateLogEntry {

@@ -44,7 +44,7 @@ use basename_suffix_skeleton_manifest::RootBasenameSuffixSkeletonManifest;
 use blame::RootBlameV2;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_info::ChangesetInfo;
@@ -92,18 +92,9 @@ pub struct CommandArgs {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Action {
-    Exists {
-        name: String,
-        id: ChangesetId,
-    },
-    Bookmark {
-        name: String,
-        bookmark: BookmarkName,
-    },
-    Change {
-        name: String,
-        change: ChangeAction,
-    },
+    Exists { name: String, id: ChangesetId },
+    Bookmark { name: String, bookmark: BookmarkKey },
+    Change { name: String, change: ChangeAction },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -354,7 +345,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     let mut existing: BTreeMap<String, ChangesetId> = BTreeMap::new();
     let mut commit_changes: BTreeMap<String, Vec<ChangeAction>> = BTreeMap::new();
-    let mut bookmarks: BTreeMap<BookmarkName, String> = BTreeMap::new();
+    let mut bookmarks: BTreeMap<BookmarkKey, String> = BTreeMap::new();
 
     for action in actions {
         match action {

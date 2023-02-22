@@ -16,8 +16,8 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
@@ -118,7 +118,7 @@ impl AffectedChangesets {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), Error> {
         if self.additional_changesets.is_some() {
@@ -252,7 +252,7 @@ impl AffectedChangesets {
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         hook_manager: &HookManager,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         pushvars: Option<&HashMap<String, Bytes>>,
         reason: BookmarkUpdateReason,
         kind: BookmarkKind,
@@ -291,7 +291,7 @@ impl AffectedChangesets {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
@@ -333,7 +333,7 @@ impl AffectedChangesets {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
@@ -403,7 +403,7 @@ impl AffectedChangesets {
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         hook_manager: &HookManager,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         pushvars: Option<&HashMap<String, Bytes>>,
         reason: BookmarkUpdateReason,
         kind: BookmarkKind,
@@ -487,7 +487,7 @@ impl AffectedChangesets {
         authz: &AuthorizationContext,
         repo: &impl Repo,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
         // For optimization, first check if the user is permitted to modify
@@ -558,7 +558,7 @@ pub async fn find_draft_ancestors(
 pub(crate) async fn log_new_bonsai_changesets(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     kind: BookmarkKind,
     commits_to_log: Vec<BonsaiChangeset>,
 ) {

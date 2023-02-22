@@ -202,7 +202,7 @@ mod tests {
 
     use blobrepo::save_bonsai_changesets;
     use bonsai_hg_mapping::BonsaiHgMapping;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::Bookmarks;
     use changeset_fetcher::ChangesetFetcher;
     use changesets::Changesets;
@@ -692,7 +692,7 @@ mod tests {
         ctx: CoreContext,
         repo: TestRepo,
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
-        let master_book = BookmarkName::new("master").unwrap();
+        let master_book = BookmarkKey::new("master").unwrap();
         repo.bookmarks
             .get(ctx.clone(), &master_book)
             .map_ok(move |maybe_bcs_id| {

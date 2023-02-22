@@ -14,7 +14,7 @@ use std::collections::HashSet;
 
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 #[cfg(fbcode_build)]
 pub use facebook::land_service::override_certificate_paths as land_service_override_certificate_paths;
@@ -32,7 +32,7 @@ pub trait PushrebaseClient: Sync + Send {
     /// Pushrebase the given changesets to the given bookmark.
     async fn pushrebase(
         &self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         // Must be a stack
         changesets: HashSet<BonsaiChangeset>,
         pushvars: Option<&HashMap<String, Bytes>>,

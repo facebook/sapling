@@ -21,8 +21,8 @@ mod test {
     use anyhow::Result;
     use ascii::AsciiString;
     use bookmarks::Bookmark;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarkKind;
-    use bookmarks::BookmarkName;
     use bookmarks::BookmarkPagination;
     use bookmarks::BookmarkPrefix;
     use bookmarks::BookmarkUpdateReason;
@@ -48,9 +48,9 @@ mod test {
         let store = SqlBookmarksBuilder::with_sqlite_in_memory()
             .unwrap()
             .with_repo_id(REPO_ZERO);
-        let scratch_name = BookmarkName::new("book1").unwrap();
-        let publishing_name = BookmarkName::new("book2").unwrap();
-        let pull_default_name = BookmarkName::new("book3").unwrap();
+        let scratch_name = BookmarkKey::new("book1").unwrap();
+        let publishing_name = BookmarkKey::new("book2").unwrap();
+        let pull_default_name = BookmarkKey::new("book3").unwrap();
 
         let conn = store.connections.write_connection.clone();
 
@@ -136,7 +136,7 @@ mod test {
     }
 
     fn mock_bookmarks_response(
-        bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+        bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
@@ -162,7 +162,7 @@ mod test {
 
     fn insert_then_query(
         fb: FacebookInit,
-        bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+        bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         query_freshness: Freshness,
         query_prefix: &BookmarkPrefix,
         query_kinds: &[BookmarkKind],
@@ -203,11 +203,11 @@ mod test {
     quickcheck! {
         fn responses_match(
             fb: FacebookInit,
-            bookmarks: BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+            bookmarks: BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
             freshness: Freshness,
             kinds: HashSet<BookmarkKind>,
             prefix_char: Option<ascii_ext::AsciiChar>,
-            after: Option<BookmarkName>,
+            after: Option<BookmarkKey>,
             limit: u64
         ) -> bool {
             // Test that requests return what is expected.

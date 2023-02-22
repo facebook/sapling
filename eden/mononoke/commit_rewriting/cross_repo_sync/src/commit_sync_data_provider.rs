@@ -13,7 +13,7 @@ use anyhow::Error;
 use bookmark_renaming::get_bookmark_renamers;
 use bookmark_renaming::BookmarkRenamer;
 use bookmark_renaming::BookmarkRenamers;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -167,7 +167,7 @@ impl CommitSyncDataProvider {
     pub async fn get_common_pushrebase_bookmarks(
         &self,
         repo_id: RepositoryId,
-    ) -> Result<Vec<BookmarkName>, Error> {
+    ) -> Result<Vec<BookmarkKey>, Error> {
         use CommitSyncDataProvider::*;
 
         match self {

@@ -31,8 +31,8 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLog;
@@ -601,7 +601,7 @@ impl Repo {
         Ok(())
     }
 
-    fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
+    fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkKey) {
         error!(
             ctx.logger(),
             "Monitored bookmark does not exist in the cache: {}, repo: {}",
@@ -616,7 +616,7 @@ impl Repo {
         );
     }
 
-    fn report_bookmark_missing_from_repo(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
+    fn report_bookmark_missing_from_repo(&self, ctx: &CoreContext, bookmark: &BookmarkKey) {
         error!(
             ctx.logger(),
             "Monitored bookmark does not exist in the repo: {}", bookmark
@@ -629,12 +629,7 @@ impl Repo {
         );
     }
 
-    fn report_bookmark_staleness(
-        &self,
-        ctx: &CoreContext,
-        bookmark: &BookmarkName,
-        staleness: i64,
-    ) {
+    fn report_bookmark_staleness(&self, ctx: &CoreContext, bookmark: &BookmarkKey, staleness: i64) {
         // Don't log if staleness is 0 to make output less spammy
         if staleness > 0 {
             debug!(
@@ -656,7 +651,7 @@ impl Repo {
     async fn report_bookmark_age_difference(
         &self,
         ctx: &CoreContext,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> Result<(), MononokeError> {
         let repo = self.blob_repo();
 
@@ -1049,7 +1044,7 @@ impl RepoContext {
         freshness: BookmarkFreshness,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         // a non ascii bookmark name is an invalid request
-        let bookmark = BookmarkName::new(bookmark.as_ref())
+        let bookmark = BookmarkKey::new(bookmark.as_ref())
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
 
         let mut cs_id = match freshness {
@@ -1283,7 +1278,7 @@ impl RepoContext {
         bookmark: impl AsRef<str>,
     ) -> Result<Option<BookmarkInfo>, MononokeError> {
         // a non ascii bookmark name is an invalid request
-        let bookmark = BookmarkName::new(bookmark.as_ref())
+        let bookmark = BookmarkKey::new(bookmark.as_ref())
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
 
         let (maybe_warm_cs_id, maybe_log_entry) = try_join!(
@@ -1365,7 +1360,7 @@ impl RepoContext {
 
         let pagination = match after {
             Some(after) => {
-                let name = BookmarkName::new(after).map_err(|e| {
+                let name = BookmarkKey::new(after).map_err(|e| {
                     MononokeError::InvalidRequest(format!(
                         "invalid bookmark name '{}': {}",
                         after, e

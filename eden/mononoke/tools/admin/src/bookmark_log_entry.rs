@@ -13,7 +13,7 @@ use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use futures::stream;
@@ -30,7 +30,7 @@ pub trait Repo =
 
 pub struct BookmarkLogEntry {
     timestamp: Timestamp,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     reason: BookmarkUpdateReason,
     ids: Vec<(IdentityScheme, String)>,
     bundle_id: Option<u64>,
@@ -41,7 +41,7 @@ impl BookmarkLogEntry {
         ctx: &CoreContext,
         repo: &impl Repo,
         timestamp: Timestamp,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         reason: BookmarkUpdateReason,
         changeset_id: Option<ChangesetId>,
         bundle_id: Option<u64>,

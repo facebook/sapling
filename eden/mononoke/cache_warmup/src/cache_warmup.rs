@@ -10,7 +10,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
@@ -43,19 +43,19 @@ use slog::warn;
 use tokio::task;
 
 mod errors {
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use thiserror::Error;
 
     #[derive(Debug, Error)]
     pub enum ErrorKind {
         #[error("Bookmark {0} does not exist")]
-        BookmarkNotFound(BookmarkName),
+        BookmarkNotFound(BookmarkKey),
     }
 }
 
 #[derive(Debug)]
 pub enum CacheWarmupTarget {
-    Bookmark(BookmarkName),
+    Bookmark(BookmarkKey),
     Changeset(ChangesetId),
 }
 

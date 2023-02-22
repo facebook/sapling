@@ -1146,7 +1146,7 @@ mod test {
 
     use async_trait::async_trait;
     use blobrepo::BlobRepo;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarksMaybeStaleExt;
     use bookmarks::BookmarksRef;
     use changeset_fetcher::ChangesetFetcher;
@@ -2166,7 +2166,7 @@ mod test {
     async fn test_is_ancestor(ctx: CoreContext, repo: BlobRepo, sli: SkiplistIndex) {
         let f = repo
             .bookmarks()
-            .get(ctx.clone(), &BookmarkName::new("master").unwrap())
+            .get(ctx.clone(), &BookmarkKey::new("master").unwrap())
             .compat()
             .and_then({
                 cloned!(ctx, repo);

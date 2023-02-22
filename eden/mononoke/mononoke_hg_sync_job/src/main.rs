@@ -33,7 +33,7 @@ use async_trait::async_trait;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::Freshness;
@@ -698,7 +698,7 @@ pub struct CombinedBookmarkUpdateLogEntry {
     bundle_file: Arc<NamedTempFile>,
     timestamps_file: Arc<NamedTempFile>,
     cs_id: Option<(ChangesetId, HgChangesetId)>,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     // List of commits in a bundle in case they are known
     commits: CommitsInBundle,
 }
@@ -905,19 +905,19 @@ where
 
 #[derive(Clone)]
 pub struct BookmarkOverlay {
-    bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
-    overlay: HashMap<BookmarkName, Option<ChangesetId>>,
+    bookmarks: Arc<HashMap<BookmarkKey, ChangesetId>>,
+    overlay: HashMap<BookmarkKey, Option<ChangesetId>>,
 }
 
 impl BookmarkOverlay {
-    fn new(bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>) -> Self {
+    fn new(bookmarks: Arc<HashMap<BookmarkKey, ChangesetId>>) -> Self {
         Self {
             bookmarks,
             overlay: HashMap::new(),
         }
     }
 
-    fn update(&mut self, book: BookmarkName, val: Option<ChangesetId>) {
+    fn update(&mut self, book: BookmarkKey, val: Option<ChangesetId>) {
         self.overlay.insert(book, val);
     }
 
@@ -929,7 +929,7 @@ impl BookmarkOverlay {
             .collect()
     }
 
-    fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
+    fn get(&self, bookmark: &BookmarkKey) -> Option<ChangesetId> {
         if let Some(value) = self.overlay.get(bookmark) {
             return value.clone();
         }

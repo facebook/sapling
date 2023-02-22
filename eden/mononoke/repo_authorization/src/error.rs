@@ -8,7 +8,7 @@
 use std::fmt;
 
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use permission_checker::MononokeIdentitySet;
@@ -25,7 +25,7 @@ pub enum DeniedAction {
     PathRead(ChangesetId, Option<MPath>),
     RepoWrite(RepoWriteOperation),
     PathWrite(MPath),
-    BookmarkModification(BookmarkName),
+    BookmarkModification(BookmarkKey),
     OverrideGitMapping,
 }
 

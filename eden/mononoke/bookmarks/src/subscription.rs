@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
@@ -20,5 +20,5 @@ pub trait BookmarksSubscription: Send + Sync + 'static {
     async fn refresh(&mut self, ctx: &CoreContext) -> Result<()>;
 
     /// Get current bookmarks.
-    fn bookmarks(&self) -> &HashMap<BookmarkName, (ChangesetId, BookmarkKind)>;
+    fn bookmarks(&self) -> &HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>;
 }

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -75,7 +75,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
     async fn find_content<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         self.inner.find_content(ctx, bookmark, paths).await
@@ -93,7 +93,7 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
     async fn latest_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
         self.inner.latest_changes(ctx, bookmark, paths).await

@@ -15,7 +15,7 @@ use anyhow::format_err;
 use anyhow::Error;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
@@ -446,14 +446,11 @@ pub struct UpdateBookmarkContext<R: Repo> {
 }
 
 impl<R: Repo> UpdateBookmarkContext<R> {
-    pub async fn set_to(
-        self,
-        cs_ident: impl Into<CommitIdentifier>,
-    ) -> Result<BookmarkName, Error> {
+    pub async fn set_to(self, cs_ident: impl Into<CommitIdentifier>) -> Result<BookmarkKey, Error> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
             Bookmark(bookmark) => bookmark,
-            String(s) => BookmarkName::new(s)?,
+            String(s) => BookmarkKey::new(s)?,
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
@@ -466,11 +463,11 @@ impl<R: Repo> UpdateBookmarkContext<R> {
     pub async fn create_publishing(
         self,
         cs_ident: impl Into<CommitIdentifier>,
-    ) -> Result<BookmarkName, Error> {
+    ) -> Result<BookmarkKey, Error> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
             Bookmark(bookmark) => bookmark,
-            String(s) => BookmarkName::new(s)?,
+            String(s) => BookmarkKey::new(s)?,
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
@@ -483,11 +480,11 @@ impl<R: Repo> UpdateBookmarkContext<R> {
     pub async fn create_pull_default(
         self,
         cs_ident: impl Into<CommitIdentifier>,
-    ) -> Result<BookmarkName, Error> {
+    ) -> Result<BookmarkKey, Error> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
             Bookmark(bookmark) => bookmark,
-            String(s) => BookmarkName::new(s)?,
+            String(s) => BookmarkKey::new(s)?,
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
@@ -500,11 +497,11 @@ impl<R: Repo> UpdateBookmarkContext<R> {
     pub async fn create_scratch(
         self,
         cs_ident: impl Into<CommitIdentifier>,
-    ) -> Result<BookmarkName, Error> {
+    ) -> Result<BookmarkKey, Error> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
             Bookmark(bookmark) => bookmark,
-            String(s) => BookmarkName::new(s)?,
+            String(s) => BookmarkKey::new(s)?,
         };
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
@@ -518,7 +515,7 @@ impl<R: Repo> UpdateBookmarkContext<R> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
             Bookmark(bookmark) => bookmark,
-            String(s) => BookmarkName::new(s)?,
+            String(s) => BookmarkKey::new(s)?,
         };
 
         let mut book_txn = self.repo.bookmarks().create_transaction(self.ctx);
@@ -532,7 +529,7 @@ pub enum CommitIdentifier {
     Bonsai(ChangesetId),
     Hg(HgChangesetId),
     String(String),
-    Bookmark(BookmarkName),
+    Bookmark(BookmarkKey),
 }
 
 impl From<ChangesetId> for CommitIdentifier {
@@ -559,21 +556,21 @@ impl From<String> for CommitIdentifier {
     }
 }
 
-impl From<&BookmarkName> for CommitIdentifier {
-    fn from(bookmark: &BookmarkName) -> Self {
+impl From<&BookmarkKey> for CommitIdentifier {
+    fn from(bookmark: &BookmarkKey) -> Self {
         Self::Bookmark(bookmark.clone())
     }
 }
 
-impl From<BookmarkName> for CommitIdentifier {
-    fn from(bookmark: BookmarkName) -> Self {
+impl From<BookmarkKey> for CommitIdentifier {
+    fn from(bookmark: BookmarkKey) -> Self {
         Self::Bookmark(bookmark)
     }
 }
 
 pub enum BookmarkIdentifier {
     String(String),
-    Bookmark(BookmarkName),
+    Bookmark(BookmarkKey),
 }
 
 impl From<&str> for BookmarkIdentifier {
@@ -588,14 +585,14 @@ impl From<String> for BookmarkIdentifier {
     }
 }
 
-impl From<&BookmarkName> for BookmarkIdentifier {
-    fn from(bookmark: &BookmarkName) -> Self {
+impl From<&BookmarkKey> for BookmarkIdentifier {
+    fn from(bookmark: &BookmarkKey) -> Self {
         Self::Bookmark(bookmark.clone())
     }
 }
 
-impl From<BookmarkName> for BookmarkIdentifier {
-    fn from(bookmark: BookmarkName) -> Self {
+impl From<BookmarkKey> for BookmarkIdentifier {
+    fn from(bookmark: BookmarkKey) -> Self {
         Self::Bookmark(bookmark)
     }
 }
@@ -679,7 +676,7 @@ pub async fn resolve_cs_id(
             maybe_cs_id.ok_or_else(|| format_err!("{} not found", bookmark))
         }
         String(hash_or_bookmark) => {
-            if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {
+            if let Ok(name) = BookmarkKey::new(hash_or_bookmark.clone()) {
                 if let Ok(Some(csid)) = repo.bookmarks().get(ctx.clone(), &name).await {
                     return Ok(csid);
                 }

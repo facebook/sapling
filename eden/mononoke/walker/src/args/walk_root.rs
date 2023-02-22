@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use clap::Args;
 
 use crate::detail::graph::EdgeType;
@@ -18,7 +18,7 @@ use crate::detail::walk::OutgoingEdge;
 pub struct WalkRootArgs {
     /// Bookmark(s) to start traversal from.
     #[clap(long, short = 'b')]
-    pub bookmark: Vec<BookmarkName>,
+    pub bookmark: Vec<BookmarkKey>,
     /// Root(s) to start traversal from in format <NodeType>:<node_key>, e.g.
     /// Bookmark:master or HgChangeset:7712b62acdc858689504945ac8965a303ded6626
     #[clap(long, short = 'r')]

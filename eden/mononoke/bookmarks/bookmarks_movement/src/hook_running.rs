@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
@@ -65,7 +65,7 @@ fn take_n_changeset_ids<'a>(
 pub async fn run_hooks(
     ctx: &CoreContext,
     hook_manager: &HookManager,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     changesets: impl Iterator<Item = &BonsaiChangeset> + Clone,
     pushvars: Option<&HashMap<String, Bytes>>,
     cross_repo_push_source: CrossRepoPushSource,

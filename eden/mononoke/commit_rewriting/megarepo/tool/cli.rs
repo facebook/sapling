@@ -7,7 +7,7 @@
 
 use anyhow::format_err;
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use clap::App;
 use clap::Arg;
 use clap::ArgGroup;
@@ -104,7 +104,7 @@ pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetAr
     let bookmark = try_boxfuture!(
         sub_m
             .value_of(COMMIT_BOOKMARK)
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .transpose()
     );
     let mark_public = sub_m.is_present(MARK_PUBLIC);

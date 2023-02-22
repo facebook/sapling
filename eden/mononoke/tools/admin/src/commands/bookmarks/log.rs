@@ -7,7 +7,7 @@
 
 use anyhow::anyhow;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Args;
@@ -22,7 +22,7 @@ use crate::commit_id::IdentityScheme;
 #[derive(Args)]
 pub struct BookmarksLogArgs {
     /// Name of the bookmark to show the log for
-    name: BookmarkName,
+    name: BookmarkKey,
 
     /// Commit identity schemes to display
     #[clap(long, short='S', arg_enum, default_values = &["bonsai"], use_value_delimiter = true)]

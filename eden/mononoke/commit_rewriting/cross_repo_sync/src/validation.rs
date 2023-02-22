@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksMaybeStaleExt;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -697,21 +697,21 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BookmarkDiff {
     InconsistentValue {
-        target_bookmark: BookmarkName,
+        target_bookmark: BookmarkKey,
         target_cs_id: ChangesetId,
         source_cs_id: Option<ChangesetId>,
     },
     MissingInTarget {
-        target_bookmark: BookmarkName,
+        target_bookmark: BookmarkKey,
         source_cs_id: ChangesetId,
     },
     NoSyncOutcome {
-        target_bookmark: BookmarkName,
+        target_bookmark: BookmarkKey,
     },
 }
 
 impl BookmarkDiff {
-    pub fn target_bookmark(&self) -> &BookmarkName {
+    pub fn target_bookmark(&self) -> &BookmarkKey {
         use BookmarkDiff::*;
         match self {
             InconsistentValue {
@@ -733,11 +733,11 @@ struct CorrespondingChangesets {
 async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    bookmarks: impl IntoIterator<Item = (BookmarkName, ChangesetId)>,
+    bookmarks: impl IntoIterator<Item = (BookmarkKey, ChangesetId)>,
 ) -> Result<
     (
-        HashMap<BookmarkName, CorrespondingChangesets>,
-        HashSet<BookmarkName>,
+        HashMap<BookmarkKey, CorrespondingChangesets>,
+        HashSet<BookmarkKey>,
     ),
     Error,
 > {
@@ -796,7 +796,7 @@ mod test {
     use std::sync::Arc;
 
     use ascii::AsciiString;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use changeset_fetcher::ChangesetFetcherArc;
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
@@ -911,7 +911,7 @@ mod test {
         assert_eq!(
             actual_diff,
             vec![BookmarkDiff::NoSyncOutcome {
-                target_bookmark: BookmarkName::new("master")?,
+                target_bookmark: BookmarkKey::new("master")?,
             }]
         );
         Ok(())
@@ -1145,7 +1145,7 @@ mod test {
         let large_repo: TestRepo =
             Linear::get_custom_test_repo_with_id(fb, RepositoryId::new(1)).await;
 
-        let master = BookmarkName::new("master")?;
+        let master = BookmarkKey::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
@@ -1188,7 +1188,7 @@ mod test {
         let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
         let common_config = CommonCommitSyncConfig {
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::from_str("prefix/").unwrap(),
@@ -1199,7 +1199,7 @@ mod test {
 
         let current_version_config = CommitSyncConfig {
             large_repo_id: large_repo.repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,

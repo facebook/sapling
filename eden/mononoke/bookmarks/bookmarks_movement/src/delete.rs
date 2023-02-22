@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -27,7 +27,7 @@ use crate::Repo;
 
 #[must_use = "DeleteBookmarkOp must be run to have an effect"]
 pub struct DeleteBookmarkOp<'op> {
-    bookmark: &'op BookmarkName,
+    bookmark: &'op BookmarkKey,
     old_target: ChangesetId,
     reason: BookmarkUpdateReason,
     kind_restrictions: BookmarkKindRestrictions,
@@ -37,7 +37,7 @@ pub struct DeleteBookmarkOp<'op> {
 
 impl<'op> DeleteBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkName,
+        bookmark: &'op BookmarkKey,
         old_target: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> DeleteBookmarkOp<'op> {

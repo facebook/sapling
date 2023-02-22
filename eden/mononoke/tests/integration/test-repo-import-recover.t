@@ -134,7 +134,7 @@
   * Start deriving data types (glob)
   * Finished deriving data types (glob)
   * Start tailing segmented changelog (glob)
-  * Using the following segmented changelog heads: [Bookmark(BookmarkName { bookmark: "master_bookmark" })] (glob)
+  * Using the following segmented changelog heads: [Bookmark(BookmarkKey { bookmark: "master_bookmark" })] (glob)
   * SegmentedChangelogTailer initialized (glob)
   * starting incremental update to segmented changelog (glob)
   * iddag initialized, it covers 3 ids (glob)
@@ -147,9 +147,9 @@
   * SegmentedChangelogTailer is done (glob)
   * Finished tailing segmented changelog (glob)
   * Start moving the bookmark (glob)
-  * Created bookmark BookmarkName { bookmark: "repo_import_new_repo" } pointing to 4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a (glob)
-  * Set bookmark BookmarkName { bookmark: "repo_import_new_repo" } to point to ChangesetId(Blake2(6b49fda25c209960aad992721e872237737671564a6ce0f0347f04f4c0fee177)) (glob)
-  * Set bookmark BookmarkName { bookmark: "repo_import_new_repo" } to point to ChangesetId(Blake2(11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9)) (glob)
+  * Created bookmark BookmarkKey { bookmark: "repo_import_new_repo" } pointing to 4f830791a5ae7a2981d6c252d2be0bd7ebd3b1090080074b4b4bae6deb250b4a (glob)
+  * Set bookmark BookmarkKey { bookmark: "repo_import_new_repo" } to point to ChangesetId(Blake2(6b49fda25c209960aad992721e872237737671564a6ce0f0347f04f4c0fee177)) (glob)
+  * Set bookmark BookmarkKey { bookmark: "repo_import_new_repo" } to point to ChangesetId(Blake2(11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9)) (glob)
   * Finished moving the bookmark (glob)
   * Merging the imported commits into given bookmark, master_bookmark (glob)
   * Done checking path conflicts (glob)
@@ -158,7 +158,7 @@
   * Finished merging (glob)
   * Running pushrebase (glob)
   * Finished pushrebasing to 3b27309e57b5809695eb8978fa999d34fafbbe33d17420d9e0301351a19e40a1 (glob)
-  * Set bookmark BookmarkName { bookmark: "repo_import_new_repo" } to the merge commit: ChangesetId(Blake2(3b27309e57b5809695eb8978fa999d34fafbbe33d17420d9e0301351a19e40a1)) (glob)
+  * Set bookmark BookmarkKey { bookmark: "repo_import_new_repo" } to the merge commit: ChangesetId(Blake2(3b27309e57b5809695eb8978fa999d34fafbbe33d17420d9e0301351a19e40a1)) (glob)
 
 # Check if we derived all the types for imported commits. Checking last one after bookmark move, before setting it to the merge commit.
   $ MERGE_PARENT_GIT="11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9"

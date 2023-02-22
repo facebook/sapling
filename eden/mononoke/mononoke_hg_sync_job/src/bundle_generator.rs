@@ -12,7 +12,7 @@ use anyhow::bail;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use borrowed::borrowed;
 use bytes_old::Bytes as BytesOld;
 use changeset_fetcher::ChangesetFetcherArc;
@@ -72,7 +72,7 @@ pub trait FilterExistingChangesets: Send + Sync {
 pub fn create_bundle(
     ctx: CoreContext,
     repo: Repo,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     bookmark_change: BookmarkChange,
     hg_server_heads: Vec<ChangesetId>,
     lfs_params: SessionLfsParams,
@@ -259,7 +259,7 @@ impl FilenodeVerifier {
 fn create_bundle_impl(
     ctx: CoreContext,
     repo: Repo,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     bookmark_change: BookmarkChange,
     commits_to_push: Vec<HgChangesetId>,
     session_lfs_params: SessionLfsParams,

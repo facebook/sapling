@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
@@ -67,7 +67,7 @@ async fn test_full_access(fb: FacebookInit) -> Result<()> {
         )
         .await?;
     authz
-        .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+        .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
         .await?;
 
     Ok(())
@@ -165,7 +165,7 @@ async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
             .is_err()
     );
     authz
-        .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+        .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
         .await?;
 
     Ok(())
@@ -278,7 +278,7 @@ async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
             // the user has no write acceess!? Even if that's intended this API might be
             // easily misused. We need to audit this.
             authz
-                .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+                .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
                 .await?;
 
             Ok(())
@@ -333,7 +333,7 @@ async fn test_user_write_no_draft_access(fb: FacebookInit) -> Result<()> {
                 )
                 .await?;
             authz
-                .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+                .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
                 .await?;
 
             Ok(())
@@ -379,13 +379,13 @@ async fn test_service_access(fb: FacebookInit) -> Result<()> {
 
     // Test service is permitted to modify main.
     authz_test_service
-        .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+        .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
         .await?;
 
     // Another service is not permitted to modify main.
     assert!(
         authz_other_service
-            .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main")?)
+            .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main")?)
             .await
             .is_err()
     );
@@ -440,7 +440,7 @@ async fn test_user_readonly_instance(fb: FacebookInit) -> () {
     );
     assert!(
         authz
-            .require_bookmark_modify(&ctx, &repo, &BookmarkName::new("main").unwrap())
+            .require_bookmark_modify(&ctx, &repo, &BookmarkKey::new("main").unwrap())
             .await
             .is_err()
     );

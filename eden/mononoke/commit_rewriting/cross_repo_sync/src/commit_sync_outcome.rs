@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
@@ -66,14 +66,14 @@ pub enum CandidateSelectionHint<R: Repo> {
     /// Selected candidate should either be the only candidate
     /// or be an ancestor of a given bookmark
     OnlyOrAncestorOfBookmark(
-        Target<BookmarkName>,
+        Target<BookmarkKey>,
         Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
     /// Selected candidate should either be the only candidate
     /// or be a descendant of a given bookmark
     OnlyOrDescendantOfBookmark(
-        Target<BookmarkName>,
+        Target<BookmarkKey>,
         Target<R>,
         Target<Arc<dyn LeastCommonAncestorsHint>>,
     ),
@@ -985,7 +985,7 @@ mod tests {
         ctx: &CoreContext,
         blob_repo: &TestRepo,
         bcs_id: ChangesetId,
-        book: &BookmarkName,
+        book: &BookmarkKey,
     ) -> Result<(), Error> {
         let mut txn = blob_repo.bookmarks().create_transaction(ctx.clone());
         txn.force_set(book, bcs_id, BookmarkUpdateReason::TestMove)
@@ -1016,9 +1016,9 @@ mod tests {
         let e = *dag.get("E").unwrap();
         let g = *dag.get("G").unwrap();
 
-        let book_e = BookmarkName::new("book_e").unwrap();
+        let book_e = BookmarkKey::new("book_e").unwrap();
         set_bookmark(&ctx, &blob_repo, e, &book_e).await?;
-        let book_g = BookmarkName::new("book_g").unwrap();
+        let book_g = BookmarkKey::new("book_g").unwrap();
         set_bookmark(&ctx, &blob_repo, g, &book_g).await?;
 
         use CandidateSelectionHint::*;

@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use ascii::AsciiString;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
@@ -23,8 +23,7 @@ pub enum ErrorKind {
 }
 
 /// A function to modify bookmark names during the x-repo sync
-pub type BookmarkRenamer =
-    Arc<dyn Fn(&BookmarkName) -> Option<BookmarkName> + Send + Sync + 'static>;
+pub type BookmarkRenamer = Arc<dyn Fn(&BookmarkKey) -> Option<BookmarkKey> + Send + Sync + 'static>;
 
 /// Both forward and reverse `BookmarkRenamer`, encapsulated in a struct
 pub struct BookmarkRenamers {
@@ -35,8 +34,8 @@ pub struct BookmarkRenamers {
 fn get_prefix_and_common_bookmarks(
     commit_sync_config: &CommonCommitSyncConfig,
     small_repo_id: RepositoryId,
-) -> Result<(AsciiString, HashSet<BookmarkName>)> {
-    let common_pushrebase_bookmarks: HashSet<BookmarkName> = commit_sync_config
+) -> Result<(AsciiString, HashSet<BookmarkKey>)> {
+    let common_pushrebase_bookmarks: HashSet<BookmarkKey> = commit_sync_config
         .common_pushrebase_bookmarks
         .iter()
         .cloned()
@@ -63,7 +62,7 @@ pub fn get_small_to_large_renamer(
         } else {
             let mut prefixed_name = prefix.clone();
             prefixed_name.push_str(source_bookmark_name.as_ascii());
-            Some(BookmarkName::new_ascii(prefixed_name))
+            Some(BookmarkKey::new_ascii(prefixed_name))
         }
     }))
 }
@@ -81,7 +80,7 @@ pub fn get_large_to_small_renamer(
             Some(source_bookmark_name.clone())
         } else if source_bookmark_name.as_str().starts_with(prefix.as_str()) {
             let unprefixed = &source_bookmark_name.as_ascii()[prefix.len()..];
-            Some(BookmarkName::new_ascii(unprefixed.into()))
+            Some(BookmarkKey::new_ascii(unprefixed.into()))
         } else {
             None
         }
@@ -124,8 +123,8 @@ mod test {
     fn get_commit_sync_config() -> CommonCommitSyncConfig {
         CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![
-                BookmarkName::new("m1").unwrap(),
-                BookmarkName::new("m2").unwrap(),
+                BookmarkKey::new("m1").unwrap(),
+                BookmarkKey::new("m2").unwrap(),
             ],
             small_repos: hashmap! {
                 RepositoryId::new(1) => SmallRepoPermanentConfig {
@@ -147,11 +146,11 @@ mod test {
         let bookmark_renamer_2 =
             get_small_to_large_renamer(&commit_sync_config, RepositoryId::new(2)).unwrap();
 
-        let hello = BookmarkName::new("hello").unwrap();
-        let b1_hello = BookmarkName::new("b1/hello").unwrap();
-        let b2_hello = BookmarkName::new("b2/hello").unwrap();
-        let m1 = BookmarkName::new("m1").unwrap();
-        let m2 = BookmarkName::new("m2").unwrap();
+        let hello = BookmarkKey::new("hello").unwrap();
+        let b1_hello = BookmarkKey::new("b1/hello").unwrap();
+        let b2_hello = BookmarkKey::new("b2/hello").unwrap();
+        let m1 = BookmarkKey::new("m1").unwrap();
+        let m2 = BookmarkKey::new("m2").unwrap();
 
         assert_eq!(bookmark_renamer_1(&hello), Some(b1_hello));
         assert_eq!(bookmark_renamer_2(&hello), Some(b2_hello));
@@ -169,11 +168,11 @@ mod test {
         let bookmark_renamer_2 =
             get_large_to_small_renamer(&commit_sync_config, RepositoryId::new(2)).unwrap();
 
-        let hello = BookmarkName::new("hello").unwrap();
-        let b1_hello = BookmarkName::new("b1/hello").unwrap();
-        let b2_hello = BookmarkName::new("b2/hello").unwrap();
-        let m1 = BookmarkName::new("m1").unwrap();
-        let m2 = BookmarkName::new("m2").unwrap();
+        let hello = BookmarkKey::new("hello").unwrap();
+        let b1_hello = BookmarkKey::new("b1/hello").unwrap();
+        let b2_hello = BookmarkKey::new("b2/hello").unwrap();
+        let m1 = BookmarkKey::new("m1").unwrap();
+        let m2 = BookmarkKey::new("m2").unwrap();
 
         // Unprefixed and non-common-pushrebase bookmarks are not synced
         assert_eq!(bookmark_renamer_1(&hello), None);

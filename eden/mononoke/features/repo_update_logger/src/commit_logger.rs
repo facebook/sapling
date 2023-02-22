@@ -10,8 +10,8 @@ use std::num::NonZeroU64;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use changesets::ChangesetsRef;
 use chrono::DateTime;
 use chrono::Utc;
@@ -133,7 +133,7 @@ impl PlainCommitInfo {
         ctx: &CoreContext,
         repo: &(impl ChangesetsRef + RepoIdentityRef),
         received_timestamp: DateTime<Utc>,
-        bookmark: Option<(&BookmarkName, BookmarkKind)>,
+        bookmark: Option<(&BookmarkKey, BookmarkKind)>,
         commit_info: CommitInfo,
     ) -> Result<PlainCommitInfo> {
         let CommitInfo {
@@ -226,7 +226,7 @@ impl Loggable for PlainCommitInfo {
 pub async fn log_new_commits(
     ctx: &CoreContext,
     repo: &(impl RepoIdentityRef + ChangesetsRef + RepoConfigRef),
-    bookmark: Option<(&BookmarkName, BookmarkKind)>,
+    bookmark: Option<(&BookmarkKey, BookmarkKind)>,
     commit_infos: Vec<CommitInfo>,
 ) {
     let new_commit_logging_destination = repo

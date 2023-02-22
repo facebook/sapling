@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -35,7 +35,7 @@ pub trait FileContentManager: Send + Sync {
     async fn find_content<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind>;
 
@@ -49,7 +49,7 @@ pub trait FileContentManager: Send + Sync {
     async fn latest_changes<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind>;
 }

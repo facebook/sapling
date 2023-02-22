@@ -10,8 +10,8 @@ use std::fmt;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
@@ -42,7 +42,7 @@ pub struct BookmarksListArgs {
 
     /// Show bookmarks after this name (continue pagination)
     #[clap(long)]
-    after: Option<BookmarkName>,
+    after: Option<BookmarkKey>,
 
     /// Commit identity schemes to display
     #[clap(long, short='S', arg_enum, default_values = &["bonsai"], use_value_delimiter = true)]

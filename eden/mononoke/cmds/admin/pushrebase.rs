@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use clap_old::App;
 use clap_old::Arg;
 use clap_old::ArgMatches;
@@ -72,7 +72,7 @@ pub async fn subcommand_pushrebase<'a>(
 
     let config_store = matches.config_store();
     let (_, repo_config) = args::not_shardmanager_compatible::get_config(config_store, matches)?;
-    let bookmark = BookmarkName::new(bookmark)?;
+    let bookmark = BookmarkKey::new(bookmark)?;
 
     let pushrebase_flags = repo_config.pushrebase.flags;
     let bookmark_attrs = BookmarkAttrs::new(fb, repo_config.bookmarks.clone()).await?;

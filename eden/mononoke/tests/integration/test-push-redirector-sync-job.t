@@ -102,10 +102,10 @@ Check that admin-created bookmark sets and deletes in the large repo can be corr
   $ cd "$TESTTMP/large-hg-client"
   $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark) &>/dev/null
   $ backsync_large_to_small 2>&1 | grep creating
-  * creating bookmark BookmarkName { bookmark: "foobar" } * (glob)
+  * creating bookmark BookmarkKey { bookmark: "foobar" } * (glob)
   $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark~1) &>/dev/null
   $ backsync_large_to_small 2>&1 2>&1 | grep updating
-  * updating bookmark BookmarkName { bookmark: "foobar" } * (glob)
+  * updating bookmark BookmarkKey { bookmark: "foobar" } * (glob)
   $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks delete bookprefix/foobar &>/dev/null
   $ backsync_large_to_small 2>&1 | grep deleting
-  * deleting bookmark BookmarkName { bookmark: "foobar" } * (glob)
+  * deleting bookmark BookmarkKey { bookmark: "foobar" } * (glob)

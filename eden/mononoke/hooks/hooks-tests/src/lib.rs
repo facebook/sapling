@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
@@ -81,7 +81,7 @@ impl ChangesetHook for FnChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -111,7 +111,7 @@ impl ChangesetHook for FindFilesChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -119,7 +119,7 @@ impl ChangesetHook for FindFilesChangesetHook {
     ) -> Result<HookExecution, Error> {
         let path = to_mpath(self.filename.as_str());
         let res = content_manager
-            .find_content(ctx, BookmarkName::new("master")?, vec![path.clone()])
+            .find_content(ctx, BookmarkKey::new("master")?, vec![path.clone()])
             .await;
 
         match res {
@@ -151,7 +151,7 @@ impl ChangesetHook for FileChangesChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -199,7 +199,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -207,7 +207,7 @@ impl ChangesetHook for LatestChangesChangesetHook {
     ) -> Result<HookExecution, Error> {
         let paths = self.0.keys().cloned().collect();
         let res = content_manager
-            .latest_changes(ctx, BookmarkName::new("master")?, paths)
+            .latest_changes(ctx, BookmarkKey::new("master")?, paths)
             .map_err(Error::from)
             .await?;
 
@@ -228,7 +228,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -300,7 +300,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -1001,7 +1001,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
     // set master bookmark
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(
-        &BookmarkName::new("master")?,
+        &BookmarkKey::new("master")?,
         bcs_id,
         BookmarkUpdateReason::TestMove,
     )?;
@@ -1190,7 +1190,7 @@ async fn test_file_hooks_with_blob_store(fb: FacebookInit) {
 
         let mut txn = repo.bookmarks().create_transaction(ctx.clone());
         txn.force_set(
-            &BookmarkName::new("master").unwrap(),
+            &BookmarkKey::new("master").unwrap(),
             bcs_id,
             BookmarkUpdateReason::TestMove,
         )
@@ -1274,7 +1274,7 @@ async fn run_changeset_hooks_with_mgr(
         .run_hooks_for_bookmark(
             &ctx,
             vec![changeset].iter(),
-            &BookmarkName::new(bookmark_name).unwrap(),
+            &BookmarkKey::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
@@ -1357,7 +1357,7 @@ async fn run_file_hooks_with_mgr(
         .run_hooks_for_bookmark(
             &ctx,
             vec![cs].iter(),
-            &BookmarkName::new(bookmark_name).unwrap(),
+            &BookmarkKey::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,
             PushAuthoredBy::User,
@@ -1388,7 +1388,7 @@ async fn setup_hook_manager(
     };
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
-            .set_hooks_for_bookmark(BookmarkName::new(bookmark_name).unwrap().into(), hook_names);
+            .set_hooks_for_bookmark(BookmarkKey::new(bookmark_name).unwrap().into(), hook_names);
     }
     for (regx, hook_names) in regexes {
         hook_manager.set_hooks_for_bookmark(Regex::new(&regx).unwrap().into(), hook_names);
@@ -1475,7 +1475,7 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
 async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
     let mut config = RepoConfig::default();
     config.bookmarks = vec![BookmarkParams {
-        bookmark: BookmarkName::new("bm1").unwrap().into(),
+        bookmark: BookmarkKey::new("bm1").unwrap().into(),
         hooks: vec!["hook1".into()],
         only_fast_forward: false,
         allowed_users: None,
@@ -1538,7 +1538,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
     let mut config = RepoConfig::default();
 
     config.bookmarks = vec![BookmarkParams {
-        bookmark: BookmarkName::new("bm1").unwrap().into(),
+        bookmark: BookmarkKey::new("bm1").unwrap().into(),
         hooks: vec!["hook1".into()],
         only_fast_forward: false,
         allowed_users: None,

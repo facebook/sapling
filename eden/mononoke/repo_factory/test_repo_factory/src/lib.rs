@@ -27,7 +27,7 @@ use bonsai_svnrev_mapping::SqlBonsaiSvnrevMappingBuilder;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ArcChangesetFetcher;
@@ -186,7 +186,7 @@ pub fn default_test_repo_config() -> RepoConfig {
         segmented_changelog_config: SegmentedChangelogConfig {
             enabled: true,
             heads_to_include: vec![SegmentedChangelogHeadConfig::Bookmark(
-                BookmarkName::new("master").unwrap(),
+                BookmarkKey::new("master").unwrap(),
             )],
             ..Default::default()
         },

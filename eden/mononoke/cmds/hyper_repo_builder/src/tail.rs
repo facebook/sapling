@@ -13,7 +13,7 @@ use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
@@ -47,8 +47,8 @@ pub async fn tail_once(
     ctx: &CoreContext,
     source_repos: Vec<InnerRepo>,
     hyper_repo: BlobRepo,
-    source_bookmark: &Source<BookmarkName>,
-    hyper_repo_bookmark: &Target<BookmarkName>,
+    source_bookmark: &Source<BookmarkKey>,
+    hyper_repo_bookmark: &Target<BookmarkKey>,
 ) -> Result<(), Error> {
     let source_repos_and_latest_synced_commits =
         find_latest_synced_commits(ctx, &source_repos, &hyper_repo, hyper_repo_bookmark).await?;
@@ -86,7 +86,7 @@ async fn find_latest_synced_commits(
     ctx: &CoreContext,
     source_repos: &[InnerRepo],
     hyper_repo: &BlobRepo,
-    bookmark_name: &Target<BookmarkName>,
+    bookmark_name: &Target<BookmarkKey>,
 ) -> Result<Vec<(InnerRepo, ChangesetId)>, Error> {
     let hyper_repo_tip_cs_id = hyper_repo
         .bookmarks()
@@ -121,7 +121,7 @@ async fn find_commits_to_replay(
     ctx: &CoreContext,
     source_repo: &InnerRepo,
     latest_synced_cs_id: ChangesetId,
-    bookmark_name: &Source<BookmarkName>,
+    bookmark_name: &Source<BookmarkKey>,
 ) -> Result<Vec<ChangesetId>, Error> {
     let source_repo_tip_cs_id = source_repo
         .blob_repo
@@ -181,7 +181,7 @@ async fn sync_commits(
     source_repo: &InnerRepo,
     hyper_repo: &BlobRepo,
     cs_ids: &[ChangesetId],
-    bookmark_name: &Target<BookmarkName>,
+    bookmark_name: &Target<BookmarkKey>,
     latest_synced_state: &mut HashMap<String, ChangesetId>,
 ) -> Result<(), Error> {
     if cs_ids.is_empty() {
@@ -354,7 +354,7 @@ mod test {
             &source_repo,
             &hyper_repo,
             &[second_cs_id],
-            &Target(BookmarkName::new("main")?),
+            &Target(BookmarkKey::new("main")?),
             &mut latest_synced_state,
         )
         .await?;
@@ -389,8 +389,8 @@ mod test {
             .with_name("hyper_repo")
             .build()?;
 
-        let book = Source(BookmarkName::new("main")?);
-        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+        let book = Source(BookmarkKey::new("main")?);
+        let hyper_repo_book = Target(BookmarkKey::new("hyper_repo_main")?);
         // Create a commit in hyper repo
         let root_cs_id = CreateCommitContext::new_root(&ctx, &hyper_repo)
             .add_file("README.md", "readme")

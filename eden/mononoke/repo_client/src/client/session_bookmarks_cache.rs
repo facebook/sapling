@@ -15,8 +15,8 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::to_hg_bookmark_stream;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
@@ -138,7 +138,7 @@ where
         ctx: &CoreContext,
         prefix: &BookmarkPrefix,
         return_max: u64,
-    ) -> Result<impl Stream<Item = Result<(BookmarkName, HgChangesetId), Error>> + '_, Error> {
+    ) -> Result<impl Stream<Item = Result<(BookmarkKey, HgChangesetId), Error>> + '_, Error> {
         let mut kinds = vec![BookmarkKind::Scratch];
 
         let mut result = HashMap::new();
@@ -193,7 +193,7 @@ where
     pub async fn get_bookmark(
         &self,
         ctx: CoreContext,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
     ) -> Result<Option<HgChangesetId>, Error> {
         if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
             if let Some(cs_id) = warm_bookmarks_cache.get(&ctx, &bookmark).await? {
@@ -289,7 +289,7 @@ fn update_publishing_bookmarks_maybe_stale_cache_raw(
 
 #[cfg(test)]
 mod test {
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateLogArc;
     use bookmarks::BookmarksArc;
     use fbinit::FacebookInit;
@@ -380,7 +380,7 @@ mod test {
         session_bookmark_cache: &SessionBookmarkCache<BasicTestRepo>,
     ) -> Result<(), Error> {
         let maybe_hg_cs_id = session_bookmark_cache
-            .get_bookmark(ctx.clone(), BookmarkName::new("prefix/scratchbook")?)
+            .get_bookmark(ctx.clone(), BookmarkKey::new("prefix/scratchbook")?)
             .await?;
         assert_eq!(maybe_hg_cs_id, Some(hg_cs_id));
 
@@ -391,9 +391,9 @@ mod test {
             .await?;
         assert_eq!(
             hashmap! {
-                BookmarkName::new("prefix/scratchbook")? => hg_cs_id,
-                BookmarkName::new("prefix/publishing")? => hg_cs_id,
-                BookmarkName::new("prefix/pulldefault")? => hg_cs_id,
+                BookmarkKey::new("prefix/scratchbook")? => hg_cs_id,
+                BookmarkKey::new("prefix/publishing")? => hg_cs_id,
+                BookmarkKey::new("prefix/pulldefault")? => hg_cs_id,
             },
             res
         );

@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks_movement::check_bookmark_sync_config;
@@ -23,7 +23,7 @@ use crate::commit_id::parse_commit_id;
 #[derive(Args)]
 pub struct BookmarksSetArgs {
     /// Name of the bookmark to set
-    name: BookmarkName,
+    name: BookmarkKey,
 
     /// Commit ID to set the bookmark to
     ///

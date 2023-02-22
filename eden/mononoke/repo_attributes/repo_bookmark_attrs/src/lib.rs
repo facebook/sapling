@@ -11,7 +11,7 @@
 
 use anyhow::bail;
 use anyhow::Result;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use context::CoreContext;
 use metaconfig_types::BookmarkParams;
 use permission_checker::AclProvider;
@@ -52,7 +52,7 @@ impl RepoBookmarkAttrs {
     /// Select bookmark params matching provided bookmark
     pub fn select<'a>(
         &'a self,
-        bookmark: &'a BookmarkName,
+        bookmark: &'a BookmarkKey,
     ) -> impl Iterator<Item = &'a BookmarkAttr> {
         self.bookmark_attrs
             .iter()
@@ -60,14 +60,14 @@ impl RepoBookmarkAttrs {
     }
 
     /// Check if provided bookmark is fast-forward only
-    pub fn is_fast_forward_only(&self, bookmark: &BookmarkName) -> bool {
+    pub fn is_fast_forward_only(&self, bookmark: &BookmarkKey) -> bool {
         self.select(bookmark)
             .any(|attr| attr.params().only_fast_forward)
     }
 
     /// Check if a bookmark config overrides whether date should be rewritten during pushrebase.
     /// Return None if there are no bookmark config overriding rewrite_dates.
-    pub fn should_rewrite_dates(&self, bookmark: &BookmarkName) -> Option<bool> {
+    pub fn should_rewrite_dates(&self, bookmark: &BookmarkKey) -> Option<bool> {
         for attr in self.select(bookmark) {
             // NOTE: If there are multiple patterns matching the bookmark, the first match
             // overrides others.
@@ -83,7 +83,7 @@ impl RepoBookmarkAttrs {
         &self,
         ctx: &CoreContext,
         unixname: &str,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> bool {
         for attr in self.select(bookmark) {
             let maybe_allowed = attr

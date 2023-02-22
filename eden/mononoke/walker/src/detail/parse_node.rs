@@ -188,7 +188,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
 
 #[cfg(test)]
 mod tests {
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
 
     use super::*;
 
@@ -207,7 +207,7 @@ mod tests {
                 );
             }
             NodeType::Bookmark => assert_eq!(
-                Node::Bookmark(BookmarkName::new("foo")?),
+                Node::Bookmark(BookmarkKey::new("foo")?),
                 parse_node(&format!("Bookmark{}foo", NODE_SEP))?
             ),
             NodeType::Changeset => assert_eq!(

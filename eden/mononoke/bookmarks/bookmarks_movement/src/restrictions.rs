@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateReason;
 use context::CoreContext;
 use futures::stream;
@@ -45,7 +45,7 @@ impl BookmarkKindRestrictions {
     pub(crate) fn check_kind(
         &self,
         repo: &impl RepoConfigRef,
-        name: &BookmarkName,
+        name: &BookmarkKey,
     ) -> Result<BookmarkKind, BookmarkMovementError> {
         let infinitepush_params = &repo.repo_config().infinitepush;
         match (self, &infinitepush_params.namespace) {
@@ -73,7 +73,7 @@ impl BookmarkKindRestrictions {
 pub(crate) async fn check_restriction_ensure_ancestor_of(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_to_move: &BookmarkName,
+    bookmark_to_move: &BookmarkKey,
     lca_hint: &dyn LeastCommonAncestorsHint,
     target: ChangesetId,
 ) -> Result<(), BookmarkMovementError> {
@@ -121,9 +121,9 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
 pub(crate) async fn ensure_ancestor_of(
     ctx: &CoreContext,
     repo: &impl Repo,
-    bookmark_to_move: &BookmarkName,
+    bookmark_to_move: &BookmarkKey,
     lca_hint: &dyn LeastCommonAncestorsHint,
-    descendant_bookmark: &BookmarkName,
+    descendant_bookmark: &BookmarkKey,
     target: ChangesetId,
 ) -> Result<bool, BookmarkMovementError> {
     let descendant_cs_id = repo
@@ -146,7 +146,7 @@ pub(crate) async fn ensure_ancestor_of(
 
 pub fn check_bookmark_sync_config(
     repo: &(impl RepoIdentityRef + RepoCrossRepoRef),
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     kind: BookmarkKind,
 ) -> Result<(), BookmarkMovementError> {
     match kind {

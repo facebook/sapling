@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::CrossRepoPushSource;
@@ -60,7 +60,7 @@ impl BookmarkUpdatePolicy {
         ctx: &CoreContext,
         repo: &impl Repo,
         lca_hint: &dyn LeastCommonAncestorsHint,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         targets: &BookmarkUpdateTargets,
     ) -> Result<(), BookmarkMovementError> {
         let fast_forward_only = match self {
@@ -91,7 +91,7 @@ impl BookmarkUpdatePolicy {
 
 #[must_use = "UpdateBookmarkOp must be run to have an effect"]
 pub struct UpdateBookmarkOp<'op> {
-    bookmark: &'op BookmarkName,
+    bookmark: &'op BookmarkKey,
     targets: BookmarkUpdateTargets,
     update_policy: BookmarkUpdatePolicy,
     reason: BookmarkUpdateReason,
@@ -105,7 +105,7 @@ pub struct UpdateBookmarkOp<'op> {
 
 impl<'op> UpdateBookmarkOp<'op> {
     pub fn new(
-        bookmark: &'op BookmarkName,
+        bookmark: &'op BookmarkKey,
         targets: BookmarkUpdateTargets,
         update_policy: BookmarkUpdatePolicy,
         reason: BookmarkUpdateReason,

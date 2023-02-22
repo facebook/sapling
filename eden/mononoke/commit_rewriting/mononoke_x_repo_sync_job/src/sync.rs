@@ -13,7 +13,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
@@ -80,7 +80,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     entry: BookmarkUpdateLogEntry,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
-    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     mut scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
@@ -130,10 +130,10 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static,
     commit_syncer: &CommitSyncer<M, R>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
-    maybe_bookmark: Option<BookmarkName>,
+    maybe_bookmark: Option<BookmarkKey>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
-    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<SyncResult, Error> {
     let (unsynced_ancestors, unsynced_ancestors_versions) =
@@ -237,8 +237,8 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     commit_syncer: &CommitSyncer<M, R>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
-    bookmark: &BookmarkName,
-    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    bookmark: &BookmarkKey,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
     unsynced_ancestors: Vec<ChangesetId>,
     version: &CommitSyncConfigVersion,
@@ -315,7 +315,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     scuba_sample: MononokeScubaSampleBuilder,
     cs_id: ChangesetId,
-    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "syncing {}", cs_id);
@@ -398,8 +398,8 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R: 
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
     scuba_sample: MononokeScubaSampleBuilder,
-    bookmark: &BookmarkName,
-    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    bookmark: &BookmarkKey,
+    common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
 ) -> Result<(), Error> {
     if common_pushrebase_bookmarks.contains(bookmark) {
         Err(format_err!(
@@ -461,7 +461,7 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
 async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     cs_id: ChangesetId,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
 ) -> Result<Option<ChangesetId>, Error> {
@@ -586,7 +586,7 @@ async fn check_if_independent_branch_and_return(
 async fn delete_bookmark(
     ctx: CoreContext,
     repo: &impl BookmarksRef,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
 ) -> Result<(), Error> {
     let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
     let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
@@ -611,7 +611,7 @@ async fn delete_bookmark(
 async fn move_or_create_bookmark(
     ctx: &CoreContext,
     repo: &impl BookmarksRef,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     cs_id: ChangesetId,
 ) -> Result<(), Error> {
     let maybe_bookmark_val = repo.bookmarks().get(ctx.clone(), bookmark).await?;
@@ -769,7 +769,7 @@ mod test {
             let res = sync(
                 &ctx,
                 &commit_syncer,
-                &hashset! {BookmarkName::new("master")?},
+                &hashset! {BookmarkKey::new("master")?},
             )
             .await?;
             assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
@@ -783,8 +783,8 @@ mod test {
             sync_and_validate_with_common_bookmarks(
                 &ctx,
                 &commit_syncer,
-                &hashset! {BookmarkName::new("master")?},
-                &hashset! {BookmarkName::new("newrepohead")?},
+                &hashset! {BookmarkKey::new("master")?},
+                &hashset! {BookmarkKey::new("newrepohead")?},
             )
             .await?;
 
@@ -899,7 +899,7 @@ mod test {
             let res = sync(
                 &ctx,
                 &commit_syncer,
-                &hashset! {BookmarkName::new("master")?},
+                &hashset! {BookmarkKey::new("master")?},
             )
             .await?;
             assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
@@ -912,8 +912,8 @@ mod test {
             sync_and_validate_with_common_bookmarks(
                 &ctx,
                 &commit_syncer,
-                &hashset! {BookmarkName::new("master")?},
-                &hashset! {BookmarkName::new("newrepoimport")?},
+                &hashset! {BookmarkKey::new("master")?},
+                &hashset! {BookmarkKey::new("newrepoimport")?},
             )
             .await?;
 
@@ -941,7 +941,7 @@ mod test {
             let res = sync(
                 &ctx,
                 &commit_syncer,
-                &hashset! {BookmarkName::new("master")?},
+                &hashset! {BookmarkKey::new("master")?},
             )
             .await?;
             assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
@@ -955,8 +955,8 @@ mod test {
                 sync_and_validate_with_common_bookmarks(
                     &ctx,
                     &commit_syncer,
-                    &hashset! {BookmarkName::new("master")?},
-                    &hashset! {BookmarkName::new("newrepohead")?, BookmarkName::new("somebook")?},
+                    &hashset! {BookmarkKey::new("master")?},
+                    &hashset! {BookmarkKey::new("newrepohead")?, BookmarkKey::new("somebook")?},
                 )
                 .await
                 .is_err()
@@ -984,7 +984,7 @@ mod test {
         sync_and_validate_with_common_bookmarks(
             &ctx,
             &commit_syncer,
-            &hashset! { BookmarkName::new("master")?},
+            &hashset! { BookmarkKey::new("master")?},
             &hashset! {},
         )
         .await?;
@@ -1000,7 +1000,7 @@ mod test {
 
         sync_and_validate_with_common_bookmarks(
             &ctx, &commit_syncer,
-            &hashset!{ BookmarkName::new("master")?, BookmarkName::new("another_pushrebase_bookmark")?},
+            &hashset!{ BookmarkKey::new("master")?, BookmarkKey::new("another_pushrebase_bookmark")?},
             &hashset!{},
         ).await?;
 
@@ -1014,7 +1014,7 @@ mod test {
         sync_and_validate_with_common_bookmarks(
             ctx,
             commit_syncer,
-            &hashset! {BookmarkName::new("master")?},
+            &hashset! {BookmarkKey::new("master")?},
             &hashset! {},
         )
         .await
@@ -1023,8 +1023,8 @@ mod test {
     async fn sync_and_validate_with_common_bookmarks(
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-        common_pushrebase_bookmarks: &HashSet<BookmarkName>,
-        should_be_missing: &HashSet<BookmarkName>,
+        common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
+        should_be_missing: &HashSet<BookmarkKey>,
     ) -> Result<(), Error> {
         let smallrepo = commit_syncer.get_source_repo();
         sync(ctx, commit_syncer, common_pushrebase_bookmarks).await?;
@@ -1053,7 +1053,7 @@ mod test {
     async fn sync(
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-        common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+        common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     ) -> Result<Vec<SyncResult>, Error> {
         let smallrepo = commit_syncer.get_source_repo();
         let megarepo = commit_syncer.get_target_repo();

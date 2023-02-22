@@ -12,7 +12,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
@@ -55,7 +55,7 @@ pub struct Tailer {
     ctx: CoreContext,
     repo: BlobRepo,
     hook_manager: Arc<HookManager>,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     concurrency: usize,
     log_interval: usize,
     exclude_merges: bool,
@@ -70,7 +70,7 @@ impl Tailer {
         acl_provider: &dyn AclProvider,
         repo: BlobRepo,
         config: RepoConfig,
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
         concurrency: usize,
         log_interval: usize,
         exclude_merges: bool,
@@ -211,7 +211,7 @@ async fn run_hooks_for_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
     hm: &HookManager,
-    bm: &BookmarkName,
+    bm: &BookmarkKey,
     cs_id: ChangesetId,
     exclude_merges: bool,
     cross_repo_push_source: CrossRepoPushSource,
@@ -253,5 +253,5 @@ async fn run_hooks_for_changeset(
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("No such bookmark '{0}'")]
-    NoSuchBookmark(BookmarkName),
+    NoSuchBookmark(BookmarkKey),
 }

@@ -226,7 +226,7 @@ mod tests {
     use blobrepo::BlobRepo;
     use bonsai_git_mapping::CONVERT_REVISION_EXTRA;
     use bonsai_git_mapping::HGGIT_SOURCE_EXTRA;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateReason;
     use bookmarks::BookmarksRef;
     use borrowed::borrowed;
@@ -271,7 +271,7 @@ mod tests {
     async fn apply_entries(
         ctx: &CoreContext,
         repo: &impl Repo,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         old_target: ChangesetId,
         new_target: ChangesetId,
         entries: NewMappingEntries,
@@ -297,7 +297,7 @@ mod tests {
     async fn test_new_mapping_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: InnerRepo = TestRepoFactory::new(fb)?.build()?;
-        let bookmark = BookmarkName::new("main")?;
+        let bookmark = BookmarkKey::new("main")?;
         borrowed!(ctx, repo);
 
         let dag = create_from_dag_with_changes(

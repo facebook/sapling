@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 
@@ -32,7 +32,7 @@ impl ChangesetHook for AlwaysFailChangeset {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _bookmark: &BookmarkName,
+        _bookmark: &BookmarkKey,
         _changeset: &'cs BonsaiChangeset,
         _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,

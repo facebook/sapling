@@ -12,7 +12,7 @@ use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use commit_transformation::copy_file_contents;
@@ -42,8 +42,8 @@ pub async fn add_source_repo(
     ctx: &CoreContext,
     source_repo: &BlobRepo,
     hyper_repo: &BlobRepo,
-    source_bookmark: &Source<BookmarkName>,
-    hyper_repo_bookmark: &Target<BookmarkName>,
+    source_bookmark: &Source<BookmarkKey>,
+    hyper_repo_bookmark: &Target<BookmarkKey>,
     per_commit_file_changes_limit: Option<usize>,
 ) -> Result<(), Error> {
     let source_bcs_id = source_repo
@@ -282,8 +282,8 @@ mod tests {
             .with_name("hyper_repo")
             .build()?;
 
-        let book = Source(BookmarkName::new("main")?);
-        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+        let book = Source(BookmarkKey::new("main")?);
+        let hyper_repo_book = Target(BookmarkKey::new("hyper_repo_main")?);
         let res = add_source_repo(
             &ctx,
             &source_repo,
@@ -378,8 +378,8 @@ mod tests {
             .add_file("1.txt", "content")
             .commit()
             .await?;
-        let book = Source(BookmarkName::new("main")?);
-        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+        let book = Source(BookmarkKey::new("main")?);
+        let hyper_repo_book = Target(BookmarkKey::new("hyper_repo_main")?);
 
         bookmark(&ctx, &source_repo, &book.0)
             .set_to(root_cs_id)
@@ -399,8 +399,8 @@ mod tests {
             &ctx,
             &source_repo,
             &hyper_repo,
-            &Source(BookmarkName::new("main")?),
-            &Target(BookmarkName::new("hyper_repo_main")?),
+            &Source(BookmarkKey::new("main")?),
+            &Target(BookmarkKey::new("hyper_repo_main")?),
             None,
         )
         .await;
@@ -423,8 +423,8 @@ mod tests {
             .with_name("hyper_repo")
             .build()?;
 
-        let book = Source(BookmarkName::new("main")?);
-        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+        let book = Source(BookmarkKey::new("main")?);
+        let hyper_repo_book = Target(BookmarkKey::new("hyper_repo_main")?);
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
             .add_file("1.txt", "content_1")
@@ -477,8 +477,8 @@ mod tests {
             .with_name("hyper_repo")
             .build()?;
 
-        let book = Source(BookmarkName::new("main")?);
-        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+        let book = Source(BookmarkKey::new("main")?);
+        let hyper_repo_book = Target(BookmarkKey::new("hyper_repo_main")?);
 
         let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
             .add_file("1.txt", "content_1")

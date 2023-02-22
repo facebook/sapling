@@ -174,7 +174,7 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use blobstore::Loadable;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use borrowed::borrowed;
     use changeset_fetcher::ChangesetFetcherArc;
@@ -251,7 +251,7 @@ mod test {
         ctx: &'a CoreContext,
         repo: &'a (impl BookmarksRef + ChangesetFetcherArc + RepoDerivedDataRef + Send + Sync),
     ) -> Result<impl Stream<Item = Result<(ChangesetId, HgChangesetId)>> + 'a> {
-        let master_book = BookmarkName::new("master").unwrap();
+        let master_book = BookmarkKey::new("master").unwrap();
         let bcs_id = repo
             .bookmarks()
             .get(ctx.clone(), &master_book)

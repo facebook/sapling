@@ -8,7 +8,7 @@
 use anyhow::format_err;
 use anyhow::Error;
 use blobrepo::save_bonsai_changesets;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use changesets::ChangesetsRef;
@@ -37,7 +37,7 @@ pub struct ChangesetArgs {
     pub author: String,
     pub message: String,
     pub datetime: DateTime,
-    pub bookmark: Option<BookmarkName>,
+    pub bookmark: Option<BookmarkKey>,
     pub mark_public: bool,
 }
 
@@ -118,7 +118,7 @@ async fn generate_hg_changeset(
 async fn create_bookmark(
     ctx: &CoreContext,
     repo: &impl BookmarksRef,
-    bookmark: BookmarkName,
+    bookmark: BookmarkKey,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
     info!(

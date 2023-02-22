@@ -11,7 +11,7 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use anyhow::Result;
 use ascii::AsciiString;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use commitsync::types::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
 use itertools::Itertools;
 use metaconfig_types::CommitSyncConfig;
@@ -136,7 +136,7 @@ impl Convert for RawCommitSyncConfig {
 
         let common_pushrebase_bookmarks = common_pushrebase_bookmarks
             .into_iter()
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .collect::<Result<Vec<_>>>()?;
 
         let large_repo_id = RepositoryId::new(large_repo_id);
@@ -199,10 +199,10 @@ impl Convert for RawCommonCommitSyncConfig {
 
     fn convert(self) -> Result<Self::Output> {
         let large_repo_id = RepositoryId::new(self.large_repo_id);
-        let common_pushrebase_bookmarks: Result<Vec<BookmarkName>> = self
+        let common_pushrebase_bookmarks: Result<Vec<BookmarkKey>> = self
             .common_pushrebase_bookmarks
             .into_iter()
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .try_collect();
         let common_pushrebase_bookmarks = common_pushrebase_bookmarks?;
         let small_repos: HashMap<_, _> = self

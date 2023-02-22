@@ -8,7 +8,7 @@
 use std::fmt;
 
 use anyhow::Result;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::Freshness;
 use clap::ArgEnum;
 use context::CoreContext;
@@ -32,7 +32,7 @@ pub struct BookmarkUpdateLogEntry {
     /// Id of a repo
     pub repo_id: RepositoryId,
     /// Name of the bookmark
-    pub bookmark_name: BookmarkName,
+    pub bookmark_name: BookmarkKey,
     /// Previous position of bookmark if it's known. It might not be known if a bookmark was
     /// force set or if a bookmark didn't exist
     pub from_changeset_id: Option<ChangesetId>,
@@ -70,7 +70,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
     fn list_bookmark_log_entries(
         &self,
         _ctx: CoreContext,
-        name: BookmarkName,
+        name: BookmarkKey,
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
@@ -80,7 +80,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
     fn list_bookmark_log_entries_ts_in_range(
         &self,
         _ctx: CoreContext,
-        name: BookmarkName,
+        name: BookmarkKey,
         max_rec: u32,
         min_ts: Timestamp,
         max_ts: Timestamp,

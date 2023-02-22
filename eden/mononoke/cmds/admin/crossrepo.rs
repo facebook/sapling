@@ -15,7 +15,7 @@ use anyhow::Error;
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
@@ -346,7 +346,7 @@ async fn run_pushredirection_subcommand<'a>(
             let large_bookmark = Large(
                 sub_m
                     .value_of(LARGE_REPO_BOOKMARK_ARG)
-                    .map(BookmarkName::new)
+                    .map(BookmarkKey::new)
                     .transpose()?
                     .ok_or_else(|| format_err!("{} is not specified", LARGE_REPO_BOOKMARK_ARG))?,
             );
@@ -458,7 +458,7 @@ async fn change_mapping_via_extras<'a>(
     let large_bookmark = Large(
         sub_m
             .value_of(LARGE_REPO_BOOKMARK_ARG)
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .transpose()?
             .ok_or_else(|| format_err!("{} is not specified", LARGE_REPO_BOOKMARK_ARG))?,
     );
@@ -866,7 +866,7 @@ fn get_generated_string() -> String {
 async fn get_bookmark_value(
     ctx: &CoreContext,
     repo: &CrossRepo,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
 ) -> Result<ChangesetId, Error> {
     let maybe_bookmark_value = repo.bookmarks().get(ctx.clone(), bookmark).await?;
 
@@ -882,7 +882,7 @@ async fn get_bookmark_value(
 async fn move_bookmark(
     ctx: &CoreContext,
     repo: &CrossRepo,
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     prev_value: ChangesetId,
     new_value: ChangesetId,
 ) -> Result<(), Error> {
@@ -1445,7 +1445,7 @@ mod test {
     use std::sync::Arc;
 
     use ascii::AsciiString;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use cacheblob::InProcessLease;
     use changeset_fetcher::ChangesetFetcherArc;
     use cross_repo_sync::validation::find_bookmark_diff;
@@ -1483,7 +1483,7 @@ mod test {
         let small_repo = syncers.small_to_large.get_small_repo();
         let large_repo = syncers.small_to_large.get_large_repo();
 
-        let master = BookmarkName::new("master")?;
+        let master = BookmarkKey::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
 
@@ -1516,7 +1516,7 @@ mod test {
         );
 
         // Create another bookmark
-        let another_book = BookmarkName::new("newbook")?;
+        let another_book = BookmarkKey::new("newbook")?;
         set_bookmark(fb, &small_repo, another_hash, another_book.clone()).await;
 
         let actual_diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
@@ -1580,7 +1580,7 @@ mod test {
         let small_repo = Linear::get_inner_repo_with_id(fb, RepositoryId::new(0)).await;
         let large_repo = Linear::get_inner_repo_with_id(fb, RepositoryId::new(1)).await;
 
-        let master = BookmarkName::new("master")?;
+        let master = BookmarkKey::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
@@ -1612,7 +1612,7 @@ mod test {
         let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
         let common_config = CommonCommitSyncConfig {
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
@@ -1623,7 +1623,7 @@ mod test {
 
         let current_version_config = CommitSyncConfig {
             large_repo_id: large_repo.repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,

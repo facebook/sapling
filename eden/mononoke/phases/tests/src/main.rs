@@ -12,7 +12,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksMaybeStaleExt;
 use bookmarks::BookmarksRef;
@@ -56,7 +56,7 @@ async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> 
 async fn set_bookmark(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    book: &BookmarkName,
+    book: &BookmarkKey,
     cs_id: &str,
 ) -> Result<(), Error> {
     let head = repo
@@ -118,7 +118,7 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     set_bookmark(
         &ctx,
         &repo,
-        &BookmarkName::new("master").unwrap(),
+        &BookmarkKey::new("master").unwrap(),
         "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
     )
     .await?;

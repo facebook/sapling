@@ -24,7 +24,7 @@ use mononoke_api::specifiers::GitSha1;
 use mononoke_api::specifiers::GitSha1Prefix;
 use mononoke_api::specifiers::Globalrev;
 use mononoke_api::specifiers::Svnrev;
-use mononoke_api::BookmarkName;
+use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
 use mononoke_api::ChangesetId;
 use mononoke_api::ChangesetIdPrefix;
@@ -51,9 +51,9 @@ pub(crate) trait FromRequest<T: ?Sized> {
         Self: Sized;
 }
 
-impl FromRequest<str> for BookmarkName {
-    fn from_request(bookmark: &str) -> Result<BookmarkName, thrift::RequestError> {
-        BookmarkName::new(bookmark).map_err(|e| {
+impl FromRequest<str> for BookmarkKey {
+    fn from_request(bookmark: &str) -> Result<BookmarkKey, thrift::RequestError> {
+        BookmarkKey::new(bookmark).map_err(|e| {
             errors::invalid_request(format!(
                 "failed parsing bookmark out of {}: {:?}",
                 bookmark, e
@@ -97,13 +97,13 @@ impl FromRequest<thrift::CandidateSelectionHint> for CandidateSelectionHintArgs 
     fn from_request(hint: &thrift::CandidateSelectionHint) -> Result<Self, thrift::RequestError> {
         match hint {
             thrift::CandidateSelectionHint::bookmark_ancestor(bookmark) => {
-                let bookmark = BookmarkName::from_request(bookmark)?;
+                let bookmark = BookmarkKey::from_request(bookmark)?;
                 Ok(CandidateSelectionHintArgs::OnlyOrAncestorOfBookmark(
                     bookmark,
                 ))
             }
             thrift::CandidateSelectionHint::bookmark_descendant(bookmark) => {
-                let bookmark = BookmarkName::from_request(bookmark)?;
+                let bookmark = BookmarkKey::from_request(bookmark)?;
                 Ok(CandidateSelectionHintArgs::OnlyOrDescendantOfBookmark(
                     bookmark,
                 ))

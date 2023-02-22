@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::Freshness;
@@ -91,7 +91,7 @@ where
 pub(crate) fn tail_entries(
     ctx: CoreContext,
     start_id: u64,
-    skip_bookmarks: HashSet<BookmarkName>,
+    skip_bookmarks: HashSet<BookmarkKey>,
     repo_id: RepositoryId,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
     scuba_sample: MononokeScubaSampleBuilder,

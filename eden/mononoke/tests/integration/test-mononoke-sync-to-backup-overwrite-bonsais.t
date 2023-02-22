@@ -83,7 +83,7 @@ Manually create a bonsai that would not normally be produced because it has unne
   $ mononoke_admin bookmarks set master_bookmark 2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(2fd0d90fc6899dd5643e344ebad05bbd6014382de3341654a7630de99bb1f96f)) (glob)
-  * Current position of BookmarkName { bookmark: "master_bookmark" } is Some(ChangesetId(Blake2(d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da))) (glob)
+  * Current position of BookmarkKey { bookmark: "master_bookmark" } is Some(ChangesetId(Blake2(d0356578495b2a286e817587034d9fbda1eb317d619496ee03a211f34d9e06da))) (glob)
 
 Sync to backup repo
   $ mononoke_backup_sync backup sync-loop 0 2>&1 | grep 'should map' | head -n 1

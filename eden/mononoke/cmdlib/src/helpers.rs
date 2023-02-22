@@ -19,7 +19,7 @@ use anyhow::Result;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -122,7 +122,7 @@ where
     C: BonsaiHgMappingRef + BookmarksRef,
 {
     let hash_or_bookmark = hash_or_bookmark.to_string();
-    if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {
+    if let Ok(name) = BookmarkKey::new(hash_or_bookmark.clone()) {
         if let Some(cs_id) = container.bookmarks().get(ctx.clone(), &name).await? {
             return Ok(cs_id);
         }

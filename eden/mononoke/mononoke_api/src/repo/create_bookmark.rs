@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_movement::CreateBookmarkOp;
 use bytes::Bytes;
@@ -32,10 +32,10 @@ impl RepoContext {
         self.start_write()?;
 
         let bookmark = bookmark.as_ref();
-        let bookmark = BookmarkName::new(bookmark)?;
+        let bookmark = BookmarkKey::new(bookmark)?;
 
         fn make_create_op<'a>(
-            bookmark: &'a BookmarkName,
+            bookmark: &'a BookmarkKey,
             target: ChangesetId,
             pushvars: Option<&'a HashMap<String, Bytes>>,
         ) -> CreateBookmarkOp<'a> {

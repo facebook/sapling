@@ -15,7 +15,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use cached_config::ConfigStore;
 use cmdlib::args;
@@ -431,7 +431,7 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
 async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
     ctx: &CoreContext,
     syncers: &Syncers<M, R>,
-    large_bookmark: &BookmarkName,
+    large_bookmark: &BookmarkKey,
     maybe_large_cs_id: &Option<ChangesetId>,
     maybe_small_cs_id: &Option<ChangesetId>,
     max_log_records: u32,
@@ -568,7 +568,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &Some(small_master),
             100,
@@ -586,7 +586,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &Some(small_master),
             100,
@@ -599,7 +599,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &Some(small_master),
             1,
@@ -617,7 +617,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &Some(cs_id),
             100,
@@ -667,7 +667,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &Some(small_master),
             1,
@@ -690,7 +690,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &Some(small_master),
             1,
@@ -729,7 +729,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("newbook")?,
+            &BookmarkKey::new("newbook")?,
             &Some(large_master),
             &None,
             5,
@@ -742,7 +742,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &None,
             5,
@@ -774,7 +774,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(large_master),
             &None,
             2,
@@ -825,7 +825,7 @@ mod tests {
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
-            &BookmarkName::new("master")?,
+            &BookmarkKey::new("master")?,
             &Some(old_large_master),
             &Some(small_master),
             100,

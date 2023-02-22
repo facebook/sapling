@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use bookmarks_movement::DeleteBookmarkOp;
@@ -29,7 +29,7 @@ impl RepoContext {
         self.start_write()?;
 
         let bookmark = bookmark.as_ref();
-        let bookmark = BookmarkName::new(bookmark)?;
+        let bookmark = BookmarkKey::new(bookmark)?;
 
         // We need to find out where the bookmark currently points to in order
         // to delete it.  Make sure to bypass any out-of-date caches.
@@ -47,7 +47,7 @@ impl RepoContext {
         };
 
         fn make_delete_op<'a>(
-            bookmark: &'a BookmarkName,
+            bookmark: &'a BookmarkKey,
             old_target: ChangesetId,
             pushvars: Option<&'a HashMap<String, Bytes>>,
         ) -> DeleteBookmarkOp<'a> {

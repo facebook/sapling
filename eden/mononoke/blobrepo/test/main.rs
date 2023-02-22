@@ -911,7 +911,7 @@ async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
 async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo = fixtures::ManyDiamonds::getrepo(fb).await;
-    let book = bookmarks::BookmarkName::new("master").unwrap();
+    let book = bookmarks::BookmarkKey::new("master").unwrap();
     let bcs_id = repo
         .bookmarks()
         .get(ctx.clone(), &book)

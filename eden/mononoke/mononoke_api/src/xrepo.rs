@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 
 use crate::specifiers::ChangesetSpecifier;
 
 /// An aux struct to build `CandidateSelectionHint`
 pub enum CandidateSelectionHintArgs {
-    OnlyOrAncestorOfBookmark(BookmarkName),
-    OnlyOrDescendantOfBookmark(BookmarkName),
+    OnlyOrAncestorOfBookmark(BookmarkKey),
+    OnlyOrDescendantOfBookmark(BookmarkKey),
     OnlyOrAncestorOfCommit(ChangesetSpecifier),
     OnlyOrDescendantOfCommit(ChangesetSpecifier),
     Exact(ChangesetSpecifier),

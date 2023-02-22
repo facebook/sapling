@@ -29,7 +29,7 @@ use std::str;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
 pub use errors::*;
@@ -65,7 +65,7 @@ use slog::debug;
 pub struct HookManager {
     repo_name: String,
     hooks: HashMap<String, Hook>,
-    bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
+    bookmark_hooks: HashMap<BookmarkKey, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
     content_manager: Box<dyn FileContentManager>,
     reviewers_membership: ArcMembershipChecker,
@@ -175,7 +175,7 @@ impl HookManager {
         self.admin_membership.clone()
     }
 
-    pub fn hooks_exist_for_bookmark(&self, bookmark: &BookmarkName) -> bool {
+    pub fn hooks_exist_for_bookmark(&self, bookmark: &BookmarkKey) -> bool {
         if self.bookmark_hooks.contains_key(bookmark) {
             return true;
         }
@@ -192,7 +192,7 @@ impl HookManager {
 
     fn hooks_for_bookmark<'a>(
         &'a self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> impl Iterator<Item = &'a str> + Clone {
         let mut hooks: Vec<&'a str> = match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => hooks.iter().map(|a| a.as_str()).collect(),
@@ -221,7 +221,7 @@ impl HookManager {
         &self,
         ctx: &CoreContext,
         changesets: impl Iterator<Item = &BonsaiChangeset> + Clone + itertools::Itertools,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
@@ -356,7 +356,7 @@ impl<'a> HookInstance<'a> {
     async fn run(
         self,
         ctx: &CoreContext,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         content_manager: &dyn FileContentManager,
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
@@ -464,7 +464,7 @@ impl Hook {
     pub fn get_futures<'a: 'cs, 'cs>(
         &'a self,
         ctx: &'a CoreContext,
-        bookmark: &'a BookmarkName,
+        bookmark: &'a BookmarkKey,
         content_manager: &'a dyn FileContentManager,
         hook_name: &'cs str,
         cs: &'cs BonsaiChangeset,
@@ -513,7 +513,7 @@ pub trait ChangesetHook: Send + Sync {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn FileContentManager,
         cross_repo_push_source: CrossRepoPushSource,

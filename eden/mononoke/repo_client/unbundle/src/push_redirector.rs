@@ -16,8 +16,8 @@ use anyhow::Error;
 use backsyncer::backsync_latest;
 use backsyncer::BacksyncLimit;
 use blobstore::Loadable;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
@@ -517,8 +517,8 @@ impl<R: Repo> PushRedirector<R> {
 
     pub async fn small_to_large_bookmark(
         &self,
-        bookmark: &BookmarkName,
-    ) -> Result<BookmarkName, Error> {
+        bookmark: &BookmarkKey,
+    ) -> Result<BookmarkKey, Error> {
         self.small_to_large_commit_syncer
             .rename_bookmark(bookmark)
             .await?
@@ -859,7 +859,7 @@ impl<R: Repo> PushRedirector<R> {
         &self,
         ctx: &CoreContext,
         uploaded_map: UploadedBonsais,
-        maybe_bookmark: Option<&BookmarkName>,
+        maybe_bookmark: Option<&BookmarkKey>,
     ) -> Result<HashMap<ChangesetId, BonsaiChangeset>, Error> {
         let target_repo = self.small_to_large_commit_syncer.get_target_repo();
         let uploaded_ids: HashSet<ChangesetId> = uploaded_map

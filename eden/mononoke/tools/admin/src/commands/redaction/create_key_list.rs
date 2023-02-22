@@ -19,7 +19,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Storable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use clap::ArgGroup;
 use clap::Args;
@@ -56,7 +56,7 @@ pub struct RedactionCreateKeyListArgs {
     /// Fail if any of the content to be redacted is reachable from this main
     /// bookmark unless --force is set.
     #[clap(long, default_value = "master")]
-    main_bookmark: BookmarkName,
+    main_bookmark: BookmarkKey,
 
     /// Force content redaction even if content is reachable from the main
     /// bookmark.

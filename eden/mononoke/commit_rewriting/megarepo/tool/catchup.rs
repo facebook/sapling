@@ -11,7 +11,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -41,7 +41,7 @@ use unodes::RootUnodeManifestId;
 pub async fn create_deletion_head_commits<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
-    head_bookmark: BookmarkName,
+    head_bookmark: BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
     deletion_chunk_size: usize,
@@ -173,7 +173,7 @@ pub async fn validate(
 async fn find_files_that_need_to_be_deleted(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    head_bookmark: &BookmarkName,
+    head_bookmark: &BookmarkKey,
     commit_to_merge: ChangesetId,
     path_regex: Regex,
 ) -> Result<Vec<MPath>, Error> {
@@ -235,7 +235,7 @@ mod test {
         let repo = prepare_repo(&ctx).await?;
 
         let commit_to_merge = resolve_cs_id(&ctx, &repo, "commit_to_merge").await?;
-        let book = BookmarkName::new("book")?;
+        let book = BookmarkKey::new("book")?;
         let mut paths = find_files_that_need_to_be_deleted(
             &ctx,
             &repo,
@@ -285,7 +285,7 @@ mod test {
             .commit()
             .await?;
 
-        let book = BookmarkName::new("book")?;
+        let book = BookmarkKey::new("book")?;
         let mut paths = find_files_that_need_to_be_deleted(
             &ctx,
             &repo,
@@ -305,7 +305,7 @@ mod test {
     async fn test_create_deletion_head_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = prepare_repo(&ctx).await?;
-        let book = BookmarkName::new("book")?;
+        let book = BookmarkKey::new("book")?;
 
         let commit_to_merge = resolve_cs_id(&ctx, &repo, "commit_to_merge").await?;
         let args_factory = Box::new(|stack_pos: StackPosition| ChangesetArgs {

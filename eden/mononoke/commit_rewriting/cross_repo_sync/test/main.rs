@@ -18,7 +18,7 @@ use assert_matches::assert_matches;
 use blobrepo::save_bonsai_changesets;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use cacheblob::InProcessLease;
@@ -123,7 +123,7 @@ async fn create_initial_commit_with_contents<'a>(
 }
 
 async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
-    let bookmark = BookmarkName::new("master").unwrap();
+    let bookmark = BookmarkKey::new("master").unwrap();
     let p1 = repo
         .bookmarks()
         .get(ctx.clone(), &bookmark)
@@ -168,7 +168,7 @@ async fn sync_to_master<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let bookmark_name = BookmarkName::new("master").unwrap();
+    let bookmark_name = BookmarkKey::new("master").unwrap();
     let source_bcs = source_bcs_id
         .load(&ctx, config.get_source_repo().repo_blobstore())
         .await
@@ -607,7 +607,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
 
     // Fetch master from linear - the pushrebase in a remap will change copyinfo
     let linear_master_bcs_id = {
-        let bookmark = BookmarkName::new("master").unwrap();
+        let bookmark = BookmarkKey::new("master").unwrap();
         linear
             .bookmarks()
             .get(ctx.clone(), &bookmark)
@@ -984,7 +984,7 @@ async fn get_multiple_master_mapping_setup(
         .unsafe_sync_commit_pushrebase(
             &ctx,
             small_cs.clone(),
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
             Target(megarepo_lca_hint.clone()),
             CommitSyncContext::Tests,
         )
@@ -995,7 +995,7 @@ async fn get_multiple_master_mapping_setup(
         .unsafe_sync_commit_pushrebase(
             &ctx,
             small_cs.clone(),
-            BookmarkName::new("other_branch").unwrap(),
+            BookmarkKey::new("other_branch").unwrap(),
             Target(megarepo_lca_hint.clone()),
             CommitSyncContext::Tests,
         )
@@ -1052,7 +1052,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
     assert!(format!("{:?}", e).contains("Too many rewritten candidates for"));
 
     // Can sync with a bookmark-based hint
-    let book = Target(BookmarkName::new("master").unwrap());
+    let book = Target(BookmarkKey::new("master").unwrap());
     let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
@@ -1099,7 +1099,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
         .unsafe_sync_commit_pushrebase(
             &ctx,
             to_sync,
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
             lca_hint,
             CommitSyncContext::Tests,
         )
@@ -1146,7 +1146,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         .unsafe_sync_commit_pushrebase(
             &ctx,
             to_sync,
-            BookmarkName::new("master").unwrap(),
+            BookmarkKey::new("master").unwrap(),
             lca_hint,
             CommitSyncContext::Tests,
         )
@@ -1515,7 +1515,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                 .unsafe_sync_commit_pushrebase(
                     &ctx,
                     small_cs.clone(),
-                    BookmarkName::new("master").unwrap(),
+                    BookmarkKey::new("master").unwrap(),
                     Target(megarepo_lca_hint.clone()),
                     CommitSyncContext::Tests,
                 )
@@ -1694,7 +1694,7 @@ fn get_merge_sync_data_provider(
     };
     let commit_sync_config_v1 = CommitSyncConfig {
         large_repo_id,
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             small_repo_id => small_repo_config.clone(),
         },
@@ -1702,7 +1702,7 @@ fn get_merge_sync_data_provider(
     };
     let commit_sync_config_v2 = CommitSyncConfig {
         large_repo_id,
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             small_repo_id => small_repo_config,
         },
@@ -1710,7 +1710,7 @@ fn get_merge_sync_data_provider(
     };
 
     let common_config = CommonCommitSyncConfig {
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             small_repo_id => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
@@ -2017,7 +2017,7 @@ async fn test_no_accidental_preserved_roots(
         };
         let commit_sync_config = CommitSyncConfig {
             large_repo_id: commit_syncer.get_large_repo().repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 commit_syncer.get_small_repo().repo_identity().id() => small_repo_config,
             },
@@ -2025,7 +2025,7 @@ async fn test_no_accidental_preserved_roots(
         };
 
         let common_config = CommonCommitSyncConfig {
-            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
             small_repos: hashmap! {
                 commit_syncer.get_small_repo().repo_identity().id() => SmallRepoPermanentConfig {
                     bookmark_prefix: AsciiString::new(),
@@ -2107,7 +2107,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
 
     // First create common config that have two small repos in it
     source.add_common_config(CommonCommitSyncConfig {
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             first_small_repo_id => SmallRepoPermanentConfig {
                 bookmark_prefix: AsciiString::new(),
@@ -2123,7 +2123,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
     let noop_version_first_small_repo = CommitSyncConfigVersion("noop_first".to_string());
     let noop_first_version_config = CommitSyncConfig {
         large_repo_id,
-        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
         small_repos: hashmap! {
             first_small_repo_id => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,

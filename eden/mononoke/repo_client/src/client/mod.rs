@@ -33,7 +33,7 @@ use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::Bookmark;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkPrefix;
 use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
@@ -1426,7 +1426,7 @@ impl HgCommands for RepoClient {
             // If there are suggestions, show them. This happens in case of ambiguous outcome of prefix lookup.
             // Otherwise, show an error.
 
-            let bookmark = BookmarkName::new(&key).ok();
+            let bookmark = BookmarkKey::new(&key).ok();
             let lookup_fut = node_fut
                 .and_then({
                     cloned!(ctx, repo);
@@ -1674,7 +1674,7 @@ impl HgCommands for RepoClient {
                         }
                     } else {
                         // literal match
-                        let bookmark = BookmarkName::new(&pattern)?;
+                        let bookmark = BookmarkKey::new(&pattern)?;
 
                         let cs_id = session_bookmarks_cache.get_bookmark(ctx, bookmark).await?;
                         match cs_id {

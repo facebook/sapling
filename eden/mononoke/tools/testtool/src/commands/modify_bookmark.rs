@@ -8,7 +8,7 @@
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
@@ -37,7 +37,7 @@ pub struct CommandArgs {
 pub enum BookmarkOperation {
     Create {
         /// Bookmark to create
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
 
         /// Bookmark update reason
         #[clap(long, arg_enum, default_value = "test-move")]
@@ -49,7 +49,7 @@ pub enum BookmarkOperation {
     },
     Update {
         /// Bookmark to update
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
 
         /// Bookmark update reason
         #[clap(long, arg_enum, default_value = "test-move")]
@@ -70,7 +70,7 @@ pub enum BookmarkOperation {
     },
     Delete {
         /// Bookmark to delete
-        bookmark: BookmarkName,
+        bookmark: BookmarkKey,
 
         /// Bookmark update reason
         #[clap(long, arg_enum, default_value = "test-move")]

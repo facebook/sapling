@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
@@ -39,7 +39,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     .await?;
     let mut txn = blob_repo.bookmarks().create_transaction(ctx.clone());
     txn.force_set(
-        &BookmarkName::new("trunk")?,
+        &BookmarkKey::new("trunk")?,
         changesets["C"],
         BookmarkUpdateReason::TestMove,
     )?;
@@ -124,7 +124,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
         .bookmark_update_log()
         .list_bookmark_log_entries(
             ctx.clone(),
-            BookmarkName::new("trunk")?,
+            BookmarkKey::new("trunk")?,
             3,
             None,
             Freshness::MostRecent,

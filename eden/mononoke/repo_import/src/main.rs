@@ -24,7 +24,7 @@ use backsyncer::BacksyncLimit;
 use blobrepo::save_bonsai_changesets;
 use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
 use borrowed::borrowed;
@@ -146,15 +146,15 @@ struct ChangesetArgs {
 }
 #[derive(Clone, Debug, PartialEq)]
 struct RepoImportSetting {
-    importing_bookmark: BookmarkName,
-    dest_bookmark: BookmarkName,
+    importing_bookmark: BookmarkKey,
+    dest_bookmark: BookmarkKey,
 }
 
 #[derive(Clone)]
 struct SmallRepoBackSyncVars {
     large_to_small_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
     target_repo_dbs: TargetRepoDbs,
-    small_repo_bookmark: BookmarkName,
+    small_repo_bookmark: BookmarkKey,
     small_repo: Repo,
     maybe_call_sign: Option<String>,
     version: CommitSyncConfigVersion,
@@ -267,7 +267,7 @@ async fn rewrite_file_paths(
 async fn find_mapping_version(
     ctx: &CoreContext,
     large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
-    dest_bookmark: &BookmarkName,
+    dest_bookmark: &BookmarkKey,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let bookmark_val = large_to_small_syncer
         .get_large_repo()
@@ -404,7 +404,7 @@ async fn move_bookmark(
     ctx: &CoreContext,
     repo: &Repo,
     shifted_bcs_ids: &[ChangesetId],
-    bookmark: &BookmarkName,
+    bookmark: &BookmarkKey,
     checker_flags: &CheckerFlags,
     maybe_call_sign: &Option<String>,
     maybe_small_repo_back_sync_vars: &Option<SmallRepoBackSyncVars>,
@@ -559,7 +559,7 @@ async fn merge_imported_commit(
     ctx: &CoreContext,
     repo: &Repo,
     imported_cs_id: ChangesetId,
-    dest_bookmark: &BookmarkName,
+    dest_bookmark: &BookmarkKey,
     changeset_args: ChangesetArgs,
 ) -> Result<ChangesetId, Error> {
     info!(
@@ -635,7 +635,7 @@ async fn push_merge_commit(
     ctx: &CoreContext,
     repo: &Repo,
     merged_cs_id: ChangesetId,
-    bookmark_to_merge_into: &BookmarkName,
+    bookmark_to_merge_into: &BookmarkKey,
     repo_config: &RepoConfig,
 ) -> Result<ChangesetId, Error> {
     info!(ctx.logger(), "Running pushrebase");
@@ -799,8 +799,8 @@ fn get_cs_ids(changesets: &[BonsaiChangeset]) -> Vec<ChangesetId> {
     cs_ids
 }
 
-fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkName, Error> {
-    BookmarkName::new(format!("repo_import_{}", &bookmark_suffix))
+fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkKey, Error> {
+    BookmarkKey::new(format!("repo_import_{}", &bookmark_suffix))
 }
 
 // Note: pushredirection only works from small repo to large repo.
@@ -1013,7 +1013,7 @@ async fn repo_import(
         ));
     }
 
-    let dest_bookmark = BookmarkName::new(&recovery_fields.dest_bookmark_name)?;
+    let dest_bookmark = BookmarkKey::new(&recovery_fields.dest_bookmark_name)?;
     let changeset_args = ChangesetArgs {
         author: recovery_fields.commit_author.clone(),
         message: recovery_fields.commit_message.clone(),
@@ -1418,7 +1418,7 @@ async fn check_additional_setup_steps(
         importing_bookmark
     );
     let dest_bookmark_name = check_additional_setup_steps_args.dest_bookmark.as_str();
-    let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
+    let dest_bookmark = BookmarkKey::new(dest_bookmark_name)?;
     info!(
         ctx.logger(),
         "The destination bookmark name is: {}. \

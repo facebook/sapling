@@ -15,8 +15,8 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks_types::Bookmark;
+use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
-use bookmarks_types::BookmarkName;
 use bookmarks_types::BookmarkPagination;
 use bookmarks_types::BookmarkPrefix;
 use bookmarks_types::Freshness;
@@ -48,7 +48,7 @@ define_stats! {
     cached_bookmarks_misses: dynamic_timeseries("{}.miss", (repo: String); Rate, Sum),
 }
 
-type CacheData = BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>;
+type CacheData = BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>;
 
 #[derive(Clone)]
 struct Cache {
@@ -332,7 +332,7 @@ impl Bookmarks for CachedBookmarks {
     fn get(
         &self,
         ctx: CoreContext,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
         // NOTE: If you to implement a Freshness notion here and try to fetch from cache, be
         // mindful that not all bookmarks are cached, so a cache miss here does not necessarily
@@ -350,7 +350,7 @@ impl Bookmarks for CachedBookmarks {
 impl BookmarkTransaction for CachedBookmarksTransaction {
     fn update(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
@@ -361,7 +361,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
 
     fn create(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -371,7 +371,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
 
     fn force_set(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -381,7 +381,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
 
     fn delete(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -389,18 +389,14 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.delete(bookmark, old_cs, reason)
     }
 
-    fn force_delete(
-        &mut self,
-        bookmark: &BookmarkName,
-        reason: BookmarkUpdateReason,
-    ) -> Result<()> {
+    fn force_delete(&mut self, bookmark: &BookmarkKey, reason: BookmarkUpdateReason) -> Result<()> {
         self.dirty = true;
         self.transaction.force_delete(bookmark, reason)
     }
 
     fn update_scratch(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
     ) -> Result<()> {
@@ -408,19 +404,19 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.update_scratch(bookmark, new_cs, old_cs)
     }
 
-    fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+    fn create_scratch(&mut self, bookmark: &BookmarkKey, new_cs: ChangesetId) -> Result<()> {
         // Scratch bookmarks aren't stored in the cache.
         self.transaction.create_scratch(bookmark, new_cs)
     }
 
-    fn delete_scratch(&mut self, bookmark: &BookmarkName, old_cs: ChangesetId) -> Result<()> {
+    fn delete_scratch(&mut self, bookmark: &BookmarkKey, old_cs: ChangesetId) -> Result<()> {
         // Scratch bookmarks aren't stored in the cache.
         self.transaction.delete_scratch(bookmark, old_cs)
     }
 
     fn create_publishing(
         &mut self,
-        bookmark: &BookmarkName,
+        bookmark: &BookmarkKey,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
@@ -496,7 +492,7 @@ mod tests {
 
     fn bookmark(name: impl AsRef<str>) -> Bookmark {
         Bookmark::new(
-            BookmarkName::new(name).unwrap(),
+            BookmarkKey::new(name).unwrap(),
             BookmarkKind::PullDefaultPublishing,
         )
     }
@@ -531,7 +527,7 @@ mod tests {
         // Dirty the transaction.
         transaction
             .force_delete(
-                &BookmarkName::new("").unwrap(),
+                &BookmarkKey::new("").unwrap(),
                 BookmarkUpdateReason::TestMove,
             )
             .unwrap();
@@ -544,7 +540,7 @@ mod tests {
         fn get(
             &self,
             _ctx: CoreContext,
-            _name: &BookmarkName,
+            _name: &BookmarkKey,
         ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
             unimplemented!()
         }
@@ -596,7 +592,7 @@ mod tests {
     impl BookmarkTransaction for MockTransaction {
         fn update(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
@@ -606,7 +602,7 @@ mod tests {
 
         fn create(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
@@ -615,7 +611,7 @@ mod tests {
 
         fn force_set(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
@@ -624,7 +620,7 @@ mod tests {
 
         fn delete(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
@@ -633,7 +629,7 @@ mod tests {
 
         fn force_delete(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
             Ok(())
@@ -641,24 +637,24 @@ mod tests {
 
         fn update_scratch(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
         ) -> Result<()> {
             Ok(())
         }
 
-        fn create_scratch(&mut self, _bookmark: &BookmarkName, _new_cs: ChangesetId) -> Result<()> {
+        fn create_scratch(&mut self, _bookmark: &BookmarkKey, _new_cs: ChangesetId) -> Result<()> {
             Ok(())
         }
 
-        fn delete_scratch(&mut self, _bookmark: &BookmarkName, _old_cs: ChangesetId) -> Result<()> {
+        fn delete_scratch(&mut self, _bookmark: &BookmarkKey, _old_cs: ChangesetId) -> Result<()> {
             Ok(())
         }
 
         fn create_publishing(
             &mut self,
-            _bookmark: &BookmarkName,
+            _bookmark: &BookmarkKey,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
         ) -> Result<()> {
@@ -898,7 +894,7 @@ mod tests {
     }
 
     fn mock_bookmarks_response(
-        bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+        bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
@@ -924,7 +920,7 @@ mod tests {
 
     fn mock_then_query(
         fb: FacebookInit,
-        bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+        bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         query_freshness: Freshness,
         query_prefix: &BookmarkPrefix,
         query_kinds: &[BookmarkKind],
@@ -985,11 +981,11 @@ mod tests {
     quickcheck! {
         fn responses_match(
             fb: FacebookInit,
-            bookmarks: BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+            bookmarks: BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
             freshness: Freshness,
             kinds: HashSet<BookmarkKind>,
             prefix_char: Option<ascii_ext::AsciiChar>,
-            after: Option<BookmarkName>,
+            after: Option<BookmarkKey>,
             limit: u64
         ) -> bool {
             // Test that requesting via the cache gives the same result

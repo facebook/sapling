@@ -12,8 +12,8 @@ use std::collections::HashMap;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
-use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLog;
@@ -42,8 +42,8 @@ use sql::mysql_async::prelude::ConvIr;
 use sql::mysql_async::Value;
 use sql_construct::SqlConstruct;
 
-fn create_bookmark_name(book: &str) -> BookmarkName {
-    BookmarkName::new(book).unwrap()
+fn create_bookmark_name(book: &str) -> BookmarkKey {
+    BookmarkKey::new(book).unwrap()
 }
 
 fn create_prefix(book: &str) -> BookmarkPrefix {

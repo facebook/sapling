@@ -14,7 +14,7 @@ use anyhow::Result;
 use blobrepo::AsBlobRepo;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
 use bulkops::PublicChangesetBulkFetch;
 use caching_ext::CachelibHandler;
@@ -102,7 +102,7 @@ where
     }
 }
 
-static BOOKMARK_NAME: Lazy<BookmarkName> = Lazy::new(|| BookmarkName::new("master").unwrap());
+static BOOKMARK_NAME: Lazy<BookmarkKey> = Lazy::new(|| BookmarkKey::new("master").unwrap());
 
 async fn new_tailer_for_tailing(
     blobrepo: &BlobRepo,
@@ -958,7 +958,7 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
 async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = Linear::getrepo(fb).await;
-    let bookmark_name = BookmarkName::new("periodic_update")?;
+    let bookmark_name = BookmarkKey::new("periodic_update")?;
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281";
     let start_cs = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;

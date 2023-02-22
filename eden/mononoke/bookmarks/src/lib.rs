@@ -25,8 +25,8 @@ mod subscription;
 mod transaction;
 
 pub use bookmarks_types::Bookmark;
+pub use bookmarks_types::BookmarkKey;
 pub use bookmarks_types::BookmarkKind;
-pub use bookmarks_types::BookmarkName;
 pub use bookmarks_types::BookmarkPagination;
 pub use bookmarks_types::BookmarkPrefix;
 pub use bookmarks_types::BookmarkPrefixRange;
@@ -52,7 +52,7 @@ pub trait Bookmarks: Send + Sync + 'static {
     fn get(
         &self,
         ctx: CoreContext,
-        name: &BookmarkName,
+        name: &BookmarkKey,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>>;
 
     /// List bookmarks that match certain parameters.

@@ -12,7 +12,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use bookmarks_types::BookmarkName;
+use bookmarks_types::BookmarkKey;
 use metaconfig_types::Address;
 use metaconfig_types::BlameVersion;
 use metaconfig_types::BookmarkOrRegex;
@@ -95,7 +95,7 @@ impl Convert for RawCacheWarmupConfig {
 
     fn convert(self) -> Result<Self::Output> {
         Ok(CacheWarmupParams {
-            bookmark: BookmarkName::new(self.bookmark)?,
+            bookmark: BookmarkKey::new(self.bookmark)?,
             commit_limit: self
                 .commit_limit
                 .map(|v| v.try_into())
@@ -166,7 +166,7 @@ impl Convert for RawBookmarkConfig {
 
     fn convert(self) -> Result<Self::Output> {
         let bookmark_or_regex = match (self.regex, self.name) {
-            (None, Some(name)) => BookmarkOrRegex::Bookmark(BookmarkName::new(name).unwrap()),
+            (None, Some(name)) => BookmarkOrRegex::Bookmark(BookmarkKey::new(name).unwrap()),
             (Some(regex), None) => match Regex::new(&regex) {
                 Ok(regex) => BookmarkOrRegex::Regex(ComparableRegex::new(regex)),
                 Err(err) => {
@@ -198,9 +198,9 @@ impl Convert for RawBookmarkConfig {
             .hooks_skip_ancestors_of
             .unwrap_or_default()
             .into_iter()
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .collect::<Result<Vec<_>, _>>()?;
-        let ensure_ancestor_of = self.ensure_ancestor_of.map(BookmarkName::new).transpose()?;
+        let ensure_ancestor_of = self.ensure_ancestor_of.map(BookmarkKey::new).transpose()?;
         let allow_move_to_public_commits_without_hooks = self
             .allow_move_to_public_commits_without_hooks
             .unwrap_or(false);
@@ -300,7 +300,7 @@ impl Convert for RawPushrebaseParams {
             emit_obsmarkers: self.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
             globalrevs_publishing_bookmark: self
                 .globalrevs_publishing_bookmark
-                .map(BookmarkName::new)
+                .map(BookmarkKey::new)
                 .transpose()?,
             populate_git_mapping: self
                 .populate_git_mapping
@@ -415,7 +415,7 @@ impl Convert for RawSourceControlServiceMonitoring {
         let bookmarks_to_report_age = self
             .bookmarks_to_report_age
             .into_iter()
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .collect::<Result<Vec<_>>>()?;
         Ok(SourceControlServiceMonitoring {
             bookmarks_to_report_age,
@@ -489,12 +489,12 @@ impl Convert for RawSegmentedChangelogHeadConfig {
                 SegmentedChangelogHeadConfig::AllPublicBookmarksExcept(
                     exceptions
                         .into_iter()
-                        .map(BookmarkName::new)
-                        .collect::<Result<Vec<BookmarkName>>>()?,
+                        .map(BookmarkKey::new)
+                        .collect::<Result<Vec<BookmarkKey>>>()?,
                 )
             }
             Self::bookmark(bookmark_name) => {
-                SegmentedChangelogHeadConfig::Bookmark(BookmarkName::new(bookmark_name)?)
+                SegmentedChangelogHeadConfig::Bookmark(BookmarkKey::new(bookmark_name)?)
             }
             Self::bonsai_changeset(changeset_id) => {
                 SegmentedChangelogHeadConfig::Changeset(ChangesetId::from_str(&changeset_id)?)
@@ -628,7 +628,7 @@ impl Convert for RawCrossRepoCommitValidationConfig {
         let skip_bookmarks = self
             .skip_bookmarks
             .into_iter()
-            .map(BookmarkName::new)
+            .map(BookmarkKey::new)
             .collect::<Result<_, _>>()?;
         Ok(CrossRepoCommitValidation { skip_bookmarks })
     }

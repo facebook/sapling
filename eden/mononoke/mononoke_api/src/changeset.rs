@@ -19,7 +19,7 @@ use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
@@ -1517,7 +1517,7 @@ impl ChangesetContext {
             .run_hooks_for_bookmark(
                 self.ctx(),
                 vec![self.bonsai_changeset().await?].iter(),
-                &BookmarkName::new(bookmark.as_ref())?,
+                &BookmarkKey::new(bookmark.as_ref())?,
                 pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
                 PushAuthoredBy::User,

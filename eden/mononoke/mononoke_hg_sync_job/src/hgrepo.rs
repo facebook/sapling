@@ -19,7 +19,7 @@ use anyhow::format_err;
 use anyhow::Context as _;
 use anyhow::Error;
 use anyhow::Result;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFuture;
@@ -51,7 +51,7 @@ const SEND_UNBUNDLE_REPLAY_EXTENSION: &str = include_str!("sendunbundlereplay.py
 
 pub async fn list_hg_server_bookmarks(
     hg_repo_path: String,
-) -> Result<HashMap<BookmarkName, HgChangesetId>, Error> {
+) -> Result<HashMap<BookmarkKey, HgChangesetId>, Error> {
     let extension_file = tempfile::Builder::new()
         .suffix(".py")
         .tempfile()
@@ -86,7 +86,7 @@ pub async fn list_hg_server_bookmarks(
             (Some(key), Some(value)) => {
                 let key = String::from_utf8(key.to_vec()).map_err(Error::from)?;
                 let value = String::from_utf8(value.to_vec()).map_err(Error::from)?;
-                res.insert(BookmarkName::new(key)?, HgChangesetId::from_str(&value)?);
+                res.insert(BookmarkKey::new(key)?, HgChangesetId::from_str(&value)?);
             }
             _ => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -289,7 +289,7 @@ impl HgPeer {
         &'a mut self,
         bundle_path: &'a str,
         timestamps_path: &'a str,
-        onto_bookmark: BookmarkName,
+        onto_bookmark: BookmarkKey,
         expected_bookmark_position: Option<HgChangesetId>,
         attempt: usize,
         logger: &Logger,
@@ -426,7 +426,7 @@ impl HgRepo {
         &self,
         bundle_filename: String,
         timestamps_path: String,
-        onto_bookmark: BookmarkName,
+        onto_bookmark: BookmarkKey,
         expected_bookmark_position: Option<HgChangesetId>,
         attempt: usize,
         logger: &Logger,
@@ -497,7 +497,7 @@ impl HgRepo {
 
     async fn verify_server_bookmark_location(
         &self,
-        name: &BookmarkName,
+        name: &BookmarkKey,
         expected_bookmark_position: Option<HgChangesetId>,
     ) -> Result<(), Error> {
         let name = name.to_string();

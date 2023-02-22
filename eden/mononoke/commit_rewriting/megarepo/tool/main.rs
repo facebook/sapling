@@ -14,7 +14,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::BookmarkKey;
 use borrowed::borrowed;
 use clap::ArgMatches;
 use cmdlib::args;
@@ -266,7 +266,7 @@ async fn run_sync_diamond_merge<'a>(
         args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
     let maybe_bookmark = sub_m
         .value_of(cli::COMMIT_BOOKMARK)
-        .map(BookmarkName::new)
+        .map(BookmarkKey::new)
         .transpose()?;
 
     let bookmark = maybe_bookmark.ok_or_else(|| Error::msg("bookmark must be specified"))?;
@@ -575,7 +575,7 @@ async fn run_gradual_merge<'a>(
     let params = gradual_merge::GradualMergeParams {
         pre_deletion_commit,
         last_deletion_commit,
-        bookmark_to_merge_into: BookmarkName::new(bookmark)?,
+        bookmark_to_merge_into: BookmarkKey::new(bookmark)?,
         merge_changeset_args_factory,
         limit,
         dry_run,
@@ -614,7 +614,7 @@ async fn run_gradual_merge_progress<'a>(
         &repo,
         &pre_deletion_commit,
         &last_deletion_commit,
-        &BookmarkName::new(bookmark)?,
+        &BookmarkKey::new(bookmark)?,
     )
     .await?;
 
@@ -751,7 +751,7 @@ async fn run_catchup_delete_head<'a>(
         .value_of(HEAD_BOOKMARK)
         .ok_or_else(|| format_err!("{} not set", HEAD_BOOKMARK))?;
 
-    let head_bookmark = BookmarkName::new(head_bookmark)?;
+    let head_bookmark = BookmarkKey::new(head_bookmark)?;
 
     let to_merge_cs_id = sub_m
         .value_of(TO_MERGE_CS_ID)

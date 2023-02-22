@@ -249,7 +249,7 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use blobstore::Loadable;
-    use bookmarks::BookmarkName;
+    use bookmarks::BookmarkKey;
     use borrowed::borrowed;
     use cloned::cloned;
     use derived_data::BonsaiDerived;
@@ -331,7 +331,7 @@ mod test {
         ctx: CoreContext,
         repo: TestRepo,
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
-        let master_book = BookmarkName::new("master").unwrap();
+        let master_book = BookmarkKey::new("master").unwrap();
         repo.bookmarks
             .get(ctx.clone(), &master_book)
             .map_ok(move |maybe_bcs_id| {
