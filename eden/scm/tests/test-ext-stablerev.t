@@ -1,4 +1,6 @@
-#chg-compatible
+#debugruntest-compatible
+#require /bin/bash /bin/cat
+
   $ configure modernclient
   $ newclientrepo
   $ enable stablerev
@@ -64,7 +66,7 @@ An alias can be used for simplicity:
 Check that stables template keyword works:
   $ cat <<'EOF' > stables.sh
   > #!/bin/bash
-  > cat << FOE
+  > /bin/cat << FOE
   > {
   >   "$1": ["stable1", "stable2"]
   > }

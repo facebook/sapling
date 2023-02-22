@@ -92,6 +92,12 @@ def checkfeatures(features):
     result = {"error": [], "missing": [], "skipped": []}
 
     for feature in features:
+        if feature.startswith("/"):
+            # feature is a path to a binary on POSIX
+            if not os.access(feature, os.X_OK):
+                result["skipped"].append(f"missing binary: {feature}")
+            continue
+
         negate = feature.startswith("no-")
         if negate:
             feature = feature[3:]
