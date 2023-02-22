@@ -27,6 +27,7 @@ mod transaction;
 pub use bookmarks_types::Bookmark;
 pub use bookmarks_types::BookmarkKey;
 pub use bookmarks_types::BookmarkKind;
+pub use bookmarks_types::BookmarkName;
 pub use bookmarks_types::BookmarkPagination;
 pub use bookmarks_types::BookmarkPrefix;
 pub use bookmarks_types::BookmarkPrefixRange;

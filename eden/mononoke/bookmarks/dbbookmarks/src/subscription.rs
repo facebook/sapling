@@ -15,6 +15,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
 use context::CoreContext;
@@ -94,7 +95,7 @@ impl SqlBookmarksSubscription {
 
         let bookmarks = bookmarks
             .into_iter()
-            .map(|(name, kind, cs_id, _log_id, _tok)| (name, (cs_id, kind)))
+            .map(|(name, kind, cs_id, _log_id, _tok)| (BookmarkKey::with_name(name), (cs_id, kind)))
             .collect();
 
         Ok(Self {
@@ -164,7 +165,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
 
             // NOTE: We get the updates in DESC-ending order, so we'll always find the curent
             // bookmark state first.
-            updates.entry(name).or_insert(value);
+            updates.entry(BookmarkKey::with_name(name)).or_insert(value);
         }
 
         for (book, maybe_value) in updates.into_iter() {
@@ -210,7 +211,7 @@ mononoke_queries! {
     read SelectUpdatedBookmarks(
         repo_id: RepositoryId,
         log_id: u64
-    ) -> (u64, BookmarkKey, Option<BookmarkKind>, Option<ChangesetId>) {
+    ) -> (u64, BookmarkName, Option<BookmarkKind>, Option<ChangesetId>) {
         mysql("
         SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks.hg_kind, bookmarks.changeset_id
         FROM bookmarks_update_log

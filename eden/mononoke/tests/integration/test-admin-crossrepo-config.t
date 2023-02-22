@@ -18,7 +18,7 @@ test various admin commands
   $ REPOID=0 mononoke_admin crossrepo config list --with-contents
   TEST_VERSION_NAME:
     large repo: 0
-    common pushrebase bookmarks: [BookmarkKey { bookmark: "master_bookmark" }]
+    common pushrebase bookmarks: [* "master_bookmark" *] (glob)
     version name: TEST_VERSION_NAME
       small repo: 1
       default action: Preserve
@@ -36,7 +36,7 @@ test various admin commands
   
   TEST_VERSION_NAME_OLD:
     large repo: 0
-    common pushrebase bookmarks: [BookmarkKey { bookmark: "master_bookmark" }]
+    common pushrebase bookmarks: [* "master_bookmark" *] (glob)
     version name: TEST_VERSION_NAME_OLD
       small repo: 1
       default action: Preserve
@@ -54,7 +54,7 @@ test various admin commands
   
   $ REPOID=0 mononoke_admin crossrepo config by-version TEST_VERSION_NAME_OLD
   large repo: 0
-  common pushrebase bookmarks: [BookmarkKey { bookmark: "master_bookmark" }]
+  common pushrebase bookmarks: [* "master_bookmark" *] (glob)
   version name: TEST_VERSION_NAME_OLD
     small repo: 1
     default action: Preserve

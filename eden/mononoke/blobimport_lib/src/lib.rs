@@ -185,7 +185,7 @@ impl<'a> Blobimport<'a> {
         let mononoke_bookmarks_fut = blobrepo
             .bookmarks()
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
-            .map_ok(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id))
+            .map_ok(|(bookmark, changeset_id)| (bookmark.into_key(), changeset_id))
             .try_collect::<Vec<_>>();
 
         let (stale_bookmarks, mononoke_bookmarks) =

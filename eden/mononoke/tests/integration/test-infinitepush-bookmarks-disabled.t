@@ -89,7 +89,9 @@ Do infinitepush (aka commit cloud) push
   remote:             context: "Failed to create scratch bookmark",
   remote:             source: ScratchBookmarksDisabled {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "scratch/123",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "scratch/123",
+  remote:                     },
   remote:                 },
   remote:             },
   remote:         },

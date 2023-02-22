@@ -79,8 +79,8 @@ impl Cache {
                     .try_fold(
                         BTreeMap::new(),
                         |mut map, (bookmark, changeset_id)| async move {
-                            let Bookmark { name, kind } = bookmark;
-                            map.insert(name, (kind, changeset_id));
+                            let Bookmark { key, kind } = bookmark;
+                            map.insert(key, (kind, changeset_id));
                             Ok(map)
                         },
                     )
@@ -236,6 +236,9 @@ impl CachedBookmarks {
             .map(move |cache_result| match &*cache_result {
                 Ok(bookmarks) => {
                     let result: Vec<_> = bookmarks
+                        .iter()
+                        .map(move |(k, v)| (k.name().clone(), v))
+                        .collect::<BTreeMap<_, _>>()
                         .range(range)
                         .filter_map(move |(name, (kind, changeset_id))| {
                             if filter_kinds
@@ -243,7 +246,7 @@ impl CachedBookmarks {
                                 .map_or(true, |kinds| kinds.iter().any(|k| k == kind))
                             {
                                 let bookmark = Bookmark {
-                                    name: name.clone(),
+                                    key: BookmarkKey::with_name(name.clone()),
                                     kind: *kind,
                                 };
                                 Some(Ok((bookmark, *changeset_id)))
@@ -902,11 +905,14 @@ mod tests {
     ) -> Vec<(Bookmark, ChangesetId)> {
         let range = prefix.to_range().with_pagination(pagination.clone());
         bookmarks
+            .iter()
+            .map(move |(k, v)| (k.name().clone(), v))
+            .collect::<BTreeMap<_, _>>()
             .range(range)
-            .filter_map(|(bookmark, (kind, changeset_id))| {
+            .filter_map(|(name, (kind, changeset_id))| {
                 if kinds.iter().any(|k| kind == k) {
                     let bookmark = Bookmark {
-                        name: bookmark.clone(),
+                        key: BookmarkKey::with_name(name.clone()),
                         kind: *kind,
                     };
                     Some((bookmark, *changeset_id))
@@ -996,7 +1002,7 @@ mod tests {
                 None => BookmarkPrefix::empty(),
             };
             let pagination = match after {
-                Some(name) => BookmarkPagination::After(name),
+                Some(key) => BookmarkPagination::After(key.into_name()),
                 None => BookmarkPagination::FromStart,
             };
             let have = mock_then_query(

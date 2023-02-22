@@ -41,7 +41,7 @@ async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> 
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());
 
     for (bookmark, _) in bookmarks {
-        txn.force_delete(bookmark.name(), BookmarkUpdateReason::TestMove)
+        txn.force_delete(bookmark.key(), BookmarkUpdateReason::TestMove)
             .unwrap();
     }
 

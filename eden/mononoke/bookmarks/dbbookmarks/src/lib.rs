@@ -144,11 +144,14 @@ mod test {
     ) -> Vec<(Bookmark, ChangesetId)> {
         let range = prefix.to_range().with_pagination(pagination.clone());
         bookmarks
+            .iter()
+            .map(|(k, v)| (k.name().clone(), v))
+            .collect::<BTreeMap<_, _>>()
             .range(range)
-            .filter_map(|(bookmark, (kind, changeset_id))| {
+            .filter_map(|(name, (kind, changeset_id))| {
                 if kinds.iter().any(|k| kind == k) {
                     let bookmark = Bookmark {
-                        name: bookmark.clone(),
+                        key: BookmarkKey::with_name(name.clone()),
                         kind: *kind,
                     };
                     Some((bookmark, *changeset_id))
@@ -217,7 +220,7 @@ mod test {
                 None => BookmarkPrefix::empty(),
             };
             let pagination = match after {
-                Some(name) => BookmarkPagination::After(name),
+                Some(key) => BookmarkPagination::After(key.into_name()),
                 None => BookmarkPagination::FromStart,
             };
             let mut have = insert_then_query(

@@ -341,7 +341,10 @@ impl BookmarksCache for NoopBookmarksCache {
                 pagination,
                 limit.unwrap_or(std::u64::MAX),
             )
-            .map_ok(|(book, cs_id)| (book.name, (cs_id, book.kind)))
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_key(), (cs_id, kind))
+            })
             .try_collect()
             .await
     }
@@ -423,15 +426,15 @@ impl BookmarksCache for WarmBookmarksCache {
             // Simple case: return all bookmarks
             Ok(bookmarks
                 .iter()
-                .map(|(name, (cs_id, kind))| (name.clone(), (*cs_id, *kind)))
+                .map(|(key, (cs_id, kind))| (key.clone(), (*cs_id, *kind)))
                 .collect())
         } else {
             // Filter based on prefix and pagination
             let range = prefix.to_range().with_pagination(pagination.clone());
             let mut matches = bookmarks
                 .iter()
-                .filter(|(name, _)| range.contains(name))
-                .map(|(name, (cs_id, kind))| (name.clone(), (*cs_id, *kind)))
+                .filter(|(key, _)| range.contains(key.name()))
+                .map(|(key, (cs_id, kind))| (key.clone(), (*cs_id, *kind)))
                 .collect::<Vec<_>>();
             // Release the read lock.
             drop(bookmarks);
@@ -753,7 +756,7 @@ impl BookmarksCoordinator {
                 )
                 .map_ok(|(book, cs_id)| {
                     let kind = *book.kind();
-                    (book.into_name(), (cs_id, kind))
+                    (book.into_key(), (cs_id, kind))
                 })
                 .try_collect::<HashMap<_, _>>()
                 .await
@@ -797,8 +800,8 @@ impl BookmarksCoordinator {
 
         for book in changed_bookmarks {
             let need_spawning = self.live_updaters.with_write(|live_updaters| {
-                if !live_updaters.contains_key(book.name()) {
-                    live_updaters.insert(book.name().clone(), BookmarkUpdaterState::Started);
+                if !live_updaters.contains_key(book.key()) {
+                    live_updaters.insert(book.key().clone(), BookmarkUpdaterState::Started);
                     true
                 } else {
                     false
@@ -826,7 +829,7 @@ impl BookmarksCoordinator {
                         |ts: Timestamp| {
                             live_updaters.with_write(|live_updaters| {
                                 live_updaters.insert(
-                                    book.name().clone(),
+                                    book.key().clone(),
                                     BookmarkUpdaterState::InProgress {
                                         oldest_underived_ts: ts,
                                     },
@@ -837,13 +840,13 @@ impl BookmarksCoordinator {
                     .await;
                     if let Err(ref err) = res {
                         STATS::bookmark_update_failures.add_value(1);
-                        warn!(ctx.logger(), "update of {} failed: {:?}", book.name(), err);
+                        warn!(ctx.logger(), "update of {} failed: {:?}", book.key(), err);
                     };
 
                     live_updaters.with_write(|live_updaters| {
-                        let maybe_state = live_updaters.remove(book.name());
+                        let maybe_state = live_updaters.remove(book.key());
                         if let Some(state) = maybe_state {
-                            live_updaters.insert(book.name().clone(), state.into_finished(&res));
+                            live_updaters.insert(book.key().clone(), state.into_finished(&res));
                         }
                     });
                 });
@@ -997,15 +1000,15 @@ async fn single_bookmark_updater(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
-        bookmark.name(),
+        bookmark.key(),
         warmers.as_ref(),
     )
     .await?;
 
     let update_bookmark = |cs_id: ChangesetId| async move {
         bookmarks.with_write(|bookmarks| {
-            let name = bookmark.name().clone();
-            bookmarks.insert(name, (cs_id, *bookmark.kind()))
+            let key = bookmark.key().clone();
+            bookmarks.insert(key, (cs_id, *bookmark.kind()))
         });
     };
 
@@ -1016,14 +1019,14 @@ async fn single_bookmark_updater(
                 update_bookmark(cs_id).await;
             }
             None => {
-                bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.name()));
+                bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.key()));
             }
         },
         LatestDerivedBookmarkEntry::NotFound => {
             warn!(
                 ctx.logger(),
                 "Haven't found previous derived version of {}! Will try to derive anyway",
-                bookmark.name()
+                bookmark.key()
             );
         }
     }
@@ -1039,7 +1042,7 @@ async fn single_bookmark_updater(
         let maybe_ts = maybe_id_ts.map(|(_, ts)| ts);
 
         let ctx = ctx.clone().with_mutated_scuba(|mut scuba| {
-            scuba.add("bookmark", bookmark.name().to_string());
+            scuba.add("bookmark", bookmark.key().to_string());
             scuba.add("bookmark_log_id", bookmark_log_id);
             scuba.add("top_changeset", underived_cs_id.to_hex().to_string());
             scuba
@@ -1064,7 +1067,7 @@ async fn single_bookmark_updater(
                     ctx.logger(),
                     "failed to derive data for {} while updating {}: {}",
                     underived_cs_id,
-                    bookmark.name(),
+                    bookmark.key(),
                     err
                 );
                 break;
@@ -1353,7 +1356,7 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_name(), (cs_id, kind))
+                (book.into_key(), (cs_id, kind))
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1412,7 +1415,7 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_name(), (cs_id, kind))
+                (book.into_key(), (cs_id, kind))
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1506,7 +1509,7 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_name(), (cs_id, kind))
+                (book.into_key(), (cs_id, kind))
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1681,7 +1684,7 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_name(), (cs_id, kind))
+                (book.into_key(), (cs_id, kind))
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1740,7 +1743,7 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_name(), (cs_id, kind))
+                (book.into_key(), (cs_id, kind))
             })
             .try_collect::<HashMap<_, _>>()
             .await?;

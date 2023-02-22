@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use bookmarks::Bookmark;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkTransaction;
@@ -56,7 +57,7 @@ define_stats! {
 }
 
 mononoke_queries! {
-    pub(crate) read SelectBookmark(repo_id: RepositoryId, name: BookmarkKey) -> (ChangesetId, Option<u64>) {
+    pub(crate) read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId, Option<u64>) {
         "SELECT changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -68,7 +69,7 @@ mononoke_queries! {
         repo_id: RepositoryId,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, Option<u64>) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
         "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -82,7 +83,7 @@ mononoke_queries! {
         limit: u64,
         tok: i32,
         >list kinds: BookmarkKind
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, Option<u64>, i32) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>, i32) {
         "
         SELECT name, hg_kind, changeset_id, log_id, {tok}
          FROM bookmarks
@@ -93,10 +94,10 @@ mononoke_queries! {
 
     read SelectAllAfter(
         repo_id: RepositoryId,
-        after: BookmarkKey,
+        after: BookmarkName,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, Option<u64>) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
         "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -112,7 +113,7 @@ mononoke_queries! {
         escape_character: &str,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, Option<u64>) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
         "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -128,7 +129,7 @@ mononoke_queries! {
         escape_character: &str,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, Option<u64>) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
         "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -141,10 +142,10 @@ mononoke_queries! {
         repo_id: RepositoryId,
         prefix_like_pattern: String,
         escape_character: &str,
-        after: BookmarkKey,
+        after: BookmarkName,
         limit: u64,
         >list kinds: BookmarkKind
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, Option<u64>) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, Option<u64>) {
         "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -158,7 +159,7 @@ mononoke_queries! {
     read SelectAfterLogId(
         repo_id: RepositoryId,
         log_id: u64,
-    ) -> (BookmarkKey, BookmarkKind, ChangesetId, u64) {
+    ) -> (BookmarkName, BookmarkKind, ChangesetId, u64) {
         "SELECT name, hg_kind, changeset_id, log_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -167,7 +168,7 @@ mononoke_queries! {
     }
 
     read ReadNextBookmarkLogEntries(min_id: u64, repo_id: RepositoryId, limit: u64) -> (
-        i64, RepositoryId, BookmarkKey, Option<ChangesetId>, Option<ChangesetId>,
+        i64, RepositoryId, BookmarkName, Option<ChangesetId>, Option<ChangesetId>,
         BookmarkUpdateReason, Timestamp
     ) {
         "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp
@@ -222,7 +223,7 @@ mononoke_queries! {
         WHERE id > {min_id} AND repo_id = {repo_id} AND NOT reason = {reason}"
     }
 
-    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkKey, max_records: u32, tok: i32) -> (
+    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, max_records: u32, tok: i32) -> (
         u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp, i32
     ) {
         "SELECT id, to_changeset_id, reason, timestamp, {tok}
@@ -235,7 +236,7 @@ mononoke_queries! {
 
     read SelectBookmarkLogsWithTsInRange(
         repo_id: RepositoryId,
-        name: BookmarkKey,
+        name: BookmarkName,
         max_records: u32,
         min_ts: Timestamp,
         max_ts: Timestamp
@@ -252,7 +253,7 @@ mononoke_queries! {
          LIMIT {max_records}"
     }
 
-    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkKey, max_records: u32, offset: u32, tok: i32) -> (
+    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32, tok: i32) -> (
         u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp, i32
     ) {
         "SELECT id, to_changeset_id, reason, timestamp, {tok}
@@ -351,14 +352,28 @@ impl SqlBookmarks {
                             SelectAllUnordered::query(&conn, &repo_id, &limit, &tok, &kinds)
                                 .await?
                                 .into_iter()
-                                .map(|(name, kind, cs_id, log_id, _)| (name, kind, cs_id, log_id))
+                                .map(|(name, kind, cs_id, log_id, _)| {
+                                    (BookmarkKey::with_name(name), kind, cs_id, log_id)
+                                })
                                 .collect()
                         } else {
-                            SelectAll::query(&conn, &repo_id, &limit, &kinds).await?
+                            SelectAll::query(&conn, &repo_id, &limit, &kinds)
+                                .await?
+                                .into_iter()
+                                .map(|(name, kind, cs_id, log_id)| {
+                                    (BookmarkKey::with_name(name), kind, cs_id, log_id)
+                                })
+                                .collect()
                         }
                     }
                     BookmarkPagination::After(after) => {
-                        SelectAllAfter::query(&conn, &repo_id, &after, &limit, &kinds).await?
+                        SelectAllAfter::query(&conn, &repo_id, &after, &limit, &kinds)
+                            .await?
+                            .into_iter()
+                            .map(|(name, kind, cs_id, log_id)| {
+                                (BookmarkKey::with_name(name), kind, cs_id, log_id)
+                            })
+                            .collect()
                     }
                 }
             } else {
@@ -375,6 +390,11 @@ impl SqlBookmarks {
                                 &kinds,
                             )
                             .await?
+                            .into_iter()
+                            .map(|(name, kind, cs_id, log_id)| {
+                                (BookmarkKey::with_name(name), kind, cs_id, log_id)
+                            })
+                            .collect()
                         } else {
                             SelectByPrefix::query(
                                 &conn,
@@ -385,20 +405,28 @@ impl SqlBookmarks {
                                 &kinds,
                             )
                             .await?
+                            .into_iter()
+                            .map(|(name, kind, cs_id, log_id)| {
+                                (BookmarkKey::with_name(name), kind, cs_id, log_id)
+                            })
+                            .collect()
                         }
                     }
-                    BookmarkPagination::After(after) => {
-                        SelectByPrefixAfter::query(
-                            &conn,
-                            &repo_id,
-                            &prefix_like_pattern,
-                            &"\\",
-                            &after,
-                            &limit,
-                            &kinds,
-                        )
-                        .await?
-                    }
+                    BookmarkPagination::After(after) => SelectByPrefixAfter::query(
+                        &conn,
+                        &repo_id,
+                        &prefix_like_pattern,
+                        &"\\",
+                        &after,
+                        &limit,
+                        &kinds,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|(name, kind, cs_id, log_id)| {
+                        (BookmarkKey::with_name(name), kind, cs_id, log_id)
+                    })
+                    .collect(),
                 }
             };
 
@@ -409,15 +437,15 @@ impl SqlBookmarks {
     pub fn get_raw(
         &self,
         ctx: CoreContext,
-        name: &BookmarkKey,
+        key: &BookmarkKey,
     ) -> impl Future<Output = Result<Option<(ChangesetId, Option<u64>)>>> + 'static {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = self.connections.read_master_connection.clone();
-        cloned!(self.repo_id, name);
+        cloned!(self.repo_id, key);
         async move {
-            let rows = SelectBookmark::query(&conn, &repo_id, &name).await?;
+            let rows = SelectBookmark::query(&conn, &repo_id, key.name()).await?;
             Ok(rows.into_iter().next())
         }
     }
@@ -483,7 +511,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn list_bookmark_log_entries(
         &self,
         ctx: CoreContext,
-        name: BookmarkKey,
+        key: BookmarkKey,
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
@@ -506,11 +534,18 @@ impl BookmarkUpdateLog for SqlBookmarks {
             let rows = match offset {
                 Some(offset) => {
                     SelectBookmarkLogsWithOffset::query(
-                        &conn, &repo_id, &name, &max_rec, &offset, &tok,
+                        &conn,
+                        &repo_id,
+                        key.name(),
+                        &max_rec,
+                        &offset,
+                        &tok,
                     )
                     .await?
                 }
-                None => SelectBookmarkLogs::query(&conn, &repo_id, &name, &max_rec, &tok).await?,
+                None => {
+                    SelectBookmarkLogs::query(&conn, &repo_id, key.name(), &max_rec, &tok).await?
+                }
             };
             Ok(stream::iter(
                 rows.into_iter()
@@ -525,7 +560,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
     fn list_bookmark_log_entries_ts_in_range(
         &self,
         ctx: CoreContext,
-        name: BookmarkKey,
+        key: BookmarkKey,
         max_rec: u32,
         min_ts: Timestamp,
         max_ts: Timestamp,
@@ -539,7 +574,12 @@ impl BookmarkUpdateLog for SqlBookmarks {
 
         async move {
             let rows = SelectBookmarkLogsWithTsInRange::query(
-                &conn, &repo_id, &name, &max_rec, &min_ts, &max_ts,
+                &conn,
+                &repo_id,
+                key.name(),
+                &max_rec,
+                &min_ts,
+                &max_ts,
             )
             .await?;
             Ok(stream::iter(rows.into_iter().map(Ok)))
@@ -640,12 +680,12 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     // Note: types are explicit here to protect us from query behavior change
                     //       when tuple items 2 or 5 become something else, and we still succeed
                     //       compiling everything because of the type inference
-                    let first_name: &BookmarkKey = &first_entry.2;
+                    let first_name: &BookmarkKey = &BookmarkKey::with_name(first_entry.2.clone());
                     let first_reason: &BookmarkUpdateReason = &first_entry.5;
                     entries
                         .into_iter()
                         .take_while(|entry| {
-                            let name: &BookmarkKey = &entry.2;
+                            let name: &BookmarkKey = &BookmarkKey::with_name(entry.2.clone());
                             let reason: &BookmarkUpdateReason = &entry.5;
                             name == first_name && reason == first_reason
                         })
@@ -659,7 +699,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     Ok(BookmarkUpdateLogEntry {
                         id,
                         repo_id,
-                        bookmark_name: name,
+                        bookmark_name: BookmarkKey::with_name(name),
                         to_changeset_id: to_cs_id,
                         from_changeset_id: from_cs_id,
                         reason,
@@ -701,7 +741,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     Ok(BookmarkUpdateLogEntry {
                         id,
                         repo_id,
-                        bookmark_name: name,
+                        bookmark_name: BookmarkKey::with_name(name),
                         to_changeset_id: to_cs_id,
                         from_changeset_id: from_cs_id,
                         reason,

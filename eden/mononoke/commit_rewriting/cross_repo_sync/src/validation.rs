@@ -386,7 +386,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static, R: Rep
     let target_bookmarks = target_repo
         .bookmarks()
         .get_publishing_bookmarks_maybe_stale(ctx.clone())
-        .map_ok(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+        .map_ok(|(bookmark, cs_id)| (bookmark.key().clone(), cs_id))
         .try_collect::<HashMap<_, _>>()
         .await?;
 
@@ -396,7 +396,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static, R: Rep
         let source_bookmarks: Vec<_> = source_repo
             .bookmarks()
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
-            .map_ok(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+            .map_ok(|(bookmark, cs_id)| (bookmark.key().clone(), cs_id))
             .try_collect()
             .await?;
 

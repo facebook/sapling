@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use bookmarks::BookmarkKey;
+use bookmarks::BookmarkName;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql::mysql;
@@ -108,7 +108,7 @@ pub enum RequestStatus {
 pub struct LongRunningRequestEntry {
     pub id: RowId,
     pub repo_id: RepositoryId,
-    pub bookmark: BookmarkKey,
+    pub bookmark: BookmarkName,
     pub request_type: RequestType,
     pub args_blobstore_key: BlobstoreKey,
     pub result_blobstore_key: Option<BlobstoreKey>,

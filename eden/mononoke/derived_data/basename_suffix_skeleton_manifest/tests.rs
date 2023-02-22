@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::RwLock;
@@ -14,6 +15,7 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use changesets::ChangesetsRef;
 use context::CoreContext;
@@ -78,7 +80,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
     let blobstore = repo.repo_blobstore();
     let master = repo
         .bookmarks()
-        .get(ctx.clone(), &"master".try_into()?)
+        .get(ctx.clone(), &BookmarkKey::from_str("master")?)
         .await?
         .unwrap();
     derived_data

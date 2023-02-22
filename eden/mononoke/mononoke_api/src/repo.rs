@@ -33,6 +33,7 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
+use bookmarks::BookmarkName;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLog;
@@ -1360,7 +1361,7 @@ impl RepoContext {
 
         let pagination = match after {
             Some(after) => {
-                let name = BookmarkKey::new(after).map_err(|e| {
+                let name = BookmarkName::new(after).map_err(|e| {
                     MononokeError::InvalidRequest(format!(
                         "invalid bookmark name '{}': {}",
                         after, e
@@ -1389,14 +1390,14 @@ impl RepoContext {
                 )
                 .try_filter_map(move |(bookmark, cs_id)| async move {
                     if bookmark.kind() == &BookmarkKind::Scratch {
-                        Ok(Some((bookmark.into_name().into_string(), cs_id)))
+                        Ok(Some((bookmark.into_key().into_string(), cs_id)))
                     } else {
                         // For non-scratch bookmarks, always return the value
                         // from the cache so that clients only ever see the
                         // warm value.  If the bookmark is newly created and
                         // has no warm value, this might mean we have to
                         // filter this bookmark out.
-                        let bookmark_name = bookmark.into_name();
+                        let bookmark_name = bookmark.into_key();
                         let maybe_cs_id = cache.get(&self.ctx, &bookmark_name).await?;
                         Ok(maybe_cs_id.map(|cs_id| (bookmark_name.into_string(), cs_id)))
                     }

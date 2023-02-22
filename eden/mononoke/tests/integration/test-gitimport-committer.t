@@ -67,11 +67,11 @@
   $ mononoke_admin bookmarks set another_committer 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7)) (glob)
-  * Current position of BookmarkKey { bookmark: "another_committer" } is None (glob)
+  * Current position of * bookmark: "another_committer" * is None (glob)
   $ mononoke_admin bookmarks set master 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Current position of BookmarkKey { bookmark: "master" } is None (glob)
+  * Current position of * bookmark: "master" * is None (glob)
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server

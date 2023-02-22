@@ -39,21 +39,25 @@ pub enum Freshness {
 
 #[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Bookmark {
-    pub name: BookmarkKey,
+    pub key: BookmarkKey,
     pub kind: BookmarkKind,
 }
 
 impl Bookmark {
-    pub fn new(name: BookmarkKey, kind: BookmarkKind) -> Self {
-        Bookmark { name, kind }
+    pub fn new(key: BookmarkKey, kind: BookmarkKind) -> Self {
+        Bookmark { key, kind }
     }
 
-    pub fn into_name(self) -> BookmarkKey {
-        self.name
+    pub fn into_key(self) -> BookmarkKey {
+        self.key
     }
 
-    pub fn name(&self) -> &BookmarkKey {
-        &self.name
+    pub fn key(&self) -> &BookmarkKey {
+        &self.key
+    }
+
+    pub fn name(&self) -> &BookmarkName {
+        &self.key.name
     }
 
     pub fn kind(&self) -> &BookmarkKind {
@@ -81,10 +85,9 @@ impl Bookmark {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
-#[derive(mysql::OptTryFromRowField)]
+#[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct BookmarkKey {
-    bookmark: AsciiString,
+    name: BookmarkName,
 }
 
 impl FromStr for BookmarkKey {
@@ -96,11 +99,72 @@ impl FromStr for BookmarkKey {
 
 impl fmt::Display for BookmarkKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+impl BookmarkKey {
+    pub fn with_name(name: BookmarkName) -> Self {
+        Self { name }
+    }
+
+    pub fn new<B: AsRef<str>>(bookmark: B) -> Result<Self, Error> {
+        Ok(Self {
+            name: BookmarkName::new(bookmark)?,
+        })
+    }
+
+    pub fn new_ascii(bookmark: AsciiString) -> Self {
+        Self {
+            name: BookmarkName::new_ascii(bookmark),
+        }
+    }
+
+    pub fn as_ascii(&self) -> &AsciiString {
+        self.name.as_ascii()
+    }
+
+    pub fn into_string(self) -> String {
+        self.name.into_string()
+    }
+
+    pub fn into_byte_vec(self) -> Vec<u8> {
+        self.name.into_byte_vec()
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub fn name(&self) -> &BookmarkName {
+        &self.name
+    }
+
+    pub fn into_name(self) -> BookmarkName {
+        self.name
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
+#[derive(mysql::OptTryFromRowField)]
+pub struct BookmarkName {
+    bookmark: AsciiString,
+}
+
+impl FromStr for BookmarkName {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        BookmarkName::new(s)
+    }
+}
+
+impl fmt::Display for BookmarkName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.bookmark)
     }
 }
 
-impl Arbitrary for BookmarkKey {
+impl Arbitrary for BookmarkName {
     fn arbitrary(g: &mut Gen) -> Self {
         // NOTE: We use a specific large size here because our tests exercise DB Bookmarks, which
         // require unique names in the DB.
@@ -113,7 +177,7 @@ impl Arbitrary for BookmarkKey {
     }
 }
 
-impl BookmarkKey {
+impl BookmarkName {
     pub fn new<B: AsRef<str>>(bookmark: B) -> Result<Self, Error> {
         Ok(Self {
             bookmark: AsciiString::from_ascii(bookmark.as_ref())
@@ -142,7 +206,7 @@ impl BookmarkKey {
     }
 }
 
-impl TryFrom<&str> for BookmarkKey {
+impl TryFrom<&str> for BookmarkName {
     type Error = Error;
 
     fn try_from(s: &str) -> Result<Self, Error> {
@@ -150,23 +214,23 @@ impl TryFrom<&str> for BookmarkKey {
     }
 }
 
-impl From<BookmarkKey> for Value {
-    fn from(bookmark: BookmarkKey) -> Self {
+impl From<BookmarkName> for Value {
+    fn from(bookmark: BookmarkName) -> Self {
         Value::Bytes(bookmark.bookmark.into())
     }
 }
 
-impl ConvIr<BookmarkKey> for BookmarkKey {
+impl ConvIr<BookmarkName> for BookmarkName {
     fn new(v: Value) -> Result<Self, FromValueError> {
         match v {
             Value::Bytes(bytes) => AsciiString::from_ascii(bytes)
                 .map_err(|err| FromValueError(Value::Bytes(err.into_source())))
-                .map(BookmarkKey::new_ascii),
+                .map(BookmarkName::new_ascii),
             v => Err(FromValueError(v)),
         }
     }
 
-    fn commit(self) -> BookmarkKey {
+    fn commit(self) -> BookmarkName {
         self
     }
 
@@ -175,8 +239,8 @@ impl ConvIr<BookmarkKey> for BookmarkKey {
     }
 }
 
-impl FromValue for BookmarkKey {
-    type Intermediate = BookmarkKey;
+impl FromValue for BookmarkName {
+    type Intermediate = BookmarkName;
 }
 
 impl From<BookmarkPrefix> for Value {
@@ -284,7 +348,7 @@ impl From<BookmarkKind> for Value {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum BookmarkPagination {
     FromStart,
-    After(BookmarkKey),
+    After(BookmarkName),
 }
 
 /// Bookmark name filter for prefixes.
@@ -308,19 +372,19 @@ impl FromStr for BookmarkPrefix {
 
 pub enum BookmarkPrefixRange {
     /// All bookmarks in the given half-open range.
-    Range(Range<BookmarkKey>),
+    Range(Range<BookmarkName>),
 
     /// All bookmarks in the given range from an inclusive start.
-    RangeFrom(RangeFrom<BookmarkKey>),
+    RangeFrom(RangeFrom<BookmarkName>),
 
     /// All bookmarks.
     RangeFull(RangeFull),
 
     /// All bookmarks after the given name (exclusive).
-    After(BookmarkKey),
+    After(BookmarkName),
 
     /// All bookmarks between the given names (exclusive on both sides).
-    Between(BookmarkKey, BookmarkKey),
+    Between(BookmarkName, BookmarkName),
 
     /// No bookmarks.
     ///
@@ -329,7 +393,7 @@ pub enum BookmarkPrefixRange {
     /// provide a valid range.  To do this, we use an arbitrary
     /// name owned by this `BookmarkPrefixRange`, and return
     /// the half-open range `[name, name)`, which is empty.
-    Empty(BookmarkKey),
+    Empty(BookmarkName),
 }
 
 impl BookmarkPrefixRange {
@@ -353,8 +417,8 @@ impl BookmarkPrefixRange {
     }
 }
 
-impl RangeBounds<BookmarkKey> for BookmarkPrefixRange {
-    fn start_bound(&self) -> Bound<&BookmarkKey> {
+impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
+    fn start_bound(&self) -> Bound<&BookmarkName> {
         use BookmarkPrefixRange::*;
         match self {
             Range(r) => r.start_bound(),
@@ -366,7 +430,7 @@ impl RangeBounds<BookmarkKey> for BookmarkPrefixRange {
         }
     }
 
-    fn end_bound(&self) -> Bound<&BookmarkKey> {
+    fn end_bound(&self) -> Bound<&BookmarkName> {
         use BookmarkPrefixRange::*;
         match self {
             Range(r) => r.end_bound(),
@@ -405,8 +469,8 @@ impl BookmarkPrefix {
         match prefix_to_range_end(self.bookmark_prefix.clone()) {
             Some(range_end) => {
                 let range = Range {
-                    start: BookmarkKey::new_ascii(self.bookmark_prefix.clone()),
-                    end: BookmarkKey::new_ascii(range_end),
+                    start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
+                    end: BookmarkName::new_ascii(range_end),
                 };
                 BookmarkPrefixRange::Range(range)
             }
@@ -414,7 +478,7 @@ impl BookmarkPrefix {
                 0 => BookmarkPrefixRange::RangeFull(RangeFull),
                 _ => {
                     let range = RangeFrom {
-                        start: BookmarkKey::new_ascii(self.bookmark_prefix.clone()),
+                        start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
                     };
                     BookmarkPrefixRange::RangeFrom(range)
                 }
@@ -438,7 +502,7 @@ impl BookmarkPrefix {
         like_pattern
     }
 
-    pub fn is_prefix_of(&self, bookmark: &BookmarkKey) -> bool {
+    pub fn is_prefix_of(&self, bookmark: &BookmarkName) -> bool {
         bookmark
             .bookmark
             .as_bytes()
@@ -508,7 +572,7 @@ mod tests {
             let prefix = BookmarkPrefix::new_ascii(bookmark.name().as_ascii().clone());
             let mut name = bookmark.name().as_ascii().clone();
             name.push_str(&more.0);
-            prefix.to_range().contains(&BookmarkKey::new_ascii(name))
+            prefix.to_range().contains(&BookmarkName::new_ascii(name))
         }
 
         fn test_prefix_range_does_not_contains_its_prefixes(bookmark: Bookmark, chr: ascii_ext::AsciiChar) -> bool {
@@ -524,7 +588,7 @@ mod tests {
             prefix.to_range().contains(bookmark.name())
         }
 
-        fn test_pagination_excludes_start(prefix_char: Option<ascii_ext::AsciiChar>, after: BookmarkKey) -> bool {
+        fn test_pagination_excludes_start(prefix_char: Option<ascii_ext::AsciiChar>, after: BookmarkName) -> bool {
             let prefix = match prefix_char {
                 Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
                 None => BookmarkPrefix::empty(),

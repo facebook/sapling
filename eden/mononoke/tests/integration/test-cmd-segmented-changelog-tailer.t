@@ -75,7 +75,7 @@ Now test without head option (tailer will fetch it from config) and with prefetc
   $ grep -e "repo_id: 0" -e "segmented_changelog_tailer" "$TESTTMP/quiet.last.log"
   * reading prefetched commits from $TESTTMP/prefetched_commits (glob)
   * repo name 'repo' translates to id 0 (glob)
-  * Using the following segmented changelog heads: [AllPublicBookmarksExcept([BookmarkKey { bookmark: "master_bookmark" }]), Bookmark(BookmarkKey { bookmark: "master_bookmark" })], repo_id: 0 (glob)
+  * Using the following segmented changelog heads: [AllPublicBookmarksExcept([* "master_bookmark" *]), Bookmark(* "master_bookmark" *)], repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * woke up to update, repo_id: 0 (glob)
   * starting incremental update to segmented changelog, repo_id: 0 (glob)
@@ -99,7 +99,7 @@ Add a new commit, and see the tailer tail it in properly
   $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
   $ quiet segmented_changelog_tailer_once --scuba-dataset "file://$LOG_FILE"  --repo repo
   $ grep "repo_id: 0" "$TESTTMP/quiet.last.log"
-  * Using the following segmented changelog heads: [AllPublicBookmarksExcept([BookmarkKey { bookmark: "master_bookmark" }]), Bookmark(BookmarkKey { bookmark: "master_bookmark" })], repo_id: 0 (glob)
+  * Using the following segmented changelog heads: [AllPublicBookmarksExcept([* "master_bookmark" *]), Bookmark(* "master_bookmark" *)], repo_id: 0 (glob)
   * SegmentedChangelogTailer initialized, repo_id: 0 (glob)
   * starting incremental update to segmented changelog, repo_id: 0 (glob)
   * iddag initialized, it covers 3 ids, repo_id: 0 (glob)

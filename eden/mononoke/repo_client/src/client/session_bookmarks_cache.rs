@@ -173,7 +173,7 @@ where
                     &BookmarkPagination::FromStart,
                     left_to_fetch,
                 )
-                .map_ok(|(bookmark, cs_id)| (bookmark.name, cs_id))
+                .map_ok(|(bookmark, cs_id)| (bookmark.into_key(), cs_id))
                 .left_stream()
         } else {
             futures::stream::empty().map(Ok).right_stream()

@@ -1040,13 +1040,13 @@ async fn verify_bookmarks(
 
     // Check that bookmark point to corresponding working copies
     for (bookmark, source_hg_cs_id) in bookmarks {
-        println!("checking bookmark: {}", bookmark.name());
-        match bookmark_renamer(bookmark.name()) {
+        println!("checking bookmark: {}", bookmark.key());
+        match bookmark_renamer(bookmark.key()) {
             Some(renamed_book) => {
-                if &renamed_book != bookmark.name() {
+                if &renamed_book != bookmark.key() {
                     assert!(
                         target_repo
-                            .get_bookmark_hg(ctx.clone(), bookmark.name())
+                            .get_bookmark_hg(ctx.clone(), bookmark.key())
                             .await?
                             .is_none()
                     );
@@ -1055,7 +1055,7 @@ async fn verify_bookmarks(
                     .get_bookmark_hg(ctx.clone(), &renamed_book)
                     .await?
                     .unwrap_or_else(|| {
-                        panic!("{} bookmark doesn't exist in target repo!", bookmark.name())
+                        panic!("{} bookmark doesn't exist in target repo!", bookmark.key())
                     });
 
                 let source_bcs_id = source_repo
@@ -1098,7 +1098,7 @@ async fn verify_bookmarks(
                 // Make sure we don't have this bookmark in target repo
                 assert!(
                     target_repo
-                        .get_bookmark_hg(ctx.clone(), bookmark.name())
+                        .get_bookmark_hg(ctx.clone(), bookmark.key())
                         .await?
                         .is_none()
                 );

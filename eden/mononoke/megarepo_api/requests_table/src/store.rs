@@ -9,6 +9,7 @@ use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -31,7 +32,7 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkKey,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -63,7 +64,7 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkKey,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -95,7 +96,7 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkKey,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -126,7 +127,7 @@ mononoke_queries! {
         "
     }
 
-    write AddRequest(request_type: RequestType, repo_id: RepositoryId, bookmark: BookmarkKey, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
+    write AddRequest(request_type: RequestType, repo_id: RepositoryId, bookmark: BookmarkName, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
         none,
         "INSERT INTO long_running_request_queue
          (request_type, repo_id, bookmark, args_blobstore_key, status, created_at)
@@ -222,7 +223,7 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkKey,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -256,7 +257,7 @@ fn row_to_entry(
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkKey,
+        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -319,7 +320,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             &self.connections.write_connection,
             request_type,
             repo_id,
-            bookmark,
+            bookmark.name(),
             args_blobstore_key,
             &Timestamp::now(),
         )

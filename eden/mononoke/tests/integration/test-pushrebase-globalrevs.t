@@ -68,10 +68,14 @@ Check that we cannot pushrebase on that bookmark
   remote:   Debug context:
   remote:     PushrebaseInvalidGlobalrevsBookmark {
   remote:         bookmark: BookmarkKey {
-  remote:             bookmark: "other_bookmark",
+  remote:             name: BookmarkName {
+  remote:                 bookmark: "other_bookmark",
+  remote:             },
   remote:         },
   remote:         globalrevs_publishing_bookmark: BookmarkKey {
-  remote:             bookmark: "master_bookmark",
+  remote:             name: BookmarkName {
+  remote:                 bookmark: "master_bookmark",
+  remote:             },
   remote:         },
   remote:     }
   abort: unexpected EOL, expected netstring digit
@@ -103,10 +107,14 @@ Check that we cannot push to that bookmark if the commit is not a descendant
   remote:             context: "Failed to move bookmark",
   remote:             source: RequiresAncestorOf {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "other_bookmark",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "other_bookmark",
+  remote:                     },
   remote:                 },
   remote:                 descendant_bookmark: BookmarkKey {
-  remote:                     bookmark: "master_bookmark",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "master_bookmark",
+  remote:                     },
   remote:                 },
   remote:             },
   remote:         },
@@ -137,10 +145,14 @@ Check that we cannot do a regular push to the globalrev bookmark either
   remote:             context: "Failed to move bookmark",
   remote:             source: RequiresAncestorOf {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "master_bookmark",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "master_bookmark",
+  remote:                     },
   remote:                 },
   remote:                 descendant_bookmark: BookmarkKey {
-  remote:                     bookmark: "master_bookmark",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "master_bookmark",
+  remote:                     },
   remote:                 },
   remote:             },
   remote:         },

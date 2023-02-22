@@ -87,7 +87,9 @@ Invalid infinitepush, with pushrebase disabled
   remote:             context: "Failed to create scratch bookmark",
   remote:             source: InvalidScratchBookmark {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "bad/123",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "bad/123",
+  remote:                     },
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },
@@ -119,7 +121,9 @@ Invalid infinitepush, with pushrebase enabled
   remote:             context: "Failed to create scratch bookmark",
   remote:             source: InvalidScratchBookmark {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "bad/456",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "bad/456",
+  remote:                     },
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },
@@ -165,7 +169,9 @@ Invalid push, with pushrebase disabled
   remote:             context: "Failed to create bookmark",
   remote:             source: InvalidPublishingBookmark {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "infinitepush2/123",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "infinitepush2/123",
+  remote:                     },
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },
@@ -198,7 +204,9 @@ Invalid push, with pushrebase enabled
   remote:             context: "Failed to create bookmark",
   remote:             source: InvalidPublishingBookmark {
   remote:                 bookmark: BookmarkKey {
-  remote:                     bookmark: "infinitepush2/456",
+  remote:                     name: BookmarkName {
+  remote:                         bookmark: "infinitepush2/456",
+  remote:                     },
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },

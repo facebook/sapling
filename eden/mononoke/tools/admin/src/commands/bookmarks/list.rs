@@ -108,6 +108,7 @@ pub async fn list(ctx: &CoreContext, repo: &Repo, list_args: BookmarksListArgs) 
     let prefix = list_args.prefix.unwrap_or_else(BookmarkPrefix::empty);
     let pagination = list_args
         .after
+        .map(|bookmark_key| bookmark_key.into_name())
         .map_or(BookmarkPagination::FromStart, BookmarkPagination::After);
     repo.bookmarks()
         .list(

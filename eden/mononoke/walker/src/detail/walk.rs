@@ -1989,7 +1989,7 @@ where
             &BookmarkPagination::FromStart,
             std::u64::MAX,
         )
-        .map_ok(|(book, csid)| (book.name, csid))
+        .map_ok(|(book, csid)| (book.into_key(), csid))
         .try_collect::<HashMap<_, _>>();
 
     // Roots were not stepped to from elsewhere, so their Option<Route> is None.

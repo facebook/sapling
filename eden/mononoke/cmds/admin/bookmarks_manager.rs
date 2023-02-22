@@ -340,7 +340,7 @@ async fn handle_list(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) ->
                         cloned!(ctx, repo);
                         async move {
                             let hg_cs_id = repo.derive_hg_changeset(&ctx, bonsai_cs_id).await?;
-                            println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
+                            println!("{}\t{}\t{}", bookmark.into_key(), bonsai_cs_id, hg_cs_id);
                             Ok(())
                         }
                     }

@@ -144,7 +144,7 @@ async fn all_bookmarks_except_with_options(
             u64::MAX,
         )
         .try_filter_map(|(bookmark, cs_id)| {
-            let res = if exceptions.contains(bookmark.name()) {
+            let res = if exceptions.contains(bookmark.key()) {
                 None
             } else {
                 Some(cs_id)

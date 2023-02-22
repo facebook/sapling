@@ -606,7 +606,7 @@ impl RepoClient {
                     .filter_map(|(book, cs)| {
                         let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
                         if book.kind() == &BookmarkKind::PullDefaultPublishing {
-                            Some((book.into_name().into_byte_vec(), hash))
+                            Some((book.into_key().into_byte_vec(), hash))
                         } else {
                             None
                         }

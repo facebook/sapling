@@ -195,8 +195,10 @@ mod test {
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
+    use std::str::FromStr;
 
     use anyhow::format_err;
+    use bookmarks::BookmarkKey;
     use bookmarks::BookmarksRef;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
@@ -222,7 +224,7 @@ mod test {
 
         let bcs_id = repo
             .bookmarks()
-            .get(ctx.clone(), &("master".try_into()?))
+            .get(ctx.clone(), &BookmarkKey::from_str("master")?)
             .await?
             .ok_or_else(|| format_err!("no master"))?;
 
