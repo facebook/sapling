@@ -28,6 +28,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use assembly_line::TryAssemblyLine;
 use async_trait::async_trait;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -62,7 +63,6 @@ use futures::future::BoxFuture;
 use futures::future::FutureExt as _;
 use futures::future::TryFutureExt;
 use futures::lock::Mutex;
-use futures::pin_mut;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -1383,6 +1383,14 @@ async fn run<'a>(
                 try_join(counter, repo_parts).watched(ctx.logger()).await?;
 
             let outcome_handler = build_outcome_handler(ctx, lock_via);
+            borrowed!(
+                outcome_handler,
+                can_continue,
+                hg_repo,
+                reporting_handler,
+                globalrev_syncer,
+                replayed_sync_counter
+            );
 
             cloned!(filter_changesets);
             let s = loop_over_log_entries(
@@ -1432,69 +1440,70 @@ async fn run<'a>(
             })
             .map_ok(|batches| {
                 cloned!(filter_changesets, bundle_preparer, ctx);
-                // Spawn is here so the bundling makes progress even when the
-                // latter sync stages are going on.
-                tokio::spawn(async move {
-                    let bundles = bundle_preparer
+                async move {
+                    bundle_preparer
                         .prepare_bundles(ctx.clone(), batches, filter_changesets)
                         .watched(ctx.logger())
-                        .await?;
-                    Ok::<_, PipelineError>(bundles)
-                })
-                .map_err(|cause| AnonymousError {
-                    cause: cause.into(),
-                })
-            })
-            .try_buffered(bundle_buffer_size);
-            pin_mut!(s);
-            while let Some(bundles) = s.try_next().await? {
-                let bundles: Vec<CombinedBookmarkUpdateLogEntry> = bundles?;
-                for bundle in bundles {
-                    if !can_continue() {
-                        break;
-                    }
-                    let (stats, res) = sync_single_combined_entry(
-                        ctx,
-                        &bundle,
-                        &hg_repo,
-                        base_retry_delay_ms,
-                        retry_num,
-                        &globalrev_syncer,
-                    )
-                    .watched(ctx.logger())
-                    .timed()
-                    .await;
-                    let res = bind_sync_result(&bundle.components, res);
-                    let res = match res {
-                        Ok(ok) => Ok((stats, ok)),
-                        Err(err) => Err((Some(stats), err)),
-                    };
-                    let res = reporting_handler(res).watched(ctx.logger()).await;
-                    let entry = outcome_handler(res).watched(ctx.logger()).await?;
-                    let next_id = get_id_to_search_after(&entry);
-
-                    retry_always(
-                        ctx.logger(),
-                        |_| async {
-                            let success = replayed_sync_counter
-                                .set_counter(ctx, next_id)
-                                .watched(ctx.logger())
-                                .await?;
-
-                            if success {
-                                Ok(())
-                            } else {
-                                bail!("failed to update counter")
-                            }
-                        },
-                        base_retry_delay_ms,
-                        retry_num,
-                    )
-                    .watched(ctx.logger())
-                    .await?;
+                        .await
+                        .map_err(|cause| AnonymousError {
+                            cause: cause.into(),
+                        })
                 }
-            }
-            Ok(())
+            })
+            .try_buffered(bundle_buffer_size)
+            .map_err(anyhow::Error::from);
+            TryAssemblyLine::try_next_step(
+                s.fuse(),
+                async move |bundles: Vec<CombinedBookmarkUpdateLogEntry>| {
+                    for bundle in bundles {
+                        if !can_continue() {
+                            break;
+                        }
+                        let (stats, res) = sync_single_combined_entry(
+                            ctx,
+                            &bundle,
+                            hg_repo,
+                            base_retry_delay_ms,
+                            retry_num,
+                            globalrev_syncer,
+                        )
+                        .watched(ctx.logger())
+                        .timed()
+                        .await;
+                        let res = bind_sync_result(&bundle.components, res);
+                        let res = match res {
+                            Ok(ok) => Ok((stats, ok)),
+                            Err(err) => Err((Some(stats), err)),
+                        };
+                        let res = reporting_handler(res).watched(ctx.logger()).await;
+                        let entry = outcome_handler(res).watched(ctx.logger()).await?;
+                        let next_id = get_id_to_search_after(&entry);
+
+                        retry_always(
+                            ctx.logger(),
+                            |_| async {
+                                let success = replayed_sync_counter
+                                    .set_counter(ctx, next_id)
+                                    .watched(ctx.logger())
+                                    .await?;
+
+                                if success {
+                                    Ok(())
+                                } else {
+                                    bail!("failed to update counter")
+                                }
+                            },
+                            base_retry_delay_ms,
+                            retry_num,
+                        )
+                        .watched(ctx.logger())
+                        .await?;
+                    }
+                    Ok(())
+                },
+            )
+            .try_collect::<()>()
+            .await
         }
         _ => bail!("incorrect mode of operation is specified"),
     }

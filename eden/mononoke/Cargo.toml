@@ -262,6 +262,7 @@ members = [
   "commit_rewriting/synced_commit_mapping",
   "commit_traversal/slice_repository",
   "common/allocation_tracing",
+  "common/assembly_line",
   "common/async_limiter",
   "common/async_limiter/examples/tokio_v2",
   "common/bounded_traversal",
