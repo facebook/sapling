@@ -50,6 +50,7 @@ from . import (
     doctor as doctor_mod,
     hg_util,
     mtab,
+    prefetch as prefetch_mod,
     rage as rage_mod,
     redirect as redirect_mod,
     stats as stats_mod,
@@ -2328,6 +2329,8 @@ def create_parser() -> argparse.ArgumentParser:
         stats_mod.StatsCmd,
         trace_mod.TraceCmd,
         redirect_mod.RedirectCmd,
+        prefetch_mod.GlobCmd,
+        prefetch_mod.PrefetchCmd,
     ]
 
     subcmd_add_list.append(debug_mod.DebugCmd)
