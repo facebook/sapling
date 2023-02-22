@@ -30,20 +30,19 @@ def create_pull_request_title_and_body(
     ...     pr_numbers_index,
     ...     contributor_repo,
     ... )
-    >>> title == 'The original commit message.'
-    True
+    >>> print(title)
+    The original commit message.
     >>> reviewstack_url = "https://reviewstack.dev/facebook/sapling/pull/42"
-    >>> body == (
-    ...     'The original commit message.\n' +
-    ...     'Second line of message.\n' +
-    ...     '---\n' +
-    ...     'Stack created with [Sapling](https://sapling-scm.com). ' +
-    ...     f'Best reviewed with [ReviewStack]({reviewstack_url}).\n' +
-    ...     '* #1\n' +
-    ...     '* #2 (2 commits)\n' +
-    ...     '* __->__ #42\n' +
-    ...     '* #4\n')
-    True
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    The original commit message.
+    Second line of message.
+    ---
+    Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
+    * #1
+    * #2 (2 commits)
+    * __->__ #42
+    * #4
+    <BLANKLINE>
     """
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
