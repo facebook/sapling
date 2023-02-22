@@ -693,7 +693,9 @@ InodePtr InodeMap::decFsRefcountHelper(
     unloadedEntry.numFsReferences -= count;
   }
 
-  if (unloadedEntry.numFsReferences == 0) {
+  // Make sure that this inode isn't being loaded before removing it from the
+  // unloadedInodes_ map.
+  if (unloadedEntry.numFsReferences == 0 && unloadedEntry.promises.empty()) {
     // We can completely forget about this unloaded inode now.
     XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
                << unloadedEntry.parent << ":" << unloadedEntry.name;
