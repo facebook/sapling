@@ -46,6 +46,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::TrackedFileChange;
+use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use stats::prelude::*;
 
@@ -501,29 +502,30 @@ pub trait DeriveHgChangeset {
     ) -> Result<HgChangesetId, Error>;
 }
 
+pub async fn derive_hg_changeset(
+    ctx: &CoreContext,
+    derived_data: &RepoDerivedData,
+    cs_id: ChangesetId,
+) -> Result<HgChangesetId, Error> {
+    STATS::get_hg_from_bonsai_changeset.add_value(1);
+    let start_timestamp = Instant::now();
+    let result = match derived_data.derive::<MappedHgChangesetId>(ctx, cs_id).await {
+        Ok(id) => Ok(id.hg_changeset_id()),
+        Err(err @ DerivationError::Disabled(..)) => Err(err.into()),
+        Err(DerivationError::Error(err)) => Err(err),
+    };
+    STATS::generate_hg_from_bonsai_total_latency_ms
+        .add_value(start_timestamp.elapsed().as_millis() as i64);
+    result
+}
+
 #[async_trait]
-impl<Repo> DeriveHgChangeset for Repo
-where
-    Repo: RepoDerivedDataRef + Send + Sync,
-{
+impl<Repo: RepoDerivedDataRef + Send + Sync> DeriveHgChangeset for Repo {
     async fn derive_hg_changeset(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<HgChangesetId, Error> {
-        STATS::get_hg_from_bonsai_changeset.add_value(1);
-        let start_timestamp = Instant::now();
-        let result = match self
-            .repo_derived_data()
-            .derive::<MappedHgChangesetId>(ctx, cs_id)
-            .await
-        {
-            Ok(id) => Ok(id.hg_changeset_id()),
-            Err(err @ DerivationError::Disabled(..)) => Err(err.into()),
-            Err(DerivationError::Error(err)) => Err(err),
-        };
-        STATS::generate_hg_from_bonsai_total_latency_ms
-            .add_value(start_timestamp.elapsed().as_millis() as i64);
-        result
+        derive_hg_changeset(ctx, self.repo_derived_data(), cs_id).await
     }
 }

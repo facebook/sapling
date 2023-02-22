@@ -149,7 +149,7 @@ impl UnbundleResponse {
 
         let obsmarkers_part = match pushrebase_params.emit_obsmarkers {
             true => obsolete::pushrebased_changesets_to_obsmarkers_part(
-                ctx.clone(),
+                ctx,
                 repo,
                 pushrebased_changesets,
             )

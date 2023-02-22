@@ -9,7 +9,6 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.65"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
@@ -18,3 +17,4 @@ mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercuri
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
