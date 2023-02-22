@@ -8,6 +8,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import ghstack.query
+from edenscm import error
 
 from edenscm.ext.github.consts import query
 from edenscm.ext.github.gh_submit import PullRequestState
@@ -96,10 +97,9 @@ class MockGitHubServer:
 
         key = create_request_key(params, hostname, endpoint, method)
 
-        try:
-            return self.requests[key].get_response()
-        except KeyError:
+        if key not in self.requests:
             raise MockRequestNotFound(key, self.requests)
+        return self.requests[key].get_response()
 
     def _add_request(self, request_key: str, request: "MockRequest") -> None:
         self.requests[request_key] = request
@@ -579,10 +579,34 @@ class MergeIntoBranchRequest(MockRequest):
         return self._response
 
 
-class MockRequestNotFound(Exception):
+class MockRequestNotFound(error.Abort):
     def __init__(self, key: str, requests: Dict[str, MockRequest]) -> None:
-        key_list = "\n\n".join(requests.keys())
-        super().__init__(f"key not found: {key}\nAvailable keys:\n{key_list}")
+        import textwrap
+
+        from edenscm import mdiff
+
+        # Try to find a similar key. The diff should be within 30 lines.
+        best_diff = None
+        best_diff_lines = 30
+        for existing_key in requests.keys():
+            diff_text = b"".join(
+                t
+                for _b, ts in mdiff.unidiff(
+                    existing_key.encode(), "", key.encode(), "", "existing", "got"
+                )[1]
+                for t in ts
+            ).decode()
+            diff_lines = diff_text.count("\n")
+            if diff_lines < best_diff_lines:
+                best_diff = diff_text
+                best_diff_lines = diff_lines
+        if best_diff:
+            msg = f"Mock key has changed:\n{textwrap.indent(best_diff, '| ')}"
+        else:
+            key_list = "\n\n".join(textwrap.indent(k, "| ") for k in requests.keys())
+            indented_key = textwrap.indent(key, "| ")
+            msg = f"key not found:\n{indented_key}\nAvailable keys:\n{key_list}"
+        super().__init__(msg)
 
 
 class MockResponseNotSet(Exception):
