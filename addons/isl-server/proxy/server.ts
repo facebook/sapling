@@ -182,6 +182,9 @@ export function startServer({
         case 'androidStudio':
           platformImpl = (await import('../platform/androidstudioServerPlatform')).platform;
           break;
+        case 'androidStudioRemote':
+          platformImpl = (await import('../platform/androidStudioRemoteServerPlatform')).platform;
+          break;
         default:
         case undefined:
           break;

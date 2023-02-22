@@ -15,7 +15,7 @@ import type {AllUndefined, Json} from 'shared/typeUtils';
 export type Result<T> = {value: T; error?: undefined} | {value?: undefined; error: Error};
 
 /** known supported "Platforms" in which ISL may be embedded */
-export type PlatformName = 'browser' | 'androidStudio' | 'vscode';
+export type PlatformName = 'browser' | 'androidStudio' | 'androidStudioRemote' | 'vscode';
 
 export type AbsolutePath = string;
 /**
