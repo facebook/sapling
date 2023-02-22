@@ -291,22 +291,24 @@ class MockGitHubServer:
             stack_pr_ids = [pr_number]
         stack_pr_ids = list(reversed(sorted(stack_pr_ids)))
 
-        pr_list = [
-            f"* __->__ #{n}\n" if n == pr_number else f"* #{n}\n" for n in stack_pr_ids
-        ]
+        if len(stack_pr_ids) > 1:
+            pr_list = [
+                f"* __->__ #{n}" if n == pr_number else f"* #{n}"
+                for n in stack_pr_ids
+            ]
+            body += (
+                "\n---\n"
+                "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
+                f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
+                + "\n".join(pr_list)
+            )
 
         title = firstline(body)
         params: ParamsType = {
             "query": query.GRAPHQL_UPDATE_PULL_REQUEST,
             "pullRequestId": pr_id,
             "title": title,
-            "body": (
-                f"{body}\n"
-                "---\n"
-                "Stack created with [Sapling](https://sapling-scm.com). Best reviewed"
-                f" with [ReviewStack](https://reviewstack.dev/{owner}/{name}/pull/{pr_number}).\n"
-                + "".join(pr_list)
-            ),
+            "body": body,
             "base": base,
         }
         key = create_request_key(params, self.hostname)
@@ -602,7 +604,8 @@ def create_request_key(
     This will be used to verify the input and find corresponding output.
     """
     s = ",".join(f"{k}={v}" for k, v in sorted(params.items()))
-    return f"{hostname}|{endpoint}|{method}|{s}"
+    v = f"{hostname}|{endpoint}|{method}|{s}"
+    return v
 
 
 def gen_hash_hexdigest(s: str) -> str:

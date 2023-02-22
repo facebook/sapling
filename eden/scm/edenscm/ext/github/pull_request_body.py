@@ -42,23 +42,28 @@ def create_pull_request_title_and_body(
     * #2 (2 commits)
     * __->__ #42
     * #4
-    <BLANKLINE>
+
+    Single commit stack:
+    >>> title, body = create_pull_request_title_and_body("Foo", [(1, 1)], 0, contributor_repo)
+    >>> print(body.replace(reviewstack_url, "{reviewstack_url}"))
+    Foo
     """
     owner, name = repository.get_upstream_owner_and_name()
     pr = pr_numbers_and_num_commits[pr_numbers_index][0]
     reviewstack_url = f"https://reviewstack.dev/{owner}/{name}/pull/{pr}"
-    bulleted_list = "\n".join(
-        [
+    title = firstline(commit_msg)
+    body = commit_msg
+    if len(pr_numbers_and_num_commits) > 1:
+        review_stack_message = f"Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url})."
+        bulleted_list = "\n".join(
             _format_stack_entry(pr_number, index, pr_numbers_index, num_commits)
             for index, (pr_number, num_commits) in enumerate(pr_numbers_and_num_commits)
+        )
+        extra = [
+            review_stack_message,
+            bulleted_list,
         ]
-    )
-    title = firstline(commit_msg)
-    body = f"""{commit_msg}
-{_HORIZONTAL_RULE}
-Stack created with [Sapling](https://sapling-scm.com). Best reviewed with [ReviewStack]({reviewstack_url}).
-{bulleted_list}
-"""
+        body = "\n".join([body, _HORIZONTAL_RULE] + extra)
     return title, body
 
 
