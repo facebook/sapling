@@ -16,6 +16,8 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use bytes::Bytes;
+use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
 use changesets::deserialize_cs_entries;
 use changesets::serialize_cs_entries;
 use changesets::ChangesetEntry;
@@ -27,6 +29,7 @@ use clap::Args;
 use clap::Parser;
 use clap::Subcommand;
 use context::CoreContext;
+use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream;
 use futures::StreamExt;
@@ -37,6 +40,9 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use phases::PhasesArc;
+use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use skiplist::SkiplistIndex;
+use skiplist::SkiplistIndexArc;
 
 use crate::commit_id::parse_commit_id;
 
@@ -79,6 +85,8 @@ pub enum DumpChangesetsSubcommand {
     FetchPublic(FetchPublicArgs),
     /// Don't do any extra fetching of changesets, useful for merging dumps and changing formats.
     Convert(ConvertArgs),
+    /// Fetch all commits until given heads
+    FixedHeads(FixedHeadsArgs),
 }
 
 #[derive(Args)]
@@ -99,6 +107,13 @@ pub struct FetchPublicArgs {
 #[derive(Args)]
 pub struct ConvertArgs {}
 
+#[derive(Args)]
+pub struct FixedHeadsArgs {
+    /// Heads to list commits until
+    #[clap(long)]
+    head: Vec<String>,
+}
+
 #[facet::container]
 pub struct Repo {
     #[facet]
@@ -118,6 +133,12 @@ pub struct Repo {
 
     #[facet]
     phases: dyn Phases,
+
+    #[facet]
+    skiplist_index: SkiplistIndex,
+
+    #[facet]
+    changeset_fetcher: dyn ChangesetFetcher,
 }
 
 impl Format {
@@ -163,7 +184,40 @@ impl DumpChangesetsSubcommand {
         match self {
             Self::Convert(_) => Ok(vec![]),
             Self::FetchPublic(args) => args.fetch_extra_changesets(ctx, repo, input_format).await,
+            Self::FixedHeads(args) => args.fetch_extra_changesets(ctx, repo).await,
         }
+    }
+}
+
+impl FixedHeadsArgs {
+    async fn fetch_extra_changesets(
+        self,
+        ctx: &CoreContext,
+        repo: &Repo,
+    ) -> Result<Vec<ChangesetEntry>> {
+        let changesets = repo.changesets();
+        let mut css: Vec<ChangesetEntry> = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
+            ctx.clone(),
+            &repo.changeset_fetcher_arc(),
+            repo.skiplist_index_arc(),
+            self.head
+                .into_iter()
+                .map(|id| id.parse())
+                .collect::<Result<_>>()?,
+        )
+        .compat()
+        .try_chunks(1000)
+        .map_err(|stream::TryChunksError(_chunk, err)| err)
+        .map_ok(|ids| async move {
+            let css = changesets.get_many(ctx, ids).await?;
+            Ok(stream::iter(css.into_iter().map(anyhow::Ok)))
+        })
+        .try_buffered(5)
+        .try_flatten()
+        .try_collect()
+        .await?;
+        css.sort_by_key(|entry| entry.gen);
+        Ok(css)
     }
 }
 
