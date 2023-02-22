@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::max;
 use std::cmp::min;
 use std::num::NonZeroUsize;
 use std::time::Duration;
@@ -33,8 +34,12 @@ pub struct BlobDelay {
 
 // Adds a small amount of random delay to desynchronise when waiting
 async fn jitter_delay(raw_lag: Duration) {
-    let delay =
-        thread_rng().gen_range(Duration::from_secs(0)..min(Duration::from_secs(1), raw_lag));
+    // Delay should not be greater than 1 second
+    let delay = min(Duration::from_millis(1000), raw_lag);
+    // Delay should also not be less than or equal to 0 seconds since that
+    // will make the range empty and lead to panic
+    let delay = max(Duration::from_millis(50), delay);
+    let delay = thread_rng().gen_range(Duration::from_millis(0)..delay);
     tokio::time::sleep(delay).await;
 }
 
