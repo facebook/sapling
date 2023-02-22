@@ -10,7 +10,6 @@ use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
-use futures::compat::Future01CompatExt;
 use futures::TryStream;
 use futures::TryStreamExt;
 use getbundle_response::SessionLfsParams;
@@ -176,13 +175,11 @@ impl HgDataContext for HgFileContext {
         };
 
         let (_size, content_fut) =
-            create_getpack_v2_blob(ctx, blob_repo, filenode_id, lfs_params, false)
-                .compat()
-                .await?;
+            create_getpack_v2_blob(ctx, blob_repo, filenode_id, lfs_params, false).await?;
 
         // TODO(kulshrax): Right now this buffers the entire file content in memory. It would
         // probably be better for this method to return a stream of the file content instead.
-        let (_filenode, content, metadata) = content_fut.compat().await?;
+        let (_filenode, content, metadata) = content_fut.await?;
 
         Ok((content, metadata))
     }

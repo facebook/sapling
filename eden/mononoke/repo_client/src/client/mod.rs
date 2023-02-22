@@ -823,7 +823,6 @@ impl RepoClient {
                                             &path,
                                             allow_short_getpack_history,
                                         )
-                                        .compat()
                                         .try_collect::<Vec<_>>(),
                                     )
                                     .flatten_err();
@@ -2094,11 +2093,14 @@ impl HgCommands for RepoClient {
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
-                create_getpack_v1_blob(ctx, repo, node, validate_hash).map(|(size, fut)| {
-                    // GetpackV1 has no metadata.
-                    let fut = fut.map(|(id, bytes)| (id, bytes, None));
-                    (size, fut)
-                })
+                create_getpack_v1_blob(ctx, repo, node, validate_hash)
+                    .boxed()
+                    .compat()
+                    .map(|(size, fut)| {
+                        // GetpackV1 has no metadata.
+                        let fut = fut.boxed().compat().map(|(id, bytes)| (id, bytes, None));
+                        (size, fut)
+                    })
             },
             ops::GETPACKV1,
         )
@@ -2112,13 +2114,17 @@ impl HgCommands for RepoClient {
         self.getpack(
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
-                create_getpack_v2_blob(ctx, repo, node, lfs_thresold, validate_hash).map(
-                    |(size, fut)| {
+                create_getpack_v2_blob(ctx, repo, node, lfs_thresold, validate_hash)
+                    .boxed()
+                    .compat()
+                    .map(|(size, fut)| {
                         // GetpackV2 always has metadata.
-                        let fut = fut.map(|(id, bytes, metadata)| (id, bytes, Some(metadata)));
+                        let fut = fut
+                            .boxed()
+                            .compat()
+                            .map(|(id, bytes, metadata)| (id, bytes, Some(metadata)));
                         (size, fut)
-                    },
-                )
+                    })
             },
             ops::GETPACKV2,
         )
