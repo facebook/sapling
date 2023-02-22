@@ -50,8 +50,12 @@ templatekeyword = registrar.templatekeyword()
 namespacepredicate = registrar.namespacepredicate()
 autopullpredicate = registrar.autopullpredicate()
 
-
 hint = registrar.hint()
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("github", "pull-request-include-reviewstack", default=True)
 
 
 @hint("unlink-closed-pr")

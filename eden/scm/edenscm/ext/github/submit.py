@@ -267,6 +267,7 @@ async def rewrite_pull_request_body(
         pr_numbers_and_num_commits,
         index,
         repository,
+        reviewstack=ui.configbool("github", "pull-request-include-reviewstack"),
     )
     pr = head_commit_data.pr
     assert pr
