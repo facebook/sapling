@@ -135,7 +135,7 @@ pub async fn copy(
                 }
             }
             if let Some(limit) = limits.total_size_limit {
-                if total_file_size as u64 > limit.get() {
+                if total_file_size > limit.get() {
                     break;
                 }
             }

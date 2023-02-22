@@ -35,7 +35,14 @@ impl WeightSlidingWindow {
     fn prune(&mut self) -> Instant {
         let now = Instant::now();
         while let Some((last, weight)) = self.entries.front() {
-            if *last < now - self.window {
+            if *last
+                < now.checked_sub(self.window).unwrap_or_else(|| {
+                    panic!(
+                        "Duration now ({:?}) is less than window ({:?})",
+                        now, self.window
+                    )
+                })
+            {
                 self.total_weight -= weight;
                 self.entries.pop_front();
             } else {
@@ -61,7 +68,7 @@ impl WeightSlidingWindow {
     /// saturation (less accurate with longer weights or shorter windows).
     pub fn wps(&mut self) -> f64 {
         let now = self.prune();
-        (self.total_weight as f64) / ((now - self.start).min(self.window).as_secs_f64())
+        self.total_weight / ((now - self.start).min(self.window).as_secs_f64())
     }
 
     pub fn add_entry(&mut self, weight: f64) -> Instant {

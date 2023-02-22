@@ -139,7 +139,7 @@ where
             &commit_syncer,
             target_repo_dbs,
             next_entries,
-            counter as i64,
+            counter,
             cancellation_requested,
             sync_context,
             disable_lease,

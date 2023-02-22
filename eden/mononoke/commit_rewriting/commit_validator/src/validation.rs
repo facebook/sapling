@@ -222,7 +222,7 @@ impl ValidationHelper {
         let commit_sync_data_provider =
             CommitSyncDataProvider::Live(Arc::new(self.live_commit_sync_config.clone()));
         let maybe_commit_sync_outcome: Option<CommitSyncOutcome> = get_commit_sync_outcome(
-            &ctx,
+            ctx,
             Source(large_repo_id),
             Target(small_repo_id),
             Source(hash.0),
@@ -597,7 +597,7 @@ impl ValidationHelpers {
             }
         };
 
-        let p1_root_mf_id_fut = fetch_root_mf_id(&ctx, repo, p1);
+        let p1_root_mf_id_fut = fetch_root_mf_id(ctx, repo, p1);
         let (cs_root_mf_id, p1_root_mf_id): (HgManifestId, HgManifestId) =
             try_join!(cs_root_mf_id_fut, p1_root_mf_id_fut)?;
 
@@ -1360,7 +1360,7 @@ async fn validate_in_a_single_repo(
     mapping: SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
     validate_full_manifest_diffs_equivalence(
-        &ctx,
+        ctx,
         &validation_helper,
         &large_cs_id,
         &small_cs_id,
@@ -1372,7 +1372,7 @@ async fn validate_in_a_single_repo(
     .await?;
 
     validate_topological_order(
-        &ctx,
+        ctx,
         &large_repo,
         large_cs_id,
         &validation_helper.small_repo,

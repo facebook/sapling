@@ -75,13 +75,10 @@ pub(crate) async fn derive_blame_v1(
         cloned!(ctx, blobstore, renames);
         async move {
             let (path, file) = v?;
-            Result::<_>::Ok(
-                tokio::spawn(async move {
-                    create_blame_v1(&ctx, &blobstore, renames, csid, path, file, filesize_limit)
-                        .await
-                })
-                .await??,
-            )
+            tokio::spawn(async move {
+                create_blame_v1(&ctx, &blobstore, renames, csid, path, file, filesize_limit).await
+            })
+            .await?
         }
     })
     .buffered(256)

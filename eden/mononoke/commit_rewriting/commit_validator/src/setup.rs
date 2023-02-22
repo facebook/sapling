@@ -64,8 +64,8 @@ pub async fn get_validation_helpers<'a>(
     let validation_helper_futs =
         common_commit_sync_config
             .small_repos
-            .into_iter()
-            .map(|(small_repo_id, _)| {
+            .into_keys()
+            .map(|small_repo_id| {
                 let large_blob_repo = large_repo.blob_repo.clone();
                 borrowed!(matches, ctx, scuba_sample);
                 async move {

@@ -143,7 +143,7 @@ mod tests {
             }
 
             let left: HashSet<_> = left.into_iter().map(|(key, _)| key).collect();
-            let mut fetched: HashSet<_> = fetched.into_iter().map(|(key, _)| key).collect();
+            let mut fetched: HashSet<_> = fetched.into_keys().collect();
 
             if fetched.len() + left.len() != keys_to_query.len() {
                 return TestResult::error("Returned wrong number of unique items from get");

@@ -148,7 +148,7 @@ mod test {
     }
 
     fn alloc_some<T: Default>() -> Box<T> {
-        Box::new(T::default())
+        Box::<T>::default()
     }
 
     #[test]

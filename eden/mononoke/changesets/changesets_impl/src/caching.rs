@@ -178,8 +178,8 @@ impl Changesets for CachingChangesets {
         let ctx = (ctx, self);
         let res = get_or_fill_chunked(ctx, cs_ids.into_iter().collect(), 1000, 2)
             .await?
-            .into_iter()
-            .map(|(_, val)| val.0)
+            .into_values()
+            .map(|val| val.0)
             .collect();
         Ok(res)
     }

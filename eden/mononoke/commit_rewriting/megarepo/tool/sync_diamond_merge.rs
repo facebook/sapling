@@ -141,7 +141,7 @@ pub async fn do_sync_diamond_merge(
     let new_branch = find_new_branch_oldest_first(ctx.clone(), &small_repo, p1, p2).await?;
 
     let syncers = create_commit_syncers(
-        &ctx,
+        ctx,
         small_repo.clone(),
         large_repo.clone(),
         mapping,
@@ -173,7 +173,7 @@ pub async fn do_sync_diamond_merge(
         syncers
             .small_to_large
             .unsafe_sync_commit(
-                &ctx,
+                ctx,
                 cs_id,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::SyncDiamondMerge,
@@ -202,10 +202,10 @@ pub async fn do_sync_diamond_merge(
 
     let new_merge_cs_id = rewritten.get_changeset_id();
     info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
-    upload_commits(&ctx, vec![rewritten], &small_repo.blob_repo, &large_repo).await?;
+    upload_commits(ctx, vec![rewritten], &small_repo.blob_repo, &large_repo).await?;
 
     update_mapping_with_version(
-        &ctx,
+        ctx,
         hashmap! {small_merge_cs_id => new_merge_cs_id},
         &syncers.small_to_large,
         &version_for_merge,
