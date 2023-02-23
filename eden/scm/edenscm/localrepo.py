@@ -604,6 +604,24 @@ class localrepository(object):
         except errormod.AbandonedTransactionFoundError:
             self.ui.debug("skipping automigrate due to an abandoned transaction\n")
 
+        if not create:
+            self._report_conflicting_requirements()
+
+    def _report_conflicting_requirements(self):
+        """Find conflicting requirements"""
+        repo_types = []
+        if "remotefilelog" in self.requirements:
+            repo_types.append("shallow")
+        if eagerepo.iseagerepo(self):
+            repo_types.append("eager")
+        if git.isgitstore(self):
+            repo_types.append("git")
+        if len(repo_types) > 1:
+            hint = "check problematic logic writing to requires directly"
+            raise errormod.ProgrammingError(
+                f"conflicting repo types: {repo_types}\n{hint}"
+            )
+
     def _treestatemigration(self):
         if treestate.currentversion(self) != self.ui.configint("format", "dirstate"):
             with self.wlock(wait=False), self.lock(wait=False):
