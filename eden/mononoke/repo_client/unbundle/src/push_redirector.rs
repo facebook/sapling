@@ -66,7 +66,7 @@ use crate::UnbundleResponse;
 use crate::UploadedBonsais;
 
 pub trait Repo =
-    crate::processing::Repo + cross_repo_sync::Repo + SkiplistIndexArc + HookManagerRef;
+    crate::processing::Repo + backsyncer::RepoLike + HookManagerRef + Clone + Send + Sync + 'static;
 
 /// An auxillary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`

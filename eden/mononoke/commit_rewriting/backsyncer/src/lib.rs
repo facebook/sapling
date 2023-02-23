@@ -23,6 +23,7 @@
 //! 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
 //!    log id.
 
+use std::collections::HashSet;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -31,12 +32,23 @@ use std::time::Instant;
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Error;
+use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 use blobstore_factory::ReadOnlyStorage;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkTransactionError;
+use bookmarks::BookmarkUpdateLog;
+use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
+use bookmarks::Bookmarks;
+use bookmarks::BookmarksArc;
 use bookmarks::Freshness;
+use changeset_fetcher::ChangesetFetcher;
+use changeset_fetcher::ChangesetFetcherArc;
+use changesets::Changesets;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
@@ -44,13 +56,31 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::Repo;
+use filestore::FilestoreConfig;
+use futures::compat::Stream01CompatExt;
+use futures::stream;
 use futures::FutureExt;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::RepoConfig;
+use metaconfig_types::RepoConfigRef;
 use mononoke_types::ChangesetId;
+use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
+use mutable_counters::MutableCounters;
+use mutable_counters::MutableCountersArc;
 use mutable_counters::SqlMutableCounters;
+use phases::Phases;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
+use repo_identity::RepoIdentityRef;
+use revset::AncestorsNodeStream;
+use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use skiplist::SkiplistIndex;
+use skiplist::SkiplistIndexArc;
 use slog::debug;
 use slog::info;
 use slog::warn;
@@ -61,6 +91,24 @@ use sql_ext::TransactionResult;
 use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
 use wireproto_handler::TargetRepoDbs;
+
+#[derive(Clone)]
+#[facet::container]
+pub struct Repo(
+    dyn BonsaiHgMapping,
+    dyn Bookmarks,
+    dyn BookmarkUpdateLog,
+    dyn Changesets,
+    dyn ChangesetFetcher,
+    FilestoreConfig,
+    dyn MutableCounters,
+    dyn Phases,
+    RepoBlobstore,
+    RepoConfig,
+    RepoDerivedData,
+    RepoIdentity,
+    SkiplistIndex,
+);
 
 #[cfg(test)]
 mod tests;
@@ -90,7 +138,7 @@ pub async fn backsync_latest<M, R>(
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
-    R: cross_repo_sync::Repo,
+    R: RepoLike + Send + Sync + Clone + 'static,
 {
     // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
@@ -160,7 +208,7 @@ async fn sync_entries<M, R>(
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
-    R: cross_repo_sync::Repo,
+    R: RepoLike + Send + Sync + Clone + 'static,
 {
     for entry in entries {
         // Before processing each entry, check if cancellation has
@@ -278,6 +326,39 @@ where
     Ok(())
 }
 
+/// All "new" commits on this bookmark move. Use with care, creating a bookmark
+/// means ALL ancestors are new.
+async fn commits_added_by_bookmark_move(
+    ctx: &CoreContext,
+    repo: &impl RepoLike,
+    from_cs_id: Option<ChangesetId>,
+    to_cs_id: Option<ChangesetId>,
+) -> Result<HashSet<ChangesetId>, Error> {
+    match (from_cs_id, to_cs_id) {
+        (_, None) => Ok(HashSet::new()),
+        (None, Some(to_id)) => {
+            AncestorsNodeStream::new(ctx.clone(), &repo.changeset_fetcher_arc(), to_id)
+                .compat()
+                .try_collect()
+                .await
+        }
+        (Some(from_id), Some(to_id)) => {
+            // If needed, this can be optimised by using RangeNodeStream when from_id is
+            // an ancestor of from_id
+            DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+                ctx.clone(),
+                &repo.changeset_fetcher_arc(),
+                repo.skiplist_index_arc(),
+                vec![to_id],
+                vec![from_id],
+            )
+            .compat()
+            .try_collect()
+            .await
+        }
+    }
+}
+
 async fn backsync_bookmark<M, R>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M, R>,
@@ -287,7 +368,7 @@ async fn backsync_bookmark<M, R>(
 ) -> Result<bool, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
-    R: cross_repo_sync::Repo,
+    R: RepoLike + Send + Sync + Clone + 'static,
 {
     let target_repo_id = commit_syncer.get_target_repo().repo_identity().id();
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
@@ -333,31 +414,6 @@ where
             None => Ok(None),
         };
 
-    let txn_hook = Arc::new({
-        move |ctx: CoreContext, txn: Transaction| {
-            async move {
-                // This is an abstraction leak: it only works because the
-                // mutable counters are stored in the same db as the
-                // bookmarks.
-                let txn_result = SqlMutableCounters::set_counter_on_txn(
-                    &ctx,
-                    target_repo_id,
-                    &format_counter(&source_repo_id),
-                    new_counter,
-                    prev_counter,
-                    txn,
-                )
-                .await?;
-
-                match txn_result {
-                    TransactionResult::Succeeded(txn) => Ok(txn),
-                    TransactionResult::Failed => Err(BookmarkTransactionError::LogicError),
-                }
-            }
-            .boxed()
-        }
-    });
-
     if let Some(bookmark) = bookmark {
         // Fetch sync outcome before transaction to keep transaction as short as possible
         let from_sync_outcome = get_commit_sync_outcome(from_cs_id).await?;
@@ -371,6 +427,36 @@ where
         let to_cs_id = get_remapped_cs_id(to_sync_outcome)?;
 
         if from_cs_id != to_cs_id {
+            let target_repo = commit_syncer.get_target_repo();
+            // This CANNOT be done after getting the bookmark transaction, because it accesses SQL without a
+            // transaction and that causes a deadlock that blocks the syncing.
+            let globalrev_entries: Vec<BonsaiGlobalrevMappingEntry> = if target_repo
+                .repo_config()
+                .pushrebase
+                .globalrevs_publishing_bookmark
+                .as_ref()
+                == Some(&bookmark)
+            {
+                let all_commits =
+                    commits_added_by_bookmark_move(&ctx, target_repo, from_cs_id, to_cs_id).await?;
+                let ctx = &ctx;
+                let blobstore = target_repo.repo_blobstore();
+                stream::iter(all_commits)
+                    .map(|bcs_id| async move {
+                        let cs = bcs_id.load(ctx, blobstore).await?;
+                        // Since this repo has globalrevs enabled, CommitSyncInMemoryResult::write
+                        // should have already set the globalrevs when backsyncing, and this will
+                        // never fail
+                        let globalrev = Globalrev::from_bcs(&cs)?;
+                        anyhow::Ok(BonsaiGlobalrevMappingEntry { bcs_id, globalrev })
+                    })
+                    .buffer_unordered(100)
+                    .try_collect()
+                    .await?
+            } else {
+                vec![]
+            };
+
             let mut bookmark_txn = target_repo_dbs.bookmarks.create_transaction(ctx.clone());
             debug!(
                 ctx.logger(),
@@ -404,6 +490,44 @@ where
                 }
             };
 
+            let txn_hook = Arc::new({
+                move |ctx: CoreContext, txn: Transaction| {
+                    cloned!(globalrev_entries);
+                    async move {
+                        // This is an abstraction leak: it only works because the
+                        // mutable counters/globalrevs are stored in the same db as the
+                        // bookmarks.
+                        let txn_result = SqlMutableCounters::set_counter_on_txn(
+                            &ctx,
+                            target_repo_id,
+                            &format_counter(&source_repo_id),
+                            new_counter,
+                            prev_counter,
+                            txn,
+                        )
+                        .await?;
+
+                        let txn = match txn_result {
+                            TransactionResult::Succeeded(txn) => Ok(txn),
+                            TransactionResult::Failed => Err(BookmarkTransactionError::LogicError),
+                        }?;
+
+                        if !globalrev_entries.is_empty() {
+                            bonsai_globalrev_mapping::replace_globalrevs(
+                                txn,
+                                target_repo_id,
+                                &globalrev_entries,
+                            )
+                            .await
+                            .map_err(BookmarkTransactionError::Other)
+                        } else {
+                            Ok(txn)
+                        }
+                    }
+                    .boxed()
+                }
+            });
+
             return bookmark_txn.commit_with_hook(txn_hook).await;
         } else {
             debug!(
@@ -432,7 +556,7 @@ where
 
 pub async fn open_backsyncer_dbs(
     ctx: CoreContext,
-    blobrepo: &impl Repo,
+    blobrepo: &impl RepoLike,
     db_config: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
@@ -447,8 +571,8 @@ pub async fn open_backsyncer_dbs(
 
     Ok(TargetRepoDbs {
         connections,
-        bookmarks: blobrepo.bookmarks_arc().clone(),
-        bookmark_update_log: blobrepo.bookmark_update_log_arc().clone(),
+        bookmarks: blobrepo.bookmarks_arc(),
+        bookmark_update_log: blobrepo.bookmark_update_log_arc(),
         counters: blobrepo.mutable_counters_arc(),
     })
 }

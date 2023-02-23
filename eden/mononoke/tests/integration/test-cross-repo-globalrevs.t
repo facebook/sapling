@@ -90,19 +90,19 @@ Lets change the sync direction
   $ LAST_UPDATE=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select max(id) from bookmarks_update_log where repo_id=$REPOIDLARGE")
   $ quiet mononoke_newadmin mutable-counters --repo-id $REPOIDSMALL set backsync_from_$REPOIDLARGE $LAST_UPDATE
 
-Do a few commits on large repo
+Do a few commits on large repo. They no longer have globalrevs.
   $ mkcommit large_only
   $ echo hello > smallrepofolder/new_file_from_large.txt
   $ hglarge addremove -q && hglarge commit -m "commit_from_large_to_small"
-  $ hglarge push --to master_bookmark -q
+  $ hglarge push --to master_bookmark -q && hglarge up master_bookmark -q
   $ globalrev
   no globalrev
 
-See commit on small repo. BUG: It currently DOES NOT have globalrev, while it should.
+See commit on small repo. It was imported with globalrev and we can query globalrevs on small repo.
   $ cd "$TESTTMP/small-hg-client"
   $ quiet backsync_large_to_small -q
   $ hgsmall pull -B master_bookmark -q && hgsmall up master_bookmark -q && tglogpnr -r 'public()'
-  @  3a65b0a13376 public 'commit_from_large_to_small'  remote/master_bookmark
+  @  b92328759f69 public 'commit_from_large_to_small'  remote/master_bookmark
   │
   o  15a08a4c4f68 public 'S_D'
   │
@@ -113,22 +113,18 @@ See commit on small repo. BUG: It currently DOES NOT have globalrev, while it sh
   o  fc7ae591de0e public 'pre-move commit'
   
   $ globalrev
-  no globalrev
+  global_rev=1000147972
   $ mononoke_newadmin convert --from globalrev --to hg -R small-mon 1000147972
-  Error: globalrev-bonsai mapping not found for 1000147972
-  [1]
+  b92328759f69a2627d676c1074e25561325890bc
   $ mononoke_newadmin convert --from hg --to globalrev -R small-mon $(hg log -T{node} -r .)
-  Error: bonsai-globalrev mapping not found for d94fc8486038f9561912163a87ea6cb203073d63942ef1246855f6d26b6fd903
-  [1]
+  1000147972
 Push through small repo.
   $ mkcommit commit_from_small
-  $ hgsmall push --to master_bookmark -q
+  $ hgsmall push --to master_bookmark -q && hgsmall up master_bookmark -q
   $ globalrev
-  no globalrev
+  global_rev=1000147973
   $ mononoke_newadmin convert --from globalrev --to hg -R small-mon 1000147973
-  Error: globalrev-bonsai mapping not found for 1000147973
-  [1]
+  f378fa07a8e3f0e0a755df2112896914325abbe5
   $ mononoke_newadmin convert --from hg --to globalrev -R small-mon $(hg log -T{node} -r .)
-  Error: bonsai-globalrev mapping not found for 970c2016750194f4bce8ddd95c1b0607326deb11818163286ff2f8c2b6d290bf
-  [1]
+  1000147973
 

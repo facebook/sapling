@@ -18,6 +18,7 @@ use mononoke_types::RepositoryId;
 pub use crate::caching::CachingBonsaiGlobalrevMapping;
 pub use crate::sql::add_globalrevs;
 pub use crate::sql::bulk_import_globalrevs;
+pub use crate::sql::replace_globalrevs;
 pub use crate::sql::AddGlobalrevsErrorKind;
 pub use crate::sql::SqlBonsaiGlobalrevMapping;
 pub use crate::sql::SqlBonsaiGlobalrevMappingBuilder;

@@ -71,6 +71,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::Globalrev;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
@@ -206,12 +207,35 @@ impl CommitSyncInMemoryResult {
             }
             Rewritten {
                 source_cs_id,
-                rewritten,
+                mut rewritten,
                 version,
-            } => syncer
-                .upload_rewritten_and_update_mapping(ctx, source_cs_id, rewritten, version)
-                .await
-                .map(Some),
+            } => {
+                let target = syncer.get_target_repo();
+                // If the target repo has globalrevs, always create globalrevs.
+                // We never know when something is going to change bookmarks.
+                if target
+                    .repo_config()
+                    .pushrebase
+                    .globalrevs_publishing_bookmark
+                    .is_some()
+                {
+                    if rewritten.parents.len() > 1 {
+                        bail!("merge commits are not supported in a repo with globalrevs");
+                    }
+                    if let Some(parent) = rewritten.parents.first() {
+                        // We could load ChangesetInfo here, but it's probably not derived yet
+                        let parent = parent.load(ctx, target.repo_blobstore()).await?;
+                        Globalrev::from_bcs(&parent)?.increment()
+                    } else {
+                        Globalrev::start_commit()
+                    }
+                    .set_on_changeset(&mut rewritten);
+                }
+                syncer
+                    .upload_rewritten_and_update_mapping(ctx, source_cs_id, rewritten, version)
+                    .await
+                    .map(Some)
+            }
         }
     }
 }
@@ -1028,7 +1052,7 @@ where
             source_cs_id,
             parent_mapping_selection_hint
         );
-        let (source_repo, _) = self.get_source_target();
+        let source_repo = self.get_source_repo();
         let cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
         if cs.parents().count() > 1 {
             parent_mapping_selection_hint = CandidateSelectionHint::Only;

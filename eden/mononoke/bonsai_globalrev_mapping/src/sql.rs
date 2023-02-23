@@ -38,6 +38,15 @@ mononoke_queries! {
         "{insert_or_ignore} INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES {values}"
     }
 
+    write ReplaceGlobalrevs(values: (
+        repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        globalrev: Globalrev,
+    )) {
+        none,
+        "REPLACE INTO bonsai_globalrev_mapping (repo_id, bcs_id, globalrev) VALUES {values}"
+    }
+
     read SelectMappingByBonsai(
         repo_id: RepositoryId,
         >list bcs_id: ChangesetId
@@ -322,6 +331,23 @@ pub async fn add_globalrevs(
     if res.affected_rows() != rows.len() as u64 {
         return Err(AddGlobalrevsErrorKind::Conflict);
     }
+
+    Ok(transaction)
+}
+
+/// Like add_globalrevs, but always replaces values, even if they're different
+pub async fn replace_globalrevs(
+    transaction: Transaction,
+    repo_id: RepositoryId,
+    entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
+) -> Result<Transaction, Error> {
+    let rows: Vec<_> = entries
+        .into_iter()
+        .map(|BonsaiGlobalrevMappingEntry { bcs_id, globalrev }| (&repo_id, bcs_id, globalrev))
+        .collect();
+
+    let (transaction, _) =
+        ReplaceGlobalrevs::query_with_transaction(transaction, &rows[..]).await?;
 
     Ok(transaction)
 }

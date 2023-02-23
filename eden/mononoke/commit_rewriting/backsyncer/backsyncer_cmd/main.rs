@@ -23,7 +23,9 @@ use backsyncer::backsync_latest;
 use backsyncer::format_counter;
 use backsyncer::open_backsyncer_dbs;
 use backsyncer::BacksyncLimit;
+use backsyncer::Repo;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
 use clap::Arg;
 use clap::SubCommand;
@@ -38,7 +40,6 @@ use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncOutcome;
 use cross_repo_sync::CommitSyncer;
-use cross_repo_sync::Repo as CrossRepo;
 use executor_lib::split_repo_names;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
@@ -55,6 +56,7 @@ use mercurial_derived_data::DeriveHgChangeset;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use once_cell::sync::OnceCell;
+use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::error;
@@ -261,10 +263,10 @@ fn extract_cs_id_from_sync_outcome(
     }
 }
 
-async fn derive_target_hg_changesets<R: CrossRepo>(
+async fn derive_target_hg_changesets(
     ctx: &CoreContext,
     maybe_target_cs_id: Option<ChangesetId>,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, R>,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
 ) -> Result<(), Error> {
     match maybe_target_cs_id {
         Some(target_cs_id) => {
@@ -282,9 +284,9 @@ async fn derive_target_hg_changesets<R: CrossRepo>(
     }
 }
 
-pub async fn backsync_forever<M, R>(
+pub async fn backsync_forever<M>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<M, R>,
+    commit_syncer: CommitSyncer<M, Repo>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     source_repo_name: String,
     target_repo_name: String,
@@ -293,7 +295,6 @@ pub async fn backsync_forever<M, R>(
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
-    R: CrossRepo,
 {
     let target_repo_id = commit_syncer.get_target_repo_id();
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
@@ -353,14 +354,13 @@ impl Delay {
 }
 
 // Returns logs delay and returns the number of remaining bookmark update log entries
-async fn calculate_delay<M, R>(
+async fn calculate_delay<M>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<M, Repo>,
     target_repo_dbs: &TargetRepoDbs,
 ) -> Result<Delay, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
-    R: CrossRepo,
 {
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
@@ -479,7 +479,7 @@ async fn run(
             MononokeScubaSampleBuilder::with_discard(),
         )
         .clone_with_repo_name(&repo_tag);
-    let commit_syncer = create_commit_syncer_from_matches::<cross_repo_sync::ConcreteRepo>(
+    let commit_syncer = create_commit_syncer_from_matches::<Repo>(
         &ctx,
         &matches,
         Some((source_repo.id, target_repo.id)),
