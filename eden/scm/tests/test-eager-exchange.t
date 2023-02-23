@@ -85,47 +85,65 @@ Push:
   DEBUG eagerepo::api: bookmarks master
   DEBUG edenscm::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
 
-Pull:
+Pull (non-lazy):
 
-  $ newremoterepo
-  $ setconfig paths.default=test:e1
-  $ hg debugchangelog --migrate lazy
-  $ hg pull -B master
-  pulling from test:e1
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG edenscm::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG eagerepo::api: commit_known 
-  DEBUG eagerepo::api: commit_graph 23d30dc6b70380b2d939023947578ae0e0198999 
-  DEBUG eagerepo::api: commit_mutations 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999, 748104bd5058bf2c386d074d8dcf2704855380f6
+  for cltype in ["revlog", "fullsegments"]:
+    $ newremoterepo
+    $ setconfig paths.default=test:e1
+    $ hg debugchangelog --migrate $(py cltype)
+    $ LOG= hg pull -B master -r $B
+    pulling from test:e1
+    $ LOG= hg log -Gr 'all()' -T '{desc} {remotenames}'
+    o  B
+    │
+    │ o  D remote/master
+    │ │
+    │ o  C
+    ├─╯
+    o  A
 
-  $ hg pull -r $B
-  pulling from test:e1
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG eagerepo::api: commit_known 99dac869f01e09fe3d501fa645ea524af80d498f
-  TRACE edenscm::eagerpeer: known 99dac869f01e09fe3d501fa645ea524af80d498f: True
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG edenscm::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
-  DEBUG eagerepo::api: bookmarks master
-  DEBUG eagerepo::api: commit_known 23d30dc6b70380b2d939023947578ae0e0198999
-  searching for changes
-  DEBUG eagerepo::api: commit_graph 99dac869f01e09fe3d501fa645ea524af80d498f 23d30dc6b70380b2d939023947578ae0e0198999
-  DEBUG eagerepo::api: commit_mutations 99dac869f01e09fe3d501fa645ea524af80d498f
+Pull (lazy):
 
-  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
-  DEBUG eagerepo::api: revlog_data 99dac869f01e09fe3d501fa645ea524af80d498f, 23d30dc6b70380b2d939023947578ae0e0198999, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 748104bd5058bf2c386d074d8dcf2704855380f6
-  TRACE eagerepo::api:  found: 99dac869f01e09fe3d501fa645ea524af80d498f, 94 bytes
-  TRACE eagerepo::api:  found: 23d30dc6b70380b2d939023947578ae0e0198999, 94 bytes
-  TRACE eagerepo::api:  found: 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 98 bytes
-  TRACE eagerepo::api:  found: 748104bd5058bf2c386d074d8dcf2704855380f6, 98 bytes
-  o  B
-  │
-  │ o  D remote/master
-  │ │
-  │ o  C
-  ├─╯
-  o  A
+  for cltype in ["lazytext", "lazy"]:
+    $ newremoterepo
+    $ setconfig paths.default=test:e1
+    $ hg debugchangelog --migrate $(py cltype)
+    $ hg pull -B master
+    pulling from test:e1
+    DEBUG eagerepo::api: bookmarks master
+    DEBUG eagerepo::api: bookmarks master
+    DEBUG edenscm::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
+    DEBUG eagerepo::api: bookmarks master
+    DEBUG eagerepo::api: commit_known 
+    DEBUG eagerepo::api: commit_graph 23d30dc6b70380b2d939023947578ae0e0198999 
+    DEBUG eagerepo::api: commit_mutations 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999, 748104bd5058bf2c386d074d8dcf2704855380f6
+
+    $ hg pull -r $B
+    pulling from test:e1
+    DEBUG eagerepo::api: bookmarks master
+    DEBUG eagerepo::api: commit_known 99dac869f01e09fe3d501fa645ea524af80d498f
+    TRACE edenscm::eagerpeer: known 99dac869f01e09fe3d501fa645ea524af80d498f: True
+    DEBUG eagerepo::api: bookmarks master
+    DEBUG edenscm::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
+    DEBUG eagerepo::api: bookmarks master
+    DEBUG eagerepo::api: commit_known 23d30dc6b70380b2d939023947578ae0e0198999
+    searching for changes
+    DEBUG eagerepo::api: commit_graph 99dac869f01e09fe3d501fa645ea524af80d498f 23d30dc6b70380b2d939023947578ae0e0198999
+    DEBUG eagerepo::api: commit_mutations 99dac869f01e09fe3d501fa645ea524af80d498f
+
+    $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+    DEBUG eagerepo::api: revlog_data 99dac869f01e09fe3d501fa645ea524af80d498f, 23d30dc6b70380b2d939023947578ae0e0198999, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 748104bd5058bf2c386d074d8dcf2704855380f6
+    TRACE eagerepo::api:  found: 99dac869f01e09fe3d501fa645ea524af80d498f, 94 bytes
+    TRACE eagerepo::api:  found: 23d30dc6b70380b2d939023947578ae0e0198999, 94 bytes
+    TRACE eagerepo::api:  found: 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 98 bytes
+    TRACE eagerepo::api:  found: 748104bd5058bf2c386d074d8dcf2704855380f6, 98 bytes
+    o  B
+    │
+    │ o  D remote/master
+    │ │
+    │ o  C
+    ├─╯
+    o  A
   
 Trigger file and tree downloading:
 

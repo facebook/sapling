@@ -1503,12 +1503,6 @@ def _httpcommitgraphenabled(repo, remote):
     if repo.nullableedenapi is None:
         return None
 
-    if (
-        "lazychangelog" not in repo.storerequirements
-        and "lazytextchangelog" not in repo.storerequirements
-    ):
-        return None
-
     # TODO(liubovd) check if "and" condition is more correct here
     if remote.capable("commitgraph") or repo.ui.configbool("pull", "httpcommitgraph"):
         return "v1"
@@ -1795,7 +1789,28 @@ def _pullcommitgraph(pullop, version):
     )
 
     if graphnodes:
-        commits.addgraphnodes(graphnodes)
+        is_lazy = (
+            "lazychangelog" in repo.storerequirements
+            or "lazytextchangelog" in repo.storerequirements
+        )
+        if is_lazy:
+            commits.addgraphnodes(graphnodes)
+        else:
+            # also need fetch commit text (messages)
+            # graphnodes: [(node, [parent])]
+            nodes = [n[0] for n in graphnodes]
+            # commitdata result: [{"hgid": node, "revlog_data": p1_p2_text}]
+            prefix_len = len(nullid) * 2
+            # node_text: {node: text}
+            node_text = {
+                c["hgid"]: c["revlog_data"][prefix_len:]
+                for c in repo.edenapi.commitdata(nodes)[0]
+            }
+            # input of addcommits: [(node, [parent], text)]
+            commits.addcommits(
+                [(node, parents, node_text[node]) for node, parents in graphnodes]
+            )
+
         pullop.cgresult = 2  # changed
         if repo.ui.configbool("pull", "httpmutation"):
             if allphasesreturned:
