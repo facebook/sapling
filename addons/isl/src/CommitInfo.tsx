@@ -23,6 +23,7 @@ import {
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
+import {Center} from './ComponentUtils';
 import {numPendingImageUploads} from './ImageUpload';
 import {Subtle} from './Subtle';
 import {CommitInfoField} from './TextArea';
@@ -71,7 +72,9 @@ export function CommitInfoSidebar() {
   if (commit == null) {
     return (
       <div className="commit-info-view" data-testid="commit-info-view-loading">
-        <Icon icon="loading" />
+        <Center>
+          <Icon icon="loading" />
+        </Center>
       </div>
     );
   } else {
