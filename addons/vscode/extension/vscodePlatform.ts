@@ -13,6 +13,7 @@ import type {
   ServerToClientMessage,
 } from 'isl/src/types';
 
+import {executeVSCodeCommand} from './commands';
 import {t} from './i18n';
 import * as pathModule from 'path';
 import * as vscode from 'vscode';
@@ -41,7 +42,7 @@ export const VSCodePlatform: ServerPlatform = {
           }
           const path: AbsolutePath = pathModule.join(repo.info.repoRoot, message.path);
           const uri = vscode.Uri.file(path);
-          vscode.commands.executeCommand('sapling.open-file-diff', uri, message.comparison);
+          executeVSCodeCommand('sapling.open-file-diff', uri, message.comparison);
           break;
         }
         case 'platform/openExternal': {

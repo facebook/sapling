@@ -925,6 +925,14 @@ export function absolutePathForFileInRepo(
   }
 }
 
+export function repoRelativePathForAbsolutePath(
+  absolutePath: AbsolutePath,
+  repo: Repository,
+  pathMod = path,
+): RepoRelativePath {
+  return pathMod.relative(repo.info.repoRoot, absolutePath);
+}
+
 function isProcessError(s: unknown): s is {stderr: string} {
   return s != null && typeof s === 'object' && 'stderr' in s;
 }

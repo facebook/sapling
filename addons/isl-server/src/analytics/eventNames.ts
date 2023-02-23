@@ -37,7 +37,10 @@ export type TrackEventName =
   | 'UncommitOperation'
   // @fb-only
   | 'UnsubmittedStarRating'
-  | 'UploadImage';
+  | 'UploadImage'
+  | 'RunVSCodeCommand'
+  | 'UnsubmittedStarRating'
+  | 'VSCodeExtensionActivated';
 
 export type TrackErrorName =
   | 'DiffFetchFailed'
@@ -48,4 +51,6 @@ export type TrackErrorName =
   | 'TopLevelError'
   | 'RunOperationError'
   | 'RepositoryError'
-  | 'UploadImageError';
+  | 'UploadImageError'
+  | 'VSCodeCommandError'
+  | 'VSCodeActivationError';
