@@ -67,6 +67,7 @@ import hashlib
 import os
 import struct
 
+import bindings
 from bindings import manifest as rustmanifest, revisionstore
 from edenscm import (
     bundle2,
@@ -421,7 +422,12 @@ def setuptreestores(repo, mfl):
     elif eagerepo.iseagerepo(repo):
         mfl._isgit = False
         mfl._iseager = True
-        mfl.datastore = repo.fileslog.contentstore
+        store = repo.fileslog.contentstore
+        mfl.datastore = store
+        if not isinstance(store, bindings.eagerepo.EagerRepoStore):
+            raise error.ProgrammingError(
+                "incompatible eagerrepo store: %r (expect EagerRepoStore)" % store
+            )
     else:
         mfl._isgit = False
         mfl._iseager = False
