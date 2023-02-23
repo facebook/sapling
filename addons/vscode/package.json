@@ -46,6 +46,12 @@
     },
     "commands": [
       {
+        "command": "sapling.revert-file",
+        "title": "%sapling.revert-file-command%",
+        "category": "%sapling.command-category%",
+        "icon": "$(discard)"
+      },
+      {
         "command": "sapling.open-isl",
         "title": "%sapling.open-isl-command%",
         "category": "%sapling.command-category%",
@@ -72,6 +78,11 @@
       "scm/resourceState/context": [
         {
           "command": "sapling.open-file-diff-uncommitted",
+          "group": "inline",
+          "when": "scmProvider == sapling && scmResourceGroup == changes"
+        },
+        {
+          "command": "sapling.revert-file",
           "group": "inline",
           "when": "scmProvider == sapling && scmResourceGroup == changes"
         }

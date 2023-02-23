@@ -7,6 +7,7 @@
 
 import type {Repository} from 'isl-server/src/Repository';
 import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
+import type {Operation} from 'isl/src/operations/Operation';
 import type {RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -14,6 +15,7 @@ import {encodeSaplingDiffUri} from './DiffContentProvider';
 import {t} from './i18n';
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
+import {RevertOperation} from 'isl/src/operations/RevertOperation';
 import path from 'path';
 import {ComparisonType, labelForComparison} from 'shared/Comparison';
 import * as vscode from 'vscode';
@@ -33,6 +35,23 @@ export const vscodeCommands = {
   ),
   ['sapling.open-file-diff']: (uri: vscode.Uri, comparison: Comparison) =>
     openDiffView(uri, comparison),
+
+  ['sapling.revert-file']: commandWithUriOrResourceState(async function (
+    this: Context,
+    repo: Repository,
+    _,
+    path: RepoRelativePath,
+  ) {
+    const choice = await vscode.window.showWarningMessage(
+      'Are you sure you want to revert this file?',
+      'Cancel',
+      'Revert',
+    );
+    if (choice !== 'Revert') {
+      return;
+    }
+    return runOperation(repo, new RevertOperation([path]), this.tracker);
+  }),
 };
 
 /** Type definitions for built-in or third-party VS Code commands we want to execute programatically. */
@@ -59,6 +78,25 @@ export function executeVSCodeCommand<
 
 type Context = {
   tracker: ServerSideTracker;
+};
+
+const runOperation = (
+  repo: Repository,
+  operation: Operation,
+  tracker: ServerSideTracker,
+): undefined => {
+  repo.runOrQueueOperation(
+    {
+      args: operation.getArgs(),
+      id: operation.id,
+      runner: operation.runner,
+      trackEventName: operation.trackEventName,
+    },
+    () => undefined, // TODO: Send this progress info to any existing ISL webview if there is one
+    tracker,
+    repo.info.repoRoot,
+  );
+  return undefined;
 };
 
 export function registerCommands(tracker: ServerSideTracker): Array<vscode.Disposable> {
