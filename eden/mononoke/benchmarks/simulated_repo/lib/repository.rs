@@ -51,7 +51,7 @@ use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::Filenodes;
 use filenodes::PreparedFilenode;
@@ -420,7 +420,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         ctx: &CoreContext,
         path: &RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
+    ) -> Result<FilenodeResult<FilenodeRange>> {
         delay(self.get_dist).await;
         self.inner
             .get_all_filenodes_maybe_stale(ctx, path, limit)

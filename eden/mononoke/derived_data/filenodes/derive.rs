@@ -307,7 +307,7 @@ mod tests {
     use cloned::cloned;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
-    use filenodes::FilenodeRangeResult;
+    use filenodes::FilenodeRange;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -737,7 +737,7 @@ mod tests {
             ctx: &CoreContext,
             path: &RepoPath,
             limit: Option<u64>,
-        ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
+        ) -> Result<FilenodeResult<FilenodeRange>> {
             self.inner
                 .get_all_filenodes_maybe_stale(ctx, path, limit)
                 .await

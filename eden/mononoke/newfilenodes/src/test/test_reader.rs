@@ -12,7 +12,7 @@ use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::PreparedFilenode;
 use maplit::hashmap;
@@ -463,8 +463,10 @@ async fn assert_all_filenodes(
     let res = reader
         .get_all_filenodes_for_path(ctx, repo_id, path, limit)
         .await?;
-    let res = res.do_not_handle_disabled_filenodes()?;
-    assert_eq!(res.as_ref(), Some(expected));
+    match res.do_not_handle_disabled_filenodes()? {
+        FilenodeRange::Filenodes(ref filenodes) => assert_eq!(filenodes, expected),
+        FilenodeRange::TooBig => panic!("Unexpected FilenodeRange::TooBig"),
+    }
     Ok(())
 }
 
@@ -906,13 +908,13 @@ macro_rules! filenodes_tests {
                     .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, Some(1))
                     .await?;
                 let res = res.do_not_handle_disabled_filenodes()?;
-                assert_eq!(None, res);
+                assert_eq!(FilenodeRange::TooBig, res);
 
                 let res = reader
                     .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, Some(2))
                     .await?;
                 let res = res.do_not_handle_disabled_filenodes()?;
-                assert_eq!(None, res);
+                assert_eq!(FilenodeRange::TooBig, res);
 
                 Ok(())
             }
@@ -1038,7 +1040,7 @@ fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), E
         ))
     })?;
 
-    if let FilenodeRangeResult::Present(_) = res {
+    if let FilenodeResult::Present(_) = res {
         panic!("expected FilenodeResult::Disabled");
     }
 

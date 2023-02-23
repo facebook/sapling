@@ -22,6 +22,7 @@ use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
+use filenodes::FilenodeRange;
 use filenodes::FilenodesRef;
 use futures::future::try_join_all;
 use futures::TryStreamExt;
@@ -323,9 +324,12 @@ pub async fn subcommand_filenodes<'a>(
                 .await;
 
             debug!(ctx.logger(), "took {:?}", stats.completion_time);
-            let maybe_filenodes = res?.do_not_handle_disabled_filenodes()?;
-            let filenodes = maybe_filenodes
-                .ok_or_else(|| anyhow!("unexpected failure: history is too long?"))?;
+            let filenodes = match res?.do_not_handle_disabled_filenodes()? {
+                FilenodeRange::Filenodes(filenodes) => filenodes,
+                FilenodeRange::TooBig => {
+                    return Err(anyhow!("unexpected failure: history is too long?").into());
+                }
+            };
             for filenode in filenodes {
                 log_filenode(ctx.logger(), &path, &filenode, None);
             }

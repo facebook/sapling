@@ -44,7 +44,7 @@ use changesets::ChangesetsRef;
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::FilenodesRef;
 use futures::future;
@@ -141,7 +141,7 @@ pub trait BlobRepoHg: Send + Sync {
         ctx: CoreContext,
         path: RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>
+    ) -> Result<FilenodeResult<FilenodeRange>, Error>
     where
         Self: FilenodesRef;
 }
@@ -395,7 +395,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
         ctx: CoreContext,
         path: RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>
+    ) -> Result<FilenodeResult<FilenodeRange>, Error>
     where
         Self: FilenodesRef,
     {

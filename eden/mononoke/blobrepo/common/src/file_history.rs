@@ -20,7 +20,7 @@ use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
 use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::FilenodesRef;
 use futures::future;
@@ -228,9 +228,19 @@ pub async fn get_file_history(
     path: MPath,
     max_length: Option<u64>,
 ) -> Result<FilenodeResult<Vec<HgFileHistoryEntry>>, Error> {
-    let prefetched_res = prefetch_history(&ctx, &repo, path.clone(), max_length).await?;
+    // Prefetch and cache filenode information. Performing these fetches in bulk upfront
+    // prevents an excessive number of DB roundtrips when constructing file history.
+    let prefetched_res = repo
+        .filenodes()
+        .get_all_filenodes_maybe_stale(&ctx, &RepoPath::FilePath(path.clone()), max_length)
+        .await?;
+
     match prefetched_res {
-        FilenodeRangeResult::Present(prefetched) => {
+        FilenodeResult::Present(FilenodeRange::Filenodes(prefetched)) => {
+            let prefetched: HashMap<_, _> = prefetched
+                .into_iter()
+                .map(|filenode| (filenode.filenode, filenode))
+                .collect();
             let history = get_file_history_using_prefetched(
                 ctx, repo, filenode, path, max_length, prefetched,
             )
@@ -238,7 +248,7 @@ pub async fn get_file_history(
             .await?;
             Ok(FilenodeResult::Present(history))
         }
-        FilenodeRangeResult::TooBig => {
+        FilenodeResult::Present(FilenodeRange::TooBig) => {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::FilenodesTooBigHistory);
             STATS::too_big.add_value(1, (repo.repo_identity().name().to_string(),));
@@ -254,28 +264,8 @@ pub async fn get_file_history(
             .await?;
             Ok(FilenodeResult::Present(history))
         }
-        FilenodeRangeResult::Disabled => Ok(FilenodeResult::Disabled),
+        FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
     }
-}
-
-/// Prefetch and cache filenode information. Performing these fetches in bulk upfront
-/// prevents an excessive number of DB roundtrips when constructing file history.
-async fn prefetch_history(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    path: MPath,
-    limit: Option<u64>,
-) -> Result<FilenodeRangeResult<HashMap<HgFileNodeId, FilenodeInfo>>, Error> {
-    let filenodes_res = repo
-        .filenodes()
-        .get_all_filenodes_maybe_stale(ctx, &RepoPath::FilePath(path), limit)
-        .await?;
-    Ok(filenodes_res.map(|filenodes| {
-        filenodes
-            .into_iter()
-            .map(|filenode| (filenode.filenode, filenode))
-            .collect()
-    }))
 }
 
 /// Get the history of the file at the specified path, using the given

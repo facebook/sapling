@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::Filenodes;
 use filenodes::PreparedFilenode;
@@ -97,7 +97,7 @@ impl Filenodes for MicrowaveFilenodes {
         _ctx: &CoreContext,
         _path: &RepoPath,
         _limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
+    ) -> Result<FilenodeResult<FilenodeRange>> {
         // The rationale is a bit different to that in add() here, since this is a read method. The
         // idea here is that we do not expect cache warmup to call get_all_filenodes_maybe_stale,
         // so we don't do anything about it in Microwave (i.e. don't cache it). If cache warmup

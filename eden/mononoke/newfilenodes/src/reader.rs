@@ -16,7 +16,7 @@ use context::CoreContext;
 use context::PerfCounterType;
 use faster_hex::hex_encode;
 use filenodes::FilenodeInfo;
-use filenodes::FilenodeRangeResult;
+use filenodes::FilenodeRange;
 use filenodes::FilenodeResult;
 use filenodes::PreparedFilenode;
 use futures::future;
@@ -294,7 +294,7 @@ impl FilenodesReader {
         repo_id: RepositoryId,
         path: &RepoPath,
         limit: Option<u64>,
-    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
+    ) -> Result<FilenodeResult<FilenodeRange>, Error> {
         STATS::range_gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
@@ -324,10 +324,10 @@ impl FilenodesReader {
                             .fill(&key, &info.as_ref().map(|info| info.into()));
                         match info {
                             Some(info) => {
-                                return Ok(FilenodeRangeResult::Present(info));
+                                return Ok(FilenodeResult::Present(FilenodeRange::Filenodes(info)));
                             }
                             None => {
-                                return Ok(FilenodeRangeResult::TooBig);
+                                return Ok(FilenodeResult::Present(FilenodeRange::TooBig));
                             }
                         }
                     }
@@ -352,11 +352,13 @@ impl FilenodesReader {
                     .await?;
 
                     match res {
-                        FilenodeRangeResult::Present(res) => {
-                            Ok(FilenodeRangeResult::Present(res.try_into()?))
+                        FilenodeResult::Present(Some(res)) => Ok(FilenodeResult::Present(
+                            FilenodeRange::Filenodes(res.try_into()?),
+                        )),
+                        FilenodeResult::Present(None) => {
+                            Ok(FilenodeResult::Present(FilenodeRange::TooBig))
                         }
-                        FilenodeRangeResult::TooBig => Ok(FilenodeRangeResult::TooBig),
-                        FilenodeRangeResult::Disabled => Ok(FilenodeRangeResult::Disabled),
+                        FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
                     }
                 }
             })
@@ -379,10 +381,12 @@ impl FilenodesReader {
 
 fn convert_cached_filenodes(
     cached: Option<CachedHistory>,
-) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
+) -> Result<FilenodeResult<FilenodeRange>, Error> {
     match cached {
-        Some(cached) => Ok(FilenodeRangeResult::Present(cached.try_into()?)),
-        None => Ok(FilenodeRangeResult::TooBig),
+        Some(cached) => Ok(FilenodeResult::Present(FilenodeRange::Filenodes(
+            cached.try_into()?,
+        ))),
+        None => Ok(FilenodeResult::Present(FilenodeRange::TooBig)),
     }
 }
 
@@ -501,10 +505,10 @@ async fn select_history_from_sql(
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
     limit: Option<u64>,
-) -> Result<FilenodeRangeResult<CachedHistory>, Error> {
+) -> Result<FilenodeResult<Option<CachedHistory>>, Error> {
     if tunables().filenodes_disabled().unwrap_or_default() {
         STATS::range_gets_disabled.add_value(1);
-        return Ok(FilenodeRangeResult::Disabled);
+        return Ok(FilenodeResult::Disabled);
     }
 
     let maybe_partial = select_partial_history(connections, repo_id, pwh, recorder, limit).await?;
@@ -512,10 +516,10 @@ async fn select_history_from_sql(
         let history = fill_paths(connections, pwh, repo_id, partial, recorder).await?;
         let history = CachedHistory { history };
         filler.fill(Some(history.clone()));
-        Ok(FilenodeRangeResult::Present(history))
+        Ok(FilenodeResult::Present(Some(history)))
     } else {
         filler.fill(None);
-        Ok(FilenodeRangeResult::TooBig)
+        Ok(FilenodeResult::Present(None))
     }
 }
 
