@@ -5,20 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AnchorHTMLAttributes, DetailedHTMLProps, ReactNode} from 'react';
+import type {ComponentProps, ReactNode} from 'react';
 
 import platform from './platform';
+import {VSCodeLink} from '@vscode/webview-ui-toolkit/react';
 
 /**
  * Link which opens url in a new browser tab
  */
 export function ExternalLink(
-  props: {url?: string; children: ReactNode; className?: string} & DetailedHTMLProps<
-    AnchorHTMLAttributes<HTMLAnchorElement>,
-    HTMLAnchorElement
+  props: {href?: string; children: ReactNode; className?: string} & ComponentProps<
+    typeof VSCodeLink
   >,
 ) {
-  const {url, children, ...otherProps} = props;
+  const {href, children, ...otherProps} = props;
   const handleClick = (
     event: React.MouseEvent<HTMLAnchorElement> | React.KeyboardEvent<HTMLAnchorElement>,
   ) => {
@@ -28,22 +28,21 @@ export function ExternalLink(
         return;
       }
     }
-    if (url) {
-      platform.openExternalLink(url);
+    if (href) {
+      platform.openExternalLink(href);
     }
     event.preventDefault();
     event.stopPropagation();
   };
   return (
-    <a
-      href={url}
-      target="_blank"
+    <VSCodeLink
+      href={href}
       // Allow links to be focused
       tabIndex={0}
       onKeyUp={handleClick}
       onClick={handleClick}
       {...otherProps}>
       {children}
-    </a>
+    </VSCodeLink>
   );
 }

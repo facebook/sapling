@@ -63,7 +63,7 @@ export function DiffBadge({
   });
   return (
     <ExternalLink
-      url={openerUrl}
+      href={openerUrl}
       className={`diff-badge ${provider.name}-diff-badge`}
       onContextMenu={contextMenu}>
       <provider.DiffBadgeContent diff={diff} children={children} />
