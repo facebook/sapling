@@ -143,6 +143,7 @@ cleanbutpackages:
 	if test -d .hg; then rm -f edenscm/__version__.py; fi
 	rm -rf build/*
 	rm -rf build edenscm/locale
+	rm -f Cargo.lock
 ifeq ($(OS),Windows_NT)
 	$(RM) -r hg-python $(HGNAME).exe python27.dll
 else
