@@ -28,9 +28,9 @@ use super::util::build_shard;
 use crate::local_cache::LocalCache;
 use crate::reader::filenode_cache_key;
 use crate::reader::history_cache_key;
-use crate::remote_cache::test::make_test_cache;
 use crate::remote_cache::test::wait_for_filenode;
 use crate::remote_cache::test::wait_for_history;
+use crate::remote_cache::RemoteCache;
 
 fn filenode() -> FilenodeInfo {
     FilenodeInfo {
@@ -58,7 +58,7 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
     let (mut reader, writer) = build_reader_writer(vec1![build_shard()?]);
 
     reader.local_cache = LocalCache::new_mock();
-    reader.remote_cache = make_test_cache();
+    reader.remote_cache = RemoteCache::new_mock();
     let mut reader = Arc::new(reader);
 
     let path = RepoPath::file("file")?;
@@ -92,7 +92,7 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
     wait_for_filenode(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
-    Arc::get_mut(&mut reader).unwrap().remote_cache = make_test_cache();
+    Arc::get_mut(&mut reader).unwrap().remote_cache = RemoteCache::new_mock();
     reader
         .clone()
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
@@ -110,7 +110,7 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     let (mut reader, writer) = build_reader_writer(vec1![build_shard()?]);
 
     reader.local_cache = LocalCache::new_mock();
-    reader.remote_cache = make_test_cache();
+    reader.remote_cache = RemoteCache::new_mock();
     let mut reader = Arc::new(reader);
 
     let path = RepoPath::file("file")?;
@@ -141,7 +141,7 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     wait_for_history(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
-    Arc::get_mut(&mut reader).unwrap().remote_cache = make_test_cache();
+    Arc::get_mut(&mut reader).unwrap().remote_cache = RemoteCache::new_mock();
     reader
         .clone()
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path, limit)
@@ -159,7 +159,7 @@ async fn test_too_big_caching(fb: FacebookInit) -> Result<(), Error> {
     let (mut reader, writer) = build_reader_writer(vec1![build_shard()?]);
 
     reader.local_cache = LocalCache::new_mock();
-    reader.remote_cache = make_test_cache();
+    reader.remote_cache = RemoteCache::new_mock();
     let reader = Arc::new(reader);
 
     let path = RepoPath::file("file")?;

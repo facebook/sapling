@@ -28,6 +28,15 @@ impl From<MemcacheClient> for MemcacheHandler {
 }
 
 impl MemcacheHandler {
+    /// Returns true if this memcache handler is a no-op, and so operations
+    /// can be entirely skipped.
+    pub fn is_noop(&self) -> bool {
+        match self {
+            MemcacheHandler::Noop => true,
+            MemcacheHandler::Real(_) | MemcacheHandler::Mock(_) => false,
+        }
+    }
+
     pub async fn get(&self, key: String) -> Result<Option<Bytes>> {
         match self {
             MemcacheHandler::Real(ref client) => {

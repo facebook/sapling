@@ -175,7 +175,7 @@ impl FilenodesReader {
             read_connections: Connections::new(read_connections),
             read_master_connections: Connections::new(read_master_connections),
             local_cache: LocalCache::new_noop(),
-            remote_cache: RemoteCache::Noop,
+            remote_cache: RemoteCache::new_noop(),
         }
     }
 

@@ -56,82 +56,37 @@ const TTL_SEC: u64 = 8 * 60 * 60;
 // Adding a random to TTL helps preventing eviction of all related keys at once
 const TTL_SEC_RAND: u64 = 30 * 60; // 30min
 
-pub enum RemoteCache {
-    Memcache(MemcacheCache),
-    Noop,
-}
-
-impl RemoteCache {
-    // TODO: Can we optimize to reuse the existing PathWithHash we got?
-    pub async fn get_filenode(&self, key: &CacheKey<FilenodeInfo>) -> Option<FilenodeInfo> {
-        match self {
-            Self::Memcache(memcache) => {
-                let now = Instant::now();
-
-                let ret =
-                    get_single_filenode_from_memcache(&memcache.memcache, &memcache.keygen, key)
-                        .await;
-
-                let elapsed = now.elapsed().as_micros_unchecked() as i64;
-                STATS::get_latency.add_value(elapsed);
-
-                ret
-            }
-            Self::Noop => None,
-        }
-    }
-
-    // TODO: Need to use the same CacheKey here.
-    pub fn fill_filenode(&self, key: &CacheKey<FilenodeInfo>, filenode: FilenodeInfo) {
-        match self {
-            Self::Memcache(memcache) => {
-                schedule_fill_filenode(&memcache.memcache, &memcache.keygen, key, filenode)
-            }
-            Self::Noop => {}
-        }
-    }
-
-    pub async fn get_history(&self, key: &CacheKey<FilenodeRange>) -> Option<FilenodeRange> {
-        match self {
-            Self::Memcache(memcache) => {
-                let now = Instant::now();
-
-                let ret =
-                    get_history_from_memcache(&memcache.memcache, &memcache.keygen, key).await;
-
-                let elapsed = now.elapsed().as_micros_unchecked() as i64;
-                STATS::get_history.add_value(elapsed);
-
-                ret
-            }
-            Self::Noop => None,
-        }
-    }
-
-    // TODO: Take ownership of key
-    pub fn fill_history(&self, key: &CacheKey<FilenodeRange>, filenodes: FilenodeRange) {
-        match self {
-            Self::Memcache(memcache) => schedule_fill_history(
-                memcache.memcache.clone(),
-                memcache.keygen.clone(),
-                key.clone(),
-                filenodes,
-            ),
-            Self::Noop => {}
-        }
-    }
-}
-
-type Pointer = i64;
-
-#[derive(Clone)]
-pub struct MemcacheCache {
+pub struct RemoteCache {
     memcache: MemcacheHandler,
     keygen: KeyGen,
 }
 
-impl MemcacheCache {
+impl RemoteCache {
     pub fn new(fb: FacebookInit, backing_store_name: &str, backing_store_params: &str) -> Self {
+        Self {
+            memcache: MemcacheHandler::from(
+                MemcacheClient::new(fb).expect("Memcache initialization failed"),
+            ),
+            keygen: Self::create_key_gen(backing_store_name, backing_store_params),
+        }
+    }
+
+    pub fn new_noop() -> Self {
+        Self {
+            memcache: MemcacheHandler::create_noop(),
+            keygen: Self::create_key_gen("newfilenodes", ""),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_mock() -> Self {
+        Self {
+            memcache: MemcacheHandler::create_mock(),
+            keygen: Self::create_key_gen("newfilenodes", "test"),
+        }
+    }
+
+    fn create_key_gen(backing_store_name: &str, backing_store_params: &str) -> KeyGen {
         let key_prefix = format!(
             "scm.mononoke.filenodes.{}.{}",
             backing_store_name, backing_store_params,
@@ -142,14 +97,55 @@ impl MemcacheCache {
             Err(_) => MC_SITEVER as u32,
         };
 
-        Self {
-            memcache: MemcacheHandler::from(
-                MemcacheClient::new(fb).expect("Memcache initialization failed"),
-            ),
-            keygen: KeyGen::new(key_prefix, MC_CODEVER as u32, mc_sitever),
+        KeyGen::new(key_prefix, MC_CODEVER as u32, mc_sitever)
+    }
+
+    // TODO: Can we optimize to reuse the existing PathWithHash we got?
+    pub async fn get_filenode(&self, key: &CacheKey<FilenodeInfo>) -> Option<FilenodeInfo> {
+        let now = Instant::now();
+
+        let ret = get_single_filenode_from_memcache(&self.memcache, &self.keygen, key).await;
+
+        let elapsed = now.elapsed().as_micros_unchecked() as i64;
+        STATS::get_latency.add_value(elapsed);
+
+        ret
+    }
+
+    // TODO: Need to use the same CacheKey here.
+    pub fn fill_filenode(&self, key: &CacheKey<FilenodeInfo>, filenode: FilenodeInfo) {
+        // Avoid wasting time spawning a fill operation if the memcache is a no-op
+        if !self.memcache.is_noop() {
+            schedule_fill_filenode(&self.memcache, &self.keygen, key, filenode);
+        }
+    }
+
+    pub async fn get_history(&self, key: &CacheKey<FilenodeRange>) -> Option<FilenodeRange> {
+        let now = Instant::now();
+
+        let ret = get_history_from_memcache(&self.memcache, &self.keygen, key).await;
+
+        let elapsed = now.elapsed().as_micros_unchecked() as i64;
+        STATS::get_history.add_value(elapsed);
+
+        ret
+    }
+
+    // TODO: Take ownership of key
+    pub fn fill_history(&self, key: &CacheKey<FilenodeRange>, filenodes: FilenodeRange) {
+        // Avoid wasting time spawning a fill operation if the memcache is a no-op
+        if !self.memcache.is_noop() {
+            schedule_fill_history(
+                self.memcache.clone(),
+                self.keygen.clone(),
+                key.clone(),
+                filenodes,
+            );
         }
     }
 }
+
+type Pointer = i64;
 
 fn get_mc_key_for_filenodes_list_chunk(
     keygen: &KeyGen,
@@ -443,15 +439,6 @@ pub mod test {
         }
     }
 
-    pub fn make_test_cache() -> RemoteCache {
-        let keygen = KeyGen::new("newfilenodes.test", 0, 0);
-
-        RemoteCache::Memcache(MemcacheCache {
-            memcache: MemcacheHandler::create_mock(),
-            keygen,
-        })
-    }
-
     pub async fn wait_for_filenode(
         cache: &RemoteCache,
         key: &CacheKey<FilenodeInfo>,
@@ -494,7 +481,7 @@ pub mod test {
 
     #[fbinit::test]
     async fn test_store_filenode(_fb: FacebookInit) -> Result<(), Error> {
-        let cache = make_test_cache();
+        let cache = RemoteCache::new_mock();
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
@@ -514,7 +501,7 @@ pub mod test {
 
     #[fbinit::test]
     async fn test_store_short_history(_fb: FacebookInit) -> Result<(), Error> {
-        let cache = make_test_cache();
+        let cache = RemoteCache::new_mock();
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
         let history = FilenodeRange::Filenodes(vec![info.clone(), info.clone(), info.clone()]);
@@ -531,7 +518,7 @@ pub mod test {
 
     #[fbinit::test]
     async fn test_store_long_history(_fb: FacebookInit) -> Result<(), Error> {
-        let cache = make_test_cache();
+        let cache = RemoteCache::new_mock();
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
@@ -551,7 +538,7 @@ pub mod test {
 
     #[fbinit::test]
     async fn test_store_too_long_history(_fb: FacebookInit) -> Result<(), Error> {
-        let cache = make_test_cache();
+        let cache = RemoteCache::new_mock();
         let path = RepoPath::file("copiedto")?;
 
         let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path), None);

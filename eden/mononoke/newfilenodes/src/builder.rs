@@ -19,7 +19,6 @@ use sql_ext::SqlShardedConnections;
 
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
-use crate::remote_cache::MemcacheCache;
 use crate::remote_cache::RemoteCache;
 use crate::writer::FilenodesWriter;
 use crate::NewFilenodes;
@@ -85,10 +84,6 @@ impl NewFilenodesBuilder {
             filenodes_history_cache_pool.into(),
         );
 
-        self.reader.remote_cache = RemoteCache::Memcache(MemcacheCache::new(
-            fb,
-            backing_store_name,
-            backing_store_params,
-        ));
+        self.reader.remote_cache = RemoteCache::new(fb, backing_store_name, backing_store_params);
     }
 }
