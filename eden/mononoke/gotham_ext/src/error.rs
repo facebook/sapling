@@ -33,6 +33,13 @@ impl HttpError {
         }
     }
 
+    pub fn e401<E: Into<Error>>(err: E) -> Self {
+        Self {
+            error: err.into(),
+            status_code: StatusCode::UNAUTHORIZED,
+        }
+    }
+
     pub fn e403<E: Into<Error>>(err: E) -> Self {
         Self {
             error: err.into(),
