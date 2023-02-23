@@ -229,9 +229,15 @@ class HgRepository(repobase.Repository):
         hgrc["remotefilelog"]["cachepath"] = cachepath
         self.write_hgrc(hgrc)
 
-        requirespath = os.path.join(self.path, ".hg", "requires")
-        with open(requirespath, "a") as f:
-            f.write("remotefilelog\n")
+        storerequirespath = os.path.join(self.path, ".hg", "store", "requires")
+        with open(storerequirespath, "r") as f:
+            storerequires = set(f.read().split())
+
+        # eagerepo conflicts with remotefilelog repo
+        if "eagerepo" not in storerequires:
+            requirespath = os.path.join(self.path, ".hg", "requires")
+            with open(requirespath, "a") as f:
+                f.write("remotefilelog\n")
 
     def write_hgrc(self, hgrc: configparser.ConfigParser) -> None:
         hgrc_path = os.path.join(self.path, ".hg", "hgrc")
