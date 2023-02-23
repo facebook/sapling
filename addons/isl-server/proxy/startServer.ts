@@ -21,6 +21,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {safeWhich} from 'shared/safeWhich';
 
 const DEFAULT_PORT = '3001';
 
@@ -503,7 +504,7 @@ export async function runProxyMain(args: Args) {
         command: existingServerInfo.command,
       });
     } else if (openUrl) {
-      maybeOpenURL(url);
+      await maybeOpenURL(url);
     }
     process.exit(0);
   } else if (result.type === 'success') {
@@ -547,7 +548,7 @@ export async function runProxyMain(args: Args) {
     }
 
     if (openUrl) {
-      maybeOpenURL(url);
+      await maybeOpenURL(url);
     }
 
     // If --foreground was not specified, we can kill this process, but the
@@ -620,7 +621,7 @@ function suggestDebugPortIssue(port: number): string {
  * the caller must take responsibility for ensuring the integrity of the
  * `url` argument.
  */
-function maybeOpenURL(url: URL): void {
+async function maybeOpenURL(url: URL): Promise<void> {
   const {href} = url;
   // Basic sanity checking: this does not eliminate all illegal inputs.
   if (!href.startsWith('http://') || href.indexOf(' ') !== -1) {
@@ -652,10 +653,11 @@ function maybeOpenURL(url: URL): void {
 
   const args = commandOptions != null ? commandOptions.concat(href) : [href];
 
+  const resolvedOpenCommand = await safeWhich(openCommand);
   // Note that if openCommand does not exist on the host, this will fail with
   // ENOENT. Often, this is fine: the user could start isl on a headless
   // machine, but then set up tunneling to reach the server from another host.
-  const child = child_process.spawn(openCommand, args, {
+  const child = child_process.spawn(resolvedOpenCommand, args, {
     detached: true,
     stdio: 'ignore' as IOType,
     windowsHide: true,
