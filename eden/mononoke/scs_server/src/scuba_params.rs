@@ -511,3 +511,9 @@ impl AddScubaParams for thrift::MegarepoReadConfigParams {
         report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
+
+impl AddScubaParams for thrift::UploadGitObjectParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_git_object_id", hex(&self.git_hash));
+    }
+}

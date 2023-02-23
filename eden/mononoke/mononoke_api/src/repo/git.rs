@@ -35,10 +35,11 @@ pub enum GitError {
     #[error("Input hash {0} does not match the SHA1 hash {1} of the content")]
     HashMismatch(String, String),
 
+    /// The input hash is not a valid SHA1 hash.
     #[error("Input hash {0} is not a valid SHA1 git hash")]
     InvalidHash(String),
 
-    /// A new bubble could not be created.
+    /// The raw object content provided do not correspond to a valid git object.
     #[error("Invalid git object content provided for object ID {0}. Cause: {1}")]
     InvalidContent(String, GitInternalError),
 
@@ -56,6 +57,7 @@ pub enum GitError {
     #[error("The object corresponding to object ID {0} does not exist in the data store")]
     NonExistentObject(String),
 
+    /// The provided git object could not be converted to a valid bonsai changeset.
     #[error(
         "Validation failure while persisting git object (ID: {0}) as a bonsai changeset. Cause: {1}"
     )]
@@ -109,10 +111,10 @@ impl RepoContext {
     pub async fn upload_git_object(
         &self,
         git_hash: &git_hash::oid,
-        serialized_representation: Vec<u8>,
+        raw_content: Vec<u8>,
     ) -> anyhow::Result<(), GitError> {
         // Check if the provided Sha1 hash (i.e. ObjectId) of the bytes actually corresponds to the hash of the bytes
-        let bytes = bytes::Bytes::from(serialized_representation);
+        let bytes = bytes::Bytes::from(raw_content);
         let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
         if sha1_hash.as_ref() != git_hash.as_bytes() {
             return Err(GitError::HashMismatch(

@@ -190,3 +190,5 @@ impl AddScubaResponse for thrift::MegarepoSyncChangesetToken {
         report_megarepo_target(&self.target, scuba, Reported::Response);
     }
 }
+
+impl AddScubaResponse for thrift::UploadGitObjectResponse {}

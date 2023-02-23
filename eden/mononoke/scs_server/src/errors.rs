@@ -9,6 +9,7 @@ use std::backtrace::BacktraceStatus;
 use std::error::Error as StdError;
 
 use megarepo_error::MegarepoError;
+use mononoke_api::repo::git::GitError;
 use mononoke_api::MononokeError;
 use source_control as thrift;
 use source_control::services::source_control_service as service;
@@ -263,6 +264,7 @@ impl_into_thrift_error!(service::MegarepoSyncChangesetExn);
 impl_into_thrift_error!(service::MegarepoSyncChangesetPollExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourceExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourcePollExn);
+impl_into_thrift_error!(service::UploadGitObjectExn);
 
 pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
@@ -361,5 +363,40 @@ pub(crate) fn not_implemented(reason: String) -> thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_IMPLEMENTED,
         reason,
         ..Default::default()
+    }
+}
+
+impl From<GitError> for ServiceError {
+    fn from(error: GitError) -> Self {
+        match error {
+            // Storage failure is a internal error with system generated error message.
+            // Convert it into thrift::InternalError before sending across service boundary.
+            GitError::StorageFailure(reason, error) => {
+                let backtrace = match error.backtrace().status() {
+                    BacktraceStatus::Captured => Some(error.backtrace().to_string()),
+                    _ => None,
+                };
+                let mut source_chain = Vec::new();
+                let mut error: &dyn StdError = &error;
+                while let Some(source) = error.source() {
+                    source_chain.push(source.to_string());
+                    error = source;
+                }
+                Self::Internal(thrift::InternalError {
+                    reason,
+                    backtrace,
+                    source_chain,
+                    ..Default::default()
+                })
+            }
+            // All other kind of errors associated with git operations are a result of
+            // invalid / bad user input. Categorize them under INVALID_REQUEST and include
+            // the actual cause in the reason string.
+            _ => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::INVALID_REQUEST,
+                reason: error.to_string(),
+                ..Default::default()
+            }),
+        }
     }
 }
