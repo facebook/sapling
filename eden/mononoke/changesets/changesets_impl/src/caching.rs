@@ -279,16 +279,6 @@ impl EntityStore<ChangesetEntryWrapper> for CacheRequest<'_> {
     }
 
     caching_ext::impl_singleton_stats!("changesets");
-
-    #[cfg(test)]
-    fn spawn_memcache_writes(&self) -> bool {
-        let (_, mapping) = self;
-
-        match mapping.memcache {
-            MemcacheHandler::Real(_) => true,
-            MemcacheHandler::Mock(..) | MemcacheHandler::Noop => false,
-        }
-    }
 }
 
 #[async_trait]

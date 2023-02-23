@@ -181,14 +181,6 @@ impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
     }
 
     caching_ext::impl_singleton_stats!("commit_graph");
-
-    #[cfg(test)]
-    fn spawn_memcache_writes(&self) -> bool {
-        match self.caching_storage.memcache {
-            MemcacheHandler::Real(_) => true,
-            MemcacheHandler::Mock(..) | MemcacheHandler::Noop => false,
-        }
-    }
 }
 
 #[async_trait]

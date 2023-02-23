@@ -131,13 +131,6 @@ pub trait EntityStore<V> {
     ///
     /// Implement this method with `caching_ext::impl_singleton_stats!` macro, instead of by hand
     fn stats(&self) -> &CacheStats;
-
-    /// Whether Memcache writes should run in the background. This is normally the desired behavior
-    /// so this defaults to true, but for tests it's useful to run them synchronously to get
-    /// consistent outcomes.
-    fn spawn_memcache_writes(&self) -> bool {
-        true
-    }
 }
 
 /// Implement this to make it possible to fetch keys via the cache
@@ -352,12 +345,7 @@ async fn fill_caches_by_key<'a, V>(
 
     fill_multiple_cachelib(store.cachelib(), cachelib_keys);
 
-    fill_multiple_memcache(
-        store.memcache(),
-        memcache_keys,
-        store.spawn_memcache_writes(),
-    )
-    .await;
+    fill_multiple_memcache(store.memcache(), memcache_keys).await;
 }
 
 async fn get_multiple_from_memcache<K, V>(
@@ -435,7 +423,6 @@ fn fill_multiple_cachelib<'a, V>(
 async fn fill_multiple_memcache<'a, V: 'a>(
     memcache: &'a MemcacheHandler,
     data: impl IntoIterator<Item = (MemcacheKey, CacheTtl, &'a V)>,
-    spawn: bool,
 ) where
     V: MemcacheEntity,
 {
@@ -465,7 +452,7 @@ async fn fill_multiple_memcache<'a, V: 'a>(
 
     let fut = stream::iter(futs).for_each_concurrent(MEMCACHE_CONCURRENCY, |fut| fut);
 
-    if spawn {
+    if memcache.is_async() {
         tokio::task::spawn(fut);
     } else {
         fut.await;
@@ -536,10 +523,6 @@ mod test {
         }
 
         impl_singleton_stats!("test");
-
-        fn spawn_memcache_writes(&self) -> bool {
-            false
-        }
     }
 
     #[async_trait]

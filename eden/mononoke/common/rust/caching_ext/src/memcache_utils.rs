@@ -37,6 +37,13 @@ impl MemcacheHandler {
         }
     }
 
+    pub fn is_async(&self) -> bool {
+        match self {
+            MemcacheHandler::Real(_) => true,
+            MemcacheHandler::Mock(_) | MemcacheHandler::Noop => false,
+        }
+    }
+
     pub async fn get(&self, key: String) -> Result<Option<Bytes>> {
         match self {
             MemcacheHandler::Real(ref client) => {
