@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
+#include <fb303/ServiceData.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
@@ -25,15 +26,26 @@ std::shared_ptr<StructuredLogger> makeDefaultStructuredLogger(
   }
 
   if (category.empty()) {
-    XLOG(WARN)
-        << "Scribe binary specified, but no category specified. Structured logging is disabled.";
+    XLOGF(
+        WARN,
+        "Scribe binary '{}' specified, but no category specified. Structured logging is disabled.",
+        binary);
     return std::make_shared<NullStructuredLogger>();
   }
 
-  auto logger =
-      std::make_unique<SubprocessScribeLogger>(binary.c_str(), category);
-  return std::make_shared<ScubaStructuredLogger>(
-      std::move(logger), std::move(sessionInfo));
+  try {
+    auto logger =
+        std::make_unique<SubprocessScribeLogger>(binary.c_str(), category);
+    return std::make_shared<ScubaStructuredLogger>(
+        std::move(logger), std::move(sessionInfo));
+  } catch (const std::exception& ex) {
+    fb303::fbData->incrementCounter("subprocess_scribe_logger_failure");
+    XLOGF(
+        WARN,
+        "Failed to create SubprocessScribeLogger: {}. Structured logging is disabled.",
+        folly::exceptionStr(ex));
+    return std::make_shared<NullStructuredLogger>();
+  }
 }
 
 } // namespace facebook::eden
