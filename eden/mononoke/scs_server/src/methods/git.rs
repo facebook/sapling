@@ -6,6 +6,7 @@
  */
 
 use context::CoreContext;
+use mononoke_api::errors::MononokeError;
 use mononoke_api::repo::git::GitError;
 use source_control as thrift;
 
@@ -23,9 +24,15 @@ impl SourceControlServiceImpl {
         params: thrift::UploadGitObjectParams,
     ) -> Result<thrift::UploadGitObjectResponse, errors::ServiceError> {
         let repo_ctx = self
-            .repo(ctx, &repo)
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
             .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+        // Validate that the request sender has an internal service identity with the right permission.
+        repo_ctx
+            .authorization_context()
+            .require_git_import_operations(repo_ctx.ctx(), repo_ctx.inner_repo())
+            .await
+            .map_err(MononokeError::from)?;
         let git_hash = git_hash::oid::try_from_bytes(&params.git_hash)
             .map_err(|_| GitError::InvalidHash(format!("{:x?}", params.git_hash)))?;
         repo_ctx

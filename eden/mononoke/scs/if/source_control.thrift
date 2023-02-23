@@ -1506,6 +1506,8 @@ struct UploadGitObjectParams {
   1: binary git_hash;
   /// The raw content of the git object that is being uploaded.
   2: binary raw_content;
+  /// The identity of the service making the upload git object request.
+  3: optional string service_identity;
 }
 
 /// Method response structures

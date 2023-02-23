@@ -27,6 +27,7 @@ pub enum DeniedAction {
     PathWrite(MPath),
     BookmarkModification(BookmarkKey),
     OverrideGitMapping,
+    GitImportOperation,
 }
 
 impl fmt::Display for DeniedAction {
@@ -49,6 +50,9 @@ impl fmt::Display for DeniedAction {
                 write!(f, "Modification of bookmark '{}'", bookmark)
             }
             DeniedAction::OverrideGitMapping => f.write_str("Overriding of Git mapping"),
+            DeniedAction::GitImportOperation => {
+                f.write_str("Access for Git-import related operations")
+            }
         }
     }
 }
