@@ -174,7 +174,7 @@ impl FilenodesReader {
             shards: Arc::new(Shards::new(1000, 1000)),
             read_connections: Connections::new(read_connections),
             read_master_connections: Connections::new(read_master_connections),
-            local_cache: LocalCache::Noop,
+            local_cache: LocalCache::new_noop(),
             remote_cache: RemoteCache::Noop,
         }
     }
@@ -191,7 +191,7 @@ impl FilenodesReader {
         let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
         let key = filenode_cache_key(repo_id, &pwh, &filenode);
 
-        if let Some(cached) = self.local_cache.get(&key) {
+        if let Some(cached) = self.local_cache.get_filenode(&key) {
             return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
         }
 
@@ -202,7 +202,7 @@ impl FilenodesReader {
                 async move {
                     // Now that we acquired the permit, check our cache again, in case the previous permit
                     // owner just filed the cache with the filenode we're looking for.
-                    if let Some(cached) = self.local_cache.get(&key) {
+                    if let Some(cached) = self.local_cache.get_filenode(&key) {
                         return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
                     }
 
@@ -211,7 +211,7 @@ impl FilenodesReader {
                     if let Some(info) =
                         enforce_remote_cache_timeout(self.remote_cache.get_filenode(&key)).await
                     {
-                        self.local_cache.fill(&key, &info);
+                        self.local_cache.fill_filenode(&key, &info);
                         return Ok(FilenodeResult::Present(Some(info)));
                     }
 
@@ -301,7 +301,7 @@ impl FilenodesReader {
         let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
         let key = history_cache_key(repo_id, &pwh, limit);
 
-        if let Some(cached) = self.local_cache.get(&key) {
+        if let Some(cached) = self.local_cache.get_history(&key) {
             return Ok(FilenodeResult::Present(cached));
         }
         let ctx = ctx.clone();
@@ -310,7 +310,7 @@ impl FilenodesReader {
             .with_history(path, move || {
                 async move {
                     // See above for rationale here.
-                    if let Some(cached) = self.local_cache.get(&key) {
+                    if let Some(cached) = self.local_cache.get_history(&key) {
                         return Ok(FilenodeResult::Present(cached));
                     }
 
@@ -320,7 +320,7 @@ impl FilenodesReader {
                         enforce_remote_cache_timeout(self.remote_cache.get_history(&key)).await
                     {
                         // TODO: We should compress if this is too big.
-                        self.local_cache.fill(&key, &info);
+                        self.local_cache.fill_history(&key, &info);
                         return Ok(FilenodeResult::Present(info));
                     }
 
@@ -356,7 +356,7 @@ impl FilenodesReader {
         for c in filenodes {
             let pwh = PathWithHash::from_repo_path(&c.path);
             let key = filenode_cache_key(repo_id, &pwh, &c.info.filenode);
-            self.local_cache.fill(&key, &c.info)
+            self.local_cache.fill_filenode(&key, &c.info)
         }
     }
 }
@@ -370,7 +370,7 @@ struct FilenodeCacheFiller<'a> {
 
 impl<'a> FilenodeCacheFiller<'a> {
     fn fill(&self, filenode: FilenodeInfo) {
-        self.local_cache.fill(self.key, &filenode);
+        self.local_cache.fill_filenode(self.key, &filenode);
         self.remote_cache.fill_filenode(self.key, filenode);
     }
 }
@@ -459,7 +459,7 @@ struct HistoryCacheFiller<'a> {
 
 impl<'a> HistoryCacheFiller<'a> {
     fn fill(&self, history: FilenodeRange) {
-        self.local_cache.fill(self.key, &history);
+        self.local_cache.fill_history(self.key, &history);
         self.remote_cache.fill_history(self.key, history);
     }
 }

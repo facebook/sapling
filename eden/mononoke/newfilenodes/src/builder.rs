@@ -17,7 +17,6 @@ use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_construct::SqlShardedConstruct;
 use sql_ext::SqlShardedConnections;
 
-use crate::local_cache::CachelibCache;
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
 use crate::remote_cache::MemcacheCache;
@@ -81,10 +80,10 @@ impl NewFilenodesBuilder {
         backing_store_name: &str,
         backing_store_params: &str,
     ) {
-        self.reader.local_cache = LocalCache::Cachelib(CachelibCache::new(
-            filenodes_cache_pool,
-            filenodes_history_cache_pool,
-        ));
+        self.reader.local_cache = LocalCache::new(
+            filenodes_cache_pool.into(),
+            filenodes_history_cache_pool.into(),
+        );
 
         self.reader.remote_cache = RemoteCache::Memcache(MemcacheCache::new(
             fb,

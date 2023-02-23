@@ -7,10 +7,7 @@
 
 use std::marker::PhantomData;
 
-use abomonation::Abomonation;
-use cachelib::get_cached;
-use cachelib::set_cached;
-use cachelib::VolatileLruCachePool;
+use caching_ext::CachelibHandler;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
 use stats::prelude::*;
@@ -18,24 +15,6 @@ use stats::prelude::*;
 define_stats! {
     prefix = "mononoke.filenodes";
     fill_cache_fail: timeseries(Sum),
-}
-
-#[derive(Copy, Clone)]
-pub enum CachePool {
-    Filenodes,
-    FilenodesHistory,
-}
-
-pub trait Cacheable {
-    const POOL: CachePool;
-}
-
-impl Cacheable for FilenodeInfo {
-    const POOL: CachePool = CachePool::Filenodes;
-}
-
-impl Cacheable for FilenodeRange {
-    const POOL: CachePool = CachePool::FilenodesHistory;
 }
 
 #[derive(Clone)]
@@ -46,126 +25,62 @@ pub struct CacheKey<V> {
     pub value: PhantomData<V>,
 }
 
-pub enum LocalCache {
-    Cachelib(CachelibCache),
-    Noop,
-    #[cfg(test)]
-    Test(self::test::HashMapCache),
+pub struct LocalCache {
+    filenode_cache: CachelibHandler<FilenodeInfo>,
+    history_cache: CachelibHandler<FilenodeRange>,
 }
 
 impl LocalCache {
-    pub fn get<V>(&self, key: &CacheKey<V>) -> Option<V>
-    where
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        match self {
-            Self::Cachelib(cache) => cache.get(key),
-            Self::Noop => None,
-            #[cfg(test)]
-            Self::Test(cache) => cache.get(key),
-        }
-    }
-
-    pub fn fill<V>(&self, key: &CacheKey<V>, value: &V)
-    where
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        match self {
-            Self::Cachelib(cache) => cache.fill(key, value),
-            Self::Noop => {}
-            #[cfg(test)]
-            Self::Test(cache) => cache.fill(key, value),
-        };
-    }
-}
-
-pub struct CachelibCache {
-    filenodes_cache_pool: VolatileLruCachePool,
-    filenodes_history_cache_pool: VolatileLruCachePool,
-}
-
-impl CachelibCache {
     pub fn new(
-        filenodes_cache_pool: VolatileLruCachePool,
-        filenodes_history_cache_pool: VolatileLruCachePool,
+        filenode_cache: CachelibHandler<FilenodeInfo>,
+        history_cache: CachelibHandler<FilenodeRange>,
     ) -> Self {
-        Self {
-            filenodes_cache_pool,
-            filenodes_history_cache_pool,
+        LocalCache {
+            filenode_cache,
+            history_cache,
         }
     }
 
-    fn get<V>(&self, key: &CacheKey<V>) -> Option<V>
-    where
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        match get_cached(self.get_cache::<V>(), &key.key) {
+    pub fn new_noop() -> Self {
+        Self::new(
+            CachelibHandler::create_noop(),
+            CachelibHandler::create_noop(),
+        )
+    }
+
+    #[cfg(test)]
+    pub fn new_mock() -> Self {
+        Self::new(
+            CachelibHandler::create_mock(),
+            CachelibHandler::create_mock(),
+        )
+    }
+
+    pub fn get_filenode(&self, key: &CacheKey<FilenodeInfo>) -> Option<FilenodeInfo> {
+        match self.filenode_cache.get_cached(&key.key) {
             Ok(Some(r)) => Some(r),
             _ => None,
         }
     }
 
-    fn fill<V>(&self, key: &CacheKey<V>, value: &V)
-    where
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        let r = set_cached(self.get_cache::<V>(), &key.key, value, None);
+    pub fn fill_filenode(&self, key: &CacheKey<FilenodeInfo>, value: &FilenodeInfo) {
+        let r = self.filenode_cache.set_cached(&key.key, value, None);
         if r.is_err() {
             STATS::fill_cache_fail.add_value(1);
         }
     }
 
-    fn get_cache<V>(&self) -> &VolatileLruCachePool
-    where
-        V: Cacheable,
-    {
-        match V::POOL {
-            CachePool::Filenodes => &self.filenodes_cache_pool,
-            CachePool::FilenodesHistory => &self.filenodes_history_cache_pool,
+    pub fn get_history(&self, key: &CacheKey<FilenodeRange>) -> Option<FilenodeRange> {
+        match self.history_cache.get_cached(&key.key) {
+            Ok(Some(r)) => Some(r),
+            _ => None,
         }
     }
-}
 
-#[cfg(test)]
-pub mod test {
-    use std::collections::HashMap;
-    use std::sync::Mutex;
-
-    use super::*;
-
-    pub struct HashMapCache {
-        hashmap: Mutex<HashMap<String, Vec<u8>>>,
-    }
-
-    impl HashMapCache {
-        pub fn new() -> Self {
-            Self {
-                hashmap: Mutex::new(HashMap::new()),
-            }
-        }
-
-        pub fn get<V>(&self, key: &CacheKey<V>) -> Option<V>
-        where
-            V: Cacheable + Abomonation + Clone + Send + 'static,
-        {
-            let mut bytes = match self.hashmap.lock().unwrap().get(&key.key) {
-                Some(obj) => obj.clone(),
-                None => {
-                    return None;
-                }
-            };
-            let (obj, tail) = unsafe { abomonation::decode::<V>(&mut bytes) }.unwrap();
-            assert!(tail.is_empty());
-            Some(obj.clone())
-        }
-
-        pub fn fill<V>(&self, key: &CacheKey<V>, value: &V)
-        where
-            V: Cacheable + Abomonation + Clone + Send + 'static,
-        {
-            let mut bytes = Vec::new();
-            unsafe { abomonation::encode(value, &mut bytes) }.unwrap();
-            self.hashmap.lock().unwrap().insert(key.key.clone(), bytes);
+    pub fn fill_history(&self, key: &CacheKey<FilenodeRange>, value: &FilenodeRange) {
+        let r = self.history_cache.set_cached(&key.key, value, None);
+        if r.is_err() {
+            STATS::fill_cache_fail.add_value(1);
         }
     }
 }

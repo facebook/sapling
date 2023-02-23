@@ -38,7 +38,6 @@ use vec1::Vec1;
 use super::util::build_reader_writer;
 use super::util::build_shard;
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
-use crate::local_cache::test::HashMapCache;
 use crate::local_cache::LocalCache;
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
@@ -990,7 +989,7 @@ fn create_sharded() -> Result<Vec1<Connection>, Error> {
 fn no_caching(_reader: &mut FilenodesReader) {}
 
 fn with_caching(reader: &mut FilenodesReader) {
-    reader.local_cache = LocalCache::Test(HashMapCache::new());
+    reader.local_cache = LocalCache::new_mock();
 }
 
 filenodes_tests!(uncached_unsharded_test, create_unsharded, no_caching);
