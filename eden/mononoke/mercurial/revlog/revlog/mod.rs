@@ -19,7 +19,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use bytes::Bytes;
-use memmap::Mmap;
+use memmap2::Mmap;
 pub use mercurial_types::bdiff;
 pub use mercurial_types::bdiff::Delta;
 pub use mercurial_types::delta;

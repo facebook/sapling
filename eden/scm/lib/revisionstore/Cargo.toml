@@ -28,7 +28,7 @@ indexedlog = { version = "0.1.0", path = "../indexedlog" }
 lfs_protocol = { version = "0.1.0", path = "../../../mononoke/lfs_protocol" }
 lz4-pyframe = { version = "0.1.0", path = "../lz4-pyframe" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
-memmap = "0.7"
+memmap2 = "0.5.10"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
 mpatch = { version = "0.1.0", path = "../mpatch" }

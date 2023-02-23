@@ -19,7 +19,7 @@ flate2 = { version = "1.0.22", features = ["rust_backend", "tokio"], default-fea
 futures = "0.1.31"
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lz4-pyframe = { version = "0.1.0", path = "../../../scm/lib/lz4-pyframe" }
-memmap = "0.7"
+memmap2 = "0.5.10"
 mercurial_types = { version = "0.1.0", path = "../types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 nom = { version = "3", features = ["verbose-errors"] }

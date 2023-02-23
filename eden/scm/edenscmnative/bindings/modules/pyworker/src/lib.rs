@@ -367,7 +367,7 @@ mod tests {
     use std::os::windows::fs::OpenOptionsExt;
 
     use anyhow::ensure;
-    use memmap::MmapOptions;
+    use memmap2::MmapOptions;
     use minibytes::Bytes;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;

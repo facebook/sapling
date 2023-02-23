@@ -16,8 +16,8 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use memmap::Mmap;
-use memmap::MmapOptions;
+use memmap2::Mmap;
+use memmap2::MmapOptions;
 use thiserror::Error;
 use types::HgId;
 

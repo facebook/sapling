@@ -14,7 +14,7 @@ impl BytesOwner for Vec<u8> {}
 impl BytesOwner for Box<[u8]> {}
 impl BytesOwner for String {}
 #[cfg(feature = "frommmap")]
-impl BytesOwner for memmap::Mmap {}
+impl BytesOwner for memmap2::Mmap {}
 #[cfg(feature = "frombytes")]
 impl BytesOwner for bytes::Bytes {}
 

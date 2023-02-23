@@ -15,7 +15,7 @@ use std::io::Write;
 use std::path::Path;
 use std::sync::atomic;
 
-use memmap::MmapOptions;
+use memmap2::MmapOptions;
 use minibytes::Bytes;
 use twox_hash::XxHash;
 use twox_hash::XxHash32;
@@ -49,7 +49,7 @@ pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
         Ok(Bytes::new())
     } else {
         Ok(Bytes::from(unsafe {
-            MmapOptions::new().len(len as usize).map(&file)
+            MmapOptions::new().len(len as usize).map(file)
         }?))
     }
 }

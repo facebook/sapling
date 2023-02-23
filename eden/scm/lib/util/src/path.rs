@@ -667,7 +667,7 @@ mod tests {
         atomic_write_symlink(&j("c"), b"2")?;
         // Keep an mmap of the current "c".
         let file = fs::OpenOptions::new().read(true).open(&j("c"))?;
-        let mmap = unsafe { memmap::Mmap::map(&file) }?;
+        let mmap = unsafe { memmap2::Mmap::map(&file) }?;
         // This file should be automatically deleted.
         fs::write(j("c.aaaa.atomic"), b"0")?;
         // Rewrite c with different data.
@@ -704,7 +704,7 @@ mod tests {
         let path = dir.path().join("foo");
         fs::write(&path, b"bar").unwrap();
         let file = fs::OpenOptions::new().read(true).open(&path).unwrap();
-        let _mmap = unsafe { memmap::Mmap::map(&file) }.unwrap();
+        let _mmap = unsafe { memmap2::Mmap::map(&file) }.unwrap();
         remove_file(&path).unwrap();
         assert!(!path.exists());
         // The file can be recreated in-place.

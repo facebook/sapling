@@ -13,7 +13,7 @@
 //! reference count.
 //!
 //! Aside from supporting `Vec<u8>` as the underlying storage, [`Bytes`] also
-//! supports [`memmap::Mmap`]. Libraries can implement [`BytesOwner`] for other
+//! supports [`memmap2::Mmap`]. Libraries can implement [`BytesOwner`] for other
 //! types to further extend storage support.
 
 mod bytes;
