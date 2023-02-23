@@ -31,6 +31,7 @@ from . import (
     error,
     exchange,
     extensions,
+    identity,
     localrepo,
     lock,
     merge as mergemod,
@@ -59,6 +60,22 @@ sharedbookmarks = "bookmarks"
 def _local(path):
     path = util.expandpath(util.urllocalpath(path))
     return os.path.isfile(path) and bundlerepo or localrepo
+
+
+def _eager_or_local(path):
+    # could be "eager repo", "bundlerepo", or (legacy) "localrepo"
+    if os.path.isabs(path):
+        try:
+            ident = identity.sniffdir(path)
+            if ident:
+                with open(os.path.join(path, ident.dotdir(), "store", "requires")) as f:
+                    from .eagerepo import EAGEREPO_REQUIREMENT
+
+                    if EAGEREPO_REQUIREMENT in f.read().split():
+                        return eagerpeer
+        except IOError:
+            pass
+    return _local(path)
 
 
 def addbranchrevs(lrepo, other, branches, revs):
@@ -119,7 +136,7 @@ def parseurl(path, branches=None):
 schemes = {
     "bundle": bundlerepo,
     "eager": eagerpeer,
-    "file": _local,
+    "file": _eager_or_local,
     "mononoke": mononokepeer,
     "ssh": sshpeer,
     "test": eagerpeer,
