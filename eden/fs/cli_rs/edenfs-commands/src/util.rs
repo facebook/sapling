@@ -17,7 +17,7 @@ pub mod jsonrpc;
 /// Expand the path if the user has supplied anything. Otherwise, use the current working directory instead.
 ///
 /// Usage:
-/// ```no_run
+/// ```ignore
 /// #[clap(..., parse(try_from_str = expand_path_or_cwd), default_value = "", ...)]
 /// ```
 pub fn expand_path_or_cwd(input: &str) -> Result<PathBuf> {

@@ -9,10 +9,10 @@
 // so it can be used standalone without coupling with the rest of
 // edenscm logic.
 
-use conch_parser::lexer::Lexer;
-use conch_parser::parse::DefaultParser;
 use cpython::serde::to_py_object;
 use cpython::*;
+use third_party_conch_parser::lexer::Lexer;
+use third_party_conch_parser::parse::DefaultParser;
 
 // rustfmt turns "|py, m|" into "|py, m,|" and breaks compile
 #[rustfmt::skip::macros(py_module_initializer)]

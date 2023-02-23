@@ -42,11 +42,15 @@ use termwiz::surface::Change;
 ///
 /// Pick one from "color214" and "yellow", then combined with "bold":
 ///
-///     color214:yellow bold
+/// ```text
+/// color214:yellow bold
+/// ```
 ///
 /// Pick one from "color214" and "yellow+bold":
 ///
-///     color214:yellow+bold
+/// ```text
+/// color214:yellow+bold
+/// ```
 pub fn eval_style(level: ColorLevel, style_specs: &str) -> CellAttributes {
     let mut attrs = CellAttributes::blank();
 

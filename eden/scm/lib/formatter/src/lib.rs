@@ -8,7 +8,7 @@
 pub mod errors;
 pub mod formatter;
 
-pub use formatter::FormatOptions;
-pub use formatter::Formattable;
-pub use formatter::ListFormatter;
-pub use formatter::StyleWrite;
+pub use crate::formatter::FormatOptions;
+pub use crate::formatter::Formattable;
+pub use crate::formatter::ListFormatter;
+pub use crate::formatter::StyleWrite;
