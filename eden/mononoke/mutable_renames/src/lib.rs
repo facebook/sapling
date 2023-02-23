@@ -262,7 +262,7 @@ impl MutableRenames {
 
                 let cache = cache_handlers.has_rename(self, ctx);
 
-                let res = caching_ext::get_or_fill(cache, keys).await?;
+                let res = caching_ext::get_or_fill(&cache, keys).await?;
 
                 Ok(res.get(&dst_cs_id).map_or(false, |r| r.0))
             }
@@ -322,7 +322,7 @@ impl MutableRenames {
 
                 let cache = cache_handlers.get_rename(self, ctx);
 
-                let mut res = caching_ext::get_or_fill(cache, keys).await?;
+                let mut res = caching_ext::get_or_fill(&cache, keys).await?;
 
                 let res = res
                     .remove(&key)
@@ -361,7 +361,7 @@ impl MutableRenames {
 
                 let cache = cache_handlers.get_cs_ids_with_rename(self, ctx);
 
-                caching_ext::get_or_fill(cache, keys).await.map(|mut r| {
+                caching_ext::get_or_fill(&cache, keys).await.map(|mut r| {
                     let res = r.remove(&key);
                     res.map_or(HashSet::new(), |r| r.into())
                 })

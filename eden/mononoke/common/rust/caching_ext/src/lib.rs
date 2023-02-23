@@ -14,7 +14,6 @@ mod mock_store;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::future::Future;
 use std::hash::Hash;
 use std::time::Duration;
 
@@ -22,7 +21,6 @@ use abomonation::Abomonation;
 use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
-use auto_impl::auto_impl;
 use bytes::Bytes;
 use cloned::cloned;
 use futures::stream;
@@ -115,7 +113,6 @@ pub trait MemcacheEntity: Sized {
 }
 
 /// Implement this trait to indicate that you can cache values retrived through you
-#[auto_impl(&)]
 pub trait EntityStore<V> {
     /// Get the cachelib handler. This can be created with `.into()` on a `VolatileLruCachePool`
     fn cachelib(&self) -> &CachelibHandler<V>;
@@ -145,7 +142,6 @@ pub trait EntityStore<V> {
 
 /// Implement this to make it possible to fetch keys via the cache
 #[async_trait]
-#[auto_impl(&)]
 pub trait KeyedEntityStore<K, V>: EntityStore<V> {
     /// Given an item key, return the cachelib key to use.
     fn get_cache_key(&self, key: &K) -> String;
@@ -158,16 +154,16 @@ pub trait KeyedEntityStore<K, V>: EntityStore<V> {
 }
 
 /// Utility function to fetch all keys in a single chunk without parallelism
-pub fn get_or_fill<K, V>(
-    store: impl KeyedEntityStore<K, V>,
+pub async fn get_or_fill<K, V>(
+    store: &impl KeyedEntityStore<K, V>,
     keys: HashSet<K>,
-) -> impl Future<Output = Result<HashMap<K, V>, Error>>
+) -> Result<HashMap<K, V>, Error>
 where
     K: Hash + Eq + Clone,
     // TODO: We should relax the bounds on cachelib's set_cached. We don't need all of this:
     V: Abomonation + MemcacheEntity + Send + Clone + 'static,
 {
-    get_or_fill_chunked(store, keys, usize::MAX, 1)
+    get_or_fill_chunked(store, keys, usize::MAX, 1).await
 }
 
 /// The core of caching with this module. Takes a store that implements
@@ -183,7 +179,7 @@ where
 /// will be split into `fetch_chunk` size groups, and at most `parallel_chunks`
 /// groups will be in flight at once.
 pub async fn get_or_fill_chunked<K, V>(
-    store: impl KeyedEntityStore<K, V>,
+    store: &impl KeyedEntityStore<K, V>,
     keys: HashSet<K>,
     fetch_chunk: usize,
     parallel_chunks: usize,
@@ -265,7 +261,7 @@ where
                     keys.insert(key.clone());
                     key_mapping.insert(key.clone(), (cachelib_key, memcache_key));
                 }
-                fill_one_chunk(&store, keys, key_mapping)
+                fill_one_chunk(store, keys, key_mapping)
             })
             .collect();
         stream::iter(to_fetch_from_store)
@@ -318,14 +314,14 @@ where
 /// Directly fill a cache from data you've prefetched outside the caching system
 /// Allows things like microwave to avoid any backing store fetches
 pub async fn fill_cache<'a, K, V>(
-    store: impl KeyedEntityStore<K, V>,
+    store: &impl KeyedEntityStore<K, V>,
     data: impl IntoIterator<Item = (&'a K, &'a V)>,
 ) where
     K: Hash + Eq + Clone + 'a,
     V: Abomonation + MemcacheEntity + Send + Clone + 'static,
 {
     fill_caches_by_key(
-        &store,
+        store,
         data.into_iter().map(|(k, v)| {
             let cachelib_key = CachelibKey(store.get_cache_key(k));
             let memcache_key = MemcacheKey(store.keygen().key(&cachelib_key.0));
@@ -336,7 +332,7 @@ pub async fn fill_cache<'a, K, V>(
 }
 
 async fn fill_caches_by_key<'a, V>(
-    store: impl EntityStore<V>,
+    store: &impl EntityStore<V>,
     data: impl IntoIterator<Item = (CachelibKey, MemcacheKey, &'a V)>,
 ) where
     V: Abomonation + MemcacheEntity + Send + Clone + 'static,

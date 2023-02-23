@@ -211,7 +211,7 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
 
         let cache_entry = match cs {
             BonsaiOrHgChangesetIds::Bonsai(cs_ids) => get_or_fill_chunked(
-                cache_request,
+                &cache_request,
                 cs_ids.into_iter().collect(),
                 CHUNK_SIZE,
                 PARALLEL_CHUNKS,
@@ -221,7 +221,7 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
             .map(|val| val.into_entry(repo_id))
             .collect::<Result<_>>()?,
             BonsaiOrHgChangesetIds::Hg(hg_ids) => get_or_fill_chunked(
-                cache_request,
+                &cache_request,
                 hg_ids.into_iter().collect(),
                 CHUNK_SIZE,
                 PARALLEL_CHUNKS,

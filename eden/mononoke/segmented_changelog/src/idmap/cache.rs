@@ -127,7 +127,7 @@ impl IdMap for CachedIdMap {
     ) -> Result<HashMap<DagId, ChangesetId>> {
         let ctx = (ctx, self);
         let res = get_or_fill_chunked(
-            ctx,
+            &ctx,
             dag_ids.into_iter().collect(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,
@@ -147,7 +147,7 @@ impl IdMap for CachedIdMap {
     ) -> Result<HashMap<ChangesetId, DagId>> {
         let ctx = (ctx, self, DagIdStaleness::Fresh);
         let res = get_or_fill_chunked(
-            ctx,
+            &ctx,
             cs_ids.into_iter().collect(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,
@@ -167,7 +167,7 @@ impl IdMap for CachedIdMap {
     ) -> Result<HashMap<ChangesetId, DagId>> {
         let ctx = (ctx, self, DagIdStaleness::MaybeStale);
         let res = get_or_fill_chunked(
-            ctx,
+            &ctx,
             cs_ids.into_iter().collect(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,

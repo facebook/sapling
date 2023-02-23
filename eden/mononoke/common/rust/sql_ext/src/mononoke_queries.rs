@@ -452,7 +452,7 @@ where
             cache_config: config,
             fetcher: fetch,
         };
-        Ok(get_or_fill(store, hashset! {key})
+        Ok(get_or_fill(&store, hashset! {key})
             .await?
             .into_iter()
             .exactly_one()

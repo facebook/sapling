@@ -307,7 +307,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEdges>> {
-        let mut found = get_or_fill(self.request(ctx, Prefetch::None), hashset![cs_id]).await?;
+        let mut found = get_or_fill(&self.request(ctx, Prefetch::None), hashset![cs_id]).await?;
         Ok(found.remove(&cs_id).map(CachedChangesetEdges::take))
     }
 
@@ -317,7 +317,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         cs_id: ChangesetId,
     ) -> Result<ChangesetEdges> {
         let mut found =
-            get_or_fill(self.request_required(ctx, Prefetch::None), hashset![cs_id]).await?;
+            get_or_fill(&self.request_required(ctx, Prefetch::None), hashset![cs_id]).await?;
         Ok(found
             .remove(&cs_id)
             .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {}", cs_id))?
@@ -332,7 +332,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
         let mut found = get_or_fill_chunked(
-            self.request(ctx, prefetch),
+            &self.request(ctx, prefetch),
             cs_ids.clone(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,
@@ -357,7 +357,7 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
         let mut found = get_or_fill_chunked(
-            self.request_required(ctx, prefetch),
+            &self.request_required(ctx, prefetch),
             cs_ids.clone(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,

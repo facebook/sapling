@@ -86,11 +86,11 @@ impl SqlPhasesStore {
 
         let ctx = (ctx, repo_id, self);
 
-        let res = get_or_fill(ctx, hashset! { cs_id })
+        let res = get_or_fill(&ctx, hashset! { cs_id })
             .await
             .with_context(|| "Error fetching phases via cache")?
-            .into_iter()
-            .map(|(_, val)| val.into())
+            .into_values()
+            .map(|val| val.into())
             .next();
 
         Ok(res)
@@ -108,7 +108,7 @@ impl SqlPhasesStore {
         }
         STATS::get_many.add_value(1);
         let ctx = (ctx, repo_id, self);
-        let cs_to_phase = get_or_fill(ctx, ids)
+        let cs_to_phase = get_or_fill(&ctx, ids)
             .await
             .with_context(|| "Error fetching phases via cache")?;
 
@@ -149,7 +149,7 @@ impl SqlPhasesStore {
                 .iter()
                 .map(|csid| (csid, &SqlPhase(Phase::Public)))
                 .collect::<Vec<_>>();
-            fill_cache(ctx, phases).await;
+            fill_cache(&ctx, phases).await;
         }
 
         Ok(())

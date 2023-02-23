@@ -197,7 +197,7 @@ impl HgMutationStore for CachedHgMutationStore {
         let repo_id = self.repo_id();
 
         let mutation_entries_by_changeset =
-            get_or_fill_chunked(cache_request, changeset_ids, CHUNK_SIZE, PARALLEL_CHUNKS)
+            get_or_fill_chunked(&cache_request, changeset_ids, CHUNK_SIZE, PARALLEL_CHUNKS)
                 .await?
                 .into_iter()
                 .map(|(cs_id, val)| val.into_entries(repo_id, cs_id))

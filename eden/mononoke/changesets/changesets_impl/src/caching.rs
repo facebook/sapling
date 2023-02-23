@@ -165,7 +165,7 @@ impl Changesets for CachingChangesets {
     ) -> Result<Option<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
         let ctx = (ctx, self);
-        let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
+        let mut map = get_or_fill(&ctx, hashset![cs_id]).await?;
         Ok(map.remove(&cs_id).map(|entry| entry.0))
     }
 
@@ -176,7 +176,7 @@ impl Changesets for CachingChangesets {
     ) -> Result<Vec<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
         let ctx = (ctx, self);
-        let res = get_or_fill_chunked(ctx, cs_ids.into_iter().collect(), 1000, 2)
+        let res = get_or_fill_chunked(&ctx, cs_ids.into_iter().collect(), 1000, 2)
             .await?
             .into_values()
             .map(|val| val.0)

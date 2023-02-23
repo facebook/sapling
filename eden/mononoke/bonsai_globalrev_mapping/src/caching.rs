@@ -147,7 +147,7 @@ impl BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping {
 
         let res = match objects {
             BonsaisOrGlobalrevs::Bonsai(cs_ids) => {
-                get_or_fill(cache_request, cs_ids.into_iter().collect())
+                get_or_fill(&cache_request, cs_ids.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching globalrevs via cache")?
                     .into_values()
@@ -155,7 +155,7 @@ impl BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping {
                     .collect::<Result<_>>()?
             }
             BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-                get_or_fill(cache_request, globalrevs.into_iter().collect())
+                get_or_fill(&cache_request, globalrevs.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching bonsais via cache")?
                     .into_values()

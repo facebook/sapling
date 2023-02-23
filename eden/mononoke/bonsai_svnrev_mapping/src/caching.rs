@@ -152,7 +152,7 @@ impl BonsaiSvnrevMapping for CachingBonsaiSvnrevMapping {
 
         let res = match objects {
             BonsaisOrSvnrevs::Bonsai(cs_ids) => {
-                get_or_fill(cache_request, cs_ids.into_iter().collect())
+                get_or_fill(&cache_request, cs_ids.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching svnrevs via cache")?
                     .into_values()
@@ -160,7 +160,7 @@ impl BonsaiSvnrevMapping for CachingBonsaiSvnrevMapping {
                     .collect::<Result<_>>()?
             }
             BonsaisOrSvnrevs::Svnrev(svnrevs) => {
-                get_or_fill(cache_request, svnrevs.into_iter().collect())
+                get_or_fill(&cache_request, svnrevs.into_iter().collect())
                     .await
                     .with_context(|| "Error fetching bonsais via cache")?
                     .into_values()
