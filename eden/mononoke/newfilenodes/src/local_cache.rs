@@ -11,6 +11,8 @@ use abomonation::Abomonation;
 use cachelib::get_cached;
 use cachelib::set_cached;
 use cachelib::VolatileLruCachePool;
+use filenodes::FilenodeInfo;
+use filenodes::FilenodeRange;
 use stats::prelude::*;
 
 define_stats! {
@@ -26,6 +28,14 @@ pub enum CachePool {
 
 pub trait Cacheable {
     const POOL: CachePool;
+}
+
+impl Cacheable for FilenodeInfo {
+    const POOL: CachePool = CachePool::Filenodes;
+}
+
+impl Cacheable for FilenodeRange {
+    const POOL: CachePool = CachePool::FilenodesHistory;
 }
 
 #[derive(Clone)]

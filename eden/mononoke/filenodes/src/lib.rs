@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use abomonation_derive::Abomonation;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -32,7 +33,7 @@ pub struct PreparedFilenode {
     pub info: FilenodeInfo,
 }
 
-#[derive(Arbitrary, Clone, Debug, Eq, PartialEq)]
+#[derive(Abomonation, Arbitrary, Clone, Debug, Eq, PartialEq)]
 pub struct FilenodeInfo {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
@@ -41,7 +42,7 @@ pub struct FilenodeInfo {
     pub linknode: HgChangesetId,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, PartialEq)]
 pub enum FilenodeRange {
     /// A range of filenodes.
     Filenodes(Vec<FilenodeInfo>),

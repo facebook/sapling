@@ -12,6 +12,7 @@ use anyhow::Error;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
+use filenodes::FilenodeRange;
 use filenodes::PreparedFilenode;
 use mercurial_types_mocks::nodehash::ONES_CSID;
 use mercurial_types_mocks::nodehash::ONES_FNID;
@@ -198,7 +199,7 @@ async fn test_too_big_caching(fb: FacebookInit) -> Result<(), Error> {
         .get(&key)
         .ok_or_else(|| anyhow!("key not found"))?;
 
-    assert!(res.is_none());
+    assert_eq!(res, FilenodeRange::TooBig);
 
     // Make sure we get a cache miss if another limit parameter is used
     let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path), None);

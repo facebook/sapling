@@ -15,6 +15,7 @@ use std::iter::once;
 use std::iter::Once;
 use std::slice::Iter;
 
+use abomonation_derive::Abomonation;
 use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Error;
@@ -42,7 +43,8 @@ const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
 
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
-#[derive(Arbitrary, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Arbitrary, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Abomonation, Serialize, Deserialize)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
     // constructed.
@@ -203,7 +205,8 @@ impl<'a> From<&'a RepoPath> for RepoPath {
 /// quite short, avoiding need for heap alloc. Its stack storage size is set to 24
 /// as with the union feature the smallvec is 32 bytes on stack which is same as previous
 /// Bytes member stack sise (Bytes will usually have heap as well of course)
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(Abomonation, Serialize, Deserialize)]
 pub struct MPathElement(SmallVec<[u8; 24]>);
 
 impl MPathElement {
@@ -406,7 +409,7 @@ impl From<MPathElement> for MPath {
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Abomonation, Serialize, Deserialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,
 }

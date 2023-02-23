@@ -12,7 +12,6 @@ mod reader;
 mod remote_cache;
 mod shards;
 mod sql_timeout_knobs;
-mod structs;
 mod writer;
 
 #[cfg(test)]

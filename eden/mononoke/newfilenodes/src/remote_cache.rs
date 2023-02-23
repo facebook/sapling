@@ -17,6 +17,7 @@ use filenodes::thrift;
 use filenodes::thrift::MC_CODEVER;
 use filenodes::thrift::MC_SITEVER;
 use filenodes::FilenodeInfo;
+use filenodes::FilenodeRange;
 use futures::future::try_join_all;
 use memcache::KeyGen;
 use memcache::MemcacheClient;
@@ -26,8 +27,6 @@ use stats::prelude::*;
 use time_ext::DurationExt;
 
 use crate::local_cache::CacheKey;
-use crate::structs::CachedFilenode;
-use crate::structs::CachedHistory;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -64,7 +63,7 @@ pub enum RemoteCache {
 
 impl RemoteCache {
     // TODO: Can we optimize to reuse the existing PathWithHash we got?
-    pub async fn get_filenode(&self, key: &CacheKey<CachedFilenode>) -> Option<FilenodeInfo> {
+    pub async fn get_filenode(&self, key: &CacheKey<FilenodeInfo>) -> Option<FilenodeInfo> {
         match self {
             Self::Memcache(memcache) => {
                 let now = Instant::now();
@@ -83,7 +82,7 @@ impl RemoteCache {
     }
 
     // TODO: Need to use the same CacheKey here.
-    pub fn fill_filenode(&self, key: &CacheKey<CachedFilenode>, filenode: FilenodeInfo) {
+    pub fn fill_filenode(&self, key: &CacheKey<FilenodeInfo>, filenode: FilenodeInfo) {
         match self {
             Self::Memcache(memcache) => {
                 schedule_fill_filenode(&memcache.memcache, &memcache.keygen, key, filenode)
@@ -92,10 +91,7 @@ impl RemoteCache {
         }
     }
 
-    pub async fn get_history(
-        &self,
-        key: &CacheKey<Option<CachedHistory>>,
-    ) -> Option<RemoteCachedHistory> {
+    pub async fn get_history(&self, key: &CacheKey<FilenodeRange>) -> Option<FilenodeRange> {
         match self {
             Self::Memcache(memcache) => {
                 let now = Instant::now();
@@ -113,11 +109,7 @@ impl RemoteCache {
     }
 
     // TODO: Take ownership of key
-    pub fn fill_history(
-        &self,
-        key: &CacheKey<Option<CachedHistory>>,
-        filenodes: Option<Vec<FilenodeInfo>>,
-    ) {
+    pub fn fill_history(&self, key: &CacheKey<FilenodeRange>, filenodes: FilenodeRange) {
         match self {
             Self::Memcache(memcache) => schedule_fill_history(
                 memcache.memcache.clone(),
@@ -126,22 +118,6 @@ impl RemoteCache {
                 filenodes,
             ),
             Self::Noop => {}
-        }
-    }
-}
-
-#[derive(Eq, PartialEq)]
-pub enum RemoteCachedHistory {
-    History(Vec<FilenodeInfo>),
-    TooBig,
-}
-
-impl RemoteCachedHistory {
-    pub fn into_option(self) -> Option<Vec<FilenodeInfo>> {
-        use RemoteCachedHistory::*;
-        match self {
-            History(history) => Some(history),
-            TooBig => None,
         }
     }
 }
@@ -177,7 +153,7 @@ impl MemcacheCache {
 
 fn get_mc_key_for_filenodes_list_chunk(
     keygen: &KeyGen,
-    key: &CacheKey<Option<CachedHistory>>,
+    key: &CacheKey<FilenodeRange>,
     pointer: Pointer,
 ) -> String {
     keygen.key(format!("{}.{}", key.key, pointer))
@@ -186,7 +162,7 @@ fn get_mc_key_for_filenodes_list_chunk(
 async fn get_single_filenode_from_memcache(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    key: &CacheKey<CachedFilenode>,
+    key: &CacheKey<FilenodeInfo>,
 ) -> Option<FilenodeInfo> {
     let key = keygen.key(&key.key);
 
@@ -226,8 +202,8 @@ async fn get_single_filenode_from_memcache(
 async fn get_history_from_memcache(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    key: &CacheKey<Option<CachedHistory>>,
-) -> Option<RemoteCachedHistory> {
+    key: &CacheKey<FilenodeRange>,
+) -> Option<FilenodeRange> {
     // helper function for deserializing list of thrift FilenodeInfo into rust structure with proper
     // error returned
     fn deserialize_list(list: Vec<thrift::FilenodeInfo>) -> Option<Vec<FilenodeInfo>> {
@@ -264,7 +240,7 @@ async fn get_history_from_memcache(
             return None;
         }
         thrift::FilenodeInfoList::Data(list) => {
-            deserialize_list(list).map(RemoteCachedHistory::History)
+            deserialize_list(list).map(FilenodeRange::Filenodes)
         }
         thrift::FilenodeInfoList::Pointers(list) => {
             STATS::gaf_pointers.add_value(1);
@@ -293,16 +269,16 @@ async fn get_history_from_memcache(
 
             match compact_protocol::deserialize(&blob) {
                 Ok(thrift::FilenodeInfoList::Data(list)) => {
-                    deserialize_list(list).map(RemoteCachedHistory::History)
+                    deserialize_list(list).map(FilenodeRange::Filenodes)
                 }
-                Ok(thrift::FilenodeInfoList::TooBig(_)) => Some(RemoteCachedHistory::TooBig),
+                Ok(thrift::FilenodeInfoList::TooBig(_)) => Some(FilenodeRange::TooBig),
                 _ => {
                     STATS::gaf_pointers_err.add_value(1);
                     None
                 }
             }
         }
-        thrift::FilenodeInfoList::TooBig(_) => Some(RemoteCachedHistory::TooBig),
+        thrift::FilenodeInfoList::TooBig(_) => Some(FilenodeRange::TooBig),
     };
 
     if res.is_some() {
@@ -315,7 +291,7 @@ async fn get_history_from_memcache(
 fn schedule_fill_filenode(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    key: &CacheKey<CachedFilenode>,
+    key: &CacheKey<FilenodeInfo>,
     filenode: FilenodeInfo,
 ) {
     let serialized = compact_protocol::serialize(&filenode.into_thrift());
@@ -336,8 +312,8 @@ fn schedule_fill_filenode(
 fn schedule_fill_history(
     memcache: MemcacheHandler,
     keygen: KeyGen,
-    key: CacheKey<Option<CachedHistory>>,
-    filenodes: Option<Vec<FilenodeInfo>>,
+    key: CacheKey<FilenodeRange>,
+    filenodes: FilenodeRange,
 ) {
     let fut = async move {
         let _ = fill_history(&memcache, &keygen, &key, filenodes).await;
@@ -346,16 +322,16 @@ fn schedule_fill_history(
     tokio::spawn(fut);
 }
 
-fn serialize_history(filenodes: Option<Vec<FilenodeInfo>>) -> Bytes {
+fn serialize_history(filenodes: FilenodeRange) -> Bytes {
     let filenodes = match filenodes {
-        Some(filenodes) => thrift::FilenodeInfoList::Data(
+        FilenodeRange::Filenodes(filenodes) => thrift::FilenodeInfoList::Data(
             filenodes
                 .into_iter()
                 .map(|filenode_info| filenode_info.into_thrift())
                 .collect(),
         ),
         // Value in TooBig is ignored, so any value would work
-        None => thrift::FilenodeInfoList::TooBig(0),
+        FilenodeRange::TooBig => thrift::FilenodeInfoList::TooBig(0),
     };
     compact_protocol::serialize(&filenodes)
 }
@@ -363,8 +339,8 @@ fn serialize_history(filenodes: Option<Vec<FilenodeInfo>>) -> Bytes {
 async fn fill_history(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    key: &CacheKey<Option<CachedHistory>>,
-    filenodes: Option<Vec<FilenodeInfo>>,
+    key: &CacheKey<FilenodeRange>,
+    filenodes: FilenodeRange,
 ) -> Result<(), ()> {
     let serialized = serialize_history(filenodes);
 
@@ -478,7 +454,7 @@ pub mod test {
 
     pub async fn wait_for_filenode(
         cache: &RemoteCache,
-        key: &CacheKey<CachedFilenode>,
+        key: &CacheKey<FilenodeInfo>,
     ) -> Result<FilenodeInfo, Error> {
         let r = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
@@ -498,8 +474,8 @@ pub mod test {
 
     pub async fn wait_for_history(
         cache: &RemoteCache,
-        key: &CacheKey<Option<CachedHistory>>,
-    ) -> Result<Option<Vec<FilenodeInfo>>, Error> {
+        key: &CacheKey<FilenodeRange>,
+    ) -> Result<FilenodeRange, Error> {
         let r = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
                 match cache.get_history(key).await {
@@ -513,7 +489,7 @@ pub mod test {
         })
         .await?;
 
-        Ok(r.into_option())
+        Ok(r)
     }
 
     #[fbinit::test]
@@ -541,7 +517,7 @@ pub mod test {
         let cache = make_test_cache();
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
-        let history = Some(vec![info.clone(), info.clone(), info.clone()]);
+        let history = FilenodeRange::Filenodes(vec![info.clone(), info.clone(), info.clone()]);
 
         let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path), None);
 
@@ -559,7 +535,8 @@ pub mod test {
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
-        let history = Some((0..100_000).map(|_| info.clone()).collect::<Vec<_>>());
+        let history =
+            FilenodeRange::Filenodes((0..100_000).map(|_| info.clone()).collect::<Vec<_>>());
         assert!(serialize_history(history.clone()).len() >= MEMCACHE_VALUE_MAX_SIZE);
 
         let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path), None);
@@ -578,10 +555,10 @@ pub mod test {
         let path = RepoPath::file("copiedto")?;
 
         let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path), None);
-        cache.fill_history(&key, None);
+        cache.fill_history(&key, FilenodeRange::TooBig);
         let from_cache = wait_for_history(&cache, &key).await?;
 
-        assert_eq!(from_cache, None);
+        assert_eq!(from_cache, FilenodeRange::TooBig);
 
         Ok(())
     }
