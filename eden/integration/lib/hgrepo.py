@@ -195,7 +195,11 @@ class HgRepository(repobase.Repository):
             str, completed_process.stdout.decode(encoding, errors="replace")
         )
 
-    def init(self, hgrc: Optional[configparser.ConfigParser] = None) -> None:
+    def init(
+        self,
+        hgrc: Optional[configparser.ConfigParser] = None,
+        init_configs: Optional[List[str]] = None,
+    ) -> None:
         """
         Initialize a new hg repository by running 'hg init'
 
@@ -203,7 +207,8 @@ class HgRepository(repobase.Repository):
         describing configuration settings that should be added to the
         repository's .hg/hgrc file.
         """
-        self.hg("init")
+        init_config_args = [f"--config={c}" for c in init_configs or ()]
+        self.hg("init", *init_config_args)
         if hgrc is None:
             hgrc = configparser.ConfigParser()
 

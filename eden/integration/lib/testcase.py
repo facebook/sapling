@@ -264,8 +264,25 @@ class EdenTestCase(EdenTestCaseBase):
         return configs
 
     def create_hg_repo(
-        self, name: str, hgrc: Optional[configparser.ConfigParser] = None
+        self,
+        name: str,
+        hgrc: Optional[configparser.ConfigParser] = None,
+        init_configs: Optional[List[str]] = None,
     ) -> hgrepo.HgRepository:
+        """Create an hg repo.
+
+        Configs used:
+        1. Real system config files installed from hg package. See
+           `hgrepo.HgRepository.get_system_hgrc_contents()`.
+        2. `hgrc`. `hgrc` written after `hg init`.
+        3. `init_configs`. Command line flags passed to `hg init`.
+
+        | # | Customizable | Affect `hg init` | Affect commands afterwards |
+        --------------------------------------------------------------------
+        | 1 | No           | Yes              | Yes                        |
+        | 2 | Yes          | No               | Yes                        |
+        | 3 | Yes          | Yes              | No                         |
+        """
         repo_path = os.path.join(self.repos_dir, name)
         os.mkdir(repo_path)
 
@@ -278,7 +295,7 @@ class EdenTestCase(EdenTestCaseBase):
         repo = hgrepo.HgRepository(
             repo_path, system_hgrc=self.system_hgrc, temp_mgr=self.temp_mgr
         )
-        repo.init(hgrc=hgrc)
+        repo.init(hgrc=hgrc, init_configs=init_configs)
 
         return repo
 
