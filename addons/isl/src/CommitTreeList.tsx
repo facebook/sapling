@@ -10,6 +10,7 @@ import type {Hash} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
+import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
@@ -41,7 +42,7 @@ export function CommitTreeList() {
   const fetchError = useRecoilValue(commitFetchError);
   return fetchError == null && trees.length === 0 ? (
     <Center>
-      <Spinner />
+      <LargeSpinner />
     </Center>
   ) : (
     <>
@@ -87,18 +88,6 @@ function createSubtree(tree: CommitTreeWithPreviews): Array<React.ReactElement> 
       hasChildren={renderedChildren.length > 0}
     />,
   ];
-}
-
-function Spinner() {
-  return (
-    <div data-testid="loading-spinner">
-      <Icon icon="loading" size="L" />
-    </div>
-  );
-}
-
-function Center({children}: {children: React.ReactNode}) {
-  return <div className="center-container">{children}</div>;
 }
 
 function Branch({

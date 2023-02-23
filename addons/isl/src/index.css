@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/*
-  * We don't assume we're rendered directly into <body>,
-  * so we don't put any styles on <body> itself.
-  */
+/**
+ * We don't assume we're rendered directly into <body>,
+ * so we don't put any styles on <body> itself.
+ */
 .isl-root {
   /**
    * These CSS variables come from the VS Code webview UI toolkit:
@@ -42,14 +42,6 @@
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-.center-container {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
 }
 
 .empty-app-state {
