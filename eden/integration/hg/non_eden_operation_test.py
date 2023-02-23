@@ -22,8 +22,8 @@ class NonEdenOperationTest(EdenHgTestCase):
         non_eden_hg_repo = os.path.join(self.tmp_dir, "non-eden-hg-repo")
         os.mkdir(non_eden_hg_repo)
 
-        # Create the non-Eden Hg repo.
-        self.hg("init", cwd=non_eden_hg_repo)
+        # Create the non-Eden Hg repo to clone.
+        self.hg("init", "--config=format.use-eager-repo=True", cwd=non_eden_hg_repo)
         first_file = os.path.join(non_eden_hg_repo, "first.txt")
         with open(first_file, "w") as f:
             f.write("First file in non-Eden-backed Hg repo.\n")
@@ -36,17 +36,26 @@ class NonEdenOperationTest(EdenHgTestCase):
             "first commit",
             cwd=non_eden_hg_repo,
         )
+        self.hg(
+            "bookmark",
+            "main",
+            cwd=non_eden_hg_repo,
+        )
 
         # Run `hg clone` from the Eden repo.
         clone_of_non_eden_hg_repo = os.path.join(self.tmp_dir, "clone-target")
         self.hg(
             "clone",
-            "--config=remotefilelog.reponame=dummy",
             f"--config=remotefilelog.cachepath={os.path.join(self.tmp_dir, 'hgcache')}",
-            "--pull",
             non_eden_hg_repo,
             clone_of_non_eden_hg_repo,
             cwd=self.repo.path,
+        )
+        self.hg(
+            "goto",
+            "remote/main",
+            f"--config=remotefilelog.cachepath={os.path.join(self.tmp_dir, 'hgcache')}",
+            cwd=clone_of_non_eden_hg_repo,
         )
 
         dest_first_file = os.path.join(clone_of_non_eden_hg_repo, "first.txt")
