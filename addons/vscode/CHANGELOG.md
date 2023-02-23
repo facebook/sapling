@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.10
+
+- Added revert button to VS Code SCM Sidebar files
+- Added button to open diff view for VS Code SCM Sidebar files
+- Use --addremove flag when committing/amending so untracked files are included
+- Fix ssh:// upstream paths for GitHub repos not being detected as valid repos
+- Better styling of Load More button and commit graph
+
 ## 0.1.9
 
 - Fix sending messages to disposed webviews which caused ISL to stop working
