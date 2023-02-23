@@ -24,7 +24,6 @@ class PullTest(EdenHgTestCase):
         hgrc = self.get_hgrc()
         hgrc["paths"] = {
             "default": self.server_repo.path,
-            "infinitepush": self.server_repo.path,
         }
         repo = self.create_hg_repo("main", hgrc=hgrc)
         self.populate_backing_repo(repo)
@@ -32,7 +31,7 @@ class PullTest(EdenHgTestCase):
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         print("creating backing repo")
-        repo.hg("pull")
+        repo.hg("pull", "-B", "main")
         repo.hg("update", self.commit1)
 
     def create_server_repo(self) -> hgrepo.HgRepository:
@@ -40,12 +39,9 @@ class PullTest(EdenHgTestCase):
         # Create a server repository.
         hgrc = self.get_hgrc()
         self.apply_hg_config_variant(hgrc)
-        # fastmanifest must be disabled on the server repository.
-        # The treemanifest server-side code breaks otherwise.
-        hgrc["extensions"]["fastmanifest"] = "!"
-        hgrc["treemanifest"] = {"server": "True", "autocreatetrees": "True"}
-
-        repo = self.create_hg_repo("server_repo", hgrc=hgrc)
+        repo = self.create_hg_repo(
+            "server_repo", hgrc=hgrc, init_configs=["format.use-eager-repo=true"]
+        )
 
         # Create a commit in the server repository
         repo.write_file("hello.txt", "hola")
@@ -57,6 +53,7 @@ class PullTest(EdenHgTestCase):
         repo.write_file("src/deep/a/b/c/def.txt", "def\n")
         repo.write_file("src/deep/a/b/c/xyz.txt", "xyz\n")
         self.commit1 = repo.commit("Initial commit.\n")
+        repo.hg("bookmark", "main")
         print("commit1=%s" % (self.commit1,))
 
         return repo
