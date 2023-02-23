@@ -82,3 +82,20 @@ export function findParentWithClassName(
   }
   return undefined;
 }
+
+/**
+ * Applies a function to each key & value in an Object.
+ * ```
+ * mapObject(
+ *   {foo: 1, bar: 2},
+ *   ([key, value]) => ['_' + key, value + 1]
+ * )
+ * => {_foo: 2, _bar: 3}
+ * ```
+ */
+export function mapObject<K1 extends string | number, V1, K2 extends string | number, V2>(
+  o: Record<K1, V1>,
+  func: (param: [K1, V1]) => [K2, V2],
+): Record<K2, V2> {
+  return Object.fromEntries((Object.entries(o) as Array<[K1, V1]>).map(func)) as Record<K2, V2>;
+}

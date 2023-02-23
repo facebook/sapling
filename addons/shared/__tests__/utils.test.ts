@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {basename} from '../utils';
+import {basename, mapObject} from '../utils';
 
 describe('basename', () => {
   it('/path/to/foo.txt -> foo.txt', () => {
@@ -26,5 +26,21 @@ describe('basename', () => {
 
   it('delimeter not in string', () => {
     expect(basename('hello world')).toEqual('hello world');
+  });
+});
+
+describe('mapObject', () => {
+  it('maps object types', () => {
+    expect(mapObject({foo: 123, bar: 456}, ([key, value]) => [key, {value}])).toEqual({
+      foo: {value: 123},
+      bar: {value: 456},
+    });
+  });
+
+  it('handles different key types', () => {
+    expect(mapObject({foo: 123, bar: 456}, ([key, value]) => [value, key])).toEqual({
+      123: 'foo',
+      456: 'bar',
+    });
   });
 });
