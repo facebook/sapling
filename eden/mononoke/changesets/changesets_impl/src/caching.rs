@@ -126,7 +126,7 @@ impl CachingChangesets {
     #[cfg(test)]
     pub fn cachelib_stats(&self) -> MockStoreStats {
         match self.cachelib {
-            CachelibHandler::Real(_) => unimplemented!(),
+            CachelibHandler::Real(_) | CachelibHandler::Noop => unimplemented!(),
             CachelibHandler::Mock(ref mock) => mock.stats(),
         }
     }
@@ -134,7 +134,7 @@ impl CachingChangesets {
     #[cfg(test)]
     pub fn memcache_stats(&self) -> MockStoreStats {
         match self.memcache {
-            MemcacheHandler::Real(_) => unimplemented!(),
+            MemcacheHandler::Real(_) | MemcacheHandler::Noop => unimplemented!(),
             MemcacheHandler::Mock(ref mock) => mock.stats(),
         }
     }
@@ -286,7 +286,7 @@ impl EntityStore<ChangesetEntryWrapper> for CacheRequest<'_> {
 
         match mapping.memcache {
             MemcacheHandler::Real(_) => true,
-            MemcacheHandler::Mock(..) => false,
+            MemcacheHandler::Mock(..) | MemcacheHandler::Noop => false,
         }
     }
 }

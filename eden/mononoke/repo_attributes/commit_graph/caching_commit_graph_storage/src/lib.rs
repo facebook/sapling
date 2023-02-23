@@ -186,7 +186,7 @@ impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
     fn spawn_memcache_writes(&self) -> bool {
         match self.caching_storage.memcache {
             MemcacheHandler::Real(_) => true,
-            MemcacheHandler::Mock(..) => false,
+            MemcacheHandler::Mock(..) | MemcacheHandler::Noop => false,
         }
     }
 }

@@ -18,6 +18,7 @@ use crate::mock_store::MockStore;
 pub enum MemcacheHandler {
     Real(MemcacheClient),
     Mock(MockStore<Bytes>),
+    Noop,
 }
 
 impl From<MemcacheClient> for MemcacheHandler {
@@ -33,6 +34,7 @@ impl MemcacheHandler {
                 client.get(key).await.map(|value| value.map(Bytes::from))
             }
             MemcacheHandler::Mock(store) => Ok(store.get(&key)),
+            MemcacheHandler::Noop => Ok(None),
         }
     }
 
@@ -48,6 +50,7 @@ impl MemcacheHandler {
                 store.set(&key, value.into());
                 Ok(())
             }
+            MemcacheHandler::Noop => Ok(()),
         }
     }
 
@@ -63,6 +66,7 @@ impl MemcacheHandler {
                 // For now we ignore TTLs here
                 self.set(key, value).await
             }
+            MemcacheHandler::Noop => Ok(()),
         }
     }
 
@@ -70,11 +74,15 @@ impl MemcacheHandler {
         MemcacheHandler::Mock(MockStore::new())
     }
 
+    pub fn create_noop() -> Self {
+        MemcacheHandler::Noop
+    }
+
     #[cfg(test)]
     pub(crate) fn gets_count(&self) -> usize {
         use std::sync::atomic::Ordering;
         match self {
-            MemcacheHandler::Real(_) => unimplemented!(),
+            MemcacheHandler::Real(_) | MemcacheHandler::Noop => unimplemented!(),
             MemcacheHandler::Mock(MockStore { ref get_count, .. }) => {
                 get_count.load(Ordering::SeqCst)
             }

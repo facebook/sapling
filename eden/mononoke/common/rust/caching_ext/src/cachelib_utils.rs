@@ -22,6 +22,7 @@ use crate::CachelibKey;
 pub enum CachelibHandler<T> {
     Real(VolatileLruCachePool),
     Mock(MockStore<T>),
+    Noop,
 }
 
 impl<T> From<VolatileLruCachePool> for CachelibHandler<T> {
@@ -56,6 +57,7 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         match self {
             CachelibHandler::Real(ref cache) => get_cached(cache, key),
             CachelibHandler::Mock(store) => Ok(store.get(key)),
+            CachelibHandler::Noop => Ok(None),
         }
     }
 
@@ -66,6 +68,7 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
                 store.set(key, value.clone());
                 Ok(true)
             }
+            CachelibHandler::Noop => Ok(false),
         }
     }
 
@@ -73,11 +76,15 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         CachelibHandler::Mock(MockStore::new())
     }
 
+    pub fn create_noop() -> Self {
+        CachelibHandler::Noop
+    }
+
     #[cfg(test)]
     pub(crate) fn gets_count(&self) -> usize {
         use std::sync::atomic::Ordering;
         match self {
-            CachelibHandler::Real(_) => unimplemented!(),
+            CachelibHandler::Real(_) | CachelibHandler::Noop => unimplemented!(),
             CachelibHandler::Mock(MockStore { ref get_count, .. }) => {
                 get_count.load(Ordering::SeqCst)
             }
@@ -86,7 +93,7 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
 
     pub fn mock_store(&self) -> Option<&MockStore<T>> {
         match self {
-            CachelibHandler::Real(_) => None,
+            CachelibHandler::Real(_) | CachelibHandler::Noop => None,
             CachelibHandler::Mock(ref mock) => Some(mock),
         }
     }
