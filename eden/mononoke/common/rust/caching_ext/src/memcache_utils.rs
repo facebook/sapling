@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -18,7 +17,6 @@ use crate::mock_store::MockStore;
 #[derive(Clone)]
 pub enum MemcacheHandler {
     Real(MemcacheClient),
-    #[allow(dead_code)]
     Mock(MockStore<Bytes>),
 }
 
@@ -68,13 +66,13 @@ impl MemcacheHandler {
         }
     }
 
-    #[allow(dead_code)]
     pub fn create_mock() -> Self {
         MemcacheHandler::Mock(MockStore::new())
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn gets_count(&self) -> usize {
+        use std::sync::atomic::Ordering;
         match self {
             MemcacheHandler::Real(_) => unimplemented!(),
             MemcacheHandler::Mock(MockStore { ref get_count, .. }) => {

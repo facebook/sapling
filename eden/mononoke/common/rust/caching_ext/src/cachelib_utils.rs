@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -22,7 +21,6 @@ use crate::CachelibKey;
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
     Real(VolatileLruCachePool),
-    #[allow(dead_code)]
     Mock(MockStore<T>),
 }
 
@@ -71,13 +69,13 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         }
     }
 
-    #[allow(dead_code)]
     pub fn create_mock() -> Self {
         CachelibHandler::Mock(MockStore::new())
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn gets_count(&self) -> usize {
+        use std::sync::atomic::Ordering;
         match self {
             CachelibHandler::Real(_) => unimplemented!(),
             CachelibHandler::Mock(MockStore { ref get_count, .. }) => {
