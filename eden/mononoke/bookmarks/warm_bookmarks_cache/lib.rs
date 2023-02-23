@@ -819,7 +819,9 @@ impl BookmarksCoordinator {
                     self.live_updaters,
                     self.warmers,
                 );
-                let _ = tokio::spawn(async move {
+                // By dropping the future output by tokio::spawn instead of awaiting it, we
+                // delegate the responsibility of managing it to tokio's async queue
+                std::mem::drop(tokio::spawn(async move {
                     let res = single_bookmark_updater(
                         &ctx,
                         &repo,
@@ -849,7 +851,7 @@ impl BookmarksCoordinator {
                             live_updaters.insert(book.key().clone(), state.into_finished(&res));
                         }
                     });
-                });
+                }));
             }
         }
 
