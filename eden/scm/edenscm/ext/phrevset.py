@@ -300,15 +300,18 @@ def diffidtonode(repo, diffid):
 
         # commit is still local, get its hash
 
+        hexnodes = []
         try:
             props = resp["phabricator_version_properties"]["edges"]
-            commits = {}
             for prop in props:
-                if prop["node"]["property_name"] == "local:commits":
-                    commits = json.loads(prop["node"]["property_value"])
-            hexnodes = [c["commit"] for c in commits.values()]
+                property_name = prop["node"]["property_name"]
+                get_commits = lambda: json.loads(prop["node"]["property_value"])
+                if property_name == "local:commits":
+                    hexnodes += [c["commit"] for c in get_commits().values()]
+                elif property_name == "facebook:bundle_info:hg":
+                    hexnodes += list(get_commits().values())
         except (AttributeError, IndexError, KeyError):
-            hexnodes = []
+            pass
 
         # find a better alternative of the commit hash specified in
         # graphql response by looking up successors.
