@@ -148,29 +148,20 @@ def launch_server(
 
 
 def get_isl_args() -> List[str]:
-    if iswindows:
-        return get_isl_args_on_windows()
+    try:
+        from . import fb
 
+        return fb.isl_dotslash_args()
+    except ImportError:
+        pass
+    # This is the path to ISL in the Make-built release.
     this_dir = os.path.dirname(__file__)
-    isl_bin = os.path.join(this_dir, "isl")
-    if os.path.isfile(isl_bin):
-        # This is the path to ISL in the Buck-built release.
-        return ["dotslash", isl_bin]
-    else:
-        # This is the path to ISL in the Make-built release.
-        script = "run-isl.bat" if iswindows else "run-isl"
-        return [os.path.join(this_dir, "..", "..", "edenscm-isl", script)]
-
-
-def get_isl_args_on_windows() -> List[str]:
-    # @fb-only
-    # @fb-only
-        # @fb-only
-
-    # Assuming __file__ looks like C:\some\place\sl\python39.zip\edenscm\commands\isl.pyc,
-    # edenscm-isl should be located in "sl" alongside the zip.
-    return [
-        os.path.join(
-            os.path.dirname(__file__), "..", "..", "..", "edenscm-isl", "run-isl.bat"
-        )
-    ]
+    proxy_path = ["isl-server", "dist", "run-proxy.js"]
+    for isl_dir in ["edenscm-isl", "addons"]:
+        for relative_len in range(2, 4):
+            server_path = os.path.join(
+                this_dir, *([".."] * relative_len), isl_dir, *proxy_path
+            )
+            if os.path.exists(server_path):
+                return ["node", server_path]
+    raise error.Abort(_("unable to find isl-server build"))
