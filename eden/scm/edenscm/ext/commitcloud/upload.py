@@ -80,7 +80,7 @@ def upload(repo, revs, force=False, localbackupstate=None):
         )
 
     draftrevs = list(
-        repo.changelog.torevset(repo.dageval(lambda: ancestors(missingheads) & draft()))
+        repo.changelog.torevset(repo.dageval(lambda: draft() & ancestors(missingheads)))
     )
 
     # If the only draft revs are the missing heads then we can skip the

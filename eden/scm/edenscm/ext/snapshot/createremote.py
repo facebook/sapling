@@ -23,7 +23,7 @@ def _backupparents(repo, wctx) -> None:
     draftrevs = repo.changelog.torevset(
         # pyre-fixme[10]: Name `ancestors` is used but not defined.
         # pyre-fixme[10]: Name `draft` is used but not defined.
-        repo.dageval(lambda: ancestors(parents) & draft())
+        repo.dageval(lambda: draft() & ancestors(parents))
     )
 
     (success, failed) = uploadhgchangesets(repo, draftrevs)
