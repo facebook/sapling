@@ -422,6 +422,7 @@ members = [
   "server/qps",
   "server/repo_listener",
   "server/session_id",
+  "sharding_lib_ext",
   "sshrelay",
   "statistics_collector",
   "streaming_clone",
