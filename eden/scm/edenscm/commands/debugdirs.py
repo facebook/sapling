@@ -20,7 +20,7 @@ from .cmdtable import command
     _("[DIR]..."),
     cmdtype=command.readonly,
 )
-def debugdirs(ui, repo, *dirs, **opts):
+def debugdirs(ui, repo, *dirs, **opts) -> None:
     """list directories
 
     This is analogous to using ``hg files`` to list which files exist, except
