@@ -326,6 +326,15 @@ class EdenServer : private TakeoverHandler {
       folly::StringPiece callerName,
       CheckoutMode checkoutMode);
 
+  /**
+   * Garbage collect the working copy of the passed in mount.
+   */
+  ImmediateFuture<uint64_t> garbageCollectWorkingCopy(
+      std::shared_ptr<EdenMount> mount,
+      TreeInodePtr rootInode,
+      std::chrono::system_clock::time_point cutoff,
+      const ObjectFetchContextPtr& context);
+
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
   }
@@ -633,7 +642,7 @@ class EdenServer : private TakeoverHandler {
   void manageOverlay();
 
   // Run a garbage collection cycle over the inodes hierarchy.
-  void workingCopyGC();
+  void garbageCollectAllMounts();
 
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
@@ -806,6 +815,8 @@ class EdenServer : private TakeoverHandler {
       this,
       "backing_store"};
   PeriodicFnTask<&EdenServer::manageOverlay> overlayTask_{this, "overlay"};
-  PeriodicFnTask<&EdenServer::workingCopyGC> gcTask_{this, "working_copy_gc"};
+  PeriodicFnTask<&EdenServer::garbageCollectAllMounts> gcTask_{
+      this,
+      "working_copy_gc"};
 };
 } // namespace facebook::eden

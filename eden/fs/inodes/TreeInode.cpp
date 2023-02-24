@@ -4177,6 +4177,12 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
 ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context) {
+  // When the mount is shutting down, let's make sure to terminate quickly so
+  // unmount is not blocked for a potential very long amount of time.
+  if (getMount()->getState() == EdenMount::State::SHUTTING_DOWN) {
+    return 0;
+  }
+
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
       .thenValue([context = context.copy(),
                   cutoff](std::vector<TreeInodePtr> treeChildren) {

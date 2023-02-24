@@ -2224,34 +2224,44 @@ void EdenServer::manageOverlay() {
   }
 }
 
-void EdenServer::workingCopyGC() {
+ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
+    std::shared_ptr<EdenMount> mount,
+    TreeInodePtr rootInode,
+    std::chrono::system_clock::time_point cutoff,
+    const ObjectFetchContextPtr& context) {
+  auto lease = mount->tryStartWorkingCopyGC(rootInode);
+  if (!lease) {
+    XLOG(DBG6) << "Not running GC for: " << mount->getPath()
+               << ", another GC is already in progress";
+    return 0;
+  }
+
+  return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
+      .ensure([rootInode, lease = std::move(lease)] {
+        rootInode->unloadChildrenUnreferencedByFs();
+      });
+}
+
+void EdenServer::garbageCollectAllMounts() {
   auto config = serverState_->getReloadableConfig()->getEdenConfig();
   auto cutoffConfig =
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           config->gcCutoff.getValue());
   auto cutoff = std::chrono::system_clock::now() - cutoffConfig;
 
-  const auto mountPoints = getMountPoints();
-  for (const auto& [mount, rootInode] : mountPoints) {
-    auto lease = mount->tryStartWorkingCopyGC(rootInode);
-    if (!lease) {
-      XLOG(DBG6) << "Not running GC for: " << mount->getPath()
-                 << ", another GC is already in progress";
-      continue;
-    }
-
-    // Avoid blocking the Thrift EventBase by invalidating on another executor.
+  auto mountPoints = getMountPoints();
+  for (auto& [mount, rootInode] : mountPoints) {
     folly::via(
         getServerState()->getThreadPool().get(),
-        [rootInode = rootInode, cutoff] {
+        [this,
+         mount = std::move(mount),
+         rootInode = std::move(rootInode),
+         cutoff]() mutable {
           static auto context =
               ObjectFetchContext::getNullContextWithCauseDetail(
-                  "EdenServer::garbageCollect");
-          return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
-              .semi();
-        })
-        .ensure([rootInode = rootInode, lease = std::move(lease)] {
-          rootInode->unloadChildrenUnreferencedByFs();
+                  "EdenServer::garbageCollectAllMounts");
+          return garbageCollectWorkingCopy(
+              std::move(mount), std::move(rootInode), cutoff, context);
         });
   }
 }

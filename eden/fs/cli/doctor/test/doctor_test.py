@@ -1381,7 +1381,7 @@ Fixing files known to EdenFS but not present on disk in {Path(mount)}...<green>f
 Checking {checkout.path}
 <yellow>- Found problem:<reset>
 Mount point {checkout.path} has 9000000 files on disk, which may impact EdenFS performance
-Invalidating all non-materialized files and directories in {checkout.path}...<green>fixed<reset>
+Starting background invalidation of not recently used files and directories in {checkout.path}...<green>fixed<reset>
 
 <yellow>Successfully fixed 1 problem.<reset>
 """,

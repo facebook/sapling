@@ -3644,9 +3644,6 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
   auto [edenMount, rootInode] = server_->getMountAndRootInode(mountPath);
   auto& fetchContext = helper->getFetchContext();
 
-  TreeInodePtr inode =
-      inodeFromUserPath(*edenMount, *params->path(), fetchContext).asTreePtr();
-
   if (!folly::kIsWindows) {
     if (!(params->age()->seconds() == 0 && params->age()->nanoSeconds() == 0)) {
       throw newEdenError(
@@ -3654,6 +3651,10 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
           EdenErrorType::ARGUMENT_ERROR,
           "Non-zero age is not supported on non-Windows platforms");
     }
+  } else {
+    // TODO: We may need to restrict 0s age on Windows as that can lead to
+    // weird behavior where files are invalidated while being read causing the
+    // read to fail.
   }
 
   auto cutoff = std::chrono::system_clock::time_point::max();
@@ -3662,24 +3663,56 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
         std::chrono::seconds(*params->age()->seconds());
   }
 
-  return wrapImmediateFuture(
-             std::move(helper),
-             waitForPendingNotifications(*edenMount, *params->sync())
-                 .thenValue([inode = std::move(inode), cutoff, &fetchContext](
-                                auto&&) mutable {
-                   return inode
-                       ->invalidateChildrenNotMaterialized(cutoff, fetchContext)
-                       .ensure([inode]() {
-                         inode->unloadChildrenUnreferencedByFs();
-                       })
-                       .thenValue([inode](uint64_t numInvalidated) {
-                         auto ret = std::make_unique<DebugInvalidateResponse>();
-                         ret->numInvalidated() = numInvalidated;
-                         return ret;
-                       });
-                 }))
-      .ensure([rootInode = std::move(rootInode)] {})
-      .semi();
+  ImmediateFuture<folly::Unit> backgroundFuture{std::in_place};
+  if (*params->background()) {
+    backgroundFuture = makeNotReadyImmediateFuture();
+  }
+
+  auto invalFut =
+      std::move(backgroundFuture)
+          .thenValue([edenMount = edenMount, sync = *params->sync()](auto&&) {
+            return waitForPendingNotifications(*edenMount, sync);
+          })
+          .thenValue([edenMount = edenMount,
+                      path = *params->path(),
+                      &fetchContext](auto&&) {
+            return inodeFromUserPath(*edenMount, path, fetchContext)
+                .asTreePtr();
+          })
+          .thenValue([this,
+                      edenMount = edenMount,
+                      rootInode = rootInode,
+                      cutoff,
+                      &fetchContext](TreeInodePtr inode) mutable {
+            if (inode == rootInode) {
+              return server_->garbageCollectWorkingCopy(
+                  std::move(edenMount),
+                  std::move(rootInode),
+                  cutoff,
+                  fetchContext);
+            } else {
+              return inode
+                  ->invalidateChildrenNotMaterialized(cutoff, fetchContext)
+                  .ensure(
+                      [inode]() { inode->unloadChildrenUnreferencedByFs(); });
+            }
+          })
+          .thenValue([](uint64_t numInvalidated) {
+            auto ret = std::make_unique<DebugInvalidateResponse>();
+            ret->numInvalidated() = numInvalidated;
+            return ret;
+          })
+          .ensure([helper = std::move(helper),
+                   rootInode = std::move(rootInode)] {});
+
+  if (!*params->background()) {
+    return std::move(invalFut).semi();
+  } else {
+    folly::futures::detachOn(
+        server_->getServerState()->getThreadPool().get(),
+        std::move(invalFut).semi());
+    return std::make_unique<DebugInvalidateResponse>();
+  }
 }
 
 void EdenServiceHandler::getStatInfo(

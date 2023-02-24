@@ -29,7 +29,7 @@ from eden.fs.cli.filesystem import FsUtil
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.thrift.legacy import EdenClient
 from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
-from facebook.eden.ttypes import DebugInvalidateRequest, MountId, SyncBehavior
+from facebook.eden.ttypes import DebugInvalidateRequest, MountId, SyncBehavior, TimeSpec
 
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
@@ -683,10 +683,10 @@ class HighInodeCountProblem(Problem, FixableProblem):
         )
 
     def dry_run_msg(self) -> str:
-        return f"Would invalidate all non-materialized files and directories in {self._info.path}"
+        return f"Would start a background invalidation of not recently used files and directories in {self._info.path}"
 
     def start_msg(self) -> str:
-        return f"Invalidating all non-materialized files and directories in {self._info.path}"
+        return f"Starting background invalidation of not recently used files and directories in {self._info.path}"
 
     def perform_fix(self) -> None:
         """Invalidate all non-materialized inodes."""
@@ -694,7 +694,10 @@ class HighInodeCountProblem(Problem, FixableProblem):
             try:
                 client.debugInvalidateNonMaterialized(
                     DebugInvalidateRequest(
-                        mount=MountId(mountPoint=bytes(self._info.path)), path=b""
+                        mount=MountId(mountPoint=bytes(self._info.path)),
+                        path=b"",
+                        background=True,
+                        age=TimeSpec(seconds=3600),
                     )
                 )
             except Exception as ex:

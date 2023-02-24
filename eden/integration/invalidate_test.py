@@ -48,13 +48,14 @@ class InvalidateTest(testcase.EdenRepoTest):
             return info.loadedFileCount + info.loadedTreeCount
         return 0  # Apppease pyre
 
-    def invalidate(self, path: str, seconds: int = 0) -> int:
+    def invalidate(self, path: str, seconds: int = 0, background: bool = False) -> int:
         with self.get_thrift_client_legacy() as client:
             return client.debugInvalidateNonMaterialized(
                 DebugInvalidateRequest(
                     mount=MountId(mountPoint=self.mount_path_bytes),
                     path=os.fsencode(path),
                     age=TimeSpec(seconds=seconds, nanoSeconds=0),
+                    background=background,
                 )
             ).numInvalidated
 
@@ -130,3 +131,9 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.assertEqual(invalidated, 6)
         self.assertEqual(self.get_loaded_count(), initial_loaded + 5)
         self.read_all()
+
+    def test_invalidate_background(self) -> None:
+        """Verify that starting an invalidation in the background doesn't crash EdenFS."""
+        self.read_all()
+        self.invalidate("", seconds=10, background=True)
+        time.sleep(2)
