@@ -135,6 +135,8 @@ class EdenServer : private TakeoverHandler {
   };
 
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
+  using MountAndRootInode =
+      std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr>;
 
   EdenServer(
       std::vector<std::string> originalCommandLine,
@@ -290,11 +292,14 @@ class EdenServer : private TakeoverHandler {
    * initializing.  This is the behavior desired by most callers, as no access
    * to inode information is allowed yet on initializing mount points.
    *
-   * Mount points in the returned list may be in the process of shutting down.
-   * (Even if we attempted to return only running mount points, they may
-   * transition to shutting down before the caller can access them.)
+   * As long as the TreeInodePtr in the list is kept alive, the corresponding
+   * InodeMap is guaranteed to not be shut down too, that is the inode
+   * hierarchy starting at the returned TreeInodePtr can be accessed.
+   *
+   * Thus this function guarantees that the mounts are fully initialized and
+   * cannot be shut down.
    */
-  MountList getMountPoints() const;
+  std::vector<MountAndRootInode> getMountPoints() const;
 
   /**
    * Get all mount points, including mounts that are currently initializing.
@@ -311,8 +316,7 @@ class EdenServer : private TakeoverHandler {
    * Throws an EdenError if no mount exists with the specified path, or if the
    * mount is still initializing and is not ready for inode operations yet.
    */
-  std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr> getMountAndRootInode(
-      AbsolutePathPiece mountPath) const;
+  MountAndRootInode getMountAndRootInode(AbsolutePathPiece mountPath) const;
 
   folly::Future<CheckoutResult> checkOutRevision(
       AbsolutePathPiece mountPath,

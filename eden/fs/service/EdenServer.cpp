@@ -1728,8 +1728,8 @@ void EdenServer::mountFinished(
       });
 }
 
-EdenServer::MountList EdenServer::getMountPoints() const {
-  MountList results;
+std::vector<EdenServer::MountAndRootInode> EdenServer::getMountPoints() const {
+  std::vector<EdenServer::MountAndRootInode> results;
   {
     const auto mountPoints = mountPoints_->rlock();
     for (const auto& entry : *mountPoints) {
@@ -1739,7 +1739,7 @@ EdenServer::MountList EdenServer::getMountPoints() const {
       if (!mount->isSafeForInodeAccess()) {
         continue;
       }
-      results.emplace_back(mount);
+      results.emplace_back(mount, mount->getRootInodeUnchecked());
     }
   }
   return results;
@@ -1756,8 +1756,8 @@ EdenServer::MountList EdenServer::getAllMountPoints() const {
   return results;
 }
 
-std::tuple<std::shared_ptr<EdenMount>, TreeInodePtr>
-EdenServer::getMountAndRootInode(AbsolutePathPiece mountPath) const {
+EdenServer::MountAndRootInode EdenServer::getMountAndRootInode(
+    AbsolutePathPiece mountPath) const {
   const auto mountPoints = mountPoints_->rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
@@ -2049,16 +2049,22 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
           enumValue(state->state))));
     }
 
-    if (getMountPoints() != getAllMountPoints()) {
-      return makeFuture<TakeoverData>(std::runtime_error(
-          "can only perform graceful restart when all mount points are initialized"));
-      // TODO(xavierd): There is still a potential race after this check if a
-      // mount is initiated at this point. Injecting a block below and starting
-      // a mount would manifest it. In practice, this should be fairly rare.
-      // Moving this further (in stopMountsForTakeover for instance) to avoid
-      // this race requires EdenFS to being able to gracefully handle failures
-      // and recover in these cases by restarting several components after they
-      // have been already shutdown.
+    {
+      const auto mountPoints = mountPoints_->rlock();
+      for (const auto& entry : *mountPoints) {
+        const auto& mount = entry.second.edenMount;
+        if (!mount->isSafeForInodeAccess()) {
+          return makeFuture<TakeoverData>(std::runtime_error(
+              "can only perform graceful restart when all mount points are initialized"));
+          // TODO(xavierd): There is still a potential race after this check if
+          // a mount is initiated at this point. Injecting a block below and
+          // starting a mount would manifest it. In practice, this should be
+          // fairly rare. Moving this further (in stopMountsForTakeover for
+          // instance) to avoid this race requires EdenFS to being able to
+          // gracefully handle failures and recover in these cases by restarting
+          // several components after they have been already shutdown.
+        }
+      }
     }
 
     // Make a copy of the thrift server socket so we can transfer it to the
@@ -2226,9 +2232,7 @@ void EdenServer::workingCopyGC() {
   auto cutoff = std::chrono::system_clock::now() - cutoffConfig;
 
   const auto mountPoints = getMountPoints();
-  for (const auto& mount : mountPoints) {
-    auto rootInode = mount->getRootInode();
-
+  for (const auto& [mount, rootInode] : mountPoints) {
     auto lease = mount->tryStartWorkingCopyGC(rootInode);
     if (!lease) {
       XLOG(DBG6) << "Not running GC for: " << mount->getPath()
@@ -2237,14 +2241,18 @@ void EdenServer::workingCopyGC() {
     }
 
     // Avoid blocking the Thrift EventBase by invalidating on another executor.
-    folly::via(getServerState()->getThreadPool().get(), [rootInode, cutoff] {
-      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-          "EdenServer::garbageCollect");
-      return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
-          .semi();
-    }).ensure([rootInode, lease = std::move(lease)] {
-      rootInode->unloadChildrenUnreferencedByFs();
-    });
+    folly::via(
+        getServerState()->getThreadPool().get(),
+        [rootInode = rootInode, cutoff] {
+          static auto context =
+              ObjectFetchContext::getNullContextWithCauseDetail(
+                  "EdenServer::garbageCollect");
+          return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
+              .semi();
+        })
+        .ensure([rootInode = rootInode, lease = std::move(lease)] {
+          rootInode->unloadChildrenUnreferencedByFs();
+        });
   }
 }
 

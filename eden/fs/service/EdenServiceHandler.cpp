@@ -3512,7 +3512,7 @@ void EdenServiceHandler::debugGetInodePath(
 void EdenServiceHandler::clearFetchCounts() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
-  for (auto& mount : server_->getMountPoints()) {
+  for (auto& [mount, rootInode] : server_->getMountPoints()) {
     mount->getObjectStore()->clearFetchCounts();
   }
 }
@@ -3569,7 +3569,7 @@ void EdenServiceHandler::getAccessCounts(
 
   auto seconds = std::chrono::seconds{duration};
 
-  for (auto& mount : server_->getMountPoints()) {
+  for (auto& [mount, rootInode] : server_->getMountPoints()) {
     auto& mountStr = mount->getPath().value();
     auto& pal = mount->getProcessAccessLog();
 
@@ -3698,7 +3698,7 @@ void EdenServiceHandler::getStatInfo(
     auto mountList = server_->getMountPoints();
     std::map<PathString, MountInodeInfo> mountPointInfo = {};
     std::map<PathString, JournalInfo> mountPointJournalInfo = {};
-    for (auto& mount : mountList) {
+    for (auto& [mount, rootInode] : mountList) {
       auto inodeMap = mount->getInodeMap();
       // Set LoadedInde Count and unloaded Inode count for the mountPoint.
       MountInodeInfo mountInodeInfo;
@@ -3734,7 +3734,7 @@ void EdenServiceHandler::getStatInfo(
     auto counters = fb303::ServiceData::get()->getCounters();
     result.counters_ref() = counters;
     size_t periodicUnloadCount{0};
-    for (auto& mount : server_->getMountPoints()) {
+    for (auto& [mount, rootInode] : server_->getMountPoints()) {
       periodicUnloadCount +=
           counters[mount->getCounterName(CounterName::PERIODIC_INODE_UNLOAD)];
     }
