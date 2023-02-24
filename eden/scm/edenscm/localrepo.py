@@ -1535,7 +1535,6 @@ class localrepository(object):
 
         path in paths can be either a file or a directory.
         nodes decides the search range (ex. "::." or "_firstancestors(.)")
-        If first is True, only follow the first ancestors.
 
         This can be used for `log` operations.
         """
