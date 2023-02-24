@@ -1803,7 +1803,8 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
   // the +1 is so we count the current checkout that hasn't quite started yet
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
-  return edenMount->checkout(rootId, clientPid, callerName, checkoutMode)
+  return edenMount
+      ->checkout(rootInode, rootId, clientPid, callerName, checkoutMode)
       .via(mainEventBase_)
       .thenValue([this,
                   checkoutMode,
@@ -1864,7 +1865,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         return std::move(result);
       })
       .via(getServerState()->getThreadPool().get())
-      .ensure([rootInode = std::move(rootInode)] {});
+      .ensure([rootInode = rootInode] {});
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(

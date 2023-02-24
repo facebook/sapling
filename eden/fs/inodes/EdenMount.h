@@ -695,6 +695,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * the passed in snapshotHash.
    */
   folly::Future<CheckoutResult> checkout(
+      TreeInodePtr rootInode,
       const RootId& snapshotHash,
       std::optional<pid_t> clientPid,
       folly::StringPiece thriftMethodCaller,
@@ -720,12 +721,15 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * @param request This ResposeChannelRequest is passed from the ServiceHandler
    *     and is used to check if the request is still active, because if the
    *     request is no longer active we will cancel this diff operation.
+   * @param the rootInode of this mount. Used to prevent the mount from being
+   *     shut down.
    *
    * @return Returns a folly::Future that will be fulfilled when the diff
    *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operation to complete.
    */
   FOLLY_NODISCARD ImmediateFuture<std::unique_ptr<ScmStatus>> diff(
+      TreeInodePtr rootInode,
       const RootId& commitHash,
       folly::CancellationToken cancellation,
       bool listIgnored = false,
@@ -738,6 +742,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * exists at least until the returned Future completes.
    */
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
+      TreeInodePtr rootInode,
       DiffContext* ctxPtr,
       const RootId& commitHash) const;
 
@@ -1140,6 +1145,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * and passed through the TreeInode diff() codepath
    */
   FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
+      TreeInodePtr rootInode,
       DiffCallback* callback,
       const RootId& commitHash,
       bool listIgnored,

@@ -93,10 +93,11 @@ class DiffTest {
         std::make_unique<TopLevelIgnores>(
             systemWideIgnoreFileContents, userIgnoreFileContents)};
     auto commitHash = mount_.getEdenMount()->getCheckedOutRootId();
-    auto diffFuture = mount_.getEdenMount()
-                          ->diff(&diffContext, commitHash)
-                          .semi()
-                          .via(mount_.getServerExecutor().get());
+    auto diffFuture =
+        mount_.getEdenMount()
+            ->diff(mount_.getRootInode(), &diffContext, commitHash)
+            .semi()
+            .via(mount_.getServerExecutor().get());
     mount_.drainServerExecutor();
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractStatus();
@@ -104,6 +105,7 @@ class DiffTest {
   ImmediateFuture<ScmStatus> diffFuture(bool listIgnored = false) {
     auto commitHash = mount_.getEdenMount()->getWorkingCopyParent();
     auto diffFuture = mount_.getEdenMount()->diff(
+        mount_.getRootInode(),
         commitHash,
         folly::CancellationToken{},
         listIgnored,
@@ -1493,6 +1495,7 @@ TEST(DiffTest, fileNotReady) {
   // Run the diff
   auto diffFuture = mount.getEdenMount()
                         ->diff(
+                            mount.getRootInode(),
                             commitHash2,
                             folly::CancellationToken{},
                             /*listIgnored=*/false,
@@ -1620,6 +1623,7 @@ TEST(DiffTest, cancelledDiff) {
 
   auto diffFuture = mount.getEdenMount()
                         ->diff(
+                            mount.getRootInode(),
                             commitHash2,
                             cancellationSource.getToken(),
                             /*listIgnored=*/false,
@@ -1671,6 +1675,7 @@ class DiffTestNonMateralized : public ::testing::Test {
   std::unique_ptr<ScmStatus> diff(const RootId& hash) {
     auto fut = testMount_.getEdenMount()
                    ->diff(
+                       testMount_.getRootInode(),
                        hash,
                        folly::CancellationToken{},
                        /*listIgnored=*/true,

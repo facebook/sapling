@@ -55,11 +55,15 @@ TEST(
 
   // Now checkout 2.
 
-  auto result =
-      mount.getEdenMount()
-          ->checkout(RootId{"2"}, std::nullopt, __func__, CheckoutMode::FORCE)
-          .via(executor)
-          .getVia(executor);
+  auto result = mount.getEdenMount()
+                    ->checkout(
+                        mount.getRootInode(),
+                        RootId{"2"},
+                        std::nullopt,
+                        __func__,
+                        CheckoutMode::FORCE)
+                    .via(executor)
+                    .getVia(executor);
   EXPECT_EQ(1, result.conflicts.size());
   // There will be a conflict, but force will succeed.
   EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type());
@@ -114,10 +118,11 @@ TEST(Dematerialize, test_dematerialization_migrates_to_the_new_ID_scheme) {
 
   // Now checkout 2.
 
-  auto result = mount.getEdenMount()
-                    ->checkout(RootId{"2"}, std::nullopt, __func__)
-                    //.via(executor)
-                    .getVia(executor);
+  auto result =
+      mount.getEdenMount()
+          ->checkout(mount.getRootInode(), RootId{"2"}, std::nullopt, __func__)
+          //.via(executor)
+          .getVia(executor);
 
   // There should be no conflicts, as the file is not modified.
   EXPECT_EQ(0, result.conflicts.size());

@@ -2828,11 +2828,12 @@ EdenServiceHandler::semifuture_getScmStatusV2(
              std::move(helper),
              mount
                  ->diff(
+                     rootInode,
                      rootId,
                      context->getConnectionContext()->getCancellationToken(),
                      *params->listIgnored_ref(),
                      enforceParents)
-                 .ensure([rootInode = std::move(rootInode)] {})
+                 .ensure([rootInode = rootInode] {})
                  .thenValue([this, mount = mount](
                                 std::unique_ptr<ScmStatus>&& status) {
                    auto result = std::make_unique<GetScmStatusResult>();
@@ -2865,11 +2866,12 @@ EdenServiceHandler::semifuture_getScmStatus(
   return wrapImmediateFuture(
              std::move(helper),
              mount->diff(
+                 rootInode,
                  hash,
                  context->getConnectionContext()->getCancellationToken(),
                  listIgnored,
                  /*enforceCurrentParent=*/false))
-      .ensure([rootInode = std::move(rootInode)] {})
+      .ensure([rootInode = rootInode] {})
       .semi();
 }
 
