@@ -641,10 +641,9 @@ impl Redirection {
     #[cfg(target_os = "macos")]
     fn _bind_unmount_darwin(&self, checkout: &EdenFsCheckout) -> Result<()> {
         let mount_path = checkout.path().join(&self.repo_path);
-        // `diskutil eject` fully removes the image from the list of disk partitions while
-        // `diskutil unmount` leaves leftover state for some reason. We will use `eject` since
-        //  they're essentially the same.
-        let args = &["eject", &mount_path.to_string_lossy()];
+        // We use unmount instead of eject here since eject has caused issues
+        // by unmounting unrelated apfs volumes in the past. See S325232.
+        let args = &["unmount", "force", &mount_path.to_string_lossy()];
         let output = Command::new("diskutil")
             .args(args)
             .output()

@@ -313,11 +313,9 @@ class Redirection:
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout) -> None:
         mount_path = checkout.path / self.repo_path
-        # This will unmount/detach both disk images and apfs volumes.
-        # `diskutil eject` fully removes the image from the list of disk
-        # partitions while `diskutil unmount` leaves leftover state for some
-        # reason. We will use `eject` since they're essentially the same.
-        run_cmd_quietly(["diskutil", "eject", mount_path])
+        # We use unmount instead of eject here since eject has caused issues
+        # by unmounting unrelated apfs volumes in the past. See S325232.
+        run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: Path, target: Path
