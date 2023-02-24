@@ -322,4 +322,18 @@ struct EMenuStartupFailure {
   }
 };
 
+struct WorkingCopyGc {
+  static constexpr const char* type = "working_copy_gc";
+
+  double duration = 0.0;
+  int64_t numInvalidated = 0;
+  bool success = false;
+
+  void populate(DynamicEvent& event) const {
+    event.addDouble("duration", duration);
+    event.addInt("num_invalidated", numInvalidated);
+    event.addBool("success", success);
+  }
+};
+
 } // namespace facebook::eden

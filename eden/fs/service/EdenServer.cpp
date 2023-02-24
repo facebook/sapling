@@ -2229,6 +2229,8 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
     TreeInodePtr rootInode,
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context) {
+  folly::stop_watch<> workingCopyRuntime;
+
   auto lease = mount->tryStartWorkingCopyGC(rootInode);
   if (!lease) {
     XLOG(DBG6) << "Not running GC for: " << mount->getPath()
@@ -2236,9 +2238,29 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
     return 0;
   }
 
+  auto mountPath = mount->getPath();
+  XLOG(DBG1) << "Starting GC for: " << mountPath;
   return rootInode->invalidateChildrenNotMaterialized(cutoff, context)
       .ensure([rootInode, lease = std::move(lease)] {
         rootInode->unloadChildrenUnreferencedByFs();
+      })
+      .thenTry([workingCopyRuntime,
+                structuredLogger = structuredLogger_,
+                mountPath = std::move(mountPath)](
+                   folly::Try<uint64_t> numInvalidatedTry) {
+        auto runtime =
+            std::chrono::duration<double>{workingCopyRuntime.elapsed()};
+
+        bool success = numInvalidatedTry.hasValue();
+        int64_t numInvalidated =
+            success ? folly::to_signed(numInvalidatedTry.value()) : 0;
+        structuredLogger->logEvent(
+            WorkingCopyGc{runtime.count(), numInvalidated, success});
+
+        XLOG(DBG1) << "GC for: " << mountPath
+                   << ", completed in: " << runtime.count() << " seconds";
+
+        return numInvalidatedTry;
       });
 }
 
