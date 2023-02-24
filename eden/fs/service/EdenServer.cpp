@@ -781,31 +781,17 @@ void EdenServer::scheduleCallbackOnMainEventBase(
 
 #ifndef _WIN32
 void EdenServer::unloadInodes() {
-  struct Root {
-    AbsolutePath mountName;
-    TreeInodePtr rootInode;
-    shared_ptr<EdenMount> mount;
-  };
-  std::vector<Root> roots;
-  {
-    const auto mountPoints = mountPoints_->wlock();
-    for (auto& entry : *mountPoints) {
-      roots.emplace_back(Root{
-          entry.first,
-          entry.second.edenMount->getRootInode(),
-          entry.second.edenMount});
-    }
-  }
+  auto mounts = getMountPoints();
 
-  if (!roots.empty()) {
+  if (!mounts.empty()) {
     auto cutoff = std::chrono::system_clock::now() -
         std::chrono::minutes(FLAGS_unload_age_minutes);
     auto cutoff_ts = folly::to<timespec>(cutoff);
-    for (auto& [name, rootInode, mount] : roots) {
+    for (auto& [mount, rootInode] : mounts) {
       auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
       if (unloaded) {
         XLOG(INFO) << "Unloaded " << unloaded
-                   << " inodes in background from mount " << name;
+                   << " inodes in background from mount " << mount->getPath();
       }
       mount->getInodeMap()->recordPeriodicInodeUnload(unloaded);
     }
