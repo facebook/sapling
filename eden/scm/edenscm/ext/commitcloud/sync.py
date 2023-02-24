@@ -315,6 +315,7 @@ def _sync(
 def logsyncop(
     repo,
     op,
+    prevversion,
     version,
     oldheads,
     newheads,
@@ -339,6 +340,7 @@ def logsyncop(
         {
             "commit_cloud_sync": {
                 "op": op,
+                "prev_version": prevversion,
                 "version": version,
                 "added_heads": addedheads,
                 "removed_heads": removedheads,
@@ -503,6 +505,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     logsyncop(
         repo,
         "from_cloud",
+        lastsyncstate.version,
         cloudrefs.version,
         lastsyncstate.heads,
         cloudrefs.heads,
@@ -1042,6 +1045,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         logsyncop(
             repo,
             "to_cloud",
+            lastsyncstate.version,
             cloudrefs.version,
             lastsyncstate.heads,
             newcloudheads,

@@ -80,6 +80,9 @@ pub enum Event {
         #[serde(rename = "O", alias = "op")]
         op: CommitCloudSyncOp,
 
+        #[serde(rename = "PV", alias = "prev_version")]
+        prev_version: u64,
+
         #[serde(rename = "V", alias = "version")]
         version: u64,
 
@@ -573,6 +576,7 @@ impl fmt::Display for Event {
             },
             CommitCloudSync {
                 op,
+                prev_version,
                 version,
                 added_heads,
                 removed_heads,
@@ -587,8 +591,8 @@ impl fmt::Display for Event {
                 };
                 write!(
                     f,
-                    "[commit_cloud_sync] sync {} cloud version {}",
-                    direction, version
+                    "[commit_cloud_sync] sync {} cloud version {}, previous version was {}",
+                    direction, version, prev_version
                 )?;
                 if added_heads.len > 0 {
                     write!(f, "; heads added {}", added_heads)?;
