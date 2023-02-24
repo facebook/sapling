@@ -179,6 +179,15 @@ void LocalStore::putBlobMetadata(
   put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
 }
 
+void LocalStore::WriteBatch::putBlobMetadata(
+    const ObjectId& id,
+    const BlobMetadata& metadata) {
+  auto hashBytes = id.getBytes();
+  SerializedBlobMetadata metadataBytes(metadata);
+
+  put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
+}
+
 void LocalStore::put(
     KeySpace keySpace,
     const ObjectId& id,

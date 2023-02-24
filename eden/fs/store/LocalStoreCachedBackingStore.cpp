@@ -76,7 +76,20 @@ LocalStoreCachedBackingStore::getTree(
             .deferValue(
                 [localStore = std::move(localStore)](GetTreeResult result) {
                   if (result.tree) {
-                    localStore->putTree(*result.tree);
+                    auto batch = localStore->beginWrite();
+                    batch->putTree(*result.tree);
+
+                    // Let's cache all the entries in the LocalStore.
+                    for (const auto& [name, treeEntry] : *result.tree) {
+                      const auto& size = treeEntry.getSize();
+                      const auto& sha1 = treeEntry.getContentSha1();
+                      if (treeEntry.getType() == TreeEntryType::REGULAR_FILE &&
+                          size && sha1) {
+                        batch->putBlobMetadata(
+                            treeEntry.getHash(), BlobMetadata{*sha1, *size});
+                      }
+                    }
+                    batch->flush();
                   }
 
                   return result;
