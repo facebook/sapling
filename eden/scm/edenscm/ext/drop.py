@@ -52,7 +52,7 @@ def _checkextension(name, ui):
         return None
 
 
-def _showrev(ui, repo, node):
+def _showrev(ui, repo, node) -> None:
     """pretty print the changeset to drop"""
     showopts = {
         "template": "Dropping changeset "
@@ -63,15 +63,16 @@ def _showrev(ui, repo, node):
     displayer.show(repo[node])
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     global rebasemod
+    # pyre-fixme[10]: Name `rebasemod` is used but not defined.
     rebasemod = _checkextension("rebase", ui)
 
 
 @command(
     "drop", [("r", "rev", [], _("revision to drop"))], _("@prog@ drop [OPTION] [REV]")
 )
-def drop(ui, repo, *revs, **opts):
+def drop(ui, repo, *revs, **opts) -> None:
     """drop changeset from stack"""
     if not rebasemod:
         raise error.Abort(_("required extensions not detected"))
