@@ -200,7 +200,10 @@ impl WorkspaceSubscriberService {
                     "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
                     err
                 ),
-                Ok(_) => interrupt.store(true, Ordering::Relaxed),
+                Ok(_) => {
+                    info!("Starting subscriptions.");
+                    interrupt.store(true, Ordering::Relaxed);
+                }
             })
         });
         actions
@@ -208,7 +211,7 @@ impl WorkspaceSubscriberService {
 
     pub fn serve(self) -> Result<tokio::task::JoinHandle<Result<()>>> {
         self.channel.0.send(CommitCloudStartSubscriptions)?;
-        Ok(tokio::task::spawn(async move {
+        Ok(tokio::spawn(async move {
             info!("Starting CommitCloud WorkspaceSubscriberService");
             loop {
                 let command = self.channel.1.recv_timeout(Duration::from_secs(60));
@@ -350,79 +353,89 @@ impl WorkspaceSubscriberService {
             let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate);
             let mut last_error = false;
 
-            while let Some(event) = es.next().await {
+            loop {
                 if interrupt.load(Ordering::Relaxed) {
                     return;
                 }
 
-                let event = event.map_err(|e| ErrorKind::CommitCloudHttpError(format!("{}", e)));
-                match event {
-                    Err(e) => {
-                        terror!(throttler_error, "{} {}. Continue...", sid, e);
-                        throttler_alive.reset();
-                        last_error = true;
-                        if format!("{}", e).contains("401 Unauthorized") {
-                            // interrupt execution earlier
-                            // all subscriptions have to be restarted from scratch
-                            interrupt.store(true, Ordering::Relaxed);
-                        }
-                        continue;
-                    }
-                    Ok(Event::Open) => {
-                        info!("EventSource connection open!")
-                    }
-                    Ok(Event::Message(e)) => {
-                        let data = e.data;
-                        if data.is_empty() {
-                            tinfo!(
-                                throttler_alive,
-                                "{} Received empty event. Subscription is alive",
-                                sid
-                            );
-                            throttler_error.reset();
-                            if last_error {
-                                fire("after recover from error", None);
+                match tokio::time::timeout(Duration::from_millis(500), es.next()).await {
+                    Ok(Some(event)) => {
+                        let event =
+                            event.map_err(|e| ErrorKind::CommitCloudHttpError(format!("{}", e)));
+                        match event {
+                            Err(e) => {
+                                terror!(throttler_error, "{} {}. Continue...", sid, e);
+                                throttler_alive.reset();
+                                last_error = true;
+                                if format!("{}", e).contains("401 Unauthorized") {
+                                    // interrupt execution earlier
+                                    // all subscriptions have to be restarted from scratch
+                                    interrupt.store(true, Ordering::Relaxed);
+                                }
+                                continue;
+                            }
+                            Ok(Event::Open) => {
+                                info!("EventSource connection open!")
+                            }
+                            Ok(Event::Message(e)) => {
+                                let data = e.data;
+                                if data.is_empty() {
+                                    tinfo!(
+                                        throttler_alive,
+                                        "{} Received empty event. Subscription is alive",
+                                        sid
+                                    );
+                                    throttler_error.reset();
+                                    if last_error {
+                                        fire("after recover from error", None);
+                                        if interrupt.load(Ordering::Relaxed) {
+                                            return;
+                                        }
+                                    }
+                                    last_error = false;
+                                    continue;
+                                }
+
+                                throttler_alive.reset();
+                                throttler_error.reset();
+                                last_error = false;
+
+                                info!("{} Received new notification event", sid);
+                                let notification = serde_json::from_str::<Notification>(&data);
+                                if let Err(e) = notification {
+                                    error!(
+                                        "{} Unable to decode json data in the event, reason: {}. Continue...",
+                                        sid, e
+                                    );
+                                    continue;
+                                }
+                                let notification = notification.unwrap();
+                                info!(
+                                    "{} CommitCloud informs that the latest workspace version is {}",
+                                    sid, notification.version
+                                );
+                                if let Some(ref new_heads) = notification.new_heads {
+                                    if !new_heads.is_empty() {
+                                        info!("{} New heads:\n{}", sid, new_heads.join("\n"));
+                                    }
+                                }
+                                if let Some(ref removed_heads) = notification.removed_heads {
+                                    if !removed_heads.is_empty() {
+                                        info!(
+                                            "{} Removed heads:\n{}",
+                                            sid,
+                                            removed_heads.join("\n")
+                                        );
+                                    }
+                                }
+                                fire("on new version notification", Some(notification.version));
                                 if interrupt.load(Ordering::Relaxed) {
                                     return;
                                 }
                             }
-                            last_error = false;
-                            continue;
-                        }
-
-                        throttler_alive.reset();
-                        throttler_error.reset();
-                        last_error = false;
-
-                        info!("{} Received new notification event", sid);
-                        let notification = serde_json::from_str::<Notification>(&data);
-                        if let Err(e) = notification {
-                            error!(
-                                "{} Unable to decode json data in the event, reason: {}. Continue...",
-                                sid, e
-                            );
-                            continue;
-                        }
-                        let notification = notification.unwrap();
-                        info!(
-                            "{} CommitCloud informs that the latest workspace version is {}",
-                            sid, notification.version
-                        );
-                        if let Some(ref new_heads) = notification.new_heads {
-                            if !new_heads.is_empty() {
-                                info!("{} New heads:\n{}", sid, new_heads.join("\n"));
-                            }
-                        }
-                        if let Some(ref removed_heads) = notification.removed_heads {
-                            if !removed_heads.is_empty() {
-                                info!("{} Removed heads:\n{}", sid, removed_heads.join("\n"));
-                            }
-                        }
-                        fire("on new version notification", Some(notification.version));
-                        if interrupt.load(Ordering::Relaxed) {
-                            return;
                         }
                     }
+                    _ => continue,
                 }
             }
         }))

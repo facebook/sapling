@@ -14,6 +14,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
+use tokio::task::JoinHandle;
 
 /// Set of supported commands
 /// All unknown commands will be ignored
@@ -68,8 +69,8 @@ impl TcpReceiverService {
         self
     }
 
-    pub fn serve(self) -> Result<tokio::task::JoinHandle<Result<()>>> {
-        Ok(tokio::task::spawn(async move {
+    pub fn serve(self) -> Result<JoinHandle<Result<()>>> {
+        Ok(tokio::spawn(async move {
             let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], self.port))).await?;
             info!("Starting CommitCloud TcpReceiverService");
             info!("Listening on port {}", self.port);
