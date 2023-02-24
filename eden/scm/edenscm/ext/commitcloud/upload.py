@@ -79,8 +79,8 @@ def upload(repo, revs, force=False, localbackupstate=None):
             component="commitcloud",
         )
 
-    draftrevs = repo.changelog.torevset(
-        repo.dageval(lambda: ancestors(missingheads) & draft())
+    draftrevs = list(
+        repo.changelog.torevset(repo.dageval(lambda: ancestors(missingheads) & draft()))
     )
 
     # If the only draft revs are the missing heads then we can skip the
