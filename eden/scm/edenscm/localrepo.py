@@ -606,6 +606,29 @@ class localrepository(object):
 
         if not create:
             self._report_conflicting_requirements()
+            if util.istest() and self.ui.configbool(
+                "devel", "track-legacy-repo-format"
+            ):
+                self._track_legacy_repo_format()
+
+    def _track_legacy_repo_format(self):
+        if "remotefilelog" in self.requirements:
+            return
+        if eagerepo.iseagerepo(self):
+            return
+        if git.isgitstore(self):
+            return
+        testdir = encoding.environ.get("RUNTESTDIR")
+        path = f"{testdir}/.test-legacy-repo"
+        testname = os.path.basename(encoding.environ.get("TESTFILE"))
+        try:
+            with open(path, "r") as f:
+                if testname in f.read():
+                    return
+        except FileNotFoundError:
+            pass
+        with open(path, "a") as f:
+            f.write(f"{testname}\n")
 
     def _report_conflicting_requirements(self):
         """Find conflicting requirements"""
