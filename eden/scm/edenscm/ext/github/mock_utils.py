@@ -293,8 +293,7 @@ class MockGitHubServer:
 
         if len(stack_pr_ids) > 1:
             pr_list = [
-                f"* __->__ #{n}" if n == pr_number else f"* #{n}"
-                for n in stack_pr_ids
+                f"* __->__ #{n}" if n == pr_number else f"* #{n}" for n in stack_pr_ids
             ]
             body += (
                 "\n---\n"
