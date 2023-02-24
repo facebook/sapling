@@ -727,11 +727,17 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxag
     mindate = (time.time() - maxage * 86400) if maxage is not None else 0
     oldbookmarks = {}
 
-    # select nodes for the cloud bookmarks that are present in the local graph
-    knownlocally = repo.changelog.filternodes(
-        [nodemod.bin(n) for n in cloudbookmarks.values()]
+    # select list of nodes for the cloud bookmarks that are present in the local graph
+    # so, locally they are known
+    knownlocally = list(
+        repo.changelog.filternodes([nodemod.bin(n) for n in cloudbookmarks.values()])
     )
+    # select nodes that are public from the above
+    knownlocallypublic = list(repo.dageval(lambda: knownlocally & public()))
+
+    # convert to set of hashes
     knownlocallynodes = {nodemod.hex(n) for n in knownlocally}
+    knownlocallypublicnodes = {nodemod.hex(n) for n in knownlocallypublic}
 
     for name in allnames:
         # We are doing a 3-way diff between the local bookmark and the cloud
@@ -769,12 +775,11 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxag
                 if cloudnode is not None:
                     # The cloud bookmark has been set to point to a new commit.
                     if cloudnode in knownlocallynodes:
-                        ctx = unfi[cloudnode]
                         # The cloud bookmark is for a public commit but older than the requested age.
                         if (
                             localnode is None
-                            and not ctx.mutable()
-                            and ctx.date()[0] < mindate
+                            and cloudnode in knownlocallypublicnodes
+                            and unfi[cloudnode].date()[0] < mindate
                         ):
                             oldbookmarks[name] = cloudnode
                             omittedbookmarks.add(name)
