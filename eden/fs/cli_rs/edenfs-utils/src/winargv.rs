@@ -7,8 +7,10 @@
 
 #![cfg(windows)]
 
+use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::ffi::OsString;
+use std::ops::Deref;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::ffi::OsStringExt;
 
@@ -18,6 +20,75 @@ use anyhow::Result;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellapi::CommandLineToArgvW;
 use winapi::um::winbase::LocalFree;
+
+/// Quotes (if necessary) a set of Windows command-line arguments for consumption
+/// by CommandLineToArgvW.
+///
+/// N.B.: This does not perform quoting for cmd.exe.
+pub fn argv_to_command_line(argv: &[&OsStr]) -> Result<OsString> {
+    let quoted_args = argv
+        .iter()
+        .map(|a| quote_arg(a))
+        .collect::<Result<Vec<_>>>()?;
+
+    let mut result = OsString::new();
+    for (i, a) in quoted_args.into_iter().enumerate() {
+        if i != 0 {
+            result.push(" ");
+        }
+        result.push(a.deref());
+    }
+    Ok(result)
+}
+
+/// Quotes a single argument based on the algorithm described by Microsoft:
+/// https://learn.microsoft.com/en-us/archive/blogs/twistylittlepassagesallalike/everyone-quotes-command-line-arguments-the-wrong-way
+///
+/// With the modification that we bail out if we're asked to quote control
+/// characters, since CommandLineToArgvW can't round-trip them.
+fn quote_arg<'a>(arg: &'a OsStr) -> Result<Cow<'a, OsStr>> {
+    let arg_str = arg
+        .to_str()
+        .ok_or(anyhow!("arg invalid as Unicode string"))?;
+
+    for c in arg_str.chars() {
+        if c.is_control() {
+            bail!("cannot quote control characters");
+        }
+    }
+
+    const CHARS_TO_QUOTE: [char; 5] = [' ', '\t', '\n', '\u{000B}', '"'];
+    if arg_str.find(&CHARS_TO_QUOTE) == None && !arg_str.is_empty() {
+        // No quoting needed.
+        return Ok(Cow::Borrowed(arg));
+    }
+
+    let mut quoted = "\"".to_owned();
+    let mut num_backslashes = 0usize;
+    for c in arg_str.chars() {
+        if c == '\\' {
+            num_backslashes += 1;
+            continue;
+        }
+        if c == '"' {
+            push_n(&mut quoted, 2 * num_backslashes + 1, '\\');
+        } else {
+            push_n(&mut quoted, num_backslashes, '\\');
+        }
+        quoted.push(c);
+        num_backslashes = 0;
+    }
+    push_n(&mut quoted, 2 * num_backslashes, '\\');
+    quoted.push('"');
+
+    Ok(Cow::Owned(quoted.into()))
+}
+
+fn push_n(s: &mut String, n: usize, c: char) {
+    for _ in 0..n {
+        s.push(c);
+    }
+}
 
 /// Parses a Windows command line into an argv vector of program name followed
 /// by zero or more command-line arguments.
@@ -89,9 +160,60 @@ mod tests {
     use std::str::FromStr;
 
     use anyhow::Result;
+    use quickcheck::TestResult;
+    use quickcheck_macros::quickcheck;
 
+    use super::argv_to_command_line;
     use super::command_line_to_argv;
     use super::null_terminated_slice;
+    use super::quote_arg;
+
+    #[test]
+    fn test_quote_arg() -> Result<()> {
+        assert_eq!(quote_arg(OsStr::new(""))?, OsString::from_str("\"\"")?);
+        assert_eq!(
+            quote_arg(OsStr::new("argument1"))?,
+            OsString::from_str("argument1")?
+        );
+        assert_eq!(
+            quote_arg(OsStr::new("argument 2"))?,
+            OsString::from_str("\"argument 2\"")?
+        );
+        assert_eq!(
+            quote_arg(OsStr::new("\\some\\path with\\spaces"))?,
+            OsString::from_str("\"\\some\\path with\\spaces\"")?
+        );
+        assert_eq!(
+            quote_arg(OsStr::new("\\some\\path\\without\\spaces"))?,
+            OsString::from_str("\\some\\path\\without\\spaces")?
+        );
+        assert_eq!(
+            quote_arg(OsStr::new("with\"quote"))?,
+            OsString::from_str("\"with\\\"quote\"")?
+        );
+
+        Ok(())
+    }
+
+    // Try to gain confidence that our argv_to_command_line round-trips with
+    // win32's CommandLineToArgvW.
+    #[quickcheck]
+    fn argv_to_command_line_round_trips(argv: Vec<OsString>) -> TestResult {
+        let quoted_argv = argv_to_command_line(
+            argv.iter()
+                .map(OsString::as_os_str)
+                .collect::<Vec<_>>()
+                .as_slice(),
+        );
+        if quoted_argv.is_err() {
+            // Discard arguments that quote_arg recognizes as non-quotable.
+            return TestResult::discard();
+        }
+        let quoted_argv = quoted_argv.unwrap();
+
+        let parsed_argv = command_line_to_argv(quoted_argv.as_os_str()).unwrap();
+        TestResult::from_bool(parsed_argv == argv)
+    }
 
     #[test]
     fn test_command_line_to_argv() -> Result<()> {

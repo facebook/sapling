@@ -604,33 +604,28 @@ mod unix {
 #[cfg(windows)]
 mod windows {
     use std::ffi::OsStr;
-    use std::ffi::OsString;
     use std::path::Path;
 
     use anyhow::anyhow;
-    use anyhow::Error;
     use anyhow::Result;
+    use edenfs_utils::winargv::argv_to_command_line;
     use edenfs_utils::winargv::command_line_to_argv;
 
     pub fn trim_cmd_binary_path(cmd: &str) -> Result<String> {
         let argv = command_line_to_argv(OsStr::new(cmd))?;
 
-        Ok(argv
-            .into_iter()
+        let truncated_argv = argv
+            .iter()
             .enumerate()
-            .map(|part| {
-                match part {
-                    (0, binary) => {
-                        let filename = binary_filename_only(&binary)?;
-                        Ok::<OsString, Error>(filename.to_owned())
-                    }
-                    (_, part) => Ok(part),
-                }?
-                .into_string()
-                .map_err(|_| anyhow!("failed string conversion"))
+            .map(|part| match part {
+                (0, binary) => binary_filename_only(&binary),
+                (_, arg) => Ok(arg.as_os_str()),
             })
-            .collect::<Result<Vec<_>>>()?
-            .join(" "))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(argv_to_command_line(truncated_argv.as_slice())?
+            .to_string_lossy()
+            .into_owned())
     }
 
     fn binary_filename_only(binary: &OsStr) -> Result<&OsStr> {
@@ -652,6 +647,10 @@ mod windows {
             assert_eq!(
                 trim_cmd_binary_path("\"C:\\Program Files\\foo\\bar.exe\" baz.txt")?,
                 "bar.exe baz.txt"
+            );
+            assert_eq!(
+                trim_cmd_binary_path("\"C:\\Program Files\\foo\\bar baz.exe\" baz.txt")?,
+                "\"bar baz.exe\" baz.txt"
             );
 
             Ok(())
