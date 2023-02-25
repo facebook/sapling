@@ -75,6 +75,7 @@ except ModuleNotFoundError:
 from . import (
     cmd_util,
     hg_util,
+    prefetch_profile as prefetch_profile_mod,
     rage as rage_mod,
     stats_print,
     subcmd as subcmd_mod,

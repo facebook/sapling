@@ -509,20 +509,10 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None
         section_title("Prefetch Profiles list:", out)
         checkouts = instance.get_checkouts()
         for checkout in checkouts:
-            profiles = subprocess.check_output(
-                [
-                    "edenfsctl",
-                    "prefetch-profile",
-                    "list",
-                    "--checkout",
-                    f"{checkout.path}",
-                ]
-            )
+            profiles = sorted(checkout.get_config().active_prefetch_profiles)
             if profiles:
                 out.write(f"{checkout.path}:\n".encode())
-                output_lines = profiles.decode("utf-8").split(os.linesep)
-                # The first line of output is "NAMES"; skip that and only list profiles
-                for name in output_lines[1:]:
+                for name in profiles:
                     out.write(f"  - {name}\n".encode())
             else:
                 out.write(f"{checkout.path}: []\n".encode())
