@@ -11,7 +11,6 @@ use std::collections::BTreeMap;
 use std::io::stdout;
 use std::io::Stdout;
 use std::io::Write;
-use std::path::Path;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -39,7 +38,6 @@ use edenfs_utils::humantime::TimeUnit;
 use edenfs_utils::path_from_bytes;
 use futures::FutureExt;
 use futures::StreamExt;
-use shlex::quote;
 use sysinfo::Pid;
 use sysinfo::System;
 use sysinfo::SystemExt;
@@ -47,6 +45,10 @@ use thrift_types::edenfs::types::pid_t;
 use thrift_types::edenfs::types::AccessCounts;
 use thrift_types::edenfs::types::GetAccessCountsResult;
 
+#[cfg(unix)]
+use self::unix::trim_cmd_binary_path;
+#[cfg(windows)]
+use self::windows::trim_cmd_binary_path;
 use crate::ExitCode;
 
 #[derive(Parser, Debug)]
@@ -111,29 +113,11 @@ impl GetAccessCountsResultExt for GetAccessCountsResult {
                 // extra empty string on the end
                 let cmd = cmd.trim_end_matches(char::from(0));
 
-                let mut parts: Vec<&str> = cmd.split(char::from(0)).collect();
-                let path = Path::new(parts[0]);
-                if path.is_absolute() {
-                    parts[0] = path
-                        .file_name()
-                        .ok_or_else(|| anyhow!("cmd filename is missing"))?
-                        .to_str()
-                        .ok_or_else(|| anyhow!("cmd is not UTF-8"))?;
-                }
+                // Show only the binary's filename, not its full path.
+                let cmd = trim_cmd_binary_path(cmd)
+                    .unwrap_or_else(|e| format!("{}: {}", UNKNOWN_COMMAND, e));
 
-                Ok(parts
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, part)| {
-                        if i == 0 {
-                            // the first item is the cmd
-                            String::from(part)
-                        } else {
-                            quote(part).into_owned()
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join(" "))
+                Ok(cmd)
             }
             None => Ok(String::from(UNKNOWN_COMMAND)),
         }
@@ -578,6 +562,99 @@ impl crate::Subcommand for MinitopCmd {
                     }
                 };
             }
+        }
+    }
+}
+
+#[cfg(unix)]
+mod unix {
+    use std::path::Path;
+
+    use anyhow::anyhow;
+    use anyhow::Result;
+    use shlex::quote;
+
+    pub fn trim_cmd_binary_path(cmd: &str) -> Result<String> {
+        let mut parts: Vec<&str> = cmd.split(char::from(0)).collect();
+        let path = Path::new(parts[0]);
+        if path.is_absolute() {
+            parts[0] = path
+                .file_name()
+                .ok_or_else(|| anyhow!("cmd filename is missing"))?
+                .to_str()
+                .ok_or_else(|| anyhow!("cmd is not UTF-8"))?;
+        }
+
+        Ok(parts
+            .into_iter()
+            .enumerate()
+            .map(|(i, part)| {
+                if i == 0 {
+                    // the first item is the cmd
+                    String::from(part)
+                } else {
+                    quote(part).into_owned()
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(" "))
+    }
+}
+
+#[cfg(windows)]
+mod windows {
+    use std::ffi::OsStr;
+    use std::ffi::OsString;
+    use std::path::Path;
+
+    use anyhow::anyhow;
+    use anyhow::Error;
+    use anyhow::Result;
+    use edenfs_utils::winargv::command_line_to_argv;
+
+    pub fn trim_cmd_binary_path(cmd: &str) -> Result<String> {
+        let argv = command_line_to_argv(OsStr::new(cmd))?;
+
+        Ok(argv
+            .into_iter()
+            .enumerate()
+            .map(|part| {
+                match part {
+                    (0, binary) => {
+                        let filename = binary_filename_only(&binary)?;
+                        Ok::<OsString, Error>(filename.to_owned())
+                    }
+                    (_, part) => Ok(part),
+                }?
+                .into_string()
+                .map_err(|_| anyhow!("failed string conversion"))
+            })
+            .collect::<Result<Vec<_>>>()?
+            .join(" "))
+    }
+
+    fn binary_filename_only(binary: &OsStr) -> Result<&OsStr> {
+        Ok(Path::new(binary)
+            .file_name()
+            .ok_or(anyhow!("cmd filename is missing"))?)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use anyhow::Result;
+
+        use super::trim_cmd_binary_path;
+
+        #[test]
+        fn test_trim_cmd_binary_path() -> Result<()> {
+            assert_eq!(trim_cmd_binary_path("rustc.exe")?, "rustc.exe");
+            assert_eq!(trim_cmd_binary_path("\"rustc.exe\"")?, "rustc.exe");
+            assert_eq!(
+                trim_cmd_binary_path("\"C:\\Program Files\\foo\\bar.exe\" baz.txt")?,
+                "bar.exe baz.txt"
+            );
+
+            Ok(())
         }
     }
 }

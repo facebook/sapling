@@ -28,6 +28,9 @@ use tracing::trace;
 pub mod humantime;
 pub mod metadata;
 
+#[cfg(windows)]
+pub mod winargv;
+
 pub fn path_from_bytes(bytes: &[u8]) -> Result<PathBuf> {
     Ok(PathBuf::from(std::str::from_utf8(bytes).from_err()?))
 }
