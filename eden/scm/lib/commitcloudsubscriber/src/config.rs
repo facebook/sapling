@@ -60,14 +60,6 @@ mod defaults {
     pub fn tcp_receiver_port() -> u16 {
         15432
     }
-
-    pub fn alive_throttling_rate_sec() -> u64 {
-        60 * 5
-    }
-
-    pub fn error_throttling_rate_sec() -> u64 {
-        60 * 5
-    }
 }
 
 /// Struct for decoding Commit Cloud configuration from TOML.
@@ -105,12 +97,4 @@ pub struct CommitCloudConfig {
     /// This is a simple receiver working on tcp socket
     #[serde(default = "defaults::tcp_receiver_port")]
     pub tcp_receiver_port: u16,
-
-    /// Throttling rate for logging alive notifications in sec
-    #[serde(default = "defaults::alive_throttling_rate_sec")]
-    pub alive_throttling_rate_sec: u64,
-
-    /// Throttling rate for logging errors
-    #[serde(default = "defaults::error_throttling_rate_sec")]
-    pub error_throttling_rate_sec: u64,
 }

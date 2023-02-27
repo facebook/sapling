@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-
 use std::path::PathBuf;
 use std::str;
 use std::sync::atomic::AtomicBool;
@@ -36,20 +35,6 @@ use crate::receiver::CommandName::CommitCloudStartSubscriptions;
 use crate::util;
 use crate::ActionsMap;
 
-#[allow(unused_macros)]
-macro_rules! tinfo {
-    ($throttler:expr, $($args:tt)+) => ( $throttler.execute(&|| {
-                        info!($($args)+);
-                    }))
-}
-
-#[allow(unused_macros)]
-macro_rules! terror {
-    ($throttler:expr, $($args:tt)+) => ( $throttler.execute(&|| {
-                        error!($($args)+);
-                    }))
-}
-
 #[derive(Deserialize)]
 pub struct Notification {
     pub(crate) version: u64,
@@ -63,49 +48,13 @@ pub struct Subscription {
     pub(crate) workspace: String,
 }
 
-struct ThrottlingExecutor {
-    /// throttling rate in seconds
-    rate: Duration,
-
-    /// last time of command execution
-    last_time: SystemTime,
-}
-
-impl ThrottlingExecutor {
-    /// create ThrottlingExecutor with some duration
-    pub fn new(rate: Duration) -> ThrottlingExecutor {
-        ThrottlingExecutor {
-            rate,
-            last_time: SystemTime::now() - rate,
-        }
-    }
-    /// Run function if it is time, skip otherwise
-    #[inline]
-    fn execute(&mut self, f: &dyn Fn()) {
-        let now = SystemTime::now();
-        if now
-            .duration_since(self.last_time)
-            .map(|elapsed| elapsed >= self.rate)
-            .unwrap_or(true)
-        {
-            f();
-            self.last_time = now;
-        }
-    }
-    /// Reset time to pretend the command last execution was a while ago
-    #[inline]
-    fn reset(&mut self) {
-        self.last_time = SystemTime::now() - self.rate;
-    }
-}
-
 /// WorkspaceSubscriberService manages a set of running subscriptions
 /// and trigger `hg cloud sync` on notifications
 /// The workflow is simple:
 /// * fire `hg cloud sync` on start in every repo
 /// * read and start current set of subscriptions and
 ///     fire `hg cloud sync` on notifications
-/// * fire `hg cloud sync` when connection recovers (could missed notifications)
+/// * fire `hg cloud sync` when connection recovers
 /// * also provide actions (callbacks) to a few TcpReceiver commands
 ///     the commands are:
 ///         "start_subscriptions"
@@ -132,12 +81,6 @@ pub struct WorkspaceSubscriberService {
     /// Number of retries for `hg cloud sync`
     pub(crate) cloudsync_retries: u32,
 
-    /// Throttling rate for logging alive notification
-    pub(crate) alive_throttling_rate: Duration,
-
-    /// Throttling rate for logging errors
-    pub(crate) error_throttling_rate: Duration,
-
     /// Channel for communication between threads
     pub(crate) channel: (mpsc::Sender<CommandName>, mpsc::Receiver<CommandName>),
 
@@ -157,8 +100,6 @@ impl WorkspaceSubscriberService {
                 || ErrorKind::CommitCloudConfigError("undefined 'connected_subscribers_path'"),
             )?,
             cloudsync_retries: config.cloudsync_retries,
-            alive_throttling_rate: Duration::new(config.alive_throttling_rate_sec, 0),
-            error_throttling_rate: Duration::new(config.error_throttling_rate_sec, 0),
             channel: mpsc::channel(),
             interrupt: Arc::new(AtomicBool::new(false)),
         })
@@ -220,7 +161,7 @@ impl WorkspaceSubscriberService {
     pub fn serve(self) -> Result<tokio::task::JoinHandle<Result<()>>> {
         self.channel.0.send(CommitCloudStartSubscriptions)?;
         Ok(tokio::spawn(async move {
-            info!("Starting CommitCloud WorkspaceSubscriberService");
+            info!("Starting CommitCloud Workspace Subscriber Service");
             loop {
                 let command = self.channel.1.recv_timeout(Duration::from_secs(60));
                 match command {
@@ -317,15 +258,13 @@ impl WorkspaceSubscriberService {
 
         let mut es = EventSource::get(notification_url);
 
-        info!("{} Spawn a thread to handle the subscription", sid);
+        info!("{} Spawn a task to handle the subscription", sid);
 
         let cloudsync_retries = self.cloudsync_retries;
-        let alive_throttling_rate = self.alive_throttling_rate;
-        let error_throttling_rate = self.error_throttling_rate;
         let interrupt = self.interrupt.clone();
 
         Ok(tokio::spawn(async move {
-            info!("{} Thread started...", sid);
+            info!("{} Task started...", sid);
 
             let fire = |reason: &'static str, version: Option<u64>| {
                 for repo_root in repo_roots.iter() {
@@ -357,58 +296,22 @@ impl WorkspaceSubscriberService {
 
             info!("{} Start listening to notifications", sid);
 
-            let mut throttler_alive = ThrottlingExecutor::new(alive_throttling_rate);
-            let mut throttler_error = ThrottlingExecutor::new(error_throttling_rate);
-            let mut last_error = false;
-
-            loop {
-                if interrupt.load(Ordering::Relaxed) {
-                    return;
-                }
-
+            while !interrupt.load(Ordering::Relaxed) {
                 match tokio::time::timeout(Duration::from_millis(500), es.next()).await {
                     Ok(Some(event)) => {
                         let event =
                             event.map_err(|e| ErrorKind::CommitCloudHttpError(format!("{}", e)));
+
                         match event {
                             Err(e) => {
-                                terror!(throttler_error, "{} {}. Continue...", sid, e);
-                                throttler_alive.reset();
-                                last_error = true;
-                                if format!("{}", e).contains("401 Unauthorized") {
-                                    // interrupt execution earlier
-                                    // all subscriptions have to be restarted from scratch
-                                    interrupt.store(true, Ordering::Relaxed);
-                                }
-                                continue;
+                                error!("{} Restarting subscriptions due to error: {}...", sid, e);
+                                interrupt.store(true, Ordering::Relaxed);
                             }
                             Ok(Event::Open) => {
-                                info!("EventSource connection open for {}!", sid)
+                                info!("{} EventSource connection open...", sid)
                             }
                             Ok(Event::Message(e)) => {
                                 let data = e.data;
-                                if data.is_empty() {
-                                    tinfo!(
-                                        throttler_alive,
-                                        "{} Received empty event. Subscription is alive",
-                                        sid
-                                    );
-                                    throttler_error.reset();
-                                    if last_error {
-                                        fire("after recover from error", None);
-                                        if interrupt.load(Ordering::Relaxed) {
-                                            return;
-                                        }
-                                    }
-                                    last_error = false;
-                                    continue;
-                                }
-
-                                throttler_alive.reset();
-                                throttler_error.reset();
-                                last_error = false;
-
-                                info!("{} Received new notification event", sid);
                                 let notification = serde_json::from_str::<Notification>(&data);
                                 if let Err(e) = notification {
                                     error!(
@@ -419,27 +322,10 @@ impl WorkspaceSubscriberService {
                                 }
                                 let notification = notification.unwrap();
                                 info!(
-                                    "{} CommitCloud informs that the latest workspace version is {}",
-                                    sid, notification.version
+                                    "{} Notification to sync version {} (full message: {})",
+                                    sid, notification.version, &data
                                 );
-                                if let Some(ref new_heads) = notification.new_heads {
-                                    if !new_heads.is_empty() {
-                                        info!("{} New heads:\n{}", sid, new_heads.join("\n"));
-                                    }
-                                }
-                                if let Some(ref removed_heads) = notification.removed_heads {
-                                    if !removed_heads.is_empty() {
-                                        info!(
-                                            "{} Removed heads:\n{}",
-                                            sid,
-                                            removed_heads.join("\n")
-                                        );
-                                    }
-                                }
                                 fire("on new version notification", Some(notification.version));
-                                if interrupt.load(Ordering::Relaxed) {
-                                    return;
-                                }
                             }
                         }
                     }
