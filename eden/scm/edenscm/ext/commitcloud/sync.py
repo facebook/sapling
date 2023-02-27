@@ -733,11 +733,19 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxag
         repo.changelog.filternodes([nodemod.bin(n) for n in cloudbookmarks.values()])
     )
     # select nodes that are public from the above
-    knownlocallypublic = list(repo.dageval(lambda: knownlocally & public()))
+    knownlocallypublic = repo.dageval(lambda: knownlocally & public())
 
     # convert to set of hashes
     knownlocallynodes = {nodemod.hex(n) for n in knownlocally}
     knownlocallypublicnodes = {nodemod.hex(n) for n in knownlocallypublic}
+
+    # prefetch times in a single request for known locally public nodes
+    # tell the revset to batch text fetching, text includes date
+    batched_revset = repo.revs("%ln", knownlocallypublic).prefetch("text")
+    # iterate through the revset
+    node_date_map = {
+        nodemod.hex(c.node()): c.date()[0] for c in batched_revset.iterctx()
+    }
 
     for name in allnames:
         # We are doing a 3-way diff between the local bookmark and the cloud
@@ -779,7 +787,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxag
                         if (
                             localnode is None
                             and cloudnode in knownlocallypublicnodes
-                            and unfi[cloudnode].date()[0] < mindate
+                            and node_date_map[cloudnode] < mindate
                         ):
                             oldbookmarks[name] = cloudnode
                             omittedbookmarks.add(name)
