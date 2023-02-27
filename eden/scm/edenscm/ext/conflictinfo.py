@@ -169,7 +169,7 @@ def _resolve(orig, ui, repo, *pats, **opts):
 
 
 # To become merge.summarizefileconflicts().
-def _summarizefileconflicts(self, path, workingctx):
+def _summarizefileconflicts(self, path, workingctx) -> Optional[Dict[str, Any]]:
     # 'd' = driver-resolved
     # 'r' = marked resolved
     # 'pr', 'pu' = path conflicts
