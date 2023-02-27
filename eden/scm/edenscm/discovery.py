@@ -16,7 +16,7 @@ from . import bookmarks, setdiscovery, util
 from .node import nullid
 
 
-def findcommonincoming(repo, remote, heads=None, force=False, ancestorsof=None):
+def findcommonincoming(repo, remote, heads=None, force: bool = False, ancestorsof=None):
     """Return a tuple (common, anyincoming, heads) used to identify the common
     subset of nodes between repo and remote.
 
@@ -124,8 +124,13 @@ class outgoing(object):
 
 
 def findcommonoutgoing(
-    repo, other, onlyheads=None, force=False, commoninc=None, portable=False
-):
+    repo,
+    other,
+    onlyheads=None,
+    force: bool = False,
+    commoninc=None,
+    portable: bool = False,
+) -> outgoing:
     """Return an outgoing instance to identify the nodes present in repo but
     not in other.
 
