@@ -21,6 +21,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -357,7 +359,6 @@ impl ConfigSetHgExt for ConfigSet {
         use std::time::Duration;
         use std::time::SystemTime;
 
-        use anyhow::bail;
         use util::run_background;
 
         let mut errors = Vec::new();
@@ -571,7 +572,7 @@ fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result
         if name.is_empty() {
             tracing::warn!("repo name: no remotefilelog.reponame");
             let path: String = config.get_or_default("paths", "default")?;
-            name = repo_name_from_url(&path).unwrap_or_default();
+            name = repo_name_from_url(config, &path).unwrap_or_default();
             if name.is_empty() {
                 tracing::warn!("repo name: no path.default reponame: {}", &path);
             }
@@ -693,12 +694,35 @@ impl ConfigSetExtInternal for ConfigSet {
     }
 }
 
-pub fn repo_name_from_url(s: &str) -> Option<String> {
+/// Using custom "schemes" from config, resolve given url.
+pub fn resolve_custom_scheme(config: &dyn Config, url: Url) -> Result<Url> {
+    if let Some(tmpl) = config.get_nonempty("schemes", url.scheme()) {
+        let non_scheme = match url.as_str().split_once(':') {
+            Some((_, after)) => after.trim_start_matches('/'),
+            None => bail!("url {url} has no scheme"),
+        };
+
+        let resolved_url = if tmpl.contains("{1}") {
+            tmpl.replace("{1}", non_scheme)
+        } else {
+            format!("{tmpl}{non_scheme}")
+        };
+
+        return Ok(Url::parse(&resolved_url)
+            .with_context(|| format!("parsing resolved custom scheme URL {resolved_url}"))?);
+    }
+
+    Ok(url)
+}
+
+pub fn repo_name_from_url(config: &dyn Config, s: &str) -> Option<String> {
     // Use a base_url to support non-absolute urls.
     let base_url = Url::parse("file:///.").unwrap();
     let parse_opts = Url::options().base_url(Some(&base_url));
     match parse_opts.parse(s) {
         Ok(url) => {
+            let url = resolve_custom_scheme(config, url).ok()?;
+
             tracing::trace!("parsed url {}: {:?}", s, url);
             match url.scheme() {
                 "mononoke" => {
@@ -707,18 +731,6 @@ pub fn repo_name_from_url(s: &str) -> Option<String> {
                     let path = url.path().trim_matches('/');
                     if !path.is_empty() {
                         return Some(path.to_string());
-                    }
-                }
-                "fb" => {
-                    // In FB URLs, the path is the reponame, however some `fb`
-                    // URLs have a double-slash after the colon that shouldn't be
-                    // there, which splits up the repo name into different
-                    // components of the URL. So let's just parse the string.
-                    if let Some(path) = s.strip_prefix("fb:") {
-                        let path = path.trim_matches('/');
-                        if !path.is_empty() {
-                            return Some(path.to_string());
-                        }
                     }
                 }
                 _ => {
@@ -909,6 +921,7 @@ pub fn all_existing_user_paths<'a>(id: &'a Identity) -> impl Iterator<Item = Pat
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::io::Write;
 
     use once_cell::sync::Lazy;
@@ -1228,8 +1241,10 @@ mod tests {
 
     #[test]
     fn test_repo_name_from_url() {
+        let config = BTreeMap::<&str, &str>::from([("schemes.fb", "mononoke://example.com/{1}")]);
+
         let check = |url, name| {
-            assert_eq!(repo_name_from_url(url).as_deref(), name);
+            assert_eq!(repo_name_from_url(&config, url).as_deref(), name);
         };
 
         // Ordinary schemes use the basename as the repo name
@@ -1261,5 +1276,26 @@ mod tests {
         // there.
         check("fb://repo/", Some("repo"));
         check("fb://path/to/repo", Some("path/to/repo"));
+    }
+
+    #[test]
+    fn test_resolve_custom_scheme() {
+        let config = BTreeMap::<&str, &str>::from([
+            ("schemes.append", "appended://bar/"),
+            ("schemes.subst", "substd://bar/{1}/baz"),
+        ]);
+
+        let check = |url, resolved| {
+            assert_eq!(
+                resolve_custom_scheme(&config, Url::parse(url).unwrap())
+                    .unwrap()
+                    .as_str(),
+                resolved
+            );
+        };
+
+        check("other://foo", "other://foo");
+        check("append:one/two", "appended://bar/one/two");
+        check("subst://one/two", "substd://bar/one/two/baz");
     }
 }
