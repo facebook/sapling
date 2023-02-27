@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import struct
 import zlib
+from typing import Sized
 
 from .. import pycompat
 from ..node import nullid
@@ -34,16 +35,16 @@ def dirstatetuple(*x):
 
 
 indexformatng = ">Qiiiiii20s12x"
-indexfirst = struct.calcsize("Q")
-sizeint = struct.calcsize("i")
-indexsize = struct.calcsize(indexformatng)
+indexfirst: int = struct.calcsize("Q")
+sizeint: int = struct.calcsize("i")
+indexsize: int = struct.calcsize(indexformatng)
 
 
-def gettype(q):
+def gettype(q) -> int:
     return int(q & 0xFFFF)
 
 
-def offset_type(offset, type):
+def offset_type(offset, type: int) -> int:
     return int(int(offset) << 16 | type)
 
 
@@ -147,7 +148,8 @@ def parse_index2(data, inline):
     return InlinedIndexObject(data, inline), (0, data)
 
 
-def parse_dirstate(dmap, copymap, st):
+def parse_dirstate(dmap, copymap, st: Sized):
+    # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
     parents = [st[:20], st[20:40]]
     # dereference fields so they will be local in loop
     format = ">cllll"
@@ -168,10 +170,12 @@ def parse_dirstate(dmap, copymap, st):
     return parents
 
 
-def pack_dirstate(dmap, copymap, pl, now):
+def pack_dirstate(dmap, copymap, pl, now: int) -> bytes:
     now = int(now)
     cs = stringio()
     write = cs.write
+    # pyre-fixme[6]: For 1st argument expected `Union[array[typing.Any], bytearray,
+    #  bytes, _CData, memoryview, mmap, PickleBuffer]` but got `str`.
     write("".join(pl))
     for f, e in pycompat.iteritems(dmap):
         if e[0] == "n" and e[3] == now:
