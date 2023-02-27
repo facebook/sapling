@@ -19,9 +19,9 @@ jobs:
     - name: Prepare build environment
       run: 'eden/scm/packaging/mac/prepare_environment.py \
 
-        -s c11b17c8b78efa46dac2d213cd7a7b3fff75f6f5e6d2ef2248345cd4a900b1c6 -f openssl@1.1 \
+        -s 524ec08838d2826793e26b2ed084efdefec931e1aaa6dea01455aa77409b86c8 -f openssl@1.1 \
 
-        -s 54c7eb00a23451b956abe4797a759e29824d33953fb57715bde6b9abb2500555 -f python@3.11 \
+        -s cde36624e734632be009e3aa28d9bd07f4fa681c7caa270e7efb416b287c1e72 -f python@3.11 \
 
         -t aarch64-apple-darwin \
 

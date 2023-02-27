@@ -88,7 +88,7 @@ def get_bottle(bottle_name: str, bottle_hash: str, tmpdir: str):
     The hash corresponds to the hash of some bottle (which can be specified in
     the bottle section of homebrew formulas).
 
-    https://github.com/Homebrew/homebrew-core/blob/75bac0ef0c7a68d3607fc5d7e94ef417d93df138/Formula/python%403.11.rb#L14
+    https://github.com/Homebrew/homebrew-core/blob/38fbd0c91238c4c1ab88936cf4c3205b3c400f90/Formula/python@3.11.rb#L16
     is an example of this.
     """
     auth_url = f"https://ghcr.io/v2/homebrew/core/{bottle_name.replace('@', '/')}/blobs/sha256:{bottle_hash}"
@@ -128,7 +128,7 @@ def set_up_downloaded_crates(tmpdir):
     print(f"LOCATION IS {brew_location}")
     dylib_location = os.path.join(
         brew_location,
-        "python@3.11/3.11.1/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib",
+        "python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib",
     )
     run_cmd(
         [
@@ -137,14 +137,14 @@ def set_up_downloaded_crates(tmpdir):
             os.path.join(tmpdir, "python@3.11.bottle.tar.gz"),
             "-C",
             tmpdir,
-            "python@3.11/3.11.1/Frameworks/Python.framework/Versions/3.11/Python",
+            "python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/Python",
         ]
     )
     os.remove(dylib_location)
     shutil.copy(
         os.path.join(
             tmpdir,
-            "python@3.11/3.11.1/Frameworks/Python.framework/Versions/3.11/Python",
+            "python@3.11/3.11.2_1/Frameworks/Python.framework/Versions/3.11/Python",
         ),
         dylib_location,
     )
