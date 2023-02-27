@@ -242,7 +242,8 @@ fn list_output(
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo: repo.clone(),
         id,
@@ -261,13 +262,13 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         limit: CHUNK_SIZE,
         ..Default::default()
     };
-    let response = app.connection.tree_list(&tree, &params).await?;
+    let response = conn.tree_list(&tree, &params).await?;
     let count = response.count;
     let long = args.long;
-    let output = list_output(app.connection.clone(), repo.clone(), response, long).chain(
+    let output = list_output(conn.clone(), repo.clone(), response, long).chain(
         stream::iter((CHUNK_SIZE..count).step_by(CHUNK_SIZE as usize))
             .map({
-                let connection = app.connection.clone();
+                let connection = conn.clone();
                 move |offset| {
                     // Request subsequent chunks of the directory listing.
                     let params = thrift::TreeListParams {
@@ -281,7 +282,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .buffered(CONCURRENT_FETCHES)
             .then(move |response| {
                 let repo = repo.clone();
-                let connection = app.connection.clone();
+                let connection = conn.clone();
                 async move {
                     response.map(move |response| {
                         list_output(connection.clone(), repo.clone(), response, long)

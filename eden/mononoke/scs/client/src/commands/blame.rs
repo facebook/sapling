@@ -375,8 +375,9 @@ impl Render for BlameOut {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
+    let conn = app.get_connection(Some(&repo.name))?;
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
 
     let mut commit = thrift::CommitSpecifier {
         repo,
@@ -395,7 +396,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             identity_schemes: btreeset! { thrift::CommitIdentityScheme::BONSAI },
             ..Default::default()
         };
-        let response = app.connection.commit_info(&commit, &params).await?;
+        let response = conn.commit_info(&commit, &params).await?;
         commit.id.clone_from(
             response
                 .parents
@@ -434,10 +435,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         follow_mutable_file_history,
         ..Default::default()
     };
-    let response = app
-        .connection
-        .commit_path_blame(&commit_and_path, &params)
-        .await?;
+    let response = conn.commit_path_blame(&commit_and_path, &params).await?;
     app.target
         .render_one(
             &args,

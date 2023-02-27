@@ -96,14 +96,14 @@ impl Render for PushrebaseLookupOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,
         id,
         ..Default::default()
     };
-    let pushrebase_history = app
-        .connection
+    let pushrebase_history = conn
         .commit_lookup_pushrebase_history(
             &commit,
             &thrift::CommitLookupPushrebaseHistoryParams {
@@ -116,7 +116,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
     let commit_lookups: Vec<_> = stream::iter(pushrebase_history.history.clone())
-        .map(|commit| app.connection.commit_lookup(&commit, &lookup_params))
+        .map(|commit| conn.commit_lookup(&commit, &lookup_params))
         .buffered(10)
         .try_collect()
         .await?;

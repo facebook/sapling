@@ -45,7 +45,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let params = thrift::ListReposParams {
         ..Default::default()
     };
-    let repos = app.connection.list_repos(&params).await?;
+    let conn = app.get_connection(None)?;
+    let repos = conn.list_repos(&params).await?;
     app.target
         .render_one(
             &args,

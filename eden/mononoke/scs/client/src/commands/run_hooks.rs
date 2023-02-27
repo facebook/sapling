@@ -79,7 +79,8 @@ impl Render for RunHooksOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let original_commit_id = args.commit_id_args.clone().into_commit_id();
-    let commit_id = resolve_commit_id(&app.connection, &repo, &original_commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let commit_id = resolve_commit_id(&conn, &repo, &original_commit_id).await?;
     let commit_specifier = thrift::CommitSpecifier {
         id: commit_id,
         repo,
@@ -93,10 +94,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         pushvars,
         ..Default::default()
     };
-    let response = app
-        .connection
-        .commit_run_hooks(&commit_specifier, &params)
-        .await?;
+    let response = conn.commit_run_hooks(&commit_specifier, &params).await?;
     let outcomes = response
         .outcomes
         .into_iter()

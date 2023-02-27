@@ -61,8 +61,15 @@ lazy_static::lazy_static! {
 
 pub(crate) struct ScscApp {
     matches: ArgMatches,
-    connection: Connection,
+    connection_args: ConnectionArgs,
     target: OutputTarget,
+    fb: FacebookInit,
+}
+
+impl ScscApp {
+    fn get_connection(&self, repo: Option<&str>) -> anyhow::Result<Connection> {
+        self.connection_args.get_connection(self.fb, repo)
+    }
 }
 
 impl BaseApp for ScscApp {
@@ -97,7 +104,7 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
         .arg_required_else_help(true);
     let matches = app.get_matches();
     let common_args = ScscArgs::from_arg_matches(&matches)?;
-    let connection = common_args.connection_args.get_connection(fb)?;
+    let connection_args = common_args.connection_args;
     let target = if common_args.json {
         OutputTarget::Json
     } else if atty::is(atty::Stream::Stdout) {
@@ -107,8 +114,9 @@ async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
     };
     let app = ScscApp {
         matches,
-        connection,
+        connection_args,
         target,
+        fb,
     };
     commands::dispatch(app).await
 }

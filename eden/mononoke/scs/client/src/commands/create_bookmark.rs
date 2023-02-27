@@ -34,7 +34,8 @@ pub(super) struct CommandArgs {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let bookmark = args.name.clone();
     let service_identity = args.service_id_args.service_id.clone();
     let pushvars = args.pushvar_args.into_pushvars();
@@ -46,6 +47,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         pushvars,
         ..Default::default()
     };
-    app.connection.repo_create_bookmark(&repo, &params).await?;
+    conn.repo_create_bookmark(&repo, &params).await?;
     Ok(())
 }

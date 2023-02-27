@@ -37,8 +37,9 @@ pub(super) struct CommandArgs {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.into_repo_specifier();
     let commit_id = args.commit_id_args.into_commit_id();
+    let conn = app.get_connection(Some(&repo.name))?;
     let old_target = match commit_id {
-        Some(commit_id) => Some(resolve_commit_id(&app.connection, &repo, &commit_id).await?),
+        Some(commit_id) => Some(resolve_commit_id(&conn, &repo, &commit_id).await?),
         None => None,
     };
     let bookmark = args.name;
@@ -52,6 +53,6 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         pushvars,
         ..Default::default()
     };
-    app.connection.repo_delete_bookmark(&repo, &params).await?;
+    conn.repo_delete_bookmark(&repo, &params).await?;
     Ok(())
 }

@@ -69,7 +69,8 @@ impl Render for CommonBaseOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_ids = args.commit_ids_args.clone().into_commit_ids();
-    let ids = resolve_commit_ids(&app.connection, &repo, &commit_ids).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let ids = match ids.as_slice() {
         [id0, id1] => (id0.clone(), id1.clone()),
         _ => bail!("expected 2 commit_ids (got {})", commit_ids.len()),
@@ -84,10 +85,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         ..Default::default()
     };
-    let response = app
-        .connection
-        .commit_common_base_with(&commit, &params)
-        .await?;
+    let response = conn.commit_common_base_with(&commit, &params).await?;
     let ids = match &response.ids {
         Some(ids) => map_commit_ids(ids.values()),
         None => BTreeMap::new(),

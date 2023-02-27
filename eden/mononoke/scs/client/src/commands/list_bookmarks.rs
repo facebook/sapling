@@ -197,16 +197,17 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let prefix = args.prefix.clone();
     let include_scratch = args.include_scratch;
 
+    let conn = app.get_connection(Some(&repo.name))?;
     let bookmarks = match args.commit_ids_args.clone().into_commit_ids().as_slice() {
         [ref commit_id] => {
-            let id = resolve_commit_id(&app.connection, &repo, commit_id).await?;
+            let id = resolve_commit_id(&conn, &repo, commit_id).await?;
             let commit = thrift::CommitSpecifier {
                 repo,
                 id,
                 ..Default::default()
             };
             commit_list_descendant_bookmarks(
-                app.connection.clone(),
+                conn.clone(),
                 commit,
                 Some(limit),
                 after.map(String::from),
@@ -217,7 +218,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .left_stream()
         }
         [] => repo_list_bookmarks(
-            app.connection.clone(),
+            conn.clone(),
             repo,
             Some(limit),
             after.map(String::from),

@@ -118,8 +118,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let target_repo = get_repo_specifier(args.target_repo.clone());
 
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &source_repo, &commit_id).await?;
-    let hint = build_hint(&args, &app.connection, &target_repo).await?;
+    let src_repo_conn = app.get_connection(Some(&source_repo.name))?;
+    let id = resolve_commit_id(&src_repo_conn, &source_repo, &commit_id).await?;
+    let target_repo_conn = app.get_connection(Some(&target_repo.name))?;
+    let hint = build_hint(&args, &target_repo_conn, &target_repo).await?;
 
     let commit = thrift::CommitSpecifier {
         repo: source_repo,
@@ -132,7 +134,10 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         candidate_selection_hint: hint,
         ..Default::default()
     };
-    let response = app.connection.commit_lookup_xrepo(&commit, &params).await?;
+    // XXX Repos for xrepo methods need to be available on all servers,
+    // no matter if they're sharded or not, because SM doesn't support
+    // shard colocation.
+    let response = src_repo_conn.commit_lookup_xrepo(&commit, &params).await?;
     let ids = match &response.ids {
         Some(ids) => map_commit_ids(ids.values()),
         None => BTreeMap::new(),

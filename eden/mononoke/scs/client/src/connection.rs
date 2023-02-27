@@ -13,11 +13,12 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use fbinit::FacebookInit;
+use sharding_lib_ext::encode_repo_name;
 use source_control::client::make_SourceControlService;
 use source_control::client::SourceControlService;
 use x2pclient::X2pClientBuilder;
 
-const DEFAULT_TIER: &str = "mononoke-scs-server";
+const DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 
 const CONN_TIMEOUT_MS: u32 = 1000;
 const RECV_TIMEOUT_MS: u32 = 30_000;
@@ -57,10 +58,12 @@ impl Connection {
         fb: FacebookInit,
         client_id: String,
         tier: impl AsRef<str>,
+        shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
         use maplit::hashmap;
         use rand::distributions::Alphanumeric;
         use rand::Rng;
+        use srclient::ClientParams;
         use srclient::SRChannelBuilder;
 
         let correlator: String = rand::thread_rng()
@@ -75,10 +78,19 @@ impl Connection {
         let conn_config = hashmap! {
             String::from("client_id") => client_id,
         };
+
         let client = SRChannelBuilder::from_service_name(fb, tier.as_ref())?
             .with_conn_config(&conn_config)
-            .with_persistent_headers(headers)
-            .build_client(make_SourceControlService)?;
+            .with_persistent_headers(headers);
+
+        let client = if let Some(shardmanager_domain) = shardmanager_domain {
+            let client_params = ClientParams::new()
+                .with_shard_manager_domain(encode_repo_name(shardmanager_domain));
+            client.with_client_params(client_params)
+        } else {
+            client
+        }
+        .build_client(make_SourceControlService)?;
         Ok(Self { client })
     }
 
@@ -88,6 +100,7 @@ impl Connection {
         _fb: FacebookInit,
         _client_id: String,
         _tier: impl AsRef<str>,
+        _shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
         Err(anyhow!(
             "Connection via ServiceRouter is not supported on this platform"
@@ -99,9 +112,16 @@ impl Connection {
         fb: FacebookInit,
         _client_id: String,
         tier: impl AsRef<str>,
+        shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
-        let client = X2pClientBuilder::from_service_name(fb, tier.as_ref())
-            .build_client(make_SourceControlService)?;
+        let client = X2pClientBuilder::from_service_name(fb, tier.as_ref());
+        let client = if let Some(sm_domain) = shardmanager_domain {
+            client.with_shard_manager_domain(encode_repo_name(sm_domain))
+        } else {
+            client
+        }
+        .build_client(make_SourceControlService)?;
+
         Ok(Self { client })
     }
 
@@ -110,10 +130,15 @@ impl Connection {
         fb: FacebookInit,
         client_id: String,
         tier: impl AsRef<str>,
+        shardmanager_domain: Option<&str>,
     ) -> Result<Self, Error> {
         match x2pclient::get_env(fb) {
-            x2pclient::Environment::Prod => Self::from_tier_name_via_sr(fb, client_id, tier),
-            x2pclient::Environment::Corp => Self::from_tier_name_via_x2p(fb, client_id, tier),
+            x2pclient::Environment::Prod => {
+                Self::from_tier_name_via_sr(fb, client_id, tier, shardmanager_domain)
+            }
+            x2pclient::Environment::Corp => {
+                Self::from_tier_name_via_x2p(fb, client_id, tier, shardmanager_domain)
+            }
             other_env => Err(anyhow!("{} not supported", other_env)),
         }
     }
@@ -133,11 +158,15 @@ pub(super) struct ConnectionArgs {
 }
 
 impl ConnectionArgs {
-    pub fn get_connection(&self, fb: FacebookInit) -> Result<Connection, Error> {
+    pub fn get_connection(
+        &self,
+        fb: FacebookInit,
+        repo: Option<&str>,
+    ) -> Result<Connection, Error> {
         if let Some(host_port) = &self.host {
             Connection::from_host_port(fb, host_port)
         } else {
-            Connection::from_tier_name(fb, self.client_id.clone(), &self.tier)
+            Connection::from_tier_name(fb, self.client_id.clone(), &self.tier, repo)
         }
     }
 }

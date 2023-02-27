@@ -104,7 +104,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     if commit_ids.len() != 2 {
         bail!("expected 2 commit_ids (got {})", commit_ids.len())
     }
-    let ids = resolve_commit_ids(&app.connection, &repo, &commit_ids).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let bookmark = args.name;
     let service_identity = args.service_id_args.service_id;
     let pushvars = args.pushvar_args.into_pushvars();
@@ -124,8 +125,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         pushvars,
         ..Default::default()
     };
-    let outcome = app
-        .connection
+    let outcome = conn
         .repo_land_stack(&repo, &params)
         .await?
         .pushrebase_outcome;

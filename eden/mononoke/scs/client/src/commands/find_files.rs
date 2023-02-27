@@ -64,7 +64,8 @@ impl Render for FileListOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let prefixes = args.prefix.clone();
     let basenames = args.filename.clone();
     let basename_suffixes = args.suffix.clone();
@@ -84,10 +85,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         prefixes,
         ..Default::default()
     };
-    let response = app
-        .connection
-        .commit_find_files(&commit_specifier, &params)
-        .await?;
+    let response = conn.commit_find_files(&commit_specifier, &params).await?;
     app.target
         .render_one(&args, FileListOutput(response.files))
         .await

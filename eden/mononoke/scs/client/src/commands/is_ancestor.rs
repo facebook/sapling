@@ -53,7 +53,8 @@ impl Render for IsAncestorOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_ids = args.commit_ids_args.clone().into_commit_ids();
-    let ids = resolve_commit_ids(&app.connection, &repo, &commit_ids).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     if ids.len() != 2 {
         bail!("expected 2 commit_ids (got {})", commit_ids.len())
     }
@@ -66,10 +67,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         descendant_commit_id: ids[1].clone(),
         ..Default::default()
     };
-    let response = app
-        .connection
-        .commit_is_ancestor_of(&commit, &params)
-        .await?;
+    let response = conn.commit_is_ancestor_of(&commit, &params).await?;
     let output = IsAncestorOutput { result: response };
     app.target.render_one(&args, output).await
 }

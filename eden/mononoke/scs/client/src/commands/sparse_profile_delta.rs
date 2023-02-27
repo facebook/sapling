@@ -89,7 +89,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         bail!("expected 2 commit_ids (got {})", commit_ids.len())
     }
 
-    let commit_ids = resolve_commit_ids(&app.connection, &repo, &commit_ids).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
 
     let profiles = args.sparse_profiles_args.clone().into_sparse_profiles();
 
@@ -105,10 +106,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let response = app
-        .connection
-        .commit_sparse_profile_delta(&commit, &params)
-        .await?;
+    let response = conn.commit_sparse_profile_delta(&commit, &params).await?;
 
     let output = SparseProfileDeltaOutput {
         changed_sparse_profiles: response.changed_sparse_profiles,

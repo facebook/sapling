@@ -110,7 +110,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         bail!("expected 1 or 2 commit_ids (got {})", commit_ids.len())
     }
     let paths = args.path.clone();
-    let commit_ids = resolve_commit_ids(&app.connection, &repo, &commit_ids).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let mut identity_schemes = BTreeSet::new();
     identity_schemes.insert(thrift::CommitIdentityScheme::BONSAI);
 
@@ -152,7 +153,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ordered_params,
         ..Default::default()
     };
-    let response = app.connection.commit_compare(&base_commit, &params).await?;
+    let response = conn.commit_compare(&base_commit, &params).await?;
 
     if args.paths_only {
         return app
@@ -201,7 +202,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         .render(
             &(),
             diff_files(
-                &app.connection,
+                &conn,
                 base_commit.clone(),
                 other_commit_id,
                 paths_sizes,

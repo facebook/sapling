@@ -553,7 +553,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo: repo.clone(),
         id,
@@ -570,17 +571,11 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
     let response = {
-        let mut response = app
-            .connection
-            .commit_path_info(&commit_path, &params)
-            .await?;
+        let mut response = conn.commit_path_info(&commit_path, &params).await?;
         if !response.exists && casefold == Casefold::Insensitive {
-            if let Some(case_path) = case_insensitive_path(&app.connection, &commit, &path).await? {
+            if let Some(case_path) = case_insensitive_path(&conn, &commit, &path).await? {
                 commit_path.path = case_path;
-                response = app
-                    .connection
-                    .commit_path_info(&commit_path, &params)
-                    .await?;
+                response = conn.commit_path_info(&commit_path, &params).await?;
             }
         }
         response
@@ -632,7 +627,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         let bytes_written = bytes_written.clone();
         move |item| {
             export_item(
-                app.connection.clone(),
+                conn.clone(),
                 repo.clone(),
                 item,
                 casefold,

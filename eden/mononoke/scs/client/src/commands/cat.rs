@@ -72,8 +72,9 @@ impl Render for CatOutput {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
+    let conn = app.get_connection(Some(&repo.name))?;
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,
         id,
@@ -92,7 +93,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         size: CHUNK_SIZE,
         ..Default::default()
     };
-    let response = app.connection.file_content_chunk(&file, &params).await?;
+    let response = conn.file_content_chunk(&file, &params).await?;
     let output = CatOutput {
         offset: response.offset as u64,
         data: response.data,
@@ -107,8 +108,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     size: CHUNK_SIZE,
                     ..Default::default()
                 };
-                app.connection
-                    .file_content_chunk(&file, &params)
+                conn.file_content_chunk(&file, &params)
                     .map_err(anyhow::Error::from)
             })
             .buffered(CONCURRENT_FETCHES)

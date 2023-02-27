@@ -119,7 +119,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     if commit_ids.len() > 2 || commit_ids.is_empty() {
         anyhow::bail!("expected 1 or 2 commit_ids (got {})", commit_ids.len())
     }
-    let ids = resolve_commit_ids(&app.connection, &repo, &commit_ids).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let id = ids[0].clone();
     let descendants_of = ids.get(1).cloned();
     let commit = thrift::CommitSpecifier {
@@ -158,8 +159,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 follow_mutable_file_history,
                 ..Default::default()
             };
-            app.connection
-                .commit_path_history(&commit_and_path, &params)
+            conn.commit_path_history(&commit_and_path, &params)
                 .await?
                 .history
         }
@@ -175,10 +175,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 exclude_changeset_and_ancestors: None,
                 ..Default::default()
             };
-            app.connection
-                .commit_history(&commit, &params)
-                .await?
-                .history
+            conn.commit_history(&commit, &params).await?.history
         }
     };
 

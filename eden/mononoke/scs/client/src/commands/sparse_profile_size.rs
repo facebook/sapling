@@ -61,7 +61,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
 
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let commit_id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let commit_id = resolve_commit_id(&conn, &repo, &commit_id).await?;
 
     let profiles = args.sparse_profiles_args.clone().into_sparse_profiles();
 
@@ -76,10 +77,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let response = app
-        .connection
-        .commit_sparse_profile_size(&commit, &params)
-        .await?;
+    let response = conn.commit_sparse_profile_size(&commit, &params).await?;
 
     let output = SparseProfileSizeOutput {
         profiles_size: response.profiles_size,

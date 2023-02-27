@@ -65,7 +65,8 @@ impl Render for LookupOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let id = resolve_commit_id(&app.connection, &repo, &commit_id).await?;
+    let conn = app.get_connection(Some(&repo.name))?;
+    let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,
         id,
@@ -75,7 +76,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         identity_schemes: args.scheme_args.clone().into_request_schemes(),
         ..Default::default()
     };
-    let response = app.connection.commit_lookup(&commit, &params).await?;
+    let response = conn.commit_lookup(&commit, &params).await?;
     let ids = match &response.ids {
         Some(ids) => map_commit_ids(ids.values()),
         None => BTreeMap::new(),

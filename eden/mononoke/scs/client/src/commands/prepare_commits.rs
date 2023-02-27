@@ -27,16 +27,13 @@ pub(super) struct CommandArgs {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo.clone().into_repo_specifier();
+    let conn = app.get_connection(Some(&repo.name))?;
     let params = thrift::RepoPrepareCommitsParams {
-        commits: resolve_commit_ids(
-            &app.connection,
-            &repo,
-            &args.commit_ids.clone().into_commit_ids(),
-        )
-        .await?,
+        commits: resolve_commit_ids(&conn, &repo, &args.commit_ids.clone().into_commit_ids())
+            .await?,
         derived_data_type: args.derived_data_type.clone().into_derived_data_type(),
         ..Default::default()
     };
-    app.connection.repo_prepare_commits(&repo, &params).await?;
+    conn.repo_prepare_commits(&repo, &params).await?;
     Ok(())
 }
