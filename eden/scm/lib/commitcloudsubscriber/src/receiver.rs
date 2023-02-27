@@ -6,15 +6,21 @@
  */
 
 use std::collections::HashMap;
+use std::marker::Unpin;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use anyhow::Result;
+use log::error;
 use log::info;
 use serde::Deserialize;
 use serde::Serialize;
+use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
+
+use crate::ActionsMap;
 
 /// Set of supported commands
 /// All unknown commands will be ignored
@@ -46,50 +52,54 @@ pub struct Command(pub (CommandName, CommandData));
 
 pub struct TcpReceiverService {
     port: u16,
-    actions: HashMap<CommandName, Box<dyn Fn() + Send>>,
+    actions: Arc<ActionsMap>,
 }
 
 impl TcpReceiverService {
-    pub fn new(port: u16) -> TcpReceiverService {
+    pub fn new(port: u16, actions: ActionsMap) -> TcpReceiverService {
         TcpReceiverService {
             port,
-            actions: HashMap::new(),
+            actions: Arc::new(actions),
         }
     }
 
-    pub fn with_actions(
-        mut self,
-        actions: HashMap<CommandName, Box<dyn Fn() + Send>>,
-    ) -> TcpReceiverService {
-        self.actions = self
-            .actions
-            .into_iter()
-            .chain(actions.into_iter())
-            .collect();
-        self
+    async fn handler(actions: Arc<ActionsMap>, mut socket: impl AsyncRead + Unpin) -> Result<()> {
+        let mut buf = Vec::new();
+        let bytes_read = socket.read_to_end(&mut buf).await?;
+
+        let command: Command = serde_json::from_slice(&buf[..bytes_read])?;
+        let command_name = serde_json::to_string(&(command.0).0)
+            .ok()
+            .unwrap_or("unknown".into());
+
+        info!("Received {} command", command_name);
+
+        match actions.get(&((command.0).0)) {
+            Some(action) => action(),
+            None => info!("No actions found for {}", command_name),
+        }
+
+        Ok(())
     }
 
-    pub fn serve(self) -> Result<JoinHandle<Result<()>>> {
-        Ok(tokio::spawn(async move {
-            let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], self.port))).await?;
+    pub fn serve(self) -> JoinHandle<Result<()>> {
+        tokio::spawn(async move {
             info!("Starting CommitCloud TcpReceiverService");
+            let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], self.port))).await?;
             info!("Listening on port {}", self.port);
             loop {
-                let (mut socket, _) = listener.accept().await?;
-                let mut buf = Vec::new();
-                let bytes_read = socket.read_to_end(&mut buf).await?;
-
-                let command: Command = serde_json::from_slice(&buf[..bytes_read])?;
-                let command_name = serde_json::to_string(&(command.0).0)
-                    .ok()
-                    .unwrap_or("unknown".into());
-                info!("Received {} command", command_name);
-                if let Some(action) = self.actions.get(&((command.0).0)) {
-                    action();
-                } else {
-                    info!("No actions found for {}", command_name);
+                match listener.accept().await {
+                    Ok((socket, _)) => {
+                        let actions = self.actions.clone();
+                        tokio::spawn(async move {
+                            if let Err(err) = Self::handler(actions, socket).await {
+                                error!("Failed to handle connection: {err}")
+                            }
+                        });
+                    }
+                    Err(err) => error!("{err}"),
                 }
             }
-        }))
+        })
     }
 }

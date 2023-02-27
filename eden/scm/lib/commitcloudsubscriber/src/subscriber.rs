@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+
 use std::path::PathBuf;
 use std::str;
 use std::sync::atomic::AtomicBool;
@@ -20,6 +20,7 @@ use anyhow::Result;
 use futures::stream::StreamExt;
 use log::error;
 use log::info;
+use parking_lot::Mutex;
 use reqwest::Url;
 use reqwest_eventsource::Event;
 use reqwest_eventsource::EventSource;
@@ -33,6 +34,7 @@ use crate::receiver::CommandName::CommitCloudCancelSubscriptions;
 use crate::receiver::CommandName::CommitCloudRestartSubscriptions;
 use crate::receiver::CommandName::CommitCloudStartSubscriptions;
 use crate::util;
+use crate::ActionsMap;
 
 #[allow(unused_macros)]
 macro_rules! tinfo {
@@ -162,49 +164,55 @@ impl WorkspaceSubscriberService {
         })
     }
 
-    pub fn actions(&self) -> HashMap<CommandName, Box<dyn Fn() + Send>> {
-        let mut actions: HashMap<CommandName, Box<dyn Fn() + Send>> = HashMap::new();
+    pub fn actions(&self) -> ActionsMap {
+        let mut actions = ActionsMap::new();
         actions.insert(CommitCloudRestartSubscriptions, {
-            let sender = self.channel.0.clone();
+            let sender = Mutex::new(self.channel.0.clone());
             let interrupt = self.interrupt.clone();
-            Box::new(move || match sender.send(CommitCloudRestartSubscriptions) {
-                Err(err) => error!(
-                    "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {}",
-                    err
-                ),
-                Ok(_) => {
-                    info!("Restart subscriptions can take a while because it is graceful");
-                    interrupt.store(true, Ordering::Relaxed);
-                }
-            })
+            Box::new(
+                move || match sender.lock().send(CommitCloudRestartSubscriptions) {
+                    Err(err) => error!(
+                        "Send CommitCloudRestartSubscriptions via mpsc::channel failed, reason: {}",
+                        err
+                    ),
+                    Ok(_) => {
+                        info!("Restart subscriptions can take a while because it is graceful");
+                        interrupt.store(true, Ordering::Relaxed);
+                    }
+                },
+            )
         });
         actions.insert(CommitCloudCancelSubscriptions, {
-            let sender = self.channel.0.clone();
+            let sender = Mutex::new(self.channel.0.clone());
             let interrupt = self.interrupt.clone();
-            Box::new(move || match sender.send(CommitCloudCancelSubscriptions) {
-                Err(err) => error!(
-                    "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {}",
-                    err
-                ),
-                Ok(_) => {
-                    info!("Cancel subscriptions can take a while because it is graceful");
-                    interrupt.store(true, Ordering::Relaxed);
-                }
-            })
+            Box::new(
+                move || match sender.lock().send(CommitCloudCancelSubscriptions) {
+                    Err(err) => error!(
+                        "Send CommitCloudCancelSubscriptions via mpsc::channel failed with {}",
+                        err
+                    ),
+                    Ok(_) => {
+                        info!("Cancel subscriptions can take a while because it is graceful");
+                        interrupt.store(true, Ordering::Relaxed);
+                    }
+                },
+            )
         });
         actions.insert(CommitCloudStartSubscriptions, {
-            let sender = self.channel.0.clone();
+            let sender = Mutex::new(self.channel.0.clone());
             let interrupt = self.interrupt.clone();
-            Box::new(move || match sender.send(CommitCloudStartSubscriptions) {
-                Err(err) => error!(
-                    "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
-                    err
-                ),
-                Ok(_) => {
-                    info!("Starting subscriptions.");
-                    interrupt.store(true, Ordering::Relaxed);
-                }
-            })
+            Box::new(
+                move || match sender.lock().send(CommitCloudStartSubscriptions) {
+                    Err(err) => error!(
+                        "Send CommitCloudStartSubscriptions via mpsc::channel failed with {}",
+                        err
+                    ),
+                    Ok(_) => {
+                        info!("Starting subscriptions.");
+                        interrupt.store(true, Ordering::Relaxed);
+                    }
+                },
+            )
         });
         actions
     }
@@ -375,7 +383,7 @@ impl WorkspaceSubscriberService {
                                 continue;
                             }
                             Ok(Event::Open) => {
-                                info!("EventSource connection open!")
+                                info!("EventSource connection open for {}!", sid)
                             }
                             Ok(Event::Message(e)) => {
                                 let data = e.data;
