@@ -199,9 +199,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let env = app.environment();
 
     let scuba_builder = env.scuba_sample_builder.clone();
-
-    let repos_mgr =
-        runtime.block_on(app.open_managed_repos(Some(ShardedService::SourceControlService)))?;
+    // Service name is used for shallow or deep sharding. If sharding itself is disabled, provide
+    // service name as None while opening repos.
+    let service_name = args
+        .sharded_executor_args
+        .sharded_service_name
+        .as_ref()
+        .map(|_| ShardedService::SourceControlService);
+    let repos_mgr = runtime.block_on(app.open_managed_repos(service_name))?;
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(&app, mononoke.clone()))?);
 

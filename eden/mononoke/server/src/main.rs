@@ -270,17 +270,21 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let env = app.environment();
     let scuba = env.scuba_sample_builder.clone();
-
+    // Service name is used for shallow or deep sharding. If sharding itself is disabled, provide
+    // service name as None while opening repos.
+    let service_name = args
+        .sharded_executor_args
+        .sharded_service_name
+        .as_ref()
+        .map(|_| ShardedService::EdenApi);
     app.start_monitoring("mononoke_server", service.clone())?;
     app.start_stats_aggregation()?;
 
     let repo_listeners = {
-        cloned!(root_log, will_exit, env, runtime);
+        cloned!(root_log, will_exit, env, runtime, service_name);
         move |app: MononokeApp| async move {
             let common = configs.common.clone();
-            let repos_mgr = app
-                .open_managed_repos(Some(ShardedService::EdenApi))
-                .await?;
+            let repos_mgr = app.open_managed_repos(service_name).await?;
             let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
             info!(&root_log, "Built Mononoke");
 

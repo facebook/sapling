@@ -22,10 +22,10 @@ pub struct ShardedExecutorArgs {
     /// The name of the ShardManager service corresponding to this service's region.
     /// If this argument isn't provided, the service will operate in non-sharded mode.
     #[clap(long, requires = "sharded-scope-name")]
-    sharded_service_name: Option<String>,
+    pub sharded_service_name: Option<String>,
     /// The scope of the ShardManager service that this service corresponds to.
     #[clap(long, requires = "sharded-service-name")]
-    sharded_scope_name: Option<String>,
+    pub sharded_scope_name: Option<String>,
 }
 
 impl ShardedExecutorArgs {
