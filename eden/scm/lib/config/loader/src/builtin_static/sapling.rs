@@ -575,8 +575,6 @@ generationnumber=5
 [clone]
 default-destination-dir=$HOME
 nativecheckout=True
-# TODO(T131560043): enable Rust for clone
-use-rust=False
 nativepull=True
 
 [commands]

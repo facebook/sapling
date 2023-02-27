@@ -17,6 +17,7 @@ use clidispatch::errors;
 use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
 use cliparser::define_flags;
+use configloader::hg::resolve_custom_scheme;
 use configmodel::ConfigExt;
 use migration::feature::deprecate;
 use repo::repo::Repo;
@@ -138,7 +139,10 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>, config: &mut ConfigSet) -> Result<u8> {
 
     let supported_url = match url::Url::parse(&ctx.opts.source) {
         Err(_) => false,
-        Ok(url) => url.scheme() != "file" && url.scheme() != "ssh",
+        Ok(url) => match resolve_custom_scheme(config, url)?.scheme() {
+            "mononoke" | "eager" | "test" => true,
+            _ => false,
+        },
     };
 
     if !ctx.opts.updaterev.is_empty()
