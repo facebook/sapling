@@ -15,15 +15,15 @@ use futures::Future;
 use pin_project::pin_project;
 
 #[pin_project]
-pub struct NextStep<S, F, O, FOut>
+pub struct NextStep<S, F>
 where
     S: FusedStream,
-    F: FnMut(S::Item) -> FOut,
-    FOut: Future<Output = O>,
+    F: FnMut<(S::Item,)>,
+    F::Output: Future,
 {
     f: F,
     next_in_line: Option<S::Item>,
-    running: Option<Pin<Box<FOut>>>,
+    running: Option<Pin<Box<F::Output>>>,
     #[pin]
     inner: S,
 }
@@ -31,11 +31,11 @@ where
 /// Like stream::Then, it applies a future to the output. The difference is
 /// that it continues waiting for the next item in the stream WHILE the current
 /// one is being processed.
-impl<S, F, O, FOut> NextStep<S, F, O, FOut>
+impl<S, F> NextStep<S, F>
 where
     S: FusedStream,
-    F: FnMut(S::Item) -> FOut,
-    FOut: Future<Output = O>,
+    F: FnMut<(S::Item,)>,
+    F::Output: Future,
 {
     pub fn new(inner: S, f: F) -> Self {
         Self {
@@ -47,13 +47,13 @@ where
     }
 }
 
-impl<S, F, O, FOut> Stream for NextStep<S, F, O, FOut>
+impl<S, F> Stream for NextStep<S, F>
 where
     S: FusedStream,
-    F: FnMut(S::Item) -> FOut,
-    FOut: Future<Output = O>,
+    F: FnMut<(S::Item,)>,
+    F::Output: Future,
 {
-    type Item = O;
+    type Item = <F::Output as Future>::Output;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
@@ -82,11 +82,11 @@ where
     }
 }
 
-impl<S, F, O, FOut> FusedStream for NextStep<S, F, O, FOut>
+impl<S, F> FusedStream for NextStep<S, F>
 where
     S: FusedStream,
-    F: FnMut(S::Item) -> FOut,
-    FOut: Future<Output = O>,
+    F: FnMut<(S::Item,)>,
+    F::Output: Future,
 {
     fn is_terminated(&self) -> bool {
         self.running.is_none() && self.next_in_line.is_none() && self.inner.is_terminated()
