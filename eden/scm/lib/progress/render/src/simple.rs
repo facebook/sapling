@@ -21,7 +21,12 @@ use crate::RenderingConfig;
 
 /// Render progress in to a list of termwiz changes.
 pub fn render(registry: &Registry, config: &RenderingConfig) -> Vec<Change> {
-    vec![render_string(registry, config).into()]
+    let text = render_string(registry, config);
+    if text.is_empty() {
+        vec![]
+    } else {
+        vec![text.into()]
+    }
 }
 
 /// Render progress into a multi-line string.
