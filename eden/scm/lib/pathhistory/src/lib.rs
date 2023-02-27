@@ -22,6 +22,7 @@
 
 mod pathhistory;
 mod pathops;
+mod renametrace;
 mod utils;
 
 #[cfg(test)]
