@@ -12,7 +12,6 @@ use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::SystemTime;
 
 use anyhow::bail;
 use anyhow::Result;
