@@ -170,11 +170,24 @@ make oss
 `}
 </pre>
 
+To build on FreeBSD, you'll also need to setup a terminfo database and use GNU Make for the build:
+
+<pre>{`\
+pkg install gmake terminfo-db
+export TERMINFO=/usr/local/share/terminfo
+git clone ${gitHubRepo}
+cd ${gitHubRepoName}/eden/scm
+gmake oss
+./sl --help
+`}
+</pre>
+
 The Windows build has some additional dependencies and a separate build script. From the [GitHub Action used to build the Windows release](https://github.com/facebook/sapling/blob/main/.github/workflows/sapling-cli-windows-amd64-release.yml), perform the steps that use [`vcpkg`](https://vcpkg.io/) on your local machine to install the additional dependencies. Then you can build and run Sapling on Windows as follows:
 
 <pre>{`\
 git clone ${gitHubRepo}
 cd ${gitHubRepoName}/eden/scm
+git config --system core.longpaths true
 python3 .\\packaging\\windows\\build_windows_zip.py
 .\\build\\embedded\\sl.exe --help
 `}

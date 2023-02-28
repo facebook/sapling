@@ -54,6 +54,12 @@ See the dedicated [ghstack](./ghstack.md) page for more information.
 - Can only be used if you have _write_ access to the repository.
 - You will NOT be able to merge these pull requests using the normal GitHub UI.
 
+:::tip
+
+You can use the `pr` revset to automatically pull and checkout GitHub pull request. For example, `sl goto pr123`. See `sl help revsets` for more info.
+
+:::
+
 ## Troubleshooting
 
 ### `could not read Username` error when trying to `git push`

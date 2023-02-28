@@ -122,3 +122,4 @@ Example revsets:
 * `824cbba75~2` Second ancestor of `824cbba75`.
 * `19340c083~-1` Child of `19340c083`.
 * `ancestor(., main)` The first common ancestor of your current commit and main (that is, `2ac18611a` in the examples above).
+* `pr42` Pull request `#42` on GitHub repos.
