@@ -58,6 +58,7 @@ pub enum BatchDeriveOptions {
     Serial,
 }
 
+#[derive(Debug)]
 pub enum BatchDeriveStats {
     Parallel(Duration),
     Serial(Vec<(ChangesetId, Duration)>),
