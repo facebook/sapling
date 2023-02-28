@@ -58,6 +58,7 @@ from . import (
     pathutil,
     peer,
     phases,
+    progress,
     pushkey,
     pycompat,
     repository,
@@ -2753,7 +2754,7 @@ class localrepository(object):
                             if fctx.filenode() is not None:
                                 keys.append((fctx.path(), fctx.filenode()))
                         self.fileslog.metadatastore.prefetch(keys)
-                for f in added:
+                for f in progress.each(self.ui, added, _("committing"), _("files")):
                     self.ui.note(f + "\n")
                     try:
                         fctx = ctx[f]

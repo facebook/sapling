@@ -17,6 +17,7 @@ import os
 import threading
 import time
 import traceback
+from typing import Collection, Iterator
 
 import bindings
 from bindings import threading as rustthreading
@@ -498,7 +499,7 @@ def spinner(ui, topic):
 
 
 class iterwrapper(object):
-    def __init__(self, itr, bar):
+    def __init__(self, itr: Iterator, bar):
         self.itr = itr
         self.bar = bar
 
@@ -517,9 +518,9 @@ class iterwrapper(object):
             raise
 
 
-def each(ui, iterable, topic, unit=""):
-    b = bar(ui, topic, unit, total=len(iterable))
-    return iterwrapper(iter(iterable), b)
+def each(ui, c: Collection, topic, unit=""):
+    b = bar(ui, topic, unit, total=len(c))
+    return iterwrapper(iter(c), b)
 
 
 def resetstate():
