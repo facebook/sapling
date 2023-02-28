@@ -28,7 +28,13 @@ use winapi::um::winbase::LocalFree;
 pub fn argv_to_command_line(argv: &[&OsStr]) -> Result<OsString> {
     let quoted_args = argv
         .iter()
-        .map(|a| quote_arg(a))
+        .enumerate()
+        .map(|(i, a)| {
+            if i == 0 && has_illegal_cmd_chars(&a) {
+                bail!("illegal chars for argv[0] in {:?}", a);
+            }
+            quote_arg(a)
+        })
         .collect::<Result<Vec<_>>>()?;
 
     let mut result = OsString::new();
@@ -39,6 +45,13 @@ pub fn argv_to_command_line(argv: &[&OsStr]) -> Result<OsString> {
         result.push(a.deref());
     }
     Ok(result)
+}
+
+fn has_illegal_cmd_chars(cmd: &OsStr) -> bool {
+    match cmd.to_str() {
+        Some(cmd_str) => cmd_str.contains('"') || cmd_str.ends_with('\\'),
+        None => true,
+    }
 }
 
 /// Quotes a single argument based on the algorithm described by Microsoft:
@@ -195,24 +208,52 @@ mod tests {
         Ok(())
     }
 
-    // Try to gain confidence that our argv_to_command_line round-trips with
-    // win32's CommandLineToArgvW.
-    #[quickcheck]
-    fn argv_to_command_line_round_trips(argv: Vec<OsString>) -> TestResult {
+    fn argv_round_trips(argv: Vec<OsString>) -> Result<bool> {
         let quoted_argv = argv_to_command_line(
             argv.iter()
                 .map(OsString::as_os_str)
                 .collect::<Vec<_>>()
                 .as_slice(),
-        );
-        if quoted_argv.is_err() {
+        )?;
+
+        let parsed_argv = command_line_to_argv(quoted_argv.as_os_str()).unwrap();
+        Ok(parsed_argv == argv)
+    }
+
+    // Try to gain confidence that our argv_to_command_line round-trips with
+    // win32's CommandLineToArgvW, or returns an error if quoting is impossible.
+    // The important cases to cover seem to be quoting argv[0] and argv[1..],
+    // so we cover those two cases explicitly to allow quickcheck to generate
+    // more comprehensive sets of test strings.
+    #[quickcheck]
+    fn check_argv_to_command_line_round_trips_argv0(argv: OsString) -> TestResult {
+        let round_trips_ok = argv_round_trips(vec![argv]);
+        if round_trips_ok.is_err() {
             // Discard arguments that quote_arg recognizes as non-quotable.
             return TestResult::discard();
         }
-        let quoted_argv = quoted_argv.unwrap();
+        TestResult::from_bool(round_trips_ok.unwrap())
+    }
 
-        let parsed_argv = command_line_to_argv(quoted_argv.as_os_str()).unwrap();
-        TestResult::from_bool(parsed_argv == argv)
+    #[quickcheck]
+    fn check_argv_to_command_line_round_trips_argv1(argv: OsString) -> TestResult {
+        let round_trips_ok = argv_round_trips(vec![OsString::from_str("foo.exe").unwrap(), argv]);
+        if round_trips_ok.is_err() {
+            // Discard arguments that quote_arg recognizes as non-quotable.
+            return TestResult::discard();
+        }
+        TestResult::from_bool(round_trips_ok.unwrap())
+    }
+
+    // Specific round trip cases to check.
+    #[test]
+    fn test_argv_to_command_line_round_trips() -> Result<()> {
+        assert!(argv_round_trips(vec![OsString::from("\"")]).is_err());
+        assert!(argv_round_trips(vec![OsString::from(" \\")]).is_err());
+        assert!(argv_round_trips(vec![OsString::from(" !\\")]).is_err());
+        assert!(argv_round_trips(vec![OsString::from(" \\a")])?);
+
+        Ok(())
     }
 
     #[test]
