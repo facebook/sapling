@@ -26,7 +26,8 @@ export const vscodeWebviewPlatform: Platform = {
       );
     });
   },
-  openFile: path => window.clientToServerAPI?.postMessage({type: 'platform/openFile', path}),
+  openFile: (path, options) =>
+    window.clientToServerAPI?.postMessage({type: 'platform/openFile', path, options}),
   openDiff: (path: RepoRelativePath, comparison: Comparison) =>
     window.clientToServerAPI?.postMessage({type: 'platform/openDiff', path, comparison}),
   openExternalLink: url => {

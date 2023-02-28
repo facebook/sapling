@@ -6,7 +6,7 @@
  */
 
 import type {Platform} from './platform';
-import type {RepoRelativePath} from './types';
+import type {OneIndexedLineNumber, RepoRelativePath} from './types';
 
 import serverAPI from './ClientToServerAPI';
 
@@ -23,8 +23,8 @@ export const browserPlatform: Platform = {
     return Promise.resolve(ok);
   },
 
-  openFile: (path: RepoRelativePath) => {
-    serverAPI.postMessage({type: 'platform/openFile', path});
+  openFile: (path: RepoRelativePath, options?: {line?: OneIndexedLineNumber}) => {
+    serverAPI.postMessage({type: 'platform/openFile', path, options});
   },
 
   openExternalLink(url: string): void {

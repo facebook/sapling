@@ -6,7 +6,7 @@
  */
 
 import type {Platform} from '../platform';
-import type {RepoRelativePath} from '../types';
+import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
 declare global {
   interface Window {
@@ -29,7 +29,8 @@ const androidStudioPlatform: Platform = {
     return Promise.resolve(ok);
   },
 
-  openFile: (_path: RepoRelativePath) => {
+  openFile: (_path: RepoRelativePath, _options: {line?: OneIndexedLineNumber}) => {
+    // TODO: support line numbers
     window.__IdeBridge.openFileInAndroidStudio(_path);
   },
 

@@ -282,6 +282,9 @@ export type OperationCommandProgressReporter = (
 
 export type OperationProgressEvent = {type: 'operationProgress'} & OperationProgress;
 
+/** A line number starting from 1 */
+export type OneIndexedLineNumber = Exclude<number, 0>;
+
 /* protocol */
 
 /**
@@ -289,7 +292,7 @@ export type OperationProgressEvent = {type: 'operationProgress'} & OperationProg
  * to be handled uniquely per server type.
  */
 export type PlatformSpecificClientToServerMessages =
-  | {type: 'platform/openFile'; path: RepoRelativePath}
+  | {type: 'platform/openFile'; path: RepoRelativePath; options?: {line?: OneIndexedLineNumber}}
   | {type: 'platform/openDiff'; path: RepoRelativePath; comparison: Comparison}
   | {type: 'platform/openExternal'; url: string}
   | {type: 'platform/confirm'; message: string; details?: string | undefined};

@@ -74,6 +74,7 @@ export const browserServerPlatform: ServerPlatform = {
           // https://nodejs.org/docs/latest-v10.x/api/child_process.html#child_process_options_detached
           repo?.logger.log('open file', path);
           // TODO: Report error if spawn() fails?
+          // TODO: support passing the column/line number to programs that support it? e.g. vscode: `code /path/to/file:10:20`
           const proc = spawn(command, [path], {
             detached: true,
             stdio: 'ignore',
