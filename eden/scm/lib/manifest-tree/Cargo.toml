@@ -13,9 +13,7 @@ required-features = ["for-tests"]
 
 [dependencies]
 anyhow = "1.0.65"
-async-runtime = { version = "0.1.0", path = "../async-runtime" }
-futures = { version = "0.3.22", features = ["async-await", "compat"] }
-futures-batch = "0.6"
+crossbeam = "0.8"
 manifest = { version = "0.1.0", path = "../manifest" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 once_cell = "1.12"

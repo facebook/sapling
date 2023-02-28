@@ -70,7 +70,7 @@ pub trait Manifest {
     /// representing the identifier for saved manifest.
     fn flush(&mut self) -> Result<HgId>;
 
-    /// Retrieve the FileMetadata that is associated with a path.
+    /// Retrieve the FileMetadata associated with a path.
     /// Paths that were not set will return None.
     fn get_file(&self, file_path: &RepoPath) -> Result<Option<FileMetadata>> {
         let result = self.get(file_path)?.and_then(|fs_hgid| match fs_hgid {

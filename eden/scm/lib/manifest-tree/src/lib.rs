@@ -20,6 +20,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Result;
+use iter::bfs_iter;
 use manifest::DiffEntry;
 use manifest::DirDiffEntry;
 use manifest::Directory;
@@ -50,7 +51,6 @@ pub(crate) use self::link::Link;
 pub use self::store::Element as TreeElement;
 pub use self::store::Entry as TreeEntry;
 pub use self::store::TreeStore;
-use crate::iter::BfsIter;
 use crate::iter::DfsCursor;
 use crate::iter::Step;
 use crate::link::DirLink;
@@ -322,11 +322,12 @@ impl Manifest for TreeManifest {
         Ok(hgid)
     }
 
+    #[tracing::instrument(skip_all)]
     fn files<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
-        let files = BfsIter::new(&self, matcher).filter_map(|result| match result {
+        let files = bfs_iter(self, matcher).filter_map(|result| match result {
             Ok((path, FsNodeMetadata::File(metadata))) => Some(Ok(File::new(path, metadata))),
             Ok(_) => None,
             Err(e) => Some(Err(e)),
@@ -339,11 +340,12 @@ impl Manifest for TreeManifest {
     ///
     /// Note: the matcher should be a prefix matcher, other kinds of matchers
     /// could be less effective than expected.
+    #[tracing::instrument(skip_all)]
     fn dirs<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
-        let dirs = BfsIter::new(&self, matcher).filter_map(|result| match result {
+        let dirs = bfs_iter(self, matcher).filter_map(|result| match result {
             Ok((path, FsNodeMetadata::Directory(metadata))) => {
                 Some(Ok(Directory::new(path, metadata)))
             }

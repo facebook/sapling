@@ -6,19 +6,17 @@
  */
 
 use std::collections::btree_map;
-use std::sync::atomic::AtomicU64;
+use std::mem;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Duration;
 
+use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use async_runtime::RunStream;
-use async_runtime::RunStreamOptions;
-use futures::channel::mpsc::unbounded;
-use futures::stream;
-use futures::StreamExt;
-use futures_batch::ChunksTimeoutStreamExt;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
 use manifest::FsNodeMetadata;
 use pathmatcher::Matcher;
 use types::Key;
@@ -33,124 +31,154 @@ use crate::link::Link;
 use crate::store::InnerStore;
 use crate::TreeManifest;
 
-pub struct BfsIter {
-    iter: RunStream<Result<(RepoPathBuf, FsNodeMetadata)>>,
-    pending: Arc<AtomicU64>,
-}
+pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
+    tree: &TreeManifest,
+    matcher: M,
+) -> Box<dyn Iterator<Item = Result<(RepoPathBuf, FsNodeMetadata)>>> {
+    // This channel carries iteration results to the calling code.
+    let (result_send, result_recv) =
+        crossbeam::channel::unbounded::<Result<(RepoPathBuf, FsNodeMetadata)>>();
 
-impl BfsIter {
-    pub fn new<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Self {
-        let matcher = Arc::new(matcher);
-        let store1 = tree.store.clone();
-        let store2 = tree.store.clone();
-        let (sender, receiver) = unbounded();
-        let pending = Arc::new(AtomicU64::new(1));
-        sender
-            .unbounded_send((RepoPathBuf::new(), tree.root.thread_copy()))
-            .expect("unbounded send should always succeed");
-        let inner_pending = pending.clone();
-        let stream = receiver
-            .chunks_timeout(500, Duration::from_millis(1))
-            .map(move |chunk| {
-                let store = store1.clone();
-                async_runtime::spawn_blocking(move || {
-                    let keys: Vec<_> = chunk
-                        .iter()
-                        .filter_map(|(path, link)| {
-                            if let Durable(entry) = link.as_ref() {
-                                Some(Key::new(path.clone(), entry.hgid.clone()))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-                    let _ = store.prefetch(keys.clone());
-                    stream::iter(chunk.into_iter())
-                })
-            })
-            .buffer_unordered(10)
-            .map(|r| match r {
-                Ok(r) => r,
-                Err(e) => {
-                    // The child thread paniced.
-                    panic!("{:?}", e)
-                }
-            })
-            .flatten()
-            .chunks_timeout(200, Duration::from_millis(1))
-            .map(move |chunk| {
-                let pending = inner_pending.clone();
-                let store = store2.clone();
-                let matcher = matcher.clone();
-                let sender = sender.clone();
-                async_runtime::spawn_blocking(move || {
-                    let mut results = vec![];
-                    'outer: for item in chunk.into_iter() {
-                        let (path, link): (RepoPathBuf, Link) = item;
-                        let (children, hgid) = match link.as_ref() {
-                            Leaf(file_metadata) => {
-                                results.push(Ok((path, FsNodeMetadata::File(*file_metadata))));
-                                continue;
-                            }
-                            Ephemeral(children) => (children, None),
-                            Durable(entry) => loop {
-                                match entry.materialize_links(&store, &path) {
-                                    Ok(children) => break (children, Some(entry.hgid)),
-                                    Err(e) => {
-                                        results.push(Err(e));
-                                        continue 'outer;
-                                    }
-                                };
-                            },
-                        };
-                        for (component, link) in children.iter() {
-                            let mut child_path = path.clone();
-                            child_path.push(component.as_ref());
-                            match link.matches(&matcher, &child_path) {
-                                Ok(true) => {
-                                    pending.fetch_add(1, Ordering::SeqCst);
-                                    sender
-                                        .unbounded_send((child_path, link.thread_copy()))
-                                        .expect("unbounded_send should always succeed")
-                                }
-                                Ok(false) => {}
-                                Err(e) => {
-                                    results.push(Err(e));
-                                    continue 'outer;
-                                }
-                            };
-                        }
-                        results.push(Ok((path, FsNodeMetadata::Directory(hgid))));
-                    }
-                    stream::iter(results.into_iter())
-                })
-            })
-            .buffer_unordered(10)
-            .map(|r| match r {
-                Ok(r) => r,
-                Err(e) => {
-                    // The child thread paniced.
-                    panic!("{:?}", e)
-                }
-            })
-            .flatten();
+    // This channel carries BFS work to the workers threads.
+    let (work_send, work_recv) = crossbeam::channel::unbounded::<BfsWork>();
 
-        BfsIter {
-            iter: RunStreamOptions::new().buffer_size(5000).run(stream),
-            pending,
-        }
+    let worker = BfsWorker {
+        work_recv,
+        work_send,
+        result_send,
+        pending: Arc::new(AtomicUsize::new(0)),
+        store: tree.store.clone(),
+        matcher: Arc::new(matcher),
+    };
+
+    // Kick off the search at the root.
+    worker
+        .publish_work(vec![(RepoPathBuf::new(), tree.root.thread_copy())])
+        .unwrap();
+
+    const NUM_BFS_WORKERS: usize = 10;
+
+    for _ in 0..NUM_BFS_WORKERS {
+        let worker = worker.clone();
+        std::thread::spawn(move || {
+            // If the worker returns an error, that signals we should shutdown
+            // the whole operation.
+            if worker.run().is_err() {
+                worker.broadcast_shutdown(NUM_BFS_WORKERS);
+            }
+        });
     }
+
+    Box::new(result_recv.into_iter())
 }
 
-impl Iterator for BfsIter {
-    type Item = Result<(RepoPathBuf, FsNodeMetadata)>;
+enum BfsWork {
+    Walk(Vec<(RepoPathBuf, Link)>),
+    Shutdown,
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        // If the previous value was 0, then we've already yielded all the values.
-        if self.pending.fetch_sub(1, Ordering::SeqCst) == 0 {
-            return None;
+#[derive(Clone)]
+struct BfsWorker {
+    work_recv: Receiver<BfsWork>,
+    work_send: Sender<BfsWork>,
+    result_send: Sender<Result<(RepoPathBuf, FsNodeMetadata)>>,
+    matcher: Arc<dyn Matcher + Sync + Send>,
+    store: InnerStore,
+    pending: Arc<AtomicUsize>,
+}
+
+impl BfsWorker {
+    const BATCH_SIZE: usize = 5000;
+
+    fn run(&self) -> Result<()> {
+        for work in &self.work_recv {
+            let work = match work {
+                BfsWork::Walk(work) => work,
+                BfsWork::Shutdown => return Ok(()),
+            };
+
+            let work_len = work.len();
+
+            let keys: Vec<_> = work
+                .iter()
+                .filter_map(|(path, link)| {
+                    if let Durable(entry) = link.as_ref() {
+                        Some(Key::new(path.clone(), entry.hgid.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            let _ = self.store.prefetch(keys);
+
+            let mut to_send = Vec::<(RepoPathBuf, Link)>::new();
+            for (path, link) in work {
+                let (children, hgid) = match link.as_ref() {
+                    Leaf(file_metadata) => {
+                        self.result_send
+                            .send(Ok((path, FsNodeMetadata::File(*file_metadata))))?;
+                        continue;
+                    }
+                    Ephemeral(children) => (children, None),
+                    Durable(entry) => match entry.materialize_links(&self.store, &path) {
+                        Ok(children) => (children, Some(entry.hgid)),
+                        Err(e) => {
+                            self.result_send
+                                .send(Err(e).context("materialize_links in bfs_iter"))?;
+                            continue;
+                        }
+                    },
+                };
+
+                for (component, link) in children.iter() {
+                    let mut child_path = path.clone();
+                    child_path.push(component.as_ref());
+                    match link.matches(&self.matcher, &child_path) {
+                        Ok(true) => {
+                            to_send.push((child_path, link.thread_copy()));
+                            if to_send.len() >= Self::BATCH_SIZE {
+                                self.publish_work(mem::take(&mut to_send))?;
+                            }
+                        }
+                        Ok(false) => {}
+                        Err(e) => self
+                            .result_send
+                            .send(Err(e).context("matching in bfs_iter"))?,
+                    };
+                }
+
+                self.result_send
+                    .send(Ok((path, FsNodeMetadata::Directory(hgid))))?;
+            }
+
+            self.publish_work(to_send)?;
+
+            if self.pending.fetch_sub(work_len, Ordering::AcqRel) == work_len {
+                // If we processed the last work item (i.e. pending has become
+                // 0), return an error which will trigger the shutdown of all
+                // the worker threads.
+                return Err(anyhow!("walk done"));
+            }
         }
-        self.iter.next()
+
+        unreachable!("worker owns channel send and recv - channel should not disconnect");
+    }
+
+    fn publish_work(&self, to_send: Vec<(RepoPathBuf, Link)>) -> Result<()> {
+        if to_send.is_empty() {
+            return Ok(());
+        }
+
+        self.pending.fetch_add(to_send.len(), Ordering::AcqRel);
+        Ok(self.work_send.send(BfsWork::Walk(to_send))?)
+    }
+
+    fn broadcast_shutdown(&self, num_workers: usize) {
+        // I couldn't think of a better way to handle shutdown.
+        for _ in 0..num_workers {
+            self.work_send.send(BfsWork::Shutdown).unwrap();
+        }
     }
 }
 
