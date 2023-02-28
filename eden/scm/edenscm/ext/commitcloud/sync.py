@@ -515,11 +515,19 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         newremotebookmarks,
     )
 
-    # For a new join or a workspace switch, record cloudrefs.heads as backed up, not only the pulled commits that are missing locally.
     if lastsyncstate.version == 0:
+        # Update backup state.  For a new cloud join or a workspace switch,
+        # record all cloudrefs.heads that are present in the repo as backed up,
+        # not only the pulled commits that are missing locally (newheads)
+        # Some commits could be in the repo already, so the pull would skip them.
         state.update(
-            [nodemod.bin(head) for head in cloudrefs.heads if head in repo], tr
+            repo.changelog.filternodes([nodemod.bin(n) for n in cloudrefs.heads]),
+            tr,
         )
+    else:
+        # Update backup state.  These new heads are already backed up,
+        # otherwise the server wouldn't have told us about them.
+        state.update([nodemod.bin(head) for head in newheads], tr)
 
     lastsyncstate.update(
         tr,
@@ -532,10 +540,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         newomittedbookmarks=omittedbookmarks,
         newomittedremotebookmarks=omittedremotebookmarks,
     )
-
-    # Also update backup state.  These new heads are already backed up,
-    # otherwise the server wouldn't have told us about them.
-    state.update([nodemod.bin(head) for head in newheads], tr)
 
 
 def _pullheadgroups(repo, remotepath, headgroups):
