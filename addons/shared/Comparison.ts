@@ -24,6 +24,17 @@ export type Comparison =
         | ComparisonType.StackChanges;
     };
 
+export function comparisonIsAgainstHead(comparison: Comparison): boolean {
+  switch (comparison.type) {
+    case ComparisonType.UncommittedChanges:
+    case ComparisonType.HeadChanges:
+    case ComparisonType.StackChanges:
+      return true;
+    case ComparisonType.Committed:
+      return false;
+  }
+}
+
 /** Arguments for a comparison, compatible with `sl diff`. */
 export function revsetArgsForComparison(comparison: Comparison): Array<string> {
   switch (comparison.type) {

@@ -28,4 +28,7 @@ export type Context<T> = {
   };
   translate?: (s: string) => string;
   copy?: (s: string) => void;
+  openFileToLine?: (line: OneIndexedLineNumber) => unknown;
 };
+
+export type OneIndexedLineNumber = Exclude<number, 0>;

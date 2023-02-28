@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {OneIndexedLineNumber} from './types';
+
 import {Box} from '@primer/react';
 
 type Props = {
@@ -14,6 +16,7 @@ type Props = {
   after: React.ReactFragment | null;
   rowType: SplitDiffRowType;
   path: string;
+  openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
 };
 
 type SplitDiffRowType = 'add' | 'common' | 'modify' | 'remove' | 'expanded';
@@ -25,6 +28,7 @@ export default function SplitDiffRow({
   after,
   rowType,
   path,
+  openFileToLine,
 }: Props): React.ReactElement {
   let beforeClass;
   let afterClass;
@@ -79,6 +83,7 @@ export default function SplitDiffRow({
         path={path}
         side={'RIGHT'}
         canComment={canComment}
+        openFileToLine={openFileToLine} // opening to a line number only makes sense on the "right" comparison side
       />
     </tr>
   );
@@ -91,11 +96,14 @@ type SideProps = {
   path: string;
   side: 'LEFT' | 'RIGHT';
   canComment: boolean;
+  openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
 };
 
-function SplitDiffRowSide({className, content, lineNumber, path, side}: SideProps) {
+function SplitDiffRowSide({className, content, lineNumber, path, side, openFileToLine}: SideProps) {
   const lineNumberBorderStyle = side === 'RIGHT' ? extraRightLineNumberCellProps : {};
-  const extraClassName = className != null ? ` ${className}-number` : '';
+  const clickableLineNumber = openFileToLine != null && lineNumber != null;
+  const extraClassName =
+    (className != null ? ` ${className}-number` : '') + (clickableLineNumber ? ' clickable' : '');
   return (
     <>
       <Box
@@ -104,6 +112,7 @@ function SplitDiffRowSide({className, content, lineNumber, path, side}: SideProp
         data-line-number={lineNumber}
         data-path={path}
         data-side={side}
+        onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}
         {...lineNumberBorderStyle}>
         {lineNumber}
       </Box>

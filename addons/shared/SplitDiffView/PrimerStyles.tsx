@@ -66,6 +66,14 @@ export default React.memo(function PrimerStyles(): React.ReactElement {
   font-family: ${theme?.fonts.mono}
 }
 
+.lineNumber.clickable {
+  cursor: pointer;
+}
+
+.lineNumber.clickable:hover {
+  text-decoration: underline;
+}
+
 /**
  * pl = prettylights theme
  *

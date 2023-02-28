@@ -29,7 +29,7 @@ import {
   useRecoilValue,
   useSetRecoilState,
 } from 'recoil';
-import {labelForComparison, ComparisonType} from 'shared/Comparison';
+import {comparisonIsAgainstHead, labelForComparison, ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {SplitDiffView} from 'shared/SplitDiffView';
 import SplitDiffViewPrimerStyles from 'shared/SplitDiffView/PrimerStyles';
@@ -218,6 +218,10 @@ function ComparisonViewFile({diff, comparison}: {diff: ParsedDiff; comparison: C
     atoms: {lineRange},
     translate: t,
     copy: platform.clipboardCopy,
+    // only offer clickable line numbers for comparisons against head, otherwise line numbers will be inaccurate
+    openFileToLine: comparisonIsAgainstHead(comparison)
+      ? (line: number) => platform.openFile(path, {line})
+      : undefined,
   };
   return (
     <div className="comparison-view-file" key={path}>

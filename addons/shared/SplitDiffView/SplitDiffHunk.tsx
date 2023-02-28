@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Context, LineRangeParams} from './types';
+import type {Context, LineRangeParams, OneIndexedLineNumber} from './types';
 import type {Hunk, ParsedDiff} from 'diff';
 
 import SplitDiffRow from './SplitDiffRow';
@@ -79,7 +79,7 @@ export const SplitDiffTable = React.memo(
           }
         }
 
-        addRowsForHunk(hunk, path, rows);
+        addRowsForHunk(hunk, path, rows, ctx.openFileToLine);
 
         if (index !== lastHunkIndex) {
           const nextHunk = hunks[index + 1];
@@ -144,7 +144,12 @@ export const SplitDiffTable = React.memo(
 /**
  * Adds new rows to the supplied `rows` array.
  */
-function addRowsForHunk(hunk: Hunk, path: string, rows: React.ReactElement[]): void {
+function addRowsForHunk(
+  hunk: Hunk,
+  path: string,
+  rows: React.ReactElement[],
+  openFileToLine?: (line: OneIndexedLineNumber) => unknown,
+): void {
   const {oldStart, newStart, lines} = hunk;
   const groups = organizeLinesIntoGroups(lines);
   let beforeLineNumber = oldStart;
@@ -152,7 +157,15 @@ function addRowsForHunk(hunk: Hunk, path: string, rows: React.ReactElement[]): v
 
   groups.forEach(group => {
     const {common, removed, added} = group;
-    addUnmodifiedRows(common, path, 'common', beforeLineNumber, afterLineNumber, rows);
+    addUnmodifiedRows(
+      common,
+      path,
+      'common',
+      beforeLineNumber,
+      afterLineNumber,
+      rows,
+      openFileToLine,
+    );
     beforeLineNumber += common.length;
     afterLineNumber += common.length;
 
@@ -172,6 +185,7 @@ function addRowsForHunk(hunk: Hunk, path: string, rows: React.ReactElement[]): v
             after={after}
             rowType="modify"
             path={path}
+            openFileToLine={openFileToLine}
           />,
         );
         ++beforeLineNumber;
@@ -186,6 +200,7 @@ function addRowsForHunk(hunk: Hunk, path: string, rows: React.ReactElement[]): v
             after={null}
             rowType="remove"
             path={path}
+            openFileToLine={openFileToLine}
           />,
         );
         ++beforeLineNumber;
@@ -199,6 +214,7 @@ function addRowsForHunk(hunk: Hunk, path: string, rows: React.ReactElement[]): v
             after={addedLine}
             rowType="add"
             path={path}
+            openFileToLine={openFileToLine}
           />,
         );
         ++afterLineNumber;
@@ -217,6 +233,7 @@ function addUnmodifiedRows(
   initialBeforeLineNumber: number,
   initialAfterLineNumber: number,
   rows: React.ReactElement[],
+  openFileToLine?: (line: OneIndexedLineNumber) => unknown,
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
@@ -230,6 +247,7 @@ function addUnmodifiedRows(
         after={lineContent}
         rowType={rowType}
         path={path}
+        openFileToLine={openFileToLine}
       />,
     );
     ++beforeLineNumber;
@@ -333,7 +351,15 @@ function ExpandingSeparator<Id>({
     case 'hasValue': {
       const rows: React.ReactElement[] = [];
       const lines = loadable.contents;
-      addUnmodifiedRows(lines, path, 'expanded', beforeLineStart, afterLineStart, rows);
+      addUnmodifiedRows(
+        lines,
+        path,
+        'expanded',
+        beforeLineStart,
+        afterLineStart,
+        rows,
+        ctx.openFileToLine,
+      );
       return <>{rows}</>;
     }
     case 'loading': {
