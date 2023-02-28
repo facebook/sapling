@@ -187,6 +187,7 @@ The Windows build has some additional dependencies and a separate build script. 
 <pre>{`\
 git clone ${gitHubRepo}
 cd ${gitHubRepoName}/eden/scm
+git config --system core.longpaths true
 python3 .\\packaging\\windows\\build_windows_zip.py
 .\\build\\embedded\\sl.exe --help
 `}
