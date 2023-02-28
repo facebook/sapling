@@ -517,3 +517,9 @@ impl AddScubaParams for thrift::UploadGitObjectParams {
         scuba.add("param_git_object_id", hex(&self.git_hash));
     }
 }
+
+impl AddScubaParams for thrift::CreateGitTreeParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_git_object_id", hex(&self.git_tree_hash));
+    }
+}

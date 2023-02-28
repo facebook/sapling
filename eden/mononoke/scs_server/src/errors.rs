@@ -265,6 +265,7 @@ impl_into_thrift_error!(service::MegarepoSyncChangesetPollExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourceExn);
 impl_into_thrift_error!(service::MegarepoRemergeSourcePollExn);
 impl_into_thrift_error!(service::UploadGitObjectExn);
+impl_into_thrift_error!(service::CreateGitTreeExn);
 
 pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {

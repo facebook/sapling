@@ -1510,6 +1510,15 @@ struct UploadGitObjectParams {
   3: optional string service_identity;
 }
 
+/// Params for create_git_tree method
+struct CreateGitTreeParams {
+  /// The raw bytes of the hash of the git tree object that is being stored
+  /// as a bonsai changeset at Mononoke end
+  1: binary git_tree_hash;
+  /// The identity of the service making the create git tree request.
+  2: optional string service_identity;
+}
+
 /// Method response structures
 
 struct RepoResolveBookmarkResponse {
@@ -1839,6 +1848,8 @@ struct MegarepoRemergeSourcePollResponse {
 }
 
 struct UploadGitObjectResponse {}
+
+struct CreateGitTreeResponse {}
 
 /// Exceptions
 
@@ -2292,5 +2303,13 @@ service SourceControlService extends fb303_core.BaseService {
   UploadGitObjectResponse upload_git_object(
     1: RepoSpecifier repo,
     2: UploadGitObjectParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Create Mononoke counterpart of git tree object in the form of a bonsai changeset.
+  /// The raw git tree object must already be stored in Mononoke stores before invoking
+  /// this endpoint.
+  CreateGitTreeResponse create_git_tree(
+    1: RepoSpecifier repo,
+    2: CreateGitTreeParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 } (rust.request_context, sr.service_name = "mononoke-scs-server")
