@@ -29,6 +29,7 @@ def restackonce(
     childrenonly=False,
     noconflict=None,
     noconflictmsg=None,
+    maxpredecessordepth=None,
 ):
     """Rebase all descendants of precursors of rev onto rev, thereby
     stabilzing any non-obsolete descendants of those precursors.
@@ -40,7 +41,13 @@ def restackonce(
     or a custom rebase using `-d _destrestack(SRC)`.
     """
     # Get visible, non-obsolete descendants of precusors of rev.
-    allpredecessors = repo.revs("predecessors(%d) - (%d)", rev, rev)
+
+    if maxpredecessordepth is not None:
+        predsquery = "predecessors(%%d, %d)" % maxpredecessordepth
+    else:
+        predsquery = "predecessors(%d)"
+
+    allpredecessors = repo.revs(predsquery + " - (%d)", rev, rev)
     fmt = "%s(%%ld) - %%ld - obsolete()" % (
         "children" if childrenonly else "descendants"
     )

@@ -284,3 +284,43 @@ Test fold with --reuse-message
   │
   o  fdaccbb26270 r0
 
+Test rebase with unrelated predecessors:
+  $ reset
+  $ hg debugbuilddag -m +6
+  $ hg rebase -q -r 'desc(r2)' -r 'desc(r3)' -r 'desc(r4)' -d 'desc(r0)'
+  $ showgraph
+  o  657a15828ddc r4
+  │
+  o  529253ee297f r3
+  │
+  o  04b5fa612c4e r2
+  │
+  │ o  f2987ebe5838 r5
+  │ │
+  │ x  aa70f0fe546a r4
+  │ │
+  │ x  cb14eba0ad9c r3
+  │ │
+  │ x  f07e66f449d0 r2
+  │ │
+  │ o  09bb8c08de89 r1
+  ├─╯
+  o  fdaccbb26270 r0
+  $ hg fold -q --exact 04b5fa612c4e 529253ee297f
+Don't restack r5 since it isn't related to our fold.
+  $ showgraph
+  o  5a5dfc14d0aa r4
+  │
+  o  f240f06c8498 r2
+  │
+  │ o  f2987ebe5838 r5
+  │ │
+  │ x  aa70f0fe546a r4
+  │ │
+  │ x  cb14eba0ad9c r3
+  │ │
+  │ x  f07e66f449d0 r2
+  │ │
+  │ o  09bb8c08de89 r1
+  ├─╯
+  o  fdaccbb26270 r0
