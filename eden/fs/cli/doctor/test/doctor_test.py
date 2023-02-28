@@ -274,8 +274,8 @@ To start EdenFS, run:
     eden start
 
 <yellow>1 issue requires manual attention\.<reset>
-Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
+Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -313,8 +313,8 @@ If EdenFS seems to be taking too long to start you can try restarting it
 with "eden restart --force"
 
 <yellow>1 issue requires manual attention\.<reset>
-Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
+Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -350,8 +350,8 @@ Either wait for edenfs to exit, or to forcibly kill EdenFS, run:
     eden stop --kill
 
 <yellow>1 issue requires manual attention\.<reset>
-Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
+Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -878,8 +878,8 @@ Run "cd / && cd -" to update your shell's working directory\.
 
 Checking .*
 <yellow>1 issue requires manual attention\.<reset>
-Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
+Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -1418,13 +1418,13 @@ Starting background invalidation of not recently used files and directories in {
             r"""<yellow>- Found problem:<reset>
 Slow file download taking up to 15 minutes observed
 Try:
-- Running `hg debugnetwork`.
-- Checking your network connection's performance.
-- Running `eden top` to check whether downloads are making progress.
+- Running `hg debugnetwork`\.
+- Checking your network connection's performance\.
+- Running `eden top` to check whether downloads are making progress\.
 
 <yellow>1 issue requires manual attention\.<reset>
-Ask in the EdenFS (Windows )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.facebook\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows)
+Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
+(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(exit_code, 1)

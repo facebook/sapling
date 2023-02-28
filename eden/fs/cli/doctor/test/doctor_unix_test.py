@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import sys
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -16,6 +17,19 @@ from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
 )
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
+
+
+def get_support_suggestion() -> str:
+    if sys.platform == "darwin":
+        return """<yellow>1 issue requires manual attention.<reset>
+Collect an 'eden rage' and ask in the EdenFS macOS Users group if you need help fixing issues with EdenFS:
+https://fb.workplace.com/groups/edenfsmacos/
+"""
+    else:
+        return """<yellow>1 issue requires manual attention.<reset>
+Collect an 'eden rage' and ask in the EdenFS Users group if you need help fixing issues with EdenFS:
+https://fb.workplace.com/groups/eden.users/
+"""
 
 
 class DoctorUnixTest(DoctorTestBase):
@@ -55,10 +69,7 @@ The PrivHelper process is not accessible.
 To restore the connection to the PrivHelper, run `eden restart`
 
 Checking {mount}
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
-""",
+{get_support_suggestion()}""",
             out.getvalue(),
         )
         self.assertEqual(1, exit_code)
@@ -97,10 +108,7 @@ Checking {edenfs_path2}
 Checkout {edenfs_path2} is running but not listed in Eden's configuration file.
 Running "eden unmount {edenfs_path2}" will unmount this checkout.
 
-<yellow>1 issue requires manual attention.<reset>
-Ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.facebook.com/groups/eden.users/
-""",
+{get_support_suggestion()}""",
             out.getvalue(),
         )
         self.assertEqual(1, exit_code)

@@ -417,15 +417,18 @@ class EdenDoctor(EdenDoctorChecker):
         if fixer.num_fixed_problems == fixer.num_problems:
             return 0
 
-        help_url = (
-            "https://fb.workplace.com/groups/edenfswindows"
-            if sys.platform == "win32"
-            else "https://fb.facebook.com/groups/eden.users/"
-        )
-        help_group = "EdenFS Windows" if sys.platform == "win32" else "EdenFS"
+        if sys.platform == "darwin":
+            help_url = "https://fb.workplace.com/groups/edenfsmacos"
+            help_group = "EdenFS macOS"
+        elif sys.platform == "win32":
+            help_url = "https://fb.workplace.com/groups/edenfswindows"
+            help_group = "EdenFS Windows"
+        else:
+            help_url = "https://fb.workplace.com/groups/eden.users/"
+            help_group = "EdenFS"
 
         out.write(
-            f"Ask in the {help_group} Users group if you need help fixing issues with EdenFS:\n"
+            f"Collect an 'eden rage' and ask in the {help_group} Users group if you need help fixing issues with EdenFS:\n"
             f"{help_url}\n"
         )
         return 1
