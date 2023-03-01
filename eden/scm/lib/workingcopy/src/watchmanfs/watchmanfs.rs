@@ -131,31 +131,11 @@ impl PendingChanges for WatchmanFileSystem {
 
         let should_warn = config.get_or_default("fsmonitor", "warn-fresh-instance")?;
         if result.is_fresh_instance && should_warn {
-            let old_pid = parse_watchman_pid(prev_clock.as_ref());
-            let new_pid = parse_watchman_pid(Some(&result.clock));
-            let mut output = io.output();
-            match (old_pid, new_pid) {
-                (Some(old_pid), Some(new_pid)) if old_pid != new_pid => {
-                    writeln!(
-                        &mut output,
-                        "warning: watchman has recently restarted (old pid {}, new pid {}) - operation will be slower than usual",
-                        old_pid, new_pid
-                    )?;
-                }
-                (None, Some(new_pid)) => {
-                    writeln!(
-                        &mut output,
-                        "warning: watchman has recently started (pid {}) - operation will be slower than usual",
-                        new_pid
-                    )?;
-                }
-                _ => {
-                    writeln!(
-                        &mut output,
-                        "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual"
-                    )?;
-                }
-            }
+            let _ = warn_about_fresh_instance(
+                io,
+                parse_watchman_pid(prev_clock.as_ref()),
+                parse_watchman_pid(Some(&result.clock)),
+            );
         }
 
         let file_change_threshold =
@@ -185,6 +165,34 @@ impl PendingChanges for WatchmanFileSystem {
 
         Ok(Box::new(pending_changes.into_iter()))
     }
+}
+
+fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>) -> Result<()> {
+    let mut output = io.error();
+    match (old_pid, new_pid) {
+        (Some(old_pid), Some(new_pid)) if old_pid != new_pid => {
+            writeln!(
+                &mut output,
+                "warning: watchman has recently restarted (old pid {}, new pid {}) - operation will be slower than usual",
+                old_pid, new_pid
+            )?;
+        }
+        (None, Some(new_pid)) => {
+            writeln!(
+                &mut output,
+                "warning: watchman has recently started (pid {}) - operation will be slower than usual",
+                new_pid
+            )?;
+        }
+        _ => {
+            writeln!(
+                &mut output,
+                "warning: watchman failed to catch up with file change events and requires a full scan - operation will be slower than usual"
+            )?;
+        }
+    }
+
+    Ok(())
 }
 
 fn parse_watchman_pid(clock: Option<&Clock>) -> Option<u32> {
