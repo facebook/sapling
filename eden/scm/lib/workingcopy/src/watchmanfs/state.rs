@@ -32,7 +32,7 @@ query_result_type! {
 }
 
 pub struct WatchmanState {
-    treestate_needs_check: HashSet<RepoPathBuf>,
+    treestate_needs_check: Vec<RepoPathBuf>,
     treestate_errors: Vec<ParseError>,
 }
 
@@ -44,7 +44,7 @@ impl WatchmanState {
         let (needs_check, parse_errs) = treestate.list_needs_check(matcher)?;
 
         Ok(WatchmanState {
-            treestate_needs_check: needs_check.into_iter().collect(),
+            treestate_needs_check: needs_check,
             treestate_errors: parse_errs,
         })
     }
@@ -53,77 +53,105 @@ impl WatchmanState {
     pub fn merge(
         self,
         result: QueryResult<StatusQuery>,
-        mut file_change_detector: impl FileChangeDetectorTrait + 'static,
+        file_change_detector: impl FileChangeDetectorTrait + 'static,
     ) -> Result<WatchmanPendingChanges> {
-        let (needs_check, errors): (Vec<_>, Vec<_>) = result
+        let mut errors: Vec<ParseError> = Vec::new();
+        let needs_check: Vec<RepoPathBuf> = result
             .files
             .unwrap_or_default()
             .into_iter()
-            .map(|query| RepoPathBuf::from_utf8(query.name.into_inner().into_bytes()))
-            .partition(Result::is_ok);
+            .filter_map(|query| {
+                match RepoPathBuf::from_utf8(query.name.into_inner().into_bytes()) {
+                    Ok(path) => Some(path),
+                    Err(err) => {
+                        errors.push(err);
+                        None
+                    }
+                }
+            })
+            .collect();
 
-        let mut needs_check = needs_check
-            .into_iter()
-            .map(Result::unwrap)
-            .collect::<HashSet<_>>();
-
-        tracing::debug!(
-            watchman_needs_check = needs_check.len(),
-            treestate_needs_check = self.treestate_needs_check.len(),
-            watchman_errors = errors.len(),
-            treestate_errors = self.treestate_errors.len(),
+        let mut changes = detect_changes(
+            file_change_detector,
+            self.treestate_needs_check,
+            needs_check,
+            result.clock,
         );
 
-        needs_check.extend(self.treestate_needs_check.iter().cloned());
+        changes.pending_changes.extend(
+            errors
+                .into_iter()
+                .chain(self.treestate_errors.into_iter())
+                .map(|e| Err(anyhow!(e))),
+        );
 
-        let errors = errors
-            .into_iter()
-            .map(|e| anyhow!(e.unwrap_err()))
-            .chain(self.treestate_errors.into_iter().map(|e| anyhow!(e)))
-            .collect::<Vec<_>>();
+        Ok(changes)
+    }
+}
 
-        let mut needs_clear: Vec<RepoPathBuf> = vec![];
-        let mut needs_mark: Vec<RepoPathBuf> = vec![];
-        let mut pending_changes = needs_check
-            .into_iter()
-            .filter_map(|path| match file_change_detector.has_changed(&path) {
-                Ok(FileChangeResult::Yes(change)) => {
-                    needs_mark.push(path);
-                    Some(Ok(PendingChangeResult::File(change)))
-                }
-                Ok(FileChangeResult::No) => {
-                    if self.treestate_needs_check.contains(&path) {
-                        needs_clear.push(path);
-                    }
-                    None
-                }
-                Err(e) => Some(Err(e)),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
-        pending_changes.extend(errors.into_iter().map(Err));
+fn detect_changes(
+    mut file_change_detector: impl FileChangeDetectorTrait + 'static,
+    ts_need_check: Vec<RepoPathBuf>,
+    wm_need_check: Vec<RepoPathBuf>,
+    // TODO: propagate this differently since it isn't used here.
+    clock: Clock,
+) -> WatchmanPendingChanges {
+    let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
 
-        for result in file_change_detector.resolve_maybes() {
-            match result {
-                Ok(ResolvedFileChangeResult::Yes(change)) => {
-                    needs_mark.push(change.get_path().clone());
-                    pending_changes.push(Ok(PendingChangeResult::File(change)));
+    let mut pending_changes: Vec<Result<PendingChangeResult>> = Vec::new();
+    let mut needs_clear = Vec::new();
+    let mut needs_mark = Vec::new();
+
+    tracing::debug!(
+        watchman_needs_check = wm_need_check.len(),
+        treestate_needs_check = ts_need_check.len(),
+    );
+
+    for needs_check in ts_need_check
+        .iter()
+        .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)))
+    {
+        match file_change_detector.has_changed(needs_check) {
+            Ok(FileChangeResult::Yes(change)) => {
+                pending_changes.push(Ok(PendingChangeResult::File(change)));
+                if !ts_need_check.contains(needs_check) {
+                    needs_mark.push(needs_check.clone());
                 }
-                Ok(ResolvedFileChangeResult::No(path)) => {
-                    if self.treestate_needs_check.contains(&path) {
-                        needs_clear.push(path);
-                    }
-                }
-                Err(e) => pending_changes.push(Err(e)),
             }
+            Ok(FileChangeResult::No) => {
+                if ts_need_check.contains(needs_check) {
+                    needs_clear.push(needs_check.clone());
+                }
+            }
+            // Handled in below in next loop.
+            Ok(FileChangeResult::Maybe) => {}
+            Err(e) => pending_changes.push(Err(e)),
         }
+    }
 
-        Ok(WatchmanPendingChanges {
-            pending_changes,
-            needs_clear,
-            needs_mark,
-            clock: result.clock,
-        })
+    for result in file_change_detector.resolve_maybes() {
+        match result {
+            Ok(ResolvedFileChangeResult::Yes(change)) => {
+                let path = change.get_path();
+                if !ts_need_check.contains(path) {
+                    needs_mark.push(path.clone());
+                }
+                pending_changes.push(Ok(PendingChangeResult::File(change)));
+            }
+            Ok(ResolvedFileChangeResult::No(path)) => {
+                if ts_need_check.contains(&path) {
+                    needs_clear.push(path);
+                }
+            }
+            Err(e) => pending_changes.push(Err(e)),
+        }
+    }
+
+    WatchmanPendingChanges {
+        pending_changes,
+        needs_clear,
+        needs_mark,
+        clock,
     }
 }
 
@@ -472,9 +500,7 @@ mod tests {
 
         assert_eq!(
             state.treestate_needs_check,
-            [RepoPathBuf::from_string("include_me".to_string())?]
-                .into_iter()
-                .collect()
+            vec![RepoPathBuf::from_string("include_me".to_string())?],
         );
 
         Ok(())

@@ -115,7 +115,6 @@ impl PendingChanges for WatchmanFileSystem {
             root: self.vfs.root(),
         };
 
-        let state = WatchmanState::new(watchman_ts.clone(), matcher)?;
         let prev_clock = watchman_ts.get_clock()?;
 
         let result = async_runtime::block_on(self.query_result(WatchmanConfig {
@@ -177,6 +176,9 @@ impl PendingChanges for WatchmanFileSystem {
             manifests[0].clone(),
             self.store.clone(),
         );
+
+        let state = WatchmanState::new(watchman_ts.clone(), matcher)?;
+
         let mut pending_changes = state.merge(result, file_change_detector)?;
 
         pending_changes.persist(watchman_ts, should_update_clock, &self.locker)?;

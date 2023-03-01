@@ -21,4 +21,4 @@ We want the ignore files to be present in our treestate.
 
 We shouldn't need to check any files from treestate.
   $ LOG=workingcopy::watchmanfs::state=debug hg status 2>&1 | grep treestate_needs_check
-  DEBUG merge: workingcopy::watchmanfs::state: watchman_needs_check=1 treestate_needs_check=0 watchman_errors=0 treestate_errors=0
+  DEBUG * watchman_needs_check=1 treestate_needs_check=0 (glob)
