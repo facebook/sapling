@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod state;
 mod treestate;
 mod watchmanfs;
 

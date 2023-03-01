@@ -168,3 +168,48 @@ impl WatchmanTreeStateRead for WatchmanTreeState<'_> {
             .map(|clock| Clock::Spec(ClockSpec::StringClock(clock.clone()))))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pathmatcher::ExactMatcher;
+    use types::RepoPath;
+
+    use super::*;
+
+    #[test]
+    fn test_skip_ignored_files() -> Result<()> {
+        // Show that we respect the matcher to skip treestate files we don't care about.
+
+        let fs = FileStateV2 {
+            mode: 0,
+            size: 0,
+            mtime: 0,
+            state: StateFlags::NEED_CHECK,
+            copied: None,
+        };
+
+        let dir = tempfile::tempdir()?;
+
+        let mut ts = TreeState::new(dir.path(), false)?.0;
+        ts.insert("include_me", &fs)?;
+        ts.insert("ignore_me", &fs)?;
+
+        let matcher = Arc::new(ExactMatcher::new(
+            [RepoPath::from_str("include_me")?].iter(),
+            false,
+        ));
+
+        let mut wm_ts = WatchmanTreeState {
+            treestate: Arc::new(Mutex::new(ts)),
+            root: "/dev/null".as_ref(),
+        };
+
+        let (needs_check, _) = wm_ts.list_needs_check(matcher)?;
+        assert_eq!(
+            needs_check,
+            vec![RepoPathBuf::from_string("include_me".to_string())?],
+        );
+
+        Ok(())
+    }
+}

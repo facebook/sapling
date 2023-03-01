@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -20,15 +22,20 @@ use parking_lot::Mutex;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
+use serde::Deserialize;
 use treestate::treestate::TreeState;
+use types::path::ParseError;
+use types::RepoPathBuf;
 use vfs::VFS;
 use watchman_client::prelude::*;
 
-use super::state::StatusQuery;
-use super::state::WatchmanState;
 use super::treestate::WatchmanTreeState;
+use super::treestate::WatchmanTreeStateWrite;
 use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
+use crate::filechangedetector::FileChangeDetectorTrait;
+use crate::filechangedetector::FileChangeResult;
+use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
 use crate::watchmanfs::treestate::WatchmanTreeStateRead;
@@ -47,6 +54,13 @@ pub struct WatchmanFileSystem {
 struct WatchmanConfig {
     clock: Option<Clock>,
     sync_timeout: std::time::Duration,
+}
+
+query_result_type! {
+    pub struct StatusQuery {
+        name: BytesNameField,
+        exists: ExistsField,
+    }
 }
 
 impl WatchmanFileSystem {
@@ -110,7 +124,7 @@ impl PendingChanges for WatchmanFileSystem {
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
-        let watchman_ts = WatchmanTreeState {
+        let mut watchman_ts = WatchmanTreeState {
             treestate: self.treestate.clone(),
             root: self.vfs.root(),
         };
@@ -157,9 +171,39 @@ impl PendingChanges for WatchmanFileSystem {
             self.store.clone(),
         );
 
-        let state = WatchmanState::new(watchman_ts.clone(), matcher)?;
+        let (ts_needs_check, ts_errors) = watchman_ts.list_needs_check(matcher)?;
 
-        let mut pending_changes = state.merge(result, file_change_detector)?;
+        let mut wm_errors: Vec<ParseError> = Vec::new();
+        let wm_needs_check: Vec<RepoPathBuf> = result
+            .files
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|query| {
+                match RepoPathBuf::from_utf8(query.name.into_inner().into_bytes()) {
+                    Ok(path) => Some(path),
+                    Err(err) => {
+                        wm_errors.push(err);
+                        None
+                    }
+                }
+            })
+            .collect();
+
+        let mut pending_changes = detect_changes(
+            file_change_detector,
+            ts_needs_check,
+            wm_needs_check,
+            result.clock,
+        );
+
+        // Add back path errors into the pending changes. The caller
+        // of pending_changes must choose how to handle these.
+        pending_changes.pending_changes.extend(
+            wm_errors
+                .into_iter()
+                .chain(ts_errors.into_iter())
+                .map(|e| Err(anyhow!(e))),
+        );
 
         pending_changes.persist(watchman_ts, should_update_clock, &self.locker)?;
 
@@ -193,6 +237,124 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
     }
 
     Ok(())
+}
+
+fn detect_changes(
+    mut file_change_detector: impl FileChangeDetectorTrait + 'static,
+    ts_need_check: Vec<RepoPathBuf>,
+    wm_need_check: Vec<RepoPathBuf>,
+    // TODO: propagate this differently since it isn't used here.
+    clock: Clock,
+) -> WatchmanPendingChanges {
+    let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
+
+    let mut pending_changes: Vec<Result<PendingChangeResult>> = Vec::new();
+    let mut needs_clear = Vec::new();
+    let mut needs_mark = Vec::new();
+
+    tracing::debug!(
+        watchman_needs_check = wm_need_check.len(),
+        treestate_needs_check = ts_need_check.len(),
+    );
+
+    for needs_check in ts_need_check
+        .iter()
+        .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)))
+    {
+        match file_change_detector.has_changed(needs_check) {
+            Ok(FileChangeResult::Yes(change)) => {
+                pending_changes.push(Ok(PendingChangeResult::File(change)));
+                if !ts_need_check.contains(needs_check) {
+                    needs_mark.push(needs_check.clone());
+                }
+            }
+            Ok(FileChangeResult::No) => {
+                if ts_need_check.contains(needs_check) {
+                    needs_clear.push(needs_check.clone());
+                }
+            }
+            // Handled in below in next loop.
+            Ok(FileChangeResult::Maybe) => {}
+            Err(e) => pending_changes.push(Err(e)),
+        }
+    }
+
+    for result in file_change_detector.resolve_maybes() {
+        match result {
+            Ok(ResolvedFileChangeResult::Yes(change)) => {
+                let path = change.get_path();
+                if !ts_need_check.contains(path) {
+                    needs_mark.push(path.clone());
+                }
+                pending_changes.push(Ok(PendingChangeResult::File(change)));
+            }
+            Ok(ResolvedFileChangeResult::No(path)) => {
+                if ts_need_check.contains(&path) {
+                    needs_clear.push(path);
+                }
+            }
+            Err(e) => pending_changes.push(Err(e)),
+        }
+    }
+
+    WatchmanPendingChanges {
+        pending_changes,
+        needs_clear,
+        needs_mark,
+        clock,
+    }
+}
+
+pub struct WatchmanPendingChanges {
+    pending_changes: Vec<Result<PendingChangeResult>>,
+    needs_clear: Vec<RepoPathBuf>,
+    needs_mark: Vec<RepoPathBuf>,
+    clock: Clock,
+}
+
+impl WatchmanPendingChanges {
+    #[tracing::instrument(skip_all)]
+    pub fn persist(
+        &mut self,
+        mut treestate: impl WatchmanTreeStateWrite,
+        should_update_clock: bool,
+        locker: &RepoLocker,
+    ) -> Result<()> {
+        let mut wrote = false;
+        for path in self.needs_clear.iter() {
+            match treestate.clear_needs_check(path) {
+                Ok(v) => wrote |= v,
+                Err(e) =>
+                // We can still build a valid result if we fail to clear the
+                // needs check flag. Propagate the error to the caller but allow
+                // the persist to continue.
+                {
+                    self.pending_changes.push(Err(e))
+                }
+            }
+        }
+
+        for path in self.needs_mark.iter() {
+            wrote |= treestate.mark_needs_check(path)?;
+        }
+
+        // If the treestate is already dirty, we're going to write it anyway, so let's go ahead and
+        // update the clock while we're at it.
+        if should_update_clock || wrote {
+            treestate.set_clock(self.clock.clone())?;
+        }
+
+        treestate.flush(locker)
+    }
+}
+
+impl IntoIterator for WatchmanPendingChanges {
+    type Item = Result<PendingChangeResult>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.pending_changes.into_iter()
+    }
 }
 
 fn parse_watchman_pid(clock: Option<&Clock>) -> Option<u32> {
