@@ -6,10 +6,12 @@
  */
 
 import type {
+  ApplyMergeConflictsPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
+  MergeConflictsPreviewContext,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommandArg, RepoRelativePath, UncommittedChanges} from '../types';
+import type {CommandArg, MergeConflicts, RepoRelativePath, UncommittedChanges} from '../types';
 
 import {Operation} from './Operation';
 
@@ -67,6 +69,34 @@ export class ResolveOperation extends Operation {
       return changes.map(change =>
         change.path === this.filePath ? {path: change.path, status: 'Resolved'} : change,
       );
+    };
+    return func;
+  }
+
+  makeOptimisticMergeConflictsApplier?(
+    context: MergeConflictsPreviewContext,
+  ): ApplyMergeConflictsPreviewsFuncType | undefined {
+    if (
+      context.conflicts?.files?.some(
+        change => change.path === this.filePath && change.status !== 'U',
+      ) === true
+    ) {
+      return undefined;
+    }
+
+    const func: ApplyMergeConflictsPreviewsFuncType = (conflicts?: MergeConflicts) => {
+      if (conflicts?.state !== 'loaded') {
+        return conflicts;
+      }
+      return {
+        ...conflicts,
+        files:
+          conflicts?.files?.map(change =>
+            change.path === this.filePath
+              ? {path: change.path, status: 'Resolved' as const}
+              : change,
+          ) ?? [],
+      };
     };
     return func;
   }

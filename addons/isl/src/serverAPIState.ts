@@ -356,13 +356,15 @@ export type OperationInfo = {
   hasCompletedOptimisticState?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic changes to uncommited changes to show */
   hasCompletedUncommittedChangesOptimisticState?: boolean;
+  /** if true, the operation process has exited AND there's no more optimistic changes to merge conflicts to show */
+  hasCompletedMergeConflictsOptimisticState?: boolean;
 };
 
 /**
  * Bundle history of previous operations together with the current operation,
  * so we can easily manipulate operations together in one piece of state.
  */
-interface OperationList {
+export interface OperationList {
   /** The currently running operation, or the most recently run if not currently running. */
   currentOperation: OperationInfo | undefined;
   /** All previous operations oldest to newest, not including currentOperation */
@@ -597,6 +599,12 @@ export function useClearAllOptimisticState() {
                   hasCompletedUncommittedChangesOptimisticState: true,
                 };
               }
+              if (!operationHistory[i].hasCompletedMergeConflictsOptimisticState) {
+                operationHistory[i] = {
+                  ...operationHistory[i],
+                  hasCompletedMergeConflictsOptimisticState: true,
+                };
+              }
             }
           }
           const currentOperation =
@@ -604,6 +612,7 @@ export function useClearAllOptimisticState() {
           if (currentOperation?.exitCode != null) {
             currentOperation.hasCompletedOptimisticState = true;
             currentOperation.hasCompletedUncommittedChangesOptimisticState = true;
+            currentOperation.hasCompletedMergeConflictsOptimisticState = true;
           }
           return {currentOperation, operationHistory};
         });

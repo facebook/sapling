@@ -28,14 +28,9 @@ import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
 import platform from './platform';
-import {uncommittedChangesWithPreviews} from './previews';
+import {optimisticMergeConflicts, uncommittedChangesWithPreviews} from './previews';
 import {selectedCommits} from './selection';
-import {
-  latestHeadCommit,
-  mergeConflicts,
-  uncommittedChangesFetchError,
-  useRunOperation,
-} from './serverAPIState';
+import {latestHeadCommit, uncommittedChangesFetchError, useRunOperation} from './serverAPIState';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useEffect, useRef} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
@@ -115,7 +110,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
   // TODO: use treeWithPreviews instead, and update CommitOperation
   const headCommit = useRecoilValue(latestHeadCommit);
 
-  const conflicts = useRecoilValue(mergeConflicts);
+  const conflicts = useRecoilValue(optimisticMergeConflicts);
 
   const [deselectedFiles, setDeselectedFiles] = useDeselectedFiles(uncommittedChanges);
   const commitTitleRef = useRef(null);
@@ -296,8 +291,8 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
           </>
         )}
       </div>
-      {conflicts?.files != null ? (
-        <ChangedFiles files={conflicts.files} showFileActions={true} />
+      {conflicts != null ? (
+        <ChangedFiles files={conflicts.files ?? []} showFileActions={true} />
       ) : (
         <ChangedFiles
           files={uncommittedChanges}

@@ -6,8 +6,10 @@
  */
 
 import type {
+  ApplyMergeConflictsPreviewsFuncType,
   ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
+  MergeConflictsPreviewContext,
   PreviewContext,
   UncommittedChangesPreviewContext,
 } from '../previews';
@@ -42,4 +44,8 @@ export abstract class Operation {
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,
   ): ApplyUncommittedChangesPreviewsFuncType | undefined;
+
+  makeOptimisticMergeConflictsApplier?(
+    context: MergeConflictsPreviewContext,
+  ): ApplyMergeConflictsPreviewsFuncType | undefined;
 }

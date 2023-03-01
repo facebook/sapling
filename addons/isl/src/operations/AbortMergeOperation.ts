@@ -26,4 +26,11 @@ export class AbortMergeOperation extends Operation {
     }
     return this.conflicts.toAbort.split(' ');
   }
+
+  // It's tempting to add makeOptimisticMergeConflictsApplier to `abort`,
+  // but hiding optimistic conflicts may reveal temporary uncommitted changes
+  // we could use optimistic uncommitted changes to hide those as well,
+  // but it gets complicated. More robust is to just show a spinner on the abort button instead.
+  // Abort should be relatively quick.
+  // TODO: if this is a slow point in workflows, we could make this experience smoother.
 }
