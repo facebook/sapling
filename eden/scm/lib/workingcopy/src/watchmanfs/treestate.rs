@@ -90,7 +90,7 @@ pub fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
     Ok(())
 }
 
-pub fn flush(root: &Path, ts: &mut TreeState, locker: &RepoLocker) -> Result<()> {
+pub fn maybe_flush_treestate(root: &Path, ts: &mut TreeState, locker: &RepoLocker) -> Result<()> {
     match dirstate::flush(root, ts, locker) {
         Ok(()) => Ok(()),
         // If the dirstate was changed before we flushed, that's ok. Let the other write win

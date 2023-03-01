@@ -7,7 +7,6 @@
 
 use std::collections::HashSet;
 use std::io::Write;
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -31,7 +30,6 @@ use vfs::VFS;
 use watchman_client::prelude::*;
 
 use super::treestate::clear_needs_check;
-use super::treestate::flush;
 use super::treestate::mark_needs_check;
 use super::treestate::set_clock;
 use crate::filechangedetector::ArcReadFileContents;
@@ -43,6 +41,7 @@ use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
 use crate::watchmanfs::treestate::get_clock;
 use crate::watchmanfs::treestate::list_needs_check;
+use crate::watchmanfs::treestate::maybe_flush_treestate;
 use crate::workingcopy::WorkingCopy;
 
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
@@ -188,13 +187,8 @@ impl PendingChanges for WatchmanFileSystem {
             })
             .collect();
 
-        let mut pending_changes = detect_changes(
-            file_change_detector,
-            ts,
-            ts_needs_check,
-            wm_needs_check,
-            result.clock,
-        );
+        let mut pending_changes =
+            detect_changes(file_change_detector, ts, ts_needs_check, wm_needs_check);
 
         // Add back path errors into the pending changes. The caller
         // of pending_changes must choose how to handle these.
@@ -205,7 +199,13 @@ impl PendingChanges for WatchmanFileSystem {
                 .map(|e| Err(anyhow!(e))),
         );
 
-        pending_changes.persist(self.vfs.root(), ts, should_update_clock, &self.locker)?;
+        let did_something = pending_changes.update_treestate(ts)?;
+        if did_something || should_update_clock {
+            // If we had something to update in the treestate, make sure clock is updated as well.
+            set_clock(ts, result.clock)?;
+        }
+
+        maybe_flush_treestate(self.vfs.root(), ts, &self.locker)?;
 
         Ok(Box::new(pending_changes.into_iter()))
     }
@@ -244,8 +244,6 @@ fn detect_changes(
     ts: &mut TreeState,
     ts_need_check: Vec<RepoPathBuf>,
     wm_need_check: Vec<RepoPathBuf>,
-    // TODO: propagate this differently since it isn't used here.
-    clock: Clock,
 ) -> WatchmanPendingChanges {
     let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
 
@@ -302,7 +300,6 @@ fn detect_changes(
         pending_changes,
         needs_clear,
         needs_mark,
-        clock,
     }
 }
 
@@ -310,18 +307,11 @@ pub struct WatchmanPendingChanges {
     pending_changes: Vec<Result<PendingChangeResult>>,
     needs_clear: Vec<RepoPathBuf>,
     needs_mark: Vec<RepoPathBuf>,
-    clock: Clock,
 }
 
 impl WatchmanPendingChanges {
     #[tracing::instrument(skip_all)]
-    pub fn persist(
-        &mut self,
-        root: &Path,
-        ts: &mut TreeState,
-        should_update_clock: bool,
-        locker: &RepoLocker,
-    ) -> Result<()> {
+    pub fn update_treestate(&mut self, ts: &mut TreeState) -> Result<bool> {
         let mut wrote = false;
         for path in self.needs_clear.iter() {
             match clear_needs_check(ts, path) {
@@ -340,13 +330,7 @@ impl WatchmanPendingChanges {
             wrote |= mark_needs_check(ts, path)?;
         }
 
-        // If the treestate is already dirty, we're going to write it anyway, so let's go ahead and
-        // update the clock while we're at it.
-        if should_update_clock || wrote {
-            set_clock(ts, self.clock.clone())?;
-        }
-
-        flush(root, ts, locker)
+        Ok(wrote)
     }
 }
 
