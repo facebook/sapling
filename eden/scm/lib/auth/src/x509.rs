@@ -187,23 +187,23 @@ mod tests {
 
     // CERT_1 is valid from 2020-12-09 22:39:13 UTC to 2020-12-10 22:39:13 UTC.
     static CERT_1_NOT_BEFORE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.ymd(2020, 12, 9).and_hms(22, 39, 13));
+        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 9, 22, 39, 13).unwrap());
     static CERT_1_NOT_AFTER: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.ymd(2020, 12, 10).and_hms(22, 39, 13));
+        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 10, 22, 39, 13).unwrap());
 
     // CERT_2 is valid from  2020-12-09 22:40:23 UTC to 2020-12-11 22:40:23 UTC.
     static CERT_2_NOT_BEFORE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.ymd(2020, 12, 9).and_hms(22, 40, 23));
+        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 9, 22, 40, 23).unwrap());
     static CERT_2_NOT_AFTER: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.ymd(2020, 12, 11).and_hms(22, 40, 23));
+        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 11, 22, 40, 23).unwrap());
 
     // Both CERT_1 and CERT_1 are valid on this date.
     static CERT_1_VALID_DATE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.ymd(2020, 12, 10).and_hms(0, 0, 0));
+        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 10, 0, 0, 0).unwrap());
 
     // On this date, CERT_2 is valid but CERT_1 is not.
     static CERT_2_VALID_DATE: Lazy<DateTime<Utc>> =
-        Lazy::new(|| Utc.ymd(2020, 12, 11).and_hms(0, 0, 0));
+        Lazy::new(|| Utc.with_ymd_and_hms(2020, 12, 11, 0, 0, 0).unwrap());
 
     #[test]
     fn test_date_parsing() -> Result<()> {

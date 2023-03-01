@@ -124,13 +124,13 @@ impl HgTime {
     }
 
     pub fn to_utc(self) -> DateTime<Utc> {
-        let naive = NaiveDateTime::from_timestamp(self.unixtime, 0);
+        let naive = NaiveDateTime::from_timestamp_opt(self.unixtime, 0).unwrap();
         DateTime::from_utc(naive, Utc)
     }
 
     /// Converts to `NaiveDateTime` with local timezone specified by `offset`.
     fn to_naive(self) -> NaiveDateTime {
-        NaiveDateTime::from_timestamp(self.unixtime - self.offset as i64, 0)
+        NaiveDateTime::from_timestamp_opt(self.unixtime - self.offset as i64, 0).unwrap()
     }
 
     /// Set as the faked "now". Useful for testing.
@@ -149,10 +149,16 @@ impl HgTime {
     pub fn parse(date: &str) -> Option<Self> {
         match date {
             "now" => Self::now(),
-            "today" => Self::now()
-                .and_then(|now| Self::try_from(now.to_naive().date().and_hms(0, 0, 0)).ok()),
+            "today" => Self::now().and_then(|now| {
+                Self::try_from(now.to_naive().date().and_hms_opt(0, 0, 0).unwrap()).ok()
+            }),
             "yesterday" => Self::now().and_then(|now| {
-                Self::try_from((now.to_naive().date() - Duration::days(1)).and_hms(0, 0, 0)).ok()
+                Self::try_from(
+                    (now.to_naive().date() - Duration::days(1))
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap(),
+                )
+                .ok()
             }),
             date if date.ends_with(" ago") => {
                 let duration_str = &date[..date.len() - 4];
@@ -181,8 +187,8 @@ impl HgTime {
             "now" => Self::now().and_then(|n| (n + 1).map(|m| n..m)),
             "today" => Self::now().and_then(|now| {
                 let date = now.to_naive().date();
-                let start = Self::try_from(date.and_hms(0, 0, 0));
-                let end = Self::try_from(date.and_hms(23, 59, 59)).map(|t| t + 1);
+                let start = Self::try_from(date.and_hms_opt(0, 0, 0).unwrap());
+                let end = Self::try_from(date.and_hms_opt(23, 59, 59).unwrap()).map(|t| t + 1);
                 if let (Ok(start), Ok(Some(end))) = (start, end) {
                     Some(start..end)
                 } else {
@@ -191,8 +197,8 @@ impl HgTime {
             }),
             "yesterday" => Self::now().and_then(|now| {
                 let date = now.to_naive().date() - Duration::days(1);
-                let start = Self::try_from(date.and_hms(0, 0, 0));
-                let end = Self::try_from(date.and_hms(23, 59, 59)).map(|t| t + 1);
+                let start = Self::try_from(date.and_hms_opt(0, 0, 0).unwrap());
+                let end = Self::try_from(date.and_hms_opt(23, 59, 59).unwrap()).map(|t| t + 1);
                 if let (Ok(start), Ok(Some(end))) = (start, end) {
                     Some(start..end)
                 } else {

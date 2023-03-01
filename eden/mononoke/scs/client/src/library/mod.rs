@@ -19,5 +19,8 @@ use chrono::TimeZone;
 use source_control as thrift;
 
 pub fn datetime(datetime: &thrift::DateTime) -> DateTime<FixedOffset> {
-    FixedOffset::east(datetime.tz).timestamp(datetime.timestamp, 0)
+    FixedOffset::east_opt(datetime.tz)
+        .unwrap()
+        .timestamp_opt(datetime.timestamp, 0)
+        .unwrap()
 }

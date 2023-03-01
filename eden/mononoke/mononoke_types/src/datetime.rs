@@ -231,8 +231,8 @@ impl From<Timestamp> for DateTime {
         let ts_secs = ts.timestamp_seconds();
         let ts_nsecs = (ts.0 % SEC_IN_NS) as u32;
         DateTime::new(ChronoDateTime::<FixedOffset>::from_utc(
-            NaiveDateTime::from_timestamp(ts_secs, ts_nsecs),
-            FixedOffset::west(0),
+            NaiveDateTime::from_timestamp_opt(ts_secs, ts_nsecs).unwrap(),
+            FixedOffset::west_opt(0).unwrap(),
         ))
     }
 }

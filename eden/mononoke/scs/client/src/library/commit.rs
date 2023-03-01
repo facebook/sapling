@@ -53,7 +53,10 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
         // the timezone is seconds east of UTC.
         let timestamp = commit.date;
         let timezone = commit.tz;
-        let date = FixedOffset::east(timezone).timestamp(timestamp, 0);
+        let date = FixedOffset::east_opt(timezone)
+            .unwrap()
+            .timestamp_opt(timestamp, 0)
+            .unwrap();
         // Extras are binary data, but usually we want to render them as
         // strings. In the case that they are not UTF-8 strings, they're
         // probably a commit hash, so we should hex-encode them. Record extras

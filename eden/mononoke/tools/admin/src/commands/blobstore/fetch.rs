@@ -168,7 +168,7 @@ pub async fn fetch(
                         std::io::stdout(),
                         "Ctime: {} ({})",
                         ctime,
-                        Local.timestamp(ctime, 0)
+                        Local.timestamp_opt(ctime, 0).unwrap()
                     )?;
                 }
                 if let Some(sizes) = value.as_meta().sizes() {

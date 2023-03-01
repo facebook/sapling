@@ -12,13 +12,23 @@ use mononoke_types::DateTime;
 
 /// Return a `DateTime` corresponding to <year>-01-01 00:00:00 UTC.
 pub fn day_1_utc(year: i32) -> DateTime {
-    DateTime::new(FixedOffset::west(0).ymd(year, 1, 1).and_hms(0, 0, 0))
+    DateTime::new(
+        FixedOffset::west_opt(0)
+            .unwrap()
+            .with_ymd_and_hms(year, 1, 1, 0, 0, 0)
+            .unwrap(),
+    )
 }
 
 /// Return a `DateTime` corresponding to <year>-01-01 00:00:00 UTC,
 /// with the specified offset applied.
 pub fn day_1_tz(year: i32, offset: i32) -> DateTime {
-    DateTime::new(FixedOffset::west(offset).ymd(year, 1, 1).and_hms(0, 0, 0))
+    DateTime::new(
+        FixedOffset::west_opt(offset)
+            .unwrap()
+            .with_ymd_and_hms(year, 1, 1, 0, 0, 0)
+            .unwrap(),
+    )
 }
 
 pub const PST_OFFSET: i32 = 7 * 3600;

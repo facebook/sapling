@@ -89,7 +89,10 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(cs.author().await?, "Jeremy Fitzhardinge <jsgf@fb.com>");
     assert_eq!(
         cs.author_date().await?,
-        FixedOffset::west(7 * 3600).timestamp(1504041761, 0)
+        FixedOffset::west_opt(7 * 3600)
+            .unwrap()
+            .timestamp_opt(1504041761, 0)
+            .unwrap()
     );
     assert_eq!(cs.generation().await?.value(), 11);
 
@@ -121,7 +124,10 @@ async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(cs.author().await?, "Jeremy Fitzhardinge <jsgf@fb.com>");
     assert_eq!(
         cs.author_date().await?,
-        FixedOffset::west(7 * 3600).timestamp(1504041758, 0)
+        FixedOffset::west_opt(7 * 3600)
+            .unwrap()
+            .timestamp_opt(1504041758, 0)
+            .unwrap()
     );
 
     Ok(())
@@ -154,7 +160,10 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(cs.author().await?, "Jeremy Fitzhardinge <jsgf@fb.com>");
     assert_eq!(
         cs.author_date().await?,
-        FixedOffset::west(7 * 3600).timestamp(1504041761, 0)
+        FixedOffset::west_opt(7 * 3600)
+            .unwrap()
+            .timestamp_opt(1504041761, 0)
+            .unwrap()
     );
 
     Ok(())

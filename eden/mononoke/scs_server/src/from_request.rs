@@ -331,7 +331,10 @@ impl FromRequest<thrift::RepoCreateCommitParamsFileCopyInfo> for CreateCopyInfo 
 
 impl FromRequest<thrift::DateTime> for DateTime<FixedOffset> {
     fn from_request(date: &thrift::DateTime) -> Result<Self, thrift::RequestError> {
-        Ok(FixedOffset::east(date.tz).timestamp(date.timestamp, 0))
+        Ok(FixedOffset::east_opt(date.tz)
+            .unwrap()
+            .timestamp_opt(date.timestamp, 0)
+            .unwrap())
     }
 }
 

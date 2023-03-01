@@ -70,7 +70,9 @@ pub(crate) fn render_bookmark_info(
         w,
     )?;
     write!(w, "\n")?;
-    let date = FixedOffset::west(0).timestamp_nanos(bookmark_info.last_update_timestamp_ns);
+    let date = FixedOffset::west_opt(0)
+        .unwrap()
+        .timestamp_nanos(bookmark_info.last_update_timestamp_ns);
     let date_str = date.to_string();
     let local_date_str = date.with_timezone(&Local).to_string();
     if date_str != local_date_str {

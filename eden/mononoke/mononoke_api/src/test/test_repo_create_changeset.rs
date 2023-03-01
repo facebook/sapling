@@ -59,7 +59,10 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     let parent_hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
     let parents = vec![ChangesetId::from_str(parent_hash)?];
     let author = String::from("Test Author <test@example.com>");
-    let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+    let author_date = FixedOffset::east_opt(0)
+        .unwrap()
+        .with_ymd_and_hms(2000, 2, 1, 12, 0, 0)
+        .unwrap();
     let committer = None;
     let committer_date = None;
     let message = String::from("Test Created Commit");
@@ -211,7 +214,10 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
         let parent_hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
         let parents = vec![ChangesetId::from_str(parent_hash)?];
         let author = String::from("Test Author <test@example.com>");
-        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let author_date = FixedOffset::east_opt(0)
+            .unwrap()
+            .with_ymd_and_hms(2000, 2, 1, 12, 0, 0)
+            .unwrap();
         let committer = None;
         let committer_date = None;
         let message = String::from("Test Created Commit");
@@ -342,7 +348,10 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
         parents: Vec<ChangesetId>,
     ) -> Result<ChangesetContext, MononokeError> {
         let author = String::from("Test Author <test@example.com>");
-        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let author_date = FixedOffset::east_opt(0)
+            .unwrap()
+            .with_ymd_and_hms(2000, 2, 1, 12, 0, 0)
+            .unwrap();
         let committer = None;
         let committer_date = None;
         let message = String::from("Test Created Commit");
@@ -442,7 +451,10 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
         parents: Vec<ChangesetId>,
     ) -> Result<ChangesetContext, MononokeError> {
         let author = String::from("Test Author <test@example.com>");
-        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let author_date = FixedOffset::east_opt(0)
+            .unwrap()
+            .with_ymd_and_hms(2000, 2, 1, 12, 0, 0)
+            .unwrap();
         let committer = None;
         let committer_date = None;
         let message = String::from("Test Created Commit");
@@ -551,7 +563,10 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
         parents: Vec<ChangesetId>,
     ) -> Result<ChangesetContext, MononokeError> {
         let author = String::from("Test Author <test@example.com>");
-        let author_date = FixedOffset::east(0).ymd(2000, 2, 1).and_hms(12, 0, 0);
+        let author_date = FixedOffset::east_opt(0)
+            .unwrap()
+            .with_ymd_and_hms(2000, 2, 1, 12, 0, 0)
+            .unwrap();
         let committer = None;
         let committer_date = None;
         let message = String::from("Test Created Commit");
