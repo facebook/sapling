@@ -40,6 +40,10 @@ PST=UTC-8 / PDT=UTC-7
 Summer time begins on April's first Sunday at 2:00am,
 and ends on October's last Sunday at 2:00am.
 
+This sleep is to defeat Rust chrono crate's unix local TZ caching. It refreshes
+it's cache if it's been more than 1 second since since last check.
+  $ sleep 1
+
   $ hg debugrebuildstate
   $ echo "a" > a
 #if windows
