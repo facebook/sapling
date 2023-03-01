@@ -12,6 +12,7 @@ use clap_old::Arg;
 use clap_old::ArgMatches;
 pub use cmdlib_caching::CachelibSettings;
 use environment::Caching;
+pub use environment::LocalCacheConfig;
 use fbinit::FacebookInit;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
@@ -19,6 +20,7 @@ use once_cell::sync::OnceCell;
 use super::app::bool_as_str;
 use super::app::BOOL_VALUES;
 
+const CACHE_MODE: &str = "cache-mode";
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
 const MAX_PROCESS_SIZE: &str = "max-process-size";
@@ -152,18 +154,28 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
             .help("How often to rebalance across allocation classes"),
     )
     .arg(
+        Arg::with_name(CACHE_MODE)
+            .long(CACHE_MODE)
+            .possible_values(&["enabled", "local-only", "disabled"])
+            .default_value("enabled")
+            .help("Mode to initialize caching in"),
+    )
+    .arg(
         Arg::with_name(SKIP_CACHING)
             .long(SKIP_CACHING)
+            .hidden(true)
             .help("do not init cachelib and disable caches (useful for tests)"),
     )
     .arg(
         Arg::with_name(CACHELIB_ONLY_BLOBSTORE_OLD)
             .long(CACHELIB_ONLY_BLOBSTORE_OLD)
+            .hidden(true)
             .help("do not init memcache for blobstore. DEPRECATED, prefer --blobstore-cachelib-only=true"),
     )
     .arg(
         Arg::with_name(CACHELIB_ONLY_BLOBSTORE_NEW)
             .long(CACHELIB_ONLY_BLOBSTORE_NEW)
+            .hidden(true)
             .possible_values(BOOL_VALUES)
             .default_value(bool_as_str(defaults.blobstore_cachelib_only))
             .takes_value(true)
@@ -178,18 +190,22 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
     .args(&cache_args)
 }
 
-pub(crate) fn parse_cachelib_shards(matches: &ArgMatches<'_>) -> usize {
-    match matches.value_of(CACHELIB_SHARDS) {
+pub(crate) fn parse_cachelib_shards(matches: &ArgMatches<'_>) -> LocalCacheConfig {
+    let blobstore_cache_shards = match matches.value_of(CACHELIB_SHARDS) {
         Some(v) => v.parse().unwrap(),
         None => 0,
+    };
+    LocalCacheConfig {
+        blobstore_cache_shards,
     }
 }
 
 fn parse_caching(matches: &ArgMatches<'_>) -> Caching {
-    if matches.is_present(SKIP_CACHING) {
+    let cache_mode = matches.value_of(CACHE_MODE);
+    if matches.is_present(SKIP_CACHING) || cache_mode == Some("disabled") {
         Caching::Disabled
     } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE_OLD) {
-        Caching::CachelibOnlyBlobstore(parse_cachelib_shards(matches))
+        Caching::LocalBlobstoreOnly(parse_cachelib_shards(matches))
     } else {
         let cachelib_only = matches
             .value_of(CACHELIB_ONLY_BLOBSTORE_NEW)
@@ -200,7 +216,9 @@ fn parse_caching(matches: &ArgMatches<'_>) -> Caching {
             });
 
         if cachelib_only {
-            Caching::CachelibOnlyBlobstore(parse_cachelib_shards(matches))
+            Caching::LocalBlobstoreOnly(parse_cachelib_shards(matches))
+        } else if cache_mode == Some("local-only") {
+            Caching::LocalOnly(parse_cachelib_shards(matches))
         } else {
             Caching::Enabled(parse_cachelib_shards(matches))
         }
@@ -216,7 +234,7 @@ pub fn parse_and_init_cachelib(
     let caching = parse_caching(matches);
 
     match caching {
-        Caching::Enabled(..) | Caching::CachelibOnlyBlobstore(..) => {
+        Caching::Enabled(..) | Caching::LocalOnly(..) | Caching::LocalBlobstoreOnly(..) => {
             if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
                 settings.cache_size =
                     (cache_size.parse::<f64>().unwrap() * ONE_GIB as f64) as usize;

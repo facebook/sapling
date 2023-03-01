@@ -25,14 +25,23 @@ use sql_ext::facebook::MysqlOptions;
 use strum_macros::EnumString;
 use tokio::runtime::Runtime;
 
-#[derive(Copy, Clone, PartialEq)]
-pub enum Caching {
-    /// Caching is enabled with the given number of shards.
-    Enabled(usize),
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub struct LocalCacheConfig {
+    /// Number of shards in the local blobstore cache
+    pub blobstore_cache_shards: usize,
+}
 
-    /// Caching is enabled only for the blobstore via cachelib, with the given
-    /// number of shards.
-    CachelibOnlyBlobstore(usize),
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Caching {
+    /// Caching is fully enabled, with both local and shared caches.
+    Enabled(LocalCacheConfig),
+
+    /// Caching is only enabled locally - the shared cache is disabled.
+    LocalOnly(LocalCacheConfig),
+
+    /// Caching is only enabled locally, and only for the blobstore.
+    /// (DEPRECATED)
+    LocalBlobstoreOnly(LocalCacheConfig),
 
     /// Caching is not enabled.
     Disabled,

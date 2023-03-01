@@ -11,8 +11,10 @@ pub mod facebook;
 mod settings;
 
 use environment::Caching;
+use environment::LocalCacheConfig;
 use fbinit::FacebookInit;
 
+pub use crate::args::CacheMode;
 pub use crate::args::CachelibArgs;
 pub use crate::settings::CachelibSettings;
 
@@ -21,7 +23,7 @@ pub fn init_cachelib(
     settings: &CachelibSettings,
     args: &CachelibArgs,
 ) -> Caching {
-    if args.skip_caching {
+    if args.skip_caching || args.cache_mode == CacheMode::Disabled {
         return Caching::Disabled;
     }
 
@@ -39,9 +41,21 @@ pub fn init_cachelib(
             .expect("cachelib initialize should always succeed");
 
         if args.blobstore_cachelib_only {
-            Caching::CachelibOnlyBlobstore(args.cachelib_shards)
+            // Legacy mode where caching is only enabled for the blobstore.
+            // TODO(mbthomas): remove this
+            Caching::LocalBlobstoreOnly(LocalCacheConfig {
+                blobstore_cache_shards: args.cachelib_shards,
+            })
         } else {
-            Caching::Enabled(args.cachelib_shards)
+            match args.cache_mode {
+                CacheMode::Enabled => Caching::Enabled(LocalCacheConfig {
+                    blobstore_cache_shards: args.cachelib_shards,
+                }),
+                CacheMode::LocalOnly => Caching::LocalOnly(LocalCacheConfig {
+                    blobstore_cache_shards: args.cachelib_shards,
+                }),
+                CacheMode::Disabled => unreachable!(),
+            }
         }
     }
 }

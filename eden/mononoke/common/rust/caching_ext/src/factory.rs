@@ -23,6 +23,9 @@ pub enum CacheHandlerFactory {
         memcache_client: MemcacheClient,
     },
 
+    /// Caching is via a local cache (cachelib) only.
+    Local { cachelib_pool: VolatileLruCachePool },
+
     /// Caching is mocked for testing purposes, with items cached in an
     /// in-memory store.
     Mocked,
@@ -38,7 +41,9 @@ impl CacheHandlerFactory {
         T: Abomonation + Send + Clone + 'static,
     {
         match self {
-            Self::Shared { cachelib_pool, .. } => cachelib_pool.clone().into(),
+            Self::Shared { cachelib_pool, .. } | Self::Local { cachelib_pool, .. } => {
+                cachelib_pool.clone().into()
+            }
             Self::Mocked => CachelibHandler::create_mock(),
             Self::Noop => CachelibHandler::create_noop(),
         }
@@ -51,7 +56,7 @@ impl CacheHandlerFactory {
                 memcache_client, ..
             } => memcache_client.clone().into(),
             Self::Mocked => MemcacheHandler::create_mock(),
-            Self::Noop => MemcacheHandler::create_noop(),
+            Self::Noop | Self::Local { .. } => MemcacheHandler::create_noop(),
         }
     }
 }

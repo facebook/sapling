@@ -406,7 +406,7 @@ impl RepoFactory {
                 let mut blobstore = self.blobstore_no_cache(config).await?;
 
                 match self.env.caching {
-                    Caching::Enabled(cache_shards) => {
+                    Caching::Enabled(local_cache_config) => {
                         let fb = self.env.fb;
                         let memcache_blobstore = tokio::task::spawn_blocking(move || {
                             new_memcache_blobstore(fb, blobstore, "multiplexed", "")
@@ -414,14 +414,15 @@ impl RepoFactory {
                         .await??;
                         blobstore = cachelib_blobstore(
                             memcache_blobstore,
-                            cache_shards,
+                            local_cache_config.blobstore_cache_shards,
                             &self.env.blobstore_options.cachelib_options,
                         )?
                     }
-                    Caching::CachelibOnlyBlobstore(cache_shards) => {
+                    Caching::LocalOnly(local_cache_config)
+                    | Caching::LocalBlobstoreOnly(local_cache_config) => {
                         blobstore = cachelib_blobstore(
                             blobstore,
-                            cache_shards,
+                            local_cache_config.blobstore_cache_shards,
                             &self.env.blobstore_options.cachelib_options,
                         )?;
                     }
@@ -497,7 +498,10 @@ impl RepoFactory {
                 memcache_client: MemcacheClient::new(self.env.fb)
                     .context("Failed to initialize memcache client")?,
             })),
-            _ => Ok(None),
+            Caching::LocalOnly(_) => Ok(Some(CacheHandlerFactory::Local {
+                cachelib_pool: volatile_pool(name)?,
+            })),
+            Caching::LocalBlobstoreOnly(_) | Caching::Disabled => Ok(None),
         }
     }
 
