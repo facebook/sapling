@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFile, ChangedFileType, RepoRelativePath} from './types';
+import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
 import type {SetterOrUpdater} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
@@ -28,9 +28,18 @@ import {PurgeOperation} from './operations/PurgeOperation';
 import {ResolveOperation, ResolveTool} from './operations/ResolveOperation';
 import {RevertOperation} from './operations/RevertOperation';
 import platform from './platform';
-import {optimisticMergeConflicts, uncommittedChangesWithPreviews} from './previews';
+import {
+  optimisticMergeConflicts,
+  uncommittedChangesWithPreviews,
+  useIsOperationRunningOrQueued,
+} from './previews';
 import {selectedCommits} from './selection';
-import {latestHeadCommit, uncommittedChangesFetchError, useRunOperation} from './serverAPIState';
+import {
+  latestHeadCommit,
+  operationList,
+  uncommittedChangesFetchError,
+  useRunOperation,
+} from './serverAPIState';
 import {VSCodeButton, VSCodeCheckbox, VSCodeTextField} from '@vscode/webview-ui-toolkit/react';
 import {useEffect, useRef} from 'react';
 import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
@@ -199,28 +208,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
       ) : null}
       <div className="button-row">
         {conflicts != null ? (
-          <>
-            <VSCodeButton
-              appearance={allConflictsResolved ? 'primary' : 'icon'}
-              key="continue"
-              disabled={!allConflictsResolved}
-              data-testid="conflict-continue-button"
-              onClick={() => {
-                runOperation(new ContinueOperation());
-              }}>
-              <Icon slot="start" icon="debug-continue" />
-              <T>Continue</T>
-            </VSCodeButton>
-            <VSCodeButton
-              appearance="icon"
-              key="abort"
-              onClick={() => {
-                runOperation(new AbortMergeOperation(conflicts));
-              }}>
-              <Icon slot="start" icon="circle-slash" />
-              <T>Abort</T>
-            </VSCodeButton>
-          </>
+          <MergeConflictButtons allConflictsResolved={allConflictsResolved} conflicts={conflicts} />
         ) : (
           <>
             <OpenComparisonViewButton
@@ -377,6 +365,56 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         </div>
       )}
     </div>
+  );
+}
+
+function MergeConflictButtons({
+  conflicts,
+  allConflictsResolved,
+}: {
+  conflicts: MergeConflicts;
+  allConflictsResolved: boolean;
+}) {
+  const runOperation = useRunOperation();
+  // usually we only care if the operation is queued or actively running,
+  // but since we don't use optimistic state for continue/abort,
+  // we also need to consider recently run commands to disable the buttons.
+  // But only if the abort/continue command succeeded.
+  // TODO: is this reliable? Is it possible to get stuck with buttons disabled because
+  // we think it's still running?
+  const lastRunOperation = useRecoilValue(operationList).currentOperation;
+  const justFinishedContinue =
+    lastRunOperation?.operation instanceof ContinueOperation && lastRunOperation.exitCode === 0;
+  const justFinishedAbort =
+    lastRunOperation?.operation instanceof AbortMergeOperation && lastRunOperation.exitCode === 0;
+  const isRunningContinue = !!useIsOperationRunningOrQueued(ContinueOperation);
+  const isRunningAbort = !!useIsOperationRunningOrQueued(AbortMergeOperation);
+  const shouldDisableButtons =
+    isRunningContinue || isRunningAbort || justFinishedContinue || justFinishedAbort;
+  return (
+    <>
+      <VSCodeButton
+        appearance={allConflictsResolved ? 'primary' : 'icon'}
+        key="continue"
+        disabled={!allConflictsResolved || shouldDisableButtons}
+        data-testid="conflict-continue-button"
+        onClick={() => {
+          runOperation(new ContinueOperation());
+        }}>
+        <Icon slot="start" icon={isRunningContinue ? 'loading' : 'debug-continue'} />
+        <T>Continue</T>
+      </VSCodeButton>
+      <VSCodeButton
+        appearance="icon"
+        key="abort"
+        disabled={shouldDisableButtons}
+        onClick={() => {
+          runOperation(new AbortMergeOperation(conflicts));
+        }}>
+        <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
+        <T>Abort</T>
+      </VSCodeButton>
+    </>
   );
 }
 

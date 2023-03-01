@@ -523,7 +523,8 @@ export type MergeConflictsPreviewContext = {
   conflicts: MergeConflicts | undefined;
 };
 
-type Class<T> = new (...args: unknown[]) => T;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Class<T> = new (...args: any[]) => T;
 /**
  * React hook which looks in operation queue and history to see if a
  * particular operation is running or queued to run.
