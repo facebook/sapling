@@ -17,6 +17,7 @@ use bytes::Bytes;
 use caching_ext::fill_cache;
 use caching_ext::get_or_fill;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -56,10 +57,10 @@ pub struct Caches {
 }
 
 impl Caches {
-    pub fn new_mock(keygen: KeyGen) -> Self {
+    pub fn new(cache_handler_factory: CacheHandlerFactory, keygen: KeyGen) -> Self {
         Self {
-            memcache: MemcacheHandler::create_mock(),
-            cache_pool: CachelibHandler::create_mock(),
+            memcache: cache_handler_factory.memcache(),
+            cache_pool: cache_handler_factory.cachelib(),
             keygen,
         }
     }

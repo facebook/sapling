@@ -7,8 +7,7 @@
 
 use std::sync::Arc;
 
-use cachelib::VolatileLruCachePool;
-use fbinit::FacebookInit;
+use caching_ext::CacheHandlerFactory;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::RepositoryId;
@@ -73,17 +72,21 @@ impl NewFilenodesBuilder {
 
     pub fn enable_caching(
         &mut self,
-        fb: FacebookInit,
-        filenodes_cache_pool: VolatileLruCachePool,
-        filenodes_history_cache_pool: VolatileLruCachePool,
+        cache_handler_factory: CacheHandlerFactory,
+        history_cache_handler_factory: CacheHandlerFactory,
         backing_store_name: &str,
         backing_store_params: &str,
     ) {
-        self.reader.local_cache = LocalCache::new(
-            filenodes_cache_pool.into(),
-            filenodes_history_cache_pool.into(),
-        );
+        // We require two cache builders for the two cache pools.
+        self.reader.local_cache =
+            LocalCache::new(&cache_handler_factory, &history_cache_handler_factory);
 
-        self.reader.remote_cache = RemoteCache::new(fb, backing_store_name, backing_store_params);
+        // However, memcache doesn't have cache pools, so we can just use
+        // either of the cache builders to construct the remote cache.
+        self.reader.remote_cache = RemoteCache::new(
+            &cache_handler_factory,
+            backing_store_name,
+            backing_store_params,
+        );
     }
 }

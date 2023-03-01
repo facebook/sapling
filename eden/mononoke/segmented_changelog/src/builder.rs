@@ -11,9 +11,9 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore::Blobstore;
 use bookmarks::ArcBookmarks;
+use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ArcChangesetFetcher;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentity;
@@ -78,7 +78,6 @@ pub fn new_test_segmented_changelog(
 }
 
 pub async fn new_server_segmented_changelog_manager<'a>(
-    fb: FacebookInit,
     ctx: &'a CoreContext,
     repo_identity: &'a RepoIdentity,
     config: SegmentedChangelogConfig,
@@ -86,15 +85,16 @@ pub async fn new_server_segmented_changelog_manager<'a>(
     changeset_fetcher: ArcChangesetFetcher,
     bookmarks: ArcBookmarks,
     blobstore: Arc<dyn Blobstore>,
-    cache_pool: Option<cachelib::VolatileLruCachePool>,
+    cache_handler_factory: Option<CacheHandlerFactory>,
 ) -> Result<SegmentedChangelogManager> {
     let repo_id = repo_identity.id();
     let seed_heads = seedheads_from_config(ctx, &config, JobType::Server)
         .context("finding segmented changelog heads")?;
     let replica_lag_monitor = Arc::new(NoReplicaLagMonitor());
     let mut idmap_factory = IdMapFactory::new(connections.0.clone(), replica_lag_monitor, repo_id);
-    if let Some(pool) = cache_pool {
-        idmap_factory = idmap_factory.with_cache_handlers(CacheHandlers::prod(fb, pool));
+    if let Some(cache_handler_factory) = cache_handler_factory {
+        idmap_factory =
+            idmap_factory.with_cache_handlers(CacheHandlers::new(cache_handler_factory));
     }
     let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
     let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore.clone());
@@ -116,7 +116,6 @@ pub async fn new_server_segmented_changelog_manager<'a>(
 }
 
 pub async fn new_server_segmented_changelog<'a>(
-    fb: FacebookInit,
     ctx: &'a CoreContext,
     repo_identity: &'a RepoIdentity,
     config: SegmentedChangelogConfig,
@@ -124,7 +123,7 @@ pub async fn new_server_segmented_changelog<'a>(
     changeset_fetcher: ArcChangesetFetcher,
     bookmarks: ArcBookmarks,
     blobstore: Arc<dyn Blobstore>,
-    cache_pool: Option<cachelib::VolatileLruCachePool>,
+    cache_handler_factory: Option<CacheHandlerFactory>,
 ) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
     if !config.enabled {
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
@@ -150,7 +149,6 @@ pub async fn new_server_segmented_changelog<'a>(
     }
     let reload_dag_save_period = config.reload_dag_save_period;
     let manager = new_server_segmented_changelog_manager(
-        fb,
         ctx,
         repo_identity,
         config,
@@ -158,7 +156,7 @@ pub async fn new_server_segmented_changelog<'a>(
         changeset_fetcher,
         bookmarks,
         blobstore,
-        cache_pool,
+        cache_handler_factory,
     )
     .await?;
     let name = repo_identity.name().to_string();

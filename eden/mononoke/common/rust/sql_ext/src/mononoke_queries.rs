@@ -341,6 +341,7 @@ struct QueryCacheStore<'a, F, T> {
     key: Key,
     cache_config: &'a CachingConfig,
     cachelib: CachelibHandler<T>,
+    memcache: MemcacheHandler,
     fetcher: F,
 }
 
@@ -354,7 +355,7 @@ impl<F, V> EntityStore<V> for QueryCacheStore<'_, F, V> {
     }
 
     fn memcache(&self) -> &MemcacheHandler {
-        &self.cache_config.memcache
+        &self.memcache
     }
 
     fn cache_determinator(&self, _v: &V) -> CacheDisposition {
@@ -448,7 +449,8 @@ where
     if let Some(config) = cache_data.config.as_ref() {
         let store = QueryCacheStore {
             key: cache_data.key,
-            cachelib: config.cache_pool.clone().into(),
+            cachelib: config.cache_handler_factory.cachelib(),
+            memcache: config.cache_handler_factory.memcache(),
             cache_config: config,
             fetcher: fetch,
         };

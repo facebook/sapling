@@ -16,9 +16,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
-use cachelib::VolatileLruCachePool;
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -28,10 +28,8 @@ use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
@@ -133,34 +131,26 @@ impl From<HgChangesetId> for BonsaiOrHgChangesetId {
 
 pub struct CachingBonsaiHgMapping {
     mapping: Arc<dyn BonsaiHgMapping>,
-    cache_pool: CachelibHandler<BonsaiHgMappingCacheEntry>,
+    cachelib: CachelibHandler<BonsaiHgMappingCacheEntry>,
     memcache: MemcacheHandler,
     keygen: KeyGen,
 }
 
 impl CachingBonsaiHgMapping {
     pub fn new(
-        fb: FacebookInit,
         mapping: Arc<dyn BonsaiHgMapping>,
-        cache_pool: VolatileLruCachePool,
+        cache_handler_factory: CacheHandlerFactory,
     ) -> Self {
         Self {
             mapping,
-            cache_pool: cache_pool.into(),
-            memcache: MemcacheClient::new(fb)
-                .expect("Memcache initialization failed")
-                .into(),
+            cachelib: cache_handler_factory.cachelib(),
+            memcache: cache_handler_factory.memcache(),
             keygen: CachingBonsaiHgMapping::create_key_gen(),
         }
     }
 
     pub fn new_test(mapping: Arc<dyn BonsaiHgMapping>) -> Self {
-        Self {
-            mapping,
-            cache_pool: CachelibHandler::create_mock(),
-            memcache: MemcacheHandler::create_mock(),
-            keygen: CachingBonsaiHgMapping::create_key_gen(),
-        }
+        Self::new(mapping, CacheHandlerFactory::Mocked)
     }
 
     fn create_key_gen() -> KeyGen {
@@ -275,7 +265,7 @@ type CacheRequest<'a> = (&'a CoreContext, &'a CachingBonsaiHgMapping);
 impl EntityStore<BonsaiHgMappingCacheEntry> for CacheRequest<'_> {
     fn cachelib(&self) -> &CachelibHandler<BonsaiHgMappingCacheEntry> {
         let (_, mapping) = self;
-        &mapping.cache_pool
+        &mapping.cachelib
     }
 
     fn keygen(&self) -> &KeyGen {

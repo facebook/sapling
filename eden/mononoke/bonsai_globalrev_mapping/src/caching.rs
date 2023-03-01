@@ -17,9 +17,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bonsai_globalrev_mapping_thrift as thrift;
 use bytes::Bytes;
-use cachelib::VolatileLruCachePool;
 use caching_ext::get_or_fill;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -29,10 +29,8 @@ use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mononoke_types::ChangesetId;
 use mononoke_types::Globalrev;
 use mononoke_types::RepositoryId;
@@ -85,27 +83,19 @@ pub struct CachingBonsaiGlobalrevMapping {
 
 impl CachingBonsaiGlobalrevMapping {
     pub fn new(
-        fb: FacebookInit,
         inner: Arc<dyn BonsaiGlobalrevMapping>,
-        cachelib: VolatileLruCachePool,
+        cache_handler_factory: CacheHandlerFactory,
     ) -> Self {
         Self {
             inner,
-            cachelib: cachelib.into(),
-            memcache: MemcacheClient::new(fb)
-                .expect("Memcache initialization failed")
-                .into(),
+            cachelib: cache_handler_factory.cachelib(),
+            memcache: cache_handler_factory.memcache(),
             keygen: Self::create_key_gen(),
         }
     }
 
     pub fn new_test(inner: Arc<dyn BonsaiGlobalrevMapping>) -> Self {
-        Self {
-            inner,
-            cachelib: CachelibHandler::create_mock(),
-            memcache: MemcacheHandler::create_mock(),
-            keygen: Self::create_key_gen(),
-        }
+        Self::new(inner, CacheHandlerFactory::Mocked)
     }
 
     fn create_key_gen() -> KeyGen {

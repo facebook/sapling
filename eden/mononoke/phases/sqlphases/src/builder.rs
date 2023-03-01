@@ -7,11 +7,9 @@
 
 use std::sync::Arc;
 
-use cachelib::VolatileLruCachePool;
+use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ArcChangesetFetcher;
-use fbinit::FacebookInit;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mononoke_types::RepositoryId;
 use phases::ArcPhases;
 use sql::Connection;
@@ -40,14 +38,8 @@ pub struct SqlPhasesBuilder {
 }
 
 impl SqlPhasesBuilder {
-    pub fn enable_caching(&mut self, fb: FacebookInit, cache_pool: VolatileLruCachePool) {
-        let caches = Caches {
-            memcache: MemcacheClient::new(fb)
-                .expect("Memcache initialization failed")
-                .into(),
-            keygen: Self::key_gen(),
-            cache_pool: cache_pool.into(),
-        };
+    pub fn enable_caching(&mut self, cache_handler_factory: CacheHandlerFactory) {
+        let caches = Caches::new(cache_handler_factory, Self::key_gen());
         self.caches = Arc::new(caches);
     }
 
@@ -83,7 +75,8 @@ impl SqlConstruct for SqlPhasesBuilder {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-phases.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        let caches = Arc::new(Caches::new_mock(Self::key_gen()));
+        // TODO(mbthomas): this shouldn't be using a mocked cache if caching is disabled
+        let caches = Arc::new(Caches::new(CacheHandlerFactory::Mocked, Self::key_gen()));
         Self {
             write_connection: connections.write_connection,
             read_connection: connections.read_connection,
@@ -99,6 +92,7 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesBuilder {}
 mod tests {
     use anyhow::Error;
     use context::CoreContext;
+    use fbinit::FacebookInit;
     use maplit::hashset;
     use mononoke_types_mocks::changesetid::*;
     use phases::Phase;

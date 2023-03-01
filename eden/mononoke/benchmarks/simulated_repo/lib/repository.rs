@@ -35,6 +35,7 @@ use bookmarks::ArcBookmarks;
 use cacheblob::dummy::DummyLease;
 use cacheblob::new_cachelib_blobstore;
 use cacheblob::CachelibBlobstoreOptions;
+use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
@@ -59,6 +60,7 @@ use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use futures::stream::BoxStream;
 use memblob::Memblob;
+use memcache::MemcacheClient;
 use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types::HgChangesetId;
@@ -139,6 +141,13 @@ fn volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
     cachelib::get_volatile_pool(name)?.ok_or_else(|| anyhow!("no cache pool: {}", name))
 }
 
+fn cache_handler_factory(fb: FacebookInit, name: &str) -> Result<CacheHandlerFactory> {
+    Ok(CacheHandlerFactory::Shared {
+        cachelib_pool: volatile_pool(name)?,
+        memcache_client: MemcacheClient::new(fb)?,
+    })
+}
+
 #[facet::factory()]
 impl BenchmarkRepoFactory {
     pub fn repo_blobstore(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcRepoBlobstore> {
@@ -183,9 +192,8 @@ impl BenchmarkRepoFactory {
             self.delay_settings.db_put_dist,
         ));
         Ok(Arc::new(CachingChangesets::new(
-            self.fb,
             changesets,
-            volatile_pool("changesets")?,
+            cache_handler_factory(self.fb, "changesets")?,
         )))
     }
 
@@ -236,9 +244,8 @@ impl BenchmarkRepoFactory {
             self.delay_settings.db_put_dist,
         ));
         Ok(Arc::new(CachingBonsaiHgMapping::new(
-            self.fb,
             mapping,
-            volatile_pool("bonsai_hg_mapping")?,
+            cache_handler_factory(self.fb, "bonsai_hg_mapping")?,
         )))
     }
 
@@ -285,10 +292,13 @@ impl BenchmarkRepoFactory {
     }
 
     pub fn filenodes(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcFilenodes> {
-        let pool = volatile_pool("filenodes")?;
-
         let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
-        builder.enable_caching(self.fb, pool.clone(), pool, "filenodes", "");
+        builder.enable_caching(
+            cache_handler_factory(self.fb, "filenodes")?,
+            cache_handler_factory(self.fb, "filenodes_history")?,
+            "filenodes",
+            "",
+        );
 
         Ok(Arc::new(DelayedFilenodes::new(
             builder.build(repo_identity.id()),

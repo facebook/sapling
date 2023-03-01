@@ -21,12 +21,12 @@ use bookmarks::Bookmarks;
 use bookmarks::BookmarksArc;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
+use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ChangesetFetcher;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::ChangesetEntry;
 use changesets::ChangesetsArc;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -115,14 +115,14 @@ impl SegmentedChangelogTailer {
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
         seed_heads: Vec<SeedHead>,
-        caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
+        cache_handler_factory: Option<CacheHandlerFactory>,
     ) -> Self {
         let clone_hints = CloneHints::new(connections.0.clone(), repo_id, blobstore.clone());
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
         let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
         let mut idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
-        if let Some((fb, pool)) = caching {
-            let cache_handlers = CacheHandlers::prod(fb, pool);
+        if let Some(cache_handler_factory) = cache_handler_factory {
+            let cache_handlers = CacheHandlers::new(cache_handler_factory);
             idmap_factory = idmap_factory.with_cache_handlers(cache_handlers);
         }
         Self {
@@ -146,7 +146,7 @@ impl SegmentedChangelogTailer {
         mysql_options: &MysqlOptions,
         seed_heads: Vec<SeedHead>,
         prefetched_commits: impl Stream<Item = Result<ChangesetEntry, Error>>,
-        caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
+        cache_handler_factory: Option<CacheHandlerFactory>,
     ) -> Result<Self> {
         let repo_id = blobrepo.repo_identity().id();
 
@@ -208,7 +208,7 @@ impl SegmentedChangelogTailer {
             blobrepo.repo_blobstore_arc(),
             blobrepo.bookmarks_arc(),
             seed_heads,
-            caching,
+            cache_handler_factory,
         ))
     }
 

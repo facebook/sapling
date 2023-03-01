@@ -7,6 +7,7 @@
 
 use std::marker::PhantomData;
 
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CachelibHandler;
 use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
@@ -32,28 +33,22 @@ pub struct LocalCache {
 
 impl LocalCache {
     pub fn new(
-        filenode_cache: CachelibHandler<FilenodeInfo>,
-        history_cache: CachelibHandler<FilenodeRange>,
+        filenode_cache_handler_factory: &CacheHandlerFactory,
+        history_cache_handler_factory: &CacheHandlerFactory,
     ) -> Self {
         LocalCache {
-            filenode_cache,
-            history_cache,
+            filenode_cache: filenode_cache_handler_factory.cachelib(),
+            history_cache: history_cache_handler_factory.cachelib(),
         }
     }
 
     pub fn new_noop() -> Self {
-        Self::new(
-            CachelibHandler::create_noop(),
-            CachelibHandler::create_noop(),
-        )
+        Self::new(&CacheHandlerFactory::Noop, &CacheHandlerFactory::Noop)
     }
 
     #[cfg(test)]
     pub fn new_mock() -> Self {
-        Self::new(
-            CachelibHandler::create_mock(),
-            CachelibHandler::create_mock(),
-        )
+        Self::new(&CacheHandlerFactory::Mocked, &CacheHandlerFactory::Mocked)
     }
 
     pub fn get_filenode(&self, key: &CacheKey<FilenodeInfo>) -> Option<FilenodeInfo> {

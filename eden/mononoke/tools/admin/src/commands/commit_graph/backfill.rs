@@ -15,6 +15,7 @@ use buffered_commit_graph_storage::BufferedCommitGraphStorage;
 use bulkops::Direction;
 use bulkops::PublicChangesetBulkFetch;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
+use caching_ext::CacheHandlerFactory;
 use clap::Args;
 use commit_graph::CommitGraph;
 use commit_graph_types::storage::CommitGraphStorage;
@@ -22,6 +23,7 @@ use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_stats::TimedFutureExt;
+use memcache::MemcacheClient;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -189,13 +191,16 @@ pub(super) async fn backfill(
         );
     let maybe_cached_sql_storage: Arc<dyn CommitGraphStorage> = match app.environment().caching {
         environment::Caching::Enabled(_) => {
-            if let Some(pool) = cachelib::get_volatile_pool("commit_graph")
+            if let Some(cachelib_pool) = cachelib::get_volatile_pool("commit_graph")
                 .with_context(|| "Missing commit_graph cache pool")?
             {
+                let memcache_client = MemcacheClient::new(ctx.fb)?;
                 Arc::new(CachingCommitGraphStorage::new(
-                    ctx.fb,
                     Arc::new(sql_storage),
-                    pool,
+                    CacheHandlerFactory::Shared {
+                        cachelib_pool,
+                        memcache_client,
+                    },
                 ))
             } else {
                 Arc::new(sql_storage)

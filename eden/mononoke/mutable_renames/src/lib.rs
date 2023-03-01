@@ -11,11 +11,10 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
-use cachelib::VolatileLruCachePool;
+use caching_ext::CacheHandlerFactory;
 use changesets::Changesets;
 use context::CoreContext;
 use context::PerfCounterType;
-use fbinit::FacebookInit;
 use futures::try_join;
 use manifest::Entry;
 use maplit::hashset;
@@ -144,14 +143,11 @@ pub struct MutableRenames {
 
 impl MutableRenames {
     pub fn new(
-        fb: FacebookInit,
         repo_id: RepositoryId,
         store: SqlMutableRenamesStore,
-        cache_pool: Option<VolatileLruCachePool>,
+        cache_handler_factory: Option<CacheHandlerFactory>,
     ) -> Result<Self, Error> {
-        let cache_handlers = cache_pool
-            .map(|pool| CacheHandlers::new(fb, pool))
-            .transpose()?;
+        let cache_handlers = cache_handler_factory.map(CacheHandlers::new).transpose()?;
         Ok(Self {
             repo_id,
             store: Arc::new(store),

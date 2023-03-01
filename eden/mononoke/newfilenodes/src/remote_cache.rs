@@ -10,8 +10,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 use bytes::Bytes;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::MemcacheHandler;
-use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use filenodes::thrift;
 use filenodes::thrift::MC_CODEVER;
@@ -20,7 +20,6 @@ use filenodes::FilenodeInfo;
 use filenodes::FilenodeRange;
 use futures::future::try_join_all;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use rand::random;
 use stats::prelude::*;
@@ -62,28 +61,24 @@ pub struct RemoteCache {
 }
 
 impl RemoteCache {
-    pub fn new(fb: FacebookInit, backing_store_name: &str, backing_store_params: &str) -> Self {
+    pub fn new(
+        cache_handler_factory: &CacheHandlerFactory,
+        backing_store_name: &str,
+        backing_store_params: &str,
+    ) -> Self {
         Self {
-            memcache: MemcacheHandler::from(
-                MemcacheClient::new(fb).expect("Memcache initialization failed"),
-            ),
+            memcache: cache_handler_factory.memcache(),
             keygen: Self::create_key_gen(backing_store_name, backing_store_params),
         }
     }
 
     pub fn new_noop() -> Self {
-        Self {
-            memcache: MemcacheHandler::create_noop(),
-            keygen: Self::create_key_gen("newfilenodes", ""),
-        }
+        Self::new(&CacheHandlerFactory::Noop, "newfilenodes", "")
     }
 
     #[cfg(test)]
     pub fn new_mock() -> Self {
-        Self {
-            memcache: MemcacheHandler::create_mock(),
-            keygen: Self::create_key_gen("newfilenodes", "test"),
-        }
+        Self::new(&CacheHandlerFactory::Mocked, "newfilenodes", "test")
     }
 
     fn create_key_gen(backing_store_name: &str, backing_store_params: &str) -> KeyGen {
@@ -415,6 +410,7 @@ pub mod test {
     use std::time::Duration;
 
     use anyhow::Error;
+    use fbinit::FacebookInit;
     use mercurial_types_mocks::nodehash::ONES_CSID;
     use mercurial_types_mocks::nodehash::ONES_FNID;
     use mononoke_types::RepoPath;

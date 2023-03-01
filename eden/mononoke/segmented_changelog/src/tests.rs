@@ -17,8 +17,7 @@ use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
 use bulkops::PublicChangesetBulkFetch;
-use caching_ext::CachelibHandler;
-use caching_ext::MemcacheHandler;
+use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ChangesetFetcherArc;
 use changeset_fetcher::ChangesetFetcherRef;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
@@ -891,14 +890,9 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     let blobrepo = Linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
-    let cs_to_dag_handler = CachelibHandler::create_mock();
-    let dag_to_cs_handler = CachelibHandler::create_mock();
-    let memcache_handler = MemcacheHandler::create_mock();
-    let cache_handlers = CacheHandlers::new(
-        cs_to_dag_handler.clone(),
-        dag_to_cs_handler.clone(),
-        memcache_handler.clone(),
-    );
+    let cache_handlers = CacheHandlers::new(CacheHandlerFactory::Mocked);
+    let cs_to_dag_handler = cache_handlers.cs_to_dag.clone();
+    let dag_to_cs_handler = cache_handlers.dag_to_cs.clone();
 
     // It's easier to reason about cache hits and sets when the dag is already built
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;

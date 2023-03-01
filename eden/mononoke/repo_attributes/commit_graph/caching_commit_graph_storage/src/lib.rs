@@ -18,6 +18,7 @@ use bytes::Bytes;
 use caching_ext::get_or_fill;
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -33,11 +34,9 @@ use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use maplit::hashset;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -228,33 +227,21 @@ impl CachingCommitGraphStorage {
     }
 
     pub fn new(
-        fb: FacebookInit,
         storage: Arc<dyn CommitGraphStorage>,
-        cache_pool: cachelib::VolatileLruCachePool,
+        cache_handler_factory: CacheHandlerFactory,
     ) -> Self {
         Self {
             repo_id: storage.repo_id(),
             storage,
-            cachelib: cache_pool.into(),
-            memcache: MemcacheClient::new(fb)
-                .expect("Memcache initialization failed")
-                .into(),
+            cachelib: cache_handler_factory.cachelib(),
+            memcache: cache_handler_factory.memcache(),
             keygen: Self::keygen(),
         }
     }
 
     #[cfg(test)]
     pub fn mocked(storage: Arc<dyn CommitGraphStorage>) -> Self {
-        let cachelib = CachelibHandler::create_mock();
-        let memcache = MemcacheHandler::create_mock();
-
-        Self {
-            repo_id: storage.repo_id(),
-            storage,
-            cachelib,
-            memcache,
-            keygen: Self::keygen(),
-        }
+        Self::new(storage, CacheHandlerFactory::Mocked)
     }
 
     fn request<'a>(&'a self, ctx: &'a CoreContext, prefetch: Prefetch) -> CacheRequest<'a> {

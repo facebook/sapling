@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -25,12 +26,10 @@ use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use futures::future;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 
@@ -54,33 +53,11 @@ pub struct CacheHandlers {
 }
 
 impl CacheHandlers {
-    pub fn new(
-        dag_to_cs: CachelibHandler<ChangesetIdWrapper>,
-        cs_to_dag: CachelibHandler<DagIdWrapper>,
-        memcache: MemcacheHandler,
-    ) -> Self {
+    pub fn new(cache_handler_factory: CacheHandlerFactory) -> Self {
         Self {
-            dag_to_cs,
-            cs_to_dag,
-            memcache,
-        }
-    }
-
-    pub fn prod(fb: FacebookInit, cache_pool: cachelib::VolatileLruCachePool) -> Self {
-        Self {
-            dag_to_cs: cache_pool.clone().into(),
-            cs_to_dag: cache_pool.into(),
-            memcache: MemcacheClient::new(fb)
-                .expect("Memcache initialization failed")
-                .into(),
-        }
-    }
-
-    pub fn mock() -> Self {
-        Self {
-            dag_to_cs: CachelibHandler::create_mock(),
-            cs_to_dag: CachelibHandler::create_mock(),
-            memcache: MemcacheHandler::create_mock(),
+            dag_to_cs: cache_handler_factory.cachelib(),
+            cs_to_dag: cache_handler_factory.cachelib(),
+            memcache: cache_handler_factory.memcache(),
         }
     }
 }
@@ -366,11 +343,7 @@ mod tests {
     async fn test_no_key_colisions(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 
-        let cache_handlers = CacheHandlers::new(
-            CachelibHandler::create_mock(),
-            CachelibHandler::create_mock(),
-            MemcacheHandler::create_mock(),
-        );
+        let cache_handlers = CacheHandlers::new(CacheHandlerFactory::Mocked);
         let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
         let new_cached_idmap = |repo_id| {
             let idmap_version = IdMapVersion(0);

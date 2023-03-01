@@ -14,8 +14,8 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
-use cachelib::VolatileLruCachePool;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -25,10 +25,8 @@ use caching_ext::McResult;
 use caching_ext::MemcacheEntity;
 use caching_ext::MemcacheHandler;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mononoke_types::hash::Blake2;
 use mononoke_types::path_bytes_from_mpath;
 use mononoke_types::ChangesetId;
@@ -55,52 +53,33 @@ pub struct CacheHandlers {
 }
 
 impl CacheHandlers {
-    pub fn new(fb: FacebookInit, pool: VolatileLruCachePool) -> Result<Self, Error> {
-        let memcache = MemcacheClient::new(fb)?.into();
-        let presence_cachelib = pool.clone().into();
+    pub fn new(cache_handler_factory: CacheHandlerFactory) -> Result<Self, Error> {
         let sitever = tunables::tunables()
             .mutable_renames_sitever()
             .unwrap_or_default()
             .try_into()
             .context("While converting from i64 to u32 sitever")?;
         let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, sitever);
-        let rename_cachelib = pool.clone().into();
         let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", CODEVER, sitever);
-        let get_cs_ids_cachelib = pool.into();
         let get_cs_ids_keygen = KeyGen::new(
             "scm.mononoke.mutable_renames.cs_ids_for_path",
             CODEVER,
             sitever,
         );
         Ok(Self {
-            memcache,
-            presence_cachelib,
+            memcache: cache_handler_factory.memcache(),
+            presence_cachelib: cache_handler_factory.cachelib(),
             presence_keygen,
-            rename_cachelib,
+            rename_cachelib: cache_handler_factory.cachelib(),
             rename_keygen,
-            get_cs_ids_cachelib,
+            get_cs_ids_cachelib: cache_handler_factory.cachelib(),
             get_cs_ids_keygen,
         })
     }
 
     pub fn new_test() -> Self {
-        let memcache = MemcacheHandler::create_mock();
-        let presence_cachelib = CachelibHandler::create_mock();
-        let rename_cachelib = CachelibHandler::create_mock();
-        let presence_keygen = KeyGen::new("scm.mononoke.mutable_renames.present", CODEVER, 0);
-        let rename_keygen = KeyGen::new("scm.mononoke.mutable_renames.rename", CODEVER, 0);
-        let get_cs_ids_cachelib = CachelibHandler::create_mock();
-        let get_cs_ids_keygen =
-            KeyGen::new("scm.mononoke.mutable_renames.cs_ids_for_path", CODEVER, 0);
-        Self {
-            memcache,
-            presence_cachelib,
-            presence_keygen,
-            rename_cachelib,
-            rename_keygen,
-            get_cs_ids_cachelib,
-            get_cs_ids_keygen,
-        }
+        Self::new(CacheHandlerFactory::Mocked)
+            .expect("Test construction of CacheHandlers should succeed")
     }
 
     pub fn has_rename<'a>(

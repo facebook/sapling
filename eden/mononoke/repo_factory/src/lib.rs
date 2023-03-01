@@ -52,6 +52,7 @@ use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
+use caching_ext::CacheHandlerFactory;
 use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::ArcChangesets;
@@ -488,10 +489,14 @@ impl RepoFactory {
         session.new_context(logger, self.env.scuba_sample_builder.clone())
     }
 
-    /// Returns a named volatile pool if caching is enabled.
-    fn maybe_volatile_pool(&self, name: &str) -> Result<Option<cachelib::VolatileLruCachePool>> {
+    /// Returns a cache builder for the named pool if caching is enabled
+    fn cache_handler_factory(&self, name: &str) -> Result<Option<CacheHandlerFactory>> {
         match self.env.caching {
-            Caching::Enabled(_) => Ok(Some(volatile_pool(name)?)),
+            Caching::Enabled(_) => Ok(Some(CacheHandlerFactory::Shared {
+                cachelib_pool: volatile_pool(name)?,
+                memcache_client: MemcacheClient::new(self.env.fb)
+                    .context("Failed to initialize memcache client")?,
+            })),
             _ => Ok(None),
         }
     }
@@ -667,11 +672,10 @@ impl RepoFactory {
         let changesets = builder.build(self.env.rendezvous_options, repo_identity.id());
 
         let possibly_cached_changesets: ArcChangesets =
-            if let Some(pool) = self.maybe_volatile_pool("changesets")? {
+            if let Some(cache_handler_factory) = self.cache_handler_factory("changesets")? {
                 Arc::new(CachingChangesets::new(
-                    self.env.fb,
                     Arc::new(changesets),
-                    pool,
+                    cache_handler_factory,
                 ))
             } else {
                 Arc::new(changesets)
@@ -737,8 +741,8 @@ impl RepoFactory {
             .open::<SqlPhasesBuilder>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::Phases)?;
-        if let Some(pool) = self.maybe_volatile_pool("phases")? {
-            sql_phases_builder.enable_caching(self.env.fb, pool);
+        if let Some(cache_handler_factory) = self.cache_handler_factory("phases")? {
+            sql_phases_builder.enable_caching(cache_handler_factory);
         }
         let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
         Ok(sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher))
@@ -760,11 +764,10 @@ impl RepoFactory {
 
         let bonsai_hg_mapping = builder.build(repo_identity.id(), self.env.rendezvous_options);
 
-        if let Some(pool) = self.maybe_volatile_pool("bonsai_hg_mapping")? {
+        if let Some(cache_handler_factory) = self.cache_handler_factory("bonsai_hg_mapping")? {
             Ok(Arc::new(CachingBonsaiHgMapping::new(
-                self.env.fb,
                 Arc::new(bonsai_hg_mapping),
-                pool,
+                cache_handler_factory,
             )))
         } else {
             Ok(Arc::new(bonsai_hg_mapping))
@@ -805,11 +808,12 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::BonsaiGlobalrevMapping)?
             .build(repo_identity.id());
-        if let Some(pool) = self.maybe_volatile_pool("bonsai_globalrev_mapping")? {
+        if let Some(cache_handler_factory) =
+            self.cache_handler_factory("bonsai_globalrev_mapping")?
+        {
             Ok(Arc::new(CachingBonsaiGlobalrevMapping::new(
-                self.env.fb,
                 Arc::new(bonsai_globalrev_mapping),
-                pool,
+                cache_handler_factory,
             )))
         } else {
             Ok(Arc::new(bonsai_globalrev_mapping))
@@ -826,11 +830,10 @@ impl RepoFactory {
             .await
             .context(RepoFactoryError::BonsaiSvnrevMapping)?
             .build(repo_identity.id());
-        if let Some(pool) = self.maybe_volatile_pool("bonsai_svnrev_mapping")? {
+        if let Some(cache_handler_factory) = self.cache_handler_factory("bonsai_svnrev_mapping")? {
             Ok(Arc::new(CachingBonsaiSvnrevMapping::new(
-                self.env.fb,
                 Arc::new(bonsai_svnrev_mapping),
-                pool,
+                cache_handler_factory,
             )))
         } else {
             Ok(Arc::new(bonsai_svnrev_mapping))
@@ -898,18 +901,14 @@ impl RepoFactory {
             }
         })
         .await??;
-        if let Caching::Enabled(_) = self.env.caching {
+        if let (Some(filenodes_cache_handler_factory), Some(history_cache_handler_factory)) = (
+            self.cache_handler_factory("filenodes")?,
+            self.cache_handler_factory("filenodes_history")?,
+        ) {
             let filenodes_tier = sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?;
-            let filenodes_pool = self
-                .maybe_volatile_pool("filenodes")?
-                .ok_or(RepoFactoryError::Filenodes)?;
-            let filenodes_history_pool = self
-                .maybe_volatile_pool("filenodes_history")?
-                .ok_or(RepoFactoryError::Filenodes)?;
             filenodes_builder.enable_caching(
-                self.env.fb,
-                filenodes_pool,
-                filenodes_history_pool,
+                filenodes_cache_handler_factory,
+                history_cache_handler_factory,
                 "newfilenodes",
                 &filenodes_tier.tier_name,
             );
@@ -930,11 +929,10 @@ impl RepoFactory {
             .context(RepoFactoryError::HgMutationStore)?
             .with_repo_id(repo_identity.id());
 
-        if let Some(pool) = self.maybe_volatile_pool("hg_mutation_store")? {
+        if let Some(cache_handler_factory) = self.cache_handler_factory("hg_mutation_store")? {
             Ok(Arc::new(CachedHgMutationStore::new(
-                self.env.fb,
                 Arc::new(hg_mutation_store),
-                pool,
+                cache_handler_factory,
             )))
         } else {
             Ok(Arc::new(hg_mutation_store))
@@ -953,9 +951,8 @@ impl RepoFactory {
             .open::<SegmentedChangelogSqlConnections>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::SegmentedChangelog)?;
-        let pool = self.maybe_volatile_pool("segmented_changelog")?;
+        let cache_handler_factory = self.cache_handler_factory("segmented_changelog")?;
         let segmented_changelog = new_server_segmented_changelog(
-            self.env.fb,
             &self.ctx(Some(repo_identity)),
             repo_identity,
             repo_config.segmented_changelog_config.clone(),
@@ -963,7 +960,7 @@ impl RepoFactory {
             changeset_fetcher.clone(),
             bookmarks.clone(),
             repo_blobstore.clone(),
-            pool,
+            cache_handler_factory,
         )
         .await
         .context(RepoFactoryError::SegmentedChangelog)?;
@@ -982,9 +979,8 @@ impl RepoFactory {
             .open::<SegmentedChangelogSqlConnections>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::SegmentedChangelog)?;
-        let pool = self.maybe_volatile_pool("segmented_changelog")?;
+        let cache_handler_factory = self.cache_handler_factory("segmented_changelog")?;
         let manager = new_server_segmented_changelog_manager(
-            self.env.fb,
             &self.ctx(Some(repo_identity)),
             repo_identity,
             repo_config.segmented_changelog_config.clone(),
@@ -992,7 +988,7 @@ impl RepoFactory {
             changeset_fetcher.clone(),
             bookmarks.clone(),
             repo_blobstore.clone(),
-            pool,
+            cache_handler_factory,
         )
         .await
         .context(RepoFactoryError::SegmentedChangelogManager)?;
@@ -1136,12 +1132,11 @@ impl RepoFactory {
             .open::<SqlMutableRenamesStore>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::MutableRenames)?;
-        let cache_pool = self.maybe_volatile_pool("mutable_renames")?;
+        let cache_handler_factory = self.cache_handler_factory("mutable_renames")?;
         Ok(Arc::new(MutableRenames::new(
-            self.env.fb,
             repo_config.repoid,
             sql_store,
-            cache_pool,
+            cache_handler_factory,
         )?))
     }
 
@@ -1490,7 +1485,7 @@ impl RepoFactory {
     }
 
     pub async fn sql_query_config(&self) -> Result<ArcSqlQueryConfig> {
-        let caching = if matches!(self.env.caching, Caching::Enabled(_)) {
+        let caching = if let Some(cache_handler_factory) = self.cache_handler_factory("sql")? {
             const KEY_PREFIX: &str = "scm.mononoke.sql";
             const MC_CODEVER: u32 = 0;
             let sitever: u32 = tunables()
@@ -1500,8 +1495,7 @@ impl RepoFactory {
                 .unwrap_or(0);
             Some(sql_query_config::CachingConfig {
                 keygen: KeyGen::new(KEY_PREFIX, MC_CODEVER, sitever),
-                memcache: MemcacheClient::new(self.env.fb)?.into(),
-                cache_pool: volatile_pool("sql")?,
+                cache_handler_factory,
             })
         } else {
             None
@@ -1524,11 +1518,10 @@ impl RepoFactory {
                 repo_identity.id(),
             );
         let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
-            if let Some(pool) = self.maybe_volatile_pool("commit_graph")? {
+            if let Some(cache_handler_factory) = self.cache_handler_factory("commit_graph")? {
                 Arc::new(CachingCommitGraphStorage::new(
-                    self.env.fb,
                     Arc::new(sql_storage),
-                    pool,
+                    cache_handler_factory,
                 ))
             } else {
                 Arc::new(sql_storage)

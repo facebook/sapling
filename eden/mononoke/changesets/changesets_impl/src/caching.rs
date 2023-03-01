@@ -16,6 +16,7 @@ use bytes::Bytes;
 use caching_ext::get_or_fill;
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
+use caching_ext::CacheHandlerFactory;
 use caching_ext::CacheTtl;
 use caching_ext::CachelibHandler;
 use caching_ext::EntityStore;
@@ -32,12 +33,10 @@ use changesets::ChangesetInsert;
 use changesets::Changesets;
 use changesets::SortOrder;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::stream::BoxStream;
 use maplit::hashset;
 use memcache::KeyGen;
-use memcache::MemcacheClient;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -83,33 +82,21 @@ fn get_keygen() -> KeyGen {
 
 impl CachingChangesets {
     pub fn new(
-        fb: FacebookInit,
         changesets: Arc<dyn Changesets>,
-        cache_pool: cachelib::VolatileLruCachePool,
+        cache_handler_factory: CacheHandlerFactory,
     ) -> Self {
         Self {
             repo_id: changesets.repo_id(),
             changesets,
-            cachelib: cache_pool.into(),
-            memcache: MemcacheClient::new(fb)
-                .expect("Memcache initialization failed")
-                .into(),
+            cachelib: cache_handler_factory.cachelib(),
+            memcache: cache_handler_factory.memcache(),
             keygen: get_keygen(),
         }
     }
 
     #[cfg(test)]
     pub fn mocked(changesets: Arc<dyn Changesets>) -> Self {
-        let cachelib = CachelibHandler::create_mock();
-        let memcache = MemcacheHandler::create_mock();
-
-        Self {
-            repo_id: changesets.repo_id(),
-            changesets,
-            cachelib,
-            memcache,
-            keygen: get_keygen(),
-        }
+        Self::new(changesets, CacheHandlerFactory::Mocked)
     }
 
     #[cfg(test)]
