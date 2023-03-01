@@ -164,7 +164,6 @@ impl PendingChanges for WatchmanFileSystem {
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
 
         let file_change_detector = FileChangeDetector::new(
-            self.treestate.clone(),
             self.vfs.clone(),
             last_write.try_into()?,
             manifests[0].clone(),
@@ -191,6 +190,7 @@ impl PendingChanges for WatchmanFileSystem {
 
         let mut pending_changes = detect_changes(
             file_change_detector,
+            &mut self.treestate.lock(),
             ts_needs_check,
             wm_needs_check,
             result.clock,
@@ -241,6 +241,7 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
 
 fn detect_changes(
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
+    ts: &mut TreeState,
     ts_need_check: Vec<RepoPathBuf>,
     wm_need_check: Vec<RepoPathBuf>,
     // TODO: propagate this differently since it isn't used here.
@@ -261,7 +262,7 @@ fn detect_changes(
         .iter()
         .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)))
     {
-        match file_change_detector.has_changed(needs_check) {
+        match file_change_detector.has_changed(ts, needs_check) {
             Ok(FileChangeResult::Yes(change)) => {
                 pending_changes.push(Ok(PendingChangeResult::File(change)));
                 if !ts_need_check.contains(needs_check) {

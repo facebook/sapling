@@ -86,7 +86,6 @@ impl PendingChangesTrait for PhysicalFileSystem {
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
         let file_change_detector = FileChangeDetector::new(
-            self.treestate.clone(),
             self.vfs.clone(),
             last_write.try_into()?,
             manifests[0].clone(),
@@ -143,14 +142,16 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         loop {
             match self.walker.next() {
                 Some(Ok(WalkEntry::File(file, metadata))) => {
+                    let mut ts = self.treestate.lock();
+
                     // On case insensitive systems, normalize the path so duplicate paths with
                     // different case can be detected in the seen set.
-                    let file = self.treestate.lock().normalize(file.as_ref())?;
+                    let file = ts.normalize(file.as_ref())?;
                     let path = RepoPath::from_utf8(file.as_ref())?;
                     self.seen.insert(path.to_owned());
                     let changed = self
                         .file_change_detector
-                        .has_changed_with_fresh_metadata(path, metadata)?;
+                        .has_changed_with_fresh_metadata(&mut ts, path, metadata)?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
                         return Ok(Some(PendingChangeResult::File(change_type)));
@@ -187,9 +188,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
             return results;
         }
         let tracked = tracked.unwrap();
+        let mut ts = self.treestate.lock();
 
         for path in tracked.into_iter() {
-            let cow_path = match self.treestate.lock().normalize(path.as_ref()) {
+            let cow_path = match ts.normalize(path.as_ref()) {
                 Ok(path) => path,
                 Err(e) => {
                     results.push(Err(e));
@@ -217,7 +219,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 }
             }
 
-            let changed = match self.file_change_detector.has_changed(path) {
+            let changed = match self.file_change_detector.has_changed(&mut ts, path) {
                 Ok(result) => result,
                 Err(e) => {
                     results.push(Err(e));

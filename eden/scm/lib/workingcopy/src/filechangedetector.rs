@@ -14,7 +14,6 @@ use anyhow::Result;
 use futures::StreamExt;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
 use storemodel::ReadFileContents;
@@ -78,13 +77,12 @@ pub enum ResolvedFileChangeResult {
 }
 
 pub trait FileChangeDetectorTrait {
-    fn has_changed(&mut self, path: &RepoPath) -> Result<FileChangeResult>;
+    fn has_changed(&mut self, ts: &mut TreeState, path: &RepoPath) -> Result<FileChangeResult>;
 
     fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>;
 }
 
 pub struct FileChangeDetector {
-    treestate: Arc<Mutex<TreeState>>,
     vfs: VFS,
     last_write: HgModifiedTime,
     lookups: Vec<RepoPathBuf>,
@@ -94,7 +92,6 @@ pub struct FileChangeDetector {
 
 impl FileChangeDetector {
     pub fn new(
-        treestate: Arc<Mutex<TreeState>>,
         vfs: VFS,
         last_write: HgModifiedTime,
         manifest: Arc<RwLock<TreeManifest>>,
@@ -102,7 +99,6 @@ impl FileChangeDetector {
     ) -> Self {
         let lookups: Vec<RepoPathBuf> = vec![];
         FileChangeDetector {
-            treestate,
             vfs,
             last_write,
             lookups,
@@ -115,13 +111,14 @@ impl FileChangeDetector {
 impl FileChangeDetector {
     pub fn has_changed_with_fresh_metadata(
         &mut self,
+        ts: &mut TreeState,
         path: &RepoPath,
         metadata: Metadata,
     ) -> Result<FileChangeResult> {
         let file_type = metadata.file_type();
         let is_valid_file = file_type.is_file() || file_type.is_symlink();
 
-        let state = match (self.get_treestate(path)?, is_valid_file) {
+        let state = match (self.get_treestate(ts, path)?, is_valid_file) {
             // File exists and is in the tree state: it might have changed.
             (Some(state), true) => state,
 
@@ -205,11 +202,9 @@ impl FileChangeDetector {
         Ok(FileChangeResult::No)
     }
 
-    fn get_treestate(&self, path: &RepoPath) -> Result<Option<FileStateV2>> {
-        let mut treestate = self.treestate.lock();
-        let normalized = treestate.normalize(path.as_ref())?;
-        treestate
-            .get(normalized.as_ref())
+    fn get_treestate(&self, ts: &mut TreeState, path: &RepoPath) -> Result<Option<FileStateV2>> {
+        let normalized = ts.normalize(path.as_ref())?;
+        ts.get(normalized.as_ref())
             .map(|option| option.map(|state| state.clone()))
     }
 
@@ -223,7 +218,7 @@ impl FileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for FileChangeDetector {
-    fn has_changed(&mut self, path: &RepoPath) -> Result<FileChangeResult> {
+    fn has_changed(&mut self, ts: &mut TreeState, path: &RepoPath) -> Result<FileChangeResult> {
         let metadata = match self.vfs.metadata(path) {
             Ok(metadata) => Some(metadata),
             Err(e) => match e.downcast_ref::<std::io::Error>() {
@@ -232,7 +227,7 @@ impl FileChangeDetectorTrait for FileChangeDetector {
             },
         };
 
-        let state = self.get_treestate(path)?;
+        let state = self.get_treestate(ts, path)?;
         let metadata = match (metadata, state) {
             // File was untracked during crawl but no longer exists.
             (None, None) => return Ok(FileChangeResult::No),
@@ -250,7 +245,7 @@ impl FileChangeDetectorTrait for FileChangeDetector {
             (Some(m), _) => m,
         };
 
-        self.has_changed_with_fresh_metadata(path, metadata)
+        self.has_changed_with_fresh_metadata(ts, path, metadata)
     }
 
     fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {
