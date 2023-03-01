@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(test)]
+mod tests;
 mod treestate;
 mod watchmanfs;
 

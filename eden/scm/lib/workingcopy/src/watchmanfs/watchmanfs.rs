@@ -169,8 +169,6 @@ impl PendingChanges for WatchmanFileSystem {
             self.store.clone(),
         );
 
-        let (ts_needs_check, ts_errors) = list_needs_check(ts, matcher)?;
-
         let mut wm_errors: Vec<ParseError> = Vec::new();
         let wm_needs_check: Vec<RepoPathBuf> = result
             .files
@@ -188,16 +186,13 @@ impl PendingChanges for WatchmanFileSystem {
             .collect();
 
         let mut pending_changes =
-            detect_changes(file_change_detector, ts, ts_needs_check, wm_needs_check);
+            detect_changes(matcher, file_change_detector, ts, wm_needs_check)?;
 
         // Add back path errors into the pending changes. The caller
         // of pending_changes must choose how to handle these.
-        pending_changes.pending_changes.extend(
-            wm_errors
-                .into_iter()
-                .chain(ts_errors.into_iter())
-                .map(|e| Err(anyhow!(e))),
-        );
+        pending_changes
+            .pending_changes
+            .extend(wm_errors.into_iter().map(|e| Err(anyhow!(e))));
 
         let did_something = pending_changes.update_treestate(ts)?;
         if did_something || should_update_clock {
@@ -239,15 +234,22 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
     Ok(())
 }
 
-fn detect_changes(
+// Given the existing treestate and files watchman says to check,
+// figure out all the files that may have changed and check them for
+// changes. Also track paths we need to mark or unmark as NEED_CHECK
+// in the treestate.
+pub fn detect_changes(
+    matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
     ts: &mut TreeState,
-    ts_need_check: Vec<RepoPathBuf>,
     wm_need_check: Vec<RepoPathBuf>,
-) -> WatchmanPendingChanges {
+) -> Result<WatchmanPendingChanges> {
+    let (ts_need_check, ts_errors) = list_needs_check(ts, matcher)?;
+
     let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
 
-    let mut pending_changes: Vec<Result<PendingChangeResult>> = Vec::new();
+    let mut pending_changes: Vec<Result<PendingChangeResult>> =
+        ts_errors.into_iter().map(|e| Err(anyhow!(e))).collect();
     let mut needs_clear = Vec::new();
     let mut needs_mark = Vec::new();
 
@@ -296,11 +298,11 @@ fn detect_changes(
         }
     }
 
-    WatchmanPendingChanges {
+    Ok(WatchmanPendingChanges {
         pending_changes,
         needs_clear,
         needs_mark,
-    }
+    })
 }
 
 pub struct WatchmanPendingChanges {
