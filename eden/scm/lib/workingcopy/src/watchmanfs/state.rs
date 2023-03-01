@@ -52,9 +52,7 @@ impl WatchmanState {
             treestate_needs_check: needs_check.into_iter().collect(),
             clock: treestate.get_clock()?,
             treestate_errors: parse_errs,
-            timeout: config
-                .get_opt::<u64>("fsmonitor", "timeout")?
-                .map(std::time::Duration::from_millis),
+            timeout: config.get_opt::<std::time::Duration>("fsmonitor", "timeout")?,
         })
     }
 
