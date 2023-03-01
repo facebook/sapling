@@ -714,11 +714,18 @@ impl EdenFsCheckout {
             .as_bytes()
             .to_vec();
         if predictive {
-            let num_dirs = predictive_num_dirs.try_into().with_context(|| {
-                anyhow!("could not convert u32 ({}) to i32", predictive_num_dirs)
-            })?;
+            let num_dirs = if predictive_num_dirs != 0 {
+                predictive_num_dirs
+                    .try_into()
+                    .with_context(|| {
+                        anyhow!("could not convert u32 ({}) to i32", predictive_num_dirs)
+                    })
+                    .ok()
+            } else {
+                None
+            };
             let predictive_params = PredictiveFetch {
-                numTopDirectories: Some(num_dirs),
+                numTopDirectories: num_dirs,
                 ..Default::default()
             };
             let glob_params = GlobParams {
