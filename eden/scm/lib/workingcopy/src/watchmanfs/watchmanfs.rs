@@ -8,6 +8,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
@@ -30,6 +31,7 @@ use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
+use crate::watchmanfs::treestate::WatchmanTreeStateRead;
 use crate::workingcopy::WorkingCopy;
 
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
@@ -40,6 +42,11 @@ pub struct WatchmanFileSystem {
     tree_resolver: ArcReadTreeManifest,
     store: ArcReadFileContents,
     locker: Arc<RepoLocker>,
+}
+
+struct WatchmanConfig {
+    clock: Option<Clock>,
+    sync_timeout: std::time::Duration,
 }
 
 impl WatchmanFileSystem {
@@ -60,7 +67,7 @@ impl WatchmanFileSystem {
     }
 
     #[tracing::instrument(skip_all, err)]
-    async fn query_result(&self, state: &WatchmanState) -> Result<QueryResult<StatusQuery>> {
+    async fn query_result(&self, config: WatchmanConfig) -> Result<QueryResult<StatusQuery>> {
         let start = std::time::Instant::now();
 
         let _bar = ProgressBar::register_new("querying watchman", 0, "");
@@ -80,9 +87,9 @@ impl WatchmanFileSystem {
             .query::<StatusQuery>(
                 &resolved,
                 QueryRequestCommon {
-                    since: state.get_clock(),
+                    since: config.clock,
                     expression: Some(Expr::Not(Box::new(excludes))),
-                    sync_timeout: state.sync_timeout(),
+                    sync_timeout: config.sync_timeout.into(),
                     ..Default::default()
                 },
             )
@@ -103,16 +110,19 @@ impl PendingChanges for WatchmanFileSystem {
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
-        let state = WatchmanState::new(
-            config,
-            WatchmanTreeState {
-                treestate: self.treestate.clone(),
-                root: self.vfs.root(),
-            },
-            matcher,
-        )?;
+        let watchman_ts = WatchmanTreeState {
+            treestate: self.treestate.clone(),
+            root: self.vfs.root(),
+        };
 
-        let result = async_runtime::block_on(self.query_result(&state))?;
+        let state = WatchmanState::new(watchman_ts.clone(), matcher)?;
+        let prev_clock = watchman_ts.get_clock()?;
+
+        let result = async_runtime::block_on(self.query_result(WatchmanConfig {
+            clock: prev_clock.clone(),
+            sync_timeout:
+                config.get_or::<Duration>("fsmonitor", "timeout", || Duration::from_secs(10))?,
+        }))?;
 
         tracing::debug!(
             target: "watchman_info",
@@ -122,7 +132,7 @@ impl PendingChanges for WatchmanFileSystem {
 
         let should_warn = config.get_or_default("fsmonitor", "warn-fresh-instance")?;
         if result.is_fresh_instance && should_warn {
-            let old_pid = parse_watchman_pid(state.get_clock().as_ref());
+            let old_pid = parse_watchman_pid(prev_clock.as_ref());
             let new_pid = parse_watchman_pid(Some(&result.clock));
             let mut output = io.output();
             match (old_pid, new_pid) {
@@ -169,14 +179,7 @@ impl PendingChanges for WatchmanFileSystem {
         );
         let mut pending_changes = state.merge(result, file_change_detector)?;
 
-        pending_changes.persist(
-            WatchmanTreeState {
-                treestate: self.treestate.clone(),
-                root: self.vfs.root(),
-            },
-            should_update_clock,
-            &self.locker,
-        )?;
+        pending_changes.persist(watchman_ts, should_update_clock, &self.locker)?;
 
         Ok(Box::new(pending_changes.into_iter()))
     }

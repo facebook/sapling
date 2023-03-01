@@ -10,8 +10,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use configmodel::Config;
-use configmodel::ConfigExt;
 use pathmatcher::Matcher;
 use repolock::RepoLocker;
 use serde::Deserialize;
@@ -35,14 +33,11 @@ query_result_type! {
 
 pub struct WatchmanState {
     treestate_needs_check: HashSet<RepoPathBuf>,
-    clock: Option<Clock>,
     treestate_errors: Vec<ParseError>,
-    timeout: Option<std::time::Duration>,
 }
 
 impl WatchmanState {
     pub fn new(
-        config: &dyn Config,
         mut treestate: impl WatchmanTreeStateRead,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     ) -> Result<Self> {
@@ -50,21 +45,8 @@ impl WatchmanState {
 
         Ok(WatchmanState {
             treestate_needs_check: needs_check.into_iter().collect(),
-            clock: treestate.get_clock()?,
             treestate_errors: parse_errs,
-            timeout: config.get_opt::<std::time::Duration>("fsmonitor", "timeout")?,
         })
-    }
-
-    pub fn get_clock(&self) -> Option<Clock> {
-        self.clock.clone()
-    }
-
-    pub fn sync_timeout(&self) -> SyncTimeout {
-        match self.timeout {
-            None => SyncTimeout::Default,
-            Some(d) => SyncTimeout::Duration(d),
-        }
     }
 
     #[tracing::instrument(skip_all)]
@@ -199,7 +181,6 @@ impl IntoIterator for WatchmanPendingChanges {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
     use std::collections::HashSet;
     use std::sync::Arc;
 
@@ -432,12 +413,7 @@ mod tests {
         ];
 
         let test = WatchmanStateTest::new(events);
-        let state = WatchmanState::new(
-            &BTreeMap::<&str, &str>::new(),
-            test.treestate(),
-            Arc::new(AlwaysMatcher::new()),
-        )
-        .unwrap();
+        let state = WatchmanState::new(test.treestate(), Arc::new(AlwaysMatcher::new())).unwrap();
 
         let pending_changes = state
             .merge(test.query_result(), test.file_change_detector())
@@ -487,7 +463,6 @@ mod tests {
         ));
 
         let state = WatchmanState::new(
-            &BTreeMap::<&str, &str>::new(),
             WatchmanTreeState {
                 treestate: Arc::new(Mutex::new(ts)),
                 root: "/dev/null".as_ref(),

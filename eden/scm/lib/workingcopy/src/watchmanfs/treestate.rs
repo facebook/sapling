@@ -45,6 +45,7 @@ pub trait WatchmanTreeStateRead {
     fn get_clock(&self) -> Result<Option<Clock>>;
 }
 
+#[derive(Clone)]
 pub struct WatchmanTreeState<'a> {
     pub treestate: Arc<Mutex<TreeState>>,
     pub root: &'a Path,
