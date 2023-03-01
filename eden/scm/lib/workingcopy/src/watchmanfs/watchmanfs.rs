@@ -19,10 +19,14 @@ use configmodel::ConfigExt;
 use io::IO;
 use manifest_tree::ReadTreeManifest;
 use parking_lot::Mutex;
+use pathmatcher::AlwaysMatcher;
+use pathmatcher::DifferenceMatcher;
+use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
 use serde::Deserialize;
+use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::path::ParseError;
 use types::RepoPathBuf;
@@ -37,8 +41,10 @@ use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
+use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
+use crate::util::walk_treestate;
 use crate::watchmanfs::treestate::get_clock;
 use crate::watchmanfs::treestate::list_needs_check;
 use crate::watchmanfs::treestate::maybe_flush_treestate;
@@ -185,8 +191,14 @@ impl PendingChanges for WatchmanFileSystem {
             })
             .collect();
 
-        let mut pending_changes =
-            detect_changes(matcher, file_change_detector, ts, wm_needs_check)?;
+        let mut pending_changes = detect_changes(
+            matcher,
+            file_change_detector,
+            ts,
+            wm_needs_check,
+            result.is_fresh_instance,
+            self.vfs.case_sensitive(),
+        )?;
 
         // Add back path errors into the pending changes. The caller
         // of pending_changes must choose how to handle these.
@@ -243,6 +255,8 @@ pub fn detect_changes(
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
     ts: &mut TreeState,
     wm_need_check: Vec<RepoPathBuf>,
+    wm_fresh_instance: bool,
+    fs_case_sensitive: bool,
 ) -> Result<WatchmanPendingChanges> {
     let (ts_need_check, ts_errors) = list_needs_check(ts, matcher)?;
 
@@ -274,7 +288,7 @@ pub fn detect_changes(
                     needs_clear.push(needs_check.clone());
                 }
             }
-            // Handled in below in next loop.
+            // Handled below in next loop.
             Ok(FileChangeResult::Maybe) => {}
             Err(e) => pending_changes.push(Err(e)),
         }
@@ -296,6 +310,30 @@ pub fn detect_changes(
             }
             Err(e) => pending_changes.push(Err(e)),
         }
+    }
+
+    if wm_fresh_instance {
+        // On fresh instance, watchman returns all files present on
+        // disk. We need to catch the case where a tracked file has been
+        // deleted while watchman wasn't running. To do that, report a
+        // pending "delete" change for all EXIST_NEXT files that were
+        // _not_ in the list we got from watchman.
+        let was_deleted_matcher = DifferenceMatcher::new(
+            AlwaysMatcher::new(),
+            ExactMatcher::new(wm_need_check.iter(), fs_case_sensitive),
+        );
+
+        walk_treestate(
+            ts,
+            Arc::new(was_deleted_matcher),
+            StateFlags::EXIST_NEXT,
+            StateFlags::NEED_CHECK,
+            |path, _state| {
+                needs_mark.push(path.clone());
+                pending_changes.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
+                Ok(())
+            },
+        )?;
     }
 
     Ok(WatchmanPendingChanges {

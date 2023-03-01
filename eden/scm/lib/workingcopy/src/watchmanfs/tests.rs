@@ -22,6 +22,10 @@ use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 
+const NEED_CHECK: StateFlags = StateFlags::NEED_CHECK;
+const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
+const EXIST_NEXT: StateFlags = StateFlags::EXIST_NEXT;
+
 #[derive(Default)]
 struct TestFileChangeDetector {
     changed_files: Vec<RepoPathBuf>,
@@ -52,12 +56,16 @@ enum Change {
     Deleted,
 }
 
+use Change::*;
+
 #[derive(Debug)]
 struct TestCase {
     // initial treestate state for this file
     state_before: Option<StateFlags>,
     // whether watchman reported this file to us
     wm_changed: bool,
+    // watchman is_fresh_instance (i.e. watchman restarted)
+    wm_fresh_instance: bool,
     // whether the file appears to have changed/deleted when we check disk
     disk_changed: Option<Change>,
     // expected treestate after the dust settles (None means should be deleted)
@@ -98,11 +106,16 @@ fn check(mut tc: TestCase) -> Result<()> {
         wm_changes.push(path.clone());
     }
 
+    //
+    // This is the code under test.
+    //
     let mut changes = detect_changes(
         Arc::new(AlwaysMatcher::new()),
         stub_detector,
         &mut ts,
         wm_changes,
+        tc.wm_fresh_instance,
+        true,
     )?;
 
     changes.update_treestate(&mut ts)?;
@@ -169,7 +182,6 @@ fn test_detect_changes() -> Result<()> {
     const NEED_CHECK: StateFlags = StateFlags::NEED_CHECK;
     const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
     const EXIST_NEXT: StateFlags = StateFlags::EXIST_NEXT;
-    use Change::*;
 
     let all_states = product(&[NEED_CHECK, EXIST_P1, EXIST_NEXT]);
     for state_before in all_states {
@@ -216,10 +228,34 @@ fn test_detect_changes() -> Result<()> {
                     disk_changed,
                     state_after,
                     pending_change,
+                    wm_fresh_instance: false,
                 })?;
             }
         }
     }
+
+    Ok(())
+}
+
+#[test]
+fn test_detect_changes_fresh_instance() -> Result<()> {
+    check(TestCase {
+        state_before: Some(EXIST_P1 | EXIST_NEXT),
+        wm_changed: false,
+        wm_fresh_instance: true,
+        disk_changed: Some(Deleted),
+        state_after: Some(EXIST_P1 | EXIST_NEXT | NEED_CHECK),
+        pending_change: Some(Deleted),
+    })?;
+
+    check(TestCase {
+        state_before: Some(NEED_CHECK),
+        wm_changed: false,
+        wm_fresh_instance: true,
+        disk_changed: Some(Deleted),
+        state_after: Some(NEED_CHECK),
+        pending_change: Some(Deleted),
+    })?;
 
     Ok(())
 }
