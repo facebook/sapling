@@ -7,6 +7,7 @@
 
 use std::collections::HashSet;
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -29,8 +30,10 @@ use types::RepoPathBuf;
 use vfs::VFS;
 use watchman_client::prelude::*;
 
-use super::treestate::WatchmanTreeState;
-use super::treestate::WatchmanTreeStateWrite;
+use super::treestate::clear_needs_check;
+use super::treestate::flush;
+use super::treestate::mark_needs_check;
+use super::treestate::set_clock;
 use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
@@ -38,7 +41,8 @@ use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
-use crate::watchmanfs::treestate::WatchmanTreeStateRead;
+use crate::watchmanfs::treestate::get_clock;
+use crate::watchmanfs::treestate::list_needs_check;
 use crate::workingcopy::WorkingCopy;
 
 type ArcReadTreeManifest = Arc<dyn ReadTreeManifest + Send + Sync>;
@@ -124,12 +128,9 @@ impl PendingChanges for WatchmanFileSystem {
         config: &dyn Config,
         io: &IO,
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
-        let mut watchman_ts = WatchmanTreeState {
-            treestate: self.treestate.clone(),
-            root: self.vfs.root(),
-        };
+        let ts = &mut *self.treestate.lock();
 
-        let prev_clock = watchman_ts.get_clock()?;
+        let prev_clock = get_clock(ts)?;
 
         let result = async_runtime::block_on(self.query_result(WatchmanConfig {
             clock: prev_clock.clone(),
@@ -160,8 +161,7 @@ impl PendingChanges for WatchmanFileSystem {
                 .as_ref()
                 .map_or(false, |f| f.len() > file_change_threshold);
 
-        let manifests =
-            WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
+        let manifests = WorkingCopy::current_manifests(ts, &self.tree_resolver)?;
 
         let file_change_detector = FileChangeDetector::new(
             self.vfs.clone(),
@@ -170,7 +170,7 @@ impl PendingChanges for WatchmanFileSystem {
             self.store.clone(),
         );
 
-        let (ts_needs_check, ts_errors) = watchman_ts.list_needs_check(matcher)?;
+        let (ts_needs_check, ts_errors) = list_needs_check(ts, matcher)?;
 
         let mut wm_errors: Vec<ParseError> = Vec::new();
         let wm_needs_check: Vec<RepoPathBuf> = result
@@ -190,7 +190,7 @@ impl PendingChanges for WatchmanFileSystem {
 
         let mut pending_changes = detect_changes(
             file_change_detector,
-            &mut self.treestate.lock(),
+            ts,
             ts_needs_check,
             wm_needs_check,
             result.clock,
@@ -205,7 +205,7 @@ impl PendingChanges for WatchmanFileSystem {
                 .map(|e| Err(anyhow!(e))),
         );
 
-        pending_changes.persist(watchman_ts, should_update_clock, &self.locker)?;
+        pending_changes.persist(self.vfs.root(), ts, should_update_clock, &self.locker)?;
 
         Ok(Box::new(pending_changes.into_iter()))
     }
@@ -317,13 +317,14 @@ impl WatchmanPendingChanges {
     #[tracing::instrument(skip_all)]
     pub fn persist(
         &mut self,
-        mut treestate: impl WatchmanTreeStateWrite,
+        root: &Path,
+        ts: &mut TreeState,
         should_update_clock: bool,
         locker: &RepoLocker,
     ) -> Result<()> {
         let mut wrote = false;
         for path in self.needs_clear.iter() {
-            match treestate.clear_needs_check(path) {
+            match clear_needs_check(ts, path) {
                 Ok(v) => wrote |= v,
                 Err(e) =>
                 // We can still build a valid result if we fail to clear the
@@ -336,16 +337,16 @@ impl WatchmanPendingChanges {
         }
 
         for path in self.needs_mark.iter() {
-            wrote |= treestate.mark_needs_check(path)?;
+            wrote |= mark_needs_check(ts, path)?;
         }
 
         // If the treestate is already dirty, we're going to write it anyway, so let's go ahead and
         // update the clock while we're at it.
         if should_update_clock || wrote {
-            treestate.set_clock(self.clock.clone())?;
+            set_clock(ts, self.clock.clone())?;
         }
 
-        treestate.flush(locker)
+        flush(root, ts, locker)
     }
 }
 
