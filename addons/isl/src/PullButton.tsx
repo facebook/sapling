@@ -8,8 +8,9 @@
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';
 import {t, T} from './i18n';
 import {PullOperation} from './operations/PullOperation';
+import {useIsOperationRunningOrQueued} from './previews';
 import {relativeDate, RelativeDate} from './relativeDate';
-import {latestCommitTree, operationList, queuedOperations, useRunOperation} from './serverAPIState';
+import {latestCommitTree, useRunOperation} from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
@@ -17,8 +18,6 @@ import {Icon} from 'shared/Icon';
 import './PullButton.css';
 
 export function PullButton() {
-  const list = useRecoilValue(operationList);
-  const queued = useRecoilValue(queuedOperations);
   const runOperation = useRunOperation();
   // no need to use previews here, we only need the latest commits to find the last pull timestamp.
   const latestCommits = useRecoilValue(latestCommitTree);
@@ -31,16 +30,11 @@ export function PullButton() {
     t('Last synced with remote:') +
     ' ' +
     relativeDate(lastSync, {});
-  let inProgress = false;
 
-  if (
-    list.currentOperation?.operation instanceof PullOperation &&
-    list.currentOperation?.exitCode == null
-  ) {
-    inProgress = true;
+  const isRunningPull = useIsOperationRunningOrQueued(PullOperation);
+  if (isRunningPull === 'queued') {
     title += '\n\n' + t('Pull is currently running.');
-  } else if (queued.some(op => op instanceof PullOperation)) {
-    inProgress = true;
+  } else if (isRunningPull === 'running') {
     title += '\n\n' + t('Pull is already scheduled.');
   }
 
@@ -49,11 +43,11 @@ export function PullButton() {
       <div className="pull-info">
         <VSCodeButton
           appearance="secondary"
-          disabled={inProgress}
+          disabled={!!isRunningPull}
           onClick={() => {
             runOperation(new PullOperation());
           }}>
-          <Icon slot="start" icon={inProgress ? 'loading' : 'cloud-download'} />
+          <Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />
           <T>Pull</T>
         </VSCodeButton>
         <RelativeDate date={lastSync} useShortVariant />

@@ -522,3 +522,24 @@ export type UncommittedChangesPreviewContext = {
 export type MergeConflictsPreviewContext = {
   conflicts: MergeConflicts | undefined;
 };
+
+type Class<T> = new (...args: unknown[]) => T;
+/**
+ * React hook which looks in operation queue and history to see if a
+ * particular operation is running or queued to run.
+ * ```
+ * const isRunning = useIsOperationRunningOrQueued(PullOperation);
+ * ```
+ */
+export function useIsOperationRunningOrQueued(
+  cls: Class<Operation>,
+): 'running' | 'queued' | undefined {
+  const list = useRecoilValue(operationList);
+  const queued = useRecoilValue(queuedOperations);
+  if (list.currentOperation?.operation instanceof cls && list.currentOperation?.exitCode == null) {
+    return 'running';
+  } else if (queued.some(op => op instanceof cls)) {
+    return 'queued';
+  }
+  return undefined;
+}
