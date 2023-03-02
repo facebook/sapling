@@ -2483,8 +2483,9 @@ class TestResult(unittest._TextTestResult):
     def addIgnore(self, test, reason):
         self.ignored.append((test, reason))
         if self.showAll:
-            with iolock:
-                self.stream.writeln("ignored %s" % reason)
+            if reason != "not retesting":
+                with iolock:
+                    self.stream.writeln("ignored %s" % reason)
         else:
             if reason not in ("not retesting", "doesn't match keyword"):
                 if not showprogress:
