@@ -163,7 +163,6 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.assertFalse(foo.exists())
         self._assertNotInStatus(b"foobar/foo")
 
-    # this test is currently broken :(
     def test_detect_removed_file_from_full_dir_matches_scm_not_empty_while_running(
         self,
     ) -> None:
@@ -281,7 +280,6 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.assertFalse(foo.exists())
         self._assertNotInStatus(b"foobar/foo")
 
-    # this test is currently broken :(
     def test_detect_removed_file_from_full_directory_scm_exists(self) -> None:
         """
         Remove a file in full directory that happens to match a tree
@@ -454,8 +452,6 @@ class WindowsFsckTest(testcase.EdenRepoTest):
             {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
         )
 
-    # this test is currently broken :( for the same reason as the
-    # remove test above.
     def test_fsck_rename_while_stopped_materialized(self) -> None:
         # Materialize the file and its parent by removing and re-creating them.
         self.rm("adir/file")

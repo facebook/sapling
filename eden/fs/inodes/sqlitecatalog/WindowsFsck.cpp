@@ -157,6 +157,7 @@ struct FsckFileState {
   bool renamedPlaceholder = false;
 
   bool diskEmptyPlaceholder = false;
+  bool directoryIsFull = false;
   bool diskTombstone = false;
   dtype_t diskDtype = dtype_t::Unknown;
 
@@ -264,6 +265,7 @@ void populateDiskState(
   state.populatedOrFullOrTomb = detectedFull || detectedTombstone;
   // It's an empty placeholder unless it's materialized or it has children.
   state.diskEmptyPlaceholder = !state.populatedOrFullOrTomb;
+  state.directoryIsFull = !recall;
 
   state.renamedPlaceholder = false;
 
@@ -340,24 +342,24 @@ InodeNumber addOrUpdateOverlay(
   return InodeNumber(*overlayEntry.inodeNumber());
 }
 
+enum class DirectoryOnDiskState { Full, Placeholder };
+
 std::optional<InodeNumber> fixup(
     FsckFileState& state,
     SqliteInodeCatalog& inodeCatalog,
     RelativePathPiece path,
     InodeNumber parentInodeNum,
-    const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir) {
+    const PathMap<overlay::OverlayEntry>& insensitiveOverlayDir,
+    DirectoryOnDiskState parentProjFSState) {
   auto name = path.basename();
 
   if (!state.onDisk) {
-    if (state.inScm) {
+    if (parentProjFSState == DirectoryOnDiskState::Full) {
+      // state.shouldExist defaults to false
+    } else if (state.inScm) {
       state.desiredDtype = state.scmDtype;
       state.desiredHash = state.scmHash;
       state.shouldExist = true;
-      // Files removed from disk while eden was stopped fall into this
-      // case. If the file was materialized, we will detect it's out of sync.
-      // We will just update the overlay to have the inode. Eden will
-      // have the file present, disk will not.
-      // TODO(kmancini): fix that.
     }
   } else if (state.diskTombstone) {
     // state.shouldExist defaults to false
@@ -518,7 +520,8 @@ ImmediateFuture<bool> processChildren(
     const OverlayChecker::LookupCallback& callback,
     uint64_t logFrequency,
     std::atomic<uint64_t>& traversedDirectories,
-    bool fsckRenamedFiles) {
+    bool fsckRenamedFiles,
+    DirectoryOnDiskState parentOnDiskState) {
   XLOGF(DBG9, "processChildren - {}", path);
 
   auto traversed = traversedDirectories.fetch_add(1, std::memory_order_relaxed);
@@ -563,7 +566,8 @@ ImmediateFuture<bool> processChildren(
         inodeCatalog,
         childPath,
         inodeNumber,
-        insensitiveOverlayDir);
+        insensitiveOverlayDir,
+        parentOnDiskState);
 
     if (childState.desiredDtype == dtype_t::Dir && childState.onDisk &&
         !childState.diskEmptyPlaceholder && childInodeNumberOpt.has_value()) {
@@ -593,6 +597,7 @@ ImmediateFuture<bool> processChildren(
       childFutures.emplace_back(
           std::move(childScmTreeFut)
               .thenValue([&inodeCatalog,
+                          isFull = childState.directoryIsFull,
                           childPath = childPath.copy(),
                           root,
                           &callback,
@@ -615,7 +620,9 @@ ImmediateFuture<bool> processChildren(
                     callback,
                     logFrequency,
                     traversedDirectories,
-                    fsckRenamedFiles);
+                    fsckRenamedFiles,
+                    isFull ? DirectoryOnDiskState::Full
+                           : DirectoryOnDiskState::Placeholder);
               })
               .thenValue([&childState = childState,
                           childPath = childPath.copy(),
@@ -703,7 +710,8 @@ void windowsFsckScanLocalChanges(
                          callback,
                          logFrequency,
                          traversedDirectories,
-                         fsckRenamedFiles)
+                         fsckRenamedFiles,
+                         DirectoryOnDiskState::Placeholder)
                   .semi();
             })
         .get();
