@@ -15,7 +15,7 @@ import {
   closeCommitInfoSidebar,
   simulateMessageFromServer,
 } from '../testUtils';
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
@@ -128,6 +128,72 @@ describe('CommitTreeList', () => {
       expect((screen.queryByTestId('conflict-continue-button') as HTMLButtonElement).disabled).toBe(
         false,
       );
+    });
+
+    it('uses optimistic state to render resolved files', () => {
+      const resolveButton = screen.getByTestId('file-action-resolve');
+      act(() => {
+        fireEvent.click(resolveButton);
+      });
+      // resolve button is no longer there
+      expect(screen.queryByTestId('file-action-resolve')).not.toBeInTheDocument();
+    });
+
+    it('lets you continue when conflicts are optimistically resolved', () => {
+      const resolveButton = screen.getByTestId('file-action-resolve');
+      act(() => {
+        fireEvent.click(resolveButton);
+      });
+
+      // continue is no longer disabled
+      expect(
+        (screen.queryByTestId('conflict-continue-button') as HTMLButtonElement).disabled,
+      ).toEqual(false);
+    });
+
+    it('disables continue button while running', () => {
+      const resolveButton = screen.getByTestId('file-action-resolve');
+      act(() => {
+        fireEvent.click(resolveButton);
+      });
+      const continueButton = screen.getByTestId('conflict-continue-button');
+      act(() => {
+        fireEvent.click(continueButton);
+      });
+
+      expect(
+        (screen.queryByTestId('conflict-continue-button') as HTMLButtonElement).disabled,
+      ).toEqual(true);
+
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({args: ['continue']}),
+      });
+
+      // simulate continue finishing
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          kind: 'exit',
+          exitCode: 0,
+          id: 'foo',
+        });
+      });
+
+      // We will soon get the next set of merge conflicts as null.
+      // In the mean time, after `continue` has run, we still disable the button.
+      expect(
+        (screen.queryByTestId('conflict-continue-button') as HTMLButtonElement).disabled,
+      ).toEqual(true);
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'mergeConflicts',
+          subscriptionID: 'conflicts',
+          conflicts: undefined,
+        });
+      });
+      expect(screen.queryByTestId('conflict-continue-button')).not.toBeInTheDocument();
     });
   });
 });

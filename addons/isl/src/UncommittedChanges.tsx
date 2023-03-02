@@ -533,6 +533,7 @@ function FileActions({file}: {file: ChangedFile}) {
       <Tooltip title={t('Mark as resolved')} key="resolve-mark">
         <VSCodeButton
           className="file-show-on-hover"
+          data-testid="file-action-resolve"
           key={file.path}
           appearance="icon"
           onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.mark))}>
