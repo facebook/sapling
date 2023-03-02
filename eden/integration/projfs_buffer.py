@@ -150,15 +150,17 @@ else:
 # | file placeholder                      |        |        |           | x       |        |         | x      | 0200000000000000 |
 # | file placeholder stopped              |        |        |           | x       | x      | x       | x      | 0200000000000000 |
 # | directory placeholder                 |        |        | x         |         |        |         | x      | 0200000000000000 |
-# | directory placeholder stoped          |        |        | x         |         |        | x       | x      | 0200000000000000 |
+# | directory placeholder stopped         |        |        | x         |         |        | x       | x      | 0200000000000000 |
+# | dirty directory placeholder           |        |        | x         |         |        |         | x      | 0200000002000000 |
+# | dirty directory placeholder stopped   |        |        | x         |         |        | x       | x      | 0200000002000000 |
 # | hydrated placeholder                  |        |        |           | x       |        |         |        | 0200000020000000 |
-# | hydrated placeholder stoped           |        |        |           | x       | x      | x       |        | 0200000020000000 |
+# | hydrated placeholder stopped          |        |        |           | x       | x      | x       |        | 0200000020000000 |
 # | full file                             |        |        |           | x       |        |         | x      | -                |
-# | full file stoped                      |        |        |           | x       |        |         | x      | -                |
+# | full file stopped                     |        |        |           | x       |        |         | x      | -                |
 # | locally created file                  |        |        |           | x       |        |         |        | -                |
-# | locally created file stoped           |        |        |           | x       |        |         |        | -                |
+# | locally created file stopped          |        |        |           | x       |        |         |        | -                |
 # | full directory                        |        |        | x         |         |        |         |        | -                |
-# | full directory stoped                 |        |        | x         |         |        |         |        | -                |
+# | full directory stopped                |        |        | x         |         |        |         |        | -                |
 # | tombstone                             |        |        |           |         |        |         |        |                  |
 # | tombstone stopped                     | x      | x      |           | x       |        | x       |        |                  |
 # | renamed placeholder                   |        |        |           | x       |        |         | x      | 0200000008000000 |
@@ -166,9 +168,9 @@ else:
 # | renamed hydrated placeholder          |        |        |           | x       |        |         |        | 0200000028000000 |
 # | renamed hydrated placeholder stopped  |        |        |           | x       | x      | x       |        | 0200000028000000 |
 # | renamed full file                     |        |        |           | x       |        |         |        | -                |
-# | renamed full file stoped              |        |        |           | x       |        |         |        | -                |
-# | renamed full diretcory                |        |        | x         |         |        |         |        | -                |
-# | renamed full directory stoped         |        |        | x         |         |        |         |        | -                |
+# | renamed full file stopped             |        |        |           | x       |        |         |        | -                |
+# | renamed full directory                |        |        | x         |         |        |         |        | -                |
+# | renamed full directory stopped        |        |        | x         |         |        |         |        | -                |
 # +---------------------------------------+--------+--------+-----------+---------+--------+---------+--------+------------------+
 
 ExpectedAttributes = namedtuple(
@@ -176,6 +178,7 @@ ExpectedAttributes = namedtuple(
     [
         "file_placeholder",
         "directory_placeholder",
+        "directory_dirty_placeholder",
         "hydrated_placeholder",
         "full_file",
         "locally_created_file",
@@ -194,6 +197,10 @@ EXPECTED_ATTRIBUTES = ExpectedAttributes(
         ),
     ),
     directory_placeholder=ExpectedAttribute(
+        eden_running=FileAttributes(directory=True, recall=True),
+        eden_stopped=FileAttributes(directory=True, reparse=True, recall=True),
+    ),
+    directory_dirty_placeholder=ExpectedAttribute(
         eden_running=FileAttributes(directory=True, recall=True),
         eden_stopped=FileAttributes(directory=True, reparse=True, recall=True),
     ),
@@ -228,6 +235,9 @@ EXPECTED_REPARSE_BUFFER = ExpectedAttributes(
     directory_placeholder=ExpectedAttribute(
         eden_running="0200000000000000", eden_stopped="0200000000000000"
     ),
+    directory_dirty_placeholder=ExpectedAttribute(
+        eden_running="0200000002000000", eden_stopped="0200000002000000"
+    ),
     hydrated_placeholder=ExpectedAttribute(
         eden_running="0200000020000000", eden_stopped="0200000020000000"
     ),
@@ -242,6 +252,7 @@ EXPECTED_REPARSE_BUFFER_RENAMED = ExpectedAttributes(
         eden_running="0200000008000000", eden_stopped="0200000008000000"
     ),
     directory_placeholder=None,
+    directory_dirty_placeholder=None,
     hydrated_placeholder=ExpectedAttribute(
         eden_running="0200000028000000", eden_stopped="0200000028000000"
     ),
@@ -360,6 +371,38 @@ class PrjFSBuffer(testcase.EdenRepoTest):
 
         self.check_projfs_reparse_buffer_and_attributes_running_and_stopped(
             hello_abs_path, attributes, buffer
+        )
+
+    def test_projfs_reparse_format_dir_would_behydrated_placeholder(self) -> None:
+        # directories don't become "hydrated" because prjfs wants to allow
+        # the server to change the contents of a directory.
+        # but maybe prjfs could have some internal distinction here, so lets
+        # cover this case just in case.
+        somedir_abs_path = Path(self.mount) / "somedir"
+
+        attributes = EXPECTED_ATTRIBUTES.directory_placeholder
+        buffer = EXPECTED_REPARSE_BUFFER.directory_placeholder
+
+        os.listdir(somedir_abs_path)
+
+        self.check_projfs_reparse_buffer_and_attributes_running_and_stopped(
+            somedir_abs_path,
+            attributes,
+            buffer,
+        )
+
+    def test_projfs_reparse_format_dir_dirty_placeholder(self) -> None:
+        somedir_abs_path = Path(self.mount) / "somedir"
+
+        attributes = EXPECTED_ATTRIBUTES.directory_dirty_placeholder
+        buffer = EXPECTED_REPARSE_BUFFER.directory_dirty_placeholder
+
+        (somedir_abs_path / "a_new_file").touch()
+
+        self.check_projfs_reparse_buffer_and_attributes_running_and_stopped(
+            somedir_abs_path,
+            attributes,
+            buffer,
         )
 
     def test_projfs_reparse_format_full_file(self) -> None:
