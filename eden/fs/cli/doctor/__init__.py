@@ -424,7 +424,7 @@ class EdenDoctor(EdenDoctorChecker):
             help_url = "https://fb.workplace.com/groups/edenfswindows"
             help_group = "EdenFS Windows"
         else:
-            help_url = "https://fb.workplace.com/groups/eden.users/"
+            help_url = "https://fb.workplace.com/groups/eden.users"
             help_group = "EdenFS"
 
         out.write(

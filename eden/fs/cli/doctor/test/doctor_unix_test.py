@@ -23,12 +23,12 @@ def get_support_suggestion() -> str:
     if sys.platform == "darwin":
         return """<yellow>1 issue requires manual attention.<reset>
 Collect an 'eden rage' and ask in the EdenFS macOS Users group if you need help fixing issues with EdenFS:
-https://fb.workplace.com/groups/edenfsmacos/
+https://fb.workplace.com/groups/edenfsmacos
 """
     else:
         return """<yellow>1 issue requires manual attention.<reset>
 Collect an 'eden rage' and ask in the EdenFS Users group if you need help fixing issues with EdenFS:
-https://fb.workplace.com/groups/eden.users/
+https://fb.workplace.com/groups/eden.users
 """
 
 

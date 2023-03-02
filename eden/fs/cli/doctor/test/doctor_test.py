@@ -275,7 +275,7 @@ To start EdenFS, run:
 
 <yellow>1 issue requires manual attention\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
+(https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -314,7 +314,7 @@ with "eden restart --force"
 
 <yellow>1 issue requires manual attention\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
+(https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -351,7 +351,7 @@ Either wait for edenfs to exit, or to forcibly kill EdenFS, run:
 
 <yellow>1 issue requires manual attention\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
+(https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -879,7 +879,7 @@ Run "cd / && cd -" to update your shell's working directory\.
 Checking .*
 <yellow>1 issue requires manual attention\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
+(https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(1, exit_code)
@@ -1424,7 +1424,7 @@ Try:
 
 <yellow>1 issue requires manual attention\.<reset>
 Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if you need help fixing issues with EdenFS:
-(https://fb\.workplace\.com/groups/eden\.users/|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
+(https://fb\.workplace\.com/groups/eden\.users|https://fb\.workplace\.com/groups/edenfswindows|https://fb\.workplace\.com/groups/edenfsmacos)
 """,
         )
         self.assertEqual(exit_code, 1)
