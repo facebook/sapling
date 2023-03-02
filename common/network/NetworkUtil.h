@@ -22,6 +22,9 @@ class NetworkUtil {
       bool disableIpv6 = false) {
     return "";
   }
+  static std::string getHostByAddr(const std::string& ip) {
+    return "";
+  }
 };
 } // namespace network
 } // namespace facebook
