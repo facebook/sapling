@@ -1880,6 +1880,10 @@ if havefb and iswindows:
     rustextbinaries += [RustBinary("fbclone", manifest="fb/fbclone/Cargo.toml")]
 
 
+if sys.platform == "cygwin":
+    print("WARNING: CYGWIN BUILD NO LONGER OFFICIALLY SUPPORTED")
+
+
 setup(
     name="edenscm",
     version=setupversion,

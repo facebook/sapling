@@ -691,56 +691,8 @@ if pycompat.isdarwin:
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 
-    # pyre-fixme[9]: checkexec has type `(path: str) -> bool`; used as `(path: str)
-    #  -> bool`.
     checkexec = _checkexec
-    # pyre-fixme[9]: checklink has type `(path: str) -> bool`; used as `(path: str)
-    #  -> bool`.
     checklink = _checklink
-
-elif pycompat.sysplatform == "cygwin":
-    # workaround for cygwin, in which mount point part of path is
-    # treated as case sensitive, even though underlying NTFS is case
-    # insensitive.
-
-    # default mount points
-    cygwinmountpoints = sorted(["/usr/bin", "/usr/lib", "/cygdrive"], reverse=True)
-
-    # use upper-ing as normcase as same as NTFS workaround
-    def normcase(path):
-        pathlen = len(path)
-        if (pathlen == 0) or (path[0] != pycompat.ossep):
-            # treat as relative
-            return encoding.upper(path)
-
-        # to preserve case of mountpoint part
-        for mp in cygwinmountpoints:
-            if not path.startswith(mp):
-                continue
-
-            mplen = len(mp)
-            if mplen == pathlen:  # mount point itself
-                return mp
-            if path[mplen] == pycompat.ossep:
-                return mp + encoding.upper(path[mplen:])
-
-        return encoding.upper(path)
-
-    normcasespec = encoding.normcasespecs.other
-    normcasefallback = normcase
-
-    # Cygwin translates native ACLs to POSIX permissions,
-    # but these translations are not supported by native
-    # tools, so the exec bit tends to be set erroneously.
-    # Therefore, disable executable bit access on Cygwin.
-    def checkexec(path: str) -> bool:
-        return False
-
-    # Similarly, Cygwin's symlink emulation is likely to create
-    # problems when Mercurial is used from both Cygwin and native
-    # Windows, with other native tools, or on shared volumes
-    def checklink(path: str) -> bool:
-        return False
 
 else:
     # os.path.normcase is a no-op, which doesn't help us on non-native
@@ -753,11 +705,7 @@ else:
     # fallback normcase function for non-ASCII strings
     normcasefallback = normcase
 
-    # pyre-fixme[9]: checkexec has type `(path: str) -> bool`; used as `(path: str)
-    #  -> bool`.
     checkexec = _checkexec
-    # pyre-fixme[9]: checklink has type `(path: str) -> bool`; used as `(path: str)
-    #  -> bool`.
     checklink = _checklink
 
 _needsshellquote = None

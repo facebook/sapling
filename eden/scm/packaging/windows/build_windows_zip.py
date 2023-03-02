@@ -20,6 +20,7 @@ import glob
 import io
 import os
 import subprocess
+import sys
 import time
 import zipfile
 from contextlib import contextmanager
@@ -103,6 +104,8 @@ def zip_sapling(project_root: Path, build_dir: Path):
 def fetch_python(python_dir: Path):
     python_dir.mkdir(parents=True, exist_ok=True)
 
+    if sys.platform == "cygwin":
+        print("WARNING: CYGWIN BUILD NO LONGER OFFICIALLY SUPPORTED")
     # The embedded Python distribution contains the runtime (we ship this with our code).
     with step("Fetching Embeddable Python"):
         # Python zip is ~6MB.
