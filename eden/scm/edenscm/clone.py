@@ -15,7 +15,12 @@ from .node import hex
 def revlogclone(source, repo):
     """clone from source into an empty remotefilelog repo using revlog changelog"""
 
-    with repo.wlock(), repo.lock(), repo.transaction("clone"):
+    with repo.wlock(), repo.lock(), repo.transaction("clone"), repo.ui.configoverride(
+        {
+            ("pull", "httpcommitgraph"): "false",
+            ("pull", "httpcommitgraph2"): "false",
+        }
+    ):
         if any(
             repo.svfs.tryread(name)
             for name in ["00changelog.i", "bookmarks", "remotenames"]
