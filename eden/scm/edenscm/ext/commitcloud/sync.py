@@ -273,7 +273,7 @@ def _sync(
                     )
 
                 # Check if any omissions are now included in the repo
-                _checkomissions(repo, remotepath, lastsyncstate, tr, maxage)
+                _checkomissions(repo, lastsyncstate, tr, maxage)
 
             # We committed the transaction so that data downloaded from the cloud is
             # committed.  Start a new transaction for uploading the local changes.
@@ -865,7 +865,7 @@ def _forkname(ui, name, othernames):
 
 
 @perftrace.tracefunc("Check Omissions")
-def _checkomissions(repo, remotepath, lastsyncstate, tr, maxage):
+def _checkomissions(repo, lastsyncstate, tr, maxage):
     """check omissions are still not available locally
 
     Check that the commits that have been deliberately omitted are still not
