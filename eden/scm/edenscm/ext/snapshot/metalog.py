@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from typing import Optional
+
 from edenscm import error, perftrace
 
 LATESTBUBBLE = "latestbubble"
@@ -10,7 +12,7 @@ LATESTSNAPSHOT = "latestsnapshot"
 
 
 @perftrace.tracefunc("Fetch latest bubble")
-def fetchlatestbubble(ml):
+def fetchlatestbubble(ml) -> Optional[int]:
     data = ml.get(LATESTBUBBLE)
     if data is not None:
         try:
@@ -25,7 +27,7 @@ def fetchlatestsnapshot(ml):
 
 
 @perftrace.tracefunc("Snapshot metalog store")
-def storelatest(repo, snapshot, bubble):
+def storelatest(repo, snapshot, bubble) -> None:
     """call this inside repo.transaction() to write changes to disk"""
     assert repo.currenttransaction()
     ml = repo.metalog()
