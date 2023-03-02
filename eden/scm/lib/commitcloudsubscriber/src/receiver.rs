@@ -67,6 +67,12 @@ impl TcpReceiverService {
         let mut buf = Vec::new();
         let bytes_read = socket.read_to_end(&mut buf).await?;
 
+        if bytes_read == 0 {
+            // Ping connection, client checks if scm daemon is alive
+            // TODO: implement proper health_check request
+            return Ok(());
+        }
+
         let command: Command = serde_json::from_slice(&buf[..bytes_read])?;
         let command_name = serde_json::to_string(&(command.0).0)
             .ok()
