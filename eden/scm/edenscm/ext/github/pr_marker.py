@@ -48,15 +48,16 @@ def cleanup_landed_pr(repo, dry_run=False):
         )
         return
 
-    _hide_commits(repo, to_hide, mutation_entries, dry_run)
-    ui.status(
-        _n(
-            "marked %d commit as landed\n",
-            "marked %d commits as landed\n",
-            len(to_hide),
+    if to_hide:
+        _hide_commits(repo, to_hide, mutation_entries, dry_run)
+        ui.status(
+            _n(
+                "marked %d commit as landed\n",
+                "marked %d commits as landed\n",
+                len(to_hide),
+            )
+            % len(to_hide)
         )
-        % len(to_hide)
-    )
 
 
 def _get_draft_commits(repo) -> t.Dict[PullRequestId, t.Set[Node]]:
