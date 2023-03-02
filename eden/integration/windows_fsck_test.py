@@ -101,6 +101,173 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
         self._assertInStatus(b"ignored/foobar")
 
+    def test_detect_removed_file_from_placeholder_directory_while_running(self) -> None:
+        """Remove a file in placeholder directory when EdenFS is running."""
+        afile = self.mount_path / "adir" / "file"
+
+        afile.unlink()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED},
+        )
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED},
+        )
+
+    def test_detect_removed_file_from_dirty_placeholder_directory_while_running(
+        self,
+    ) -> None:
+        """Remove a file in dirty placeholder directory when EdenFS is running."""
+        afile = self.mount_path / "adir" / "file"
+        new_file = self.mount_path / "adir" / "a_new_file"
+
+        new_file.touch()
+        afile.unlink()
+
+        self.assertEqual(
+            self._eden_status(),
+            {
+                b"adir/a_new_file": ScmFileStatus.ADDED,
+                b"adir/file": ScmFileStatus.REMOVED,
+            },
+        )
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {
+                b"adir/a_new_file": ScmFileStatus.ADDED,
+                b"adir/file": ScmFileStatus.REMOVED,
+            },
+        )
+
+    def test_detect_removed_file_from_full_directory_while_running(self) -> None:
+        """Remove a file in Full directory when EdenFS is running."""
+        foo = self.mount_path / "foobar" / "foo"
+        foo.parent.mkdir()
+        foo.write_text("hello!!")
+        self._assertInStatus(b"foobar/foo")
+        foo.unlink()
+        self.eden.shutdown()
+        self.eden.start()
+        self.assertFalse(foo.exists())
+        self._assertNotInStatus(b"foobar/foo")
+
+    # this test is currently broken :(
+    def test_detect_removed_file_from_full_dir_matches_scm_not_empty_while_running(
+        self,
+    ) -> None:
+        """
+        Remove a file in full directory that happens to match a source
+        control tree and is not empty on disk when EdenFS is running.
+        """
+
+        # Materialize the file and its parent by removing and re-creating them.
+        self.rm("adir/file")
+        self.rmdir("adir")
+        self.write_file("adir/file", "foo!\n")
+        self.write_file("adir/file2", "foo!\n")
+
+        self.assertEqual(self._eden_status(), {b"adir/file2": ScmFileStatus.ADDED})
+
+        afile = self.mount_path / "adir" / "file"
+        afile.unlink()
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file2": ScmFileStatus.ADDED},
+        )
+
+    def test_detect_removed_file_from_full_dir_matches_scm_empty_while_running(
+        self,
+    ) -> None:
+        """
+        Remove a file in full directory that happens to match a source
+        control tree and is not empty on disk when EdenFS is running.
+        """
+
+        # Materialize the file and its parent by removing and re-creating them.
+        self.rm("adir/file")
+        self.rmdir("adir")
+        self.write_file("adir/file", "foo!\n")
+
+        self.assertEqual(self._eden_status(), {})
+
+        afile = self.mount_path / "adir" / "file"
+        afile.unlink()
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED},
+        )
+
+    # this test is currently broken because we magically "bring the file back"
+    def test_detect_removed_file_from_dirty_placeholder_directory(self) -> None:
+        """Remove a file in placeholder directory when EdenFS is not running."""
+        afile = self.mount_path / "adir" / "file"
+        afile2 = self.mount_path / "adir" / "file2"
+        afile2.touch()
+        with open(afile, "r") as f:
+            f.read()
+
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file2": ScmFileStatus.ADDED},
+        )
+
+        self.eden.shutdown()
+
+        afile.unlink()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file2": ScmFileStatus.ADDED},
+        )
+
+    # this test is currently broken because we magically "bring the file back"
+    def test_detect_removed_file_from_placeholder_directory(self) -> None:
+        """Remove a file in dirty placeholder directory when EdenFS is not running."""
+        adir = self.mount_path / "adir"
+        afile = adir / "file"
+        with open(afile, "r") as f:
+            f.read()
+
+        self.assertEqual(
+            self._eden_status(),
+            {},
+        )
+
+        self.eden.shutdown()
+
+        afile.unlink()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED},
+        )
+
     def test_detect_removed_file_from_full_directory(self) -> None:
         """Remove a file in Full directory when EdenFS is not running."""
         foo = self.mount_path / "foobar" / "foo"
@@ -111,27 +278,33 @@ class WindowsFsckTest(testcase.EdenRepoTest):
         self.eden.shutdown()
         foo.unlink()
         self.eden.start()
+        self.assertFalse(foo.exists())
         self._assertNotInStatus(b"foobar/foo")
 
     # this test is currently broken :(
-    # def test_detect_removed_file_from_placeholder_directory(self) -> None:
-    #     """Remove a file in placeholder directory when EdenFS is not running."""
+    def test_detect_removed_file_from_full_directory_scm_exists(self) -> None:
+        """
+        Remove a file in full directory that happens to match a tree
+        in source control when EdenFS is not running.
+        """
 
-    #     # Materialize the file and its parent by removing and re-creating them.
-    #     self.rm("adir/file")
-    #     self.rmdir("adir")
-    #     self.write_file("adir/file", "foo!\n")
+        # Materialize the file and its parent by removing and re-creating them.
+        self.rm("adir/file")
+        self.rmdir("adir")
+        self.write_file("adir/file", "foo!\n")
 
-    #     self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self._eden_status(), {})
 
-    #     afile = self.mount_path / "adir" / "file"
-    #     self.eden.shutdown()
-    #     afile.unlink()
-    #     self.eden.start()
-    #     self.assertEqual(
-    #         self._eden_status(),
-    #         {b"adir/file": ScmFileStatus.REMOVED},
-    #     )
+        afile = self.mount_path / "adir" / "file"
+        self.eden.shutdown()
+        afile.unlink()
+        self.eden.start()
+
+        self.assertFalse(afile.exists())
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED},
+        )
 
     def test_fsck_not_readding_tombstone(self) -> None:
         """
@@ -283,29 +456,29 @@ class WindowsFsckTest(testcase.EdenRepoTest):
 
     # this test is currently broken :( for the same reason as the
     # remove test above.
-    # def test_fsck_rename_while_stopped_materialized(self) -> None:
-    #     # Materialize the file and its parent by removing and re-creating them.
-    #     self.rm("adir/file")
-    #     self.rmdir("adir")
-    #     self.write_file("adir/file", "foo!\n")
+    def test_fsck_rename_while_stopped_materialized(self) -> None:
+        # Materialize the file and its parent by removing and re-creating them.
+        self.rm("adir/file")
+        self.rmdir("adir")
+        self.write_file("adir/file", "foo!\n")
 
-    #     self.assertEqual(self._eden_status(), {})
+        self.assertEqual(self._eden_status(), {})
 
-    #     afile = self.mount_path / "adir" / "file"
+        afile = self.mount_path / "adir" / "file"
 
-    #     self.eden.shutdown()
-    #     afile.rename(self.mount_path / "adir" / "file-1")
-    #     self.eden.start()
+        self.eden.shutdown()
+        afile.rename(self.mount_path / "adir" / "file-1")
+        self.eden.start()
 
-    #     result = subprocess.run(
-    #         ["eden", "debug", "prjfs-state", str(afile)], capture_output=True
-    #     )
-    #     print(result)
+        result = subprocess.run(
+            ["eden", "debug", "prjfs-state", str(afile)], capture_output=True
+        )
+        print(result)
 
-    #     self.assertEqual(
-    #         self._eden_status(),
-    #         {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
-    #     )
+        self.assertEqual(
+            self._eden_status(),
+            {b"adir/file": ScmFileStatus.REMOVED, b"adir/file-1": ScmFileStatus.ADDED},
+        )
 
     def block_notification_processing(
         self, keyClass="PrjfsDispatcherImpl::fileNotification", keyValueRegex=".*"

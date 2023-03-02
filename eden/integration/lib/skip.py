@@ -132,6 +132,15 @@ if sys.platform == "win32":
             "test_mount_state_during_unmount_with_in_progress_checkout",
         ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
+        "windows_fsck_test.WindowsFsckTestHg": [
+            # T141321412
+            "test_detect_removed_file_from_full_dir_matches_scm_not_empty_while_running",
+            "test_detect_removed_file_from_full_directory_scm_exists",
+            "test_fsck_rename_while_stopped_materialized",
+            # T146967686
+            "test_detect_removed_file_from_dirty_placeholder_directory",
+            "test_detect_removed_file_from_placeholder_directory",
+        ],
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):
     # The ChownTest.setUp() code tries to look up the "nobody" group, which doesn't
