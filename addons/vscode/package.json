@@ -105,6 +105,9 @@
     "build-webview": "cross-env NODE_ENV=production webpack --config webview.webpack.config.ts",
     "vscode:prepublish": "./buildForPublish.sh"
   },
+  "optionalDependencies": {
+    "vsce": "^2.15.0"
+  },
   "devDependencies": {
     "@types/circular-dependency-plugin": "^5.0.5",
     "@types/jest": "27.5.2",
