@@ -366,8 +366,6 @@ mod tests {
         )?);
         store.indexedlog_cache = Some(cache.clone());
 
-        store.cache_to_local_cache = false;
-
         let expected = FileAuxData {
             total_size: 4,
             content_id: ContentId::from_str(

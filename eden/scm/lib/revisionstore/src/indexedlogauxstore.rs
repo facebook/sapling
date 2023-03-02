@@ -368,7 +368,6 @@ mod tests {
 
         // Set up local-only FileStore
         let mut store = FileStore::empty();
-        store.cache_to_local_cache = true;
         store.indexedlog_local = Some(content.clone());
         store.aux_local = Some(aux.clone());
 

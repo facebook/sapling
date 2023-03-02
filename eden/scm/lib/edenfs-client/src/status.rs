@@ -197,24 +197,27 @@ async fn maybe_status_fastpath_internal(
         // we ship with the eden server to provide a version check and advice
 
         use chrono::offset::TimeZone;
-        let today = chrono::Local::today();
+        let today = chrono::Local::now();
 
         // Construct a date object from the version number
         let day = version % 100;
         let month = (version % 10_000) / 100;
         let year = version / 10_000;
-        let version_date = chrono::Local.ymd(year as i32, month, day);
-
-        if today - version_date > chrono::Duration::days(45) {
-            let _ = io.write_err(
-                "
+        if let Some(version_date) = chrono::Local
+            .with_ymd_and_hms(year as i32, month, day, 0, 0, 0)
+            .latest()
+        {
+            if today - version_date > chrono::Duration::days(45) {
+                let _ = io.write_err(
+                    "
 Your running Eden server is more than 45 days old.  You should run
 `eden restart --graceful` to update to the current release.\n",
-            );
-        }
+                );
+            }
 
-        if use_color {
-            let _ = io.write_err(RESET);
+            if use_color {
+                let _ = io.write_err(RESET);
+            }
         }
     }
 

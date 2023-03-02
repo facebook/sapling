@@ -425,7 +425,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             indexedlog_cache,
             lfs_cache,
-            cache_to_local_cache: true,
 
             memcache,
             cache_to_memcache: true,

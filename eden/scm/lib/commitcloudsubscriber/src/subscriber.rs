@@ -37,8 +37,6 @@ use crate::ActionsMap;
 #[derive(Deserialize)]
 pub struct Notification {
     pub(crate) version: u64,
-    pub(crate) new_heads: Option<Vec<String>>,
-    pub(crate) removed_heads: Option<Vec<String>>,
 }
 
 #[derive(PartialEq, Eq, Hash)]

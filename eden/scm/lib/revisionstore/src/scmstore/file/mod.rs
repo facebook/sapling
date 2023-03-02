@@ -72,7 +72,6 @@ pub struct FileStore {
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
     pub(crate) extstored_policy: ExtStoredPolicy,
     pub(crate) lfs_threshold_bytes: Option<u64>,
-    pub(crate) cache_to_local_cache: bool,
     pub(crate) cache_to_memcache: bool,
     pub(crate) edenapi_retries: i32,
     /// Allow explicitly writing serialized LFS pointers outside of tests
@@ -404,7 +403,6 @@ impl FileStore {
 
             indexedlog_cache: None,
             lfs_cache: None,
-            cache_to_local_cache: true,
 
             memcache: None,
             cache_to_memcache: true,
@@ -454,7 +452,6 @@ impl LegacyStore for FileStore {
 
             indexedlog_cache: None,
             lfs_cache: None,
-            cache_to_local_cache: false,
 
             memcache: None,
             cache_to_memcache: false,
