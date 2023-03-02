@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+//! Mononoke -> hg sync job
+//!
+//! It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
+//! of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
+//! to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
+
 #![feature(auto_traits)]
 #![feature(async_closure)]
 #![feature(drain_filter)]
@@ -18,11 +24,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Mononoke -> hg sync job
-///
-/// It's a special job that is used to synchronize Mononoke to Mercurial when Mononoke is a source
-/// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
-/// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
