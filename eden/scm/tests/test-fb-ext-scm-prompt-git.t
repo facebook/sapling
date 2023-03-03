@@ -92,7 +92,7 @@ Test more advanced workflows
   $ cmd git merge --abort
   (work)
 
-  $ cmd git bisect start
+  $ quietcmd git bisect start
   (work|BISECT)
   $ cmd git bisect reset
   Already on 'work'
