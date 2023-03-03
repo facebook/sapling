@@ -8,77 +8,77 @@
  */
 
 /*
- * @generated SignedSource<<6600c2201dbaae5da46fc791ea653825>>
+ * @generated SignedSource<<73354cc731f2559ab95c001e563b13fb>>
  * Run `./scripts/gen_release_data.py` to regenerate.
  */
 
 export const latestReleaseAssets = {
   "assets": [
     {
-      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/86661584",
+      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/97517464",
       "contentType": "application/x-gtar",
-      "createdAt": "2022-12-01T18:54:32Z",
-      "downloadCount": 0,
-      "id": "RA_kwDOA3c_bc4FKlnQ",
-      "label": "",
-      "name": "sapling_0.1.20221201-095354-r360873f1.arm64_monterey.bottle.tar.gz",
-      "size": 23976070,
-      "state": "uploaded",
-      "updatedAt": "2022-12-01T18:54:33Z",
-      "url": "https://github.com/facebook/sapling/releases/download/0.1.20221201-095354-r360873f1/sapling_0.1.20221201-095354-r360873f1.arm64_monterey.bottle.tar.gz"
-    },
-    {
-      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/86661118",
-      "contentType": "application/x-gtar",
-      "createdAt": "2022-12-01T18:48:58Z",
-      "downloadCount": 1,
-      "id": "RA_kwDOA3c_bc4FKlf-",
-      "label": "",
-      "name": "sapling_0.1.20221201-095354-r360873f1.monterey.bottle.tar.gz",
-      "size": 24508812,
-      "state": "uploaded",
-      "updatedAt": "2022-12-01T18:49:00Z",
-      "url": "https://github.com/facebook/sapling/releases/download/0.1.20221201-095354-r360873f1/sapling_0.1.20221201-095354-r360873f1.monterey.bottle.tar.gz"
-    },
-    {
-      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/86660723",
-      "contentType": "application/x-debian-package",
-      "createdAt": "2022-12-01T18:43:49Z",
-      "downloadCount": 1,
-      "id": "RA_kwDOA3c_bc4FKlZz",
-      "label": "",
-      "name": "sapling_0.1.20221201-095354-r360873f1_amd64.Ubuntu20.04.deb",
-      "size": 20071260,
-      "state": "uploaded",
-      "updatedAt": "2022-12-01T18:43:50Z",
-      "url": "https://github.com/facebook/sapling/releases/download/0.1.20221201-095354-r360873f1/sapling_0.1.20221201-095354-r360873f1_amd64.Ubuntu20.04.deb"
-    },
-    {
-      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/86660272",
-      "contentType": "application/x-debian-package",
-      "createdAt": "2022-12-01T18:39:06Z",
-      "downloadCount": 1,
-      "id": "RA_kwDOA3c_bc4FKlSw",
-      "label": "",
-      "name": "sapling_0.1.20221201-095354-r360873f1_amd64.Ubuntu22.04.deb",
-      "size": 21465568,
-      "state": "uploaded",
-      "updatedAt": "2022-12-01T18:39:07Z",
-      "url": "https://github.com/facebook/sapling/releases/download/0.1.20221201-095354-r360873f1/sapling_0.1.20221201-095354-r360873f1_amd64.Ubuntu22.04.deb"
-    },
-    {
-      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/86660917",
-      "contentType": "application/zip",
-      "createdAt": "2022-12-01T18:46:16Z",
+      "createdAt": "2023-02-28T23:16:55Z",
       "downloadCount": 3,
-      "id": "RA_kwDOA3c_bc4FKlc1",
+      "id": "RA_kwDOA3c_bc4Fz_-Y",
       "label": "",
-      "name": "sapling_windows_0.1.20221201-095354-r360873f1_amd64.zip",
-      "size": 44654261,
+      "name": "sapling_0.2.20230228-144002-h9440b05e.arm64_monterey.bottle.tar.gz",
+      "size": 25041030,
       "state": "uploaded",
-      "updatedAt": "2022-12-01T18:46:17Z",
-      "url": "https://github.com/facebook/sapling/releases/download/0.1.20221201-095354-r360873f1/sapling_windows_0.1.20221201-095354-r360873f1_amd64.zip"
+      "updatedAt": "2023-02-28T23:16:56Z",
+      "url": "https://github.com/facebook/sapling/releases/download/0.2.20230228-144002-h9440b05e/sapling_0.2.20230228-144002-h9440b05e.arm64_monterey.bottle.tar.gz"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/97517739",
+      "contentType": "application/x-gtar",
+      "createdAt": "2023-02-28T23:19:43Z",
+      "downloadCount": 2,
+      "id": "RA_kwDOA3c_bc4F0ACr",
+      "label": "",
+      "name": "sapling_0.2.20230228-144002-h9440b05e.monterey.bottle.tar.gz",
+      "size": 25598450,
+      "state": "uploaded",
+      "updatedAt": "2023-02-28T23:19:44Z",
+      "url": "https://github.com/facebook/sapling/releases/download/0.2.20230228-144002-h9440b05e/sapling_0.2.20230228-144002-h9440b05e.monterey.bottle.tar.gz"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/97516649",
+      "contentType": "application/x-debian-package",
+      "createdAt": "2023-02-28T23:07:03Z",
+      "downloadCount": 0,
+      "id": "RA_kwDOA3c_bc4Fz_xp",
+      "label": "",
+      "name": "sapling_0.2.20230228-144002-h9440b05e_amd64.Ubuntu20.04.deb",
+      "size": 18921436,
+      "state": "uploaded",
+      "updatedAt": "2023-02-28T23:07:05Z",
+      "url": "https://github.com/facebook/sapling/releases/download/0.2.20230228-144002-h9440b05e/sapling_0.2.20230228-144002-h9440b05e_amd64.Ubuntu20.04.deb"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/97516660",
+      "contentType": "application/x-debian-package",
+      "createdAt": "2023-02-28T23:07:13Z",
+      "downloadCount": 2,
+      "id": "RA_kwDOA3c_bc4Fz_x0",
+      "label": "",
+      "name": "sapling_0.2.20230228-144002-h9440b05e_amd64.Ubuntu22.04.deb",
+      "size": 20370688,
+      "state": "uploaded",
+      "updatedAt": "2023-02-28T23:07:19Z",
+      "url": "https://github.com/facebook/sapling/releases/download/0.2.20230228-144002-h9440b05e/sapling_0.2.20230228-144002-h9440b05e_amd64.Ubuntu22.04.deb"
+    },
+    {
+      "apiUrl": "https://api.github.com/repos/facebook/sapling/releases/assets/97518312",
+      "contentType": "application/zip",
+      "createdAt": "2023-02-28T23:29:40Z",
+      "downloadCount": 2,
+      "id": "RA_kwDOA3c_bc4F0ALo",
+      "label": "",
+      "name": "sapling_windows_0.2.20230228-144002-h9440b05e_amd64.zip",
+      "size": 44637621,
+      "state": "uploaded",
+      "updatedAt": "2023-02-28T23:29:43Z",
+      "url": "https://github.com/facebook/sapling/releases/download/0.2.20230228-144002-h9440b05e/sapling_windows_0.2.20230228-144002-h9440b05e_amd64.zip"
     }
   ],
-  "name": "0.1.20221201-095354-r360873f1"
+  "name": "0.2.20230228-144002-h9440b05e"
 };

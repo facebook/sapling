@@ -4,7 +4,7 @@ sidebar_position: 36
 
 ## shelve
 <!--
-  @generated SignedSource<<c104bf82a72985c470946dcc453e060f>>
+  @generated SignedSource<<bda930f1fc937d7dc0afa4693def344b>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -15,7 +15,7 @@ Shelving takes files that `sl status` reports as not clean, saves
 the modifications to a bundle (a shelved change), and reverts the
 files to a clean state in the working copy.
 
-To restore the changes to the working copy, using `sl unshelve`,
+To restore the changes to the working copy, use `sl unshelve`
 regardless of your current commit.
 
 When no files are specified, `sl shelve` saves all not-clean

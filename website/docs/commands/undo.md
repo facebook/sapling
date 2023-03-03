@@ -4,7 +4,7 @@ sidebar_position: 44
 
 ## undo
 <!--
-  @generated SignedSource<<3cc2cbc7f0eb98479a55c103e2495eb4>>
+  @generated SignedSource<<8aa5533f0b018abacd06fed6af8220f5>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -43,7 +43,7 @@ undo history.
 
 For hybrid commands that result in both local and remote changes,
 `sl undo` will undo the local changes, but not the remote changes.
-For example, `@prog pull --rebase` might move remote/master and also
+For example, `sl pull --rebase` might move remote/master and also
 rebase local commits. In this situation, `sl undo` will revert the
 rebase, but not the change to remote/master.
 

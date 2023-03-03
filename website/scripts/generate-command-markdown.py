@@ -101,6 +101,8 @@ def generate_commands_json(command_list: List[str]) -> Dict:
     proc = subprocess.run(
         [
             get_sapling(),
+            "--config",
+            "extensions.github=",
             "debugshell",
             "extract-command-documentation.py",
             json.dumps(command_list, indent=2),
