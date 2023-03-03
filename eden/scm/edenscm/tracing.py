@@ -59,7 +59,9 @@ else:
 # ---- event ----
 
 
-def event(message, name=None, target=None, level=LEVEL_INFO, depth=0, **meta):
+def event(
+    message, name=None, target=None, level=LEVEL_INFO, depth: int = 0, **meta
+) -> None:
     """Log an event to the Rust tracing eco-system
 
     name, target, and meta keys are stored in the callsite metadata, meaning
@@ -134,7 +136,7 @@ class _stubspan(object):
         return None
 
 
-def span(name, target=None, level=LEVEL_INFO, depth=0, **meta):
+def span(name, target=None, level=LEVEL_INFO, depth: int = 0, **meta):
     """Open a span in the Rust tracing eco-system.
 
     The returned span works as a context manager, and meta can be dynamically
@@ -190,7 +192,7 @@ error_span = partial(span, level=LEVEL_ERROR)
 # ---- test if a callsite is enabled ----
 
 
-def isenabled(level, name=None, target=None, depth=0):
+def isenabled(level, name=None, target=None, depth: int = 0):
     """Test if a callsite is enabled."""
     if disabletracing:
         return False
