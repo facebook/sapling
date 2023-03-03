@@ -21,6 +21,7 @@ mod test {
     use anyhow::Result;
     use ascii::AsciiString;
     use bookmarks::Bookmark;
+    use bookmarks::BookmarkCategory;
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarkKind;
     use bookmarks::BookmarkPagination;
@@ -138,6 +139,7 @@ mod test {
     fn mock_bookmarks_response(
         bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         prefix: &BookmarkPrefix,
+        categories: &[BookmarkCategory],
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
@@ -148,15 +150,19 @@ mod test {
             .map(|(k, v)| (k.name().clone(), v))
             .collect::<BTreeMap<_, _>>()
             .range(range)
-            .filter_map(|(name, (kind, changeset_id))| {
+            .flat_map(|(name, (kind, _))| {
                 if kinds.iter().any(|k| kind == k) {
-                    let bookmark = Bookmark {
-                        key: BookmarkKey::with_name(name.clone()),
-                        kind: *kind,
-                    };
-                    Some((bookmark, *changeset_id))
+                    categories
+                        .iter()
+                        .filter_map(|c| {
+                            let key = BookmarkKey::with_name_and_category(name.clone(), *c);
+                            bookmarks
+                                .get(&key)
+                                .map(|(kind, csid)| (Bookmark { key, kind: *kind }, *csid))
+                        })
+                        .collect::<Vec<_>>()
                 } else {
-                    None
+                    Vec::new()
                 }
             })
             .take(limit as usize)
@@ -168,6 +174,7 @@ mod test {
         bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         query_freshness: Freshness,
         query_prefix: &BookmarkPrefix,
+        query_categories: &[BookmarkCategory],
         query_kinds: &[BookmarkKind],
         query_pagination: &BookmarkPagination,
         query_limit: u64,
@@ -194,6 +201,7 @@ mod test {
                 ctx,
                 query_freshness,
                 query_prefix,
+                query_categories,
                 query_kinds,
                 query_pagination,
                 query_limit,
@@ -208,12 +216,14 @@ mod test {
             fb: FacebookInit,
             bookmarks: BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
             freshness: Freshness,
+            categories: HashSet<BookmarkCategory>,
             kinds: HashSet<BookmarkKind>,
             prefix_char: Option<ascii_ext::AsciiChar>,
             after: Option<BookmarkKey>,
             limit: u64
         ) -> bool {
             // Test that requests return what is expected.
+            let categories: Vec<_> = categories.into_iter().collect();
             let kinds: Vec<_> = kinds.into_iter().collect();
             let prefix = match prefix_char {
                 Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
@@ -228,6 +238,7 @@ mod test {
                 &bookmarks,
                 freshness,
                 &prefix,
+                categories.as_slice(),
                 kinds.as_slice(),
                 &pagination,
                 limit,
@@ -235,6 +246,7 @@ mod test {
             let mut want = mock_bookmarks_response(
                 &bookmarks,
                 &prefix,
+                categories.as_slice(),
                 kinds.as_slice(),
                 &pagination,
                 limit,

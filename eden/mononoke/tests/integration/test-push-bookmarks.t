@@ -105,6 +105,7 @@ Try non fastforward moves (backwards and across branches)
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
@@ -143,6 +144,7 @@ Try non fastforward moves (backwards and across branches)
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
@@ -194,6 +196,7 @@ Try non fastfoward moves on regex bookmark
   remote:                     name: BookmarkName {
   remote:                         bookmark: "ffonly_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 from: ChangesetId(
   remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
@@ -235,6 +238,7 @@ Try to delete master
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:             },
   remote:         },

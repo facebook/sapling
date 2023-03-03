@@ -12,6 +12,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
@@ -139,6 +140,7 @@ async fn all_bookmarks_except_with_options(
             ctx.clone(),
             Freshness::MaybeStale,
             &BookmarkPrefix::empty(),
+            BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
             u64::MAX,

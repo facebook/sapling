@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
@@ -49,23 +50,24 @@ define_stats! {
 
 mononoke_queries! {
     write ReplaceBookmarks(
-        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, changeset_id: ChangesetId)
+        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, category: BookmarkCategory, changeset_id: ChangesetId)
     ) {
         none,
-        "REPLACE INTO bookmarks (repo_id, log_id, name, changeset_id) VALUES {values}"
+        "REPLACE INTO bookmarks (repo_id, log_id, name, category, changeset_id) VALUES {values}"
     }
 
     write InsertBookmarks(
-        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, changeset_id: ChangesetId, kind: BookmarkKind)
+        values: (repo_id: RepositoryId, log_id: Option<u64>, name: BookmarkName, category: BookmarkCategory, changeset_id: ChangesetId, kind: BookmarkKind)
     ) {
         insert_or_ignore,
-        "{insert_or_ignore} INTO bookmarks (repo_id, log_id, name, changeset_id, hg_kind) VALUES {values}"
+        "{insert_or_ignore} INTO bookmarks (repo_id, log_id, name, category, changeset_id, hg_kind) VALUES {values}"
     }
 
     write UpdateBookmark(
         repo_id: RepositoryId,
         log_id: Option<u64>,
         name: BookmarkName,
+        category: BookmarkCategory,
         old_id: ChangesetId,
         new_id: ChangesetId,
         >list kinds: BookmarkKind
@@ -75,22 +77,25 @@ mononoke_queries! {
          SET log_id = {log_id}, changeset_id = {new_id}
          WHERE repo_id = {repo_id}
            AND name = {name}
+           AND category = {category}
            AND changeset_id = {old_id}
            AND hg_kind IN {kinds}"
     }
 
-    write DeleteBookmark(repo_id: RepositoryId, name: BookmarkName) {
-        none,
-        "DELETE FROM bookmarks
-         WHERE repo_id = {repo_id}
-           AND name = {name}"
-    }
-
-    write DeleteBookmarkIf(repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId) {
+    write DeleteBookmark(repo_id: RepositoryId, name: BookmarkName, category: BookmarkCategory) {
         none,
         "DELETE FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name = {name}
+           AND category = {category}"
+    }
+
+    write DeleteBookmarkIf(repo_id: RepositoryId, name: BookmarkName, category: BookmarkCategory, changeset_id: ChangesetId) {
+        none,
+        "DELETE FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name = {name}
+           AND category = {category}
            AND changeset_id = {changeset_id}"
     }
 
@@ -261,7 +266,15 @@ impl SqlBookmarksTransactionPayload {
         }
         let data = data
             .iter()
-            .map(|(repo_id, log_id, bookmark, cs_id)| (repo_id, log_id, bookmark.name(), *cs_id))
+            .map(|(repo_id, log_id, bookmark, cs_id)| {
+                (
+                    repo_id,
+                    log_id,
+                    bookmark.name(),
+                    bookmark.category(),
+                    *cs_id,
+                )
+            })
             .collect::<Vec<_>>();
         let (txn, _) = ReplaceBookmarks::query_with_transaction(txn, data.as_slice()).await?;
         Ok(txn)
@@ -282,7 +295,14 @@ impl SqlBookmarksTransactionPayload {
         let data = data
             .iter()
             .map(|(repo_id, log_id, bookmark, cs_id, kind)| {
-                (repo_id, log_id, bookmark.name(), *cs_id, *kind)
+                (
+                    repo_id,
+                    log_id,
+                    bookmark.name(),
+                    bookmark.category(),
+                    *cs_id,
+                    *kind,
+                )
             })
             .collect::<Vec<_>>();
         let rows_to_insert = data.len() as u64;
@@ -307,9 +327,13 @@ impl SqlBookmarksTransactionPayload {
                 // This is a no-op update.  Check if the bookmark already points to the correct
                 // commit.  If it doesn't, abort the transaction. We need to make this a select
                 // query instead of an update, since affected_rows() woud otherwise return 0.
-                let (txn_, result) =
-                    SelectBookmark::query_with_transaction(txn, &self.repo_id, bookmark.name())
-                        .await?;
+                let (txn_, result) = SelectBookmark::query_with_transaction(
+                    txn,
+                    &self.repo_id,
+                    bookmark.name(),
+                    bookmark.category(),
+                )
+                .await?;
                 txn = txn_;
                 if result.get(0).map(|row| row.0).as_ref() != Some(new_cs_id) {
                     return Err(BookmarkTransactionError::LogicError);
@@ -320,6 +344,7 @@ impl SqlBookmarksTransactionPayload {
                     &self.repo_id,
                     &log_id,
                     bookmark.name(),
+                    bookmark.category(),
                     old_cs_id,
                     new_cs_id,
                     kinds,
@@ -341,8 +366,13 @@ impl SqlBookmarksTransactionPayload {
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         for (bookmark, log_entry) in self.force_deletes.iter() {
             log.push_log_entry(bookmark, log_entry);
-            let (txn_, _) =
-                DeleteBookmark::query_with_transaction(txn, &self.repo_id, bookmark.name()).await?;
+            let (txn_, _) = DeleteBookmark::query_with_transaction(
+                txn,
+                &self.repo_id,
+                bookmark.name(),
+                bookmark.category(),
+            )
+            .await?;
             txn = txn_;
         }
         Ok(txn)
@@ -361,6 +391,7 @@ impl SqlBookmarksTransactionPayload {
                 txn,
                 &self.repo_id,
                 bookmark.name(),
+                bookmark.category(),
                 old_cs_id,
             )
             .await?;
@@ -658,7 +689,7 @@ pub(crate) async fn insert_bookmarks(
     let none = None;
     let rows = rows
         .into_iter()
-        .map(|(r, b, c, k)| (r, &none, b.name(), c, k))
+        .map(|(r, b, c, k)| (r, &none, b.name(), b.category(), c, k))
         .collect::<Vec<_>>();
     InsertBookmarks::query(conn, rows.as_slice()).await?;
     Ok(())

@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
@@ -173,6 +174,7 @@ pub fn get_heads_maybe_stale(
             ctx,
             Freshness::MaybeStale,
             &BookmarkPrefix::empty(),
+            BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
             std::u64::MAX,

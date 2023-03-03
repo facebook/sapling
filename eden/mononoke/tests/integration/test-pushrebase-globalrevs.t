@@ -71,11 +71,13 @@ Check that we cannot pushrebase on that bookmark
   remote:             name: BookmarkName {
   remote:                 bookmark: "other_bookmark",
   remote:             },
+  remote:             category: Branch,
   remote:         },
   remote:         globalrevs_publishing_bookmark: BookmarkKey {
   remote:             name: BookmarkName {
   remote:                 bookmark: "master_bookmark",
   remote:             },
+  remote:             category: Branch,
   remote:         },
   remote:     }
   abort: unexpected EOL, expected netstring digit
@@ -110,11 +112,13 @@ Check that we cannot push to that bookmark if the commit is not a descendant
   remote:                     name: BookmarkName {
   remote:                         bookmark: "other_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 descendant_bookmark: BookmarkKey {
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:             },
   remote:         },
@@ -148,11 +152,13 @@ Check that we cannot do a regular push to the globalrev bookmark either
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 descendant_bookmark: BookmarkKey {
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:             },
   remote:         },

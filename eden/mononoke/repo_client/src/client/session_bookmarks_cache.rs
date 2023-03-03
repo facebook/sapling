@@ -15,6 +15,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::to_hg_bookmark_stream;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
@@ -169,6 +170,7 @@ where
                     ctx.clone(),
                     Freshness::MaybeStale,
                     prefix,
+                    BookmarkCategory::ALL,
                     &kinds,
                     &BookmarkPagination::FromStart,
                     left_to_fetch,

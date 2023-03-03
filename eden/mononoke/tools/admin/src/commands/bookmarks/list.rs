@@ -10,6 +10,7 @@ use std::fmt;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
@@ -31,6 +32,10 @@ pub struct BookmarksListArgs {
     /// Kind of bookmarks to list
     #[clap(long = "kind", short = 'k', value_name = "KIND", arg_enum, default_values = &["publishing", "pull-default-publishing"])]
     kinds: Vec<BookmarkKind>,
+
+    /// Categories of bookmarks to list
+    #[clap(long = "category", short = 'c', value_name = "CATEGORY", arg_enum, default_values = &["branch", "tag", "note"])]
+    categories: Vec<BookmarkCategory>,
 
     /// Prefix of bookmarks to list
     #[clap(long)]
@@ -115,6 +120,7 @@ pub async fn list(ctx: &CoreContext, repo: &Repo, list_args: BookmarksListArgs) 
             ctx.clone(),
             freshness,
             &prefix,
+            &list_args.categories,
             &list_args.kinds,
             &pagination,
             list_args.limit,

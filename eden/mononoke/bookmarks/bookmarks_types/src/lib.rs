@@ -88,6 +88,7 @@ impl Bookmark {
 #[derive(Arbitrary, Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
 pub struct BookmarkKey {
     name: BookmarkName,
+    category: BookmarkCategory,
 }
 
 impl FromStr for BookmarkKey {
@@ -104,19 +105,25 @@ impl fmt::Display for BookmarkKey {
 }
 
 impl BookmarkKey {
+    pub fn with_name_and_category(name: BookmarkName, category: BookmarkCategory) -> Self {
+        Self { name, category }
+    }
+
     pub fn with_name(name: BookmarkName) -> Self {
-        Self { name }
+        Self::with_name_and_category(name, Default::default())
     }
 
     pub fn new<B: AsRef<str>>(bookmark: B) -> Result<Self, Error> {
         Ok(Self {
             name: BookmarkName::new(bookmark)?,
+            category: Default::default(),
         })
     }
 
     pub fn new_ascii(bookmark: AsciiString) -> Self {
         Self {
             name: BookmarkName::new_ascii(bookmark),
+            category: Default::default(),
         }
     }
 
@@ -138,6 +145,10 @@ impl BookmarkKey {
 
     pub fn name(&self) -> &BookmarkName {
         &self.name
+    }
+
+    pub fn category(&self) -> &BookmarkCategory {
+        &self.category
     }
 
     pub fn into_name(self) -> BookmarkName {
@@ -338,6 +349,104 @@ impl From<BookmarkKind> for Value {
             Publishing => Value::Bytes(PUBLISHING_KIND.to_vec()),
             PullDefaultPublishing => Value::Bytes(PULL_DEFAULT_KIND.to_vec()),
         }
+    }
+}
+
+/// Historically, in Mononoke, bookmark names have been unique.
+/// Since we import repositories from Git, this invariant is not true anymore.
+/// A tag, a branch or a note can have the same name as they are namespaced in Git.
+/// BookmarkCategory allows to differentiate between e.g. a tag called foo and a branch called
+/// foo.
+/// See https://docs.rs/git-ref/0.23.1/git_ref/enum.Category.html for an exhaustive
+/// list of what git supports.
+/// Here, we explicitly don't support worktrees or the distinction between remote and local
+/// branches as these concepts don't fit in the mononoke data model. We also don't support pseudo
+/// refs such as HEAD as the server doesn't need to know about this.
+#[derive(
+    Arbitrary,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Copy,
+    Ord,
+    PartialOrd,
+    clap::ArgEnum
+)]
+#[derive(mysql::OptTryFromRowField)]
+pub enum BookmarkCategory {
+    /// A bookmark created in Mononoke or imported from a Git branch (ref living under
+    /// `refs/heads` or `refs/remotes/<remote_name>`)
+    Branch,
+    /// A bookmark created from importing a Git tag (under `refs/tags`)
+    Tag,
+    /// A bookmark created from importing a Git note (under `refs/notes`)
+    Note,
+}
+
+impl BookmarkCategory {
+    pub const ALL: &'static [BookmarkCategory] = &[Self::Branch, Self::Tag, Self::Note];
+}
+
+const BRANCH_CATEGORY: &[u8] = b"branch";
+const TAG_CATEGORY: &[u8] = b"tag";
+const NOTE_CATEGORY: &[u8] = b"note";
+
+impl Default for BookmarkCategory {
+    fn default() -> Self {
+        Self::Branch
+    }
+}
+
+impl From<BookmarkCategory> for Value {
+    fn from(category: BookmarkCategory) -> Self {
+        use BookmarkCategory::*;
+
+        match category {
+            Branch => Value::Bytes(BRANCH_CATEGORY.to_vec()),
+            Tag => Value::Bytes(TAG_CATEGORY.to_vec()),
+            Note => Value::Bytes(NOTE_CATEGORY.to_vec()),
+        }
+    }
+}
+
+impl ConvIr<BookmarkCategory> for BookmarkCategory {
+    fn new(v: Value) -> Result<Self, FromValueError> {
+        use BookmarkCategory::*;
+
+        match v {
+            Value::Bytes(ref b) if b == BRANCH_CATEGORY => Ok(Branch),
+            Value::Bytes(ref b) if b == TAG_CATEGORY => Ok(Tag),
+            Value::Bytes(ref b) if b == NOTE_CATEGORY => Ok(Note),
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> BookmarkCategory {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for BookmarkCategory {
+    type Intermediate = BookmarkCategory;
+}
+
+impl std::fmt::Display for BookmarkCategory {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use BookmarkCategory::*;
+
+        let s = match self {
+            Branch => "branch",
+            Tag => "tag",
+            Note => "note",
+        };
+
+        write!(f, "{}", s)
     }
 }
 

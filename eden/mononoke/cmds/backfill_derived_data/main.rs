@@ -28,6 +28,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::StoreLoadable;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
@@ -1399,6 +1400,7 @@ async fn get_most_recent_heads(ctx: &CoreContext, repo: &BlobRepo) -> Result<Vec
             ctx.clone(),
             Freshness::MostRecent,
             &BookmarkPrefix::empty(),
+            BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
             std::u64::MAX,

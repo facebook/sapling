@@ -11,8 +11,11 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   changeset_id VARBINARY(32) NOT NULL,
   -- this column is named 'hg_kind' for historical reasons, but applies for non-Mercurial uses (e.g. phase calculations)
   hg_kind VARCHAR(32) NOT NULL DEFAULT (CAST('pull_default' AS BLOB)), -- enum is used in mysql
+  -- Distinguish between different categories of bookmarks:
+  -- branch, tag or note
+  category VARCHAR(32) NOT NULL DEFAULT (CAST('branch' AS BLOB)),
   log_id INTEGER NULL,
-  PRIMARY KEY (repo_id, name),
+  PRIMARY KEY (repo_id, name, category),
   UNIQUE(repo_id, log_id)
 );
 

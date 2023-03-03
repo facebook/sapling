@@ -80,11 +80,13 @@ Now try to pushrebase "ancestor" bookmark, should fail
   remote:             name: BookmarkName {
   remote:                 bookmark: "ancestor",
   remote:             },
+  remote:             category: Branch,
   remote:         },
   remote:         descendant_bookmark: BookmarkKey {
   remote:             name: BookmarkName {
   remote:                 bookmark: "master_bookmark",
   remote:             },
+  remote:             category: Branch,
   remote:         },
   remote:     }
   abort: unexpected EOL, expected netstring digit
@@ -126,11 +128,13 @@ And try to move "ancestor" bookmark there, it should fail
   remote:                     name: BookmarkName {
   remote:                         bookmark: "ancestor",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 descendant_bookmark: BookmarkKey {
   remote:                     name: BookmarkName {
   remote:                         bookmark: "master_bookmark",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:             },
   remote:         },

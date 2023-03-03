@@ -22,6 +22,7 @@ use blame::BlameRoot;
 use blame::RootBlameV2;
 use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogRef;
@@ -337,6 +338,7 @@ impl BookmarksCache for NoopBookmarksCache {
                 ctx.clone(),
                 Freshness::MaybeStale,
                 prefix,
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL_PUBLISHING,
                 pagination,
                 limit.unwrap_or(std::u64::MAX),
@@ -750,6 +752,7 @@ impl BookmarksCoordinator {
                     ctx.clone(),
                     Freshness::MaybeStale,
                     &BookmarkPrefix::empty(),
+                    BookmarkCategory::ALL,
                     BookmarkKind::ALL_PUBLISHING,
                     &BookmarkPagination::FromStart,
                     std::u64::MAX,

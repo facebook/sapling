@@ -90,6 +90,7 @@ Invalid infinitepush, with pushrebase disabled
   remote:                     name: BookmarkName {
   remote:                         bookmark: "bad/123",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },
@@ -124,6 +125,7 @@ Invalid infinitepush, with pushrebase enabled
   remote:                     name: BookmarkName {
   remote:                         bookmark: "bad/456",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },
@@ -172,6 +174,7 @@ Invalid push, with pushrebase disabled
   remote:                     name: BookmarkName {
   remote:                         bookmark: "infinitepush2/123",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },
@@ -207,6 +210,7 @@ Invalid push, with pushrebase enabled
   remote:                     name: BookmarkName {
   remote:                         bookmark: "infinitepush2/456",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
   remote:             },

@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use anyhow::Error;
 use anyhow::Result;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
@@ -562,6 +563,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
                 ctx.clone(),
                 Freshness::MostRecent,
                 &prefix,
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
                 std::u64::MAX
@@ -581,6 +583,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
                 ctx.clone(),
                 Freshness::MostRecent,
                 &key_1_prefix,
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
                 std::u64::MAX
@@ -600,6 +603,7 @@ async fn test_list_by_prefix(fb: FacebookInit) {
                 ctx.clone(),
                 Freshness::MostRecent,
                 &key_2_prefix,
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
                 std::u64::MAX
@@ -1107,6 +1111,7 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
                 ctx.clone(),
                 Freshness::MostRecent,
                 &BookmarkPrefix::empty(),
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
                 std::u64::MAX
@@ -1130,6 +1135,7 @@ async fn test_creating_publishing_bookmarks(fb: FacebookInit) {
                 ctx.clone(),
                 Freshness::MostRecent,
                 &BookmarkPrefix::empty(),
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL,
                 &BookmarkPagination::FromStart,
                 std::u64::MAX
@@ -1172,6 +1178,7 @@ async fn test_pagination_ordering(fb: FacebookInit) {
                     ctx.clone(),
                     Freshness::MostRecent,
                     &BookmarkPrefix::empty(),
+                    BookmarkCategory::ALL,
                     BookmarkKind::ALL,
                     &BookmarkPagination::FromStart,
                     3
@@ -1201,6 +1208,7 @@ async fn test_pagination_ordering(fb: FacebookInit) {
                     ctx.clone(),
                     Freshness::MostRecent,
                     &BookmarkPrefix::empty(),
+                    BookmarkCategory::ALL,
                     BookmarkKind::ALL,
                     &BookmarkPagination::After(key_1.clone().into_name()),
                     1

@@ -341,6 +341,7 @@ function create_books_sqlite3_db {
   from_changeset_id VARBINARY(32),
   to_changeset_id VARBINARY(32),
   reason VARCHAR(32) NOT NULL, -- enum is used in mysql
+  category VARCHAR(32) NOT NULL DEFAULT 'branch',
   timestamp BIGINT NOT NULL
 );
 SQL

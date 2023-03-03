@@ -31,6 +31,7 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_svnrev_mapping::BonsaiSvnrevMappingRef;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
@@ -1384,6 +1385,7 @@ impl RepoContext {
                     self.ctx.clone(),
                     BookmarkFreshness::MaybeStale,
                     &prefix,
+                    BookmarkCategory::ALL,
                     BookmarkKind::ALL,
                     &pagination,
                     limit.unwrap_or(std::u64::MAX),

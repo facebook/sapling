@@ -92,6 +92,7 @@ Do infinitepush (aka commit cloud) push
   remote:                     name: BookmarkName {
   remote:                         bookmark: "scratch/123",
   remote:                     },
+  remote:                     category: Branch,
   remote:                 },
   remote:             },
   remote:         },

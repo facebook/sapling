@@ -13,6 +13,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkName;
@@ -84,6 +85,7 @@ impl SqlBookmarksSubscription {
             &std::u64::MAX,
             &tok,
             BookmarkKind::ALL_PUBLISHING,
+            BookmarkCategory::ALL,
         )
         .await
         .context("Failed to query bookmarks")?;
@@ -95,7 +97,12 @@ impl SqlBookmarksSubscription {
 
         let bookmarks = bookmarks
             .into_iter()
-            .map(|(name, kind, cs_id, _log_id, _tok)| (BookmarkKey::with_name(name), (cs_id, kind)))
+            .map(|(name, category, kind, cs_id, _log_id, _tok)| {
+                (
+                    BookmarkKey::with_name_and_category(name, category),
+                    (cs_id, kind),
+                )
+            })
             .collect();
 
         Ok(Self {
@@ -152,20 +159,21 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
         let mut updates = HashMap::new();
 
         for (log_id, name, kind, cs_id) in changes {
+            let bookmark = BookmarkKey::with_name_and_category(name, BookmarkCategory::Branch);
             // kind & cs_id come from the same table (bookmarks) and they're not nullable there, so
             // if one is missing, that means the join didn't find anything, and the one must be
             // missing too.
             let value = match (kind, cs_id) {
                 (Some(kind), Some(cs_id)) => Some((cs_id, kind)),
                 (None, None) => None,
-                _ => bail!("Inconsistent data for bookmark: {}", name),
+                _ => bail!("Inconsistent data for bookmark: {}", bookmark),
             };
 
             max_log_id = std::cmp::max(max_log_id, Some(log_id));
 
             // NOTE: We get the updates in DESC-ending order, so we'll always find the curent
             // bookmark state first.
-            updates.entry(BookmarkKey::with_name(name)).or_insert(value);
+            updates.entry(bookmark).or_insert(value);
         }
 
         for (book, maybe_value) in updates.into_iter() {

@@ -15,6 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks_types::Bookmark;
+use bookmarks_types::BookmarkCategory;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkPagination;
@@ -72,6 +73,7 @@ impl Cache {
                         ctx,
                         freshness,
                         &BookmarkPrefix::empty(),
+                        BookmarkCategory::ALL,
                         BookmarkKind::ALL_PUBLISHING,
                         &BookmarkPagination::FromStart,
                         std::u64::MAX,
@@ -294,6 +296,7 @@ impl Bookmarks for CachedBookmarks {
         ctx: CoreContext,
         freshness: Freshness,
         prefix: &BookmarkPrefix,
+        categories: &[BookmarkCategory],
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
@@ -313,7 +316,7 @@ impl Bookmarks for CachedBookmarks {
 
         // Bypass the cache as it cannot serve this request.
         self.bookmarks
-            .list(ctx, freshness, prefix, kinds, pagination, limit)
+            .list(ctx, freshness, prefix, categories, kinds, pagination, limit)
     }
 
     fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
@@ -505,6 +508,7 @@ mod tests {
         response: oneshot::Sender<Result<Vec<(Bookmark, ChangesetId)>>>,
         freshness: Freshness,
         prefix: BookmarkPrefix,
+        categories: Vec<BookmarkCategory>,
         kinds: Vec<BookmarkKind>,
         pagination: BookmarkPagination,
         limit: u64,
@@ -561,6 +565,7 @@ mod tests {
             _ctx: CoreContext,
             freshness: Freshness,
             prefix: &BookmarkPrefix,
+            categories: &[BookmarkCategory],
             kinds: &[BookmarkKind],
             pagination: &BookmarkPagination,
             limit: u64,
@@ -572,6 +577,7 @@ mod tests {
                     response: send,
                     freshness,
                     prefix: prefix.clone(),
+                    categories: categories.to_vec(),
                     kinds: kinds.to_vec(),
                     pagination: pagination.clone(),
                     limit,
@@ -755,6 +761,7 @@ mod tests {
                         ctx.clone(),
                         Freshness::MaybeStale,
                         &BookmarkPrefix::new(prefix).unwrap(),
+                        BookmarkCategory::ALL,
                         BookmarkKind::ALL_PUBLISHING,
                         &BookmarkPagination::FromStart,
                         std::u64::MAX,
@@ -899,6 +906,7 @@ mod tests {
     fn mock_bookmarks_response(
         bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         prefix: &BookmarkPrefix,
+        categories: &[BookmarkCategory],
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
@@ -909,15 +917,19 @@ mod tests {
             .map(move |(k, v)| (k.name().clone(), v))
             .collect::<BTreeMap<_, _>>()
             .range(range)
-            .filter_map(|(name, (kind, changeset_id))| {
+            .flat_map(|(name, (kind, _))| {
                 if kinds.iter().any(|k| kind == k) {
-                    let bookmark = Bookmark {
-                        key: BookmarkKey::with_name(name.clone()),
-                        kind: *kind,
-                    };
-                    Some((bookmark, *changeset_id))
+                    categories
+                        .iter()
+                        .filter_map(|c| {
+                            let key = BookmarkKey::with_name_and_category(name.clone(), *c);
+                            bookmarks
+                                .get(&key)
+                                .map(|(kind, csid)| (Bookmark { key, kind: *kind }, *csid))
+                        })
+                        .collect::<Vec<_>>()
                 } else {
-                    None
+                    Vec::new()
                 }
             })
             .take(limit as usize)
@@ -929,6 +941,7 @@ mod tests {
         bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         query_freshness: Freshness,
         query_prefix: &BookmarkPrefix,
+        query_categories: &[BookmarkCategory],
         query_kinds: &[BookmarkKind],
         query_pagination: &BookmarkPagination,
         query_limit: u64,
@@ -956,6 +969,7 @@ mod tests {
                 ctx,
                 query_freshness,
                 query_prefix,
+                query_categories,
                 query_kinds,
                 query_pagination,
                 query_limit,
@@ -975,6 +989,7 @@ mod tests {
         let response = mock_bookmarks_response(
             bookmarks,
             &request.prefix,
+            request.categories.as_slice(),
             request.kinds.as_slice(),
             &request.pagination,
             request.limit,
@@ -989,6 +1004,7 @@ mod tests {
             fb: FacebookInit,
             bookmarks: BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
             freshness: Freshness,
+            categories: HashSet<BookmarkCategory>,
             kinds: HashSet<BookmarkKind>,
             prefix_char: Option<ascii_ext::AsciiChar>,
             after: Option<BookmarkKey>,
@@ -996,6 +1012,7 @@ mod tests {
         ) -> bool {
             // Test that requesting via the cache gives the same result
             // as going directly to the back-end.
+            let categories: Vec<_> = categories.into_iter().collect();
             let kinds: Vec<_> = kinds.into_iter().collect();
             let prefix = match prefix_char {
                 Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
@@ -1010,6 +1027,7 @@ mod tests {
                 &bookmarks,
                 freshness,
                 &prefix,
+                categories.as_slice(),
                 kinds.as_slice(),
                 &pagination,
                 limit,
@@ -1017,6 +1035,7 @@ mod tests {
             let want = mock_bookmarks_response(
                 &bookmarks,
                 &prefix,
+                categories.as_slice(),
                 kinds.as_slice(),
                 &pagination,
                 limit,

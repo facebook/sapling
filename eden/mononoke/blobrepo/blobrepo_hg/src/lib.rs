@@ -34,6 +34,7 @@ use blobrepo_errors::ErrorKind;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bookmarks::Bookmark;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
@@ -250,6 +251,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
                 ctx.clone(),
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
+                BookmarkCategory::ALL,
                 BookmarkKind::ALL_PUBLISHING,
                 &BookmarkPagination::FromStart,
                 std::u64::MAX,
@@ -352,6 +354,7 @@ impl<T: ChangesetsRef + BonsaiHgMappingRef + Send + Sync> BlobRepoHg for T {
             ctx.clone(),
             Freshness::MaybeStale,
             &BookmarkPrefix::empty(),
+            BookmarkCategory::ALL,
             BookmarkKind::ALL_PUBLISHING,
             &BookmarkPagination::FromStart,
             std::u64::MAX,
