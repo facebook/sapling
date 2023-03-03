@@ -88,7 +88,7 @@
 
   $ echo space > asdf
   $ rm .hg/hgrc
-  $ hg commit -m commit-1
+  $ HGPLAIN=1 hg commit -m commit-1
   no username found, using '[^']*' instead (re)
 
   $ echo space2 > asdf

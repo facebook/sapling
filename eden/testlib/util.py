@@ -44,6 +44,7 @@ class GlobalTestState(threading.local):
         hgrc_path = os.path.join(new_dir(), "global_hgrc")
         self.env = {
             "HGRCPATH": hgrc_path,
+            "HGUSER": "test",
             "TESTTMP": str(self.test_tmp),
             "TEST_PROD_CONFIGS": "true",
             "WATCHMAN_CONFIG_FILE": str(self.watchman.config),

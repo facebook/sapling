@@ -572,7 +572,7 @@ class ui(object):
             return user
         if user is None and self.configbool("ui", "askusername"):
             user = self.prompt(_("enter a commit username:"), default=None)
-        if user is None and not self.interactive():
+        if user is None and not self.interactive() and self.plain():
             try:
                 user = "%s@%s" % (util.getuser(), socket.getfqdn())
                 self.warn(_("no username found, using '%s' instead\n") % user)
