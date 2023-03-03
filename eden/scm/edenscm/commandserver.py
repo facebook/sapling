@@ -302,6 +302,8 @@ class server(object):
         hellomsg += "encoding: " + encoding.encoding
         hellomsg += "\n"
         hellomsg += "pid: %d" % util.getpid()
+        hellomsg += "\n"
+        hellomsg += "groups: " + " ".join(str(gid) for gid in sorted(os.getgroups()))
         versionmod = sys.modules.get("edenscm.__version__")
         if versionmod:
             hellomsg += "\n"

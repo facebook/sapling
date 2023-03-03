@@ -391,6 +391,17 @@ int chg_main(
             "RLIMIT_NOFILE compatible (client %lu <= server %lu)", cur, nofile);
       }
     }
+
+    // If server's groups differ from client's, restart server. We don't want to
+    // cache out-of-date permissions in the server.
+    if (hgc_groups_mismatch(hgc)) {
+      killcmdserver(&opts);
+      needreconnect = 1;
+      debugmsg("groups mismatch, reconnecting");
+    } else {
+      debugmsg("groups match");
+    }
+
     if (!needreconnect) {
       hgc_setenv(hgc, envp);
     }

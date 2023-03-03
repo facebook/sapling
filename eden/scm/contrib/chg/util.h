@@ -29,6 +29,7 @@ void fchdirx(int dirfd);
 void fsetcloexec(int fd);
 void* chg_mallocx(size_t size);
 void* chg_reallocx(void* ptr, size_t size);
+void* chg_callocx(size_t count, size_t size);
 
 double chg_now();
 

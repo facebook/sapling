@@ -69,6 +69,8 @@ struct hgclient_tag_ {
   unsigned long long versionhash;
   unsigned long nofile;
   double connectedat;
+  int num_groups;
+  gid_t* groups;
 };
 
 static const size_t defaultdatasize = 4096;
@@ -326,6 +328,48 @@ static unsigned int parsecapabilities(const char* s, const char* e) {
   return flags;
 }
 
+// groups is a space separated list of group ids
+static void parsegroups(hgclient_t* hgc, const char* s, const char* e) {
+  if (s == e) {
+    return;
+  }
+
+  size_t len = 1;
+  for (const char* tmp = s; tmp < e; tmp++) {
+    if (*tmp == ' ') {
+      len++;
+    }
+  }
+
+  gid_t* groups = chg_callocx(len, sizeof(gid_t));
+  gid_t* current_group = groups;
+  int seen_digits = 0;
+  for (; s <= e; s++) {
+    if (s == e || *s == ' ') {
+      if (!seen_digits) {
+        debugmsg("invalid groups from server");
+        free(groups);
+        return;
+      }
+      current_group++;
+      seen_digits = 0;
+    } else if (isdigit(*s)) {
+      *current_group *= 10;
+      *current_group += *s - '0';
+      seen_digits++;
+    } else {
+      debugmsg("invalid groups from server");
+      free(groups);
+      return;
+    }
+  }
+
+  debugmsg("parsed %zu groups", len);
+
+  hgc->groups = groups;
+  hgc->num_groups = len;
+}
+
 static void readhello(hgclient_t* hgc) {
   readchannel(hgc);
   context_t* ctx = &hgc->ctx;
@@ -361,6 +405,8 @@ static void readhello(hgclient_t* hgc) {
       hgc->versionhash = strtoull(t + 2, NULL, 10);
     } else if (strncmp(s, "nofile:", t - s + 1) == 0) {
       hgc->nofile = strtoul(t + 2, NULL, 10);
+    } else if (strncmp(s, "groups:", t - s + 1) == 0) {
+      parsegroups(hgc, t + 2, u);
     }
     s = u + 1;
   }
@@ -521,6 +567,7 @@ void hgc_close(hgclient_t* hgc) {
   assert(hgc);
   freecontext(&hgc->ctx);
   close(hgc->sockfd);
+  free(hgc->groups);
   free(hgc);
 }
 
@@ -542,6 +589,47 @@ pid_t hgc_peerpid(const hgclient_t* hgc) {
 unsigned long long hgc_versionhash(const hgclient_t* hgc) {
   assert(hgc);
   return hgc->versionhash;
+}
+
+int hgc_compare_gid(const void* a, const void* b) {
+  return (int)*((gid_t*)a) - *((gid_t*)b);
+}
+
+int hgc_groups_mismatch(const hgclient_t* hgc) {
+  assert(hgc);
+  if (!hgc->groups) {
+    return 0;
+  }
+
+  int num_groups = getgroups(0, NULL);
+  if (num_groups < 0) {
+    return 0;
+  }
+
+  if (num_groups != hgc->num_groups) {
+    debugmsg(
+        "server has %d groups, client has %d groups",
+        hgc->num_groups,
+        num_groups);
+    return 1;
+  }
+
+  gid_t* groups = chg_callocx(num_groups, sizeof(gid_t));
+  if (getgroups(num_groups, groups) < 0) {
+    return 0;
+  }
+
+  qsort(groups, num_groups, sizeof(gid_t), hgc_compare_gid);
+
+  for (int i = 0; i < num_groups; i++) {
+    if (hgc->groups[i] != groups[i]) {
+      debugmsg(
+          "server/client group mismatch: %d != %d", hgc->groups[i], groups[i]);
+      return 1;
+    }
+  }
+
+  return 0;
 }
 
 /*!

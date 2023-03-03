@@ -119,6 +119,13 @@ void* chg_reallocx(void* ptr, size_t size) {
   return result;
 }
 
+void* chg_callocx(size_t count, size_t size) {
+  void* result = calloc(count, size);
+  if (!result)
+    abortmsg("failed to calloc");
+  return result;
+}
+
 /*
  * Execute a shell command in mostly the same manner as system(), with the
  * give environment variables, after chdir to the given cwd. Returns a status
