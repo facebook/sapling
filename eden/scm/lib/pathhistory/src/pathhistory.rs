@@ -298,7 +298,7 @@ impl PathHistory {
                         .iter()
                         .all(|&p| !interesting_ancestors.contains(p))
                 {
-                    // Split the segment. It does not contain "interesting" parents.
+                    // Skip the segment. It does not contain "interesting" parents.
                     continue;
                 } else {
                     interesting_ancestors =
