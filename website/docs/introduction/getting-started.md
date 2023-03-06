@@ -118,7 +118,7 @@ Sapling will open the URL automatically in your browser. See the docs on [Intera
 Sapling supports multiple workflows for interacting with GitHub pull requests. The simplest solution is the <SLCommand name="pr" /> command:
 
 ```sl-shell-example
-$ sl pr
+$ sl pr submit
 ...
 $ sl
   @  4d9180fd8  6 minutes ago  alyssa  #178
@@ -133,14 +133,14 @@ $ sl
 o  f22585511  Oct 06 at 17:40  remote/main
 │
 ~
-$ sl pr
+$ sl pr submit
 #178 is up-to-date
 #177 is up-to-date
 #176 is up-to-date
 no pull requests to update
 ```
 
-As shown, running `sl pr` creates a pull request (PR) for every commit in your local stack. Note this creates "overlapping pull requests," which means each PR uses the associated commit as the head of the PR and `remote/main` as the base.  Reviewing overlapping pull requests on GitHub can be confusing, so we also provide [ReviewStack](../addons/reviewstack.md) as an alternative code review tool that handles these kinds of pull requests better.
+As shown, running `sl pr submit` creates a pull request (PR) for every commit in your local stack. Note this creates "overlapping pull requests," which means each PR uses the associated commit as the head of the PR and `remote/main` as the base. Reviewing overlapping pull requests on GitHub can be confusing, so we also provide [ReviewStack](../addons/reviewstack.md) as an alternative code review tool that handles these kinds of pull requests better.
 
 After you have created an initial series of pull requests using <Command name="pr" sl={true} />, you will likely make local changes to your commits that need to be submitted for review. To publish these local changes to GitHub, simply run <Command name="pr" sl={true} /> again to update your existing PRs. Note if you have introduced new commits in your stack that are not linked to a PR, <Command name="pr" sl={true} /> will create pull requests for those, as well.
 
