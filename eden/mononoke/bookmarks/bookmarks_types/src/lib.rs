@@ -113,6 +113,18 @@ impl BookmarkKey {
         Self::with_name_and_category(name, Default::default())
     }
 
+    /// First bookmark key with a given name.  Used for constructing ranges
+    /// which include all categories.
+    pub fn with_first_name(name: BookmarkName) -> Self {
+        Self::with_name_and_category(name, BookmarkCategory::ALL.first().copied().unwrap())
+    }
+
+    /// Last bookmark key with a given name.  Used for constructing ranges
+    /// which include all categories.
+    pub fn with_last_name(name: BookmarkName) -> Self {
+        Self::with_name_and_category(name, BookmarkCategory::ALL.last().copied().unwrap())
+    }
+
     pub fn new<B: AsRef<str>>(bookmark: B) -> Result<Self, Error> {
         Ok(Self {
             name: BookmarkName::new(bookmark)?,
@@ -481,19 +493,19 @@ impl FromStr for BookmarkPrefix {
 
 pub enum BookmarkPrefixRange {
     /// All bookmarks in the given half-open range.
-    Range(Range<BookmarkName>),
+    Range(Range<BookmarkKey>),
 
     /// All bookmarks in the given range from an inclusive start.
-    RangeFrom(RangeFrom<BookmarkName>),
+    RangeFrom(RangeFrom<BookmarkKey>),
 
     /// All bookmarks.
     RangeFull(RangeFull),
 
     /// All bookmarks after the given name (exclusive).
-    After(BookmarkName),
+    After(BookmarkKey),
 
     /// All bookmarks between the given names (exclusive on both sides).
-    Between(BookmarkName, BookmarkName),
+    Between(BookmarkKey, BookmarkKey),
 
     /// No bookmarks.
     ///
@@ -502,7 +514,7 @@ pub enum BookmarkPrefixRange {
     /// provide a valid range.  To do this, we use an arbitrary
     /// name owned by this `BookmarkPrefixRange`, and return
     /// the half-open range `[name, name)`, which is empty.
-    Empty(BookmarkName),
+    Empty(BookmarkKey),
 }
 
 impl BookmarkPrefixRange {
@@ -510,24 +522,26 @@ impl BookmarkPrefixRange {
     /// after a given bookmark page start (exclusively).
     pub fn with_pagination(self, pagination: BookmarkPagination) -> BookmarkPrefixRange {
         use BookmarkPrefixRange::*;
+        let last = BookmarkKey::with_last_name;
+        // For `Empty` we only need an arbitrary value, so the last one will do.
         match pagination {
             BookmarkPagination::FromStart => self,
             BookmarkPagination::After(name) => match self {
-                Range(r) if name >= r.end => Empty(name),
-                Range(r) if name >= r.start => Between(name, r.end),
-                RangeFrom(r) if name >= r.start => After(name),
-                RangeFull(_) => After(name),
-                Between(_, e) if name >= e => Empty(name),
-                Between(s, e) if name >= s => Between(name, e),
-                After(a) if name >= a => After(name),
+                Range(r) if name >= *r.end.name() => Empty(last(name)),
+                Range(r) if name >= *r.start.name() => Between(last(name), r.end),
+                RangeFrom(r) if name >= *r.start.name() => After(last(name)),
+                RangeFull(_) => After(last(name)),
+                Between(_, e) if name >= *e.name() => Empty(last(name)),
+                Between(s, e) if name >= *s.name() => Between(last(name), e),
+                After(a) if name >= *a.name() => After(last(name)),
                 range => range,
             },
         }
     }
 }
 
-impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
-    fn start_bound(&self) -> Bound<&BookmarkName> {
+impl RangeBounds<BookmarkKey> for BookmarkPrefixRange {
+    fn start_bound(&self) -> Bound<&BookmarkKey> {
         use BookmarkPrefixRange::*;
         match self {
             Range(r) => r.start_bound(),
@@ -539,7 +553,7 @@ impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
         }
     }
 
-    fn end_bound(&self) -> Bound<&BookmarkName> {
+    fn end_bound(&self) -> Bound<&BookmarkKey> {
         use BookmarkPrefixRange::*;
         match self {
             Range(r) => r.end_bound(),
@@ -578,8 +592,10 @@ impl BookmarkPrefix {
         match prefix_to_range_end(self.bookmark_prefix.clone()) {
             Some(range_end) => {
                 let range = Range {
-                    start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
-                    end: BookmarkName::new_ascii(range_end),
+                    start: BookmarkKey::with_first_name(BookmarkName::new_ascii(
+                        self.bookmark_prefix.clone(),
+                    )),
+                    end: BookmarkKey::with_first_name(BookmarkName::new_ascii(range_end)),
                 };
                 BookmarkPrefixRange::Range(range)
             }
@@ -587,7 +603,9 @@ impl BookmarkPrefix {
                 0 => BookmarkPrefixRange::RangeFull(RangeFull),
                 _ => {
                     let range = RangeFrom {
-                        start: BookmarkName::new_ascii(self.bookmark_prefix.clone()),
+                        start: BookmarkKey::with_first_name(BookmarkName::new_ascii(
+                            self.bookmark_prefix.clone(),
+                        )),
                     };
                     BookmarkPrefixRange::RangeFrom(range)
                 }
@@ -674,14 +692,14 @@ mod tests {
     quickcheck! {
         fn test_prefix_range_contains_self(bookmark: Bookmark) -> bool {
             let prefix = BookmarkPrefix::new_ascii(bookmark.name().as_ascii().clone());
-            prefix.to_range().contains(bookmark.name())
+            prefix.to_range().contains(bookmark.key())
         }
 
         fn test_prefix_range_contains_its_suffixes(bookmark: Bookmark, more: ascii_ext::AsciiString) -> bool {
             let prefix = BookmarkPrefix::new_ascii(bookmark.name().as_ascii().clone());
             let mut name = bookmark.name().as_ascii().clone();
             name.push_str(&more.0);
-            prefix.to_range().contains(&BookmarkName::new_ascii(name))
+            prefix.to_range().contains(&BookmarkKey::new_ascii(name))
         }
 
         fn test_prefix_range_does_not_contains_its_prefixes(bookmark: Bookmark, chr: ascii_ext::AsciiChar) -> bool {
@@ -689,12 +707,12 @@ mod tests {
             prefix.push(chr.0);
             let prefix = BookmarkPrefix::new_ascii(prefix);
 
-            !prefix.to_range().contains(bookmark.name())
+            !prefix.to_range().contains(bookmark.key())
         }
 
         fn test_empty_range_contains_any(bookmark: Bookmark) -> bool {
             let prefix = BookmarkPrefix::empty();
-            prefix.to_range().contains(bookmark.name())
+            prefix.to_range().contains(bookmark.key())
         }
 
         fn test_pagination_excludes_start(prefix_char: Option<ascii_ext::AsciiChar>, after: BookmarkName) -> bool {
@@ -703,7 +721,8 @@ mod tests {
                 None => BookmarkPrefix::empty(),
             };
             let pagination = BookmarkPagination::After(after.clone());
-            !prefix.to_range().with_pagination(pagination).contains(&after)
+            let after_key = BookmarkKey::with_last_name(after);
+            !prefix.to_range().with_pagination(pagination).contains(&after_key)
         }
     }
 }

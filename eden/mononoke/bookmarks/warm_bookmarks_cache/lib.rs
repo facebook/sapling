@@ -435,7 +435,7 @@ impl BookmarksCache for WarmBookmarksCache {
             let range = prefix.to_range().with_pagination(pagination.clone());
             let mut matches = bookmarks
                 .iter()
-                .filter(|(key, _)| range.contains(key.name()))
+                .filter(|(key, _)| range.contains(key))
                 .map(|(key, (cs_id, kind))| (key.clone(), (*cs_id, *kind)))
                 .collect::<Vec<_>>();
             // Release the read lock.

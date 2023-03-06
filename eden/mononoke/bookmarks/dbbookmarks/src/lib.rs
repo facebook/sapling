@@ -146,23 +146,17 @@ mod test {
     ) -> Vec<(Bookmark, ChangesetId)> {
         let range = prefix.to_range().with_pagination(pagination.clone());
         bookmarks
-            .iter()
-            .map(|(k, v)| (k.name().clone(), v))
-            .collect::<BTreeMap<_, _>>()
             .range(range)
-            .flat_map(|(name, (kind, _))| {
-                if kinds.iter().any(|k| kind == k) {
-                    categories
-                        .iter()
-                        .filter_map(|c| {
-                            let key = BookmarkKey::with_name_and_category(name.clone(), *c);
-                            bookmarks
-                                .get(&key)
-                                .map(|(kind, csid)| (Bookmark { key, kind: *kind }, *csid))
-                        })
-                        .collect::<Vec<_>>()
+            .filter_map(|(key, (kind, csid))| {
+                let category = key.category();
+                if kinds.iter().any(|k| kind == k) && categories.iter().any(|c| category == c) {
+                    let bookmark = Bookmark {
+                        key: key.clone(),
+                        kind: *kind,
+                    };
+                    Some((bookmark, *csid))
                 } else {
-                    Vec::new()
+                    None
                 }
             })
             .take(limit as usize)

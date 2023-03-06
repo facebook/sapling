@@ -212,6 +212,7 @@ impl CachedBookmarks {
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
+        categories: &[BookmarkCategory],
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
@@ -220,6 +221,15 @@ impl CachedBookmarks {
         let range = prefix.to_range().with_pagination(pagination.clone());
 
         let cache = self.cache(ctx, ttl);
+
+        let filter_categories = if BookmarkCategory::ALL
+            .iter()
+            .all(|category| categories.iter().any(|c| c == category))
+        {
+            None
+        } else {
+            Some(categories.to_vec())
+        };
 
         let filter_kinds = if BookmarkKind::ALL_PUBLISHING
             .iter()
@@ -238,17 +248,18 @@ impl CachedBookmarks {
             .map(move |cache_result| match &*cache_result {
                 Ok(bookmarks) => {
                     let result: Vec<_> = bookmarks
-                        .iter()
-                        .map(move |(k, v)| (k.name().clone(), v))
-                        .collect::<BTreeMap<_, _>>()
                         .range(range)
-                        .filter_map(move |(name, (kind, changeset_id))| {
-                            if filter_kinds
+                        .filter_map(move |(key, (kind, changeset_id))| {
+                            let category = key.category();
+                            if filter_categories
                                 .as_ref()
-                                .map_or(true, |kinds| kinds.iter().any(|k| k == kind))
+                                .map_or(true, |categories| categories.iter().any(|c| c == category))
+                                && filter_kinds
+                                    .as_ref()
+                                    .map_or(true, |kinds| kinds.iter().any(|k| k == kind))
                             {
                                 let bookmark = Bookmark {
-                                    key: BookmarkKey::with_name(name.clone()),
+                                    key: key.clone(),
                                     kind: *kind,
                                 };
                                 Some(Ok((bookmark, *changeset_id)))
@@ -308,8 +319,9 @@ impl Bookmarks for CachedBookmarks {
                     .all(|kind| BookmarkKind::ALL_PUBLISHING.iter().any(|k| k == kind))
                 {
                     // All requested kinds are supported by the cache.
-                    return self
-                        .list_from_publishing_cache(ctx, prefix, kinds, pagination, limit, ttl);
+                    return self.list_from_publishing_cache(
+                        ctx, prefix, categories, kinds, pagination, limit, ttl,
+                    );
                 }
             }
         }
@@ -913,23 +925,17 @@ mod tests {
     ) -> Vec<(Bookmark, ChangesetId)> {
         let range = prefix.to_range().with_pagination(pagination.clone());
         bookmarks
-            .iter()
-            .map(move |(k, v)| (k.name().clone(), v))
-            .collect::<BTreeMap<_, _>>()
             .range(range)
-            .flat_map(|(name, (kind, _))| {
-                if kinds.iter().any(|k| kind == k) {
-                    categories
-                        .iter()
-                        .filter_map(|c| {
-                            let key = BookmarkKey::with_name_and_category(name.clone(), *c);
-                            bookmarks
-                                .get(&key)
-                                .map(|(kind, csid)| (Bookmark { key, kind: *kind }, *csid))
-                        })
-                        .collect::<Vec<_>>()
+            .filter_map(|(key, (kind, csid))| {
+                let category = key.category();
+                if kinds.iter().any(|k| kind == k) && categories.iter().any(|c| category == c) {
+                    let bookmark = Bookmark {
+                        key: key.clone(),
+                        kind: *kind,
+                    };
+                    Some((bookmark, *csid))
                 } else {
-                    Vec::new()
+                    None
                 }
             })
             .take(limit as usize)
