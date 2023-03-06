@@ -29,6 +29,7 @@ use tunables::tunables;
 use crate::middleware::RequestContext;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
+const UPLOAD_PATH: &str = "/upload/";
 
 lazy_static! {
     static ref FILTERED_HEADERS: HashSet<&'static str> = {
@@ -42,6 +43,7 @@ lazy_static! {
 enum LogAction {
     Log,
     BodyTooBig,
+    Upload,
 }
 
 #[derive(Debug, StateData, Clone)]
@@ -64,12 +66,17 @@ impl RequestDumper {
         self.logger.add("method", method);
 
         let uri = http::uri::Uri::try_borrow_from(state).context("Uri not present in State")?;
-        self.logger.add(
-            "path",
-            uri.path_and_query()
-                .context("path_and_query is None")?
-                .as_str(),
-        );
+        let uristr = uri
+            .path_and_query()
+            .context("path_and_query is None")?
+            .as_str();
+
+        if uristr.contains(UPLOAD_PATH) {
+            self.log_action = LogAction::Upload;
+            return Ok(());
+        }
+
+        self.logger.add("path", uristr);
 
         let mut headers_hs = HashSet::new();
         for (k, v) in headers
@@ -86,6 +93,7 @@ impl RequestDumper {
         match self.log_action {
             LogAction::Log => true,
             LogAction::BodyTooBig => false,
+            LogAction::Upload => false,
         }
     }
 
