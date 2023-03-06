@@ -52,7 +52,10 @@ const config = {
             external:
               'https://github.com/facebookexperimental/eden/tree/main/website',
           }),
-          remarkPlugins: [require('sapling-output-plugin')],
+          remarkPlugins: [
+            [require('remark-github'), {repository: "facebook/sapling"}],
+            require('sapling-output-plugin')
+          ],
         },
         staticDocsProject: 'sapling',
         trackingFile: 'xplat/staticdocs/WATCHED_FILES',
