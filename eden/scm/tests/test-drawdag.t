@@ -396,8 +396,8 @@ for documentation:
   > python:
   > now('2000-7-28 12:00 UTC')  # set the "now" time
   > commit(user='mary')         # set default author
-  > commit('A1', '[sl] windows: update Python', date='2000-7-15 14:25')
-  > commit('A2', 'debug', date='2000-7-15 14:35')
+  > commit('A1', '[sl] windows: update Python', date='2000-7-15 14:25', files={"0": b85(b"f\n")})
+  > commit('A2', 'debug', date='2000-7-15 14:35', files={"1": b85(b"f\n"), "2": "f\n", "3": b85(b"f\n") + ' (copied from 0)'})
   > commit('B1', '[eden] Thread EdenConfig down to Windows fsck', date='3d ago')
   > commit('B2', '[eden] Remove n^2 path comparisons from Windows fsck', date='3d ago')
   > commit('B3', '[edenfs] Recover Overlay from disk/scm for Windows fsck', date='3d ago')
@@ -444,12 +444,30 @@ for documentation:
   │
   o  eb5e
   ╷
-  ╷ o  3c0a  mary Jul 15 at 14:35
+  ╷ o  d097  mary Jul 15 at 14:35
   ╷ │  debug
   ╷ │
-  ╷ x  f8f9 (land to 29ac1765dd19) mary Jul 15 at 14:25
+  ╷ x  8ada (land to 29ac1765dd19) mary Jul 15 at 14:25
   ╭─╯  [sl] windows: update Python
   │
   o  19cd
   │
   ~
+
+  $ hg log --config diff.git=true -T '{desc}\n' -p -r 'desc(debug)'
+  debug
+  diff --git a/1 b/1
+  new file mode 100644
+  --- /dev/null
+  +++ b/1
+  @@ -0,0 +1,1 @@
+  +f
+  diff --git a/2 b/2
+  new file mode 100644
+  --- /dev/null
+  +++ b/2
+  @@ -0,0 +1,1 @@
+  +f
+  diff --git a/0 b/3
+  copy from 0
+  copy to 3

@@ -86,6 +86,7 @@ commit properties using Python code:
 By using a script, default files and bookmarks are disabled.
 """
 
+import base64
 import collections
 import re
 from dataclasses import dataclass, field
@@ -195,10 +196,14 @@ def preapre_script_env_and_output():
     """
     output = ScriptOutput(default_commit=Commit("x", user="test", date="0 0"))
 
+    def b85(data: bytes) -> str:
+        return f"base85:{base64.b85encode(data).decode()}"
+
     global_env = {
         "commit": output.commit,
         "goto": output.set_goto,
         "now": bindings.hgtime.setnowfortesting,
+        "b85": b85,
     }
 
     return global_env, output
@@ -333,7 +338,11 @@ class simplecommitctx(context.committablectx):
             renamed = m.group(2)
         else:
             renamed = None
-        return simplefilectx(self._repo, key, pycompat.encodeutf8(data), renamed)
+        if data.startswith("base85:"):
+            bdata = base64.b85decode(data.split(":", 1)[-1].strip())
+        else:
+            bdata = data.encode("utf-8")
+        return simplefilectx(self._repo, key, bdata, renamed)
 
     def commit(self):
         return self._repo.commitctx(self)
