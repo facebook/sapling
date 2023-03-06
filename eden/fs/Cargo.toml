@@ -15,7 +15,7 @@ prost-derive = { version = "0.11.6", git = "https://github.com/krallin/prost.git
 prost-types = { version = "0.11.6", git = "https://github.com/krallin/prost.git", rev = "90b7e204c66f6baed0b1426ce456fb70d16b1cdb" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 reqwest = { git = "https://github.com/vmagro/reqwest", rev = "f9490c06756a9d35ab874c44657db790a87af80b" }
-scip = { git = "https://github.com/davidbarsky/scip.git", rev = "58b9509f04aa853006ed1b1256434c421bb54eec" }
+scip = { git = "https://github.com/sourcegraph/scip.git", rev = "f90a867eb194bf6dae2e2b176e4f8ec7928bf70b" }
 solana-program = { git = "https://github.com/omertxyz/solana.git", rev = "03a3b241622b6248bb245c29baef538a88f04c0b" }
 solana-zk-token-sdk = { git = "https://github.com/omertxyz/solana.git", rev = "03a3b241622b6248bb245c29baef538a88f04c0b" }
 tar = { package = "tar", git = "https://github.com/jrwats/tar-rs.git", rev = "21eeccdc08d9b87f6ad610f9b20a5839aabe5974" }
