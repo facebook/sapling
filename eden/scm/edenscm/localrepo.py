@@ -1402,6 +1402,7 @@ class localrepository(object):
                 "lookup": lambda *names: removenull([self[n].node() for n in names]),
                 "obsolete": lambda: mutation.obsoletenodes(self),
                 "public": lambda: getphaseset(self, phases.public),
+                "tonodes": self.changelog.tonodes,
             },
         )
 
