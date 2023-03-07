@@ -43,7 +43,7 @@ std::shared_ptr<StructuredLogger> makeDefaultStructuredLogger(
   } catch (const std::exception& ex) {
     edenStats->increment(&TelemetryStats::subprocessLoggerFailure, 1);
     XLOGF(
-        WARN,
+        ERR,
         "Failed to create SubprocessScribeLogger: {}. Structured logging is disabled.",
         folly::exceptionStr(ex));
     return std::make_shared<NullStructuredLogger>();
