@@ -41,6 +41,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mercurial_types::FileBytes;
+use metaconfig_types::ShardedService;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
@@ -491,8 +492,9 @@ impl AliasVerification {
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: AliasVerifyArgs = app.args()?;
-    // TODO(rajshar): Replace this None with ShardedService as AliasVerify
-    let repo_mgr = app.open_managed_repos(None).await?;
+    let repo_mgr = app
+        .open_managed_repos(Some(ShardedService::AliasVerify))
+        .await?;
     let process = AliasVerifyProcess::new(app, repo_mgr);
     match args.sharded_service_name {
         None => {
