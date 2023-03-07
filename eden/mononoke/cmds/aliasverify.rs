@@ -46,6 +46,7 @@ use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mutable_counters::MutableCounters;
+use mutable_counters::MutableCountersRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
@@ -69,8 +70,16 @@ pub struct Repo {
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum Mode {
+    /// Mode to verify if the alias exists, and if it doesn't, report the error
     Verify,
+    /// Mode to verify if the alias exists, and if it doesn't then generate it.
     Generate,
+    /// Mode to generate aliases (along with metadata) for large collection of files.
+    /// Can be used for backfilling repos with metadata and new aliases. In this mode,
+    /// min_cs_db_id is ignored and {repo_name}_alias_backfill_counter mutable counter
+    /// is used to determine the starting changeset for backfilling. If the mutable counter
+    /// doesn't exist, the backfilling starts from cs_id 0.
+    Backfill,
 }
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
@@ -190,7 +199,7 @@ impl AliasVerification {
 
         match self.mode {
             Mode::Verify => Ok(()),
-            Mode::Generate => {
+            Mode::Generate | Mode::Backfill => {
                 let blobstore = self.repo.repo_blobstore().clone();
 
                 let maybe_meta =
@@ -272,6 +281,10 @@ impl AliasVerification {
         );
     }
 
+    fn counter_name(&self) -> String {
+        format!("{}_alias_backfill_counter", self.repo.repo_identity.name())
+    }
+
     async fn get_bounded(&self, ctx: &CoreContext, min_id: u64, max_id: u64) -> Result<(), Error> {
         info!(
             self.logger,
@@ -282,7 +295,8 @@ impl AliasVerification {
             .repo
             .changesets()
             .list_enumeration_range(ctx, min_id, max_id, None, true);
-
+        let count = AtomicUsize::new(0);
+        let rcount = &count;
         bcs_ids
             .and_then(move |(bcs_id, _)| async move {
                 let file_changes_vec = self.get_file_changes_vector(ctx, bcs_id).await?;
@@ -290,6 +304,7 @@ impl AliasVerification {
             })
             .try_flatten()
             .try_for_each_concurrent(LIMIT, move |file_change| async move {
+                rcount.fetch_add(1, Ordering::Relaxed);
                 match file_change.simplify() {
                     Some(tc) => {
                         self.process_file_content(ctx, tc.content_id().clone())
@@ -299,7 +314,31 @@ impl AliasVerification {
                 }
             })
             .await?;
-
+        info!(
+            self.logger,
+            "Processed {} changesets",
+            rcount.load(Ordering::Relaxed)
+        );
+        if let Mode::Backfill = self.mode {
+            info!(
+                self.logger,
+                "Completed processing till changeset ID {}",
+                max_id.to_string()
+            );
+            let counter_name = self.counter_name();
+            self.repo
+                .mutable_counters()
+                .set_counter(ctx, &counter_name, max_id as i64, None)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to set {} for {} to {}",
+                        counter_name,
+                        self.repo.repo_identity.name(),
+                        max_id
+                    )
+                })?;
+        }
         self.print_report(true);
         Ok(())
     }
@@ -316,9 +355,27 @@ impl AliasVerification {
             .enumeration_bounds(ctx, true, vec![])
             .await?
             .unwrap();
-
+        let counter_name = self.counter_name();
+        let init_changeset_id = match self.mode {
+            Mode::Backfill => self
+                .repo
+                .mutable_counters()
+                .get_counter(ctx, &counter_name)
+                .await
+                .with_context(|| format!("Error while getting mutable counter {}", counter_name))?
+                .unwrap_or(0) as u64,
+            _ => min_cs_db_id,
+        };
         let mut bounds = vec![];
-        let mut cur_id = cmp::max(min_id, min_cs_db_id);
+        let mut cur_id = cmp::max(min_id, init_changeset_id);
+        info!(
+            self.logger,
+            "Initiating aliasverify in {:?} mode with input init changesetid {} and actual init changesetid {}. Max changesetid {}",
+            self.mode,
+            init_changeset_id,
+            cur_id,
+            max_id,
+        );
         let max_id = max_id + 1;
         while cur_id < max_id {
             let max = cmp::min(max_id, cur_id + step);
