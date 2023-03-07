@@ -41,40 +41,40 @@ describe('LineLog', () => {
 
   it('supports a single edit', () => {
     const log = new LineLog();
-    log.recordText('c\nd\ne', 42);
+    log.recordText('c\nd\ne');
     expect(log.maxRev).toBe(1);
     expect(log.content).toBe('c\nd\ne');
-    expect(log.getLineTimestamp(0)).toBe(42);
-    expect(log.getLineTimestamp(1)).toBe(42);
-    expect(log.getLineTimestamp(2)).toBe(42);
-    expect(log.getLineTimestamp(3)).toBe(0); // out of range
+    expect(log.getLineRev(0)).toBe(1);
+    expect(log.getLineRev(1)).toBe(1);
+    expect(log.getLineRev(2)).toBe(1);
+    expect(log.getLineRev(3)).toBeNull(); // out of range
     expect(log.lines[0].deleted).toBe(false);
   });
 
   it('supports multiple edits', () => {
     const log = new LineLog();
-    log.recordText('c\nd\ne\n', 42);
-    log.recordText('d\ne\nf\n', 52);
+    log.recordText('c\nd\ne\n');
+    log.recordText('d\ne\nf\n');
     expect(log.maxRev).toBe(2);
     expect(log.content).toBe('d\ne\nf\n');
-    expect(log.getLineTimestamp(0)).toBe(42);
-    expect(log.getLineTimestamp(1)).toBe(42);
-    expect(log.getLineTimestamp(2)).toBe(52);
-    expect(log.getLineTimestamp(3)).toBe(0); // out of range
+    expect(log.getLineRev(0)).toBe(1);
+    expect(log.getLineRev(1)).toBe(1);
+    expect(log.getLineRev(2)).toBe(2);
+    expect(log.getLineRev(3)).toBeNull(); // out of range
     expect(log.lines[0].deleted).toBe(false);
     expect(log.lines[2].deleted).toBe(false);
   });
 
   it('supports checkout', () => {
     const log = new LineLog();
-    log.recordText('c\nd\ne\n', 42);
-    log.recordText('d\ne\nf\n', 52);
+    log.recordText('c\nd\ne\n');
+    log.recordText('d\ne\nf\n');
     log.checkOut(1);
     expect(log.content).toBe('c\nd\ne\n');
     log.checkOut(0);
     expect(log.lines[0].deleted).toBe(false);
     expect(log.content).toBe('');
-    expect(log.getLineTimestamp(0)).toBe(0);
+    expect(log.getLineRev(0)).toBeNull();
     log.checkOut(2);
     expect(log.content).toBe('d\ne\nf\n');
     expect(log.lines[2].deleted).toBe(false);
@@ -82,9 +82,9 @@ describe('LineLog', () => {
 
   it('supports checkout range', () => {
     const log = new LineLog();
-    log.recordText('c\nd\ne\n', 42);
-    log.recordText('d\ne\nf\n', 52);
-    log.recordText('e\ng\nf\n', 62);
+    log.recordText('c\nd\ne\n'); // rev 1
+    log.recordText('d\ne\nf\n'); // rev 2
+    log.recordText('e\ng\nf\n'); // rev 3
 
     log.checkOut(2, 1);
     expect(log.content).toBe('c\nd\ne\nf\n');

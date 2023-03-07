@@ -80,21 +80,9 @@ interface LineInfo {
   deleted: boolean;
 }
 
-interface TimestampMap {
-  [rev: number]: number;
-}
-
-interface ExtraMap {
-  [rev: number]: object;
-}
-
 class LineLog {
   // core state
   private code: Inst[];
-  // rev -> timestamp map
-  tsMap: TimestampMap;
-  // rev -> object map
-  extraMap: ExtraMap;
 
   // cached states
   maxRev: Rev;
@@ -104,8 +92,6 @@ class LineLog {
 
   constructor() {
     this.code = [{op: Op.END}];
-    this.tsMap = {};
-    this.extraMap = {};
     this.maxRev = 0;
     this.lastCheckoutRev = -1;
     this.lines = [];
@@ -231,11 +217,7 @@ class LineLog {
     return this.lines.map(l => l.data).join('');
   }
 
-  public recordText(
-    text: string,
-    timestamp: null | number = null,
-    extra: null | object = null,
-  ): Rev {
+  public recordText(text: string): Rev {
     const a = this.content;
     const b = text;
     if (a === b) {
@@ -244,38 +226,8 @@ class LineLog {
     const lines = splitLines(b);
     this.checkOut(this.maxRev);
     const blocks = diffLines(a, b);
-    const ts = timestamp || Date.now();
 
-    if (blocks.length === 1) {
-      const rev = this.maxRev;
-      const [a1, a2, b1, b2] = blocks[0];
-      if (
-        a2 - a1 === 1 &&
-        b2 - b1 === 1 &&
-        this.lines[a1].rev === rev &&
-        this.lines.filter(l => l.rev === rev).length === 1
-      ) {
-        // Trivial change. Update directly without keeping the old history.
-        this.tsMap[rev] = ts;
-        const code = this.code[this.lines[a1].pc];
-        if (code.op === Op.LINE) {
-          const newLine = lines[b1];
-          code.data = newLine;
-          this.lines[a1].data = newLine;
-        } else {
-          assert(false, 'bug: inconsistent op');
-        }
-        this.content = b;
-        return rev;
-      }
-    }
-
-    // Non-trivial change.
     const rev = this.maxRev + 1;
-    this.tsMap[rev] = ts;
-    if (extra) {
-      this.extraMap[rev] = extra;
-    }
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
       this.editChunk(a1, a2, rev, lines.slice(b1, b2));
     });
@@ -285,20 +237,12 @@ class LineLog {
     return rev;
   }
 
-  public getLineTimestamp(i: LineIdx): number {
+  /** Get revision of the specified line. Returns null if out of range. */
+  public getLineRev(i: LineIdx): Rev | null {
     if (i >= this.lines.length - 1) {
-      return 0;
+      return null;
     } else {
-      const ts = this.tsMap[this.lines[i].rev];
-      return ts;
-    }
-  }
-
-  public getLineExtra(i: LineIdx): object {
-    if (i >= this.lines.length - 1) {
-      return {};
-    } else {
-      return this.extraMap[this.lines[i].rev] || {};
+      return this.lines[i].rev;
     }
   }
 }
