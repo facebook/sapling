@@ -667,7 +667,7 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
     initial_commit: str = ""
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
-        return {"eden.fs.inodes.treeoverlay.TreeOverlayWindowsFsck": "DBG9"}
+        return {"eden.fs.inodes.sqlitecatalog.WindowsFsck": "DBG9"}
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
