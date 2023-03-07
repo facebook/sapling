@@ -25,6 +25,7 @@ struct HgBackingStoreStats;
 struct HgImporterStats;
 struct JournalStats;
 struct ThriftStats;
+struct TelemetryStats;
 
 /**
  * StatsGroupBase is a base class for a group of thread-local stats
@@ -117,6 +118,7 @@ class EdenStats {
   ThreadLocal<HgImporterStats> hgImporterStats_;
   ThreadLocal<JournalStats> journalStats_;
   ThreadLocal<ThriftStats> thriftStats_;
+  ThreadLocal<TelemetryStats> telemetryStats_;
 };
 
 template <>
@@ -159,6 +161,11 @@ inline JournalStats& EdenStats::getStatsForCurrentThread<JournalStats>() {
 template <>
 inline ThriftStats& EdenStats::getStatsForCurrentThread<ThriftStats>() {
   return *thriftStats_.get();
+}
+
+template <>
+inline TelemetryStats& EdenStats::getStatsForCurrentThread<TelemetryStats>() {
+  return *telemetryStats_.get();
 }
 
 template <typename T>
@@ -322,6 +329,10 @@ struct JournalStats : StatsGroup<JournalStats> {
 struct ThriftStats : StatsGroup<ThriftStats> {
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
+};
+
+struct TelemetryStats : StatsGroup<TelemetryStats> {
+  Counter subprocessLoggerFailure{"telemetry.subprocess_logger_failure"};
 };
 
 /**

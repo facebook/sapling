@@ -372,8 +372,10 @@ EdenServer::EdenServer(
       // the main thread.  The runServer() code will end up driving this
       // EventBase.
       mainEventBase_{folly::EventBaseManager::get()->getEventBase()},
-      structuredLogger_{
-          makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo))},
+      structuredLogger_{makeDefaultStructuredLogger(
+          *edenConfig,
+          std::move(sessionInfo),
+          edenStats)},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),

@@ -13,6 +13,7 @@ namespace facebook::eden {
 
 class EdenConfig;
 class StructuredLogger;
+class EdenStats;
 struct SessionInfo;
 
 /**
@@ -21,6 +22,7 @@ struct SessionInfo;
  */
 std::shared_ptr<StructuredLogger> makeDefaultStructuredLogger(
     const EdenConfig&,
-    SessionInfo sessionInfo);
+    SessionInfo sessionInfo,
+    std::shared_ptr<EdenStats> edenStats);
 
 } // namespace facebook::eden
