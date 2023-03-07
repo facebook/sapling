@@ -15,6 +15,7 @@ use context::CoreContext;
 use futures::future;
 use futures::task::Poll;
 use futures::TryFutureExt;
+use mononoke_types::private::ErrorKind;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -45,11 +46,18 @@ pub async fn get_metadata<B: Blobstore>(
     ctx: &CoreContext,
     content_id: ContentId,
 ) -> Result<Option<ContentMetadataV2>, Error> {
-    let maybe_metadata = get_metadata_readonly(blobstore, ctx, content_id).await?;
-
-    // We found the metadata. Return it.
-    if let Some(metadata) = maybe_metadata {
-        return Ok(Some(metadata));
+    let metadata = get_metadata_readonly(blobstore, ctx, content_id).await;
+    // We found the metadata, return it.
+    if let Ok(Some(_)) = metadata {
+        return metadata;
+    } else if let Err(e) = metadata {
+        match e.downcast_ref::<ErrorKind>() {
+            // The backfilling for ContentMetadataV2 has happened in different stages.
+            // If any of the later fields are missing, we get invalid thrift error. In
+            // that case we need to rebuild the metadata, so do not return.
+            Some(ErrorKind::InvalidThrift(..)) => (),
+            _ => return Err(e),
+        }
     }
 
     // We didn't find the metadata. Try to recompute it. This might fail if the
