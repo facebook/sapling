@@ -23,9 +23,14 @@ use clap::ArgEnum;
 use clap::Parser;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use filestore::hash_bytes;
 use filestore::Alias;
 use filestore::AliasBlob;
+use filestore::Blake3IncrementalHasher;
 use filestore::FetchKey;
+use filestore::GitSha1IncrementalHasher;
+use filestore::Sha1IncrementalHasher;
+use filestore::Sha256IncrementalHasher;
 use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -36,8 +41,6 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
-use mononoke_types::hash;
-use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
@@ -51,24 +54,42 @@ use slog::Logger;
 
 const LIMIT: usize = 1000;
 
-pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
-    use sha2::Digest;
-    use sha2::Sha256;
-    let mut hasher = Sha256::new();
-    hasher.update(contents);
-    hash::Sha256::from_byte_array(hasher.finalize().into())
-}
-
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum Mode {
     Verify,
     Generate,
 }
 
+#[derive(Debug, Clone, Copy, ArgEnum)]
+enum AliasType {
+    Sha256,
+    SeededBlake3,
+    Sha1,
+    GitSha1,
+}
+
+impl AliasType {
+    fn get_alias(&self, content: &Bytes) -> Alias {
+        match self {
+            AliasType::GitSha1 => {
+                Alias::GitSha1(hash_bytes(GitSha1IncrementalHasher::new(content), content).sha1())
+            }
+            AliasType::SeededBlake3 => {
+                Alias::SeededBlake3(hash_bytes(Blake3IncrementalHasher::new_seeded(), content))
+            }
+            AliasType::Sha1 => Alias::Sha1(hash_bytes(Sha1IncrementalHasher::new(), content)),
+            AliasType::Sha256 => Alias::Sha256(hash_bytes(Sha256IncrementalHasher::new(), content)),
+        }
+    }
+}
+
 /// Verify and reload all the alias blobs
 #[derive(Parser)]
 #[clap(about = "Verify and reload all the alias blobs into Mononoke blobstore.")]
 struct AliasVerifyArgs {
+    /// The type of alias to verify or generate (in case of missing alias)
+    #[clap(long, arg_enum, default_value_t = AliasType::Sha256)]
+    alias_type: AliasType,
     /// Mode for missing blobs
     #[clap(long, arg_enum, default_value_t = Mode::Verify)]
     mode: Mode,
@@ -89,17 +110,25 @@ struct AliasVerification {
     #[allow(dead_code)]
     repoid: RepositoryId,
     mode: Mode,
+    alias_type: AliasType,
     err_cnt: Arc<AtomicUsize>,
     cs_processed: Arc<AtomicUsize>,
 }
 
 impl AliasVerification {
-    pub fn new(logger: Logger, blobrepo: BlobRepo, repoid: RepositoryId, mode: Mode) -> Self {
+    pub fn new(
+        logger: Logger,
+        blobrepo: BlobRepo,
+        repoid: RepositoryId,
+        mode: Mode,
+        alias_type: AliasType,
+    ) -> Self {
         Self {
             logger,
             blobrepo,
             repoid,
             mode,
+            alias_type,
             err_cnt: Arc::new(AtomicUsize::new(0)),
             cs_processed: Arc::new(AtomicUsize::new(0)),
         }
@@ -127,7 +156,7 @@ impl AliasVerification {
 
     async fn check_alias_blob(
         &self,
-        alias: &Sha256,
+        alias: &Alias,
         expected_content_id: ContentId,
         content_id: ContentId,
     ) -> Result<(), Error> {
@@ -147,13 +176,13 @@ impl AliasVerification {
     async fn process_missing_alias_blob(
         &self,
         ctx: &CoreContext,
-        alias: &Sha256,
+        alias: &Alias,
         content_id: ContentId,
     ) -> Result<(), Error> {
         self.err_cnt.fetch_add(1, Ordering::Relaxed);
         debug!(
             self.logger,
-            "Missing alias blob: alias {:?}, content_id {:?}", alias, content_id
+            "Missing alias blob: alias {}, content_id {:?}", alias, content_id
         );
 
         match self.mode {
@@ -167,20 +196,26 @@ impl AliasVerification {
 
                 let meta =
                     maybe_meta.ok_or_else(|| format_err!("Missing content {:?}", content_id))?;
+                let is_valid_match = match *alias {
+                    Alias::Sha256(hash_val) => meta.sha256 == hash_val,
+                    Alias::GitSha1(hash_val) => meta.git_sha1.sha1() == hash_val,
+                    Alias::SeededBlake3(hash_val) => meta.seeded_blake3 == hash_val,
+                    Alias::Sha1(hash_val) => meta.sha1 == hash_val,
+                };
 
-                if meta.sha256 == *alias {
-                    AliasBlob(
-                        Alias::Sha256(meta.sha256),
-                        ContentAlias::from_content_id(content_id),
-                    )
-                    .store(ctx, &blobstore)
-                    .await
+                if is_valid_match {
+                    AliasBlob(alias.clone(), ContentAlias::from_content_id(content_id))
+                        .store(ctx, &blobstore)
+                        .await
                 } else {
                     Err(format_err!(
-                        "Inconsistent hashes for {:?}, got {:?}, meta is {:?}",
+                        "Inconsistent hashes for {:?}, got {:?}, metadata hashes are (Sha1: {:?}, Sha256: {:?}, GitSha1: {:?}, SeededBlake3: {:?})",
                         content_id,
                         alias,
-                        meta.sha256
+                        meta.sha1,
+                        meta.sha256,
+                        meta.git_sha1.sha1(),
+                        meta.seeded_blake3,
                     ))
                 }
             }
@@ -190,7 +225,7 @@ impl AliasVerification {
     async fn process_alias(
         &self,
         ctx: &CoreContext,
-        alias: &Sha256,
+        alias: &Alias,
         content_id: ContentId,
     ) -> Result<(), Error> {
         let result = FetchKey::from(alias.clone())
@@ -219,7 +254,7 @@ impl AliasVerification {
 
         let alias = filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id)
             .map_ok(FileBytes)
-            .map_ok(|content| get_sha256(&content.into_bytes()))
+            .map_ok(|content| self.alias_type.get_alias(&content.into_bytes()))
             .await?;
 
         self.process_alias(ctx, &alias, content_id).await
@@ -307,6 +342,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let ctx = app.new_basic_context();
 
     let mode = args.mode;
+    let alias_type = args.alias_type;
     let step = args.step;
     let min_cs_db_id = args.min_cs_db_id;
 
@@ -315,7 +351,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .await
         .context("Failed to open repo")?;
     let repo_id = repo.repo_identity().id();
-    AliasVerification::new(logger.clone(), repo, repo_id, mode)
+    AliasVerification::new(logger.clone(), repo, repo_id, mode, alias_type)
         .verify_all(&ctx, step, min_cs_db_id)
         .await
 }

@@ -1787,11 +1787,13 @@ EOF
 }
 
 function aliasverify() {
-  mode=$1
-  shift 1
+  mode="$1"
+  alias_type="$2"
+  shift 2
   GLOG_minloglevel=5 "$MONONOKE_ALIAS_VERIFY" --repo-id $REPOID \
      "${COMMON_ARGS[@]}" \
      --mononoke-config-path "$TESTTMP/mononoke-config" \
+     --alias-type "$alias_type" \
      --mode "$mode" "$@"
 }
 

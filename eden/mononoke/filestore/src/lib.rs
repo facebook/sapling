@@ -51,7 +51,10 @@ pub use fetch_key::Alias;
 pub use fetch_key::AliasBlob;
 pub use fetch_key::FetchKey;
 pub use incremental_hash::hash_bytes;
+pub use incremental_hash::Blake3IncrementalHasher;
+pub use incremental_hash::GitSha1IncrementalHasher;
 pub use incremental_hash::Sha1IncrementalHasher;
+pub use incremental_hash::Sha256IncrementalHasher;
 pub use rechunk::force_rechunk;
 pub use rechunk::rechunk;
 

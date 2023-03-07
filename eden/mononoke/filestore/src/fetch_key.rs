@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Display;
+
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -84,6 +86,17 @@ pub enum Alias {
     Sha256(hash::Sha256),
     GitSha1(hash::GitSha1),
     SeededBlake3(hash::Blake3),
+}
+
+impl Display for Alias {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Sha1(sha1) => f.write_fmt(format_args!("{:?}", sha1)),
+            Self::Sha256(sha256) => f.write_fmt(format_args!("{:?}", sha256)),
+            Self::GitSha1(gitsha1) => f.write_fmt(format_args!("{:?}", gitsha1)),
+            Self::SeededBlake3(seeded_blake3) => f.write_fmt(format_args!("{:?}", seeded_blake3)),
+        }
+    }
 }
 
 #[async_trait]
