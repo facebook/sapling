@@ -735,4 +735,260 @@ mod test {
         );
         assert!(!is_binary(bytes_stream).await);
     }
+
+    // is_generated tests
+    #[tokio::test]
+    async fn basic_is_generated_test() {
+        let input = concat!("Random string with @", "generated tag within it");
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(is_generated(bytes_stream).await);
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!is_partially_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn negative_is_generated_test() {
+        let input = "Random string without any generated tag";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!is_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn almost_is_generated_test() {
+        let input = "@,generated @ generated @generate d @generatd @\0generated @\ngenerated @geenerated @Generated @geneRateD";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!is_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn stream_is_generated_test() {
+        let bytes_stream = stream::iter(
+            [
+                "This chunk has no marker",
+                "Neither does this chunk",
+                "But the last chunk in this list",
+                concat!("has @", "generated marker in it"),
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert!(is_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn stream_negative_is_generated_test() {
+        let bytes_stream = stream::iter(
+            [
+                "This chunk has no marker",
+                "Neither does this chunk",
+                "But the last chunk in this list",
+                "Also doesn't have any marker",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert!(!is_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn broken_stream_is_generated_test() {
+        let bytes_stream = stream::iter(
+            ["This chunk has @gene", "rated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @ge", "nerated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @", "generated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @generate", "d marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @ge", "ne", "rate", "d marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter([
+            "A much longer string that has the initial part of the required marker @",
+            "generated in it. This check validates that even for longer strings, inter-chunk marker check succeeds",
+        ].into_iter()
+        .map(Bytes::from)
+    );
+        assert!(is_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn broken_stream_negative_is_generated_test() {
+        let bytes_stream = stream::iter(
+            ["This chunk has @gene", " rated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @gen", "nerated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @", "g", "generated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @generatde", "d marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_generated(bytes_stream).await);
+    }
+
+    // is_partially_generated tests
+    #[tokio::test]
+    async fn basic_is_partially_generated_test() {
+        let input = concat!("Random string with @", "partially-generated tag within it");
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!is_generated(bytes_stream).await);
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(is_partially_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn negative_is_partially_generated_test() {
+        let input = "Random string without any generated tag";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!is_partially_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn broken_stream_is_partially_generated_test() {
+        let bytes_stream = stream::iter(
+            ["This chunk has @partially-", "generated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @pa", "rtially-generated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @", "partially-generated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @partially-generate", "d marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            [
+                "This chunk has @pa",
+                "rti",
+                "ally",
+                "-",
+                "gen",
+                "erat",
+                "ed",
+                " marker in it",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert!(is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter([
+            "A much longer string that has the initial part of the required marker @",
+            "partially-generated in it. This check validates that even for longer strings, inter-chunk marker check succeeds",
+        ].into_iter()
+        .map(Bytes::from)
+    );
+        assert!(is_partially_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn broken_stream_with_empty_string_is_partially_generated_test() {
+        let bytes_stream = stream::iter(
+            [
+                "This chunk has @pa",
+                "rti",
+                "",
+                "ally",
+                "-",
+                "",
+                "gen",
+                "erat",
+                "",
+                "ed",
+                " marker in it",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert!(is_partially_generated(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn broken_stream_negative_is_partially_generated_test() {
+        let bytes_stream = stream::iter(
+            ["This chunk has @partially-gene", " rated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @partially-gen", "nerated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @", "p", "partially-generated marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_partially_generated(bytes_stream).await);
+
+        let bytes_stream = stream::iter(
+            ["This chunk has @partially-genarate", "d marker in it"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(!is_partially_generated(bytes_stream).await);
+    }
 }
