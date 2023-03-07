@@ -13,6 +13,8 @@
 
 from __future__ import absolute_import, print_function
 
+import base64
+
 import collections
 import copy
 import email
@@ -1666,7 +1668,7 @@ class binhunk(object):
             else:
                 l = l - ord("a") + 27
             try:
-                dec.append(util.b85decode(line[1:])[:l])
+                dec.append(base64.b85decode(line[1:])[:l])
             except ValueError as e:
                 raise PatchError(
                     _('could not decode "%s" binary patch: %s') % (self._fname, str(e))

@@ -1537,12 +1537,6 @@ havefanotify = (
 
 extmodules = [
     Extension(
-        "edenscmnative.base85",
-        ["edenscm/cext/base85.c"],
-        include_dirs=include_dirs,
-        depends=common_depends,
-    ),
-    Extension(
         "edenscmnative.bdiff",
         ["edenscm/bdiff.c", "edenscm/cext/bdiff.c"],
         include_dirs=include_dirs,

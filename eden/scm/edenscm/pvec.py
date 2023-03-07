@@ -55,6 +55,8 @@ Uses:
 
 from __future__ import absolute_import
 
+import base64
+
 from typing import List, Tuple
 
 from . import util
@@ -184,14 +186,14 @@ def ctxpvec(ctx) -> "pvec":
                     pvc[n] = _mergevec(pvc[p1], pvc[p2], node)
     bs = _join(*pvc[ctx.rev()])
     # pyre-fixme[6]: For 1st param expected `bytes` but got `str`.
-    return pvec(util.b85encode(bs))
+    return pvec(base64.b85encode(bs))
 
 
 class pvec(object):
     def __init__(self, hashorctx):
         if isinstance(hashorctx, str):
             self._bs = hashorctx
-            self._depth, self._vec = _split(util.b85decode(hashorctx))
+            self._depth, self._vec = _split(base64.b85decode(hashorctx))
         else:
             self._vec = ctxpvec(hashorctx)
 

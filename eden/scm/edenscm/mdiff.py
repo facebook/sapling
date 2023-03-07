@@ -12,6 +12,7 @@
 
 from __future__ import absolute_import
 
+import base64
 import re
 import struct
 import zlib
@@ -574,7 +575,7 @@ def b85diff(to: bytes, tn: bytes) -> bytes:
             l = ord("A") + l - 1
         else:
             l = l - 26 + ord("a") - 1
-        return b"%c%s\n" % (l, util.b85encode(line, True))
+        return b"%c%s\n" % (l, base64.b85encode(line, True))
 
     def chunk(text, csize=52):
         l = len(text)

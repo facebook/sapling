@@ -67,7 +67,7 @@ from typing import (
 import bindings
 from edenscm import tracing
 
-from edenscmnative import base85, osutil
+from edenscmnative import osutil
 
 from . import blackbox, encoding, error, fscap, i18n, pycompat, urllibcompat
 from .pycompat import decodeutf8, encodeutf8, range
@@ -75,9 +75,6 @@ from .pycompat import decodeutf8, encodeutf8, range
 
 getsignal = signalmod.getsignal
 signal = signalmod.signal
-
-b85decode = base85.b85decode
-b85encode = base85.b85encode
 
 # pyre-fixme[11]: Annotation `cookiejar` is not defined as a type.
 cookielib = pycompat.cookielib
