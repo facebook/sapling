@@ -588,4 +588,65 @@ mod test {
             assert!(is_utf8(bytes_stream).await);
         }
     }
+
+    // ends_in_newline tests
+    #[tokio::test]
+    async fn basic_ends_in_newline_test() {
+        let input = "Random string ending in newline\n";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(ends_in_newline(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn negative_ends_in_newline_test() {
+        let input = "Just some string";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!ends_in_newline(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn non_ending_newlines_test() {
+        let input = "\nThere are \n newlines in \n this string \nbut not at the en\nd";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(!ends_in_newline(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn ends_in_newline_with_stream_test() {
+        let bytes_stream = stream::iter(
+            ["This is a", " broken up", " string that ends in newline\n"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert!(ends_in_newline(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn ends_in_newline_with_invalid_stream_test() {
+        let bytes_stream = stream::iter(
+            [
+                "Each chunk\n",
+                " of this string\n",
+                " ends in newline\n",
+                " except the last",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert!(!ends_in_newline(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn ends_in_newline_with_arbitrary_non_ascii_stream_test() {
+        let bytes_stream = stream::iter(
+            [
+                "इस पाठ का प्रत्येक हिस्सा",
+                "अंग्रेजी वाक्य नहीं है",
+                "इसलिए इसमें कोई न्यूलाइन नहीं होनी चाहिए।",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert!(!ends_in_newline(bytes_stream).await);
+    }
 }
