@@ -88,6 +88,7 @@ Check file in blobstores
   sha1: true
   sha256: true
   git_sha1: true
+  seeded_blake3: true
   $ mononoke_newadmin filestore -R "$REPONAME" verify --content-sha1 7b18d017f89f61cf17d47f92749ea6930a3f1deb
   Error: Content not found
   [1]
@@ -96,3 +97,4 @@ Check file in blobstores
   sha1: true
   sha256: true
   git_sha1: true
+  seeded_blake3: true
