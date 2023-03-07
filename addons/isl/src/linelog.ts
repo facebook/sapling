@@ -29,13 +29,8 @@ SOFTWARE.
 
 */
 
-import {diff_match_patch} from 'diff-match-patch';
-
-const dmp = new diff_match_patch();
-
-// The timeout does not seem to affect dmp performance.
-// But bumping it produces better diff results.
-dmp.Diff_Timeout = 10000;
+// Read D43857949 about the choice of the diff library.
+import diffSequences from 'diff-sequences';
 
 /** Operation code. */
 enum Op {
@@ -400,13 +395,13 @@ class LineLog {
     const [aRev, bRev] = rev ? [rev, rev] : [this.maxRev, this.maxRev + 1];
     const b = text;
 
-    const lines = splitLines(b);
+    const bLines = splitLines(b);
     this.checkOut(aRev);
-    const a = this.content;
-    const blocks = diffLines(a, b);
+    const aLines = splitLines(this.content);
+    const blocks = diffLines(aLines, bLines);
 
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
-      this.editChunk(a1, a2, bRev, lines.slice(b1, b2));
+      this.editChunk(a1, a2, bRev, bLines.slice(b1, b2));
     });
     this.content = b;
     this.lastCheckoutKey = `${bRev},null`;
@@ -429,41 +424,59 @@ class LineLog {
 }
 
 /**
- * Calculate the differences.
+ * Calculate the line differences. For performance, this function only
+ * returns the line indexes for different chunks. The line contents
+ * are not returned.
  *
- * @param a Content of the "a" side.
- * @param b Content of the "b" side.
+ * @param aLines lines on the "a" side.
+ * @param bLines lines on the "b" side.
  * @returns A list of `(a1, a2, b1, b2)` tuples for the line ranges that
  * are different between "a" and "b".
  */
-function diffLines(a: string, b: string): [LineIdx, LineIdx, LineIdx, LineIdx][] {
-  const {chars1, chars2} = dmp.diff_linesToChars_(a, b);
+function diffLines(aLines: string[], bLines: string[]): [LineIdx, LineIdx, LineIdx, LineIdx][] {
+  // Avoid O(string length) comparison.
+  const [aList, bList] = stringsToInts([aLines, bLines]);
+
+  // Skip common prefix and suffix.
+  let aLen = aList.length;
+  let bLen = bList.length;
+  const minLen = Math.min(aLen, bLen);
+  let commonPrefixLen = 0;
+  while (commonPrefixLen < minLen && aList[commonPrefixLen] === bList[commonPrefixLen]) {
+    commonPrefixLen += 1;
+  }
+  while (aLen > commonPrefixLen && bLen > commonPrefixLen && aList[aLen - 1] === bList[bLen - 1]) {
+    aLen -= 1;
+    bLen -= 1;
+  }
+  aLen -= commonPrefixLen;
+  bLen -= commonPrefixLen;
+
+  // Run the diff algorithm.
   const blocks: [LineIdx, LineIdx, LineIdx, LineIdx][] = [];
-  let a1 = 0,
-    a2 = 0,
-    b1 = 0,
-    b2 = 0;
-  const push = (len: number) => {
+  let a1 = 0;
+  let b1 = 0;
+
+  function isCommon(aIndex: number, bIndex: number) {
+    return aList[aIndex + commonPrefixLen] === bList[bIndex + commonPrefixLen];
+  }
+
+  function foundSequence(n: LineIdx, a2: LineIdx, b2: LineIdx) {
     if (a1 !== a2 || b1 !== b2) {
-      blocks.push([a1, a2, b1, b2]);
+      blocks.push([
+        a1 + commonPrefixLen,
+        a2 + commonPrefixLen,
+        b1 + commonPrefixLen,
+        b2 + commonPrefixLen,
+      ]);
     }
-    a1 = a2 = a2 + len;
-    b1 = b2 = b2 + len;
-  };
-  dmp.diff_main(chars1, chars2, false).forEach(x => {
-    const [op, chars] = x;
-    const len = chars.length;
-    if (op === 0) {
-      push(len);
-    }
-    if (op < 0) {
-      a2 += len;
-    }
-    if (op > 0) {
-      b2 += len;
-    }
-  });
-  push(0);
+    a1 = a2 + n;
+    b1 = b2 + n;
+  }
+
+  diffSequences(aLen, bLen, isCommon, foundSequence);
+  foundSequence(0, aLen, bLen);
+
   return blocks;
 }
 
@@ -483,6 +496,28 @@ function splitLines(s: string): string[] {
     pos = nextPos + 1;
   }
   return result;
+}
+
+/**
+ * Make strings with the same content use the same integer
+ * for fast comparasion.
+ */
+function stringsToInts(linesArray: string[][]): number[][] {
+  // This is similar to diff-match-patch's diff_linesToChars_ but is not
+  // limited to 65536 unique lines.
+  const lineMap = new Map<string, number>();
+  return linesArray.map(lines =>
+    lines.map(line => {
+      const existingId = lineMap.get(line);
+      if (existingId != null) {
+        return existingId;
+      } else {
+        const id = lineMap.size;
+        lineMap.set(line, id);
+        return id;
+      }
+    }),
+  );
 }
 
 /** If the assertion fails, throw an `Error` with the given `message`. */
