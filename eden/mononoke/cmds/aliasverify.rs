@@ -14,10 +14,10 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bytes::Bytes;
+use changesets::Changesets;
 use changesets::ChangesetsRef;
 use clap::ArgEnum;
 use clap::Parser;
@@ -45,14 +45,27 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
 use mononoke_types::FileChange;
-use mononoke_types::RepositoryId;
+use mutable_counters::MutableCounters;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
-use repo_identity::RepoIdentityRef;
+use repo_identity::RepoIdentity;
 use slog::debug;
 use slog::info;
 use slog::Logger;
 
 const LIMIT: usize = 1000;
+
+#[facet::container]
+pub struct Repo {
+    #[facet]
+    repo_identity: RepoIdentity,
+    #[facet]
+    repo_blobstore: RepoBlobstore,
+    #[facet]
+    mutable_counters: dyn MutableCounters,
+    #[facet]
+    changesets: dyn Changesets,
+}
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum Mode {
@@ -103,12 +116,9 @@ struct AliasVerifyArgs {
     repo: RepoArgs,
 }
 
-#[derive(Clone)]
 struct AliasVerification {
     logger: Logger,
-    blobrepo: BlobRepo,
-    #[allow(dead_code)]
-    repoid: RepositoryId,
+    repo: Repo,
     mode: Mode,
     alias_type: AliasType,
     err_cnt: Arc<AtomicUsize>,
@@ -116,17 +126,10 @@ struct AliasVerification {
 }
 
 impl AliasVerification {
-    pub fn new(
-        logger: Logger,
-        blobrepo: BlobRepo,
-        repoid: RepositoryId,
-        mode: Mode,
-        alias_type: AliasType,
-    ) -> Self {
+    pub fn new(logger: Logger, repo: Repo, mode: Mode, alias_type: AliasType) -> Self {
         Self {
             logger,
-            blobrepo,
-            repoid,
+            repo,
             mode,
             alias_type,
             err_cnt: Arc::new(AtomicUsize::new(0)),
@@ -145,7 +148,7 @@ impl AliasVerification {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        let bcs = bcs_id.load(ctx, self.blobrepo.repo_blobstore()).await?;
+        let bcs = bcs_id.load(ctx, self.repo.repo_blobstore()).await?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
             .iter()
@@ -188,7 +191,7 @@ impl AliasVerification {
         match self.mode {
             Mode::Verify => Ok(()),
             Mode::Generate => {
-                let blobstore = self.blobrepo.repo_blobstore().clone();
+                let blobstore = self.repo.repo_blobstore().clone();
 
                 let maybe_meta =
                     filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))
@@ -229,7 +232,7 @@ impl AliasVerification {
         content_id: ContentId,
     ) -> Result<(), Error> {
         let result = FetchKey::from(alias.clone())
-            .load(ctx, self.blobrepo.repo_blobstore())
+            .load(ctx, self.repo.repo_blobstore())
             .await;
 
         match result {
@@ -250,9 +253,7 @@ impl AliasVerification {
         ctx: &CoreContext,
         content_id: ContentId,
     ) -> Result<(), Error> {
-        let repo = self.blobrepo.clone();
-
-        let alias = filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id)
+        let alias = filestore::fetch_concat(self.repo.repo_blobstore(), ctx, content_id)
             .map_ok(FileBytes)
             .map_ok(|content| self.alias_type.get_alias(&content.into_bytes()))
             .await?;
@@ -278,7 +279,7 @@ impl AliasVerification {
         );
 
         let bcs_ids = self
-            .blobrepo
+            .repo
             .changesets()
             .list_enumeration_range(ctx, min_id, max_id, None, true);
 
@@ -310,7 +311,7 @@ impl AliasVerification {
         min_cs_db_id: u64,
     ) -> Result<(), Error> {
         let (min_id, max_id) = self
-            .blobrepo
+            .repo
             .changesets()
             .enumeration_bounds(ctx, true, vec![])
             .await?
@@ -346,12 +347,11 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let step = args.step;
     let min_cs_db_id = args.min_cs_db_id;
 
-    let repo: BlobRepo = app
+    let repo: Repo = app
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;
-    let repo_id = repo.repo_identity().id();
-    AliasVerification::new(logger.clone(), repo, repo_id, mode, alias_type)
+    AliasVerification::new(logger.clone(), repo, mode, alias_type)
         .verify_all(&ctx, step, min_cs_db_id)
         .await
 }
