@@ -36,11 +36,13 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mercurial_types::FileBytes;
+use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_repos::MononokeRepos;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
@@ -121,13 +123,15 @@ struct AliasVerifyArgs {
     /// Changeset to start verification from. Id from changeset table. Not connected to hash
     #[clap(long, default_value_t = 0)]
     min_cs_db_id: u64,
+    /// The repo against which the alias verify command needs to be executed
     #[clap(flatten)]
     repo: RepoArgs,
 }
 
 struct AliasVerification {
     logger: Logger,
-    repo: Repo,
+    repos: Arc<MononokeRepos<Repo>>,
+    repo_name: String,
     mode: Mode,
     alias_type: AliasType,
     err_cnt: Arc<AtomicUsize>,
@@ -135,15 +139,33 @@ struct AliasVerification {
 }
 
 impl AliasVerification {
-    pub fn new(logger: Logger, repo: Repo, mode: Mode, alias_type: AliasType) -> Self {
+    pub fn new(
+        logger: Logger,
+        repo_name: String,
+        repos: Arc<MononokeRepos<Repo>>,
+        mode: Mode,
+        alias_type: AliasType,
+    ) -> Self {
         Self {
             logger,
-            repo,
+            repo_name,
+            repos,
             mode,
             alias_type,
             err_cnt: Arc::new(AtomicUsize::new(0)),
             cs_processed: Arc::new(AtomicUsize::new(0)),
         }
+    }
+
+    fn repo(&self) -> Result<Arc<Repo>> {
+        self.repos
+            .get_by_name(self.repo_name.as_ref())
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Requested repo {} does not exist on this server",
+                    self.repo_name
+                )
+            })
     }
 
     async fn get_file_changes_vector(
@@ -152,12 +174,10 @@ impl AliasVerification {
         bcs_id: ChangesetId,
     ) -> Result<Vec<FileChange>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
-
         if cs_cnt % 1000 == 0 {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
-
-        let bcs = bcs_id.load(ctx, self.repo.repo_blobstore()).await?;
+        let bcs = bcs_id.load(ctx, self.repo()?.repo_blobstore()).await?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
             .iter()
@@ -196,16 +216,13 @@ impl AliasVerification {
             self.logger,
             "Missing alias blob: alias {}, content_id {:?}", alias, content_id
         );
-
         match self.mode {
             Mode::Verify => Ok(()),
             Mode::Generate | Mode::Backfill => {
-                let blobstore = self.repo.repo_blobstore().clone();
-
+                let blobstore = self.repo()?.repo_blobstore().clone();
                 let maybe_meta =
                     filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))
                         .await?;
-
                 let meta =
                     maybe_meta.ok_or_else(|| format_err!("Missing content {:?}", content_id))?;
                 let is_valid_match = match *alias {
@@ -214,7 +231,6 @@ impl AliasVerification {
                     Alias::SeededBlake3(hash_val) => meta.seeded_blake3 == hash_val,
                     Alias::Sha1(hash_val) => meta.sha1 == hash_val,
                 };
-
                 if is_valid_match {
                     AliasBlob(alias.clone(), ContentAlias::from_content_id(content_id))
                         .store(ctx, &blobstore)
@@ -241,9 +257,8 @@ impl AliasVerification {
         content_id: ContentId,
     ) -> Result<(), Error> {
         let result = FetchKey::from(alias.clone())
-            .load(ctx, self.repo.repo_blobstore())
+            .load(ctx, self.repo()?.repo_blobstore())
             .await;
-
         match result {
             Ok(content_id_from_blobstore) => {
                 self.check_alias_blob(alias, content_id, content_id_from_blobstore)
@@ -262,17 +277,15 @@ impl AliasVerification {
         ctx: &CoreContext,
         content_id: ContentId,
     ) -> Result<(), Error> {
-        let alias = filestore::fetch_concat(self.repo.repo_blobstore(), ctx, content_id)
+        let alias = filestore::fetch_concat(self.repo()?.repo_blobstore(), ctx, content_id)
             .map_ok(FileBytes)
             .map_ok(|content| self.alias_type.get_alias(&content.into_bytes()))
             .await?;
-
         self.process_alias(ctx, &alias, content_id).await
     }
 
     fn print_report(&self, partial: bool) {
         let resolution = if partial { "continues" } else { "finished" };
-
         info!(
             self.logger,
             "Alias Verification {}: {:?} errors found",
@@ -281,8 +294,8 @@ impl AliasVerification {
         );
     }
 
-    fn counter_name(&self) -> String {
-        format!("{}_alias_backfill_counter", self.repo.repo_identity.name())
+    fn counter_name(&self) -> Result<String> {
+        Ok(format!("{}_alias_backfill_counter", self.repo_name))
     }
 
     async fn get_bounded(&self, ctx: &CoreContext, min_id: u64, max_id: u64) -> Result<(), Error> {
@@ -290,9 +303,8 @@ impl AliasVerification {
             self.logger,
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
-
-        let bcs_ids = self
-            .repo
+        let repo = self.repo()?;
+        let bcs_ids = repo
             .changesets()
             .list_enumeration_range(ctx, min_id, max_id, None, true);
         let count = AtomicUsize::new(0);
@@ -319,23 +331,21 @@ impl AliasVerification {
             "Processed {} changesets",
             rcount.load(Ordering::Relaxed)
         );
+
         if let Mode::Backfill = self.mode {
             info!(
                 self.logger,
                 "Completed processing till changeset ID {}",
                 max_id.to_string()
             );
-            let counter_name = self.counter_name();
-            self.repo
-                .mutable_counters()
+            let counter_name = self.counter_name()?;
+            repo.mutable_counters()
                 .set_counter(ctx, &counter_name, max_id as i64, None)
                 .await
                 .with_context(|| {
                     format!(
                         "Failed to set {} for {} to {}",
-                        counter_name,
-                        self.repo.repo_identity.name(),
-                        max_id
+                        counter_name, self.repo_name, max_id
                     )
                 })?;
         }
@@ -349,16 +359,15 @@ impl AliasVerification {
         step: u64,
         min_cs_db_id: u64,
     ) -> Result<(), Error> {
-        let (min_id, max_id) = self
-            .repo
+        let repo = self.repo()?;
+        let (min_id, max_id) = repo
             .changesets()
             .enumeration_bounds(ctx, true, vec![])
             .await?
             .unwrap();
-        let counter_name = self.counter_name();
+        let counter_name = self.counter_name()?;
         let init_changeset_id = match self.mode {
-            Mode::Backfill => self
-                .repo
+            Mode::Backfill => repo
                 .mutable_counters()
                 .get_counter(ctx, &counter_name)
                 .await
@@ -382,12 +391,10 @@ impl AliasVerification {
             bounds.push((cur_id, max));
             cur_id += step;
         }
-
         stream::iter(bounds)
             .map(Ok)
             .try_for_each(move |(min_val, max_val)| self.get_bounded(ctx, min_val, max_val))
             .await?;
-
         self.print_report(false);
         Ok(())
     }
@@ -395,22 +402,26 @@ impl AliasVerification {
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: AliasVerifyArgs = app.args()?;
-
     let logger = app.logger();
     let ctx = app.new_basic_context();
-
     let mode = args.mode;
     let alias_type = args.alias_type;
     let step = args.step;
     let min_cs_db_id = args.min_cs_db_id;
-
-    let repo: Repo = app
-        .open_repo(&args.repo)
+    let (repo_name, _) = app.repo_config(args.repo.as_repo_arg())?;
+    let repo_manager = app
+        .open_named_managed_repos(Some(repo_name.to_string()), None)
         .await
-        .context("Failed to open repo")?;
-    AliasVerification::new(logger.clone(), repo, mode, alias_type)
-        .verify_all(&ctx, step, min_cs_db_id)
-        .await
+        .with_context(|| format!("Failure in opening repo {}", repo_name))?;
+    AliasVerification::new(
+        logger.clone(),
+        repo_name,
+        repo_manager.repos().clone(),
+        mode,
+        alias_type,
+    )
+    .verify_all(&ctx, step, min_cs_db_id)
+    .await
 }
 
 #[fbinit::main]
@@ -418,6 +429,5 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(Fb303AppExtension {})
         .build::<AliasVerifyArgs>()?;
-
     app.run_with_monitoring_and_logging(async_main, "aliasverify", AliveService)
 }

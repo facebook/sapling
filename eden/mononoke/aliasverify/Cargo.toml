@@ -24,6 +24,7 @@ filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
+mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
