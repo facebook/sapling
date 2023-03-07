@@ -46,6 +46,12 @@ pub struct ContentMetadataV2 {
 }
 
 impl ContentMetadataV2 {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let thrift_tc = compact_protocol::deserialize(bytes)
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentMetadataV2".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
+
     pub fn from_thrift(metadata: thrift::ContentMetadataV2) -> Result<Self> {
         let newline_count = thrift_field!(ContentMetadataV2, metadata, newline_count)?;
         let newline_count: u64 = newline_count.try_into()?;
