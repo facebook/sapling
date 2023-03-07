@@ -91,6 +91,7 @@ unique_ptr<EdenServer> TestServer::createServer(
   return make_unique<EdenServer>(
       std::vector<std::string>{"edenfs_unit_test"},
       userInfo,
+      make_shared<EdenStats>(),
       SessionInfo{},
       std::move(privHelper),
       config,

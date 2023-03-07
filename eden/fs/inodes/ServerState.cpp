@@ -35,6 +35,7 @@ constexpr std::chrono::seconds kSystemIgnoreMinPollSeconds{5};
 
 ServerState::ServerState(
     UserInfo userInfo,
+    std::shared_ptr<EdenStats> edenStats,
     std::shared_ptr<PrivHelper> privHelper,
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<Clock> clock,
@@ -47,7 +48,7 @@ ServerState::ServerState(
     std::shared_ptr<Notifier> notifier,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
-      edenStats_{std::make_unique<EdenStats>()},
+      edenStats_{std::move(edenStats)},
       privHelper_{std::move(privHelper)},
       threadPool_{std::move(threadPool)},
       clock_{std::move(clock)},

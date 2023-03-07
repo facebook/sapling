@@ -43,6 +43,7 @@ class ServerState {
  public:
   ServerState(
       UserInfo userInfo,
+      std::shared_ptr<EdenStats> edenStats,
       std::shared_ptr<PrivHelper> privHelper,
       std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
@@ -186,7 +187,7 @@ class ServerState {
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
-  std::unique_ptr<EdenStats> edenStats_;
+  std::shared_ptr<EdenStats> edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;

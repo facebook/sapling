@@ -349,6 +349,7 @@ static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
+    std::shared_ptr<EdenStats> edenStats,
     SessionInfo sessionInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
@@ -375,6 +376,7 @@ EdenServer::EdenServer(
           makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo))},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
+          std::move(edenStats),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
           std::make_shared<UnixClock>(),

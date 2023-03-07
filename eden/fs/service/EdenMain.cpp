@@ -351,6 +351,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
+        std::make_shared<EdenStats>(),
         std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig),

@@ -141,6 +141,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(
       std::vector<std::string> originalCommandLine,
       UserInfo userInfo,
+      std::shared_ptr<EdenStats>,
       SessionInfo sessionInfo,
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,

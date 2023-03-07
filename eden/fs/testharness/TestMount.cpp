@@ -166,6 +166,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
 
   serverState_ = make_shared<ServerState>(
       UserInfo::lookup(),
+      make_shared<EdenStats>(),
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
