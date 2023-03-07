@@ -649,4 +649,90 @@ mod test {
         );
         assert!(!ends_in_newline(bytes_stream).await);
     }
+
+    // newline_count tests
+    #[tokio::test]
+    async fn basic_newline_count_test() {
+        let input = "Random\n string with\n newline\n embedded in bet\nween\n";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert_eq!(5, newline_count(bytes_stream).await, "Expected 5 newlines");
+    }
+
+    #[tokio::test]
+    async fn no_newline_count_test() {
+        let input = "Random string with no newlines";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert_eq!(0, newline_count(bytes_stream).await, "Expected 0 newlines");
+    }
+
+    #[tokio::test]
+    async fn stream_newline_count_test() {
+        let bytes_stream = stream::iter(
+            [
+                "This chunk has\n newline",
+                "This chunk doesn't",
+                "Neither does this",
+                "This\n one\n has\n four\n",
+                "\n",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert_eq!(6, newline_count(bytes_stream).await, "Expected 6 newlines");
+    }
+
+    #[tokio::test]
+    async fn no_newline_count_stream_test() {
+        let bytes_stream = stream::iter(
+            ["No", "newlines", "in", "this", "stream"]
+                .into_iter()
+                .map(Bytes::from),
+        );
+        assert_eq!(0, newline_count(bytes_stream).await, "Expected 0 newlines");
+    }
+
+    // is_binary tests
+    #[tokio::test]
+    async fn basic_is_binary_test() {
+        let input = b"Binary input with \0 byte";
+        let bytes_stream = stream::once(future::ready(Bytes::from_static(input)));
+        assert!(is_binary(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn negative_is_binary_test() {
+        let input = b"Just a regular string";
+        let bytes_stream = stream::once(future::ready(Bytes::from_static(input)));
+        assert!(!is_binary(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn stream_is_binary_test() {
+        let bytes_stream = stream::iter(
+            [
+                b"This is just text",
+                b"So is this       ",
+                b"But not \0 this   ",
+                b"not even \0 this  ",
+            ]
+            .iter()
+            .map(|&b| Bytes::from_static(b)),
+        );
+        assert!(is_binary(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn stream_negative_is_binary_test() {
+        let bytes_stream = stream::iter(
+            [
+                b"This is just text",
+                b"This is just text",
+                b"This is just text",
+                b"This is just text",
+            ]
+            .iter()
+            .map(|&b| Bytes::from_static(b)),
+        );
+        assert!(!is_binary(bytes_stream).await);
+    }
 }
