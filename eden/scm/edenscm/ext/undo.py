@@ -38,6 +38,8 @@ from edenscm.i18n import _
 from edenscm.node import bin, hex, nullid, short
 from edenscm.pycompat import decodeutf8, encodeutf8
 
+from edenscmnative import mpatch
+
 
 if not pycompat.iswindows:
     from . import interactiveui
@@ -284,11 +286,19 @@ def unfinished(repo):
 # Write: Logs
 
 
-def writelog(repo, tr, name, revstring):
+def writelog(repo, tr, name, revstring, retry=False):
     if tr is None:
         raise error.ProgrammingError
     rlog = _getrevlog(repo, name)
-    node = rlog.addrevision(encodeutf8(revstring), tr, 1, nullid, nullid)
+    try:
+        node = rlog.addrevision(encodeutf8(revstring), tr, 1, nullid, nullid)
+    except mpatch.mpatchError:
+        if retry:
+            # Only allow a single retry to avoid infinite recursion.
+            raise
+
+        _nukerevlogs(repo, rlog.indexfile)
+        return writelog(repo, tr, name, revstring, retry=True)
     return hex(node)
 
 
@@ -1420,12 +1430,17 @@ def _getrevlog(repo, filename):
     except error.RevlogError:
         # corruption: for now, we can simply nuke all files
         repo.ui.debug("caught revlog error. %s was probably corrupted\n" % path)
-        _logtoscuba(repo.ui, "revlog error")
-        repo.localvfs.rmtree("undolog")
-        repo.localvfs.makedirs("undolog")
+        _nukerevlogs(repo, path)
         # if we get the error a second time
         # then someone is actively messing with these files
         return revlog.revlog(repo.localvfs, path)
+
+
+def _nukerevlogs(repo, path):
+    repo.ui.debug(f"caught revlog error. {path} was probably corrupted\n")
+    _logtoscuba(repo.ui, "revlog error")
+    repo.localvfs.rmtree("undolog")
+    repo.localvfs.makedirs("undolog")
 
 
 def tohexnode(repo, spec):
