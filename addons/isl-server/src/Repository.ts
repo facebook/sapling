@@ -37,7 +37,7 @@ import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
 import {PageFocusTracker} from './PageFocusTracker';
 import {WatchForChanges} from './WatchForChanges';
-import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from './constants';
+import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD, ErrorShortMessages} from './constants';
 import {GitHubCodeReviewProvider} from './github/githubCodeReviewProvider';
 import {isGithubEnterprise} from './github/queryGraphQL';
 import {handleAbortSignalOnProcess, serializeAsyncCall} from './utils';
@@ -613,6 +613,9 @@ export class Repository {
         : `smartlog() and date(-${visibleCommitDayRange})`;
       const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
       this.smartlogCommits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
+      if (this.smartlogCommits.length === 0) {
+        throw new Error(ErrorShortMessages.NoCommitsFetched);
+      }
       this.smartlogCommitsChangesEmitter.emit('change', this.smartlogCommits);
     } catch (err) {
       this.logger.error('Error fetching commits: ', err);

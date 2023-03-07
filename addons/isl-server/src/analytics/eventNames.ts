@@ -22,6 +22,7 @@ export type TrackEventName =
   | 'AmendOperation'
   | 'CommitOperation'
   | 'ContinueMergeOperation'
+  | 'CreateEmptyInitialCommit'
   | 'DiscardOperation'
   | 'ForgetOperation'
   | 'GhStackSubmitOperation'

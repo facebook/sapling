@@ -15,14 +15,17 @@ import {ErrorNotice} from './ErrorNotice';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {pageVisibility} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
+import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
 import {
   commitFetchError,
   commitsShownRange,
   isFetchingAdditionalCommits,
   latestUncommittedChanges,
+  useRunOperation,
 } from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
+import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
 
@@ -46,17 +49,43 @@ export function CommitTreeList() {
     </Center>
   ) : (
     <>
-      {fetchError ? <ErrorNotice title={t('Failed to fetch commits')} error={fetchError} /> : null}
-      <div className="commit-tree-root commit-group">
-        <MainLineEllipsis />
-        {trees.map(tree => createSubtree(tree))}
-        <MainLineEllipsis>
-          <FetchingAdditionalCommitsButton />
-          <FetchingAdditionalCommitsIndicator />
-        </MainLineEllipsis>
-      </div>
+      {fetchError ? <CommitFetchError error={fetchError} /> : null}
+      {trees.length === 0 ? null : (
+        <div className="commit-tree-root commit-group">
+          <MainLineEllipsis />
+          {trees.map(tree => createSubtree(tree))}
+          <MainLineEllipsis>
+            <FetchingAdditionalCommitsButton />
+            <FetchingAdditionalCommitsIndicator />
+          </MainLineEllipsis>
+        </div>
+      )}
     </>
   );
+}
+
+function CommitFetchError({error}: {error: Error}) {
+  const runOperation = useRunOperation();
+  if (error.message === ErrorShortMessages.NoCommitsFetched) {
+    return (
+      <ErrorNotice
+        title={t(
+          'No commits found. If this is a new repository, try adding an initial commit first.',
+        )}
+        error={error}
+        buttons={[
+          <VSCodeButton
+            appearance="secondary"
+            onClick={() => {
+              runOperation(new CreateEmptyInitialCommitOperation());
+            }}>
+            <T>Create empty initial commit</T>
+          </VSCodeButton>,
+        ]}
+      />
+    );
+  }
+  return <ErrorNotice title={t('Failed to fetch commits')} error={error} />;
 }
 
 function createSubtree(tree: CommitTreeWithPreviews): Array<React.ReactElement> {
