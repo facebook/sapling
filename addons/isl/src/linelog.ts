@@ -219,14 +219,13 @@ class LineLog {
   public recordText(text: string): Rev {
     const a = this.content;
     const b = text;
-    if (a === b) {
-      return this.maxRev;
-    }
+
     const lines = splitLines(b);
     this.checkOut(this.maxRev);
     const blocks = diffLines(a, b);
 
-    const rev = this.maxRev + 1;
+    this.maxRev += 1;
+    const rev = this.maxRev;
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
       this.editChunk(a1, a2, rev, lines.slice(b1, b2));
     });

@@ -108,4 +108,11 @@ describe('LineLog', () => {
     expect(!log.lines[1].deleted).toBeTruthy(); // 'e' in rev 3
     expect(!log.lines[3].deleted).toBeTruthy(); // 'f' in rev 3
   });
+
+  it('bumps rev when recording the same content', () => {
+    const log = new LineLog();
+    expect(log.recordText('a\n')).toBe(1);
+    expect(log.recordText('a\n')).toBe(2);
+    expect(log.recordText('a\n')).toBe(3);
+  });
 });
