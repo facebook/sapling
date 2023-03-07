@@ -36,3 +36,7 @@ tracing-futures = "0.2.5"
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+
+[features]
+default = ["thrift_library_unittests_disabled"]
+thrift_library_unittests_disabled = []
