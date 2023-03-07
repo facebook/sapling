@@ -188,8 +188,10 @@ impl TestHistory {
     }
 
     // Obtain the `RenameTracer` struct.
-    pub async fn rename_tracer(&self) -> RenameTracer {
-        RenameTracer::new(Arc::new(self.clone()), Arc::new(self.clone()))
+    pub async fn rename_tracer(&self, max_commit_int: u64, path: &str) -> RenameTracer {
+        let set = self.build_set(max_commit_int).await;
+        let path = RepoPath::from_str(path).unwrap().to_owned();
+        RenameTracer::new(set, path, Arc::new(self.clone()), Arc::new(self.clone()))
             .await
             .unwrap()
     }
@@ -292,11 +294,16 @@ impl PathHistory {
 }
 
 impl RenameTracer {
-    async fn run(&mut self, t: &TestHistory, max_commit_int: u64, path: &str) -> Option<u64> {
-        let path = RepoPath::from_str(path).unwrap().to_owned();
-        let set = t.build_set(max_commit_int).await;
-        let res = self.execute(set, path).await.unwrap();
-        res.map(vertex_to_int)
+    async fn next_n(&mut self, mut n: usize) -> Vec<u64> {
+        let mut result = Vec::new();
+        while let Some(v) = self.next().await.unwrap() {
+            result.push(vertex_to_int(v));
+            n -= 1;
+            if n == 0 {
+                break;
+            }
+        }
+        result
     }
 }
 
@@ -510,7 +517,7 @@ mod rename_tracer_tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_rename_trace_files() {
+    async fn test_trace_rename_files() {
         let t = TestHistory::from_history(&[
             (0, "a", 1, R),
             (100, "a", 2, R),
@@ -521,11 +528,53 @@ mod rename_tracer_tests {
             (250, "b", 5, E),
         ]);
 
-        let mut r = t.rename_tracer().await;
+        let mut r = t.rename_tracer(250, "b").await;
+        assert_eq!(r.next_n(2).await, [150]);
 
-        // fixme: Some(150)
-        assert_eq!(r.run(&t, 300, "b").await, None);
-        // fixme: Some(0)
-        assert_eq!(r.run(&t, 149, "a").await, None);
+        // commit 150 did the rename (b -> a), so we search commit 149 (150-1)
+        // with name "a"
+        let mut r = t.rename_tracer(149, "a").await;
+        assert_eq!(r.next_n(2).await, [0]);
+    }
+
+    #[tokio::test]
+    async fn test_trace_nested_rename_files() {
+        let t = TestHistory::from_history(&[
+            (0, "a/b/1", 1, R),
+            (100, "a/b/1", 2, R),
+            // rename a/b/1 -> a/2
+            (150, "a/b/1", 0, R),
+            (150, "a/2", 4, R),
+            (200, "a/2", 4, R),
+            (250, "a/2", 5, E),
+        ]);
+
+        let mut r = t.rename_tracer(250, "a/2").await;
+        assert_eq!(r.next_n(2).await, [150]);
+
+        // commit 150 did the rename (b -> a), so we search commit 149 (150-1)
+        // with name "a"
+        let mut r = t.rename_tracer(149, "a/b/1").await;
+        assert_eq!(r.next_n(2).await, [0]);
+    }
+
+    #[tokio::test]
+    async fn test_trace_commit_added_files() {
+        let t = TestHistory::from_history(&[
+            (0, "a", 1, R),
+            (100, "a", 2, R),
+            (150, "b", 3, R),
+            (160, "a", 4, R),
+            (200, "b", 5, R),
+            (210, "b", 6, R),
+            (220, "b", 7, R),
+            (250, "b", 7, E),
+        ]);
+
+        let mut r = t.rename_tracer(250, "a").await;
+        assert_eq!(r.next_n(2).await, [0]);
+
+        let mut r = t.rename_tracer(250, "b").await;
+        assert_eq!(r.next_n(2).await, [150]);
     }
 }

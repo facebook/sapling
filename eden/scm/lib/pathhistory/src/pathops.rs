@@ -19,6 +19,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::Result;
+use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::TreeEntry;
 use manifest_tree::TreeStore;
@@ -37,6 +38,10 @@ pub struct CompiledPaths {
 
     /// Cache to speed up tree lookup.
     lookup_cache: LookupCache,
+
+    /// Ignore file content changes if the value is true, this is used
+    /// for tracing file renames. Default value is `false`.
+    ignore_file_content: bool,
 }
 
 // The usize is a pointer to `PathComponentBuf` in `Op`.
@@ -283,7 +288,17 @@ impl CompiledPaths {
             ops,
             content_id_map: Default::default(),
             lookup_cache: Default::default(),
+            ignore_file_content: Default::default(),
         }
+    }
+
+    /// Set the value of ignore_file_content flag.
+    ///
+    /// When enabled, file content and file type (e.g. executable) will be ignored,
+    /// this is used for tracing renames.
+    pub fn with_ignore_file_content(mut self, ignore_file_content: bool) -> Self {
+        self.ignore_file_content = ignore_file_content;
+        self
     }
 
     /// Convert a list of root tree ids to `ContentId`s that can be compared.
@@ -320,7 +335,12 @@ impl CompiledPaths {
 
         let mut result = Vec::with_capacity(root_tree_ids.len());
         for state in states {
-            let output = state.into_output();
+            let mut output = state.into_output();
+            if self.ignore_file_content {
+                for o in output.iter_mut() {
+                    normalize_content_key_ignore_file_content(o);
+                }
+            }
             let content_id = if output.iter().all(|o| o.is_none()) {
                 ContentId::empty()
             } else {
@@ -330,6 +350,17 @@ impl CompiledPaths {
             result.push(content_id);
         }
         Ok(result)
+    }
+}
+
+fn normalize_content_key_ignore_file_content(optional_key: &mut Option<(HgId, Flag)>) {
+    if let Some(key) = optional_key.as_mut() {
+        // replaces `HgId` to a fixed value (WDIR_ID) to ignore file content changes
+        key.0 = *HgId::wdir_id();
+        // normalizes executable files as regular files to ignore file type changes
+        if let Flag::File(_) = key.1 {
+            key.1 = Flag::File(FileType::Regular);
+        }
     }
 }
 
