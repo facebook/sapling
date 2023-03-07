@@ -33,6 +33,10 @@ import {diff_match_patch} from 'diff-match-patch';
 
 const dmp = new diff_match_patch();
 
+// The timeout does not seem to affect dmp performance.
+// But bumping it produces better diff results.
+dmp.Diff_Timeout = 10000;
+
 /** Operation code. */
 enum Op {
   /** Unconditional jump. */
