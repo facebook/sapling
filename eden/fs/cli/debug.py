@@ -40,7 +40,12 @@ import thrift.util.inspect
 from eden.fs.cli.cmd_util import get_eden_instance
 from eden.thrift.legacy import EdenClient
 from facebook.eden import EdenService
-from facebook.eden.constants import DIS_REQUIRE_LOADED, DIS_REQUIRE_MATERIALIZED
+from facebook.eden.constants import (
+    DIS_COMPUTE_BLOB_SIZES,
+    DIS_NOT_RECURSIVE,
+    DIS_REQUIRE_LOADED,
+    DIS_REQUIRE_MATERIALIZED,
+)
 from facebook.eden.ttypes import (
     BlobMetadataOrError,
     BlobMetadataWithOrigin,
@@ -869,15 +874,24 @@ class InodeCmd(Subcmd):
             "a mount point is specified, only data about inodes under the "
             "specified subdirectory will be reported.",
         )
+        parser.add_argument(
+            "--recursive",
+            default=False,
+            help="Recursively walk the directory and report data on all of the subdirectories recursively.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
         with instance.get_thrift_client_legacy() as client:
+            flags = DIS_REQUIRE_LOADED | DIS_COMPUTE_BLOB_SIZES
+            if not args.recursive:
+                flags |= DIS_NOT_RECURSIVE
+
             results = client.debugInodeStatus(
                 bytes(checkout.path),
                 bytes(rel_path),
-                flags=0,
+                flags=flags,
                 sync=SyncBehavior(),
             )
 

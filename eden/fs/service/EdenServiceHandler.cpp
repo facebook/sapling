@@ -3272,6 +3272,10 @@ class InodeStatusCallbacks : public TraversalCallbacks {
   }
 
   bool shouldRecurse(const ChildEntry& entry) override {
+    if (flags_ & eden_constants::DIS_NOT_RECURSIVE_) {
+      return false;
+    }
+
     if ((flags_ & eden_constants::DIS_REQUIRE_LOADED_) && !entry.loadedChild) {
       return false;
     }
