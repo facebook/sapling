@@ -7,11 +7,9 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use bytes::Bytes;
 use futures::future;
 use futures::future::Future;
 use futures::future::TryFutureExt;
-use futures::stream::Stream;
 use mononoke_types::hash;
 
 use crate::expected_size::ExpectedSize;
@@ -63,23 +61,4 @@ pub fn add_aliases_to_multiplexer<T: AsRef<[u8]> + Send + Sync + Clone + 'static
     future::try_join3(sha1, sha256, git_sha1)
         .map_ok(move |aliases| RedeemableAliases::new(expected_size, aliases))
         .map_err(Error::from)
-}
-
-/// Produce hashes for a stream.
-pub async fn alias_stream<S>(
-    expected_size: ExpectedSize,
-    chunks: S,
-) -> Result<RedeemableAliases, Error>
-where
-    S: Stream<Item = Result<Bytes, Error>> + Send,
-{
-    let mut multiplexer = Multiplexer::new();
-    let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
-
-    multiplexer
-        .drain(chunks)
-        .await
-        .map_err(|e| -> Error { e.into() })?;
-
-    aliases.await
 }

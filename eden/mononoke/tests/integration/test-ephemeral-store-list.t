@@ -54,12 +54,12 @@ List the blob contents of a bubble using the bubble ID:
   eph1.repo0000.content.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
   eph1.repo0000.content.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
   eph1.repo0000.content.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
-  eph1.repo0000.content_metadata.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
-  eph1.repo0000.content_metadata.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
-  eph1.repo0000.content_metadata.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2
-  eph1.repo0000.content_metadata.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
-  eph1.repo0000.content_metadata.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
-  eph1.repo0000.content_metadata.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
+  eph1.repo0000.content_metadata2.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
+  eph1.repo0000.content_metadata2.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
+  eph1.repo0000.content_metadata2.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2
+  eph1.repo0000.content_metadata2.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
+  eph1.repo0000.content_metadata2.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
+  eph1.repo0000.content_metadata2.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
 
 List the blob contents of a bubble using invalid bubble ID:
   $ mononoke_newadmin ephemeral-store -R repo list -b 100001
@@ -92,12 +92,12 @@ List the blob contents of a bubble using the changeset ID:
   eph1.repo0000.content.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
   eph1.repo0000.content.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
   eph1.repo0000.content.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
-  eph1.repo0000.content_metadata.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
-  eph1.repo0000.content_metadata.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
-  eph1.repo0000.content_metadata.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2
-  eph1.repo0000.content_metadata.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
-  eph1.repo0000.content_metadata.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
-  eph1.repo0000.content_metadata.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
+  eph1.repo0000.content_metadata2.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
+  eph1.repo0000.content_metadata2.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
+  eph1.repo0000.content_metadata2.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2
+  eph1.repo0000.content_metadata2.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
+  eph1.repo0000.content_metadata2.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
+  eph1.repo0000.content_metadata2.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
 
 
 List the blob contents of a bubble using invalid changeset ID:
@@ -112,15 +112,15 @@ List the blob contents of a bubble using non-matching changeset ID:
 
 List the blob contents of a bubble after limiting the results:
   $ mononoke_newadmin ephemeral-store -R repo list -b 1 -l 4 --start-from repo0000.content_metadata.blake2 --ordered
-  eph1.repo0000.content_metadata.blake2.* (glob)
-  eph1.repo0000.content_metadata.blake2.* (glob)
-  eph1.repo0000.content_metadata.blake2.* (glob)
-  eph1.repo0000.content_metadata.blake2.* (glob)
+  eph1.repo0000.content_metadata2.blake2.* (glob)
+  eph1.repo0000.content_metadata2.blake2.* (glob)
+  eph1.repo0000.content_metadata2.blake2.* (glob)
+  eph1.repo0000.content_metadata2.blake2.* (glob)
 List the blob contents of a bubble after a specified key:
   $ mononoke_newadmin ephemeral-store -R repo list -b 1 --start-from repo0000.content_metadata --ordered
-  eph1.repo0000.content_metadata.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
-  eph1.repo0000.content_metadata.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
-  eph1.repo0000.content_metadata.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2
-  eph1.repo0000.content_metadata.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
-  eph1.repo0000.content_metadata.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
-  eph1.repo0000.content_metadata.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
+  eph1.repo0000.content_metadata2.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
+  eph1.repo0000.content_metadata2.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
+  eph1.repo0000.content_metadata2.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2
+  eph1.repo0000.content_metadata2.blake2.809a236c1e76ef09440ad7c06577ebd68f67186882862c2265e7481aea96af92
+  eph1.repo0000.content_metadata2.blake2.8ff72c730b5cb84ca1d9f0ed64427af818f7a7e197d38c2da9e813b8b430cbac
+  eph1.repo0000.content_metadata2.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1

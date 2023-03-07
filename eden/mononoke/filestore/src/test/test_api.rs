@@ -24,7 +24,7 @@ use mononoke_types::hash;
 use mononoke_types::typed_hash::BlobstoreKey;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadata;
-use mononoke_types::ContentMetadataId;
+use mononoke_types::ContentMetadataV2Id;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 use super::canonical;
@@ -86,12 +86,14 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
+        .await?
+        .map(ContentMetadata::from);
 
     println!("res = {:#?}", res);
 
     assert_eq!(
-        res?,
+        res,
         Some(ContentMetadata {
             total_size: HELLO_WORLD_LENGTH,
             content_id,
@@ -768,7 +770,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
 async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
-    let metadata: ContentMetadataId = content_id.clone().into();
+    let metadata: ContentMetadataV2Id = content_id.clone().into();
 
     let expected = Some(ContentMetadata {
         total_size: HELLO_WORLD_LENGTH,
@@ -800,9 +802,11 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Getting the metadata should cause it to get recomputed
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
+        .await?
+        .map(ContentMetadata::from);
     println!("res = {:#?}", res);
-    assert_eq!(res?, expected);
+    assert_eq!(res, expected);
 
     // Now, delete the content (this shouldn't normally happen, but we're injecting failure here).
     assert!(
@@ -813,9 +817,11 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Query the metadata again. It should succeed because it's saved.
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
+        .await?
+        .map(ContentMetadata::from);
     println!("res = {:#?}", res);
-    assert_eq!(res?, expected);
+    assert_eq!(res, expected);
 
     // Delete the metadata now.
     assert!(
@@ -827,9 +833,11 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
+        .await?
+        .map(ContentMetadata::from);
     println!("res = {:#?}", res);
-    assert_eq!(res?, None);
+    assert_eq!(res, None);
 
     Ok(())
 }

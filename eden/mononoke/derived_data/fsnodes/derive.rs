@@ -191,7 +191,7 @@ pub async fn prefetch_content_metadata(
         .map({
             move |content_id| async move {
                 match get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id)).await? {
-                    Some(metadata) => Ok(Some((content_id, metadata))),
+                    Some(metadata) => Ok(Some((content_id, ContentMetadata::from(metadata)))),
                     None => Ok(None),
                 }
             }

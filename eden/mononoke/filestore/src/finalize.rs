@@ -12,7 +12,7 @@ use context::CoreContext;
 use futures::future;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentAlias;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 
 use crate::errors::ErrorKind;
 use crate::errors::InvalidHash;
@@ -42,12 +42,18 @@ pub async fn finalize<B: Blobstore>(
     ctx: &CoreContext,
     req: Option<&StoreRequest>,
     outcome: Prepared,
-) -> Result<ContentMetadata, Error> {
+) -> Result<ContentMetadataV2, Error> {
     let Prepared {
         sha1,
         sha256,
         git_sha1,
         contents,
+        is_ascii,
+        is_binary,
+        is_utf8,
+        ends_in_newline,
+        newline_count,
+        first_line,
     } = outcome;
 
     let total_size = contents.size();
@@ -102,12 +108,18 @@ pub async fn finalize<B: Blobstore>(
 
     blob.store(ctx, blobstore).await?;
 
-    let metadata = ContentMetadata {
+    let metadata = ContentMetadataV2 {
         total_size,
         content_id,
         sha1,
         git_sha1,
         sha256,
+        is_ascii,
+        is_binary,
+        is_utf8,
+        ends_in_newline,
+        newline_count,
+        first_line,
     };
 
     metadata.clone().into_blob().store(ctx, blobstore).await?;

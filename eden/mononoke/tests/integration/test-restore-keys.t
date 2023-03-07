@@ -56,10 +56,10 @@ walker
   > repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
   > repo0000.content.blake2.d9b44f78244b55e187b398ffb891da54e595dd86ff9cc6dfed8a8378e6c83c5d
   > repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
-  > repo0000.content_metadata.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
-  > repo0000.content_metadata.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
-  > repo0000.content_metadata.blake2.d9b44f78244b55e187b398ffb891da54e595dd86ff9cc6dfed8a8378e6c83c5d
-  > repo0000.content_metadata.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
+  > repo0000.content_metadata2.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
+  > repo0000.content_metadata2.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
+  > repo0000.content_metadata2.blake2.d9b44f78244b55e187b398ffb891da54e595dd86ff9cc6dfed8a8378e6c83c5d
+  > repo0000.content_metadata2.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
   > repo0000.hgchangeset.sha1.a5c395b7e77e6dd5afdc0a3d042c9ed9fe913c27
   > repo0000.hgfilenode.sha1.005d992c5dcf32993668f7cede29d296c494a5d9
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d

@@ -63,9 +63,9 @@ Run the heal, with write errors injected, simulating store still bad
   1 Couldn't heal blob repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f in these blobstores: {BlobstoreId(0)}
   1 Couldn't heal blob repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d in these blobstores: {BlobstoreId(0)}
   1 Couldn't heal blob repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9 in these blobstores: {BlobstoreId(0)}
-  1 Couldn't heal blob repo0000.content_metadata.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f in these blobstores: {BlobstoreId(0)}
-  1 Couldn't heal blob repo0000.content_metadata.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d in these blobstores: {BlobstoreId(0)}
-  1 Couldn't heal blob repo0000.content_metadata.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9 in these blobstores: {BlobstoreId(0)}
+  1 Couldn't heal blob repo0000.content_metadata2.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f in these blobstores: {BlobstoreId(0)}
+  1 Couldn't heal blob repo0000.content_metadata2.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d in these blobstores: {BlobstoreId(0)}
+  1 Couldn't heal blob repo0000.content_metadata2.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9 in these blobstores: {BlobstoreId(0)}
   1 Couldn't heal blob repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad in these blobstores: {BlobstoreId(0)}
   1 Couldn't heal blob repo0000.filenode_lookup.9915e555ad3fed014aa36a4e48549c1130fddffc7660589f42af5f0520f1118e in these blobstores: {BlobstoreId(0)}
   1 Couldn't heal blob repo0000.filenode_lookup.a0377040953a1a3762b7c59cb526797c1afd7ae6fcebb4d11e3c9186a56edb4e in these blobstores: {BlobstoreId(0)}

@@ -10,16 +10,23 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
+use bytes::Bytes;
 use context::CoreContext;
+use futures::future;
+use futures::task::Poll;
+use futures::TryFutureExt;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadata;
-use mononoke_types::ContentMetadataId;
+use mononoke_types::ContentMetadataV2;
+use mononoke_types::ContentMetadataV2Id;
 use thiserror::Error;
 
-use crate::alias::alias_stream;
+use crate::alias::add_aliases_to_multiplexer;
 use crate::expected_size::ExpectedSize;
 use crate::fetch;
+use crate::multiplexer::Multiplexer;
+use crate::multiplexer::MultiplexerError;
+use crate::prepare::add_partial_metadata_to_multiplexer;
 
 #[derive(Debug, Error)]
 pub enum RebuildBackmappingError {
@@ -37,7 +44,7 @@ pub async fn get_metadata<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_id: ContentId,
-) -> Result<Option<ContentMetadata>, Error> {
+) -> Result<Option<ContentMetadataV2>, Error> {
     let maybe_metadata = get_metadata_readonly(blobstore, ctx, content_id).await?;
 
     // We found the metadata. Return it.
@@ -70,8 +77,8 @@ pub async fn get_metadata_readonly<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_id: ContentId,
-) -> Result<Option<ContentMetadata>, Error> {
-    ContentMetadataId::from(content_id)
+) -> Result<Option<ContentMetadataV2>, Error> {
+    ContentMetadataV2Id::from(content_id)
         .load(ctx, blobstore)
         .await
         .map(Some)
@@ -90,7 +97,7 @@ async fn rebuild_metadata<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_id: ContentId,
-) -> Result<ContentMetadata, RebuildBackmappingError> {
+) -> Result<ContentMetadataV2, RebuildBackmappingError> {
     use RebuildBackmappingError::*;
 
     let file_contents = content_id
@@ -108,27 +115,56 @@ async fn rebuild_metadata<B: Blobstore>(
         fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::all())
             .map_err(|e| InternalError(content_id, e))?;
 
-    let redeemable = alias_stream(ExpectedSize::new(total_size), content_stream)
-        .await
-        .map_err(|e| InternalError(content_id, e))?;
+    let mut multiplexer = Multiplexer::<Bytes>::new();
+    let aliases = add_aliases_to_multiplexer(&mut multiplexer, ExpectedSize::new(total_size))
+        .map_err(|e| InternalError(content_id, e));
+    let metadata = add_partial_metadata_to_multiplexer(&mut multiplexer)
+        .map_err(|e| InternalError(content_id, e));
 
-    let (sha1, sha256, git_sha1) = redeemable
-        .redeem(total_size)
-        .map_err(|e| InternalError(content_id, e))?;
+    let futs = future::try_join(aliases, metadata);
+    let res = multiplexer.drain(content_stream).await;
+    match res {
+        // All is well - get the results when our futures complete.
+        Ok(_) => {
+            let (redeemable, metadata) = futs.await?;
+            let (sha1, sha256, git_sha1) = redeemable
+                .redeem(total_size)
+                .map_err(|e| InternalError(content_id, e))?;
 
-    let metadata = ContentMetadata {
-        total_size,
-        content_id,
-        sha1,
-        sha256,
-        git_sha1,
-    };
+            let metadata = ContentMetadataV2 {
+                total_size,
+                content_id,
+                sha1,
+                sha256,
+                git_sha1,
+                is_binary: metadata.is_binary,
+                is_ascii: metadata.is_ascii,
+                is_utf8: metadata.is_utf8,
+                ends_in_newline: metadata.ends_in_newline,
+                newline_count: metadata.newline_count,
+                first_line: metadata.first_line,
+            };
 
-    let blob = metadata.clone().into_blob();
+            let blob = metadata.clone().into_blob();
 
-    blob.store(ctx, blobstore)
-        .await
-        .map_err(|e| InternalError(content_id, e))?;
+            blob.store(ctx, blobstore)
+                .await
+                .map_err(|e| InternalError(content_id, e))?;
 
-    Ok(metadata)
+            Ok(metadata)
+        }
+        // If the Multiplexer hit an error, then it's worth handling the Cancelled case
+        // separately: Cancelled means our Multiplexer noted that one of its readers
+        // stopped reading. Usually, this will be because one of the readers failed. So,
+        // let's just poll the readers once to see if they have an error value ready, and
+        // if so, let's return that Error (because it'll be a more usable one). If not,
+        // we'll passthrough the cancellation (but, we do have a unit test to make sure we
+        // hit the happy path that prettifies the error).
+        Err(m @ MultiplexerError::Cancelled) => match futures::poll!(futs) {
+            Poll::Ready(Err(e)) => Err(e),
+            _ => Err(InternalError(content_id, m.into())),
+        },
+
+        Err(m @ MultiplexerError::InputError(..)) => Err(InternalError(content_id, m.into())),
+    }
 }

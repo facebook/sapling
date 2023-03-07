@@ -93,7 +93,7 @@
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 210,
       "BlobPutsMaxLatency": *, (glob)
-      "BlobPutsTotalSize": 10930,
+      "BlobPutsTotalSize": 11003,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -137,7 +137,7 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
-      "BlobGetsTotalSize": 155,
+      "BlobGetsTotalSize": 228,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,

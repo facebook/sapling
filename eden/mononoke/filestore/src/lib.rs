@@ -26,7 +26,7 @@ use futures::stream::TryStreamExt;
 use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
 
 mod alias;
@@ -44,6 +44,7 @@ mod prepare;
 mod rechunk;
 mod streamhash;
 
+pub use alias::add_aliases_to_multiplexer;
 pub use copy::copy;
 pub use fetch::Range;
 pub use fetch_key::Alias;
@@ -59,7 +60,7 @@ mod test;
 
 /// File storage.
 ///
-/// This is a specialized wrapper around a blobstore specifically for user data files (rather
+/// This is a specialized wrapper around a blobstore specifically for user data files (
 /// rather than metadata, trees, etc). Its primary (initial) goals are:
 /// - providing a streaming interface for file access
 /// - maintain multiple aliases for each file using different key schemes
@@ -182,7 +183,7 @@ pub async fn get_metadata<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
-) -> Result<Option<ContentMetadata>, Error> {
+) -> Result<Option<ContentMetadataV2>, Error> {
     let maybe_id = key
         .load(ctx, blobstore)
         .await
@@ -205,7 +206,7 @@ pub async fn get_metadata_readonly<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
-) -> Result<Option<Option<ContentMetadata>>, Error> {
+) -> Result<Option<Option<ContentMetadataV2>>, Error> {
     let maybe_id = key
         .load(ctx, blobstore)
         .await
@@ -412,11 +413,11 @@ pub async fn store<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     req: &StoreRequest,
     data: impl Stream<Item = Result<Bytes, Error>> + Send,
-) -> Result<ContentMetadata, Error> {
+) -> Result<ContentMetadataV2, Error> {
     use chunk::Chunks;
 
     let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
-        Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?),
+        Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?).await,
         Chunks::Chunked(expected_size, chunks) => {
             prepare::prepare_chunked(
                 ctx.clone(),

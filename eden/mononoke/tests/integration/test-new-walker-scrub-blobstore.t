@@ -66,7 +66,7 @@ Check fails on only the deleted side
 Check can walk fine on the only remaining side
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
-  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2195,30,0s; Run */s,*/s,2195,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:378,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
 
 
 Check can walk fine on the multiplex remaining side
@@ -98,9 +98,9 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo","scrub",1* (glob)
   1,"scrub_repair","repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo","scrub",1* (glob)
   1,"scrub_repair","repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo","scrub",1* (glob)
-  1,"scrub_repair","repo0000.content_metadata.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo","scrub",1* (glob)
-  1,"scrub_repair","repo0000.content_metadata.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo","scrub",1* (glob)
-  1,"scrub_repair","repo0000.content_metadata.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo","scrub",1* (glob)
+  1,"scrub_repair","repo0000.content_metadata2.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo","scrub",1* (glob)
+  1,"scrub_repair","repo0000.content_metadata2.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo","scrub",1* (glob)
+  1,"scrub_repair","repo0000.content_metadata2.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo","scrub",1* (glob)
   1,"scrub_repair","repo0000.hgchangeset.sha1.112478962961147124edd43549aedd1a335e44bf","repo","scrub",1* (glob)
   1,"scrub_repair","repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","repo","scrub",1* (glob)
   1,"scrub_repair","repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0","repo","scrub",1* (glob)
@@ -142,9 +142,9 @@ Note - we might get duplicate repairs, we just expect that there should not be a
   0,"scrub_repair","repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo","scrub",1* (glob)
   0,"scrub_repair","repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo","scrub",1* (glob)
   0,"scrub_repair","repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo","scrub",1* (glob)
-  0,"scrub_repair","repo0000.content_metadata.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo","scrub",1* (glob)
-  0,"scrub_repair","repo0000.content_metadata.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo","scrub",1* (glob)
-  0,"scrub_repair","repo0000.content_metadata.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo","scrub",1* (glob)
+  0,"scrub_repair","repo0000.content_metadata2.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo","scrub",1* (glob)
+  0,"scrub_repair","repo0000.content_metadata2.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo","scrub",1* (glob)
+  0,"scrub_repair","repo0000.content_metadata2.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo","scrub",1* (glob)
   0,"scrub_repair","repo0000.hgchangeset.sha1.112478962961147124edd43549aedd1a335e44bf","repo","scrub",1* (glob)
   0,"scrub_repair","repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","repo","scrub",1* (glob)
   0,"scrub_repair","repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0","repo","scrub",1* (glob)

@@ -730,7 +730,7 @@ async fn file_content_metadata_step<V: VisitOne>(
             );
             Ok(StepOutput::Done(
                 checker.step_data(NodeType::FileContentMetadata, || {
-                    NodeData::FileContentMetadata(Some(metadata))
+                    NodeData::FileContentMetadata(Some(metadata.into()))
                 }),
                 edges,
             ))

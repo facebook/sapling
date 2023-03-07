@@ -163,7 +163,7 @@ async fn run_benchmark_filestore<'a>(
         .await;
     log_perf(stats, &res, len);
 
-    let metadata = res?;
+    let metadata = ContentMetadata::from(res?);
 
     match delay {
         Some(delay) => {

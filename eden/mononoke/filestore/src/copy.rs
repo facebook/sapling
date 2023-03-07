@@ -16,7 +16,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 
 use crate::Alias;
 use crate::FileContents;
@@ -27,7 +27,7 @@ pub async fn copy(
     copier: &impl BlobCopier,
     config: FilestoreConfig,
     ctx: &CoreContext,
-    data: &ContentMetadata,
+    data: &ContentMetadataV2,
 ) -> Result<()> {
     // See reasoning about order of writes in ./finalize.rs::finalize (https://fburl.com/code/3w8dncr3)
     let copy_sha1 = copier.copy(ctx, Alias::Sha1(data.sha1).blobstore_key());

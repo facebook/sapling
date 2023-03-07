@@ -67,4 +67,4 @@ Copy missing key from the healthy inner blobstore
 Walker now should process previously corrupted blobstore correctly
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40
-  Bytes/s,Keys/s,Bytes,Keys; Delta 000000/s,000000/s,2168,30,0s; Run 000000/s,000000/s,2168,30,0s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3
+  Bytes/s,Keys/s,Bytes,Keys; Delta 000000/s,000000/s,2195,30,0s; Run 000000/s,000000/s,2195,30,0s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:378,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3
