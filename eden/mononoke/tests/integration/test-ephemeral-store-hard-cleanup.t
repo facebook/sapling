@@ -61,10 +61,10 @@ Before doing actual clean-up, verify that the blob indeed exists
 Cleanup expired bubbles with no cut-off
   $ mononoke_newadmin ephemeral-store -R repo cleanup -c 0
   Fetched 4 expired bubbles for deletion
-  Cleaned up bubble 1 and deleted 6 blob keys contained in it
-  Cleaned up bubble 2 and deleted 11 blob keys contained in it
-  Cleaned up bubble 3 and deleted 16 blob keys contained in it
-  Cleaned up bubble 4 and deleted 36 blob keys contained in it
+  Cleaned up bubble 1 and deleted 7 blob keys contained in it
+  Cleaned up bubble 2 and deleted 13 blob keys contained in it
+  Cleaned up bubble 3 and deleted 19 blob keys contained in it
+  Cleaned up bubble 4 and deleted 43 blob keys contained in it
 
 # Since deletion_mode=MARK_AND_DELETE, the blob keys within the bubbles
 # need to be actually deleted.

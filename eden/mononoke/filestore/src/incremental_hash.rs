@@ -131,7 +131,7 @@ impl Blake3IncrementalHasher {
         #[cfg(fbcode_build)]
         let bytes = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
         #[cfg(not(fbcode_build))]
-        let bytes = "00000000000000000000000000000000".as_bytes();
+        let bytes = "20220728-2357111317192329313741#".as_bytes();
         if bytes.len() != blake3::KEY_LEN {
             panic!(
                 "Seed for Blake3 hash needs exactly {} bytes",

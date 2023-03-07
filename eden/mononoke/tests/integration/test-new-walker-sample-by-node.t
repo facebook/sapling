@@ -21,7 +21,7 @@ check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
   $ WALKABLEBLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .filenode_lookup. | wc -l)
   $ echo "$WALKABLEBLOBCOUNT"
-  27
+  30
 
 Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings and root.
   $ mononoke_walker -l sizing scrub -q -b master_bookmark --sample-rate 1 -I deep 2>&1 | strip_glog

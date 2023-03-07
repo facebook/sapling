@@ -21,9 +21,9 @@ check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
   $ WALKABLEBLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .filenode_lookup. | wc -l)
   $ echo "$WALKABLEBLOBCOUNT"
-  33
+  36
   $ find $TESTTMP/blobstore/blobs/ -type f ! -path "*.filenode_lookup.*" -exec du --bytes -c {} + | tail -1 | cut -f1
-  2940
+  3051
 
 Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings and root.  Note that the total is 3086, but blobs are 2805. This is due to BonsaiHgMapping loading the hg changeset
   $ mononoke_walker -l sizing corpus -q -b master_bookmark --output-dir=full --sample-rate 1 -I deep -i default -i derived_fsnodes 2>&1 | strip_glog

@@ -7,6 +7,7 @@
 
 use std::fmt::Debug;
 
+use mononoke_types::hash::Blake3;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -38,6 +39,9 @@ pub enum ErrorKind {
 
     #[error("Invalid RichGitSha1: {0:?}")]
     InvalidGitSha1(InvalidHash<RichGitSha1>),
+
+    #[error("Invalid Blake3: {0:?}")]
+    InvalidBlake3(InvalidHash<Blake3>),
 
     #[error("Missing content: {0:?}")]
     MissingContent(FetchKey),

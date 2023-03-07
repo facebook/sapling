@@ -100,6 +100,7 @@ pub struct StoreRequest {
     pub sha1: Option<hash::Sha1>,
     pub sha256: Option<hash::Sha256>,
     pub git_sha1: Option<hash::RichGitSha1>,
+    pub seeded_blake3: Option<hash::Blake3>,
 }
 
 impl StoreRequest {
@@ -112,6 +113,7 @@ impl StoreRequest {
             sha1: None,
             sha256: None,
             git_sha1: None,
+            seeded_blake3: None,
         }
     }
 
@@ -124,6 +126,7 @@ impl StoreRequest {
             sha1: None,
             sha256: None,
             git_sha1: None,
+            seeded_blake3: None,
         }
     }
 
@@ -136,6 +139,7 @@ impl StoreRequest {
             sha1: Some(sha1),
             sha256: None,
             git_sha1: None,
+            seeded_blake3: None,
         }
     }
 
@@ -148,6 +152,7 @@ impl StoreRequest {
             sha1: None,
             sha256: Some(sha256),
             git_sha1: None,
+            seeded_blake3: None,
         }
     }
 
@@ -160,6 +165,18 @@ impl StoreRequest {
             sha1: None,
             sha256: None,
             git_sha1: Some(git_sha1),
+            seeded_blake3: None,
+        }
+    }
+
+    pub fn with_seeded_blake3(size: u64, seeded_blake3: hash::Blake3) -> Self {
+        Self {
+            expected_size: expected_size::ExpectedSize::new(size),
+            canonical: None,
+            sha1: None,
+            sha256: None,
+            git_sha1: None,
+            seeded_blake3: Some(seeded_blake3),
         }
     }
 
@@ -172,6 +189,7 @@ impl StoreRequest {
                 Self::with_git_sha1(size, hash::RichGitSha1::from_sha1(id, "blob", size))
             }
             Aliased(Alias::Sha256(id)) => Self::with_sha256(size, id),
+            Aliased(Alias::SeededBlake3(id)) => Self::with_seeded_blake3(size, id),
         }
     }
 }

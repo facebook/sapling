@@ -67,16 +67,10 @@ lazy_static! {
         0x0d, 0x5b,
     ])
     .unwrap();
-    static ref HELLO_WORLD_SEEDED_BLAKE3_FBCODE: hash::Blake3 = hash::Blake3::from_bytes([
+    static ref HELLO_WORLD_SEEDED_BLAKE3: hash::Blake3 = hash::Blake3::from_bytes([
         0x85, 0x37, 0xf0, 0xe6, 0x1c, 0xaa, 0xa8, 0xf1, 0xac, 0xa4, 0xea, 0xc8, 0x9b, 0xb9, 0xf2,
         0x7b, 0xa2, 0x56, 0x2d, 0xbd, 0xd1, 0xb1, 0xa2, 0xd9, 0x87, 0x99, 0x9c, 0x37, 0xf1, 0x59,
         0xbf, 0x18
-    ])
-    .unwrap();
-    static ref HELLO_WORLD_SEEDED_BLAKE3_OSS: hash::Blake3 = hash::Blake3::from_bytes([
-        0xc3, 0x64, 0xc0, 0x8e, 0x27, 0x75, 0x68, 0x41, 0xdf, 0x3e, 0x8e, 0xb5, 0x75, 0x41, 0x46,
-        0x17, 0xf7, 0xcb, 0xc1, 0xd8, 0x50, 0x16, 0x02, 0x38, 0x7b, 0x93, 0x5d, 0xbc, 0x1f, 0x92,
-        0x03, 0x38
     ])
     .unwrap();
 }
@@ -101,10 +95,6 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
 
     println!("res = {:#?}", res);
-    #[cfg(fbcode_build)]
-    let seeded_blake3 = *HELLO_WORLD_SEEDED_BLAKE3_FBCODE;
-    #[cfg(not(fbcode_build))]
-    let seeded_blake3 = *HELLO_WORLD_SEEDED_BLAKE3_OSS;
 
     assert_eq!(
         res,
@@ -114,7 +104,7 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
             sha1: *HELLO_WORLD_SHA1,
             sha256: *HELLO_WORLD_SHA256,
             git_sha1: *HELLO_WORLD_GIT_SHA1,
-            seeded_blake3,
+            seeded_blake3: *HELLO_WORLD_SEEDED_BLAKE3,
             is_binary: false,
             is_ascii: true,
             is_utf8: true,
@@ -237,6 +227,36 @@ async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
         blob,
         ctx,
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
+    )
+    .await;
+
+    println!("res = {:#?}", res);
+
+    assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
+    Ok(())
+}
+
+#[fbinit::test]
+async fn filestore_put_get_seeded_blake3(fb: FacebookInit) -> Result<()> {
+    let req = request(HELLO_WORLD);
+
+    let blob = memblob::Memblob::default();
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
+
+    filestore::store(
+        blob,
+        DEFAULT_CONFIG,
+        ctx,
+        req,
+        stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
+    )
+    .await?;
+
+    let res = filestore::fetch_concat_opt(
+        blob,
+        ctx,
+        &FetchKey::Aliased(Alias::SeededBlake3(*HELLO_WORLD_SEEDED_BLAKE3)),
     )
     .await;
 
@@ -590,6 +610,52 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
+async fn filestore_put_seeded_blake3(fb: FacebookInit) -> Result<()> {
+    let blob = memblob::Memblob::default();
+    let config = FilestoreConfig {
+        chunk_size: Some(3),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock(fb);
+
+    // Bad Content Id should fail
+    let req = StoreRequest::with_seeded_blake3(
+        HELLO_WORLD_LENGTH,
+        hash::Blake3::from_byte_array([0x00; 32]),
+    );
+    borrowed!(ctx, blob, req);
+
+    let res = filestore::store(
+        blob,
+        config,
+        ctx,
+        req,
+        stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
+    )
+    .await;
+    println!("res = {:#?}", res);
+    assert_matches!(
+        res.unwrap_err().downcast::<errors::ErrorKind>(),
+        Ok(errors::ErrorKind::InvalidBlake3(..))
+    );
+
+    // Correct content Id should succeed
+    let req = StoreRequest::with_seeded_blake3(HELLO_WORLD_LENGTH, *HELLO_WORLD_SEEDED_BLAKE3);
+    let res = filestore::store(
+        blob,
+        config,
+        ctx,
+        &req,
+        stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
+    )
+    .await;
+    println!("res = {:#?}", res);
+    assert!(res.is_ok());
+
+    Ok(())
+}
+
+#[fbinit::test]
 async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
@@ -794,10 +860,6 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
     let metadata: ContentMetadataV2Id = content_id.clone().into();
-    #[cfg(fbcode_build)]
-    let seeded_blake3 = *HELLO_WORLD_SEEDED_BLAKE3_FBCODE;
-    #[cfg(not(fbcode_build))]
-    let seeded_blake3 = *HELLO_WORLD_SEEDED_BLAKE3_OSS;
 
     let expected = Some(ContentMetadataV2 {
         total_size: HELLO_WORLD_LENGTH,
@@ -805,7 +867,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
         sha1: *HELLO_WORLD_SHA1,
         git_sha1: *HELLO_WORLD_GIT_SHA1,
         sha256: *HELLO_WORLD_SHA256,
-        seeded_blake3,
+        seeded_blake3: *HELLO_WORLD_SEEDED_BLAKE3,
         is_binary: false,
         is_ascii: true,
         is_utf8: true,
@@ -899,6 +961,15 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
         blob,
         ctx,
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
+    )
+    .await;
+    println!("res = {:#?}", res);
+    assert_eq!(res?, None);
+
+    let res = filestore::get_metadata(
+        blob,
+        ctx,
+        &FetchKey::Aliased(Alias::SeededBlake3(*HELLO_WORLD_SEEDED_BLAKE3)),
     )
     .await;
     println!("res = {:#?}", res);

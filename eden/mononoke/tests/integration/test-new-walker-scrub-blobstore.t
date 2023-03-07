@@ -52,7 +52,7 @@ Check that multi repo runs for all repos specified
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  40
+  44
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
@@ -162,7 +162,11 @@ Check that all is repaired by running on only the deleted side
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
   $ ls blobstore/0/blobs/* | wc -l
   27
+The output contains seeded_blake3 alias cause walker has not yet been taught to handle it.
   $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/ | grep -E -v blob-repo0002
+  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48
+  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda
+  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.6fb4c384e79ac0771a483fcf3c46fb4ea8609f79608e8bcbf710f9887a3b9cf6
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.9915e555ad3fed014aa36a4e48549c1130fddffc7660589f42af5f0520f1118e
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.a0377040953a1a3762b7c59cb526797c1afd7ae6fcebb4d11e3c9186a56edb4e

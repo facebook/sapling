@@ -40,6 +40,7 @@
 # Confirm blobstore has file content chunks, and that the gitsha1 alias is correct - the alias output by echo
 # should be the same as the one found in SQLite
   $ sqlite3 "$TESTTMP/blobstore_git_test/blobs/shard_0.sqlite" "SELECT id, chunk_count FROM data ORDER BY id;"
+  repo0001.alias.seeded_blake3.bcb5e983e4d6d21e0e9e27128b9d377eaf4087ab1cf646c1af8076bb8e5797ab|0
   repo0001.alias.sha256.10f7beb257a6c09c796819019a6224a4355fe88e3579c37102fd69e8435ade99|0
   $ echo "repo0001.alias.gitsha1.${BLOB_OID}|0"
   repo0001.alias.gitsha1.c9385e53096db9bd2395f04495c0706de072fa27|0

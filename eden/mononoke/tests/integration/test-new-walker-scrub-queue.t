@@ -25,7 +25,7 @@ blobimport them into Mononoke storage again, but with write failures on one side
 
 Check that healer queue has successful items
   $ read_blobstore_wal_queue_size
-  30
+  33
 
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old
   $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'

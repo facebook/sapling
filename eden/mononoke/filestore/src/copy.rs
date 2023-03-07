@@ -17,6 +17,7 @@ use futures::stream::TryStreamExt;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentMetadataV2;
+use strum::IntoEnumIterator;
 
 use crate::Alias;
 use crate::FileContents;
@@ -30,11 +31,17 @@ pub async fn copy(
     data: &ContentMetadataV2,
 ) -> Result<()> {
     // See reasoning about order of writes in ./finalize.rs::finalize (https://fburl.com/code/3w8dncr3)
-    let copy_sha1 = copier.copy(ctx, Alias::Sha1(data.sha1).blobstore_key());
-    let copy_sha256 = copier.copy(ctx, Alias::Sha256(data.sha256).blobstore_key());
-    let copy_git_sha1 = copier.copy(ctx, Alias::GitSha1(data.git_sha1.sha1()).blobstore_key());
 
-    future::try_join3(copy_sha1, copy_sha256, copy_git_sha1).await?;
+    // Ensure that all aliases are covered, and missing out an alias gives a compile time error.
+    future::try_join_all(Alias::iter().map(|alias| match alias {
+        Alias::Sha1(_) => copier.copy(ctx, Alias::Sha1(data.sha1).blobstore_key()),
+        Alias::GitSha1(_) => copier.copy(ctx, Alias::GitSha1(data.git_sha1.sha1()).blobstore_key()),
+        Alias::Sha256(_) => copier.copy(ctx, Alias::Sha256(data.sha256).blobstore_key()),
+        Alias::SeededBlake3(_) => {
+            copier.copy(ctx, Alias::SeededBlake3(data.seeded_blake3).blobstore_key())
+        }
+    }))
+    .await?;
 
     // Files are stored inline or in chunks, depending on their size. If they're chunked,
     // we need to copy all chunks. Unfortunately, the only way to know how they're stored is

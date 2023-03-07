@@ -403,6 +403,13 @@ macro_rules! impl_hash {
             }
         }
 
+        impl Default for $type {
+            fn default() -> Self {
+                let bytes = [0; $size];
+                $type(bytes)
+            }
+        }
+
         impl FromStr for $type {
             type Err = Error;
 

@@ -21,7 +21,7 @@ check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
   $ WALKABLEBLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .filenode_lookup. | wc -l)
   $ echo "$WALKABLEBLOBCOUNT"
-  27
+  30
 
 Full edge base case, sample all in one go.  We are excluding BonsaiHgMapping from sampling as it has no blobstore form, was being creditted with its filenode lookups
   $ mononoke_walker -l sizing compression-benefit -q -b master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep 2>&1 | strip_glog

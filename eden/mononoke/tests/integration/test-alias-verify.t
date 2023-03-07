@@ -35,6 +35,9 @@
   blob-repo0000.alias.gitsha1.45d9e0e9fc8859787c33081dffdf12f41b54fcf3
   blob-repo0000.alias.gitsha1.8e1e71d5ce34c01b6fe83bc5051545f2918c8c2b
   blob-repo0000.alias.gitsha1.9de77c18733ab8009a956c25e28c85fe203a17d7
+  blob-repo0000.alias.seeded_blake3.612c92c71a0f363c11b4bd01861e1a00a4bb663cd8473327ff36d77baef1bce9
+  blob-repo0000.alias.seeded_blake3.c215015b756ebffc2d7a1c02926937f2a572e7143a021b7ed48aeec7d735d2b4
+  blob-repo0000.alias.seeded_blake3.d454123e25942306cb55ff51fb153919dc4cb2f4d25d1bbdb4f40acfe60d8d67
   blob-repo0000.alias.sha1.1c49a440c352f3473efa9512255033b94dc7def0
   blob-repo0000.alias.sha1.aece6dfba588900e00d95601d22b4408d49580af
   blob-repo0000.alias.sha1.b4c4c2a335010e242576b05f3e0b673adfa58bc8

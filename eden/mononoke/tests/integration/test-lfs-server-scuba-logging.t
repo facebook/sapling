@@ -91,7 +91,7 @@
       "BlobGetsTotalSize": 0,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
-      "BlobPuts": 210,
+      "BlobPuts": 211,
       "BlobPutsMaxLatency": *, (glob)
       "BlobPutsTotalSize": *, (glob)
       "CachelibHits": 0,

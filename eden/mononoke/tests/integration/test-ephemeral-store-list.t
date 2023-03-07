@@ -35,6 +35,12 @@ List the blob contents of a bubble using the bubble ID:
   eph1.repo0000.alias.gitsha1.a8cd0e934a12ed0f4f98673c6823c3a01f8260ff
   eph1.repo0000.alias.gitsha1.ab239e6bda2873d35753ed5267a70c49799fb465
   eph1.repo0000.alias.gitsha1.c1c0679bb56e42afff11f124d24d33b5c0fdb444
+  eph1.repo0000.alias.seeded_blake3.33715dbb3ac75d052bd385d2f5be43f70dc455c9849b2ee6a618fbac43d71a4f
+  eph1.repo0000.alias.seeded_blake3.50534506fccbd888d446a3d25e94500fae3039efccb9cfa5d7ae49b222d9475a
+  eph1.repo0000.alias.seeded_blake3.ab1ef9899bcad454f171457b4396523e8d96f4177721124b8e0588f66c36e989
+  eph1.repo0000.alias.seeded_blake3.ac2495b5eb93c5f6ec5730282316ee116d0bb154860b50cbd0a2dc4bfabbba7c
+  eph1.repo0000.alias.seeded_blake3.d2a8f8fc8d8b9fa2666d606480d211f69539dcf06ebe33c7f6e0170e9f998952
+  eph1.repo0000.alias.seeded_blake3.e201855acf04fcf499ed30d38b249afd2719b1a4d0580066a48c851d598ea019
   eph1.repo0000.alias.sha1.08e1c92c5f2ff43e14145e68c0842d47ce9b7ef4
   eph1.repo0000.alias.sha1.0dfa1747665759ba2c865cbd5b7a7925c4389148
   eph1.repo0000.alias.sha1.3c655550bedc3add76f50b943e3c19f5ffc364de
@@ -73,6 +79,12 @@ List the blob contents of a bubble using the changeset ID:
   eph1.repo0000.alias.gitsha1.a8cd0e934a12ed0f4f98673c6823c3a01f8260ff
   eph1.repo0000.alias.gitsha1.ab239e6bda2873d35753ed5267a70c49799fb465
   eph1.repo0000.alias.gitsha1.c1c0679bb56e42afff11f124d24d33b5c0fdb444
+  eph1.repo0000.alias.seeded_blake3.33715dbb3ac75d052bd385d2f5be43f70dc455c9849b2ee6a618fbac43d71a4f
+  eph1.repo0000.alias.seeded_blake3.50534506fccbd888d446a3d25e94500fae3039efccb9cfa5d7ae49b222d9475a
+  eph1.repo0000.alias.seeded_blake3.ab1ef9899bcad454f171457b4396523e8d96f4177721124b8e0588f66c36e989
+  eph1.repo0000.alias.seeded_blake3.ac2495b5eb93c5f6ec5730282316ee116d0bb154860b50cbd0a2dc4bfabbba7c
+  eph1.repo0000.alias.seeded_blake3.d2a8f8fc8d8b9fa2666d606480d211f69539dcf06ebe33c7f6e0170e9f998952
+  eph1.repo0000.alias.seeded_blake3.e201855acf04fcf499ed30d38b249afd2719b1a4d0580066a48c851d598ea019
   eph1.repo0000.alias.sha1.08e1c92c5f2ff43e14145e68c0842d47ce9b7ef4
   eph1.repo0000.alias.sha1.0dfa1747665759ba2c865cbd5b7a7925c4389148
   eph1.repo0000.alias.sha1.3c655550bedc3add76f50b943e3c19f5ffc364de
