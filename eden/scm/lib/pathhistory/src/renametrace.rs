@@ -27,18 +27,18 @@ impl RenameTracer {
     /// a path's rename history.
     #[allow(dead_code)]
     #[allow(unused_variables)]
-    pub fn new(
+    pub async fn new(
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_store: Arc<dyn TreeStore + Send + Sync>,
     ) -> Result<Self> {
-        unimplemented!()
+        Ok(RenameTracer {})
     }
 
     /// Find the vertex that added (can be added by a mv operation)
     /// the specified path.
     #[allow(dead_code)]
     #[allow(unused_variables)]
-    pub fn run(set: Set, path: RepoPathBuf) -> Result<Option<Vertex>> {
-        unimplemented!()
+    pub async fn execute(&mut self, set: Set, path: RepoPathBuf) -> Result<Option<Vertex>> {
+        Ok(None)
     }
 }

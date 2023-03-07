@@ -29,6 +29,7 @@ mod utils;
 mod tests;
 
 pub use crate::pathhistory::PathHistory;
+pub use crate::renametrace::RenameTracer;
 
 #[cfg(test)]
 dev_logger::init!();
