@@ -54,6 +54,8 @@ pub async fn finalize<B: Blobstore>(
         ends_in_newline,
         newline_count,
         first_line,
+        is_generated,
+        is_partially_generated,
     } = outcome;
 
     let total_size = contents.size();
@@ -105,7 +107,6 @@ pub async fn finalize<B: Blobstore>(
     // if it doesn't get written we can fix it up later.
 
     future::try_join3(put_sha1, put_sha256, put_git_sha1).await?;
-
     blob.store(ctx, blobstore).await?;
 
     let metadata = ContentMetadataV2 {
@@ -120,6 +121,8 @@ pub async fn finalize<B: Blobstore>(
         ends_in_newline,
         newline_count,
         first_line,
+        is_generated,
+        is_partially_generated,
     };
 
     metadata.clone().into_blob().store(ctx, blobstore).await?;

@@ -26,6 +26,8 @@ use mononoke_types::content_metadata_v2::ends_in_newline;
 use mononoke_types::content_metadata_v2::first_line;
 use mononoke_types::content_metadata_v2::is_ascii;
 use mononoke_types::content_metadata_v2::is_binary;
+use mononoke_types::content_metadata_v2::is_generated;
+use mononoke_types::content_metadata_v2::is_partially_generated;
 use mononoke_types::content_metadata_v2::is_utf8;
 use mononoke_types::content_metadata_v2::newline_count;
 use mononoke_types::content_metadata_v2::PartialMetadata;
@@ -56,6 +58,8 @@ pub struct Prepared {
     pub ends_in_newline: bool,
     pub newline_count: u64,
     pub first_line: Option<String>,
+    pub is_generated: bool,
+    pub is_partially_generated: bool,
     pub contents: FileContents,
 }
 
@@ -69,13 +73,26 @@ pub async fn prepare_bytes(bytes: Bytes) -> Prepared {
     let ends_in_newline = ends_in_newline(stream::once(future::ready(bytes.clone())));
     let newline_count = newline_count(stream::once(future::ready(bytes.clone())));
     let first_line = first_line(stream::once(future::ready(bytes.clone())));
-    let (is_binary, is_ascii, is_utf8, ends_in_newline, newline_count, first_line) = join!(
+    let is_generated = is_generated(stream::once(future::ready(bytes.clone())));
+    let is_partially_generated = is_partially_generated(stream::once(future::ready(bytes.clone())));
+    let (
         is_binary,
         is_ascii,
         is_utf8,
         ends_in_newline,
         newline_count,
-        first_line
+        first_line,
+        is_generated,
+        is_partially_generated,
+    ) = join!(
+        is_binary,
+        is_ascii,
+        is_utf8,
+        ends_in_newline,
+        newline_count,
+        first_line,
+        is_generated,
+        is_partially_generated
     );
     let contents = FileContents::Bytes(bytes);
 
@@ -90,6 +107,8 @@ pub async fn prepare_bytes(bytes: Bytes) -> Prepared {
         ends_in_newline,
         newline_count,
         first_line,
+        is_generated,
+        is_partially_generated,
     }
 }
 
@@ -183,6 +202,8 @@ where
                 ends_in_newline: metadata.ends_in_newline,
                 newline_count: metadata.newline_count,
                 first_line: metadata.first_line,
+                is_generated: metadata.is_generated,
+                is_partially_generated: metadata.is_partially_generated,
             };
 
             Ok(prepared)
@@ -212,13 +233,22 @@ pub fn add_partial_metadata_to_multiplexer(
     let ends_in_newline = multiplexer.add(ends_in_newline).map_err(Error::from);
     let newline_count = multiplexer.add(newline_count).map_err(Error::from);
     let first_line = multiplexer.add(first_line).map_err(Error::from);
+    let is_generated = multiplexer.add(is_generated).map_err(Error::from);
+    let is_partially_generated = multiplexer.add(is_partially_generated).map_err(Error::from);
 
-    let fut1 = future::try_join3(is_ascii, is_utf8, is_binary);
-    let fut2 = future::try_join3(ends_in_newline, newline_count, first_line);
-
+    let fut1 = future::try_join4(is_ascii, is_utf8, is_binary, is_generated);
+    let fut2 = future::try_join4(
+        ends_in_newline,
+        newline_count,
+        first_line,
+        is_partially_generated,
+    );
     future::try_join(fut1, fut2)
         .map_ok(
-            |((is_ascii, is_utf8, is_binary), (ends_in_newline, newline_count, first_line))| {
+            |(
+                (is_ascii, is_utf8, is_binary, is_generated),
+                (ends_in_newline, newline_count, first_line, is_partially_generated),
+            )| {
                 PartialMetadata {
                     is_binary,
                     is_ascii,
@@ -226,6 +256,8 @@ pub fn add_partial_metadata_to_multiplexer(
                     ends_in_newline,
                     newline_count,
                     first_line,
+                    is_generated,
+                    is_partially_generated,
                 }
             },
         )

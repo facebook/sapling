@@ -130,7 +130,6 @@ async fn rebuild_metadata<B: Blobstore>(
             let (sha1, sha256, git_sha1) = redeemable
                 .redeem(total_size)
                 .map_err(|e| InternalError(content_id, e))?;
-
             let metadata = ContentMetadataV2 {
                 total_size,
                 content_id,
@@ -143,6 +142,8 @@ async fn rebuild_metadata<B: Blobstore>(
                 ends_in_newline: metadata.ends_in_newline,
                 newline_count: metadata.newline_count,
                 first_line: metadata.first_line,
+                is_generated: metadata.is_generated,
+                is_partially_generated: metadata.is_partially_generated,
             };
 
             let blob = metadata.clone().into_blob();

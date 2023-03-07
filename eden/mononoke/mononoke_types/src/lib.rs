@@ -57,6 +57,8 @@ pub use content_metadata_v2::ends_in_newline;
 pub use content_metadata_v2::first_line;
 pub use content_metadata_v2::is_ascii;
 pub use content_metadata_v2::is_binary;
+pub use content_metadata_v2::is_generated;
+pub use content_metadata_v2::is_partially_generated;
 pub use content_metadata_v2::is_utf8;
 pub use content_metadata_v2::newline_count;
 pub use content_metadata_v2::ContentMetadataV2;

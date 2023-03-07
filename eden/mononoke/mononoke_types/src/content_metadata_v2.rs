@@ -40,6 +40,8 @@ pub struct ContentMetadataV2 {
     pub ends_in_newline: bool,
     pub newline_count: u64,
     pub first_line: Option<String>,
+    pub is_generated: bool,
+    pub is_partially_generated: bool,
 }
 
 impl ContentMetadataV2 {
@@ -72,6 +74,12 @@ impl ContentMetadataV2 {
             is_utf8: thrift_field!(ContentMetadataV2, metadata, is_utf8)?,
             ends_in_newline: thrift_field!(ContentMetadataV2, metadata, ends_in_newline)?,
             first_line: metadata.first_line,
+            is_generated: thrift_field!(ContentMetadataV2, metadata, is_generated)?,
+            is_partially_generated: thrift_field!(
+                ContentMetadataV2,
+                metadata,
+                is_partially_generated
+            )?,
         };
 
         Ok(res)
@@ -90,6 +98,8 @@ impl ContentMetadataV2 {
             git_sha1: Some(self.git_sha1.into_thrift()),
             sha256: Some(self.sha256.into_thrift()),
             first_line: self.first_line,
+            is_generated: Some(self.is_generated),
+            is_partially_generated: Some(self.is_partially_generated),
         }
     }
 }
@@ -110,6 +120,8 @@ impl Arbitrary for ContentMetadataV2 {
             sha256: hash::Sha256::arbitrary(g),
             git_sha1: hash::RichGitSha1::from_sha1(hash::GitSha1::arbitrary(g), "blob", total_size),
             first_line: Option::arbitrary(g),
+            is_generated: bool::arbitrary(g),
+            is_partially_generated: bool::arbitrary(g),
         }
     }
 }
@@ -139,6 +151,8 @@ pub struct PartialMetadata {
     pub ends_in_newline: bool,
     pub newline_count: u64,
     pub first_line: Option<String>,
+    pub is_generated: bool,
+    pub is_partially_generated: bool,
 }
 
 enum FoldState<T> {
@@ -297,6 +311,83 @@ pub async fn first_line(bytes_stream: impl Stream<Item = Bytes>) -> Option<Strin
         .await
         .0;
     if line.is_empty() { None } else { Some(line) }
+}
+
+async fn contains_marker(bytes_stream: impl Stream<Item = Bytes>, marker: &str) -> bool {
+    let output = bytes_stream
+        .fold(
+            FoldState::InProgress(Bytes::new()),
+            |acc, bytes| async move {
+                match acc {
+                    FoldState::Done(_) => acc,
+                    FoldState::InProgress(ref rem_bytes) => {
+                        // Before processing the current chunk, prepend the carry-on bytes from the last
+                        // chunk to handle cases of the marker splitting across chunks.
+                        let bytes = [rem_bytes, bytes.as_ref()].concat();
+                        match std::str::from_utf8(bytes.as_ref()) {
+                            Ok(content) => match content.contains(marker) {
+                                // The marker is present in the file content. Consider this file
+                                // as generated.
+                                true => FoldState::Done(true),
+                                // The marker was not present. Before processing the next chunk, we need to
+                                // consider scenarios where the marker was split across chunks, for example
+                                // [@gener]..[ated]. There are multiple variants of this split and to accommodate
+                                // all cases, we will pick the last N chars where N = len of marker (i.e. skip
+                                // first M - N chars where M is the number of chars in content) and carry it
+                                // to the next chunk where it will be prepended before processing it.
+                                false => {
+                                    let chars = content.chars();
+                                    let skip_count: i32 = std::cmp::max(
+                                        chars.count() as i32 - marker.len() as i32,
+                                        0,
+                                    );
+                                    let rem_str: String =
+                                        content.chars().skip(skip_count as usize).collect();
+                                    FoldState::InProgress(Bytes::copy_from_slice(
+                                        rem_str.as_bytes(),
+                                    ))
+                                }
+                            },
+                            Err(error) => {
+                                let (valid, invalid) = bytes.split_at(error.valid_up_to());
+                                // We know that the slice is valid UTF-8 by this point, so safe to do the below.
+                                let valid = unsafe { std::str::from_utf8_unchecked(valid) };
+                                // If the length of invalid slice is more than a UTF8 codepoint
+                                // then the file isn't UTF-8 encoded. A non-UTF-8 file cannot
+                                // be parsed for checking the presence of marker.
+                                if invalid.len() > UTF8_BYTES_COUNT {
+                                    FoldState::Done(false)
+                                // The UTF-8 valid part of the content contains the required
+                                // marker. The check is completed successfully.
+                                } else if valid.contains(marker) {
+                                    FoldState::Done(true)
+                                } else {
+                                    // The remaining invalid bytes need to be carried over to the next
+                                    // chunk to be concatenated with it.
+                                    FoldState::InProgress(Bytes::copy_from_slice(invalid))
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        )
+        .await;
+    match output {
+        // Check continued till the last chunk and the generated marker was not found
+        // till the last chunk. Return false.
+        FoldState::InProgress(_) => false,
+        // Check completed with either true or false status. Return the status.
+        FoldState::Done(status) => status,
+    }
+}
+
+pub async fn is_generated(bytes_stream: impl Stream<Item = Bytes>) -> bool {
+    contains_marker(bytes_stream, concat!("@", "generated")).await
+}
+
+pub async fn is_partially_generated(bytes_stream: impl Stream<Item = Bytes>) -> bool {
+    contains_marker(bytes_stream, concat!("@", "partially-generated")).await
 }
 
 #[cfg(test)]
