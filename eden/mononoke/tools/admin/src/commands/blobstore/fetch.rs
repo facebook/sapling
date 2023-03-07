@@ -26,6 +26,7 @@ use mercurial_types::HgManifestEnvelope;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
 use mononoke_types::BonsaiChangeset;
+use mononoke_types::ContentAlias;
 use mononoke_types::ContentChunk;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
@@ -66,6 +67,7 @@ pub enum DecodeAs {
     SkeletonManifest,
     Fsnode,
     ContentMetadataV2,
+    Alias,
     // TODO: Missing types, e.g. RedactionKeyList,  DeletedManifest,
     // FastlogBatch, FileUnode, ManifestUnode,
 }
@@ -87,6 +89,7 @@ impl DecodeAs {
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
                 ("fsnode.", DecodeAs::Fsnode),
                 ("content_metadata2.", DecodeAs::ContentMetadataV2),
+                ("alias.", DecodeAs::Alias),
             ] {
                 if key[index..].starts_with(prefix) {
                     return Some(auto_decode_as);
@@ -149,6 +152,7 @@ fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> Decoded
         DecodeAs::ContentMetadataV2 => Decoded::try_debug(ContentMetadataV2::from_bytes(
             data.into_raw_bytes().as_ref(),
         )),
+        DecodeAs::Alias => Decoded::try_debug(ContentAlias::from_bytes(data.into_raw_bytes())),
     }
 }
 
