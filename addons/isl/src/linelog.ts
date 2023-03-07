@@ -84,24 +84,49 @@ class LineLog {
   // core state
   private code: Inst[];
 
+  // rev dependencies. ex: {5: {3, 1}}: rev 5 depends on rev 3 and rev 1.
+  readonly revDepMap: Map<Rev, Set<Rev>>;
+
+  // config
+  private trackDeps: boolean;
+
   // cached states
   maxRev: Rev;
   private lastCheckoutKey: string;
   lines: LineInfo[];
   content: string;
 
-  constructor() {
+  constructor({trackDeps}: {trackDeps: boolean} = {trackDeps: false}) {
     this.code = [{op: Op.END}];
+    this.revDepMap = new Map<Rev, Set<Rev>>();
     this.maxRev = 0;
     this.lastCheckoutKey = '';
     this.lines = [];
     this.content = '';
+    this.trackDeps = trackDeps;
     this.checkOut(0);
   }
 
   private editChunk(a1: LineIdx, a2: LineIdx, rev: Rev, lines: string[]) {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
+
+    // Track dependencies. This is done by marking rev depend on all revs added by the a1..a2 range.
+    if (this.trackDeps) {
+      let depRevs = this.revDepMap.get(rev);
+      if (depRevs == null) {
+        const set = new Set<Rev>();
+        this.revDepMap.set(rev, set);
+        depRevs = set;
+      }
+      // Also check surrounding lines. This is a bit conservative.
+      for (let ai = Math.max(a1 - 1, 0); ai < Math.min(a2 + 1, this.lines.length); ai += 1) {
+        const depRev = this.lines[ai].rev;
+        if (depRev > 0 && depRev < rev) {
+          depRevs.add(depRev);
+        }
+      }
+    }
 
     const start = this.code.length;
     const a1Pc = this.lines[a1].pc;

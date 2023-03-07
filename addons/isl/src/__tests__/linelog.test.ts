@@ -150,10 +150,48 @@ describe('LineLog', () => {
       expect(log.checkOut(3)).toBe('a\nk\n'); // "a k" is the current implementation, "a k z" might be better
     });
   });
+
+  it('tracks rev dependencies', () => {
+    const textList = [
+      'a\nb\nc\n',
+      'a\nb\nc\nd\n',
+      'z\na\nb\nc\nd\n',
+      'z\na\nd\n',
+      'a\nd\n',
+      'a\nd\ne\nf\n',
+      'a\nd\ne\n',
+      'a\nd\n1\ne\n',
+      'x\ny\nz\n',
+    ];
+    let log = logFromTextList(textList, {trackDeps: true});
+    expect(log.revDepMap).toEqual(
+      new Map([
+        [1, new Set([])],
+        [2, new Set([1])],
+        [3, new Set([1])],
+        // deletes "c" added by rev 2
+        [4, new Set([1, 2])],
+        // deletes "z" added by rev 3
+        [5, new Set([1, 3])],
+        // appends after "d" added by rev 2
+        [6, new Set([2])],
+        // deletes "f" added by rev 6
+        [7, new Set([6])],
+        // inserts "1" between "d" (rev 2) and "e" (rev 6)
+        [8, new Set([2, 6])],
+        // replaces all: "a" (rev 1), "d" (rev 2), "1" (rev 8), "e" (rev 6)
+        [9, new Set([1, 2, 8, 6])],
+      ]),
+    );
+
+    // Disable trackDeps
+    log = logFromTextList(textList, {trackDeps: false});
+    expect(log.revDepMap).toEqual(new Map());
+  });
 });
 
-function logFromTextList(textList: string[]): LineLog {
-  const log = new LineLog();
+function logFromTextList(textList: string[], {trackDeps} = {trackDeps: false}): LineLog {
+  const log = new LineLog({trackDeps});
   textList.forEach(text => log.recordText(text));
   return log;
 }
