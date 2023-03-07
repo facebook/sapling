@@ -112,7 +112,7 @@ impl PathHistory {
             let id_dag = dag.id_dag_snapshot()?;
             let parents = id_dag.parents(id_set.clone())?;
             let union = parents.union(&id_set);
-            let roots = id_dag.roots(union.clone())?;
+            let roots = id_dag.roots(union)?;
             let roots = roots.intersection(&id_set);
             (roots, id_dag)
         } else {
@@ -382,7 +382,7 @@ impl PathHistory {
             .cloned()
             .filter(|i| !self.commit_map.contains_key(i))
             .collect::<Vec<_>>();
-        if !ids.is_empty() {
+        if !missing_ids.is_empty() {
             for state in self.prepare_commit_states(&missing_ids).await? {
                 self.stats.commit_count += 1;
                 self.commit_map.insert(state.id, state);
