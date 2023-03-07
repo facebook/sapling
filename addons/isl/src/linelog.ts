@@ -149,29 +149,29 @@ interface FlattenLine {
  */
 class LineLog {
   /** Core state: instructions. The array index type is `Pc`. */
-  private code: Inst[];
+  private code: Inst[] = [{op: Op.END}];
 
   /**
    * Rev dependencies.
    * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
    * This is only updated when `trackDeps` is `true` during construction.
    */
-  readonly revDepMap: Map<Rev, Set<Rev>>;
+  readonly revDepMap: Map<Rev, Set<Rev>> = new Map<Rev, Set<Rev>>();
 
   /** If `true`, update `revDepMap` on change. */
-  private trackDeps: boolean;
+  private trackDeps = false;
 
   /** Maximum rev tracked. */
-  maxRev: Rev;
+  maxRev: Rev = 0;
 
   /** Cache key for `checkOut`. */
-  private lastCheckoutKey: string;
+  private lastCheckoutKey = '';
 
   /** Result of a `checkOut`. */
-  lines: LineInfo[];
+  lines: LineInfo[] = [];
 
   /** Content of lines joined. */
-  content: string;
+  content = '';
 
   /**
    * Create a `LineLog` with empty content.
@@ -179,12 +179,6 @@ class LineLog {
    * stored in `revDepMap`.
    */
   constructor({trackDeps}: {trackDeps: boolean} = {trackDeps: false}) {
-    this.code = [{op: Op.END}];
-    this.revDepMap = new Map<Rev, Set<Rev>>();
-    this.maxRev = 0;
-    this.lastCheckoutKey = '';
-    this.lines = [];
-    this.content = '';
     this.trackDeps = trackDeps;
     this.checkOut(0);
   }
