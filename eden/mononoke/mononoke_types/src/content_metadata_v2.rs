@@ -270,41 +270,62 @@ pub async fn newline_count(bytes_stream: impl Stream<Item = Bytes>) -> u64 {
 }
 
 /// Gets the first UTF-8 encoded line OR the first 64 bytes of data from the input
-/// data stream, whichever is shortest.
+/// data stream, whichever is shortest. Note that in case of ASCII, the cut-off will
+/// always be 64 bytes but for UTF-8 the cutoff can include upto 8 additional bytes.
 pub async fn first_line(bytes_stream: impl Stream<Item = Bytes>) -> Option<String> {
     let line = bytes_stream
         .fold(
-            (String::with_capacity(MAX_BYTES_FOR_FIRST_LINE), false),
-            |(mut acc, done), bytes| async move {
+            (
+                String::with_capacity(MAX_BYTES_FOR_FIRST_LINE),
+                Bytes::new(),
+                false,
+            ),
+            |(mut acc, mut prev_bytes, mut done), bytes| async move {
                 // We already have the first line that we are looking for,
                 // no need to look at further data.
                 if done || acc.len() >= MAX_BYTES_FOR_FIRST_LINE {
-                    (acc, true)
+                    (acc, prev_bytes, true)
                 } else {
+                    let bytes = [prev_bytes, bytes].concat();
                     let valid_line = match std::str::from_utf8(bytes.as_ref()) {
-                        Ok(line) => line.lines().next(),
+                        Ok(text) => {
+                            // Check if there is already a newline in the parsed text. If there is, then
+                            // we will get our required line by the end of this iteration.
+                            done |= text.contains('\n');
+                            // Since the entire text got parsed, no need for carry-over bytes.
+                            prev_bytes = Bytes::new();
+                            text.lines().next()
+                        }
                         Err(error) => {
                             let (valid, invalid) = bytes.split_at(error.valid_up_to());
                             // If the length of invalid slice is more than a UTF8 codepoint
-                            // then the file isn't UTF-8 encoded. Return whatever we have
-                            // in the accumulator and exit.
+                            // then the file isn't UTF-8 encoded. If the file isn't UTF-8
+                            // encoded, then first line should be None.
                             if invalid.len() > UTF8_BYTES_COUNT {
-                                return (acc, true);
+                                return (String::new(), Bytes::new(), true);
                             }
                             // We know that the slice is valid UTF-8 by this point, so safe to do the below.
                             let valid = unsafe { std::str::from_utf8_unchecked(valid) };
+                            // The remaining bytes could not be parsed as valid UTF-8. They need to be carried
+                            // over to the next iteration to check if combining them with the next chunk creates
+                            // a valid string.
+                            prev_bytes = Bytes::copy_from_slice(invalid);
+                            done |= valid.contains('\n');
                             valid.lines().next()
                         }
                     };
                     let valid_line = match valid_line {
                         Some(line) => line,
-                        None => return (acc, true),
+                        None => return (String::new(), Bytes::new(), true),
                     };
                     let len_to_push =
                         std::cmp::min(MAX_BYTES_FOR_FIRST_LINE - acc.len(), valid_line.len());
+                    // If the input is ASCII, we can cut off at 64 bytes to get a valid string. However, for
+                    // UTF-8, 64 bytes might not be a valid char boundary so we may need to extend (at max 8 bytes).
+                    let len_to_push = valid_line.ceil_char_boundary(len_to_push);
                     // Push only till the end of the line or till the end of buffer, whichever is the shortest.
                     acc.push_str(valid_line[..len_to_push].as_ref());
-                    (acc, done)
+                    (acc, prev_bytes, done)
                 }
             },
         )
@@ -990,5 +1011,166 @@ mod test {
                 .map(Bytes::from),
         );
         assert!(!is_partially_generated(bytes_stream).await);
+    }
+
+    // first_line tests
+    #[tokio::test]
+    async fn basic_first_line_test() {
+        let bytes_stream = stream::once(future::ready(Bytes::from(
+            "This text has two lines.\nThis is the second line.",
+        )));
+        assert_eq!(
+            Some("This text has two lines.".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn negative_first_line_test() {
+        let bytes = b"C\xF4te d'Ivoire";
+        let bytes_stream = stream::once(future::ready(Bytes::from_static(bytes)));
+        assert_eq!(None, first_line(bytes_stream).await)
+    }
+
+    #[tokio::test]
+    async fn too_long_without_newline_first_line_test() {
+        let text = "This text is bascially a very long single line without any newline characters. First line is supposed to return the part till the first newline character or the first 64 bytes.";
+        let bytes_stream = stream::once(future::ready(Bytes::from(text)));
+        assert_eq!(
+            Some("This text is bascially a very long single line without any newli".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn too_long_without_newline_non_ascii_first_line_test() {
+        let text = "यह पाठ मूल रूप से बिना किसी न्यूलाइन वर्ण के एक बहुत लंबी एकल पंक्ति है। पहली पंक्ति को पहले न्यूलाइन वर्ण या पहले 64 बाइट्स तक भाग वापस करना चाहिए।";
+        let bytes_stream = stream::once(future::ready(Bytes::from(text)));
+        assert_eq!(
+            Some("यह पाठ मूल रूप से बिना किस".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn too_long_with_newline_first_line_test() {
+        let text = "This text is bascially a very\n long single line, first line is supposed to return the part till the first newline character or the first 64 bytes.";
+        let bytes_stream = stream::once(future::ready(Bytes::from(text)));
+        assert_eq!(
+            Some("This text is bascially a very".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn too_long_with_newline_non_ascii_first_line_test() {
+        let text = "यह पाठ\n मूल रूप से बिना किसी न्यूलाइन वर्ण के एक बहुत लंबी एकल पंक्ति है। पहली पंक्ति को पहले न्यूलाइन वर्ण या पहले 64 बाइट्स तक भाग वापस करना चाहिए।";
+        let bytes_stream = stream::once(future::ready(Bytes::from(text)));
+        assert_eq!(Some("यह पाठ".to_string()), first_line(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn ascii_stream_without_newline_first_line_test() {
+        let bytes_stream = stream::iter(
+            [
+                "A short chunk",
+                " followed by another chunk",
+                " and then yet another chunk",
+                " followed by a final chunk.",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert_eq!(
+            Some("A short chunk followed by another chunk and then yet another chu".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn ascii_stream_with_newline_first_line_test() {
+        let bytes_stream = stream::iter(
+            [
+                "A short chunk",
+                " followed by another\n chunk",
+                " and then yet another chunk",
+                " followed by a final chunk.",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert_eq!(
+            Some("A short chunk followed by another".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn utf8_stream_without_newline_first_line_test() {
+        let bytes_stream = stream::iter(
+            [
+                "यह पाठ मूल रूप",
+                " से बिना किसी न्यूलाइन",
+                " वर्ण के एक बहुत",
+                " लंबी एकल पंक्ति है।",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert_eq!(
+            Some("यह पाठ मूल रूप से बिना किस".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn utf8_chunked_stream_without_newline_first_line_test() {
+        let bytes_stream = stream::iter(
+            [
+                b"This buffer has a UTF-8 code point that overlaps the first buff\xc3",
+                b"\xa9r's end and the second buffer's start. Let's see what is output",
+            ]
+            .iter()
+            .map(|&b| Bytes::from_static(b)),
+        );
+        assert_eq!(
+            Some("This buffer has a UTF-8 code point that overlaps the first buffé".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn utf8_stream_with_newline_first_line_test() {
+        let bytes_stream = stream::iter(
+            [
+                "यह पाठ मूल रूप",
+                " से\n बिना किसी न्यूलाइन",
+                " वर्ण के एक\n बहुत",
+                " लंबी एकल पंक्ति है।",
+            ]
+            .into_iter()
+            .map(Bytes::from),
+        );
+        assert_eq!(
+            Some("यह पाठ मूल रूप से".to_string()),
+            first_line(bytes_stream).await
+        );
+    }
+
+    #[tokio::test]
+    async fn non_utf8_letter_in_stream_after_first_line_test() {
+        let bytes = b"Only the last part of this string has non-utf8 characters. But the earlier part of the string has valid encoding. C\xF4te d'Ivoire";
+        let bytes_stream = stream::iter(bytes.chunks(10).into_iter().map(Bytes::from_static));
+        assert_eq!(
+            Some("Only the last part of this string has non-utf8 characters. But t".to_string()),
+            first_line(bytes_stream).await
+        )
+    }
+
+    #[tokio::test]
+    async fn non_utf8_letter_in_stream_before_first_line_test() {
+        let bytes = b"The first part of the string, C\xF4te d'Ivoire, contains invalid characters. The rest of the string is valid UTF-8";
+        let bytes_stream = stream::iter(bytes.chunks(10).into_iter().map(Bytes::from_static));
+        assert_eq!(None, first_line(bytes_stream).await)
     }
 }
