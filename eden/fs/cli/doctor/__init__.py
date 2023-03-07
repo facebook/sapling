@@ -679,6 +679,11 @@ def check_running_mount(
         except Exception as ex:
             raise RuntimeError("Failed to check Mercurial status") from ex
 
+        try:
+            check_filesystems.check_hg_status_match_hg_diff(tracker, instance, checkout)
+        except Exception as ex:
+            raise RuntimeError("Failed to compare `hg status` with `hg diff`") from ex
+
 
 class CheckoutNotConfigured(Problem):
     def __init__(self, checkout_info: CheckoutInfo) -> None:

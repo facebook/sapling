@@ -19,6 +19,7 @@ import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.doctor import check_hg, check_watchman
 from eden.fs.cli.doctor.check_filesystems import (
+    check_hg_status_match_hg_diff,
     check_loaded_content,
     check_materialized_are_accessible,
 )
@@ -36,7 +37,10 @@ from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.test.lib.output import TestOutput
 from facebook.eden.ttypes import (
+    GetScmStatusResult,
     MountInodeInfo,
+    ScmFileStatus,
+    ScmStatus,
     SHA1Result,
     TreeInodeDebugInfo,
     TreeInodeEntryDebugInfo,
@@ -1428,6 +1432,54 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
 """,
         )
         self.assertEqual(exit_code, 1)
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getScmStatusV2")
+    @patch("subprocess.run")
+    def test_hg_status_and_diff_agree(
+        self, mock_subprocess_run, mock_getScmStatusV2
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        mock_getScmStatusV2.return_value = GetScmStatusResult(
+            status=ScmStatus(entries={b"foo/bar": ScmFileStatus.MODIFIED})
+        )
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            stdout='{"foo/bar": {"adds": 2, "isbinary": false, "removes": 0}}',
+            args=["hg", "diff", "--per-file-stat-json"],
+            returncode=0,
+        )
+
+        tracker = ProblemCollector()
+        # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+        # `FakeEdenInstance`.
+        check_hg_status_match_hg_diff(tracker, instance, checkout)
+        self.assertEqual(tracker.problems, [])
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_client.FakeClient.getScmStatusV2")
+    @patch("subprocess.run")
+    def test_hg_status_and_diff_mismatch(
+        self, mock_subprocess_run, mock_getScmStatusV2
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        mock_getScmStatusV2.return_value = GetScmStatusResult(
+            status=ScmStatus(entries={b"foo/bar": ScmFileStatus.MODIFIED})
+        )
+        mock_subprocess_run.return_value = subprocess.CompletedProcess(
+            stdout="{}", args=["hg", "diff", "--stat"], returncode=0
+        )
+
+        tracker = ProblemCollector()
+        # pyre-fixme[6]: For 1st param expected `EdenInstance` but got
+        # `FakeEdenInstance`.
+        check_hg_status_match_hg_diff(tracker, instance, checkout)
+        self.assertEqual(len(tracker.problems), 1)
+        self.assertEqual(
+            tracker.problems[0].description(),
+            f"{Path('foo/bar')} is present as modified in `hg status` but not in `hg diff`",
+        )
 
 
 def _create_watchman_subscription(

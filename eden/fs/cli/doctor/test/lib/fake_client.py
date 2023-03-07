@@ -136,3 +136,10 @@ class FakeClient:
         self, params: eden_ttypes.DebugInvalidateRequest
     ) -> eden_ttypes.DebugInvalidateResponse:
         return eden_ttypes.DebugInvalidateResponse(numInvalidated=0)
+
+    def getScmStatusV2(
+        self, params: eden_ttypes.GetScmStatusParams
+    ) -> eden_ttypes.GetScmStatusResult:
+        return eden_ttypes.GetScmStatusResult(
+            status=eden_ttypes.ScmStatus(entries=dict())
+        )
