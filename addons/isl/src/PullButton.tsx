@@ -22,14 +22,17 @@ export function PullButton() {
   // no need to use previews here, we only need the latest commits to find the last pull timestamp.
   const latestCommits = useRecoilValue(latestCommitTree);
   // assuming master is getting updated frequently, last pull time should equal the newest commit in the history.
-  const lastSync = Math.max(...latestCommits.map(commit => commit.info.date.valueOf()));
+  const lastSync =
+    latestCommits.length === 0
+      ? null
+      : Math.max(...latestCommits.map(commit => commit.info.date.valueOf()));
 
   let title =
     t('Fetch latest repository and branch information from remote.') +
     '\n\n' +
-    t('Last synced with remote:') +
-    ' ' +
-    relativeDate(lastSync, {});
+    (lastSync == null
+      ? ''
+      : t('Last synced with remote: $date', {replace: {$date: relativeDate(lastSync, {})}}));
 
   const isRunningPull = useIsOperationRunningOrQueued(PullOperation);
   if (isRunningPull === 'queued') {
@@ -50,7 +53,7 @@ export function PullButton() {
           <Icon slot="start" icon={isRunningPull ? 'loading' : 'cloud-download'} />
           <T>Pull</T>
         </VSCodeButton>
-        <RelativeDate date={lastSync} useShortVariant />
+        {lastSync && <RelativeDate date={lastSync} useShortVariant />}
       </div>
     </Tooltip>
   );
