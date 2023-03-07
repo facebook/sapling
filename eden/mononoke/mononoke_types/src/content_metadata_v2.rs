@@ -397,6 +397,7 @@ mod test {
     use quickcheck::quickcheck;
     use rand::distributions::Alphanumeric;
     use rand::distributions::Distribution;
+    use rand::distributions::Standard;
     use rand::thread_rng;
     use rand::Rng;
 
@@ -420,6 +421,7 @@ mod test {
         }
     }
 
+    // is_ascii tests
     #[tokio::test]
     async fn basic_is_ascii_test() {
         let input = "This is a sample ASCII_string@#$()&^/';[]`~*";
@@ -498,6 +500,92 @@ mod test {
             let bytes_stream =
                 stream::iter(bytes.chunks(chunk).into_iter().map(Bytes::copy_from_slice));
             assert!(is_ascii(bytes_stream).await);
+        }
+    }
+
+    // is_utf8 tests
+    #[tokio::test]
+    async fn basic_is_utf8_test() {
+        let input =
+            "This is a sample UTF8 encoded _string_ @#$()&^/';[]`~*. यह एक नमूना UTF8 स्ट्रिंग है 😋";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(
+            is_utf8(bytes_stream).await,
+            "The input '{}' wasn't UTF8",
+            input
+        )
+    }
+
+    #[tokio::test]
+    async fn negative_is_utf8_test() {
+        let bytes = b"C\xF4te d'Ivoire";
+        let bytes_stream = stream::once(future::ready(Bytes::from_static(bytes)));
+        assert!(!is_utf8(bytes_stream).await)
+    }
+
+    #[tokio::test]
+    async fn arbitrary_is_utf8_test() {
+        let bytes = Bytes::from(
+            thread_rng()
+                .sample_iter::<char, _>(&Standard)
+                .take(1024)
+                .collect::<String>(),
+        );
+        let bytes_stream = stream::once(future::ready(bytes));
+        assert!(is_utf8(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn arbitrary_negative_is_utf8_test() {
+        let bytes = thread_rng()
+            .sample_iter(&Standard)
+            .take(1024)
+            .collect::<Bytes>();
+        let bytes_stream = stream::once(future::ready(bytes));
+        let bytes_stream = bytes_stream.chain(stream::once(future::ready(Bytes::from_static(
+            b"C\xF4te d'Ivoire",
+        ))));
+        assert!(!is_utf8(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn arbitrary_stream_is_utf8_test() {
+        let bytes_stream = stream::iter((0..50).map(|_| {
+            let chunk_size: usize = thread_rng().gen_range(20..50);
+            Bytes::from(
+                thread_rng()
+                    .sample_iter::<char, _>(&Standard)
+                    .take(chunk_size)
+                    .collect::<String>(),
+            )
+        }));
+        assert!(is_utf8(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn single_string_single_stream_is_utf8_test() {
+        let bytes = Bytes::from(
+            thread_rng()
+                .sample_iter::<char, _>(&Standard)
+                .take(4096)
+                .collect::<String>(),
+        );
+        let bytes_stream = stream::iter(bytes.chunks(37).into_iter().map(Bytes::copy_from_slice));
+        assert!(is_utf8(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn single_string_multiple_stream_is_utf8_test() {
+        let bytes = Bytes::from(
+            thread_rng()
+                .sample_iter::<char, _>(&Standard)
+                .take(4096)
+                .collect::<String>(),
+        );
+        for chunk in [230, 10, 35, 89, 1000] {
+            let bytes_stream =
+                stream::iter(bytes.chunks(chunk).into_iter().map(Bytes::copy_from_slice));
+            assert!(is_utf8(bytes_stream).await);
         }
     }
 }
