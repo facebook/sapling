@@ -70,6 +70,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let blobstore_defaults = BlobstoreArgDefaults {
         read_qps: NonZeroU32::new(20000),
         cachelib_attempt_zstd: Some(false),
+        put_behaviour: Some(blobstore::PutBehaviour::OverwriteAndLog),
         ..Default::default()
     };
 
