@@ -86,14 +86,14 @@ class LineLog {
 
   // cached states
   maxRev: Rev;
-  lastCheckoutRev: Rev;
+  private lastCheckoutKey: string;
   lines: LineInfo[];
   content: string;
 
   constructor() {
     this.code = [{op: Op.END}];
     this.maxRev = 0;
-    this.lastCheckoutRev = -1;
+    this.lastCheckoutKey = '';
     this.lines = [];
     this.content = '';
     this.checkOut(0);
@@ -135,7 +135,6 @@ class LineLog {
     if (rev > this.maxRev) {
       this.maxRev = rev;
     }
-    this.lastCheckoutRev = rev;
     // NOTE: this.content is not updated here. It should be updated by the call-site.
   }
 
@@ -191,10 +190,9 @@ class LineLog {
   public checkOut(rev: Rev, start: Rev | null = null) {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
-    if (rev === this.lastCheckoutRev && start === null) {
+    const key = `${rev},${start}`;
+    if (key === this.lastCheckoutKey) {
       return;
-    } else {
-      this.lastCheckoutRev = rev;
     }
 
     let lines = this.execute(rev, rev);
@@ -211,6 +209,7 @@ class LineLog {
 
     this.lines = lines;
     this.content = this.reconstructContent();
+    this.lastCheckoutKey = key;
   }
 
   private reconstructContent(): string {
@@ -232,6 +231,7 @@ class LineLog {
       this.editChunk(a1, a2, rev, lines.slice(b1, b2));
     });
     this.content = b;
+    this.lastCheckoutKey = `${rev},null`;
 
     // assert(this.reconstructContent() === b, "bug: text does not match");
     return rev;

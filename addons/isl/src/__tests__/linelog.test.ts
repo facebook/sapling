@@ -99,6 +99,9 @@ describe('LineLog', () => {
     expect(log.lines[1].deleted).toBeTruthy(); // 'd' not in rev 3
     expect(!log.lines[2].deleted).toBeTruthy(); // 'e' in rev 3
 
+    log.checkOut(3); // should not reuse cache
+    expect(log.content).toBe('e\ng\nf\n');
+
     log.checkOut(3, 2);
     expect(log.content).toBe('d\ne\ng\nf\n');
     expect(log.lines[0].deleted).toBeTruthy(); // 'd' not in rev 3
