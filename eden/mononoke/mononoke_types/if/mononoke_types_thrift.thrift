@@ -62,7 +62,7 @@ typedef binary GitSha1 (
   rust.newtype,
   rust.type = "smallvec::SmallVec<[u8; 20]>",
 )
-
+typedef binary Blake3 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on
 // manifests can be applied in a streaming way.

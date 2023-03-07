@@ -61,9 +61,9 @@ pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
     PartialOrd,
     Hash,
     Serialize,
-    Deserialize
+    Deserialize,
+    mysql::OptTryFromRowField
 )]
-#[derive(mysql::OptTryFromRowField)]
 pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
 
 impl Blake2 {
@@ -216,20 +216,6 @@ impl Debug for Blake2 {
     }
 }
 
-impl Arbitrary for Blake2 {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut bytes = [0; BLAKE2_HASH_LENGTH_BYTES];
-        for b in bytes.iter_mut() {
-            *b = u8::arbitrary(g);
-        }
-        Blake2(bytes)
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        empty_shrinker()
-    }
-}
-
 #[derive(
     Abomonation,
     Clone,
@@ -345,8 +331,18 @@ impl Debug for Blake2Prefix {
 
 macro_rules! impl_hash {
     ($type:ident, $size:literal, $error:ident) => {
-        #[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-        #[derive(Serialize, Deserialize)]
+        #[derive(
+            Abomonation,
+            Clone,
+            Copy,
+            Eq,
+            PartialEq,
+            Ord,
+            PartialOrd,
+            Hash,
+            Serialize,
+            Deserialize
+        )]
         pub struct $type([u8; $size]);
 
         impl $type {
@@ -449,19 +445,57 @@ macro_rules! impl_hash {
                 Display::fmt(&self.to_hex(), fmt)
             }
         }
+
+        impl_arbitrary_for_hash!($type, $size);
+    };
+}
+
+macro_rules! impl_arbitrary_for_hash {
+    ($type:ident, $size:literal) => {
+        impl Arbitrary for $type {
+            fn arbitrary(g: &mut Gen) -> Self {
+                let mut bytes = [0; $size];
+                for b in bytes.iter_mut() {
+                    *b = u8::arbitrary(g);
+                }
+                $type(bytes)
+            }
+
+            fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+                empty_shrinker()
+            }
+        }
     };
 }
 
 impl_hash!(Sha256, 32, InvalidSha256Input);
 impl_hash!(Sha1, 20, InvalidSha1Input);
 impl_hash!(GitSha1, 20, InvalidGitSha1Input);
+impl_hash!(Blake3, 32, InvalidBlake3Input);
+impl_arbitrary_for_hash!(Blake2, 32);
+
+impl Blake3 {
+    #[inline]
+    pub fn from_thrift(b: thrift::Blake3) -> Result<Self> {
+        Blake3::from_bytes(b.0)
+    }
+}
 
 /// Git-style content blob hashes. Same as SHA-1 but with "<type> NNNN\0" appended to the front,
 /// where <type> is the object type (blob, tree, etc), and NNNN is the blob size as a decimal
 /// string. Given that we know what the prefix is, we never explicitly store it so the objects
 /// can be shared with non-Git uses.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Serialize,
+    Deserialize
+)]
 pub struct RichGitSha1 {
     sha1: GitSha1,
     ty: &'static str,
@@ -541,16 +575,6 @@ impl From<EdenapiGitSha1> for GitSha1 {
     }
 }
 
-impl Arbitrary for GitSha1 {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut bytes = [0; 20];
-        for b in bytes.iter_mut() {
-            *b = u8::arbitrary(g);
-        }
-        GitSha1(bytes)
-    }
-}
-
 impl From<Sha1> for EdenapiSha1 {
     fn from(v: Sha1) -> Self {
         EdenapiSha1::from(v.0)
@@ -560,16 +584,6 @@ impl From<Sha1> for EdenapiSha1 {
 impl From<EdenapiSha1> for Sha1 {
     fn from(v: EdenapiSha1) -> Self {
         Sha1::from_byte_array(v.into())
-    }
-}
-
-impl Arbitrary for Sha1 {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut bytes = [0; 20];
-        for b in bytes.iter_mut() {
-            *b = u8::arbitrary(g);
-        }
-        Sha1(bytes)
     }
 }
 
@@ -597,26 +611,43 @@ impl From<lfs_protocol::Sha256> for Sha256 {
     }
 }
 
-impl Arbitrary for Sha256 {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let mut bytes = [0; 32];
-        for b in bytes.iter_mut() {
-            *b = u8::arbitrary(g);
-        }
-        Sha256(bytes)
-    }
-
-    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
-        empty_shrinker()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
 
     use super::*;
+
+    macro_rules! quickcheck_hash {
+        ($type:ident, $size:literal) => {
+            paste::item! {
+                quickcheck! {
+                    fn [<parse_roundtrip_for_ $type:lower>](v: Vec<u8>) -> TestResult {
+                        if v.len() != $size {
+                            return TestResult::discard()
+                        }
+                        let h = $type::from_bytes(v).unwrap();
+                        let s = format!("{}", h);
+                        let sh = s.parse().unwrap();
+
+                        TestResult::from_bool(h == sh)
+                    }
+
+                    fn [<to_hex_roundtrip_for_ $type:lower>](h: $type) -> bool {
+                        let v = h.to_hex();
+                        let sh = $type::from_ascii_str(&v).unwrap();
+                        h == sh
+                    }
+
+                    fn [<thrift_roundtrip_for_ $type:lower>](h: $type) -> bool {
+                        let v = h.into_thrift();
+                        let sh = $type::from_thrift(v).expect("converting a valid Thrift structure should always work");
+                        h == sh
+                    }
+                }
+            }
+        };
+    }
 
     // NULL is not exposed because no production code should use it.
     const NULL: Blake2 = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
@@ -727,6 +758,19 @@ mod test {
     }
 
     #[test]
+    fn parse_blake3_bad() {
+        Blake3::from_str("").expect_err("unexpected OK - zero len");
+        Blake3::from_str("0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a")
+            .expect_err("unexpected OK - trunc");
+        Blake3::from_str("xe5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a")
+            .expect_err("unexpected OK - badchar beginning");
+        Blake3::from_str("0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3x")
+            .expect_err("unexpected OK - badchar end");
+        Blake3::from_str("0e5751c026e543b2e8ab2eb06099daa1d1x5df47778f7787faab45cdf12fe3a")
+            .expect_err("unexpected OK - badchar middle");
+    }
+
+    #[test]
     fn parse_thrift_bad() {
         Blake2::from_thrift(thrift::Blake2(vec![].into())).expect_err("unexpected OK - zero len");
         Blake2::from_thrift(thrift::Blake2(vec![0; 31].into()))
@@ -735,30 +779,17 @@ mod test {
             .expect_err("unexpected Ok - too long");
     }
 
-    quickcheck! {
-        fn parse_roundtrip(v: Vec<u8>) -> TestResult {
-            if v.len() != BLAKE2_HASH_LENGTH_BYTES {
-                return TestResult::discard()
-            }
-            let h = Blake2::from_bytes(v).unwrap();
-            let s = format!("{}", h);
-            let sh = s.parse().unwrap();
-
-            TestResult::from_bool(h == sh)
-        }
-
-        fn to_hex_roundtrip(h: Blake2) -> bool {
-            let v = h.to_hex();
-            let sh = Blake2::from_ascii_str(&v).unwrap();
-            h == sh
-        }
-
-        fn thrift_roundtrip(h: Blake2) -> bool {
-            let v = h.into_thrift();
-            let sh = Blake2::from_thrift(v).expect("converting a valid Thrift structure should always work");
-            h == sh
-        }
+    #[test]
+    fn parse_blake3_thrift_bad() {
+        Blake3::from_thrift(thrift::Blake3(vec![].into())).expect_err("unexpected OK - zero len");
+        Blake3::from_thrift(thrift::Blake3(vec![0; 31].into()))
+            .expect_err("unexpected OK - too short");
+        Blake3::from_thrift(thrift::Blake3(vec![0; 33].into()))
+            .expect_err("unexpected Ok - too long");
     }
+
+    quickcheck_hash!(Blake2, 32);
+    quickcheck_hash!(Blake3, 32);
 
     #[test]
     fn test_parse_sha1() {
@@ -783,6 +814,23 @@ mod test {
         assert_eq!(
             sha256,
             Sha256::from_bytes([
+                0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f,
+                0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b,
+                0x78, 0x52, 0xb8, 0x55,
+            ])
+            .unwrap()
+        )
+    }
+
+    #[test]
+    fn test_parse_blake3() {
+        let blake3: Blake3 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            .parse()
+            .unwrap();
+
+        assert_eq!(
+            blake3,
+            Blake3::from_bytes([
                 0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f,
                 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b,
                 0x78, 0x52, 0xb8, 0x55,
