@@ -42,6 +42,7 @@ pub struct ContentMetadataV2 {
     pub first_line: Option<String>,
     pub is_generated: bool,
     pub is_partially_generated: bool,
+    pub seeded_blake3: hash::Blake3,
 }
 
 impl ContentMetadataV2 {
@@ -80,6 +81,11 @@ impl ContentMetadataV2 {
                 metadata,
                 is_partially_generated
             )?,
+            seeded_blake3: hash::Blake3::from_thrift(thrift_field!(
+                ContentMetadataV2,
+                metadata,
+                seeded_blake3
+            )?)?,
         };
 
         Ok(res)
@@ -100,6 +106,7 @@ impl ContentMetadataV2 {
             first_line: self.first_line,
             is_generated: Some(self.is_generated),
             is_partially_generated: Some(self.is_partially_generated),
+            seeded_blake3: Some(self.seeded_blake3.into_thrift()),
         }
     }
 }
@@ -122,6 +129,7 @@ impl Arbitrary for ContentMetadataV2 {
             first_line: Option::arbitrary(g),
             is_generated: bool::arbitrary(g),
             is_partially_generated: bool::arbitrary(g),
+            seeded_blake3: hash::Blake3::arbitrary(g),
         }
     }
 }

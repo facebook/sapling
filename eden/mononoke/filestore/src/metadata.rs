@@ -127,7 +127,7 @@ async fn rebuild_metadata<B: Blobstore>(
         // All is well - get the results when our futures complete.
         Ok(_) => {
             let (redeemable, metadata) = futs.await?;
-            let (sha1, sha256, git_sha1) = redeemable
+            let (sha1, sha256, git_sha1, seeded_blake3) = redeemable
                 .redeem(total_size)
                 .map_err(|e| InternalError(content_id, e))?;
             let metadata = ContentMetadataV2 {
@@ -136,6 +136,7 @@ async fn rebuild_metadata<B: Blobstore>(
                 sha1,
                 sha256,
                 git_sha1,
+                seeded_blake3,
                 is_binary: metadata.is_binary,
                 is_ascii: metadata.is_ascii,
                 is_utf8: metadata.is_utf8,

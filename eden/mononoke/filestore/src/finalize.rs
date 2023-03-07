@@ -47,6 +47,7 @@ pub async fn finalize<B: Blobstore>(
         sha1,
         sha256,
         git_sha1,
+        seeded_blake3,
         contents,
         is_ascii,
         is_binary,
@@ -64,6 +65,7 @@ pub async fn finalize<B: Blobstore>(
     let content_id = *blob.id();
 
     // If we were provided any hashes in the request, then validate them before we proceed.
+    // TODO(rajshar): Include seeded_blake3 as part of StoreRequest and validate.
     if let Some(req) = req {
         let StoreRequest {
             expected_size,
@@ -84,6 +86,7 @@ pub async fn finalize<B: Blobstore>(
         }
     }
 
+    // TODO(rajshar): Add seeded_blake3 as another content alias.
     let alias = ContentAlias::from_content_id(content_id);
     let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx, blobstore);
     let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx, blobstore);
@@ -115,6 +118,7 @@ pub async fn finalize<B: Blobstore>(
         sha1,
         git_sha1,
         sha256,
+        seeded_blake3,
         is_ascii,
         is_binary,
         is_utf8,

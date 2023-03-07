@@ -127,7 +127,7 @@ impl Blake3IncrementalHasher {
     }
 
     /// Creates a seeded Blake3 incremental hasher
-    pub fn _new_seeded() -> Self {
+    pub fn new_seeded() -> Self {
         #[cfg(fbcode_build)]
         let bytes = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
         #[cfg(not(fbcode_build))]

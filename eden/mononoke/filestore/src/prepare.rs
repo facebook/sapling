@@ -39,6 +39,7 @@ use mononoke_types::FileContents;
 use crate::alias::add_aliases_to_multiplexer;
 use crate::expected_size::ExpectedSize;
 use crate::incremental_hash::hash_bytes;
+use crate::incremental_hash::Blake3IncrementalHasher;
 use crate::incremental_hash::ContentIdIncrementalHasher;
 use crate::incremental_hash::GitSha1IncrementalHasher;
 use crate::incremental_hash::Sha1IncrementalHasher;
@@ -52,6 +53,7 @@ pub struct Prepared {
     pub sha1: hash::Sha1,
     pub sha256: hash::Sha256,
     pub git_sha1: hash::RichGitSha1,
+    pub seeded_blake3: hash::Blake3,
     pub is_binary: bool,
     pub is_ascii: bool,
     pub is_utf8: bool,
@@ -67,6 +69,7 @@ pub async fn prepare_bytes(bytes: Bytes) -> Prepared {
     let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
     let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
     let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(&bytes), &bytes);
+    let seeded_blake3 = hash_bytes(Blake3IncrementalHasher::new_seeded(), &bytes);
     let is_binary = is_binary(stream::once(future::ready(bytes.clone())));
     let is_ascii = is_ascii(stream::once(future::ready(bytes.clone())));
     let is_utf8 = is_utf8(stream::once(future::ready(bytes.clone())));
@@ -100,6 +103,7 @@ pub async fn prepare_bytes(bytes: Bytes) -> Prepared {
         sha1,
         sha256,
         git_sha1,
+        seeded_blake3,
         contents,
         is_binary,
         is_ascii,
@@ -189,12 +193,13 @@ where
             let (content_id, aliases, chunks, metadata) = futs.await?;
             let contents = FileContents::Chunked(ChunkedFileContents::new(content_id, chunks));
 
-            let (sha1, sha256, git_sha1) = aliases.redeem(contents.size())?;
+            let (sha1, sha256, git_sha1, seeded_blake3) = aliases.redeem(contents.size())?;
 
             let prepared = Prepared {
                 sha1,
                 sha256,
                 git_sha1,
+                seeded_blake3,
                 contents,
                 is_ascii: metadata.is_ascii,
                 is_binary: metadata.is_binary,
