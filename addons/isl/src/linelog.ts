@@ -33,74 +33,147 @@ import {diff_match_patch} from 'diff-match-patch';
 
 const dmp = new diff_match_patch();
 
+/** Operation code. */
 enum Op {
+  /** Unconditional jump. */
   J = 0,
+  /** Jump if the current rev >= operand. */
   JGE = 1,
+  /** Jump if the current rev < operand. */
   JL = 2,
+  /** Append a line. */
   LINE = 3,
+  /** End execution. */
   END = 4,
 }
 
+/** J instruction. */
 interface J {
+  /** Opcode: J */
   op: Op.J;
+  /** Program counter (offset to jump). */
   pc: Pc;
 }
 
+/** JGE instruction. */
 interface JGE {
+  /** Opcode: JGE */
   op: Op.JGE;
+  /** `rev` to test. */
   rev: Rev;
+  /** Program counter (offset to jump). */
   pc: Pc;
 }
 
+/** JL instruction. */
 interface JL {
+  /** Opcode: JL */
   op: Op.JL;
+  /** `rev` to test. */
   rev: Rev;
+  /** Program counter (offset to jump). */
   pc: Pc;
 }
 
+/** LINE instruction. */
 interface LINE {
+  /** Opcode: LINE */
   op: Op.LINE;
+  /** `rev` to test. */
   rev: Rev;
+  /** Line content. Includes EOL. */
   data: string;
 }
 
+/** END instruction. */
 interface END {
+  /** Opcode: END */
   op: Op.END;
 }
 
+/** Program counter (offset to instructions). */
 type Pc = number;
+
+/** Revision number. Usually starts from 1. Larger number means newer versions. */
 type Rev = number;
+
+/** Index of a line. Starts from 0. */
 type LineIdx = number;
+
+/** Instruction. */
 type Inst = J | JGE | JL | LINE | END;
 
+/** Information about a line. Internal (`lines`) result of `LineLog.checkOut`. */
 interface LineInfo {
+  /** Line content. Includes EOL. */
   data: string;
+  /** Added by the given rev. */
   rev: Rev;
+  /** Produced by the instruction at the given offset. */
   pc: Pc;
+  /**
+   * Whether the line is deleted.
+   * This is always `false` if `checkOut(rev, None)`.
+   * It might be `true` when checking out a range of revisions
+   * (aka. `start` passed to `checkOut` is not `null`).
+   */
   deleted: boolean;
 }
 
+/** A "flatten" line. Result of `LineLog.flatten()`. */
 interface FlattenLine {
+  /** The line is present in the given revisions. */
   revs: Set<Rev>;
+  /** Content of the line, including `\n`. */
   data: string;
 }
 
+/**
+ * `LineLog` is a data structure that tracks linear changes to a single text
+ * file. Conceptually similar to a list of texts like `string[]`, with extra
+ * features suitable for stack editing:
+ * - Calculate the "blame" of the text of a given version efficiently.
+ * - Edit lines or trunks in a past version, and affect future versions.
+ * - List all lines that ever existed with each line annotated, like
+ *   a unified diff, but for all versions, not just 2 versions.
+ *
+ * Internally, `LineLog` is a byte-code interpreter that runs a program to
+ * emit lines. Changes are done by patching in new byte-codes. There are
+ * no traditional text patch involved. No operations would cause merge
+ * conflicts. See https://sapling-scm.com/docs/internals/linelog for more
+ * details.
+ */
 class LineLog {
-  // core state
+  /** Core state: instructions. The array index type is `Pc`. */
   private code: Inst[];
 
-  // rev dependencies. ex: {5: {3, 1}}: rev 5 depends on rev 3 and rev 1.
+  /**
+   * Rev dependencies.
+   * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
+   * This is only updated when `trackDeps` is `true` during construction.
+   */
   readonly revDepMap: Map<Rev, Set<Rev>>;
 
-  // config
+  /** If `true`, update `revDepMap` on change. */
   private trackDeps: boolean;
 
-  // cached states
+  /** Maximum rev tracked. */
   maxRev: Rev;
+
+  /** Cache key for `checkOut`. */
   private lastCheckoutKey: string;
+
+  /** Result of a `checkOut`. */
   lines: LineInfo[];
+
+  /** Content of lines joined. */
   content: string;
 
+  /**
+   * Create a `LineLog` with empty content.
+   * If `trackDeps` is `true`, rev dependencies are updated and
+   * stored in `revDepMap`.
+   */
   constructor({trackDeps}: {trackDeps: boolean} = {trackDeps: false}) {
     this.code = [{op: Op.END}];
     this.revDepMap = new Map<Rev, Set<Rev>>();
@@ -112,6 +185,21 @@ class LineLog {
     this.checkOut(0);
   }
 
+  /**
+   * Edit chunk. Replace line `a1` (inclusive) to `a2` (exclusive) with
+   * `lines`. `lines` are considered introduced by `rev`. If `lines` is
+   * empty, the edit is a deletion. If `a1` equals to `a2`, the edit is
+   * an insertion. Otherwise, the edit is a modification.
+   *
+   * `a1` and `a2` are based on the line indexes of the current checkout.
+   * Use `checkOut(this.maxRev)` before this function to edit the last
+   * revision. Use `checkOut(rev)` before this function to edit arbitary
+   * revision.
+   *
+   * While this function does not cause conflicts or error out, not all
+   * editings make practical sense. The callsite might want to do some
+   * extra checks to ensure the edit is meaningful.
+   */
   private editChunk(a1: LineIdx, a2: LineIdx, rev: Rev, lines: string[]) {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
@@ -168,6 +256,10 @@ class LineLog {
     // NOTE: this.content is not updated here. It should be updated by the call-site.
   }
 
+  /**
+   * Interpret the bytecodes with the given revision range.
+   * Used by `checkOut`.
+   */
   private execute(
     startRev: Rev,
     endRev: Rev,
@@ -254,6 +346,18 @@ class LineLog {
     return result;
   }
 
+  /**
+   * Checkout the content of the given revision `rev`.
+   *
+   * Updates `this.lines` internally so indexes passed to `editChunk`
+   * will be based on the given `rev`.
+   *
+   * If `start` is not `null`, checkout a revision range. For example,
+   * if `start` is 0, and `rev` is `this.maxRev`, `this.lines` will
+   * include all lines ever existed in all revisions.
+   *
+   *  @returns Content of the specified revision.
+   */
   public checkOut(rev: Rev, start: Rev | null = null): string {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
@@ -326,6 +430,14 @@ class LineLog {
   }
 }
 
+/**
+ * Calculate the differences.
+ *
+ * @param a Content of the "a" side.
+ * @param b Content of the "b" side.
+ * @returns A list of `(a1, a2, b1, b2)` tuples for the line ranges that
+ * are different between "a" and "b".
+ */
 function diffLines(a: string, b: string): [LineIdx, LineIdx, LineIdx, LineIdx][] {
   const {chars1, chars2} = dmp.diff_linesToChars_(a, b);
   const blocks: [LineIdx, LineIdx, LineIdx, LineIdx][] = [];
@@ -357,6 +469,9 @@ function diffLines(a: string, b: string): [LineIdx, LineIdx, LineIdx, LineIdx][]
   return blocks;
 }
 
+/**
+ * Split lines by `\n`. Preserve the end of lines.
+ */
 function splitLines(s: string): string[] {
   let pos = 0;
   let nextPos = 0;
@@ -372,6 +487,7 @@ function splitLines(s: string): string[] {
   return result;
 }
 
+/** If the assertion fails, throw an `Error` with the given `message`. */
 function assert(condition: boolean, message: string) {
   if (!condition) {
     throw new Error(message);
