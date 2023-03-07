@@ -69,9 +69,8 @@ function CommitFetchError({error}: {error: Error}) {
   if (error.message === ErrorShortMessages.NoCommitsFetched) {
     return (
       <ErrorNotice
-        title={t(
-          'No commits found. If this is a new repository, try adding an initial commit first.',
-        )}
+        title={t('No commits found')}
+        description={t('If this is a new repository, try adding an initial commit first.')}
         error={error}
         buttons={[
           <VSCodeButton

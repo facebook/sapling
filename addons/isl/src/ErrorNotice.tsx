@@ -15,10 +15,12 @@ import './error-notice.css';
 
 export function ErrorNotice({
   title,
+  description,
   error,
   buttons,
 }: {
   title: React.ReactNode;
+  description?: React.ReactNode;
   error: Error;
   buttons?: Array<React.ReactNode>;
 }) {
@@ -31,8 +33,10 @@ export function ErrorNotice({
         </div>
         <div className="error-notice-content">
           <span className="error-notice-title">{title}</span>
-          <span className="error-notice-byline">{error.message}</span>
-          {isExpanded ? <span className="error-notice-stack-trace">{error.stack}</span> : null}
+          <span className="error-notice-byline">{description ?? error.message}</span>
+          {isExpanded ? (
+            <span className="error-notice-stack-trace">{error.stack ?? error.message}</span>
+          ) : null}
         </div>
       </div>
       {buttons ? <div className="error-notice-buttons">{buttons}</div> : null}
