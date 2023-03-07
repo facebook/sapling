@@ -49,3 +49,12 @@ Create a signed commit.
   $ git --git-dir .hg/store/git log --show-signature $(hg whereami) | grep -A 1 'gpg: Good'
   gpg: Good signature from "Test User <testuser@example.com>" [ultimate]
   Author: Test User <testuser@example.com>
+
+Test GPG error.
+
+  $ hg config --local gpg.key "foobar"
+  updated config in $TESTTMP/repo1/.hg/hgrc
+  $ echo 1 > delta
+  $ hg commit -m gamma
+  abort: error when running gpg with gpgkeyid foobar
+  [255]
