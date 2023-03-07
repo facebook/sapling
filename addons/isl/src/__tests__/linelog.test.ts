@@ -115,4 +115,45 @@ describe('LineLog', () => {
     expect(log.recordText('a\n')).toBe(2);
     expect(log.recordText('a\n')).toBe(3);
   });
+
+  describe('supports editing previous revisions', () => {
+    it('edits stack bottom', () => {
+      const textList = ['a\n', 'a\nb\n', 'z\na\nb\n'];
+      const log = logFromTextList(textList);
+
+      expect(log.recordText('1\n2\n', 1)).toBe(1); // replace rev 1 from "a" to "1 2"
+      expect(log.checkOut(1)).toBe('1\n2\n');
+      expect(log.checkOut(2)).toBe('1\n2\nb\n');
+      expect(log.checkOut(3)).toBe('z\n1\n2\nb\n');
+
+      expect(log.recordText('', 1)).toBe(1); // replace rev 1 to ""
+      expect(log.checkOut(1)).toBe('');
+      expect(log.checkOut(2)).toBe('b\n');
+      expect(log.checkOut(3)).toBe('z\nb\n');
+    });
+
+    it('edits stack middle', () => {
+      const textList = ['c\nd\ne\n', 'b\nc\nd\n', 'a\nb\nc\nz\n'];
+      let log = logFromTextList(textList);
+
+      expect(log.recordText('b\nd\n', 2)).toBe(2); // remove "c" from "b c d" in rev 2
+      expect(log.checkOut(1)).toBe('c\nd\ne\n'); // rev 1 is unchanged, despite "c" comes from rev 1
+      expect(log.checkOut(2)).toBe('b\nd\n');
+      expect(log.checkOut(3)).toBe('a\nb\nz\n'); // "c" in rev 3 is also removed
+
+      log = logFromTextList(textList);
+      log.recordText('b\nc\ny\ny\n', 2); // change "d" to "y y" from rev 2.
+      expect(log.checkOut(3)).toBe('a\nb\nc\nz\n'); // rev 3 is unchanged, since "d" was deleted
+
+      log = logFromTextList(textList);
+      log.recordText('k\n', 2); // replace rev 2 with "k", this is a tricky case
+      expect(log.checkOut(3)).toBe('a\nk\n'); // "a k" is the current implementation, "a k z" might be better
+    });
+  });
 });
+
+function logFromTextList(textList: string[]): LineLog {
+  const log = new LineLog();
+  textList.forEach(text => log.recordText(text));
+  return log;
+}

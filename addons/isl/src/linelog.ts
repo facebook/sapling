@@ -187,12 +187,12 @@ class LineLog {
     return lines;
   }
 
-  public checkOut(rev: Rev, start: Rev | null = null) {
+  public checkOut(rev: Rev, start: Rev | null = null): string {
     // eslint-disable-next-line no-param-reassign
     rev = Math.min(rev, this.maxRev);
     const key = `${rev},${start}`;
     if (key === this.lastCheckoutKey) {
-      return;
+      return this.content;
     }
 
     let lines = this.execute(rev, rev);
@@ -210,30 +210,43 @@ class LineLog {
     this.lines = lines;
     this.content = this.reconstructContent();
     this.lastCheckoutKey = key;
+    return this.content;
   }
 
   private reconstructContent(): string {
     return this.lines.map(l => l.data).join('');
   }
 
-  public recordText(text: string): Rev {
-    const a = this.content;
+  /**
+   * Edit LineLog to match the content of `text`.
+   * This might affect `rev`s that are >= `rev` in the stack.
+   * Previous revisions won't be affected.
+   *
+   * @param text Content to match.
+   * @param rev Revision to to edit (in-place). If not set, append a new revision.
+   * @returns Revision number. `this.checkOut(rev)` should match `text`.
+   */
+  public recordText(text: string, rev: Rev | null = null): Rev {
+    // rev to edit from, and rev to match 'text'.
+    const [aRev, bRev] = rev ? [rev, rev] : [this.maxRev, this.maxRev + 1];
     const b = text;
 
     const lines = splitLines(b);
-    this.checkOut(this.maxRev);
+    this.checkOut(aRev);
+    const a = this.content;
     const blocks = diffLines(a, b);
 
-    this.maxRev += 1;
-    const rev = this.maxRev;
     blocks.reverse().forEach(([a1, a2, b1, b2]) => {
-      this.editChunk(a1, a2, rev, lines.slice(b1, b2));
+      this.editChunk(a1, a2, bRev, lines.slice(b1, b2));
     });
     this.content = b;
-    this.lastCheckoutKey = `${rev},null`;
+    this.lastCheckoutKey = `${bRev},null`;
+    if (bRev > this.maxRev) {
+      this.maxRev = bRev;
+    }
 
     // assert(this.reconstructContent() === b, "bug: text does not match");
-    return rev;
+    return bRev;
   }
 
   /** Get revision of the specified line. Returns null if out of range. */
