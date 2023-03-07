@@ -188,6 +188,32 @@ describe('LineLog', () => {
     log = logFromTextList(textList, {trackDeps: false});
     expect(log.revDepMap).toEqual(new Map());
   });
+
+  it('produces flatten lines', () => {
+    const textList = ['a\nb\nc\n', 'b\nc\nd\ne\n', 'a\nc\nd\nf\n'];
+    const log = logFromTextList(textList);
+    const lines = log.flatten();
+    expect(lines).toEqual(
+      [
+        ['a', [1]],
+        ['a', [3]],
+        ['b', [1, 2]],
+        ['c', [1, 2, 3]],
+        ['d', [2, 3]],
+        ['f', [3]],
+        ['e', [2]],
+      ].map(([line, revs]) => ({revs: new Set(revs as number[]), data: `${line}\n`})),
+    );
+    // Verify the flatten lines against definition - if "revs" contains the rev,
+    // then the line is included in "rev".
+    for (let rev = 1; rev <= textList.length; rev++) {
+      const text = lines
+        .filter(line => line.revs.has(rev))
+        .map(line => line.data)
+        .join('');
+      expect(text).toBe(textList[rev - 1]);
+    }
+  });
 });
 
 function logFromTextList(textList: string[], {trackDeps} = {trackDeps: false}): LineLog {

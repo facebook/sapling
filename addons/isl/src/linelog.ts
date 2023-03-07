@@ -80,6 +80,11 @@ interface LineInfo {
   deleted: boolean;
 }
 
+interface FlattenLine {
+  revs: Set<Rev>;
+  data: string;
+}
+
 class LineLog {
   // core state
   private code: Inst[];
@@ -210,6 +215,43 @@ class LineLog {
       assert(false, 'bug: code does not end in time');
     }
     return lines;
+  }
+
+  /**
+   * Flatten lines. Each returned line is associated with a set
+   * of `Rev`s, meaning that line is present in those `Rev`s.
+   *
+   * The returned lines can be useful to figure out file contents
+   * after reordering, folding commits. It can also provide a view
+   * similar to `absorb -e FILE` to edit all versions of a file in
+   * a single view.
+   *
+   * Note: This is currently implemented naively as roughly
+   * `O(lines * revs)`. Avoid calling frequently for large
+   * stacks.
+   */
+  public flatten(): FlattenLine[] {
+    this.checkOut(this.maxRev, 0);
+    // Drop the last (empty) line.
+    const len = Math.max(this.lines.length - 1, 0);
+    const lineInfos = this.lines.slice(0, len);
+    const linePcs = lineInfos.map(info => info.pc);
+    const result: FlattenLine[] = lineInfos.map(info => ({
+      revs: new Set<Rev>(),
+      data: info.data,
+    }));
+    for (let rev = 1; rev <= this.maxRev; rev += 1) {
+      this.checkOut(rev);
+      // Pc is used as the "unique" line identifier to detect what
+      // subset of "all lines" exist in the current "rev".
+      const pcSet: Set<Pc> = new Set(this.lines.map(info => info.pc));
+      for (let i = 0; i < linePcs.length; i += 1) {
+        if (pcSet.has(linePcs[i])) {
+          result[i].revs.add(rev);
+        }
+      }
+    }
+    return result;
   }
 
   public checkOut(rev: Rev, start: Rev | null = null): string {
