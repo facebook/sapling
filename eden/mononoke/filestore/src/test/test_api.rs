@@ -23,7 +23,7 @@ use lazy_static::lazy_static;
 use mononoke_types::hash;
 use mononoke_types::typed_hash::BlobstoreKey;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadata;
+use mononoke_types::ContentMetadataV2;
 use mononoke_types::ContentMetadataV2Id;
 use mononoke_types_mocks::contentid::ONES_CTID;
 
@@ -86,20 +86,26 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
-        .await?
-        .map(ContentMetadata::from);
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
 
     println!("res = {:#?}", res);
 
     assert_eq!(
         res,
-        Some(ContentMetadata {
-            total_size: HELLO_WORLD_LENGTH,
+        Some(ContentMetadataV2 {
             content_id,
+            total_size: HELLO_WORLD_LENGTH,
             sha1: *HELLO_WORLD_SHA1,
+            sha256: *HELLO_WORLD_SHA256,
             git_sha1: *HELLO_WORLD_GIT_SHA1,
-            sha256: *HELLO_WORLD_SHA256
+            is_binary: false,
+            is_ascii: true,
+            is_utf8: true,
+            ends_in_newline: false,
+            newline_count: 0,
+            first_line: String::from_utf8(HELLO_WORLD.to_vec()).ok(),
+            is_generated: false,
+            is_partially_generated: false,
         })
     );
 
@@ -772,12 +778,20 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
     let metadata: ContentMetadataV2Id = content_id.clone().into();
 
-    let expected = Some(ContentMetadata {
+    let expected = Some(ContentMetadataV2 {
         total_size: HELLO_WORLD_LENGTH,
         content_id,
         sha1: *HELLO_WORLD_SHA1,
         git_sha1: *HELLO_WORLD_GIT_SHA1,
         sha256: *HELLO_WORLD_SHA256,
+        is_binary: false,
+        is_ascii: true,
+        is_utf8: true,
+        ends_in_newline: false,
+        newline_count: 0,
+        first_line: String::from_utf8(HELLO_WORLD.to_vec()).ok(),
+        is_generated: false,
+        is_partially_generated: false,
     });
 
     let blob = memblob::Memblob::default();
@@ -802,9 +816,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Getting the metadata should cause it to get recomputed
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
-        .await?
-        .map(ContentMetadata::from);
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
     println!("res = {:#?}", res);
     assert_eq!(res, expected);
 
@@ -817,9 +829,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Query the metadata again. It should succeed because it's saved.
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
-        .await?
-        .map(ContentMetadata::from);
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
     println!("res = {:#?}", res);
     assert_eq!(res, expected);
 
@@ -833,9 +843,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id))
-        .await?
-        .map(ContentMetadata::from);
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
     println!("res = {:#?}", res);
     assert_eq!(res, None);
 

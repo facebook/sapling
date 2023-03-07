@@ -392,7 +392,13 @@ pub async fn is_partially_generated(bytes_stream: impl Stream<Item = Bytes>) -> 
 
 #[cfg(test)]
 mod test {
+    use futures::future;
+    use futures::stream;
     use quickcheck::quickcheck;
+    use rand::distributions::Alphanumeric;
+    use rand::distributions::Distribution;
+    use rand::thread_rng;
+    use rand::Rng;
 
     use super::*;
 
@@ -411,6 +417,87 @@ mod test {
             let metadata_from_blob = ContentMetadataV2::from_blob(blob)
                 .expect("blob roundtrips should always be valid");
             metadata == metadata_from_blob
+        }
+    }
+
+    #[tokio::test]
+    async fn basic_is_ascii_test() {
+        let input = "This is a sample ASCII_string@#$()&^/';[]`~*";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(
+            is_ascii(bytes_stream).await,
+            "The input '{}' wasn't ASCII",
+            input
+        )
+    }
+
+    #[tokio::test]
+    async fn negative_is_ascii_test() {
+        let input = "यह एक नमूना गैर-ASCII स्ट्रिंग है";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(
+            !is_ascii(bytes_stream).await,
+            "The input '{}' was ASCII",
+            input
+        )
+    }
+
+    #[tokio::test]
+    async fn single_non_ascii_codepoint_test() {
+        let input = "This is almost an ASCII ह string";
+        let bytes_stream = stream::once(future::ready(Bytes::from(input)));
+        assert!(
+            !is_ascii(bytes_stream).await,
+            "The input '{}' was ASCII",
+            input
+        )
+    }
+
+    #[tokio::test]
+    async fn arbitrary_is_ascii_test() {
+        let bytes = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(1024)
+            .collect::<Bytes>();
+        let bytes_stream = stream::once(future::ready(bytes));
+        assert!(is_ascii(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn arbitrary_stream_is_ascii_test() {
+        let mut rng = thread_rng();
+        let bytes_stream = stream::iter((0..50).map(|_| {
+            let chunk_size: usize = rng.gen_range(20..50);
+            Alphanumeric
+                .sample_iter(&mut rng)
+                .take(chunk_size)
+                .collect::<Bytes>()
+        }));
+        assert!(is_ascii(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn single_string_single_stream_is_ascii_test() {
+        let mut rng = thread_rng();
+        let bytes = Alphanumeric
+            .sample_iter(&mut rng)
+            .take(4096)
+            .collect::<Bytes>();
+        let bytes_stream = stream::iter(bytes.chunks(37).into_iter().map(Bytes::copy_from_slice));
+        assert!(is_ascii(bytes_stream).await);
+    }
+
+    #[tokio::test]
+    async fn single_string_multiple_stream_is_ascii_test() {
+        let mut rng = thread_rng();
+        let bytes = Alphanumeric
+            .sample_iter(&mut rng)
+            .take(4096)
+            .collect::<Bytes>();
+        for chunk in [230, 10, 35, 89, 1000] {
+            let bytes_stream =
+                stream::iter(bytes.chunks(chunk).into_iter().map(Bytes::copy_from_slice));
+            assert!(is_ascii(bytes_stream).await);
         }
     }
 }
