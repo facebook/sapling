@@ -90,6 +90,7 @@ with hgdemandimport.deactivated():
         debugrebuildchangelog,
         debugrunshell,
         debugsendunbundle,
+        debugstack,
         debugstatus,
         debugstrip,
         doctor,

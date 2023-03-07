@@ -132,6 +132,7 @@ Show debug commands if there are no other candidates
   debugexistingcasecollisions
   debugexportmetalog
   debugexportrevlog
+  debugexportstack
   debugextensions
   debugfilerevision
   debugfileset
@@ -458,6 +459,7 @@ Show all commands + options
   debugexistingcasecollisions: rev
   debugexportmetalog: 
   debugexportrevlog: 
+  debugexportstack: rev
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev

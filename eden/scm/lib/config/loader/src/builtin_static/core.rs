@@ -45,4 +45,9 @@ status.unknown=magenta bold underline
 
 [unsafe]
 filtersuspectsymlink=true
+
+[experimental]
+exportstack-max-commit-count=50
+exportstack-max-file-count=200
+exportstack-max-bytes=2M
 "#);
