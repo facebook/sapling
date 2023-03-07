@@ -6,6 +6,7 @@
  */
 
 use std::cmp;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -14,6 +15,7 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bytes::Bytes;
@@ -22,6 +24,9 @@ use changesets::ChangesetsRef;
 use clap::ArgEnum;
 use clap::Parser;
 use context::CoreContext;
+use executor_lib::RepoShardedProcess;
+use executor_lib::RepoShardedProcessExecutor;
+use executor_lib::ShardedProcessExecutor;
 use fbinit::FacebookInit;
 use filestore::hash_bytes;
 use filestore::Alias;
@@ -42,6 +47,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
+use mononoke_app::MononokeReposManager;
 use mononoke_repos::MononokeRepos;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentAlias;
@@ -49,6 +55,7 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mutable_counters::MutableCounters;
 use mutable_counters::MutableCountersRef;
+use once_cell::sync::OnceCell;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
@@ -57,6 +64,8 @@ use slog::info;
 use slog::Logger;
 
 const LIMIT: usize = 1000;
+const SM_SERVICE_SCOPE: &str = "global";
+const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
 #[facet::container]
 pub struct Repo {
@@ -107,6 +116,44 @@ impl AliasType {
     }
 }
 
+/// Struct representing the Alias Verify process.
+pub struct AliasVerifyProcess {
+    app: MononokeApp,
+    repos_mgr: MononokeReposManager<Repo>,
+}
+
+impl AliasVerifyProcess {
+    pub fn new(app: MononokeApp, repos_mgr: MononokeReposManager<Repo>) -> Self {
+        Self { app, repos_mgr }
+    }
+}
+
+#[async_trait]
+impl RepoShardedProcess for AliasVerifyProcess {
+    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.app.repo_logger(repo_name);
+        info!(&logger, "Setting up alias verify for repo {}", repo_name);
+        let args: AliasVerifyArgs = self.app.args()?;
+        let ctx = self.app.new_basic_context();
+        self.repos_mgr
+            .add_repo(repo_name.as_ref())
+            .await
+            .with_context(|| format!("Failure in opening repo {}", repo_name))?;
+        Ok(Arc::new(AliasVerification::new(
+            logger.clone(),
+            repo_name.to_string(),
+            self.repos_mgr.repos().clone(),
+            args.mode,
+            args.alias_type,
+            Arc::new(AtomicBool::new(false)),
+            args.step,
+            args.min_cs_db_id,
+            args.concurrency,
+            ctx,
+        )))
+    }
+}
+
 /// Verify and reload all the alias blobs
 #[derive(Parser)]
 #[clap(about = "Verify and reload all the alias blobs into Mononoke blobstore.")]
@@ -123,19 +170,57 @@ struct AliasVerifyArgs {
     /// Changeset to start verification from. Id from changeset table. Not connected to hash
     #[clap(long, default_value_t = 0)]
     min_cs_db_id: u64,
+    /// Concurrency limit defining how many commits to be processed in parallel
+    #[clap(long, default_value_t = LIMIT)]
+    concurrency: usize,
     /// The repo against which the alias verify command needs to be executed
     #[clap(flatten)]
     repo: RepoArgs,
+    /// The name of ShardManager service to be used when running alias verify in sharded setting.
+    #[clap(long, conflicts_with_all = &["repo-name", "repo-id"])]
+    pub sharded_service_name: Option<String>,
 }
 
+/// Struct representing the Alias Verify process over the context of Repo.
 struct AliasVerification {
     logger: Logger,
     repos: Arc<MononokeRepos<Repo>>,
     repo_name: String,
     mode: Mode,
     alias_type: AliasType,
+    step: u64,
+    min_cs_db_id: u64,
+    concurrency: usize,
+    ctx: CoreContext,
     err_cnt: Arc<AtomicUsize>,
     cs_processed: Arc<AtomicUsize>,
+    cancellation_requested: Arc<AtomicBool>,
+}
+
+#[async_trait]
+impl RepoShardedProcessExecutor for AliasVerification {
+    async fn execute(&self) -> anyhow::Result<()> {
+        info!(
+            self.logger,
+            "Initiating alias verify execution for repo {}", &self.repo_name,
+        );
+
+        self.verify_all().await.with_context(|| {
+            format!(
+                "Error while executing alias verify for repo {}",
+                &self.repo_name
+            )
+        })
+    }
+
+    async fn stop(&self) -> anyhow::Result<()> {
+        info!(
+            self.logger,
+            "Terminating alias verify execution for repo {}", &self.repo_name,
+        );
+        self.cancellation_requested.store(true, Ordering::Relaxed);
+        Ok(())
+    }
 }
 
 impl AliasVerification {
@@ -145,6 +230,11 @@ impl AliasVerification {
         repos: Arc<MononokeRepos<Repo>>,
         mode: Mode,
         alias_type: AliasType,
+        cancellation_requested: Arc<AtomicBool>,
+        step: u64,
+        min_cs_db_id: u64,
+        concurrency: usize,
+        ctx: CoreContext,
     ) -> Self {
         Self {
             logger,
@@ -152,6 +242,11 @@ impl AliasVerification {
             repos,
             mode,
             alias_type,
+            cancellation_requested,
+            step,
+            min_cs_db_id,
+            concurrency,
+            ctx,
             err_cnt: Arc::new(AtomicUsize::new(0)),
             cs_processed: Arc::new(AtomicUsize::new(0)),
         }
@@ -168,16 +263,14 @@ impl AliasVerification {
             })
     }
 
-    async fn get_file_changes_vector(
-        &self,
-        ctx: &CoreContext,
-        bcs_id: ChangesetId,
-    ) -> Result<Vec<FileChange>, Error> {
+    async fn get_file_changes_vector(&self, bcs_id: ChangesetId) -> Result<Vec<FileChange>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
         if cs_cnt % 1000 == 0 {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
-        let bcs = bcs_id.load(ctx, self.repo()?.repo_blobstore()).await?;
+        let bcs = bcs_id
+            .load(&self.ctx, self.repo()?.repo_blobstore())
+            .await?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
             .iter()
@@ -272,11 +365,8 @@ impl AliasVerification {
         }
     }
 
-    pub async fn process_file_content(
-        &self,
-        ctx: &CoreContext,
-        content_id: ContentId,
-    ) -> Result<(), Error> {
+    pub async fn process_file_content(&self, content_id: ContentId) -> Result<(), Error> {
+        let ctx = &self.ctx;
         let alias = filestore::fetch_concat(self.repo()?.repo_blobstore(), ctx, content_id)
             .map_ok(FileBytes)
             .map_ok(|content| self.alias_type.get_alias(&content.into_bytes()))
@@ -298,7 +388,10 @@ impl AliasVerification {
         Ok(format!("{}_alias_backfill_counter", self.repo_name))
     }
 
-    async fn get_bounded(&self, ctx: &CoreContext, min_id: u64, max_id: u64) -> Result<(), Error> {
+    async fn get_bounded(&self, min_id: u64, max_id: u64) -> Result<(), Error> {
+        if self.cancellation_requested.load(Ordering::Relaxed) {
+            return Ok(());
+        }
         info!(
             self.logger,
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
@@ -306,22 +399,22 @@ impl AliasVerification {
         let repo = self.repo()?;
         let bcs_ids = repo
             .changesets()
-            .list_enumeration_range(ctx, min_id, max_id, None, true);
+            .list_enumeration_range(&self.ctx, min_id, max_id, None, true);
         let count = AtomicUsize::new(0);
         let rcount = &count;
-        bcs_ids
+        let file_changes_stream = bcs_ids
             .and_then(move |(bcs_id, _)| async move {
-                let file_changes_vec = self.get_file_changes_vector(ctx, bcs_id).await?;
-                Ok(stream::iter(file_changes_vec).map(Ok))
+                let file_changes_vec = self.get_file_changes_vector(bcs_id).await?;
+                Ok(stream::iter(file_changes_vec).map(anyhow::Ok))
             })
             .try_flatten()
-            .try_for_each_concurrent(LIMIT, move |file_change| async move {
+            .boxed();
+
+        file_changes_stream
+            .try_for_each_concurrent(self.concurrency, move |file_change| async move {
                 rcount.fetch_add(1, Ordering::Relaxed);
                 match file_change.simplify() {
-                    Some(tc) => {
-                        self.process_file_content(ctx, tc.content_id().clone())
-                            .await
-                    }
+                    Some(tc) => self.process_file_content(tc.content_id().clone()).await,
                     None => Ok(()),
                 }
             })
@@ -340,7 +433,7 @@ impl AliasVerification {
             );
             let counter_name = self.counter_name()?;
             repo.mutable_counters()
-                .set_counter(ctx, &counter_name, max_id as i64, None)
+                .set_counter(&self.ctx, &counter_name, max_id as i64, None)
                 .await
                 .with_context(|| {
                     format!(
@@ -353,13 +446,9 @@ impl AliasVerification {
         Ok(())
     }
 
-    pub async fn verify_all(
-        &self,
-        ctx: &CoreContext,
-        step: u64,
-        min_cs_db_id: u64,
-    ) -> Result<(), Error> {
-        let repo = self.repo()?;
+    pub async fn verify_all(&self) -> Result<(), Error> {
+        let (ctx, step, min_cs_db_id, repo) =
+            (&self.ctx, self.step, self.min_cs_db_id, self.repo()?);
         let (min_id, max_id) = repo
             .changesets()
             .enumeration_bounds(ctx, true, vec![])
@@ -393,7 +482,7 @@ impl AliasVerification {
         }
         stream::iter(bounds)
             .map(Ok)
-            .try_for_each(move |(min_val, max_val)| self.get_bounded(ctx, min_val, max_val))
+            .try_for_each(move |(min_val, max_val)| self.get_bounded(min_val, max_val))
             .await?;
         self.print_report(false);
         Ok(())
@@ -402,26 +491,34 @@ impl AliasVerification {
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: AliasVerifyArgs = app.args()?;
-    let logger = app.logger();
-    let ctx = app.new_basic_context();
-    let mode = args.mode;
-    let alias_type = args.alias_type;
-    let step = args.step;
-    let min_cs_db_id = args.min_cs_db_id;
-    let (repo_name, _) = app.repo_config(args.repo.as_repo_arg())?;
-    let repo_manager = app
-        .open_named_managed_repos(Some(repo_name.to_string()), None)
-        .await
-        .with_context(|| format!("Failure in opening repo {}", repo_name))?;
-    AliasVerification::new(
-        logger.clone(),
-        repo_name,
-        repo_manager.repos().clone(),
-        mode,
-        alias_type,
-    )
-    .verify_all(&ctx, step, min_cs_db_id)
-    .await
+    // TODO(rajshar): Replace this None with ShardedService as AliasVerify
+    let repo_mgr = app.open_managed_repos(None).await?;
+    let process = AliasVerifyProcess::new(app, repo_mgr);
+    match args.sharded_service_name {
+        None => {
+            let (repo_name, _) = process.app.repo_config(args.repo.as_repo_arg())?;
+            let alias_verify = process.setup(repo_name.as_ref()).await?;
+            alias_verify.execute().await
+        }
+        Some(name) => {
+            let logger = process.app.logger().clone();
+            // The service name needs to be 'static to satisfy SM contract
+            static SM_SERVICE_NAME: OnceCell<String> = OnceCell::new();
+            let mut executor = ShardedProcessExecutor::new(
+                process.app.fb,
+                process.app.runtime().clone(),
+                &logger,
+                SM_SERVICE_NAME.get_or_init(|| name),
+                SM_SERVICE_SCOPE,
+                SM_CLEANUP_TIMEOUT_SECS,
+                Arc::new(process),
+                true, // enable shard (repo) level healing
+            )?;
+            executor
+                .block_and_execute(&logger, Arc::new(AtomicBool::new(false)))
+                .await
+        }
+    }
 }
 
 #[fbinit::main]
