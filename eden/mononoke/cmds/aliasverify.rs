@@ -11,6 +11,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -60,7 +61,9 @@ use once_cell::sync::OnceCell;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
+use sharding_lib_ext::split_repo_names;
 use slog::debug;
+use slog::error;
 use slog::info;
 use slog::Logger;
 
@@ -94,6 +97,12 @@ enum Mode {
     Backfill,
 }
 
+#[derive(Debug)]
+enum RunStatus {
+    InProgress,
+    Finished,
+}
+
 #[derive(Debug, Clone, Copy, ArgEnum)]
 enum AliasType {
     Sha256,
@@ -120,21 +129,69 @@ impl AliasType {
 /// Struct representing the Alias Verify process.
 pub struct AliasVerifyProcess {
     app: MononokeApp,
+    args: Arc<AliasVerifyArgs>,
     repos_mgr: MononokeReposManager<Repo>,
 }
 
 impl AliasVerifyProcess {
-    pub fn new(app: MononokeApp, repos_mgr: MononokeReposManager<Repo>) -> Self {
-        Self { app, repos_mgr }
+    pub fn new(app: MononokeApp, repos_mgr: MononokeReposManager<Repo>) -> Result<Self> {
+        let args: Arc<AliasVerifyArgs> = Arc::new(app.args()?);
+        Ok(Self {
+            app,
+            args,
+            repos_mgr,
+        })
     }
 }
 
 #[async_trait]
 impl RepoShardedProcess for AliasVerifyProcess {
-    async fn setup(&self, repo_name: &str) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.repo_logger(repo_name);
+    async fn setup(
+        &self,
+        repo_name_with_multiplier: &str,
+    ) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
+        let logger = self.app.repo_logger(repo_name_with_multiplier);
+        let mut repo_name_parts = split_repo_names(repo_name_with_multiplier).into_iter();
+        let mut repo_name = repo_name_with_multiplier;
+        let (mut start, mut total) = (0u64, 1u64);
+        if let Some(repo) = repo_name_parts.next() {
+            repo_name = repo;
+        }
+        if let Some(multiplier_str) = repo_name_parts.next() {
+            let mut parts = multiplier_str.split('-');
+            match (parts.next(), parts.next()) {
+                (Some(start_multiplier), Some(total_multiplier)) => {
+                    start = start_multiplier.parse().with_context(|| {
+                        format!("Invalid start multiplier {}", start_multiplier)
+                    })?;
+                    total = total_multiplier.parse().with_context(|| {
+                        format!("Invalid total multiplier {}", total_multiplier)
+                    })?;
+                }
+                _ => {
+                    error!(
+                        logger,
+                        "Multiplier provided in incorrect format: {}", multiplier_str
+                    );
+                    bail!(
+                        "Multiplier provided in incorrect format: {}",
+                        multiplier_str
+                    )
+                }
+            }
+        }
+        if repo_name_parts.next().is_some() {
+            error!(
+                logger,
+                "Repo name with multiplier provided in incorrect format: {}",
+                repo_name_with_multiplier
+            );
+            bail!(
+                "Repo name with multiplier provided in incorrect format: {}",
+                repo_name_with_multiplier
+            )
+        }
         info!(&logger, "Setting up alias verify for repo {}", repo_name);
-        let args: AliasVerifyArgs = self.app.args()?;
         let ctx = self.app.new_basic_context();
         self.repos_mgr
             .add_repo(repo_name.as_ref())
@@ -144,13 +201,11 @@ impl RepoShardedProcess for AliasVerifyProcess {
             logger.clone(),
             repo_name.to_string(),
             self.repos_mgr.repos().clone(),
-            args.mode,
-            args.alias_type,
+            self.args.clone(),
             Arc::new(AtomicBool::new(false)),
-            args.step,
-            args.min_cs_db_id,
-            args.concurrency,
             ctx,
+            start,
+            total,
         )))
     }
 }
@@ -187,15 +242,13 @@ struct AliasVerification {
     logger: Logger,
     repos: Arc<MononokeRepos<Repo>>,
     repo_name: String,
-    mode: Mode,
-    alias_type: AliasType,
-    step: u64,
-    min_cs_db_id: u64,
-    concurrency: usize,
+    args: Arc<AliasVerifyArgs>,
     ctx: CoreContext,
     err_cnt: Arc<AtomicUsize>,
     cs_processed: Arc<AtomicUsize>,
     cancellation_requested: Arc<AtomicBool>,
+    start: u64,
+    total: u64,
 }
 
 #[async_trait]
@@ -206,12 +259,19 @@ impl RepoShardedProcessExecutor for AliasVerification {
             "Initiating alias verify execution for repo {}", &self.repo_name,
         );
 
-        self.verify_all().await.with_context(|| {
-            format!(
-                "Error while executing alias verify for repo {}",
-                &self.repo_name
-            )
-        })
+        let val = self.verify_all().await;
+        match val {
+            Err(ref e) => {
+                error!(
+                    self.logger,
+                    "Alias Verify Failure in repo {}. Terminating execution. Cause: {:?}",
+                    &self.repo_name,
+                    e
+                );
+                val
+            }
+            v => v,
+        }
     }
 
     async fn stop(&self) -> anyhow::Result<()> {
@@ -229,25 +289,21 @@ impl AliasVerification {
         logger: Logger,
         repo_name: String,
         repos: Arc<MononokeRepos<Repo>>,
-        mode: Mode,
-        alias_type: AliasType,
+        args: Arc<AliasVerifyArgs>,
         cancellation_requested: Arc<AtomicBool>,
-        step: u64,
-        min_cs_db_id: u64,
-        concurrency: usize,
         ctx: CoreContext,
+        start: u64,
+        total: u64,
     ) -> Self {
         Self {
             logger,
             repo_name,
             repos,
-            mode,
-            alias_type,
+            args,
             cancellation_requested,
-            step,
-            min_cs_db_id,
-            concurrency,
             ctx,
+            start,
+            total,
             err_cnt: Arc::new(AtomicUsize::new(0)),
             cs_processed: Arc::new(AtomicUsize::new(0)),
         }
@@ -271,7 +327,13 @@ impl AliasVerification {
         }
         let bcs = bcs_id
             .load(&self.ctx, self.repo()?.repo_blobstore())
-            .await?;
+            .await
+            .with_context(|| {
+                format!(
+                    "Failure in fetching changeset for changeset ID {:?}",
+                    bcs_id
+                )
+            })?;
         let file_changes: Vec<_> = bcs
             .file_changes_map()
             .iter()
@@ -310,15 +372,16 @@ impl AliasVerification {
             self.logger,
             "Missing alias blob: alias {}, content_id {:?}", alias, content_id
         );
-        match self.mode {
+        match self.args.mode {
             Mode::Verify => Ok(()),
             Mode::Generate | Mode::Backfill => {
                 let blobstore = self.repo()?.repo_blobstore().clone();
                 let maybe_meta =
                     filestore::get_metadata(&blobstore, ctx, &FetchKey::Canonical(content_id))
                         .await?;
-                let meta =
-                    maybe_meta.ok_or_else(|| format_err!("Missing content {:?}", content_id))?;
+                let meta = maybe_meta.ok_or_else(|| {
+                    format_err!("Missing content {:?} for alias {:?}", content_id, alias)
+                })?;
                 let is_valid_match = match *alias {
                     Alias::Sha256(hash_val) => meta.sha256 == hash_val,
                     Alias::GitSha1(hash_val) => meta.git_sha1.sha1() == hash_val,
@@ -370,13 +433,19 @@ impl AliasVerification {
         let ctx = &self.ctx;
         let alias = filestore::fetch_concat(self.repo()?.repo_blobstore(), ctx, content_id)
             .map_ok(FileBytes)
-            .map_ok(|content| self.alias_type.get_alias(&content.into_bytes()))
-            .await?;
+            .map_ok(|content| self.args.alias_type.get_alias(&content.into_bytes()))
+            .await
+            .with_context(|| {
+                format!("Failure in fetching content at content ID {:?}", content_id)
+            })?;
         self.process_alias(ctx, &alias, content_id).await
     }
 
-    fn print_report(&self, partial: bool) {
-        let resolution = if partial { "continues" } else { "finished" };
+    fn print_report(&self, status: RunStatus) {
+        let resolution = match status {
+            RunStatus::InProgress => "continues",
+            RunStatus::Finished => "finished",
+        };
         info!(
             self.logger,
             "Alias Verification {}: {:?} errors found",
@@ -385,8 +454,76 @@ impl AliasVerification {
         );
     }
 
-    fn counter_name(&self) -> Result<String> {
-        Ok(format!("{}_alias_backfill_counter", self.repo_name))
+    fn counter_name(&self) -> String {
+        let counter_prefix = if self.start == 0 {
+            self.repo_name.to_string()
+        } else {
+            format!("{}_{}_{}", self.repo_name, self.start, self.total)
+        };
+        format!("{}_alias_backfill_counter", counter_prefix)
+    }
+
+    async fn update_overall_progress(&self, completed: usize, max_id: u64) -> Result<()> {
+        let repo = self.repo()?;
+        info!(self.logger, "Processed {} changesets", completed);
+        if let Mode::Backfill = self.args.mode {
+            info!(
+                self.logger,
+                "Completed processing till changeset ID {:?}", max_id
+            );
+            let counter_name = self.counter_name();
+            repo.mutable_counters()
+                .set_counter(&self.ctx, &counter_name, max_id as i64, None)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to set {} for {} to {}",
+                        counter_name, self.repo_name, max_id
+                    )
+                })?;
+            let mut updated = false;
+            if self.args.sharded_service_name.is_some() && completed > 0 {
+                // Counter to keep track of overall number of commits for the repo.
+                let overall_counter_name =
+                    format!("overall_{}_alias_backfill_counter", self.repo_name);
+                while !updated {
+                    let maybe_counter_val = repo
+                        .mutable_counters()
+                        .get_counter(&self.ctx, &overall_counter_name)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Error while getting mutable counter {}",
+                                overall_counter_name
+                            )
+                        })?;
+                    let new_counter_val =
+                        maybe_counter_val.clone().unwrap_or(0) + (completed as i64);
+                    updated = repo
+                        .mutable_counters()
+                        .set_counter(
+                            &self.ctx,
+                            &overall_counter_name,
+                            new_counter_val,
+                            maybe_counter_val,
+                        )
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "Failed to set {} for {} to {}",
+                                overall_counter_name, self.repo_name, new_counter_val
+                            )
+                        })?;
+                    info!(
+                        self.logger,
+                        "Updated total commits processed for {} to {}",
+                        self.repo_name,
+                        new_counter_val
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn get_bounded(&self, min_id: u64, max_id: u64) -> Result<(), Error> {
@@ -412,7 +549,7 @@ impl AliasVerification {
             .boxed();
 
         file_changes_stream
-            .try_for_each_concurrent(self.concurrency, move |file_change| async move {
+            .try_for_each_concurrent(self.args.concurrency, move |file_change| async move {
                 rcount.fetch_add(1, Ordering::Relaxed);
                 match file_change.simplify() {
                     Some(tc) => self.process_file_content(tc.content_id().clone()).await,
@@ -420,57 +557,59 @@ impl AliasVerification {
                 }
             })
             .await?;
-        info!(
-            self.logger,
-            "Processed {} changesets",
-            rcount.load(Ordering::Relaxed)
-        );
-
-        if let Mode::Backfill = self.mode {
-            info!(
-                self.logger,
-                "Completed processing till changeset ID {}",
-                max_id.to_string()
-            );
-            let counter_name = self.counter_name()?;
-            repo.mutable_counters()
-                .set_counter(&self.ctx, &counter_name, max_id as i64, None)
-                .await
-                .with_context(|| {
-                    format!(
-                        "Failed to set {} for {} to {}",
-                        counter_name, self.repo_name, max_id
-                    )
-                })?;
-        }
-        self.print_report(true);
+        self.update_overall_progress(rcount.load(Ordering::Relaxed), max_id)
+            .await?;
+        self.print_report(RunStatus::InProgress);
         Ok(())
     }
 
+    async fn start_and_end_id(&self, min_id: u64, max_id: u64) -> Result<(u64, u64)> {
+        // No chunking if no start or end provided.
+        if self.start == 0 {
+            return Ok((self.args.min_cs_db_id, max_id));
+        }
+        let counter_name = self.counter_name();
+        match self.args.mode {
+            // Chunking only in backfilling mode
+            Mode::Backfill => {
+                let counter_val = self
+                    .repo()?
+                    .mutable_counters()
+                    .get_counter(&self.ctx, &counter_name)
+                    .await
+                    .with_context(|| {
+                        format!("Error while getting mutable counter {}", counter_name)
+                    })?;
+                let factor = (max_id - min_id) / self.total;
+                let prev_chunk_id = std::cmp::max(self.start, 1) - 1;
+                let default_start_point = (min_id + factor * prev_chunk_id) as i64;
+                // If the mutable counter "counter_val" doesn't have a value, then use the
+                // default_start_point as the starting point of the chunk. If the counter has
+                // a value, then use that unless the value is less than default_start_point.
+                let start_point = counter_val.map_or(default_start_point, |counter| {
+                    std::cmp::max(counter, default_start_point)
+                }) as u64;
+                let end_point = min_id + factor * self.start;
+                Ok((start_point, end_point))
+            }
+            _ => Ok((self.args.min_cs_db_id, max_id)),
+        }
+    }
+
     pub async fn verify_all(&self) -> Result<(), Error> {
-        let (ctx, step, min_cs_db_id, repo) =
-            (&self.ctx, self.step, self.min_cs_db_id, self.repo()?);
+        let (ctx, step, repo) = (&self.ctx, self.args.step, self.repo()?);
         let (min_id, max_id) = repo
             .changesets()
             .enumeration_bounds(ctx, true, vec![])
             .await?
             .unwrap();
-        let counter_name = self.counter_name()?;
-        let init_changeset_id = match self.mode {
-            Mode::Backfill => repo
-                .mutable_counters()
-                .get_counter(ctx, &counter_name)
-                .await
-                .with_context(|| format!("Error while getting mutable counter {}", counter_name))?
-                .unwrap_or(0) as u64,
-            _ => min_cs_db_id,
-        };
+        let (init_changeset_id, max_id) = self.start_and_end_id(min_id, max_id).await?;
         let mut bounds = vec![];
         let mut cur_id = cmp::max(min_id, init_changeset_id);
         info!(
             self.logger,
             "Initiating aliasverify in {:?} mode with input init changesetid {} and actual init changesetid {}. Max changesetid {}",
-            self.mode,
+            self.args.mode,
             init_changeset_id,
             cur_id,
             max_id,
@@ -485,7 +624,19 @@ impl AliasVerification {
             .map(Ok)
             .try_for_each(move |(min_val, max_val)| self.get_bounded(min_val, max_val))
             .await?;
-        self.print_report(false);
+        self.print_report(RunStatus::Finished);
+        if self.args.sharded_service_name.is_some() {
+            let finished_counter_name = format!("finished_{}", self.counter_name());
+            repo.mutable_counters()
+                .set_counter(&self.ctx, &finished_counter_name, 0, None)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to set {} for {}",
+                        finished_counter_name, self.repo_name
+                    )
+                })?;
+        }
         Ok(())
     }
 }
@@ -495,7 +646,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let repo_mgr = app
         .open_managed_repos(Some(ShardedService::AliasVerify))
         .await?;
-    let process = AliasVerifyProcess::new(app, repo_mgr);
+    let process = AliasVerifyProcess::new(app, repo_mgr)?;
     match args.sharded_service_name {
         None => {
             let (repo_name, _) = process.app.repo_config(args.repo.as_repo_arg())?;
