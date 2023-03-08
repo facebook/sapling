@@ -52,6 +52,11 @@ class eagerfilelog(object):
 
     def cmp(self, node, text):
         """returns True if blob hash is different from text"""
+        # Report "changed" when node is nullid. This forces repo._filecommit to
+        # write a new revision to avoid incorrectly using the nullid in
+        # manifest.
+        if node == nullid:
+            return True
         # PERF: This does use a fast path avoid read() - a fast path requires
         # fast path reading p1, p2, which does not exist.
         return self.read(node) != text

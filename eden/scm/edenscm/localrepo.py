@@ -2765,6 +2765,7 @@ class localrepository(object):
                             filenode = self._filecommit(
                                 fctx, m1, m2, linkrev, trp, changed
                             )
+                        assert filenode != nullid, "manifest should not have nullid"
                         m[f] = filenode
                         m.setflag(f, fctx.flags())
                     except OSError:
