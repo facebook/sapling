@@ -55,7 +55,15 @@ pub async fn get_metadata<B: Blobstore>(
             // The backfilling for ContentMetadataV2 has happened in different stages.
             // If any of the later fields are missing, we get invalid thrift error. In
             // that case we need to rebuild the metadata, so do not return.
-            Some(ErrorKind::InvalidThrift(..)) => (),
+            Some(ErrorKind::InvalidThrift(..)) => {
+                let msg = format!(
+                    "Invalid ContentMetadata format exists in blobstore. Error: {:?}",
+                    e.to_string()
+                );
+                ctx.scuba()
+                    .clone()
+                    .log_with_msg("ContentMetadataV2 backfill repair", msg);
+            }
             _ => return Err(e),
         }
     }
