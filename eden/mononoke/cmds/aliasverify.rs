@@ -43,8 +43,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mercurial_types::FileBytes;
 use metaconfig_types::ShardedService;
-use mononoke_app::args::AsRepoArg;
-use mononoke_app::args::RepoArgs;
+use mononoke_app::args::OptRepoArgs;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
@@ -231,7 +230,7 @@ struct AliasVerifyArgs {
     concurrency: usize,
     /// The repo against which the alias verify command needs to be executed
     #[clap(flatten)]
-    repo: RepoArgs,
+    repo: OptRepoArgs,
     /// The name of ShardManager service to be used when running alias verify in sharded setting.
     #[clap(long, conflicts_with_all = &["repo-name", "repo-id"])]
     pub sharded_service_name: Option<String>,
@@ -649,7 +648,13 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let process = AliasVerifyProcess::new(app, repo_mgr)?;
     match args.sharded_service_name {
         None => {
-            let (repo_name, _) = process.app.repo_config(args.repo.as_repo_arg())?;
+            let maybe_repo_arg = args.repo.as_repo_arg();
+            let (repo_name, _) = match maybe_repo_arg {
+                Some(ref repo_arg) => process.app.repo_config(repo_arg)?,
+                None => bail!(
+                    "Repo name or ID not provided. Either sharded-service-name or repo id/name should be provided."
+                ),
+            };
             let alias_verify = process.setup(repo_name.as_ref()).await?;
             alias_verify.execute().await
         }
