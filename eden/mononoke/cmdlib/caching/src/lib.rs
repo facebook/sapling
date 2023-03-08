@@ -37,7 +37,8 @@ pub fn init_cachelib(
     }
     #[cfg(fbcode_build)]
     {
-        facebook::init_cachelib_from_settings(fb, settings)
+        let enable_cacheadmin = !args.cachelib_disable_cacheadmin;
+        facebook::init_cachelib_from_settings(fb, settings, enable_cacheadmin)
             .expect("cachelib initialize should always succeed");
 
         if args.blobstore_cachelib_only {

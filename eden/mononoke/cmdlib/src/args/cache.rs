@@ -28,6 +28,7 @@ const MIN_PROCESS_SIZE: &str = "min-process-size";
 const SKIP_CACHING: &str = "skip-caching";
 const CACHELIB_ONLY_BLOBSTORE_OLD: &str = "cachelib-only-blobstore";
 const CACHELIB_ONLY_BLOBSTORE_NEW: &str = "blobstore-cachelib-only";
+const CACHELIB_DISABLE_CACHEADMIN: &str = "cachelib-disable-cacheadmin";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
 const CACHELIB_REBALANCING_USE_LRU: &str = "cachelib-rebalancing-use-lru";
 const CACHELIB_REBALANCING_INTERVAL: &str = "cachelib-rebalancing-interval-secs";
@@ -141,6 +142,11 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
             .takes_value(true)
             .value_name("SIZE")
             .help(&MIN_PROCESS_SIZE_HELP),
+    )
+    .arg(
+        Arg::with_name(CACHELIB_DISABLE_CACHEADMIN)
+            .long(CACHELIB_DISABLE_CACHEADMIN)
+            .help("Disable cacheadmin for cachelib"),
     )
     .arg(
         Arg::with_name(CACHELIB_REBALANCING_USE_LRU)
@@ -300,7 +306,13 @@ pub fn parse_and_init_cachelib(
             }
             #[cfg(fbcode_build)]
             {
-                cmdlib_caching::facebook::init_cachelib_from_settings(fb, settings).unwrap();
+                let enable_cacheadmin = !matches.is_present(CACHELIB_DISABLE_CACHEADMIN);
+                cmdlib_caching::facebook::init_cachelib_from_settings(
+                    fb,
+                    settings,
+                    enable_cacheadmin,
+                )
+                .unwrap();
             }
         }
         Caching::Disabled => {

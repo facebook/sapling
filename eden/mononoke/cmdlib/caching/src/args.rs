@@ -42,6 +42,10 @@ pub struct CachelibArgs {
     )]
     pub blobstore_cachelib_only: bool,
 
+    #[clap(long)]
+    /// Disable cacheadmin for cachelib
+    pub cachelib_disable_cacheadmin: bool,
+
     /// Number of shards to control concurrent access to a blobstore
     /// behind cachelib.
     #[clap(long, default_value = "0")]
