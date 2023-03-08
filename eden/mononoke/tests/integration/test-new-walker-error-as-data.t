@@ -21,7 +21,7 @@ Base case, check can walk fine
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types * (glob)
   Walking node types * (glob)
-  Seen,Loaded: 40,40
+  Seen,Loaded: 40,40, repo: repo
   Bytes/s,* (glob)
   Walked* (glob)
 
@@ -51,7 +51,7 @@ Check counts with error-as-data-node-type
   $ mononoke_walker --scuba-dataset file://scuba.json -l loaded scrub -q --error-as-data-node-type AliasContentMapping -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types []
   1 Could not step to
-  1 Seen,Loaded: 40,39
+  1 Seen,Loaded: 40,39, repo: repo
 
 Check scuba data
   $ wc -l < scuba.json
@@ -66,10 +66,11 @@ Check error-as-data-edge-type, should get an error on FileContentMetadataToGitSh
   
   Caused by:
       alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c is missing
+  Could not step to OutgoingEdge { label: FileContentMetadataToSha1Alias, target: AliasContentMapping(AliasKey(Sha1(Sha1(32096c2e0eff33d844ee6d675407ace18289357d)))), path: None }, due to Other(*), via Some(EmptyRoute), repo: repo (glob) (?)
   Error: Execution failed
 
 Check error-as-data-edge-type, should get no errors as FileContentMetadataToGitSha1Alias has its errors converted to data
   $ mononoke_walker -l loaded scrub -q --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataToGitSha1Alias -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types [FileContentMetadataToGitSha1Alias]
   1 Could not step to
-  1 Seen,Loaded: 40,39
+  1 Seen,Loaded: 40,39, repo: repo

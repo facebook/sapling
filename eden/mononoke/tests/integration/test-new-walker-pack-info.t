@@ -26,7 +26,7 @@ setup configuration with some compressable files
 
 Run a scrub with the pack logging enabled
   $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -b master_bookmark -a all --pack-log-scuba-file pack-info.json 2>&1 | strip_glog
-  Seen,Loaded: 7,7
+  Seen,Loaded: 7,7, repo: repo
 
 Check logged pack info. Commit time is forced to zero in tests, hence mtime is 0. Expect compressed sizes and no pack_key yet
   $ jq -r '.int * .normal | [ .repo, .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .ctime] | @csv' < pack-info.json | sort | uniq
@@ -42,8 +42,8 @@ Now pack the blobs
 
 Run a scrub again now the storage is packed
   $ mononoke_walker -l loaded scrub -q -I deep -i bonsai -i FileContent -p Changeset --checkpoint-name=bonsai_packed --checkpoint-path=test_sqlite -a all --pack-log-scuba-file pack-info-packed.json 2>&1 | strip_glog
-  Seen,Loaded: 6,6
-  Deferred: 0
+  Seen,Loaded: 6,6, repo: repo
+  Deferred: 0, repo: repo
 
 Check logged pack info now the store is packed. Expecting multiple in same pack key
   $ jq -r '.int * .normal | [ .chunk_num, .blobstore_key, .node_type, .node_fingerprint, .similarity_key, .mtime, .uncompressed_size, .unique_compressed_size, .pack_key, .relevant_uncompressed_size, .relevant_compressed_size, .ctime, .checkpoint_name] | @csv' < pack-info-packed.json | sort | uniq

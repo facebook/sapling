@@ -159,11 +159,6 @@ async fn setup_validate(
         check_types,
         common_args,
     } = args;
-    let repo_name = repos.repo_name.clone().pop();
-    let logger = match repo_name {
-        Some(repo_name) => app.repo_logger(&repo_name),
-        None => app.logger().clone(),
-    };
     let job_params = setup_common(
         VALIDATE,
         app,
@@ -171,7 +166,6 @@ async fn setup_validate(
         common_args,
         None, // blobstore sampler
         None, // blobstore component sampler
-        &logger,
     )
     .await?;
 

@@ -170,11 +170,6 @@ async fn setup_corpus(
     let sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
         output_dir.clone(),
     ));
-    let repo_name = repos.repo_name.clone().pop();
-    let logger = match repo_name {
-        Some(repo_name) => app.repo_logger(&repo_name),
-        None => app.logger().clone(),
-    };
     let job_params = setup_common(
         CORPUS,
         app,
@@ -182,7 +177,6 @@ async fn setup_corpus(
         common_args,
         Some(sampler.clone()), // blobstore sampler
         None,                  // blobstore component sampler
-        &logger,
     )
     .await?;
 

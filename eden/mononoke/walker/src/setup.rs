@@ -73,8 +73,8 @@ pub async fn setup_common<'a>(
     common_args: &WalkerCommonArgs,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
-    logger: &Logger,
 ) -> Result<JobParams, Error> {
+    let logger = app.logger();
     let mut scuba_builder = app.environment().scuba_sample_builder.clone();
     let walker_type = app.args::<WalkerArgs>()?.walker_type;
     scuba_builder.add(WALK_TYPE, walk_stats_key);
@@ -406,11 +406,7 @@ async fn setup_repo<'a>(
     progress_options: ProgressOptions,
     common_config: CommonConfig,
 ) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
-    let logger = if repo_count > 1 {
-        logger.new(o!("repo" => resolved.name.clone()))
-    } else {
-        logger.clone()
-    };
+    let logger = logger.new(o!("repo" => resolved.name.clone()));
 
     let scheduled_max = scheduled_max / repo_count;
     scuba_builder.add(REPO, resolved.name.clone());

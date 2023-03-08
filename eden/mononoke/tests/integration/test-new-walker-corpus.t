@@ -45,13 +45,13 @@ Check the corpus dumped to disk agrees with the walk stats
 Repeat but using the sample-offset to slice.  Offset zero will tend to be larger as root paths sample as zero. 2000+475+611=3086
   $ for i in {0..2}; do mkdir -p slice/$i; echo slice $i; mononoke_walker -L graph corpus -q -b master_bookmark -I deep -i default -i derived_fsnodes --output-dir=slice/$i --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
   slice 0
-  Seen,Loaded: 46,46
+  Seen,Loaded: 46,46, repo: repo
   * Run */s,*/s,2*,17,*s; * (glob)
   slice 1
-  Seen,Loaded: 46,46
+  Seen,Loaded: 46,46, repo: repo
   * Run */s,*/s,5*,9,*s; * (glob)
   slice 2
-  Seen,Loaded: 46,46
+  Seen,Loaded: 46,46, repo: repo
   * Run */s,*/s,6*,10,*s; * (glob)
 
 See the breakdown

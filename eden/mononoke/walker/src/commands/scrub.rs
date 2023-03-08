@@ -170,11 +170,6 @@ async fn setup_scrub(
     args: &CommandArgs,
 ) -> Result<(JobParams, ScrubCommand), Error> {
     let component_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
-    let repo_name = repos.repo_name.clone().pop();
-    let logger = match repo_name {
-        Some(repo_name) => app.repo_logger(&repo_name),
-        None => app.logger().clone(),
-    };
     let job_params = setup_common(
         SCRUB,
         app,
@@ -182,7 +177,6 @@ async fn setup_scrub(
         &args.common_args,
         None,
         Some(component_sampler.clone()),
-        &logger,
     )
     .await?;
 
