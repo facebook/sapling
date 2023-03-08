@@ -20,7 +20,7 @@ use futures_lazy_shared::LazyShared;
 /// A file's ID is its content id.
 pub use mononoke_types::ContentId as FileId;
 /// Metadata about a file.
-pub use mononoke_types::ContentMetadataV2 as FileMetadata;
+pub use mononoke_types::ContentMetadata as FileMetadata;
 /// The type of a file.
 pub use mononoke_types::FileType;
 use repo_blobstore::RepoBlobstoreRef;
@@ -86,7 +86,7 @@ impl FileContext {
             .map(|metadata| Self {
                 repo,
                 fetch_key,
-                metadata: LazyShared::new_ready(Ok(metadata)),
+                metadata: LazyShared::new_ready(Ok(FileMetadata::from(metadata))),
             });
         Ok(file)
     }
@@ -117,7 +117,9 @@ impl FileContext {
                         .await
                         .map_err(MononokeError::from)
                         .and_then(|metadata| {
-                            metadata.ok_or_else(|| content_not_found_error(&fetch_key))
+                            metadata
+                                .map(FileMetadata::from)
+                                .ok_or_else(|| content_not_found_error(&fetch_key))
                         })
                 }
             })

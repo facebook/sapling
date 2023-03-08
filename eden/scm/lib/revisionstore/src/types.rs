@@ -7,7 +7,6 @@
 
 use std::io::Write;
 
-use edenapi_types::Blake3;
 use edenapi_types::ContentId;
 use edenapi_types::Sha1;
 use minibytes::Bytes;
@@ -86,21 +85,6 @@ impl ContentHash {
 
         let bytes: [u8; Sha1::len()] = hash.finalize().into();
         Sha1::from(bytes)
-    }
-
-    pub(crate) fn seeded_blake3(data: &Bytes) -> Blake3 {
-        use blake3::Hasher;
-        #[cfg(fbcode_build)]
-        let key = blake3_constant::BLAKE3_HASH_KEY.as_bytes();
-        #[cfg(not(fbcode_build))]
-        let key = "20220728-2357111317192329313741#".as_bytes();
-
-        let mut ret = [0; blake3::KEY_LEN];
-        ret.copy_from_slice(key);
-        let mut hasher = Hasher::new_keyed(&ret);
-        hasher.update(data.as_ref());
-        let hashed_bytes: [u8; Blake3::len()] = hasher.finalize().into();
-        Blake3::from(hashed_bytes)
     }
 
     pub fn unwrap_sha256(self) -> Sha256 {

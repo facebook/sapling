@@ -241,7 +241,6 @@ async fn fetch_file(
             content_id: content_metadata.content_id.into(),
             sha1: content_metadata.sha1.into(),
             sha256: content_metadata.sha256.into(),
-            seeded_blake3: content_metadata.seeded_blake3.into(),
         });
     }
 

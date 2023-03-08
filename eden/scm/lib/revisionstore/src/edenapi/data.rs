@@ -199,7 +199,6 @@ impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
 mod tests {
     use std::str::FromStr;
 
-    use edenapi_types::Blake3;
     use edenapi_types::ContentId;
     use edenapi_types::Sha1;
     use maplit::hashmap;
@@ -375,9 +374,6 @@ mod tests {
             content_sha1: Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?,
             content_sha256: Sha256::from_str(
                 "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-            )?,
-            content_seeded_blake3: Blake3::from_str(
-                "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?,
         };
 

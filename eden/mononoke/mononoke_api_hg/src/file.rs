@@ -21,7 +21,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::HgParents;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::fsnode::FsnodeFile;
-use mononoke_types::ContentMetadataV2;
+use mononoke_types::ContentMetadata;
 use mononoke_types::MPath;
 use remotefilelog::create_getpack_v2_blob;
 use repo_blobstore::RepoBlobstoreRef;
@@ -99,12 +99,13 @@ impl HgFileContext {
         .map_err(MononokeError::from)
     }
 
-    pub async fn content_metadata(&self) -> Result<ContentMetadataV2, MononokeError> {
+    pub async fn content_metadata(&self) -> Result<ContentMetadata, MononokeError> {
         let content_id = self.envelope.content_id();
         let fetch_key = filestore::FetchKey::Canonical(content_id);
         let blobstore = self.repo.blob_repo().repo_blobstore();
         filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
             .await?
+            .map(ContentMetadata::from)
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!(
                     "metadata not found for content id {}",

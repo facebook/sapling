@@ -17,7 +17,6 @@ use byteorder::WriteBytesExt;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
-use edenapi_types::Blake3;
 use edenapi_types::ContentId;
 use edenapi_types::FileAuxData;
 use edenapi_types::Sha1;
@@ -41,7 +40,6 @@ pub struct Entry {
     pub(crate) content_id: ContentId,
     pub(crate) content_sha1: Sha1,
     pub(crate) content_sha256: Sha256,
-    pub(crate) content_seeded_blake3: Blake3,
 }
 
 impl From<FileAuxData> for Entry {
@@ -51,7 +49,6 @@ impl From<FileAuxData> for Entry {
             content_id: v.content_id,
             content_sha1: v.sha1,
             content_sha256: v.sha256,
-            content_seeded_blake3: v.seeded_blake3,
         }
     }
 }
@@ -73,10 +70,6 @@ impl Entry {
         self.content_sha256
     }
 
-    pub fn content_seeded_blake3(&self) -> Blake3 {
-        self.content_seeded_blake3
-    }
-
     /// Serialize the Entry to Bytes.
     ///
     /// The serialization format is as follows:
@@ -86,7 +79,6 @@ impl Entry {
     /// - content sha1 <20 bytes>
     /// - content sha256 <32 bytes>
     /// - total_size <u64 VLQ, 1-9 bytes>
-    /// - content seeded blake3 <32 bytes>
     fn serialize(&self, hgid: HgId) -> Result<Bytes> {
         let mut buf = Vec::new();
         buf.write_all(hgid.as_ref())?;
@@ -95,7 +87,6 @@ impl Entry {
         buf.write_all(self.content_sha1.as_ref())?;
         buf.write_all(self.content_sha256.as_ref())?;
         buf.write_vlq(self.total_size)?;
-        buf.write_all(self.content_seeded_blake3.as_ref())?;
         Ok(buf.into())
     }
 
@@ -121,8 +112,6 @@ impl Entry {
 
         let total_size: u64 = cur.read_vlq()?;
 
-        let mut content_seeded_blake3 = [0u8; 32];
-        cur.read_exact(&mut content_seeded_blake3)?;
         Ok((
             hgid,
             Entry {
@@ -130,7 +119,6 @@ impl Entry {
                 content_sha1: content_sha1.into(),
                 content_sha256: content_sha256.into(),
                 total_size,
-                content_seeded_blake3: content_seeded_blake3.into(),
             },
         ))
     }
@@ -391,8 +379,7 @@ mod tests {
         expected.content_sha1 = Sha1::from_str("7110eda4d09e062aa5e4a390b0a572ac0d2c0220")?;
         expected.content_sha256 =
             Sha256::from_str("03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4")?;
-        expected.content_seeded_blake3 =
-            Blake3::from_str("2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a")?;
+
         // Attempt fetch.
         let fetched = store
             .fetch(

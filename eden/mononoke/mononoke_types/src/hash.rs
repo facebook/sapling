@@ -20,7 +20,6 @@ use ascii::AsciiString;
 use blake2::digest::Update;
 use blake2::digest::VariableOutput;
 use blake2::VarBlake2b;
-use edenapi_types::Blake3 as EdenapiBlake3;
 use edenapi_types::GitSha1 as EdenapiGitSha1;
 use edenapi_types::Sha1 as EdenapiSha1;
 use edenapi_types::Sha256 as EdenapiSha256;
@@ -486,18 +485,6 @@ impl Blake3 {
     #[inline]
     pub fn from_thrift(b: thrift::Blake3) -> Result<Self> {
         Blake3::from_bytes(b.0)
-    }
-}
-
-impl From<Blake3> for EdenapiBlake3 {
-    fn from(v: Blake3) -> Self {
-        EdenapiBlake3::from(v.0)
-    }
-}
-
-impl From<EdenapiBlake3> for Blake3 {
-    fn from(v: EdenapiBlake3) -> Self {
-        Blake3::from_byte_array(v.into())
     }
 }
 

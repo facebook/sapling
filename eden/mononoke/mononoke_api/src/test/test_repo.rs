@@ -33,7 +33,6 @@ use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use maplit::hashmap;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
-use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use mononoke_types::hash::Sha1;
@@ -1006,17 +1005,6 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
             "blob",
             9,
         ),
-        seeded_blake3: Blake3::from_str(
-            "bbd41b606802e603ef6eae081bed1f29eb1ffb897f98e670bbd770c3dba8b81d",
-        )?,
-        is_binary: false,
-        is_ascii: true,
-        is_utf8: true,
-        ends_in_newline: true,
-        newline_count: 1,
-        first_line: Some(String::from("content1")),
-        is_generated: false,
-        is_partially_generated: false,
     };
 
     // Get file by changeset path.
@@ -1051,16 +1039,6 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     let file = repo
         .file_by_content_sha256(Sha256::from_str(
             "47d741b6059c6d7e99be25ce46fb9ba099cfd6515de1ef7681f93479d25996a4",
-        )?)
-        .await?
-        .expect("file exists");
-    let metadata = file.metadata().await?;
-    assert_eq!(metadata, expected_metadata);
-
-    // Get file by content seeded blake3
-    let file = repo
-        .file_by_content_seeded_blake3(Blake3::from_str(
-            "bbd41b606802e603ef6eae081bed1f29eb1ffb897f98e670bbd770c3dba8b81d",
         )?)
         .await?
         .expect("file exists");

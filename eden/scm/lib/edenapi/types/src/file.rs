@@ -19,7 +19,6 @@ use types::hgid::HgId;
 use types::key::Key;
 use types::parents::Parents;
 
-use crate::Blake3;
 use crate::ContentId;
 use crate::InvalidHgId;
 use crate::ServerError;
@@ -76,8 +75,6 @@ pub struct FileAuxData {
     pub sha1: Sha1,
     #[id(3)]
     pub sha256: Sha256,
-    #[id(4)]
-    pub seeded_blake3: Blake3,
 }
 
 /// File content
