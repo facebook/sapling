@@ -574,5 +574,25 @@ Test rolling into a commit with multiple children (issue5498)
   │ o  301d76bdc3ae bb
   ├─╯
   o  8f0162e483d0 aa
-  
 
+  $ cd ..
+
+Fold/roll shouldn't trigger a merge:
+
+  $ hg init rollmerge
+  $ cd rollmerge
+  $ echo a > a
+  $ hg commit -qAm a
+  $ echo b > a
+  $ hg commit -qAm b
+  $ hg log -G -T '{node|short} {desc}'
+  @  1e6c11564562 b
+  │
+  o  cb9a9f314b8b a
+Set a bogus mergedriver as a tripwire to make sure we don't invoke merge driver.
+  $ hg histedit --config extensions.mergedriver= --config experimental.mergedriver=dontrunthis --commands - << EOF
+  > p cb9a9f314b8b
+  > r 1e6c11564562
+  > EOF
+  $ hg log -G -T '{node|short} {desc}'
+  @  9e233947f73d a

@@ -723,7 +723,9 @@ def collapse(repo, first, commitopts, skipprompt=False):
         loginfo=loginfo,
         mutinfo=mutinfo,
     )
-    return repo.commitctx(new)
+    n = repo.commitctx(new)
+    new.markcommitted(n)
+    return n
 
 
 def _isdirtywc(repo):
@@ -894,10 +896,6 @@ class fold(histeditaction):
             n = collapse(repo, ctx, commitopts, skipprompt=self.skipprompt())
         if n is None:
             return ctx, []
-        repo.ui.pushbuffer()
-        with repo.transaction("fold-checkout"):
-            hg.update(repo, n)
-        repo.ui.popbuffer()
         mergemod.mergestate.read(repo).reset()
         replacements = [
             (oldctx.node(), (n,)),
