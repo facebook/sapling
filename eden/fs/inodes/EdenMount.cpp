@@ -618,6 +618,20 @@ ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
             dotEdenInode,
             "client"_pc.copy(),
             checkoutConfig_->getClientDirectory()));
+
+        if (getEdenConfig()->findIgnoreInDotEden.getValue()) {
+          futures.emplace_back(
+              dotEdenInode->getOrLoadChild(".find-ignore"_pc, context)
+                  .unit()
+                  .thenError([dotEdenInode](auto&&) {
+                    dotEdenInode->mknod(
+                        ".find-ignore"_pc,
+                        S_IFREG | 0644,
+                        0,
+                        InvalidationRequired::No);
+                    return folly::unit;
+                  }));
+        }
 #endif
 
         // Wait until we finish setting up all of the symlinks.

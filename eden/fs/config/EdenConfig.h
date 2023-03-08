@@ -324,6 +324,24 @@ class EdenConfig : private ConfigSettingManager {
       ReaddirPrefetch::None,
       this};
 
+  /**
+   * The soong build system used in AOSP loves to crawls the entirety of the
+   * repository, including the .eden directory. In doing so, it infinitely
+   * recurse into the this-dir.
+   *
+   * Per kemurphy@, sending a pull request to soong will be refused, thus we
+   * need to workaround it in EdenFS.
+   *
+   * DO NOT SET UNLESS YOU ARE RUNNING AOSP ON EDENFS.
+   *
+   * TODO(T147468271): Remove this once soong has been taught to recognize
+   * EdenFS/Mercurial correctly.
+   */
+  ConfigSetting<bool> findIgnoreInDotEden{
+      "mount:find-ignore-in-dot-eden",
+      false,
+      this};
+
   // [store]
 
   /**
