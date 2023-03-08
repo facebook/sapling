@@ -55,7 +55,7 @@ type ExitCode = i32;
 #[clap(
     name = "edenfsctl",
     disable_version_flag = true,
-    disable_help_flag = true
+    disable_help_flag = false
 )]
 pub struct MainCommand {
     /// The path to the directory where edenfs stores its internal state.
@@ -169,14 +169,6 @@ impl fmt::Display for TopLevelSubcommand {
 }
 
 impl MainCommand {
-    fn get_etc_eden_dir(&self) -> PathBuf {
-        if let Some(etc_eden_dir) = &self.etc_eden_dir {
-            etc_eden_dir.clone()
-        } else {
-            DEFAULT_ETC_EDEN_DIR.into()
-        }
-    }
-
     fn get_config_dir(&self) -> PathBuf {
         // A config dir might be provided as a top-level argument. Top-level arguments take
         // precedent over sub-command args.
@@ -223,27 +215,12 @@ impl MainCommand {
         Ok(())
     }
 
-    pub fn is_enabled_in_json(&self, name: &str) -> Option<bool> {
-        let rollout_json_path = self.get_etc_eden_dir().join(ROLLOUT_JSON);
-        if !rollout_json_path.exists() {
-            return None;
-        }
-
-        // Open the file in read-only mode with buffer.
-        let file = File::open(rollout_json_path).ok()?;
-        let reader = BufReader::new(file);
-        let json: serde_json::Value = serde_json::from_reader(reader).ok()?;
-        let map = json.as_object()?;
-
-        map.get(name).and_then(|v| v.as_bool())
-    }
-
     /// For experimental commands, we should check whether Chef enabled the command for our shard. If not, fall back to python cli
     pub fn is_enabled(&self) -> bool {
         let name = self.subcommand.to_string();
-        self.is_enabled_in_json(&name)
-            .unwrap_or_else(|| !EXPERIMENTAL_COMMANDS.contains(&name.as_ref()))
+        is_command_enabled(&name, &self.etc_eden_dir)
     }
+
     pub fn run(self) -> Result<ExitCode> {
         self.set_working_directory()?;
 
@@ -264,10 +241,38 @@ impl MainCommand {
 
         EdenFsInstance::init(
             self.get_config_dir(),
-            self.get_etc_eden_dir(),
+            get_etc_eden_dir(&self.etc_eden_dir),
             self.get_home_dir(),
         );
         // Use EdenFsInstance::global() to access the instance from now on
         self.subcommand.run().await
+    }
+}
+
+pub fn is_command_enabled(name: &str, etc_eden_dir_override: &Option<PathBuf>) -> bool {
+    is_command_enabled_in_json(name, etc_eden_dir_override)
+        .unwrap_or_else(|| !EXPERIMENTAL_COMMANDS.contains(&name))
+}
+
+fn is_command_enabled_in_json(name: &str, etc_eden_dir_override: &Option<PathBuf>) -> Option<bool> {
+    let rollout_json_path = get_etc_eden_dir(etc_eden_dir_override).join(ROLLOUT_JSON);
+    if !rollout_json_path.exists() {
+        return None;
+    }
+
+    // Open the file in read-only mode with buffer.
+    let file = File::open(rollout_json_path).ok()?;
+    let reader = BufReader::new(file);
+    let json: serde_json::Value = serde_json::from_reader(reader).ok()?;
+    let map = json.as_object()?;
+
+    map.get(name).and_then(|v| v.as_bool())
+}
+
+fn get_etc_eden_dir(etc_eden_dir_override: &Option<PathBuf>) -> PathBuf {
+    if let Some(etc_eden_dir) = etc_eden_dir_override {
+        etc_eden_dir.clone()
+    } else {
+        DEFAULT_ETC_EDEN_DIR.into()
     }
 }

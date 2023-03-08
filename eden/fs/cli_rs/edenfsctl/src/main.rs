@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(windows)]
 use std::path::Path;
 #[cfg(windows)]
 use std::path::PathBuf;
@@ -15,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
+use edenfs_commands::is_command_enabled;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
@@ -165,6 +165,8 @@ fn wrapper_main() -> Result<i32> {
         fallback()
     } else {
         match edenfs_commands::MainCommand::try_parse() {
+            // The command is defined in Rust, but check whether it's "enabled"
+            // for Rust or else fall back to Python.
             Ok(cmd) => {
                 if cmd.is_enabled() {
                     rust_main(cmd)
@@ -172,14 +174,44 @@ fn wrapper_main() -> Result<i32> {
                     fallback()
                 }
             }
-            // If we get a help message, we don't want to fallback to the Python version. The
-            // help flag has been disabled for the main command and debug subcommand so they
-            // will fallback correct while we still show help message for enabled commands
-            // correctly.
-            Err(e) if e.kind() == clap::ErrorKind::DisplayHelp => e.exit(),
-            Err(_) => fallback(),
+            // If the command is defined in Rust, then --help will cause
+            // try_parse() to return a DisplayHelp error.  In that case, we
+            // should check whether the Rust version of the command is "enabled"
+            // to decide whether to print Rust or Python help.
+            //
+            // If the command isn't defined in Rust then try_parse will fail
+            // UnknownArgument (whether or not --help was requested) and we
+            // should fall back to Python.
+            Err(e) => {
+                if e.kind() == clap::ErrorKind::DisplayHelp
+                    && should_use_rust_help(std::env::args(), &None).unwrap_or(false)
+                {
+                    e.exit()
+                } else {
+                    fallback()
+                }
+            }
         }
     }
+}
+
+fn should_use_rust_help<T>(args: T, etc_eden_dir_override: &Option<&Path>) -> Result<bool>
+where
+    T: Iterator<Item = String>,
+{
+    // This is gross, but clap v3 doesn't let us make --help a normal bool flag.
+    // This means we can't successfully parse a command when --help is
+    // requested, so here we manually extract the subcommand name in order to
+    // check whether it's enabled for Rust.
+    let subcommand_name = args
+        .skip(1)
+        .find(|a| !a.starts_with('-'))
+        .ok_or(anyhow!("missing subcommand"))?;
+
+    Ok(is_command_enabled(
+        &subcommand_name,
+        &etc_eden_dir_override.map(Path::to_owned),
+    ))
 }
 
 #[fbinit::main]
@@ -207,5 +239,57 @@ fn main(_fb: FacebookInit) -> Result<()> {
     match code {
         Ok(code) => std::process::exit(code),
         Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
+    use std::io::Write;
+
+    use anyhow::Result;
+    use tempfile::TempDir;
+
+    use super::should_use_rust_help;
+
+    macro_rules! args {
+        ( $( $x:expr ),* ) => (
+            {
+                let mut v = Vec::new();
+                $(
+                    v.push($x.to_string());
+                )*
+                v.into_iter()
+            }
+        );
+    }
+
+    #[test]
+    fn test_should_use_rust_help() -> Result<()> {
+        assert!(should_use_rust_help(args!["eden.exe", "minitop"], &None)?);
+        {
+            let dir = TempDir::new()?;
+            assert!(!should_use_rust_help(
+                args!["eden.exe", "redirect"],
+                &Some(dir.path())
+            )?,);
+            assert!(!should_use_rust_help(
+                args!["eden.exe", "--xyz", "redirect"],
+                &Some(dir.path())
+            )?,);
+        }
+        {
+            let dir = TempDir::new()?;
+            let rollout_path = dir.path().join("edenfsctl_rollout.json");
+            let mut rollout_file = File::create(rollout_path)?;
+            writeln!(rollout_file, r#"{{"redirect": true}}"#)?;
+
+            assert!(should_use_rust_help(
+                args!["eden.exe", "redirect"],
+                &Some(dir.path())
+            )?,);
+        }
+
+        Ok(())
     }
 }
