@@ -68,6 +68,9 @@ pub struct MinitopCmd {
 
     #[clap(long, help = "Enable minitop interactive mode.")]
     interactive: bool,
+
+    #[clap(long, help = "Show full executable path")]
+    full_cmd: bool,
 }
 
 fn parse_refresh_rate(arg: &str) -> Duration {
@@ -100,11 +103,11 @@ const COLUMN_TITLES: &[&str] = &[
 ];
 
 trait GetAccessCountsResultExt {
-    fn get_cmd_for_pid(&self, pid: pid_t) -> Result<String>;
+    fn get_cmd_for_pid(&self, pid: pid_t, full_cmd: bool) -> Result<String>;
 }
 
 impl GetAccessCountsResultExt for GetAccessCountsResult {
-    fn get_cmd_for_pid(&self, pid: pid_t) -> Result<String> {
+    fn get_cmd_for_pid(&self, pid: pid_t, full_cmd: bool) -> Result<String> {
         match self.cmdsByPid.get(&pid) {
             Some(cmd) => {
                 let cmd = String::from_utf8(cmd.to_vec())?;
@@ -113,11 +116,13 @@ impl GetAccessCountsResultExt for GetAccessCountsResult {
                 // extra empty string on the end
                 let cmd = cmd.trim_end_matches(char::from(0));
 
-                // Show only the binary's filename, not its full path.
-                let cmd = trim_cmd_binary_path(cmd)
-                    .unwrap_or_else(|e| format!("{}: {}", UNKNOWN_COMMAND, e));
-
-                Ok(cmd)
+                if full_cmd {
+                    Ok(cmd.to_owned())
+                } else {
+                    // Show only the binary's filename, not its full path.
+                    Ok(trim_cmd_binary_path(cmd)
+                        .unwrap_or_else(|e| format!("{}: {}", UNKNOWN_COMMAND, e)))
+                }
             }
             None => Ok(String::from(UNKNOWN_COMMAND)),
         }
@@ -452,7 +457,7 @@ impl crate::Subcommand for MinitopCmd {
                     tracked_processes
                         .entry(*pid)
                         .or_insert_with(|| Process::new(*pid, mount_name.clone()))
-                        .set_cmd(counts.get_cmd_for_pid(*pid)?)
+                        .set_cmd(counts.get_cmd_for_pid(*pid, self.full_cmd)?)
                         .increment_access_counts(access_counts);
                 }
 
@@ -460,7 +465,7 @@ impl crate::Subcommand for MinitopCmd {
                     tracked_processes
                         .entry(*pid)
                         .or_insert_with(|| Process::new(*pid, mount_name.clone()))
-                        .set_cmd(counts.get_cmd_for_pid(*pid)?)
+                        .set_cmd(counts.get_cmd_for_pid(*pid, self.full_cmd)?)
                         .set_fetch_counts(*fetch_counts);
                 }
             }
