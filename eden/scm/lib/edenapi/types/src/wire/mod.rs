@@ -127,6 +127,7 @@ pub use crate::wire::land::WireLandStackRequest;
 pub use crate::wire::land::WireLandStackResponse;
 pub use crate::wire::land::WirePushVar;
 pub use crate::wire::metadata::WireAnyFileContentId;
+pub use crate::wire::metadata::WireBlake3;
 pub use crate::wire::metadata::WireContentId;
 pub use crate::wire::metadata::WireDirectoryMetadata;
 pub use crate::wire::metadata::WireDirectoryMetadataRequest;

@@ -11,6 +11,7 @@ pub use crate::metadata::WireDirectoryMetadataRequest;
 pub use crate::metadata::WireFileMetadata;
 pub use crate::metadata::WireFileMetadataRequest;
 pub use crate::metadata::WireFileType;
+use crate::Blake3;
 use crate::ContentId;
 use crate::FsnodeId;
 use crate::Sha1;
@@ -39,6 +40,12 @@ wire_hash! {
 wire_hash! {
     wire => WireSha256,
     api  => Sha256,
+    size => 32,
+}
+
+wire_hash! {
+    wire => WireBlake3,
+    api => Blake3,
     size => 32,
 }
 

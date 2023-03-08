@@ -122,6 +122,7 @@ pub use crate::land::LandStackRequest;
 pub use crate::land::LandStackResponse;
 pub use crate::land::PushVar;
 pub use crate::metadata::AnyFileContentId;
+pub use crate::metadata::Blake3;
 pub use crate::metadata::ContentId;
 pub use crate::metadata::DirectoryMetadata;
 pub use crate::metadata::DirectoryMetadataRequest;

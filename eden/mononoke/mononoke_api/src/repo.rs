@@ -96,6 +96,7 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::SourceControlServiceParams;
 use mononoke_api_types::InnerRepo;
 use mononoke_repos::MononokeRepos;
+use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -1529,6 +1530,15 @@ impl RepoContext {
         hash: GitSha1,
     ) -> Result<Option<FileContext>, MononokeError> {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::GitSha1(hash))).await
+    }
+
+    /// Get a File by content seeded-blake3. Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_seeded_blake3(
+        &self,
+        hash: Blake3,
+    ) -> Result<Option<FileContext>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::SeededBlake3(hash)))
+            .await
     }
 
     fn get_target_repo_and_lca_hint(

@@ -480,6 +480,9 @@ impl Client {
             AnyFileContentId::Sha256(id) => {
                 url = url.join("sha256/")?.join(&format!("{}", id))?;
             }
+            AnyFileContentId::SeededBlake3(id) => {
+                url = url.join("seeded_blake3/")?.join(&format!("{}", id))?;
+            }
         }
 
         {

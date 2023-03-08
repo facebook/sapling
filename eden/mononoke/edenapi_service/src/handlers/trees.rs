@@ -182,20 +182,21 @@ async fn fetch_child_file_metadata(
     file_type: FileType,
     child_key: Key,
 ) -> Result<TreeChildEntry, Error> {
-    let fsnode = repo
+    let metadata = repo
         .file(HgFileNodeId::new(child_key.hgid.into()))
         .await?
         .ok_or_else(|| ErrorKind::FileFetchFailed(child_key.clone()))?
-        .fetch_fsnode_data(file_type)
+        .content_metadata()
         .await?;
     Ok(TreeChildEntry::new_file_entry(
         child_key,
         FileMetadata {
-            file_type: Some((*fsnode.file_type()).into()),
-            size: Some(fsnode.size()),
-            content_sha1: Some((*fsnode.content_sha1()).into()),
-            content_sha256: Some((*fsnode.content_sha256()).into()),
-            content_id: Some((*fsnode.content_id()).into()),
+            file_type: Some(file_type.into()),
+            size: Some(metadata.total_size),
+            content_sha1: Some(metadata.sha1.into()),
+            content_sha256: Some(metadata.sha256.into()),
+            content_id: Some(metadata.content_id.into()),
+            content_seeded_blake3: Some(metadata.seeded_blake3.into()),
             ..Default::default()
         },
     ))
