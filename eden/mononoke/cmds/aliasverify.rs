@@ -6,6 +6,7 @@
  */
 
 use std::cmp;
+use std::collections::HashSet;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -50,6 +51,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use mononoke_repos::MononokeRepos;
+use mononoke_types::BlobstoreKey;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentId;
@@ -64,6 +66,7 @@ use sharding_lib_ext::split_repo_names;
 use slog::debug;
 use slog::error;
 use slog::info;
+use slog::warn;
 use slog::Logger;
 
 const LIMIT: usize = 1000;
@@ -196,6 +199,18 @@ impl RepoShardedProcess for AliasVerifyProcess {
             .add_repo(repo_name.as_ref())
             .await
             .with_context(|| format!("Failure in opening repo {}", repo_name))?;
+        let db_config = self
+            .app
+            .repo_config_by_name(repo_name.as_ref())?
+            .storage_config
+            .metadata;
+        let common_config = Arc::new(self.app.repo_configs().common.clone());
+        let redacted_blobs = self
+            .app
+            .repo_factory()
+            .redacted_blobs(ctx.clone(), &db_config, &common_config)
+            .await?;
+        let redacted_content_ids = redacted_blobs.redacted().keys().cloned().collect();
         Ok(Arc::new(AliasVerification::new(
             logger.clone(),
             repo_name.to_string(),
@@ -205,6 +220,7 @@ impl RepoShardedProcess for AliasVerifyProcess {
             ctx,
             start,
             total,
+            redacted_content_ids,
         )))
     }
 }
@@ -248,6 +264,7 @@ struct AliasVerification {
     cancellation_requested: Arc<AtomicBool>,
     start: u64,
     total: u64,
+    redacted_content_ids: HashSet<String>,
 }
 
 #[async_trait]
@@ -293,6 +310,7 @@ impl AliasVerification {
         ctx: CoreContext,
         start: u64,
         total: u64,
+        redacted_content_ids: HashSet<String>,
     ) -> Self {
         Self {
             logger,
@@ -303,6 +321,7 @@ impl AliasVerification {
             ctx,
             start,
             total,
+            redacted_content_ids,
             err_cnt: Arc::new(AtomicUsize::new(0)),
             cs_processed: Arc::new(AtomicUsize::new(0)),
         }
@@ -551,7 +570,21 @@ impl AliasVerification {
             .try_for_each_concurrent(self.args.concurrency, move |file_change| async move {
                 rcount.fetch_add(1, Ordering::Relaxed);
                 match file_change.simplify() {
-                    Some(tc) => self.process_file_content(tc.content_id().clone()).await,
+                    Some(tc) => {
+                        if self
+                            .redacted_content_ids
+                            .contains(&tc.content_id().blobstore_key())
+                        {
+                            warn!(
+                                self.logger,
+                                "Skipping content id {:?} since it is part of the redaction list",
+                                tc.content_id()
+                            );
+                            Ok(())
+                        } else {
+                            self.process_file_content(tc.content_id().clone()).await
+                        }
+                    }
                     None => Ok(()),
                 }
             })
