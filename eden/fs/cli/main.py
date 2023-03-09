@@ -1744,7 +1744,7 @@ class StartCmd(Subcmd):
         if sys.platform == "win32":
             return subprocess.call(cmd, env=eden_env)
         else:
-            os.execve(cmd[0], cmd, env=eden_env)
+            os.execvpe(cmd[0], cmd, env=eden_env)
             # Throw an exception just to let mypy know that we should never reach here
             # and will never return normally.
             raise Exception("execve should never return")
