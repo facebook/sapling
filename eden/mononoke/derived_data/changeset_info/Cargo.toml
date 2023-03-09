@@ -14,6 +14,7 @@ path = "lib.rs"
 anyhow = "1.0.65"
 async-trait = "0.1.58"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
@@ -21,6 +22,7 @@ derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 derived_data_thrift = { version = "0.1.0", path = "if" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 unicode-segmentation = "1.6.0"
 

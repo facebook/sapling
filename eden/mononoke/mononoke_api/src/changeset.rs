@@ -639,7 +639,7 @@ impl ChangesetContext {
         Ok(self
             .changeset_info()
             .await?
-            .extra()
+            .hg_extra()
             .map(|(name, value)| (name.to_string(), Vec::from(value)))
             .collect())
     }

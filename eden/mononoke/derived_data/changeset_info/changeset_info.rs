@@ -10,6 +10,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::BlobstoreGetData;
+use bytes::Bytes;
 use derived_data_thrift as thrift;
 use fbthrift::compact_protocol;
 use mononoke_types::errors::ErrorKind;
@@ -18,6 +19,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -65,7 +67,8 @@ pub struct ChangesetInfo {
     committer: Option<String>,
     committer_date: Option<DateTime>,
     message: ChangesetMessage,
-    extra: SortedVectorMap<String, Vec<u8>>,
+    hg_extra: SortedVectorMap<String, Vec<u8>>,
+    git_extra_headers: Option<SortedVectorMap<SmallVec<[u8; 24]>, Bytes>>,
 }
 
 /// At some point we may like to store large commit messages as separate blobs
@@ -107,6 +110,7 @@ impl ChangesetInfo {
             committer_date,
             message,
             hg_extra,
+            git_extra_headers,
             ..
         } = changeset.into_mut();
 
@@ -118,7 +122,8 @@ impl ChangesetInfo {
             committer,
             committer_date,
             message: ChangesetMessage::Message(message),
-            extra: hg_extra,
+            hg_extra,
+            git_extra_headers,
         }
     }
 
@@ -168,8 +173,16 @@ impl ChangesetInfo {
     }
 
     /// Get the extra fields for this message.
-    pub fn extra(&self) -> impl Iterator<Item = (&str, &[u8])> {
-        self.extra.iter().map(|(k, v)| (k.as_str(), v.as_slice()))
+    pub fn hg_extra(&self) -> impl Iterator<Item = (&str, &[u8])> {
+        self.hg_extra
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_slice()))
+    }
+
+    pub fn git_extra_headers(&self) -> Option<impl Iterator<Item = (&[u8], &[u8])>> {
+        self.git_extra_headers
+            .as_ref()
+            .map(|extra| extra.iter().map(|(k, v)| (k.as_slice(), v.as_ref())))
     }
 
     pub(crate) fn from_thrift(tc: thrift::ChangesetInfo) -> Result<Self> {
@@ -189,7 +202,10 @@ impl ChangesetInfo {
                     None => None,
                 },
                 message: ChangesetMessage::from_thrift(tc.message)?,
-                extra: tc.extra,
+                hg_extra: tc.hg_extra,
+                git_extra_headers: tc
+                    .git_extra_headers
+                    .map(|extra| extra.into_iter().map(|(k, v)| (k.0, v)).collect()),
             })
         };
 
@@ -211,7 +227,13 @@ impl ChangesetInfo {
             committer: self.committer,
             committer_date: self.committer_date.map(|dt| dt.into_thrift()),
             message: self.message.into_thrift(),
-            extra: self.extra,
+            hg_extra: self.hg_extra,
+            git_extra_headers: self.git_extra_headers.map(|extra| {
+                extra
+                    .into_iter()
+                    .map(|(k, v)| (thrift::small_binary(k), v))
+                    .collect()
+            }),
         }
     }
 
@@ -312,7 +334,7 @@ mod test {
             committer_date: None,
             message: message.to_string(),
             hg_extra: Default::default(),
-            git_extra_headers: None,
+            git_extra_headers: Some(sorted_vector_map! { SmallVec::new() => Bytes::from_static(b"world")}),
             git_tree_hash: None,
             file_changes: sorted_vector_map! { MPath::new("file").unwrap() => FileChange::Deletion },
             is_snapshot: false,

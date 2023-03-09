@@ -164,7 +164,7 @@ mod test {
         assert_eq!(info.committer(), bcs.committer());
         assert_eq!(info.committer_date(), bcs.committer_date());
         assert_eq!(
-            info.extra().collect::<BTreeMap<_, _>>(),
+            info.hg_extra().collect::<BTreeMap<_, _>>(),
             bcs.hg_extra().collect::<BTreeMap<_, _>>()
         );
     }

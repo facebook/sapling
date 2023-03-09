@@ -7,6 +7,12 @@
 
 include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 
+typedef binary small_binary (
+  rust.newtype,
+  rust.type = "smallvec::SmallVec<[u8; 24]>",
+)
+typedef binary (rust.type = "bytes::Bytes") binary_bytes
+
 // Derived data structure that represents a Bonsai changeset's metadata.
 // It contains the same data as Bonsai itself except of the file changes,
 // which can be a pretty high number of and take a long time to deserialize.
@@ -25,7 +31,10 @@ struct ChangesetInfo {
   7: ChangesetMessage message;
   8: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
-  ) extra;
+  ) hg_extra;
+  9: optional map<small_binary, binary_bytes> (
+    rust.type = "sorted_vector_map::SortedVectorMap",
+  ) git_extra_headers;
 } (rust.exhaustive)
 
 // Commit message is represented by a separate union of formats for the future

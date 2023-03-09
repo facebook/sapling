@@ -137,7 +137,7 @@ pub fn get_mapping_change_version(
         .unwrap_or(false)
     {
         let maybe_mapping = cs_info
-            .extra()
+            .hg_extra()
             .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);
         if let Some((_, version)) = maybe_mapping {
             let version = String::from_utf8(version.to_vec()).with_context(|| {
