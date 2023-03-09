@@ -192,10 +192,17 @@ elif sys.platform.startswith("darwin"):
     ]
     TEST_DISABLED["snapshot.test_snapshots.Testbasic-20210712"] = True
 
-    # Non-OSS: "EdenStartError: edenfs exited before becoming healthy: exit status 1"
-    # OSS: fails for a variety of issues (permissions, no such file or directory, etc)
-    TEST_DISABLED["basic_test.BasicTest"] = True
-    TEST_DISABLED["basic_test.PosixTest"] = True
+    # Lots of failures due to spurious ._ (AppleDouble) files
+    TEST_DISABLED["basic_test.BasicTest"] = [
+        "test_create",
+        "test_file_list",
+        "test_mkdir",
+        "test_remove_checkout",
+    ]
+    TEST_DISABLED["basic_test.PosixTest"] = [
+        "test_create_using_mknod",
+        "test_statvfs",
+    ]
 
     # `edenfsctl chown` requires sudo
     TEST_DISABLED["chown_test.ChownTest"] = True
