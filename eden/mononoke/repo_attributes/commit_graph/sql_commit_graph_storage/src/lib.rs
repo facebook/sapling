@@ -410,9 +410,9 @@ impl SqlCommitGraphStorage {
                     p1_linear_skew_ancestor_p1_linear_depth,
                     ..,
                 ) => {
-                    cs_id_to_cs_edges.insert(
-                        cs_id,
-                        ChangesetEdges {
+                    cs_id_to_cs_edges
+                        .entry(cs_id)
+                        .or_insert_with(|| ChangesetEdges {
                             node: ChangesetNode {
                                 cs_id,
                                 generation: Generation::new(gen),
@@ -444,8 +444,7 @@ impl SqlCommitGraphStorage {
                                 p1_linear_skew_ancestor_skip_tree_depth,
                                 p1_linear_skew_ancestor_p1_linear_depth,
                             ),
-                        },
-                    );
+                        });
                 }
                 _ => continue,
             }
@@ -456,18 +455,22 @@ impl SqlCommitGraphStorage {
                 (
                     cs_id,
                     ..,
+                    parent_num,
                     Some(parent),
                     Some(parent_gen),
                     Some(parent_skip_tree_depth),
                     Some(parent_p1_linear_depth),
                 ) => {
                     if let Some(edge) = cs_id_to_cs_edges.get_mut(&cs_id) {
-                        edge.parents.push(ChangesetNode {
-                            cs_id: parent,
-                            generation: Generation::new(parent_gen),
-                            skip_tree_depth: parent_skip_tree_depth,
-                            p1_linear_depth: parent_p1_linear_depth,
-                        })
+                        // Only insert if we have the correct next parent
+                        if edge.parents.len() == parent_num {
+                            edge.parents.push(ChangesetNode {
+                                cs_id: parent,
+                                generation: Generation::new(parent_gen),
+                                skip_tree_depth: parent_skip_tree_depth,
+                                p1_linear_depth: parent_p1_linear_depth,
+                            })
+                        }
                     }
                 }
                 _ => continue,
