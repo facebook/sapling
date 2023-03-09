@@ -13,6 +13,12 @@ namespace php SourceControlService
 namespace py scm.service.thrift.source_control
 namespace py3 scm.service.thrift
 
+typedef binary (rust.type = "bytes::Bytes") binary_bytes
+typedef binary small_binary (
+  rust.newtype,
+  rust.type = "smallvec::SmallVec<[u8; 24]>",
+)
+
 struct DateTime {
   /// UNIX timestamp
   1: required i64 timestamp;
@@ -183,20 +189,24 @@ struct CommitInfo {
   /// The date the commit was authored.
   4: i64 date;
 
-  /// The timezone the commit was authored in, in seconds after UTC.
-  8: i32 tz;
-
   /// The author of the commit.
   5: string author;
 
   /// The parents of the commit, in the requested identity schemes.
   6: list<map<CommitIdentityScheme, CommitId>> parents;
 
+  /// Extra metadata about the commit.
+  7: map<string, binary> extra;
+
+  /// The timezone the commit was authored in, in seconds after UTC.
+  8: i32 tz;
+
   /// Length of longest path between this commit and any root.
   9: i64 generation;
 
-  /// Extra metadata about the commit.
-  7: map<string, binary> extra;
+  /// Extra git headers associated with the commit if the commit is a
+  /// mirrored version from a git repo.
+  10: optional map<small_binary, binary_bytes> git_extra_headers;
 }
 
 struct BookmarkInfo {
@@ -822,8 +832,12 @@ struct RepoCreateCommitParamsCommitInfo {
   /// The identity that committed this commit, as opposed to wrote it
   5: optional string committer;
 
-  /// The date the commit was committed
+  /// The date the commit was committed.
   6: optional DateTime committer_date;
+
+  /// Extra git headers associated with the commit if the commit is a
+  /// mirrored version from a git repo.
+  7: optional map<small_binary, binary_bytes> git_extra_headers;
 }
 
 struct RepoCreateCommitParams {
