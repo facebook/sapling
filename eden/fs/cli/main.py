@@ -747,7 +747,7 @@ class CloneCmd(Subcmd):
 
         parser.add_argument(
             "--backing-store",
-            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' (Linux and macOS only) and 'http' (Linux only)",
+            help="Clone path as backing store instead of a source control repository. Currently only support 'recas' and 'http' (Linux only)",
         )
 
         parser.add_argument(
@@ -891,9 +891,9 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                     return 1
 
         elif args.backing_store == "recas":
-            if sys.platform == "win32":
+            if sys.platform != "linux":
                 print_stderr(
-                    "error: recas backing store was passed but this feature is not available on Windows"
+                    "error: recas backing store was passed but this feature is only available on Linux"
                 )
                 return 1
             if args.rev is not None:
