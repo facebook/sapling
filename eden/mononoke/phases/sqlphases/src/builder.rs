@@ -75,8 +75,7 @@ impl SqlConstruct for SqlPhasesBuilder {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-phases.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        // TODO(mbthomas): this shouldn't be using a mocked cache if caching is disabled
-        let caches = Arc::new(Caches::new(CacheHandlerFactory::Mocked, Self::key_gen()));
+        let caches = Arc::new(Caches::new(CacheHandlerFactory::Noop, Self::key_gen()));
         Self {
             write_connection: connections.write_connection,
             read_connection: connections.read_connection,
