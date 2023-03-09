@@ -528,6 +528,13 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> useReaddirplus{"nfs:use-readdirplus", false, this};
 
+  /**
+   * On macOS, ._ (AppleDouble) are sprinkled all over the place. Enabling this
+   * allows these file to be created. When disabled, the AppleDouble files
+   * won't be created.
+   */
+  ConfigSetting<bool> allowAppleDouble{"nfs:allow-apple-double", true, this};
+
   // [prjfs]
 
   /**

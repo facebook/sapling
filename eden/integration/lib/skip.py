@@ -192,16 +192,12 @@ elif sys.platform.startswith("darwin"):
     ]
     TEST_DISABLED["snapshot.test_snapshots.Testbasic-20210712"] = True
 
-    # Lots of failures due to spurious ._ (AppleDouble) files
     TEST_DISABLED["basic_test.BasicTest"] = [
-        "test_create",
-        "test_file_list",
-        "test_mkdir",
-        "test_remove_checkout",
+        "test_remove_checkout",  # Fails due to /proc/mounts not existing on macOS
     ]
     TEST_DISABLED["basic_test.PosixTest"] = [
-        "test_create_using_mknod",
-        "test_statvfs",
+        "test_create_using_mknod",  # PermissionDenied
+        "test_statvfs",  # NFS block size appears to be too small.
     ]
 
     # `eden chown` requires the use of `sudo` for chowning redirections. We

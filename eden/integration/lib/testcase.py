@@ -264,6 +264,7 @@ class EdenTestCase(EdenTestCaseBase):
         # image redirections instead of APFS volume redirections.
         if sys.platform == "darwin":
             configs["redirections"] = ['darwin-redirection-type = "dmg"']
+            configs["nfs"] = ["allow-apple-double = false"]
         return configs
 
     def create_hg_repo(

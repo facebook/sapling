@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/nfs/NfsUtils.h"
+#include "eden/fs/utils/String.h"
 
 namespace facebook::eden {
 
@@ -124,6 +125,14 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
     PathComponent name,
     mode_t mode,
     const ObjectFetchContextPtr& context) {
+  // macOS loves sprinkling ._ (AppleDouble) files all over the repository,
+  // prevent it from doing so.
+  if (folly::kIsApple && string_view{name.view()}.starts_with("._")) {
+    if (!mount_->getEdenConfig()->allowAppleDouble.getValue()) {
+      return makeImmediateFuture<NfsDispatcher::CreateRes>(
+          std::system_error(EACCES, std::generic_category()));
+    }
+  }
   // Make sure that we're attempting to create a file.
   mode = S_IFREG | (0777 & mode);
   return inodeMap_->lookupTreeInode(dir).thenValue(
