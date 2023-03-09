@@ -171,6 +171,14 @@ impl BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping {
     async fn get_max(&self, ctx: &CoreContext) -> Result<Option<Globalrev>, Error> {
         self.inner.as_ref().get_max(ctx).await
     }
+
+    async fn get_max_custom_repo(
+        &self,
+        ctx: &CoreContext,
+        repo_id: &RepositoryId,
+    ) -> Result<Option<Globalrev>, Error> {
+        self.inner.as_ref().get_max_custom_repo(ctx, repo_id).await
+    }
 }
 
 impl MemcacheEntity for BonsaiGlobalrevMappingCacheEntry {

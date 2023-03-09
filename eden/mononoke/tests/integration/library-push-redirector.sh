@@ -532,3 +532,12 @@ EOF
   REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
   REPOID=2 blobimport ovr-hg-srv/.hg ovr-mon
 }
+
+function enable_pushredirect {
+  repo_id=$1
+  shift
+
+  cat >"$PUSHREDIRECT_CONF/enable" << EOF
+{"per_repo": {"$repo_id": {"public_push": true, "draft_push": false}}}
+EOF
+}

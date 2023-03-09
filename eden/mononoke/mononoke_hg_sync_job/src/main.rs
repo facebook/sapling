@@ -1194,10 +1194,7 @@ async fn run<'a>(
             }
         };
 
-        let globalrevs_publishing_bookmark = repo_config
-            .pushrebase
-            .globalrevs_publishing_bookmark
-            .as_ref();
+        let globalrev_config = repo_config.pushrebase.globalrev_config.as_ref();
 
         let filter_changesets: Arc<dyn FilterExistingChangesets> =
             if let Some(backup_repo) = maybe_darkstorm_backup_repo.clone() {
@@ -1210,14 +1207,16 @@ async fn run<'a>(
         let globalrev_syncer = {
             cloned!(repo);
             async move {
-                match globalrevs_publishing_bookmark {
-                    Some(_) => match maybe_darkstorm_backup_repo {
-                        Some(darkstorm_backup_repo) => {
-                            Ok(GlobalrevSyncer::darkstorm(&repo, darkstorm_backup_repo))
+                match globalrev_config {
+                    Some(config) if config.small_repo_id.is_none() => {
+                        match maybe_darkstorm_backup_repo {
+                            Some(darkstorm_backup_repo) => {
+                                Ok(GlobalrevSyncer::darkstorm(&repo, darkstorm_backup_repo))
+                            }
+                            None => Ok(GlobalrevSyncer::Noop),
                         }
-                        None => Ok(GlobalrevSyncer::Noop),
-                    },
-                    None => Ok(GlobalrevSyncer::Noop),
+                    }
+                    _ => Ok(GlobalrevSyncer::Noop),
                 }
             }
         };

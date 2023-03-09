@@ -19,7 +19,7 @@
   > }
 
 Let's set config manually, so we can LATER start the sync
-  $ REPOID=0 REPONAME=large-mon setup_common_config blob_files
+  $ GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark GLOBALREVS_SMALL_REPO_ID=1 REPOID=0 REPONAME=large-mon setup_common_config blob_files
   $ DISALLOW_NON_PUSHREBASE=1 GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark REPOID=1 REPONAME=small-mon setup_common_config blob_files
   $ large_small_megarepo_config
 Start repos, mononoke, clones
@@ -89,14 +89,15 @@ This proves globalrevs continue working with forward sync
 Lets change the sync direction
   $ LAST_UPDATE=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select max(id) from bookmarks_update_log where repo_id=$REPOIDLARGE")
   $ quiet mononoke_newadmin mutable-counters --repo-id $REPOIDSMALL set backsync_from_$REPOIDLARGE $LAST_UPDATE
+  $ enable_pushredirect $REPOIDSMALL
 
-Do a few commits on large repo. They no longer have globalrevs.
+Do a few commits on large repo. They have globalrevs.
   $ mkcommit large_only
   $ echo hello > smallrepofolder/new_file_from_large.txt
   $ hglarge addremove -q && hglarge commit -m "commit_from_large_to_small"
   $ hglarge push --to master_bookmark -q && hglarge up master_bookmark -q
   $ globalrev
-  no globalrev
+  global_rev=1000147972
 
 See commit on small repo. It was imported with globalrev and we can query globalrevs on small repo.
   $ cd "$TESTTMP/small-hg-client"

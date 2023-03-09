@@ -433,8 +433,9 @@ where
             let globalrev_entries: Vec<BonsaiGlobalrevMappingEntry> = if target_repo
                 .repo_config()
                 .pushrebase
-                .globalrevs_publishing_bookmark
+                .globalrev_config
                 .as_ref()
+                .map(|c| &c.publishing_bookmark)
                 == Some(&bookmark)
             {
                 let all_commits =
@@ -444,9 +445,8 @@ where
                 stream::iter(all_commits)
                     .map(|bcs_id| async move {
                         let cs = bcs_id.load(ctx, blobstore).await?;
-                        // Since this repo has globalrevs enabled, CommitSyncInMemoryResult::write
-                        // should have already set the globalrevs when backsyncing, and this will
-                        // never fail
+                        // When pushrebasing into the large repo, this commit
+                        // should've gotten a globalrev
                         let globalrev = Globalrev::from_bcs(&cs)?;
                         anyhow::Ok(BonsaiGlobalrevMappingEntry { bcs_id, globalrev })
                     })
@@ -513,13 +513,13 @@ where
                         }?;
 
                         if !globalrev_entries.is_empty() {
-                            bonsai_globalrev_mapping::replace_globalrevs(
+                            bonsai_globalrev_mapping::add_globalrevs(
                                 txn,
                                 target_repo_id,
                                 &globalrev_entries,
                             )
                             .await
-                            .map_err(BookmarkTransactionError::Other)
+                            .map_err(|err| BookmarkTransactionError::Other(err.into()))
                         } else {
                             Ok(txn)
                         }

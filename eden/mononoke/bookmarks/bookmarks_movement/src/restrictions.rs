@@ -87,9 +87,11 @@ pub(crate) async fn check_restriction_ensure_ancestor_of(
         }
     }
 
-    if let Some(descendant_bookmark) = &repo.repo_config().pushrebase.globalrevs_publishing_bookmark
-    {
-        descendant_bookmarks.push(descendant_bookmark);
+    if let Some(config) = &repo.repo_config().pushrebase.globalrev_config {
+        if config.small_repo_id.is_none() {
+            // On large repo, it's fine not to be descendant of the bookmark.
+            descendant_bookmarks.push(&config.publishing_bookmark);
+        }
     }
 
     stream::iter(descendant_bookmarks)

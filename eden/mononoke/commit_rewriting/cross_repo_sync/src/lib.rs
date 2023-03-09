@@ -71,7 +71,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
-use mononoke_types::Globalrev;
 use mononoke_types::MPath;
 use mononoke_types::RepositoryId;
 use movers::Mover;
@@ -170,6 +169,7 @@ pub enum CommitSyncInMemoryResult {
         remapped_id: Option<ChangesetId>,
         version: CommitSyncConfigVersion,
     },
+
     Rewritten {
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
@@ -207,35 +207,12 @@ impl CommitSyncInMemoryResult {
             }
             Rewritten {
                 source_cs_id,
-                mut rewritten,
+                rewritten,
                 version,
-            } => {
-                let target = syncer.get_target_repo();
-                // If the target repo has globalrevs, always create globalrevs.
-                // We never know when something is going to change bookmarks.
-                if target
-                    .repo_config()
-                    .pushrebase
-                    .globalrevs_publishing_bookmark
-                    .is_some()
-                {
-                    if rewritten.parents.len() > 1 {
-                        bail!("merge commits are not supported in a repo with globalrevs");
-                    }
-                    if let Some(parent) = rewritten.parents.first() {
-                        // We could load ChangesetInfo here, but it's probably not derived yet
-                        let parent = parent.load(ctx, target.repo_blobstore()).await?;
-                        Globalrev::from_bcs(&parent)?.increment()
-                    } else {
-                        Globalrev::start_commit()
-                    }
-                    .set_on_changeset(&mut rewritten);
-                }
-                syncer
-                    .upload_rewritten_and_update_mapping(ctx, source_cs_id, rewritten, version)
-                    .await
-                    .map(Some)
-            }
+            } => syncer
+                .upload_rewritten_and_update_mapping(ctx, source_cs_id, rewritten, version)
+                .await
+                .map(Some),
         }
     }
 }

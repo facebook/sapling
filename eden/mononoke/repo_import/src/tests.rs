@@ -45,6 +45,7 @@ mod tests {
     use metaconfig_types::CommitSyncConfigVersion;
     use metaconfig_types::CommonCommitSyncConfig;
     use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
+    use metaconfig_types::GlobalrevConfig;
     use metaconfig_types::PushrebaseParams;
     use metaconfig_types::RepoConfig;
     use metaconfig_types::SmallRepoCommitSyncConfig;
@@ -371,7 +372,10 @@ mod tests {
 
         let repo_config = RepoConfig {
             pushrebase: PushrebaseParams {
-                globalrevs_publishing_bookmark: Some(BookmarkKey::new("master")?),
+                globalrev_config: Some(GlobalrevConfig {
+                    publishing_bookmark: BookmarkKey::new("master")?,
+                    small_repo_id: None,
+                }),
                 ..Default::default()
             },
             ..Default::default()

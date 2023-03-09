@@ -29,6 +29,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_authorization::AuthorizationContext;
 use repo_authorization::RepoWriteOperation;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
+use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::log_bookmark_operation;
 use repo_update_logger::log_new_commits;
@@ -282,6 +283,7 @@ pub fn get_pushrebase_hooks(
          + BonsaiGlobalrevMappingArc
          + PushrebaseMutationMappingRef
          + RepoBookmarkAttrsRef
+         + RepoCrossRepoRef
          + RepoIdentityRef
      ),
     bookmark: &BookmarkKey,
@@ -289,22 +291,33 @@ pub fn get_pushrebase_hooks(
 ) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
     let mut pushrebase_hooks = Vec::new();
 
-    match pushrebase_params.globalrevs_publishing_bookmark.as_ref() {
-        Some(globalrevs_publishing_bookmark) if globalrevs_publishing_bookmark == bookmark => {
-            let hook = GlobalrevPushrebaseHook::new(
-                ctx.clone(),
-                repo.bonsai_globalrev_mapping_arc().clone(),
-                repo.repo_identity().id(),
-            );
-            pushrebase_hooks.push(hook);
+    match pushrebase_params.globalrev_config.as_ref() {
+        Some(config) if config.publishing_bookmark == *bookmark => {
+            let add_hook = if let Some(small_repo_id) = config.small_repo_id {
+                // Only add hook if pushes are being redirected
+                repo.repo_cross_repo()
+                    .live_commit_sync_config()
+                    .push_redirector_enabled_for_public(small_repo_id)
+            } else {
+                true
+            };
+            if add_hook {
+                let hook = GlobalrevPushrebaseHook::new(
+                    ctx.clone(),
+                    repo.bonsai_globalrev_mapping_arc().clone(),
+                    repo.repo_identity().id(),
+                    config.small_repo_id,
+                );
+                pushrebase_hooks.push(hook);
+            }
         }
-        Some(globalrevs_publishing_bookmark) => {
+        Some(config) if config.small_repo_id.is_none() => {
             return Err(BookmarkMovementError::PushrebaseInvalidGlobalrevsBookmark {
                 bookmark: bookmark.clone(),
-                globalrevs_publishing_bookmark: globalrevs_publishing_bookmark.clone(),
+                globalrevs_publishing_bookmark: config.publishing_bookmark.clone(),
             });
         }
-        None => {
+        _ => {
             // No hook necessary
         }
     };

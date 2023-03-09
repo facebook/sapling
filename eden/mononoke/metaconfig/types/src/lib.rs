@@ -693,6 +693,15 @@ pub enum PushrebaseRemoteMode {
     RemoteLandServiceWithLocalFallback(Address),
 }
 
+/// Globalrev configuration
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct GlobalrevConfig {
+    /// On which bookmark to assign globalrevs
+    pub publishing_bookmark: BookmarkKey,
+    /// Present if this is a large repo and globalrevs go to the small repo
+    pub small_repo_id: Option<RepositoryId>,
+}
+
 /// Pushrebase configuration options
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct PushrebaseParams {
@@ -702,8 +711,8 @@ pub struct PushrebaseParams {
     pub block_merges: bool,
     /// Whether to do emit obsmarkers after pushrebase
     pub emit_obsmarkers: bool,
-    /// Whether Globalrevs should be assigned
-    pub globalrevs_publishing_bookmark: Option<BookmarkKey>,
+    /// Globalrev configuration
+    pub globalrev_config: Option<GlobalrevConfig>,
     /// Whether Git Mapping should be populated from extras (affects also blobimport)
     pub populate_git_mapping: bool,
     /// For the case when one repo is linked to another (a.k.a. megarepo)
@@ -722,7 +731,7 @@ impl Default for PushrebaseParams {
             flags: PushrebaseFlags::default(),
             block_merges: false,
             emit_obsmarkers: false,
-            globalrevs_publishing_bookmark: None,
+            globalrev_config: None,
             populate_git_mapping: false,
             allow_change_xrepo_mapping_extra: false,
             remote_mode: PushrebaseRemoteMode::Local,

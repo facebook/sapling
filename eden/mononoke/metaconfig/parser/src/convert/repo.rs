@@ -24,6 +24,7 @@ use metaconfig_types::ComparableRegex;
 use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
+use metaconfig_types::GlobalrevConfig;
 use metaconfig_types::HgSyncConfig;
 use metaconfig_types::HookBypass;
 use metaconfig_types::HookConfig;
@@ -54,6 +55,7 @@ use metaconfig_types::WalkerJobType;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
 use mononoke_types::PrefixTrie;
+use mononoke_types::RepositoryId;
 use regex::Regex;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
@@ -298,9 +300,14 @@ impl Convert for RawPushrebaseParams {
             },
             block_merges: self.block_merges.unwrap_or(default.block_merges),
             emit_obsmarkers: self.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
-            globalrevs_publishing_bookmark: self
+            globalrev_config: self
                 .globalrevs_publishing_bookmark
-                .map(BookmarkKey::new)
+                .map(|bookmark| {
+                    anyhow::Ok(GlobalrevConfig {
+                        publishing_bookmark: BookmarkKey::new(bookmark)?,
+                        small_repo_id: self.globalrevs_small_repo_id.map(RepositoryId::new),
+                    })
+                })
                 .transpose()?,
             populate_git_mapping: self
                 .populate_git_mapping

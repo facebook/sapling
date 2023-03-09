@@ -18,7 +18,6 @@ use mononoke_types::RepositoryId;
 pub use crate::caching::CachingBonsaiGlobalrevMapping;
 pub use crate::sql::add_globalrevs;
 pub use crate::sql::bulk_import_globalrevs;
-pub use crate::sql::replace_globalrevs;
 pub use crate::sql::AddGlobalrevsErrorKind;
 pub use crate::sql::SqlBonsaiGlobalrevMapping;
 pub use crate::sql::SqlBonsaiGlobalrevMappingBuilder;
@@ -121,4 +120,10 @@ pub trait BonsaiGlobalrevMapping: Send + Sync {
     /// Read the most recent Globalrev. This produces the freshest data possible, and is meant to
     /// be used for Globalrev assignment.
     async fn get_max(&self, ctx: &CoreContext) -> Result<Option<Globalrev>, Error>;
+
+    async fn get_max_custom_repo(
+        &self,
+        ctx: &CoreContext,
+        repo_id: &RepositoryId,
+    ) -> Result<Option<Globalrev>, Error>;
 }

@@ -1153,7 +1153,7 @@ mod test {
                     },
                     block_merges: false,
                     emit_obsmarkers: false,
-                    globalrevs_publishing_bookmark: None,
+                    globalrev_config: None,
                     populate_git_mapping: false,
                     allow_change_xrepo_mapping_extra: true,
                     remote_mode: PushrebaseRemoteMode::RemoteLandService(Address::Tier(

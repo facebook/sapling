@@ -70,6 +70,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         ctx.clone(),
         repo.bonsai_globalrev_mapping_arc(),
         repo.repo_identity().id(),
+        None,
     )];
 
     let rebased = do_pushrebase_bonsai(
@@ -209,6 +210,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
             ctx.clone(),
             repo.bonsai_globalrev_mapping_arc(),
             repo.repo_identity().id(),
+            None,
         ),
         Box::new(SleepHook) as Box<dyn PushrebaseHook>,
     ];

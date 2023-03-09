@@ -1059,6 +1059,12 @@ globalrevs_publishing_bookmark = "${GLOBALREVS_PUBLISHING_BOOKMARK}"
 CONFIG
 fi
 
+if [[ -n "${GLOBALREVS_SMALL_REPO_ID:-}" ]]; then
+  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+globalrevs_small_repo_id = ${GLOBALREVS_SMALL_REPO_ID}
+CONFIG
+fi
+
 if [[ -n "${POPULATE_GIT_MAPPING:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 populate_git_mapping=true
@@ -1936,9 +1942,9 @@ function add_synced_commit_mapping_entry() {
   large_repo_id="$3"
   large_bcs_id="$4"
   version="$5"
-  mononoke_admin_source_target "$small_repo_id" "$large_repo_id" crossrepo insert rewritten --source-hash "$small_bcs_id" \
+  quiet mononoke_admin_source_target "$small_repo_id" "$large_repo_id" crossrepo insert rewritten --source-hash "$small_bcs_id" \
     --target-hash "$large_bcs_id" \
-    --version-name "$version" 2>/dev/null
+    --version-name "$version"
 }
 
 function read_blobstore_wal_queue_size() {

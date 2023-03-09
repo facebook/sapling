@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use bonsai_globalrev_mapping::add_globalrevs;
@@ -35,6 +36,8 @@ pub struct GlobalrevPushrebaseHook {
     ctx: CoreContext,
     mapping: Arc<dyn BonsaiGlobalrevMapping>,
     repository_id: RepositoryId,
+    /// If this is a large repo where globalrevs will be backsynced to a small repo
+    small_repo_id: Option<RepositoryId>,
 }
 
 impl GlobalrevPushrebaseHook {
@@ -42,11 +45,13 @@ impl GlobalrevPushrebaseHook {
         ctx: CoreContext,
         mapping: Arc<dyn BonsaiGlobalrevMapping>,
         repository_id: RepositoryId,
+        small_repo_id: Option<RepositoryId>,
     ) -> Box<dyn PushrebaseHook> {
         Box::new(Self {
             ctx,
             mapping,
             repository_id,
+            small_repo_id,
         })
     }
 }
@@ -56,9 +61,16 @@ impl PushrebaseHook for GlobalrevPushrebaseHook {
     async fn in_critical_section(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let max = self.mapping.get_max(&self.ctx).await?;
 
-        let next_rev = match max {
-            None => Globalrev::start_commit(),
-            Some(max) => Globalrev::new(max.id() + 1),
+        let next_rev = match (max, self.small_repo_id) {
+            (Some(max), _) => Globalrev::new(max.id() + 1),
+            // The source-of-truth change just happened, let's get this value from
+            // the small repo.
+            (None, Some(small_repo_id)) => self
+                .mapping
+                .get_max_custom_repo(&self.ctx, &small_repo_id)
+                .await?
+                .context("Small repo didn't have globalrevs")?,
+            (None, None) => Globalrev::start_commit(),
         };
 
         let hook = Box::new(GlobalrevCommitHook {

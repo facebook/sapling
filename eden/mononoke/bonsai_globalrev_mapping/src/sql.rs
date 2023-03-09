@@ -194,10 +194,18 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     }
 
     async fn get_max(&self, ctx: &CoreContext) -> Result<Option<Globalrev>, Error> {
+        self.get_max_custom_repo(ctx, &self.repo_id).await
+    }
+
+    async fn get_max_custom_repo(
+        &self,
+        ctx: &CoreContext,
+        repo_id: &RepositoryId,
+    ) -> Result<Option<Globalrev>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
-        let row = SelectMaxEntry::query(&self.connections.read_master_connection, &self.repo_id)
+        let row = SelectMaxEntry::query(&self.connections.read_master_connection, repo_id)
             .await?
             .into_iter()
             .next();
@@ -331,23 +339,6 @@ pub async fn add_globalrevs(
     if res.affected_rows() != rows.len() as u64 {
         return Err(AddGlobalrevsErrorKind::Conflict);
     }
-
-    Ok(transaction)
-}
-
-/// Like add_globalrevs, but always replaces values, even if they're different
-pub async fn replace_globalrevs(
-    transaction: Transaction,
-    repo_id: RepositoryId,
-    entries: impl IntoIterator<Item = &BonsaiGlobalrevMappingEntry>,
-) -> Result<Transaction, Error> {
-    let rows: Vec<_> = entries
-        .into_iter()
-        .map(|BonsaiGlobalrevMappingEntry { bcs_id, globalrev }| (&repo_id, bcs_id, globalrev))
-        .collect();
-
-    let (transaction, _) =
-        ReplaceGlobalrevs::query_with_transaction(transaction, &rows[..]).await?;
 
     Ok(transaction)
 }
