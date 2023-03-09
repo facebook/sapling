@@ -204,7 +204,9 @@ elif sys.platform.startswith("darwin"):
         "test_statvfs",
     ]
 
-    # `edenfsctl chown` requires sudo
+    # `eden chown` requires the use of `sudo` for chowning redirections. We
+    # don't have access to passwordless `sudo` on macOS Sandcastle hosts, so
+    # we should disable these test.
     TEST_DISABLED["chown_test.ChownTest"] = True
 
     # I'm not sure if overlay corruption logic even exists on macOS?
