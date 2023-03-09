@@ -336,18 +336,36 @@ mononoke_queries! {
 }
 
 impl SqlCommitGraphStorage {
-    async fn fetch_many_edges_impl(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: &[ChangesetId],
-        _prefetch: Prefetch,
-        rendezvous: &RendezVousConnection,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        if cs_ids.is_empty() {
-            // This is actually NECESSARY, because SQL doesn't deal well with
-            // querying empty arrays
-            return Ok(HashMap::new());
-        }
+    fn collect_changeset_edges(
+        fetched_edges: &[(
+            ChangesetId,         // cs_id
+            Option<u64>,         // gen
+            Option<u64>,         // skip_tree_depth
+            Option<u64>,         // p1_linear_depth
+            Option<usize>,       // parent_count
+            Option<ChangesetId>, // merge_ancestor
+            Option<u64>,         // merge_ancestor_gen
+            Option<u64>,         // merge_ancestor_skip_tree_depth
+            Option<u64>,         // merge_ancestor_p1_linear_depth
+            Option<ChangesetId>, // skip_tree_parent
+            Option<u64>,         // skip_tree_parent_gen
+            Option<u64>,         // skip_tree_parent_skip_tree_depth
+            Option<u64>,         // skip_tree_parent_p1_linear_depth
+            Option<ChangesetId>, // skip_tree_skew_ancestor
+            Option<u64>,         // skip_tree_skew_ancestor_gen
+            Option<u64>,         // skip_tree_skew_ancestor_skip_tree_depth
+            Option<u64>,         // skip_tree_skew_ancestor_p1_linear_depth
+            Option<ChangesetId>, // p1_linear_skew_ancestor
+            Option<u64>,         // p1_linear_skew_ancestor_gen
+            Option<u64>,         // p1_linear_skew_ancestor_skip_tree_depth
+            Option<u64>,         // p1_linear_skew_ancestor_p1_linear_depth
+            usize,               // parent_num
+            Option<ChangesetId>, // parent
+            Option<u64>,         // parent_gen
+            Option<u64>,         // parent_skip_tree_depth
+            Option<u64>,         // parent_p1_linear_depth
+        )],
+    ) -> HashMap<ChangesetId, ChangesetEdges> {
         let option_fields_to_option_node =
             |cs_id, generation, skip_tree_depth, p1_linear_depth| match (
                 cs_id,
@@ -365,6 +383,112 @@ impl SqlCommitGraphStorage {
                 }
                 _ => None,
             };
+        let mut cs_id_to_cs_edges = HashMap::new();
+        for row in fetched_edges.iter() {
+            match *row {
+                (
+                    cs_id,
+                    Some(gen),
+                    Some(skip_tree_depth),
+                    Some(p1_linear_depth),
+                    Some(parent_count),
+                    merge_ancestor,
+                    merge_ancestor_gen,
+                    merge_ancestor_skip_tree_depth,
+                    merge_ancestor_p1_linear_depth,
+                    skip_tree_parent,
+                    skip_tree_parent_gen,
+                    skip_tree_parent_skip_tree_depth,
+                    skip_tree_parent_p1_linear_depth,
+                    skip_tree_skew_ancestor,
+                    skip_tree_skew_ancestor_gen,
+                    skip_tree_skew_ancestor_skip_tree_depth,
+                    skip_tree_skew_ancestor_p1_linear_depth,
+                    p1_linear_skew_ancestor,
+                    p1_linear_skew_ancestor_gen,
+                    p1_linear_skew_ancestor_skip_tree_depth,
+                    p1_linear_skew_ancestor_p1_linear_depth,
+                    ..,
+                ) => {
+                    cs_id_to_cs_edges.insert(
+                        cs_id,
+                        ChangesetEdges {
+                            node: ChangesetNode {
+                                cs_id,
+                                generation: Generation::new(gen),
+                                skip_tree_depth,
+                                p1_linear_depth,
+                            },
+                            parents: ChangesetNodeParents::new(),
+                            merge_ancestor: option_fields_to_option_node(
+                                merge_ancestor,
+                                merge_ancestor_gen,
+                                merge_ancestor_skip_tree_depth,
+                                merge_ancestor_p1_linear_depth,
+                            ),
+                            skip_tree_parent: option_fields_to_option_node(
+                                skip_tree_parent,
+                                skip_tree_parent_gen,
+                                skip_tree_parent_skip_tree_depth,
+                                skip_tree_parent_p1_linear_depth,
+                            ),
+                            skip_tree_skew_ancestor: option_fields_to_option_node(
+                                skip_tree_skew_ancestor,
+                                skip_tree_skew_ancestor_gen,
+                                skip_tree_skew_ancestor_skip_tree_depth,
+                                skip_tree_skew_ancestor_p1_linear_depth,
+                            ),
+                            p1_linear_skew_ancestor: option_fields_to_option_node(
+                                p1_linear_skew_ancestor,
+                                p1_linear_skew_ancestor_gen,
+                                p1_linear_skew_ancestor_skip_tree_depth,
+                                p1_linear_skew_ancestor_p1_linear_depth,
+                            ),
+                        },
+                    );
+                }
+                _ => continue,
+            }
+        }
+
+        for row in fetched_edges {
+            match *row {
+                (
+                    cs_id,
+                    ..,
+                    Some(parent),
+                    Some(parent_gen),
+                    Some(parent_skip_tree_depth),
+                    Some(parent_p1_linear_depth),
+                ) => {
+                    if let Some(edge) = cs_id_to_cs_edges.get_mut(&cs_id) {
+                        edge.parents.push(ChangesetNode {
+                            cs_id: parent,
+                            generation: Generation::new(parent_gen),
+                            skip_tree_depth: parent_skip_tree_depth,
+                            p1_linear_depth: parent_p1_linear_depth,
+                        })
+                    }
+                }
+                _ => continue,
+            }
+        }
+
+        cs_id_to_cs_edges
+    }
+
+    async fn fetch_many_edges_impl(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        _prefetch: Prefetch,
+        rendezvous: &RendezVousConnection,
+    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+        if cs_ids.is_empty() {
+            // This is actually NECESSARY, because SQL doesn't deal well with
+            // querying empty arrays
+            return Ok(HashMap::new());
+        }
 
         let ret = rendezvous
             .fetch_single
@@ -377,100 +501,7 @@ impl SqlCommitGraphStorage {
 
                     let fetched_edges =
                         SelectManyChangesets::query(&conn, &repo_id, cs_ids.as_slice()).await?;
-
-                    let mut cs_id_to_cs_edges = HashMap::new();
-
-                    for row in fetched_edges.iter() {
-                        match *row {
-                            (
-                                cs_id,
-                                Some(gen),
-                                Some(skip_tree_depth),
-                                Some(p1_linear_depth),
-                                Some(parent_count),
-                                merge_ancestor,
-                                merge_ancestor_gen,
-                                merge_ancestor_skip_tree_depth,
-                                merge_ancestor_p1_linear_depth,
-                                skip_tree_parent,
-                                skip_tree_parent_gen,
-                                skip_tree_parent_skip_tree_depth,
-                                skip_tree_parent_p1_linear_depth,
-                                skip_tree_skew_ancestor,
-                                skip_tree_skew_ancestor_gen,
-                                skip_tree_skew_ancestor_skip_tree_depth,
-                                skip_tree_skew_ancestor_p1_linear_depth,
-                                p1_linear_skew_ancestor,
-                                p1_linear_skew_ancestor_gen,
-                                p1_linear_skew_ancestor_skip_tree_depth,
-                                p1_linear_skew_ancestor_p1_linear_depth,
-                                ..,
-                            ) => {
-                                cs_id_to_cs_edges.insert(
-                                    cs_id,
-                                    ChangesetEdges {
-                                        node: ChangesetNode {
-                                            cs_id,
-                                            generation: Generation::new(gen),
-                                            skip_tree_depth,
-                                            p1_linear_depth,
-                                        },
-                                        parents: ChangesetNodeParents::new(),
-                                        merge_ancestor: option_fields_to_option_node(
-                                            merge_ancestor,
-                                            merge_ancestor_gen,
-                                            merge_ancestor_skip_tree_depth,
-                                            merge_ancestor_p1_linear_depth,
-                                        ),
-                                        skip_tree_parent: option_fields_to_option_node(
-                                            skip_tree_parent,
-                                            skip_tree_parent_gen,
-                                            skip_tree_parent_skip_tree_depth,
-                                            skip_tree_parent_p1_linear_depth,
-                                        ),
-                                        skip_tree_skew_ancestor: option_fields_to_option_node(
-                                            skip_tree_skew_ancestor,
-                                            skip_tree_skew_ancestor_gen,
-                                            skip_tree_skew_ancestor_skip_tree_depth,
-                                            skip_tree_skew_ancestor_p1_linear_depth,
-                                        ),
-                                        p1_linear_skew_ancestor: option_fields_to_option_node(
-                                            p1_linear_skew_ancestor,
-                                            p1_linear_skew_ancestor_gen,
-                                            p1_linear_skew_ancestor_skip_tree_depth,
-                                            p1_linear_skew_ancestor_p1_linear_depth,
-                                        ),
-                                    },
-                                );
-                            }
-                            _ => continue,
-                        }
-                    }
-
-                    for row in fetched_edges {
-                        match row {
-                            (
-                                cs_id,
-                                ..,
-                                Some(parent),
-                                Some(parent_gen),
-                                Some(parent_skip_tree_depth),
-                                Some(parent_p1_linear_depth),
-                            ) => {
-                                if let Some(edge) = cs_id_to_cs_edges.get_mut(&cs_id) {
-                                    edge.parents.push(ChangesetNode {
-                                        cs_id: parent,
-                                        generation: Generation::new(parent_gen),
-                                        skip_tree_depth: parent_skip_tree_depth,
-                                        p1_linear_depth: parent_p1_linear_depth,
-                                    })
-                                }
-                            }
-                            _ => continue,
-                        }
-                    }
-
-                    Ok(cs_id_to_cs_edges)
+                    Ok(Self::collect_changeset_edges(&fetched_edges))
                 }
             })
             .await?;
