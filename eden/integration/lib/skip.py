@@ -164,7 +164,8 @@ elif sys.platform.startswith("darwin"):
 
     # OSERROR AF_UNIX path too long
     TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = [
-        "test_status_socket",
+        "test_status",
+        "test_status_thrift_apis",
     ]
 
     # update fails because new file created while checkout operation in progress
@@ -182,7 +183,6 @@ elif sys.platform.startswith("darwin"):
     TEST_DISABLED["hg.rebase_test.RebaseTestTreeOnly"] = True
     TEST_DISABLED["hg.revert_test.RevertTestTreeOnly"] = True
     TEST_DISABLED["hg.split_test.SplitTestTreeOnly"] = True
-    TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = True
     TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = True
 
     # Assertion error and invalid argument
