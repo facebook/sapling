@@ -370,6 +370,9 @@ pub struct MononokeTunables {
     // Usage of new commit graph for speeding up server-side operations
     new_commit_graph_is_ancestor_percentage: TunableI64ByRepo,
 
+    // Disable all prefetching in the commit graph
+    disable_commit_graph_prefetch: TunableBool,
+
     // Disable the fix to use isolation level read committed
     disable_wal_read_committed: TunableBool,
 }

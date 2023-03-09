@@ -44,6 +44,7 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use stats::prelude::*;
+use tunables::tunables;
 use vec1::Vec1;
 
 #[cfg(test)]
@@ -226,7 +227,11 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
         &self,
         keys: HashSet<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, CachedChangesetEdges>> {
-        let prefetch = self.prefetch.include_hint();
+        let prefetch = if tunables().disable_commit_graph_prefetch().unwrap_or(false) {
+            Prefetch::None
+        } else {
+            self.prefetch.include_hint()
+        };
         let cs_ids: Vec<ChangesetId> = keys.iter().copied().collect();
         let entries = if self.required {
             self.caching_storage
