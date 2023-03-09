@@ -28,7 +28,7 @@ validate, expecting all valid
 
 
 validate, check route is logged on unexpected error (forced with chaos blob)
-  $ mononoke_walker --scuba-dataset file://scuba-error.json --blobstore-read-chaos-rate=1 --blobstore-cachelib-only -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --scuba-dataset file://scuba-error.json --blobstore-read-chaos-rate=1 -l validate validate -q -I deep -b master_bookmark 2>&1 | strip_glog
   Performing check types [HgLinkNodePopulated], repo: repo
   Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None } via Some(ValidateRoute { src_node: * "master_bookmark" *), via: [] }) in repo repo (glob)
   

@@ -11,9 +11,10 @@
   $ MULTIPLEXED=1 REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
 
 # Start a LFS server for this repository (no upstream, but we --always-wait-for-upstream to get logging consistency)
+# Disable local caching as we want to check each access.
   $ SCUBA="$TESTTMP/scuba.json"
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_root="$(lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-dataset "file://$SCUBA")"
+  $ lfs_root="$(CACHE_ARGS=--cache-mode=disabled lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-dataset "file://$SCUBA")"
 
 # Send some data
   $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_root}/lfs1"

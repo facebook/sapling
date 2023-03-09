@@ -11,7 +11,7 @@
   $ echo "{}" > "$ACL_FILE"
   $ echo "foobar" > "${TESTTMP}/foo"
 
-  $ "$MONONOKE_BENCHMARK_FILESTORE" "${COMMON_ARGS[@]}" "${TESTTMP}/foo" memory
+  $ "$MONONOKE_BENCHMARK_FILESTORE" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" "${TESTTMP}/foo" memory
   Test with FilestoreConfig { * }, writing into ThrottledBlob { * } (glob)
   Write start: 7 B
   Success: * (glob)

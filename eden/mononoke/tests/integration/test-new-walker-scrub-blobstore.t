@@ -68,7 +68,7 @@ Check fails on only the deleted side
 Check can walk fine on the only remaining side
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40, repo: repo0
-  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2*,30,0s; Run */s,*/s,2*,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:4*,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2*,*,0s; Run */s,*/s,2*,*,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:4*,3 HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3*, repo: repo0 (glob)
 
 Check can walk fine on the multiplex remaining side
   $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog

@@ -27,7 +27,12 @@ Check that healer queue has successful items
   $ read_blobstore_wal_queue_size
   33
 
+Check the number of blobs.  Scrub should process every blob once.
+  $ ls $TESTTMP/blobstore/1/blobs/blob-repo0000.* | grep -v .filenode_lookup. | wc -l
+  30
+
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old
+# TODO(mbthomas): concurrent fetches may not hit in the cache
   $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  30 scrub: blobstore_id BlobstoreId(0) not repaired for repo0000.
+  * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40, repo: repo
