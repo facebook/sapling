@@ -52,7 +52,6 @@ if sys.platform == "win32":
         "health_test.HealthOfFakeEdenFSTestAdHoc": True,
         "health_test.HealthOfFakeEdenFSTestManaged": True,
         "info_test.InfoTestHg": True,
-        "linux_cgroup_test.LinuxCgroupTest": True,
         "materialized_query_test.MaterializedQueryTestHg": True,
         "mmap_test.MmapTestHg": True,
         "mount_test.MountTestHg": True,
@@ -157,9 +156,6 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         "test_post_clone_permissions"
     ]
 elif sys.platform.startswith("darwin"):
-    # Linux cgroups obviously do not work on macOS
-    TEST_DISABLED["linux_cgroup_test.LinuxCgroupTest"] = True
-
     # Incorrect result
     TEST_DISABLED["hg.grep_test.GrepTestTreeOnly"] = [
         "test_grep_that_does_not_match_anything",
