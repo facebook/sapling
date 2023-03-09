@@ -393,6 +393,7 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
                     None => None,
                 }
                 .as_ref(),
+                None, //TODO(rajshar): Need to allow passing git_extra_headers through Eden API as well.
             )
             .await
             .with_context(|| anyhow!("When creating bonsai changeset"))?

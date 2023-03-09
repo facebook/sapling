@@ -44,6 +44,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::log_new_commits;
 use repo_update_logger::CommitInfo;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
@@ -458,6 +459,7 @@ impl RepoContext {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
+        git_extra_headers: Option<BTreeMap<SmallVec<[u8; 24]>, Bytes>>,
     ) -> Result<ChangesetContext, MononokeError> {
         self.start_write()?;
         self.authorization_context()
@@ -652,7 +654,8 @@ impl RepoContext {
 
         let author_date = MononokeDateTime::new(author_date);
         let committer_date = committer_date.map(MononokeDateTime::new);
-        let extra = extra.into();
+        let hg_extra = extra.into();
+        let git_extra_headers = git_extra_headers.map(SortedVectorMap::from);
 
         // Create the new Bonsai Changeset. The `freeze` method validates
         // that the bonsai changeset is internally consistent.
@@ -664,8 +667,8 @@ impl RepoContext {
             committer,
             committer_date,
             message,
-            hg_extra: extra,
-            git_extra_headers: None,
+            hg_extra,
+            git_extra_headers,
             git_tree_hash: None,
             file_changes,
             is_snapshot: bubble.is_some(),

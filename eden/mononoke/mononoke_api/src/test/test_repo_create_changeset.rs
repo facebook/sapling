@@ -20,6 +20,7 @@ use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::try_join;
 use repo_derived_data::RepoDerivedDataArc;
+use smallvec::SmallVec;
 
 use crate::ChangesetContext;
 use crate::ChangesetId;
@@ -91,6 +92,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
             extra.clone(),
             changes.clone(),
             bubble,
+            None,
         )
         .await?;
 
@@ -115,6 +117,7 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
             extra,
             changes,
             bubble,
+            None,
         )
         .await?;
 
@@ -223,6 +226,8 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
         let message = String::from("Test Created Commit");
         let extra = BTreeMap::new();
         let bubble = None;
+        let git_extra_headers =
+            Some(maplit::btreemap! {SmallVec::new() => Bytes::from_static(b"world")});
         repo.create_changeset(
             parents,
             author,
@@ -233,6 +238,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             extra,
             changes,
             bubble,
+            git_extra_headers,
         )
         .await
     }
@@ -357,6 +363,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
         let message = String::from("Test Created Commit");
         let extra = BTreeMap::new();
         let bubble = None;
+        let git_extra_headers = None;
         repo.create_changeset(
             parents,
             author.clone(),
@@ -367,6 +374,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
             extra.clone(),
             changes.clone(),
             bubble,
+            git_extra_headers,
         )
         .await
     }
@@ -460,6 +468,8 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
         let message = String::from("Test Created Commit");
         let extra = BTreeMap::new();
         let bubble = None;
+        let git_extra_headers =
+            Some(maplit::btreemap! {SmallVec::new() => Bytes::from_static(b"world")});
         repo.create_changeset(
             parents,
             author.clone(),
@@ -470,6 +480,7 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
             extra.clone(),
             changes.clone(),
             bubble,
+            git_extra_headers,
         )
         .await
     }
@@ -572,6 +583,8 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
         let message = String::from("Test Created Commit");
         let extra = BTreeMap::new();
         let bubble = None;
+        let git_extra_headers =
+            Some(maplit::btreemap! {SmallVec::new() => Bytes::from_static(b"world")});
         repo.create_changeset(
             parents,
             author.clone(),
@@ -582,6 +595,7 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
             extra.clone(),
             changes.clone(),
             bubble,
+            git_extra_headers,
         )
         .await
     }

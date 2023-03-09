@@ -429,6 +429,10 @@ impl SourceControlServiceImpl {
             .transpose()?;
         let message = params.info.message;
         let extra = params.info.extra;
+        let git_extra_headers = params
+            .info
+            .git_extra_headers
+            .map(|headers| headers.into_iter().map(|(k, v)| (k.0, v)).collect());
         let bubble = None;
 
         let changeset = repo
@@ -442,6 +446,7 @@ impl SourceControlServiceImpl {
                 extra,
                 file_changes,
                 bubble,
+                git_extra_headers,
             )
             .await?;
 
