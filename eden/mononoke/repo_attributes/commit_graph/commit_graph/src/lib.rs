@@ -25,6 +25,7 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
+use commit_graph_types::storage::PrefetchEdge;
 use commit_graph_types::ChangesetParents;
 use context::CoreContext;
 use itertools::Either;
@@ -584,7 +585,11 @@ impl CommitGraph {
                 let cs_ids = cs_ids.into_iter().collect::<Vec<_>>();
                 let frontier_edges = self
                     .storage
-                    .fetch_many_edges_required(ctx, &cs_ids, Prefetch::Hint(target_generation))
+                    .fetch_many_edges_required(
+                        ctx,
+                        &cs_ids,
+                        Prefetch::Hint(PrefetchEdge::SkipTreeSkewAncestor, target_generation),
+                    )
                     .await?;
                 for cs_id in cs_ids {
                     let edges = frontier_edges

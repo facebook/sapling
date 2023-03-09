@@ -23,6 +23,18 @@ use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;
 
+/// Indication of the kind of edge to traverse for prefetch.
+#[derive(Copy, Clone, Debug)]
+pub enum PrefetchEdge {
+    /// Prefetch a linear range of commits by following the first parent
+    FirstParent,
+
+    /// Prefetch along the maximum skip tree distance by following the skip
+    /// tree skew ancestor, or first parent if the commit does not have
+    /// a skip tree skew ancestor
+    SkipTreeSkewAncestor,
+}
+
 /// Indication for additional changesets to be fetched for subsequent
 /// traversals.
 ///
@@ -36,21 +48,23 @@ pub enum Prefetch {
 
     /// Prefetch is permitted with the given hint, but additional items are
     /// not to be returned.
-    Hint(Generation),
+    Hint(PrefetchEdge, Generation),
 
     /// Prefetch if possible, and included prefetched items in the result.
-    Include(Generation),
+    Include(PrefetchEdge, Generation),
 }
 
 impl Prefetch {
     pub fn is_hint(&self) -> bool {
-        matches!(self, Prefetch::Hint(_))
+        matches!(self, Prefetch::Hint(..))
     }
 
     pub fn include_hint(self) -> Prefetch {
         match self {
             Prefetch::None => Prefetch::None,
-            Prefetch::Hint(gen) | Prefetch::Include(gen) => Prefetch::Include(gen),
+            Prefetch::Hint(edge, gen) | Prefetch::Include(edge, gen) => {
+                Prefetch::Include(edge, gen)
+            }
         }
     }
 }
