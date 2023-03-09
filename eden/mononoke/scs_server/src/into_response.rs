@@ -340,13 +340,14 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
                 .collect())
         }
 
-        let (ids, message, date, author, parents, extra, generation) = try_join!(
+        let (ids, message, date, author, parents, hg_extra, git_extra_headers, generation) = try_join!(
             map_commit_identity(&self, identity_schemes),
             self.message(),
             self.author_date(),
             self.author(),
             map_parent_identities(&self, identity_schemes),
-            self.extras(),
+            self.hg_extras(),
+            self.git_extra_headers(),
             self.generation(),
         )?;
         Ok(thrift::CommitInfo {
@@ -356,7 +357,13 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             tz: date.offset().local_minus_utc(),
             author,
             parents,
-            extra: extra.into_iter().collect(),
+            extra: hg_extra.into_iter().collect(),
+            git_extra_headers: git_extra_headers.map(|headers| {
+                headers
+                    .into_iter()
+                    .map(|(k, v)| (thrift::small_binary(k), v))
+                    .collect()
+            }),
             generation: generation.value() as i64,
             ..Default::default()
         })

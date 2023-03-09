@@ -75,7 +75,7 @@ impl RepoContext {
         &self,
         changeset_ctx: &ChangesetContext,
     ) -> Result<(), MononokeError> {
-        let mut extras: HashMap<_, _> = changeset_ctx.extras().await?.into_iter().collect();
+        let mut extras: HashMap<_, _> = changeset_ctx.hg_extras().await?.into_iter().collect();
 
         //TODO(simonfar): Once we support deriving git commits, do derivation here
         // If there's no hggit extras, then give back the derived hash.

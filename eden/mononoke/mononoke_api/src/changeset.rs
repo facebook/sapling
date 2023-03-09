@@ -68,6 +68,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use skeleton_manifest::RootSkeletonManifestId;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
@@ -634,14 +635,28 @@ impl ChangesetContext {
         ))
     }
 
-    /// All commit extras as (name, value) pairs.
-    pub async fn extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
+    /// All mercurial commit extras as (name, value) pairs.
+    pub async fn hg_extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
         Ok(self
             .changeset_info()
             .await?
             .hg_extra()
             .map(|(name, value)| (name.to_string(), Vec::from(value)))
             .collect())
+    }
+
+    pub async fn git_extra_headers(
+        &self,
+    ) -> Result<Option<Vec<(SmallVec<[u8; 24]>, Bytes)>>, MononokeError> {
+        Ok(self
+            .changeset_info()
+            .await?
+            .git_extra_headers()
+            .map(|headers| {
+                headers
+                    .map(|(key, value)| (SmallVec::from(key), Bytes::copy_from_slice(value)))
+                    .collect()
+            }))
     }
 
     /// File changes associated with the commit.
