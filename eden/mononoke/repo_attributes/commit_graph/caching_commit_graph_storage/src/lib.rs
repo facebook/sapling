@@ -43,11 +43,19 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
-use ref_cast::RefCast;
+use stats::prelude::*;
 use vec1::Vec1;
 
 #[cfg(test)]
 mod tests;
+
+define_stats! {
+    prefix = "mononoke.cache.commit_graph.prefetch";
+
+    hit: timeseries("hit"; Rate, Sum),
+    fetched: timeseries("fetched"; Rate, Sum),
+    prefetched: timeseries("prefetched"; Rate, Sum),
+}
 
 /// Size of chunk when fetching from the backing store
 const CHUNK_SIZE: usize = 1000;
@@ -71,21 +79,43 @@ struct CacheRequest<'a> {
     required: bool,
 }
 
-#[derive(Clone, Debug, Abomonation, RefCast)]
-#[repr(transparent)]
-pub struct CachedChangesetEdges(ChangesetEdges);
+#[derive(Clone, Debug, Abomonation)]
+pub struct CachedChangesetEdges {
+    /// The cached edges.
+    edges: ChangesetEdges,
+
+    /// Whether these edges were originally fetched via a prefetch operation.
+    prefetched: bool,
+}
 
 impl Deref for CachedChangesetEdges {
     type Target = ChangesetEdges;
 
     fn deref(&self) -> &ChangesetEdges {
-        &self.0
+        &self.edges
     }
 }
 
 impl CachedChangesetEdges {
+    fn fetched(edges: ChangesetEdges) -> Self {
+        CachedChangesetEdges {
+            edges,
+            prefetched: false,
+        }
+    }
+
+    fn prefetched(edges: ChangesetEdges) -> Self {
+        CachedChangesetEdges {
+            edges,
+            prefetched: true,
+        }
+    }
+
     fn take(self) -> ChangesetEdges {
-        self.0
+        if self.prefetched {
+            STATS::hit.add_value(1);
+        }
+        self.edges
     }
 
     fn node_to_thrift(node: &ChangesetNode) -> thrift::ChangesetNode {
@@ -124,30 +154,33 @@ impl CachedChangesetEdges {
     }
 
     fn from_thrift(edges: thrift::ChangesetEdges) -> Result<Self> {
-        Ok(Self(ChangesetEdges {
-            node: Self::node_from_thrift(edges.node)?,
-            parents: edges
-                .parents
-                .into_iter()
-                .map(Self::node_from_thrift)
-                .collect::<Result<ChangesetNodeParents>>()?,
-            merge_ancestor: edges
-                .merge_ancestor
-                .map(Self::node_from_thrift)
-                .transpose()?,
-            skip_tree_parent: edges
-                .skip_tree_parent
-                .map(Self::node_from_thrift)
-                .transpose()?,
-            skip_tree_skew_ancestor: edges
-                .skip_tree_skew_ancestor
-                .map(Self::node_from_thrift)
-                .transpose()?,
-            p1_linear_skew_ancestor: edges
-                .p1_linear_skew_ancestor
-                .map(Self::node_from_thrift)
-                .transpose()?,
-        }))
+        Ok(Self {
+            edges: ChangesetEdges {
+                node: Self::node_from_thrift(edges.node)?,
+                parents: edges
+                    .parents
+                    .into_iter()
+                    .map(Self::node_from_thrift)
+                    .collect::<Result<ChangesetNodeParents>>()?,
+                merge_ancestor: edges
+                    .merge_ancestor
+                    .map(Self::node_from_thrift)
+                    .transpose()?,
+                skip_tree_parent: edges
+                    .skip_tree_parent
+                    .map(Self::node_from_thrift)
+                    .transpose()?,
+                skip_tree_skew_ancestor: edges
+                    .skip_tree_skew_ancestor
+                    .map(Self::node_from_thrift)
+                    .transpose()?,
+                p1_linear_skew_ancestor: edges
+                    .p1_linear_skew_ancestor
+                    .map(Self::node_from_thrift)
+                    .transpose()?,
+            },
+            prefetched: false,
+        })
     }
 }
 
@@ -214,19 +247,21 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
             let mut prefetched = HashMap::new();
             for (cs_id, edges) in entries {
                 if keys.contains(&cs_id) {
-                    fetched.insert(cs_id, CachedChangesetEdges(edges));
+                    fetched.insert(cs_id, CachedChangesetEdges::fetched(edges));
                 } else {
-                    prefetched.insert(cs_id, CachedChangesetEdges(edges));
+                    prefetched.insert(cs_id, CachedChangesetEdges::prefetched(edges));
                 }
             }
             if !prefetched.is_empty() {
+                STATS::prefetched.add_value(prefetched.len() as i64);
                 fill_cache(self, &prefetched).await;
             }
+            STATS::fetched.add_value(fetched.len() as i64);
             Ok(fetched)
         } else {
             Ok(entries
                 .into_iter()
-                .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges(edges)))
+                .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges::fetched(edges)))
                 .collect())
         }
     }

@@ -21,7 +21,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 maplit = "1.0"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-ref-cast = "1.0.12"
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 vec1 = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
