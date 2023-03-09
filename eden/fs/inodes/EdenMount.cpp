@@ -1735,10 +1735,18 @@ ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
 
 #ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
-  // 1) Ensure that all future opens will by default provide this owner
+  // 1) Ensure we are running in a fuse mount
+  auto fuseChannel = getFuseChannel();
+  if (!fuseChannel) {
+    return makeFuture<Unit>(newEdenError(
+        EdenErrorType::GENERIC_ERROR,
+        "chown is not currently implemented for NFS mounts"));
+  }
+
+  // 2) Ensure that all future opens will by default provide this owner
   setOwner(uid, gid);
 
-  // 2) Modify all uids/gids of files stored in the overlay
+  // 3) Modify all uids/gids of files stored in the overlay
   auto metadata = getInodeMetadataTable();
   XDCHECK(metadata) << "Unexpected null Metadata Table";
   metadata->forEachModify([&](auto& /* unusued */, auto& record) {
@@ -1750,10 +1758,8 @@ folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // guaranteed to have the requested uid/gid, but that racyness is
   // consistent with the behavior of chown
 
-  // 3) Invalidate all inodes that the kernel holds a reference to
+  // 4) Invalidate all inodes that the kernel holds a reference to
   auto inodesToInvalidate = getInodeMap()->getReferencedInodes();
-  auto fuseChannel = getFuseChannel();
-  XDCHECK(fuseChannel) << "Unexpected null Fuse Channel";
   fuseChannel->invalidateInodes(folly::range(inodesToInvalidate));
 
   return fuseChannel->flushInvalidations();
