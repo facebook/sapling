@@ -294,7 +294,7 @@ elif sys.platform.startswith("darwin"):
         "test_unlink_empty_dir",
     ]
 
-    # Requires NFSv4 as mentioned below in NFS specific skips
+    # EdenFS on macOS uses NFSv3, which doesn't support extended attributes.
     TEST_DISABLED["xattr_test.XattrTest"] = True
 
     # fsck doesn't work on macOS?
@@ -328,7 +328,8 @@ if sys.platform.startswith("linux"):
             # NFS mounts. So we inherently expect this test to fail on
             # NFS.
         ],
-        # These won't be fixed anytime soon, this requires NFSv4
+        # EdenFS's NFS implementation is NFSv3, which doesn't support extended
+        # attributes.
         "xattr_test.XattrTest": [  # T89439481
             "test_get_sha1_xattr",
             "test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir",
