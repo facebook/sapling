@@ -277,7 +277,8 @@ elif sys.platform.startswith("darwin"):
         "test_takeover",
     ]
 
-    # Key error?
+    # T89440575: We aren't able to get fetch counts by PID on NFS, which doesn't
+    # provide any information about client processes.
     TEST_DISABLED["thrift_test.ThriftTest"] = [
         "test_pid_fetch_counts",
     ]
@@ -340,7 +341,9 @@ if sys.platform.startswith("linux"):
             "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
         ],
         "stats_test.CountersTest": True,  # T89440036
-        "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
+        # T89440575: We aren't able to get fetch counts by PID on NFS, which
+        # doesn't provide any information about client processes.
+        "thrift_test.ThriftTest": ["test_pid_fetch_counts"],
         "mount_test.MountTest": [  # T91790656
             "test_unmount_succeeds_while_file_handle_is_open",
             "test_unmount_succeeds_while_dir_handle_is_open",
