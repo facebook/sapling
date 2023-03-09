@@ -59,6 +59,10 @@ impl Prefetch {
         matches!(self, Prefetch::Hint(..))
     }
 
+    pub fn is_include(&self) -> bool {
+        matches!(self, Prefetch::Include(..))
+    }
+
     pub fn include_hint(self) -> Prefetch {
         match self {
             Prefetch::None => Prefetch::None,

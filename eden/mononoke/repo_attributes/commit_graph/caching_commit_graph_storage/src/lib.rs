@@ -15,6 +15,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
+use caching_ext::fill_cache;
 use caching_ext::get_or_fill;
 use caching_ext::get_or_fill_chunked;
 use caching_ext::CacheDisposition;
@@ -192,22 +193,42 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
         &self,
         keys: HashSet<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, CachedChangesetEdges>> {
-        let cs_ids: Vec<ChangesetId> = keys.into_iter().collect();
+        let prefetch = self.prefetch.include_hint();
+        let cs_ids: Vec<ChangesetId> = keys.iter().copied().collect();
         let entries = if self.required {
             self.caching_storage
                 .storage
-                .fetch_many_edges_required(self.ctx, &cs_ids, self.prefetch.include_hint())
+                .fetch_many_edges_required(self.ctx, &cs_ids, prefetch)
                 .await?
         } else {
             self.caching_storage
                 .storage
-                .fetch_many_edges(self.ctx, &cs_ids, self.prefetch.include_hint())
+                .fetch_many_edges(self.ctx, &cs_ids, prefetch)
                 .await?
         };
-        Ok(entries
-            .into_iter()
-            .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges(edges)))
-            .collect())
+        if prefetch.is_include() {
+            // We were asked to prefetch. We must separate out the prefetched
+            // values from the fetched values as we may only return the
+            // fetched values.
+            let mut fetched = HashMap::new();
+            let mut prefetched = HashMap::new();
+            for (cs_id, edges) in entries {
+                if keys.contains(&cs_id) {
+                    fetched.insert(cs_id, CachedChangesetEdges(edges));
+                } else {
+                    prefetched.insert(cs_id, CachedChangesetEdges(edges));
+                }
+            }
+            if !prefetched.is_empty() {
+                fill_cache(self, &prefetched).await;
+            }
+            Ok(fetched)
+        } else {
+            Ok(entries
+                .into_iter()
+                .map(|(cs_id, edges)| (cs_id, CachedChangesetEdges(edges)))
+                .collect())
+        }
     }
 }
 
@@ -310,18 +331,13 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
-        let mut found = get_or_fill_chunked(
+        let found = get_or_fill_chunked(
             &self.request(ctx, prefetch),
             cs_ids.clone(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,
         )
         .await?;
-        if prefetch.is_hint() {
-            // We may have prefetched additional edges.  Remove them from the
-            // result
-            found.retain(|cs_id, _| cs_ids.contains(cs_id));
-        }
         Ok(found
             .into_iter()
             .map(|(cs_id, edges)| (cs_id, edges.take()))
@@ -335,18 +351,13 @@ impl CommitGraphStorage for CachingCommitGraphStorage {
         prefetch: Prefetch,
     ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
         let cs_ids: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
-        let mut found = get_or_fill_chunked(
+        let found = get_or_fill_chunked(
             &self.request_required(ctx, prefetch),
             cs_ids.clone(),
             CHUNK_SIZE,
             PARALLEL_CHUNKS,
         )
         .await?;
-        if prefetch.is_hint() {
-            // We may have prefetched additional edges.  Remove them from the
-            // result
-            found.retain(|cs_id, _| cs_ids.contains(cs_id));
-        }
         Ok(found
             .into_iter()
             .map(|(cs_id, edges)| (cs_id, edges.take()))
