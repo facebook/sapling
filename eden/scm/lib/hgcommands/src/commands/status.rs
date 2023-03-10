@@ -120,6 +120,7 @@ pub fn run(ctx: ReqCtx<StatusOpts>, repo: &mut Repo, wc: &mut WorkingCopy) -> Re
     }
 
     if needs_morestatus_extension(repo.dot_hg_path(), wc.treestate().lock().parents().count()) {
+        tracing::debug!(target: "status_info", status_detail="morestatus_needed");
         return Err(errors::FallbackToPython("morestatus functionality needed".to_owned()).into());
     }
 
