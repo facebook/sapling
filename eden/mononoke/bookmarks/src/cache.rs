@@ -836,7 +836,7 @@ mod tests {
         let transaction = bookmarks.create_transaction(ctx.clone());
         rt.block_on(transaction.commit()).unwrap();
 
-        let _ = spawn_query("c", ttl, &rt);
+        std::mem::drop(spawn_query("c", ttl, &rt));
         let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // successfull transaction should redirect further requests to master
@@ -904,15 +904,15 @@ mod tests {
         let requests = assert_no_pending_requests(requests, &rt, 100);
 
         // Spawn two queries, but without the cache being turned on. We expect 2 requests.
-        let _ = spawn_query("a", Some(-1), &rt);
+        std::mem::drop(spawn_query("a", Some(-1), &rt));
         let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.prefix, BookmarkPrefix::new("a").unwrap());
 
-        let _ = spawn_query("b", Some(-1), &rt);
+        std::mem::drop(spawn_query("b", Some(-1), &rt));
         let (request, requests) = next_request(requests, &rt, 100);
         assert_eq!(request.prefix, BookmarkPrefix::new("b").unwrap());
 
-        let _ = requests;
+        std::mem::drop(requests);
     }
 
     fn mock_bookmarks_response(

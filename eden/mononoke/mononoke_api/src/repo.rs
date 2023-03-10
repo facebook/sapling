@@ -1047,9 +1047,7 @@ impl RepoContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let mut cs_id = match freshness {
             BookmarkFreshness::MaybeStale => {
-                self.warm_bookmarks_cache()
-                    .get(&self.ctx, &bookmark)
-                    .await?
+                self.warm_bookmarks_cache().get(&self.ctx, bookmark).await?
             }
             BookmarkFreshness::MostRecent => None,
         };
@@ -1060,7 +1058,7 @@ impl RepoContext {
             cs_id = self
                 .blob_repo()
                 .bookmarks()
-                .get(self.ctx.clone(), &bookmark)
+                .get(self.ctx.clone(), bookmark)
                 .await?
         }
 

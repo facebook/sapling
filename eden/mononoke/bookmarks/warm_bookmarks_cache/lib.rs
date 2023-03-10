@@ -893,8 +893,8 @@ impl BookmarksCoordinator {
             info!(ctx.logger(), "Stopped warm bookmark cache updater");
         };
 
-        // Detach the handle. This will terminate using the `terminate` receiver.
-        let _ = tokio::task::spawn(fut);
+        // Fire and forget. This will terminate using the `terminate` receiver.
+        std::mem::drop(tokio::task::spawn(fut));
     }
 }
 

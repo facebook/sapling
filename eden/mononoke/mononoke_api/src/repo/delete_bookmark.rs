@@ -35,7 +35,7 @@ impl RepoContext {
             None => self
                 .blob_repo()
                 .bookmarks()
-                .get(self.ctx().clone(), &bookmark)
+                .get(self.ctx().clone(), bookmark)
                 .await
                 .context("Failed to fetch old bookmark target")?
                 .ok_or_else(|| {
@@ -52,7 +52,7 @@ impl RepoContext {
                 .with_pushvars(pushvars)
         }
         if let Some(redirector) = self.push_redirector.as_ref() {
-            let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
+            let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;
             if &large_bookmark == bookmark {
                 return Err(MononokeError::InvalidRequest(format!(
                     "Cannot delete shared bookmark '{}' from small repo",
@@ -73,7 +73,7 @@ impl RepoContext {
             // Wait for bookmark to catch up on small repo
             redirector.backsync_latest(ctx).await?;
         } else {
-            make_delete_op(&bookmark, old_target, pushvars)
+            make_delete_op(bookmark, old_target, pushvars)
                 .run(self.ctx(), self.authorization_context(), self.inner_repo())
                 .await?;
         }

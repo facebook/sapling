@@ -103,7 +103,7 @@ mod test {
         let limiter = AsyncLimiter::new(limiter).await;
 
         for _ in 0..10 {
-            let _ = limiter.access();
+            std::mem::drop(limiter.access());
         }
 
         let now = Instant::now();
