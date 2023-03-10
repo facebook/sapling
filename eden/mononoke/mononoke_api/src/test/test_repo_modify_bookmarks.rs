@@ -118,7 +118,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
 
     let key = BookmarkKey::new("trunk")?;
-    repo.move_bookmark("trunk", changesets["E"], None, false, None)
+    repo.move_bookmark(&key, changesets["E"], None, false, None)
         .await?;
     let trunk = repo
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -129,11 +129,11 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     // Attempt to move to a non-descendant commit without allowing
     // non-fast-forward moves should fail.
     assert!(
-        repo.move_bookmark("trunk", changesets["G"], None, false, None)
+        repo.move_bookmark(&key, changesets["G"], None, false, None)
             .await
             .is_err()
     );
-    repo.move_bookmark("trunk", changesets["G"], None, true, None)
+    repo.move_bookmark(&key, changesets["G"], None, true, None)
         .await?;
     let trunk = repo
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -145,13 +145,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let entries = repo
         .blob_repo()
         .bookmark_update_log()
-        .list_bookmark_log_entries(
-            ctx.clone(),
-            BookmarkKey::new("trunk")?,
-            3,
-            None,
-            Freshness::MostRecent,
-        )
+        .list_bookmark_log_entries(ctx.clone(), key, 3, None, Freshness::MostRecent)
         .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
         .try_collect::<Vec<_>>()
         .await?;
@@ -162,6 +156,24 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
             (Some(changesets["E"]), BookmarkUpdateReason::ApiRequest),
             (Some(changesets["C"]), BookmarkUpdateReason::TestMove),
         ]
+    );
+
+    // Tags can also be moved
+    let key =
+        BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag);
+    repo.create_bookmark(&key, changesets["C"], None).await?;
+    repo.move_bookmark(&key, changesets["D"], None, false, None)
+        .await?;
+    let entries = repo
+        .blob_repo()
+        .bookmark_update_log()
+        .list_bookmark_log_entries(ctx.clone(), key, 1, None, Freshness::MostRecent)
+        .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
+        .try_collect::<Vec<_>>()
+        .await?;
+    assert_eq!(
+        entries,
+        vec![(Some(changesets["D"]), BookmarkUpdateReason::ApiRequest),]
     );
 
     Ok(())

@@ -137,8 +137,14 @@ async fn set_bookmark(
                 .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
                 .id();
 
-            repo.move_bookmark(bookmark, to, Some(from), true, pushvars)
-                .await?
+            repo.move_bookmark(
+                &BookmarkKey::new(&bookmark)?,
+                to,
+                Some(from),
+                true,
+                pushvars,
+            )
+            .await?
         }
         (Some(to_hgid), None) => {
             // Create bookmark

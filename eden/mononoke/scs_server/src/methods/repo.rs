@@ -637,7 +637,7 @@ impl SourceControlServiceImpl {
         let pushvars = convert_pushvars(params.pushvars);
 
         repo.move_bookmark(
-            &params.bookmark,
+            &BookmarkKey::new(&params.bookmark).map_err(Into::<MononokeError>::into)?,
             changeset.id(),
             old_changeset_id,
             params.allow_non_fast_forward_move,

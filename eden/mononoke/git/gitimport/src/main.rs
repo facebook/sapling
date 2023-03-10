@@ -293,7 +293,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         let allow_non_fast_forward = true;
                         repo_context
                         .move_bookmark(
-                            &name,
+                            &BookmarkKey::new(&name)?,
                             *changeset,
                             old_changeset,
                             allow_non_fast_forward,
