@@ -156,12 +156,6 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         "test_post_clone_permissions"
     ]
 elif sys.platform.startswith("darwin"):
-    # Incorrect result
-    TEST_DISABLED["hg.grep_test.GrepTestTreeOnly"] = [
-        "test_grep_that_does_not_match_anything",
-        "test_grep_that_does_not_match_anything_in_directory",
-    ]
-
     # OSERROR AF_UNIX path too long
     TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = [
         "test_status",
