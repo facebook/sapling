@@ -8,12 +8,12 @@ import shutil
 import subprocess
 import sys
 import uuid
-from typing import Dict, Iterator, Optional
+from typing import Dict, Iterator, Optional, Pattern
 
 DATETIME_FORMAT = "%Y-%m-%d_%Hh%Mm%Ss"
 
 
-RE_LOG_DIRNAME = re.compile(
+RE_LOG_DIRNAME: Pattern[str] = re.compile(
     r"(\d{4}-\d\d-\d\d_\d\dh\d\dm\d\ds)_" r"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}"
 )
 
@@ -96,7 +96,7 @@ def setup(
     stderr_level: int = logging.WARN,
     file_level: int = logging.DEBUG,
     sapling_cli: str = _sapling_cli,
-):
+) -> None:
 
     global _sapling_cli
     _sapling_cli = sapling_cli
