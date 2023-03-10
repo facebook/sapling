@@ -181,18 +181,38 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let bookmark3_key = BookmarkKey::new("scratch/bookmark3")?;
     repo.create_bookmark(&bookmark3_key, changesets["G"], None)
         .await?;
+    let tag_key =
+        BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag);
+    repo.create_bookmark(&tag_key, changesets["B"], None)
+        .await?;
+    let note_key =
+        BookmarkKey::with_name_and_category(BookmarkName::new("note1")?, BookmarkCategory::Note);
+    repo.create_bookmark(&note_key, changesets["D"], None)
+        .await?;
 
-    // Can delete public bookmarks.
-    repo.delete_bookmark("bookmark1", None, None).await?;
+    // Can delete public bookmarks (of any category).
+    repo.delete_bookmark(&bookmark1_key, None, None).await?;
     assert!(
         repo.resolve_bookmark(&bookmark1_key, BookmarkFreshness::MostRecent)
+            .await?
+            .is_none()
+    );
+    repo.delete_bookmark(&tag_key, None, None).await?;
+    assert!(
+        repo.resolve_bookmark(&tag_key, BookmarkFreshness::MostRecent)
+            .await?
+            .is_none()
+    );
+    repo.delete_bookmark(&note_key, None, None).await?;
+    assert!(
+        repo.resolve_bookmark(&note_key, BookmarkFreshness::MostRecent)
             .await?
             .is_none()
     );
 
     // Deleting a bookmark with the wrong old-target fails.
     assert!(
-        repo.delete_bookmark("bookmark2", Some(changesets["E"]), None)
+        repo.delete_bookmark(&bookmark2_key, Some(changesets["E"]), None)
             .await
             .is_err()
     );
@@ -203,7 +223,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(bookmark2.id(), changesets["F"]);
 
     // But with the right old-target succeeds.
-    repo.delete_bookmark("bookmark2", Some(changesets["F"]), None)
+    repo.delete_bookmark(&bookmark2_key, Some(changesets["F"]), None)
         .await?;
     assert!(
         repo.resolve_bookmark(&bookmark1_key, BookmarkFreshness::MostRecent)
@@ -213,13 +233,13 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
 
     // Deleting a scratch bookmark with the wrong old-target fails.
     assert!(
-        repo.delete_bookmark("scratch/bookmark3", Some(changesets["E"]), None)
+        repo.delete_bookmark(&bookmark3_key, Some(changesets["E"]), None)
             .await
             .is_err()
     );
 
     // But with the right old-target succeeds.
-    repo.delete_bookmark("scratch/bookmark3", Some(changesets["G"]), None)
+    repo.delete_bookmark(&bookmark3_key, Some(changesets["G"]), None)
         .await?;
     assert!(
         repo.resolve_bookmark(&bookmark3_key, BookmarkFreshness::MostRecent)

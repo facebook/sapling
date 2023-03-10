@@ -22,14 +22,11 @@ impl RepoContext {
     /// Delete a bookmark.
     pub async fn delete_bookmark(
         &self,
-        bookmark: impl AsRef<str>,
+        bookmark: &BookmarkKey,
         old_target: Option<ChangesetId>,
         pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
         self.start_write()?;
-
-        let bookmark = bookmark.as_ref();
-        let bookmark = BookmarkKey::new(bookmark)?;
 
         // We need to find out where the bookmark currently points to in order
         // to delete it.  Make sure to bypass any out-of-date caches.
@@ -56,7 +53,7 @@ impl RepoContext {
         }
         if let Some(redirector) = self.push_redirector.as_ref() {
             let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
-            if large_bookmark == bookmark {
+            if &large_bookmark == bookmark {
                 return Err(MononokeError::InvalidRequest(format!(
                     "Cannot delete shared bookmark '{}' from small repo",
                     bookmark

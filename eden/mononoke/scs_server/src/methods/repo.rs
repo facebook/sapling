@@ -669,8 +669,13 @@ impl SourceControlServiceImpl {
         };
         let pushvars = convert_pushvars(params.pushvars);
 
-        repo.delete_bookmark(&params.bookmark, old_changeset_id, pushvars.as_ref())
-            .await?;
+        repo.delete_bookmark(
+            &BookmarkKey::new(&params.bookmark).map_err(Into::<MononokeError>::into)?,
+            old_changeset_id,
+            pushvars.as_ref(),
+        )
+        .await?;
+
         Ok(thrift::RepoDeleteBookmarkResponse {
             ..Default::default()
         })

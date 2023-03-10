@@ -163,7 +163,8 @@ async fn set_bookmark(
                 .ok_or(ErrorKind::HgIdNotFound(from_hgid))?
                 .id();
 
-            repo.delete_bookmark(bookmark, Some(from), pushvars).await?
+            repo.delete_bookmark(&BookmarkKey::new(&bookmark)?, Some(from), pushvars)
+                .await?
         }
         (None, None) => {
             return Err(Error::msg(
