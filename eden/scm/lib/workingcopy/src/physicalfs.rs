@@ -149,9 +149,11 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                     let file = ts.normalize(file.as_ref())?;
                     let path = RepoPath::from_utf8(file.as_ref())?;
                     self.seen.insert(path.to_owned());
-                    let changed = self
-                        .file_change_detector
-                        .has_changed_with_fresh_metadata(&mut ts, path, metadata)?;
+                    let changed = self.file_change_detector.has_changed_with_fresh_metadata(
+                        &mut ts,
+                        path,
+                        Some(metadata),
+                    )?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
                         return Ok(Some(PendingChangeResult::File(change_type)));

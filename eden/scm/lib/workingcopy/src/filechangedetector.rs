@@ -33,7 +33,7 @@ use crate::walker::WalkError;
 pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct HgModifiedTime(u64);
 
 impl From<u64> for HgModifiedTime {
@@ -69,6 +69,16 @@ pub enum FileChangeResult {
     Yes(ChangeType),
     No,
     Maybe,
+}
+
+impl FileChangeResult {
+    fn changed(path: RepoPathBuf) -> Self {
+        Self::Yes(ChangeType::Changed(path))
+    }
+
+    fn deleted(path: RepoPathBuf) -> Self {
+        Self::Yes(ChangeType::Deleted(path))
+    }
 }
 
 pub enum ResolvedFileChangeResult {
@@ -110,112 +120,128 @@ impl FileChangeDetector {
     }
 }
 
-impl FileChangeDetector {
-    pub fn has_changed_with_fresh_metadata(
-        &mut self,
-        ts: &mut TreeState,
-        path: &RepoPath,
-        metadata: Metadata,
-    ) -> Result<FileChangeResult> {
-        let file_type = metadata.file_type();
-        let is_valid_file = file_type.is_file() || file_type.is_symlink();
+const NEED_CHECK: StateFlags = StateFlags::NEED_CHECK;
+const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
 
-        let state = match (self.get_treestate(ts, path)?, is_valid_file) {
-            // File exists and is in the tree state: it might have changed.
-            (Some(state), true) => state,
+pub fn file_changed_given_metadata(
+    vfs: &VFS,
+    path: &RepoPath,
+    last_write: HgModifiedTime,
+    metadata: Option<Metadata>,
+    state: Option<FileStateV2>,
+) -> Result<FileChangeResult> {
+    // First handle when metadata is None (i.e. file doesn't exist).
+    let (metadata, state) = match (metadata, state) {
+        // File was untracked during crawl but no longer exists.
+        (None, None) => return Ok(FileChangeResult::No),
 
-            // If the file is not valid (e.g. a directory or a weird file like
-            // a fifo file) but exists in P1 (as a valid file at some previous
-            // time) then we consider it now deleted.
-            (Some(state), false) if state.state.intersects(StateFlags::EXIST_P1) => {
-                return Ok(Self::deleted(path));
-            }
-
-            // File exists in treestate but not P1 (e.g. as needing check by
-            // watchman). This means it must have changed from a valid file
-            // to an invalid file and so we want to mark it as not changed
-            // so we can skip over it.
-            (Some(_), false) => return Ok(FileChangeResult::No),
-
-            // File exists but is not in the treestate (untracked)
-            (None, true) => return Ok(Self::changed(path)),
-
-            // File doesn't exist on treestate and isn't a valid file. The only
-            // reason we get here is if it was a valid file during the crawl
-            // but no longer is. Mark it as not changed so we can skip over it.
-            (None, false) => return Ok(FileChangeResult::No),
-        };
-
-        // If it's not in P1, (i.e. it's added or untracked) it's considered changed.
-        let flags = state.state;
-        let in_parent = flags.intersects(StateFlags::EXIST_P1); // TODO: Also check against P2?
-        if !in_parent {
-            return Ok(Self::changed(path));
+        // File was not found but exists in P1: mark as deleted.
+        (None, Some(state)) if state.state.intersects(EXIST_P1) => {
+            return Ok(FileChangeResult::deleted(path.to_owned()));
         }
 
-        // If working copy file size or flags are different from what is in treestate, it has changed.
-        // Note: state.size is i32 since Mercurial uses negative numbers to indicate special files.
-        // A -1 indicates the file is either in a merge state or a lookup state.
-        // A -2 indicates the file comes from the other parent (and may or may not exist in the
-        // current parent).
-        //
-        // Regardless, if the size is negative, we'll do a lookup comparison since we can't
-        // determine if the file has changed relative to p1. This logic is a mess and we should get
-        // rid of all these negative numbers.
-        let valid_size = state.size >= 0;
-        if valid_size {
-            let size_different = metadata.len() != state.size.try_into().unwrap_or(std::u64::MAX);
-            let exec_different = self.vfs.supports_executables()
-                && is_executable(&metadata) != state.is_executable();
-            let symlink_different =
-                self.vfs.supports_symlinks() && is_symlink(&metadata) != state.is_symlink();
+        // File doesn't exist, isn't in P1 but exists in treestate.
+        // This can happen when watchman is tracking that this file needs
+        // checking for example.
+        (None, Some(_)) => return Ok(FileChangeResult::No),
 
-            if size_different || exec_different || symlink_different {
-                return Ok(Self::changed(path));
-            }
+        (Some(m), s) => (m, s),
+    };
+
+    // Don't check EXIST_P2. If file is only in P2 we want to report "changed"
+    // even if its contents happen to match an untracked file on disk.
+    let in_parent = matches!(&state, Some(s) if s.state.intersects(EXIST_P1));
+    let is_trackable_file = metadata.is_file() || metadata.is_symlink();
+
+    let state = match (in_parent, is_trackable_file) {
+        // If the file is not valid (e.g. a directory or a weird file like
+        // a fifo file) but exists in P1 (as a valid file at some previous
+        // time) then we consider it now deleted.
+        (true, false) => return Ok(FileChangeResult::deleted(path.to_owned())),
+        // File not in parent and not trackable - skip it. We can get here if
+        // the file was valid during the crawl but no longer is.
+        (false, false) => return Ok(FileChangeResult::No),
+        // File exists but is not in the treestate (untracked)
+        (false, true) => return Ok(FileChangeResult::changed(path.to_owned())),
+        (true, true) => state.unwrap(),
+    };
+
+    let flags = state.state;
+
+    // If working copy file size or flags are different from what is in treestate, it has changed.
+    // Note: state.size is i32 since Mercurial uses negative numbers to indicate special files.
+    // A -1 indicates the file is either in a merge state or a lookup state.
+    // A -2 indicates the file comes from the other parent (and may or may not exist in the
+    // current parent).
+    //
+    // Regardless, if the size is negative, we'll do a lookup comparison since we can't
+    // determine if the file has changed relative to p1. This logic is a mess and we should get
+    // rid of all these negative numbers.
+    let valid_size = state.size >= 0;
+    if valid_size {
+        let size_different = metadata.len() != state.size.try_into().unwrap_or(std::u64::MAX);
+        let exec_different =
+            vfs.supports_executables() && is_executable(&metadata) != state.is_executable();
+        let symlink_different =
+            vfs.supports_symlinks() && is_symlink(&metadata) != state.is_symlink();
+
+        if size_different || exec_different || symlink_different {
+            return Ok(FileChangeResult::changed(path.to_owned()));
         }
-
-        // If it's marked NEED_CHECK, we always need to do a lookup, regardless of the mtime.
-        let needs_check = flags.intersects(StateFlags::NEED_CHECK) || !valid_size;
-        if needs_check {
-            self.lookups.push(path.to_owned());
-            return Ok(FileChangeResult::Maybe);
-        }
-
-        // If the mtime has changed or matches the last normal() write time, we need to compare the
-        // file contents in the later Lookups phase.  mtime can be negative as well. A -1 indicates
-        // the file is in a lookup state. Since a -1 will always cause the equality comparison
-        // below to fail and force a lookup, the -1 is handled correctly without special casing. In
-        // theory all -1 files should be marked NEED_CHECK above (I think).
-        if state.mtime < 0 {
-            self.lookups.push(path.to_owned());
-            return Ok(FileChangeResult::Maybe);
-        }
-
-        let state_mtime: Result<HgModifiedTime> = state.mtime.try_into();
-        let state_mtime = state_mtime.map_err(|e| WalkError::InvalidMTime(path.to_owned(), e))?;
-        let mtime: HgModifiedTime = metadata.modified()?.try_into()?;
-
-        if mtime != state_mtime || mtime == self.last_write {
-            self.lookups.push(path.to_owned());
-            return Ok(FileChangeResult::Maybe);
-        }
-
-        Ok(FileChangeResult::No)
     }
 
+    // If it's marked NEED_CHECK, we always need to do a lookup, regardless of the mtime.
+    let needs_check = flags.intersects(NEED_CHECK) || !valid_size;
+    if needs_check {
+        return Ok(FileChangeResult::Maybe);
+    }
+
+    // If the mtime has changed or matches the last normal() write time, we need to compare the
+    // file contents in the later Lookups phase.  mtime can be negative as well. A -1 indicates
+    // the file is in a lookup state. Since a -1 will always cause the equality comparison
+    // below to fail and force a lookup, the -1 is handled correctly without special casing. In
+    // theory all -1 files should be marked NEED_CHECK above (I think).
+    if state.mtime < 0 {
+        return Ok(FileChangeResult::Maybe);
+    }
+
+    let state_mtime: Result<HgModifiedTime> = state.mtime.try_into();
+    let state_mtime = state_mtime.map_err(|e| WalkError::InvalidMTime(path.to_owned(), e))?;
+    let mtime: HgModifiedTime = metadata.modified()?.try_into()?;
+
+    if mtime != state_mtime || mtime == last_write {
+        return Ok(FileChangeResult::Maybe);
+    }
+
+    Ok(FileChangeResult::No)
+}
+
+impl FileChangeDetector {
     fn get_treestate(&self, ts: &mut TreeState, path: &RepoPath) -> Result<Option<FileStateV2>> {
         let normalized = ts.normalize(path.as_ref())?;
         ts.get(normalized.as_ref())
             .map(|option| option.map(|state| state.clone()))
     }
 
-    fn changed(path: &RepoPath) -> FileChangeResult {
-        FileChangeResult::Yes(ChangeType::Changed(path.to_owned()))
-    }
+    pub fn has_changed_with_fresh_metadata(
+        &mut self,
+        ts: &mut TreeState,
+        path: &RepoPath,
+        metadata: Option<Metadata>,
+    ) -> Result<FileChangeResult> {
+        let res = file_changed_given_metadata(
+            &self.vfs,
+            path,
+            self.last_write,
+            metadata,
+            self.get_treestate(ts, path)?,
+        );
 
-    fn deleted(path: &RepoPath) -> FileChangeResult {
-        FileChangeResult::Yes(ChangeType::Deleted(path.to_owned()))
+        if matches!(res, Ok(FileChangeResult::Maybe)) {
+            self.lookups.push(path.to_owned());
+        }
+
+        res
     }
 }
 
@@ -227,24 +253,6 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                 Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
                 _ => return Err(e),
             },
-        };
-
-        let state = self.get_treestate(ts, path)?;
-        let metadata = match (metadata, state) {
-            // File was untracked during crawl but no longer exists.
-            (None, None) => return Ok(FileChangeResult::No),
-
-            // File was not found but exists in P1: mark as deleted.
-            (None, Some(state)) if state.state.intersects(StateFlags::EXIST_P1) => {
-                return Ok(Self::deleted(path));
-            }
-
-            // File doesn't exist, isn't in P1 but exists in treestate.
-            // This can happen when watchman is tracking that this file needs
-            // checking for example.
-            (None, Some(_)) => return Ok(FileChangeResult::No),
-
-            (Some(m), _) => m,
         };
 
         self.has_changed_with_fresh_metadata(ts, path, metadata)
