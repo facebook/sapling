@@ -173,13 +173,27 @@ static inline PyObject* _asciitransform(
     PyObject* str_obj,
     const char table[128],
     PyObject* fallback_fn) {
-  char *str, *newstr;
+  const char* str;
+  char* newstr;
   Py_ssize_t i, len;
   PyObject* newobj = NULL;
   PyObject* ret = NULL;
 
-  str = PyBytes_AS_STRING(str_obj);
-  len = PyBytes_GET_SIZE(str_obj);
+  if (PyBytes_Check(str_obj)) {
+    str = PyBytes_AS_STRING(str_obj);
+    len = PyBytes_GET_SIZE(str_obj);
+  } else if (PyUnicode_Check(str_obj)) {
+    str = PyUnicode_AsUTF8AndSize(str_obj, &len);
+    if (!str) {
+      goto quit;
+    }
+  } else {
+    PyErr_Format(
+        PyExc_TypeError,
+        "_asciitransform takes a string or bytes object not %s",
+        Py_TYPE(str_obj)->tp_name);
+    goto quit;
+  }
 
   newobj = PyBytes_FromStringAndSize(NULL, len);
   if (!newobj)

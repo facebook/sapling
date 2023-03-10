@@ -169,7 +169,6 @@ elif sys.platform.startswith("darwin"):
 
     # hg tests with misc failures
     TEST_DISABLED["hg.add_test.AddTestTreeOnly"] = True
-    TEST_DISABLED["hg.commit_test.CommitTestTreeOnly"] = True
     TEST_DISABLED["hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly"] = True
     TEST_DISABLED["hg.files_test.FilesTestTreeOnly"] = True
     TEST_DISABLED["hg.merge_test.MergeTestTreeOnly"] = True
