@@ -158,8 +158,8 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
         let mut max_log_id = None;
         let mut updates = HashMap::new();
 
-        for (log_id, name, kind, cs_id) in changes {
-            let bookmark = BookmarkKey::with_name_and_category(name, BookmarkCategory::Branch);
+        for (log_id, name, category, kind, cs_id) in changes {
+            let bookmark = BookmarkKey::with_name_and_category(name, category);
             // kind & cs_id come from the same table (bookmarks) and they're not nullable there, so
             // if one is missing, that means the join didn't find anything, and the one must be
             // missing too.
@@ -219,9 +219,9 @@ mononoke_queries! {
     read SelectUpdatedBookmarks(
         repo_id: RepositoryId,
         log_id: u64
-    ) -> (u64, BookmarkName, Option<BookmarkKind>, Option<ChangesetId>) {
+    ) -> (u64, BookmarkName, BookmarkCategory, Option<BookmarkKind>, Option<ChangesetId>) {
         mysql("
-        SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks.hg_kind, bookmarks.changeset_id
+        SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks_update_log.category, bookmarks.hg_kind, bookmarks.changeset_id
         FROM bookmarks_update_log
         LEFT JOIN bookmarks
             FORCE INDEX (repo_id_log_id)
@@ -231,7 +231,7 @@ mononoke_queries! {
         ORDER BY bookmarks_update_log.id DESC
         ")
         sqlite("
-        SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks.hg_kind, bookmarks.changeset_id
+        SELECT bookmarks_update_log.id, bookmarks_update_log.name, bookmarks_update_log.category, bookmarks.hg_kind, bookmarks.changeset_id
         FROM bookmarks_update_log
         LEFT JOIN bookmarks
             ON  bookmarks.repo_id = bookmarks_update_log.repo_id

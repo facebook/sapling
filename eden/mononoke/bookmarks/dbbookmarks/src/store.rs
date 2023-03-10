@@ -181,10 +181,10 @@ mononoke_queries! {
     }
 
     read ReadNextBookmarkLogEntries(min_id: u64, repo_id: RepositoryId, limit: u64) -> (
-        i64, RepositoryId, BookmarkName, Option<ChangesetId>, Option<ChangesetId>,
+        i64, RepositoryId, BookmarkName, BookmarkCategory, Option<ChangesetId>, Option<ChangesetId>,
         BookmarkUpdateReason, Timestamp
     ) {
-        "SELECT id, repo_id, name, to_changeset_id, from_changeset_id, reason, timestamp
+        "SELECT id, repo_id, name, category, to_changeset_id, from_changeset_id, reason, timestamp
          FROM bookmarks_update_log
          WHERE id > {min_id} AND repo_id = {repo_id}
          ORDER BY id asc
@@ -236,13 +236,14 @@ mononoke_queries! {
         WHERE id > {min_id} AND repo_id = {repo_id} AND NOT reason = {reason}"
     }
 
-    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, max_records: u32, tok: i32) -> (
+    read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, category: BookmarkCategory, max_records: u32, tok: i32) -> (
         u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp, i32
     ) {
         "SELECT id, to_changeset_id, reason, timestamp, {tok}
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
+           AND category = {category}
          ORDER BY id DESC
          LIMIT {max_records}"
     }
@@ -250,6 +251,7 @@ mononoke_queries! {
     read SelectBookmarkLogsWithTsInRange(
         repo_id: RepositoryId,
         name: BookmarkName,
+        category: BookmarkCategory,
         max_records: u32,
         min_ts: Timestamp,
         max_ts: Timestamp
@@ -260,19 +262,21 @@ mononoke_queries! {
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
+           AND category = {category}
            AND timestamp >= {min_ts}
            AND timestamp <= {max_ts}
          ORDER BY id DESC
          LIMIT {max_records}"
     }
 
-    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32, tok: i32) -> (
+    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, category: BookmarkCategory, max_records: u32, offset: u32, tok: i32) -> (
         u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp, i32
     ) {
         "SELECT id, to_changeset_id, reason, timestamp, {tok}
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
+           AND category = {category}
          ORDER BY id DESC
          LIMIT {max_records}
          OFFSET {offset}"
@@ -595,6 +599,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                         &conn,
                         &repo_id,
                         key.name(),
+                        key.category(),
                         &max_rec,
                         &offset,
                         &tok,
@@ -602,7 +607,15 @@ impl BookmarkUpdateLog for SqlBookmarks {
                     .await?
                 }
                 None => {
-                    SelectBookmarkLogs::query(&conn, &repo_id, key.name(), &max_rec, &tok).await?
+                    SelectBookmarkLogs::query(
+                        &conn,
+                        &repo_id,
+                        key.name(),
+                        key.category(),
+                        &max_rec,
+                        &tok,
+                    )
+                    .await?
                 }
             };
             Ok(stream::iter(
@@ -635,6 +648,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 &conn,
                 &repo_id,
                 key.name(),
+                key.category(),
                 &max_rec,
                 &min_ts,
                 &max_ts,
@@ -736,21 +750,21 @@ impl BookmarkUpdateLog for SqlBookmarks {
             let homogenous_entries: Vec<_> = match entries.first().cloned() {
                 Some(first_entry) => {
                     // Note: types are explicit here to protect us from query behavior change
-                    //       when tuple items 2, or 5 become something else, and we still succeed
+                    //       when tuple items 2, 3, or 6 become something else, and we still succeed
                     //       compiling everything because of the type inference
                     let first_name: &BookmarkKey = &BookmarkKey::with_name_and_category(
                         first_entry.2.clone(),
-                        BookmarkCategory::Branch,
+                        first_entry.3.clone(),
                     );
-                    let first_reason: &BookmarkUpdateReason = &first_entry.5;
+                    let first_reason: &BookmarkUpdateReason = &first_entry.6;
                     entries
                         .into_iter()
                         .take_while(|entry| {
                             let name: &BookmarkKey = &BookmarkKey::with_name_and_category(
                                 entry.2.clone(),
-                                BookmarkCategory::Branch,
+                                entry.3.clone(),
                             );
-                            let reason: &BookmarkUpdateReason = &entry.5;
+                            let reason: &BookmarkUpdateReason = &entry.6;
                             name == first_name && reason == first_reason
                         })
                         .collect()
@@ -759,14 +773,12 @@ impl BookmarkUpdateLog for SqlBookmarks {
             };
             Ok(
                 stream::iter(homogenous_entries.into_iter().map(Ok)).and_then(|entry| async move {
-                    let (id, repo_id, name, to_cs_id, from_cs_id, reason, timestamp) = entry;
+                    let (id, repo_id, name, category, to_cs_id, from_cs_id, reason, timestamp) =
+                        entry;
                     Ok(BookmarkUpdateLogEntry {
                         id,
                         repo_id,
-                        bookmark_name: BookmarkKey::with_name_and_category(
-                            name,
-                            BookmarkCategory::Branch,
-                        ),
+                        bookmark_name: BookmarkKey::with_name_and_category(name, category),
                         to_changeset_id: to_cs_id,
                         from_changeset_id: from_cs_id,
                         reason,
@@ -804,14 +816,12 @@ impl BookmarkUpdateLog for SqlBookmarks {
 
             Ok(
                 stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
-                    let (id, repo_id, name, to_cs_id, from_cs_id, reason, timestamp) = entry;
+                    let (id, repo_id, name, category, to_cs_id, from_cs_id, reason, timestamp) =
+                        entry;
                     Ok(BookmarkUpdateLogEntry {
                         id,
                         repo_id,
-                        bookmark_name: BookmarkKey::with_name_and_category(
-                            name,
-                            BookmarkCategory::Branch,
-                        ),
+                        bookmark_name: BookmarkKey::with_name_and_category(name, category),
                         to_changeset_id: to_cs_id,
                         from_changeset_id: from_cs_id,
                         reason,

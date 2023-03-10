@@ -108,6 +108,7 @@ mononoke_queries! {
             id: u64,
             repo_id: RepositoryId,
             name: BookmarkName,
+            category: BookmarkCategory,
             from_changeset_id: Option<ChangesetId>,
             to_changeset_id: Option<ChangesetId>,
             reason: BookmarkUpdateReason,
@@ -116,7 +117,7 @@ mononoke_queries! {
     ) {
         none,
         "INSERT INTO bookmarks_update_log
-         (id, repo_id, name, from_changeset_id, to_changeset_id, reason, timestamp)
+         (id, repo_id, name, category, from_changeset_id, to_changeset_id, reason, timestamp)
          VALUES {values}"
     }
 }
@@ -242,6 +243,7 @@ impl SqlBookmarksTransactionPayload {
                 id,
                 &self.repo_id,
                 bookmark.name(),
+                bookmark.category(),
                 &log_entry.old,
                 &log_entry.new,
                 &log_entry.reason,

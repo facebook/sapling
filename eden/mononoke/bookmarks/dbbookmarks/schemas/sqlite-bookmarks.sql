@@ -29,5 +29,6 @@ CREATE TABLE IF NOT EXISTS bookmarks_update_log (
   to_changeset_id VARBINARY(32),
   reason VARCHAR(32) NOT NULL, -- enum is used in mysql
   timestamp BIGINT NOT NULL,
+  category VARCHAR(32) NOT NULL DEFAULT (CAST('branch' AS BLOB)),
   PRIMARY KEY (repo_id, id)
 );
