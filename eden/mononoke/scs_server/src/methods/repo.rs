@@ -99,7 +99,10 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::RepoResolveBookmarkResponse, errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
         match repo
-            .resolve_bookmark(params.bookmark_name, BookmarkFreshness::MaybeStale)
+            .resolve_bookmark(
+                &BookmarkKey::new(&params.bookmark_name).map_err(Into::<MononokeError>::into)?,
+                BookmarkFreshness::MaybeStale,
+            )
             .await?
         {
             Some(cs) => {

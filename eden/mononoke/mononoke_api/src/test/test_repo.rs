@@ -14,6 +14,7 @@ use anyhow::Error;
 use anyhow::Result;
 use blobrepo::AsBlobRepo;
 use blobstore::Loadable;
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
 use chrono::FixedOffset;
@@ -148,7 +149,7 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
         .build()
         .await?;
     let cs = repo
-        .resolve_bookmark("master", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&BookmarkKey::new("master")?, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark exists");
 

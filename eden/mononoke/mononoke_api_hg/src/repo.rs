@@ -22,6 +22,7 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::Bytes;
 use changeset_fetcher::ChangesetFetcherRef;
@@ -766,7 +767,11 @@ impl HgRepoContext {
         bookmark: impl AsRef<str>,
         freshness: Freshness,
     ) -> Result<Option<HgChangesetId>, MononokeError> {
-        match self.repo.resolve_bookmark(bookmark, freshness).await? {
+        match self
+            .repo
+            .resolve_bookmark(&BookmarkKey::new(bookmark)?, freshness)
+            .await?
+        {
             Some(c) => c.hg_id().await,
             None => Ok(None),
         }

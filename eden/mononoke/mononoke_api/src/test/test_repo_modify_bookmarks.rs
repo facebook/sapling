@@ -58,55 +58,51 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
 
     // Can create public bookmarks on existing changesets (ancestors of trunk).
-    repo.create_bookmark(&BookmarkKey::new("bookmark1")?, changesets["A"], None)
-        .await?;
+    let key = BookmarkKey::new("bookmark1")?;
+    repo.create_bookmark(&key, changesets["A"], None).await?;
     let bookmark1 = repo
-        .resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(bookmark1.id(), changesets["A"]);
 
     // Can create public bookmarks on other changesets (not ancestors of trunk).
-    repo.create_bookmark(&BookmarkKey::new("bookmark2")?, changesets["F"], None)
-        .await?;
+    let key = BookmarkKey::new("bookmark2")?;
+    repo.create_bookmark(&key, changesets["F"], None).await?;
     let bookmark2 = repo
-        .resolve_bookmark("bookmark2", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(bookmark2.id(), changesets["F"]);
 
     // Can create scratch bookmarks.
-    repo.create_bookmark(
-        &BookmarkKey::new("scratch/bookmark3")?,
-        changesets["G"],
-        None,
-    )
-    .await?;
+    let key = BookmarkKey::new("scratch/bookmark3")?;
+    repo.create_bookmark(&key, changesets["G"], None).await?;
     let bookmark3 = repo
-        .resolve_bookmark("scratch/bookmark3", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(bookmark3.id(), changesets["G"]);
 
     // Can create tag bookmark
-    // Note: once `resolve_bookmark` supports category, we will be able to confirm that the
-    // bookmark exists.
-    repo.create_bookmark(
-        &BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag),
-        changesets["B"],
-        None,
-    )
-    .await?;
+    let key =
+        BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag);
+    repo.create_bookmark(&key, changesets["B"], None).await?;
+    let tag = repo
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
+        .await?
+        .expect("bookmark should be set");
+    assert_eq!(tag.id(), changesets["B"]);
 
     // Can create note bookmark
-    // Note: once `resolve_bookmark` supports category, we will be able to confirm that the
-    // bookmark exists.
-    repo.create_bookmark(
-        &BookmarkKey::with_name_and_category(BookmarkName::new("note1")?, BookmarkCategory::Note),
-        changesets["D"],
-        None,
-    )
-    .await?;
+    let key =
+        BookmarkKey::with_name_and_category(BookmarkName::new("note1")?, BookmarkCategory::Note);
+    repo.create_bookmark(&key, changesets["D"], None).await?;
+    let note = repo
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
+        .await?
+        .expect("bookmark should be set");
+    assert_eq!(note.id(), changesets["D"]);
 
     // F is now public.  G is not.
     let stack = repo.stack(vec![changesets["G"]], 10).await?;
@@ -121,10 +117,11 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
 
+    let key = BookmarkKey::new("trunk")?;
     repo.move_bookmark("trunk", changesets["E"], None, false, None)
         .await?;
     let trunk = repo
-        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(trunk.id(), changesets["E"]);
@@ -139,7 +136,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     repo.move_bookmark("trunk", changesets["G"], None, true, None)
         .await?;
     let trunk = repo
-        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(trunk.id(), changesets["G"]);
@@ -175,21 +172,20 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
 
-    repo.create_bookmark(&BookmarkKey::new("bookmark1")?, changesets["A"], None)
+    let bookmark1_key = BookmarkKey::new("bookmark1")?;
+    repo.create_bookmark(&bookmark1_key, changesets["A"], None)
         .await?;
-    repo.create_bookmark(&BookmarkKey::new("bookmark2")?, changesets["F"], None)
+    let bookmark2_key = BookmarkKey::new("bookmark2")?;
+    repo.create_bookmark(&bookmark2_key, changesets["F"], None)
         .await?;
-    repo.create_bookmark(
-        &BookmarkKey::new("scratch/bookmark3")?,
-        changesets["G"],
-        None,
-    )
-    .await?;
+    let bookmark3_key = BookmarkKey::new("scratch/bookmark3")?;
+    repo.create_bookmark(&bookmark3_key, changesets["G"], None)
+        .await?;
 
     // Can delete public bookmarks.
     repo.delete_bookmark("bookmark1", None, None).await?;
     assert!(
-        repo.resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
+        repo.resolve_bookmark(&bookmark1_key, BookmarkFreshness::MostRecent)
             .await?
             .is_none()
     );
@@ -201,7 +197,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
             .is_err()
     );
     let bookmark2 = repo
-        .resolve_bookmark("bookmark2", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&bookmark2_key, BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(bookmark2.id(), changesets["F"]);
@@ -210,7 +206,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     repo.delete_bookmark("bookmark2", Some(changesets["F"]), None)
         .await?;
     assert!(
-        repo.resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
+        repo.resolve_bookmark(&bookmark1_key, BookmarkFreshness::MostRecent)
             .await?
             .is_none()
     );
@@ -226,7 +222,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     repo.delete_bookmark("scratch/bookmark3", Some(changesets["G"]), None)
         .await?;
     assert!(
-        repo.resolve_bookmark("scratch/bookmark3", BookmarkFreshness::MostRecent)
+        repo.resolve_bookmark(&bookmark3_key, BookmarkFreshness::MostRecent)
             .await?
             .is_none()
     );

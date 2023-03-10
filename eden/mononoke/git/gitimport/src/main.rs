@@ -283,8 +283,9 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     .await
                     .is_err()
                 {
+                    // TODO (pierre): handle category here
                     let old_changeset = repo_context
-                        .resolve_bookmark(&name, BookmarkFreshness::MostRecent)
+                        .resolve_bookmark(&BookmarkKey::new(&name)?, BookmarkFreshness::MostRecent)
                         .await
                         .with_context(|| format!("failed to resolve bookmark {name}"))?
                         .map(|context| context.id());

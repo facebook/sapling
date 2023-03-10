@@ -72,8 +72,9 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             User,
         )
         .await?;
+    let key = BookmarkKey::new("trunk")?;
     let trunk_g = repo
-        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("trunk should be set");
     assert_eq!(trunk_g.id(), outcome.head);
@@ -93,7 +94,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
         )
         .await?;
     let trunk_e = repo
-        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("trunk should be set");
     assert_eq!(trunk_e.id(), outcome.head);
@@ -120,7 +121,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
         )
         .await?;
     let trunk_f = repo
-        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
+        .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
         .await?
         .expect("trunk should be set");
     assert_eq!(trunk_f.id(), outcome.head);
