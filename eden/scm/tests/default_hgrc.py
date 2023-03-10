@@ -12,6 +12,7 @@ slash=True
 interactive=False
 mergemarkers=detailed
 promptecho=True
+ignore.test=$RUNTESTDIR/gitignore
 
 [devel]
 all-warnings=True

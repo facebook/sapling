@@ -22,6 +22,7 @@ Create a repository:
   treemanifest.sendtrees=True
   treemanifest.treeonly=True
   treemanifest.useruststore=True
+  ui.ignore.test=$RUNTESTDIR/gitignore
   ui.interactive=False
   ui.mergemarkers=detailed
   ui.promptecho=True

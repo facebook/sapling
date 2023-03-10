@@ -1,4 +1,4 @@
-#chg-compatible
+#debugruntest-compatible
 
   $ configure modernclient
 
@@ -67,6 +67,7 @@ make sure global options given on the cmdline take precedence
   $ hg showconfig --config ui.verbose=True --quiet ui
   ui.color=auto
   ui.debug=false
+  ui.ignore.test=$RUNTESTDIR/gitignore
   ui.interactive=False
   ui.mergemarkers=detailed
   ui.paginate=true
