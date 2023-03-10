@@ -1406,7 +1406,8 @@ async fn run<'a>(
                 unlock_via,
             )
             .try_filter(|entries| future::ready(!entries.is_empty()))
-            .and_then(|entries| async move {
+            .fuse()
+            .try_next_step(|entries| async move {
                 bundle_preparer
                     .prepare_batches(
                         ctx,
