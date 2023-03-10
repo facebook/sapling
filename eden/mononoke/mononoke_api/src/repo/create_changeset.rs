@@ -409,7 +409,7 @@ async fn check_addless_union_conflicts(
 }
 
 impl RepoContext {
-    async fn save_changeset(
+    pub(crate) async fn save_changeset(
         &self,
         changeset: BonsaiChangeset,
         repo: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef + RepoConfigRef),

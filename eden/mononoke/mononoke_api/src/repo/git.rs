@@ -11,12 +11,18 @@ use anyhow::Context;
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use chrono::DateTime;
+use chrono::FixedOffset;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
 use megarepo_error::cloneable_error;
+use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::DateTime as MononokeDateTime;
+use repo_authorization::RepoWriteOperation;
+use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 
 use crate::changeset::ChangesetContext;
@@ -188,5 +194,75 @@ impl RepoContext {
         )
         .await
         .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
+    }
+
+    /// Create a new annotated tag in the repository.
+    ///
+    /// Annotated tags are bookmarks of category `Tag` or `Note` which point to one of these
+    /// annotated tag changesets.
+    /// Bookmarks of category `Tag` can also represent lightweight tags, pointing directly to
+    /// a changeset representing a commit.
+    /// Bookmarks of category `Note` can only represent annotated tags.
+    /// Bookmarks of category `Branch` are never annotated.
+    ///
+    /// TODO: Consider also taking an `Option<Bubble>` in the future to support snapshoting for
+    /// tags.
+    ///
+    /// For git repos with tags, permit_commits_without_parents must be set to True
+    pub async fn create_annotated_tag_changeset(
+        &self,
+        author: String,
+        author_date: DateTime<FixedOffset>,
+        annotation: String,
+        annotated_tag_target: BonsaiAnnotatedTag,
+    ) -> Result<ChangesetContext, MononokeError> {
+        self.start_write()?;
+        self.authorization_context()
+            .require_repo_write(
+                self.ctx(),
+                self.inner_repo(),
+                RepoWriteOperation::CreateChangeset,
+            )
+            .await?;
+
+        let allowed_no_parents = self
+            .config()
+            .source_control_service
+            .permit_commits_without_parents;
+        if !allowed_no_parents {
+            return Err(MononokeError::InvalidRequest(String::from(
+                "Changesets with no parents cannot be created",
+            )));
+        }
+
+        let author_date = MononokeDateTime::new(author_date);
+
+        // Create the new Bonsai Changeset. The `freeze` method validates
+        // that the bonsai changeset is internally consistent.
+        let new_changeset = BonsaiChangesetMut {
+            parents: Vec::new(),
+            author,
+            author_date,
+            committer: None,
+            committer_date: None,
+            message: annotation,
+            hg_extra: SortedVectorMap::new(),
+            git_extra_headers: None,
+            git_tree_hash: None,
+            file_changes: SortedVectorMap::new(),
+            is_snapshot: false,
+            git_annotated_tag: Some(annotated_tag_target),
+        }
+        .freeze()
+        .map_err(|e| {
+            MononokeError::InvalidRequest(format!("Changes create invalid bonsai changeset: {}", e))
+        })?;
+
+        let new_changeset_id = new_changeset.get_changeset_id();
+
+        self.save_changeset(new_changeset, self.inner_repo(), None)
+            .await?;
+
+        Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
 }
