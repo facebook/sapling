@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use pathmatcher::AlwaysMatcher;
+use pathmatcher::Matcher;
+use pathmatcher::NeverMatcher;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
@@ -70,6 +72,14 @@ enum Change {
 use Change::*;
 
 #[derive(Debug)]
+enum MatcherMode {
+    Always,
+    Never,
+}
+
+use MatcherMode::*;
+
+#[derive(Debug)]
 struct TestCase {
     // initial treestate state for this file
     state_before: Option<StateFlags>,
@@ -83,6 +93,8 @@ struct TestCase {
     state_after: Option<StateFlags>,
     // what kind of pending change should be produced, if any
     pending_change: Option<Change>,
+    // matcher to limit output of status
+    matcher: MatcherMode,
 }
 
 fn check(mut tc: TestCase) -> Result<()> {
@@ -117,11 +129,16 @@ fn check(mut tc: TestCase) -> Result<()> {
         wm_changes.push(path.clone());
     }
 
+    let matcher: Arc<dyn Matcher + Send + Sync + 'static> = match tc.matcher {
+        Always => Arc::new(AlwaysMatcher::new()),
+        Never => Arc::new(NeverMatcher::new()),
+    };
+
     //
     // This is the code under test.
     //
     let mut changes = detect_changes(
-        Arc::new(AlwaysMatcher::new()),
+        matcher,
         stub_detector,
         &mut ts,
         wm_changes,
@@ -240,6 +257,7 @@ fn test_detect_changes() -> Result<()> {
                     state_after,
                     pending_change,
                     wm_fresh_instance: false,
+                    matcher: Always,
                 })?;
             }
         }
@@ -257,6 +275,7 @@ fn test_detect_changes_fresh_instance() -> Result<()> {
         disk_changed: Some(Deleted),
         state_after: Some(EXIST_P1 | EXIST_NEXT | NEED_CHECK),
         pending_change: Some(Deleted),
+        matcher: Always,
     })?;
 
     check(TestCase {
@@ -266,6 +285,54 @@ fn test_detect_changes_fresh_instance() -> Result<()> {
         disk_changed: Some(Deleted),
         state_after: Some(NEED_CHECK),
         pending_change: Some(Deleted),
+        matcher: Always,
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_never_matcher() -> Result<()> {
+    // Make sure a non-matching matcher doesn't mess up correctness of
+    // what is recorded in treestate.
+
+    check(TestCase {
+        state_before: Some(EXIST_P1 | EXIST_NEXT),
+        wm_changed: true,
+        wm_fresh_instance: false,
+        disk_changed: Some(Changed),
+        state_after: Some(EXIST_P1 | EXIST_NEXT | NEED_CHECK),
+        // Perhaps we don't need to produce the pending change, but it gets
+        // filtered later by the matcher.
+        pending_change: Some(Changed),
+        matcher: Never,
+    })?;
+    check(TestCase {
+        state_before: Some(EXIST_P1 | EXIST_NEXT | NEED_CHECK),
+        wm_changed: false,
+        wm_fresh_instance: false,
+        disk_changed: Some(Changed),
+        state_after: Some(EXIST_P1 | EXIST_NEXT | NEED_CHECK),
+        pending_change: None,
+        matcher: Never,
+    })?;
+    check(TestCase {
+        state_before: None,
+        wm_changed: true,
+        wm_fresh_instance: false,
+        disk_changed: Some(Changed),
+        state_after: Some(NEED_CHECK),
+        pending_change: Some(Changed),
+        matcher: Never,
+    })?;
+    check(TestCase {
+        state_before: None,
+        wm_changed: true,
+        wm_fresh_instance: true,
+        disk_changed: Some(Changed),
+        state_after: Some(NEED_CHECK),
+        pending_change: Some(Changed),
+        matcher: Never,
     })?;
 
     Ok(())

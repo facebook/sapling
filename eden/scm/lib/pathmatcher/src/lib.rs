@@ -70,7 +70,7 @@ impl<T: Matcher + ?Sized, U: Deref<Target = T>> Matcher for U {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AlwaysMatcher {}
 
 impl AlwaysMatcher {
@@ -88,7 +88,7 @@ impl Matcher for AlwaysMatcher {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct NeverMatcher {}
 
 impl NeverMatcher {
