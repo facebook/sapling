@@ -55,7 +55,7 @@ configitem("progress", "statefile", default="")
 _pid = None
 
 
-def writeprogress(self, progressfile, filemode, bars):
+def writeprogress(self, progressfile, filemode, bars) -> None:
     topics = {}
     for index, bar in enumerate(bars):
         pos, item = progress._progvalue(bar.value)
@@ -96,7 +96,7 @@ def writeprogress(self, progressfile, filemode, bars):
         pass
 
 
-def uisetup(ui):
+def uisetup(ui) -> None:
     progressfile = ui.config("progress", "statefile")
     append = ui.configbool("progress", "statefileappend", False)
     filemode = "a+" if append else "w+"
