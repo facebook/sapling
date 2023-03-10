@@ -16,6 +16,7 @@ import gettext as gettextmod
 import locale
 import os
 import sys
+from typing import Sized
 
 import bindings
 
@@ -175,16 +176,18 @@ def _x(message: str) -> str:
     return message
 
 
-def limititems(items, maxitems=5):
+def limititems(items: Sized, maxitems: int = 5):
     if len(items) > maxitems > 0:
+        # pyre-fixme[16]: `Sized` has no attribute `__getitem__`.
         return items[0:maxitems] + ["...and %d more" % (len(items) - maxitems)]
     else:
         return items
 
 
-def init():
+def init() -> None:
     """inline _plain() so it's faster. called by dispatch._dispatch"""
     global _encoding, _plain
+    # pyre-fixme[10]: Name `_encoding` is used but not defined.
     _encoding = encoding.encoding
     _plain = _getplain()
     _msgcache.clear()
