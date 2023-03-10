@@ -978,7 +978,7 @@ struct NoopChangesetsFilter;
 impl FilterExistingChangesets for NoopChangesetsFilter {
     async fn filter(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         cs_ids: Vec<(ChangesetId, HgChangesetId)>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error> {
         Ok(cs_ids)
@@ -993,14 +993,14 @@ struct DarkstormBackupChangesetsFilter {
 impl FilterExistingChangesets for DarkstormBackupChangesetsFilter {
     async fn filter(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         mut cs_ids: Vec<(ChangesetId, HgChangesetId)>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error> {
         let bcs_ids: Vec<_> = cs_ids.iter().map(|(cs_id, _hg_cs_id)| *cs_id).collect();
         let existing_bcs_ids: Vec<_> = self
             .repo
             .changesets
-            .get_many(&ctx, bcs_ids)
+            .get_many(ctx, bcs_ids)
             .await?
             .into_iter()
             .map(|entry| entry.cs_id)
@@ -1008,7 +1008,7 @@ impl FilterExistingChangesets for DarkstormBackupChangesetsFilter {
         let existing_hg_cs_id: BTreeSet<_> = self
             .repo
             .bonsai_hg_mapping
-            .get(&ctx, existing_bcs_ids.clone().into())
+            .get(ctx, existing_bcs_ids.clone().into())
             .await?
             .into_iter()
             .map(|entry| entry.hg_cs_id)

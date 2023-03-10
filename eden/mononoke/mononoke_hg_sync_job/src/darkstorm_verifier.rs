@@ -39,9 +39,7 @@ impl DarkstormVerifier {
         }
     }
 
-    pub async fn upload(&self, ctx: CoreContext, blobs: &[(Sha256, u64)]) -> Result<(), Error> {
-        let ctx = &ctx;
-
+    pub async fn upload(&self, ctx: &CoreContext, blobs: &[(Sha256, u64)]) -> Result<(), Error> {
         stream::iter(blobs.iter().copied())
             .map(Ok)
             .try_for_each_concurrent(50, async move |(key, size)| -> Result<(), Error> {
@@ -103,9 +101,7 @@ mod test {
 
         let alias = res.sha256;
 
-        verifier
-            .upload(ctx.clone(), &vec![(alias, size)][..])
-            .await?;
+        verifier.upload(&ctx, &vec![(alias, size)][..]).await?;
 
         let uploaded_bytes = filestore::fetch(backup, ctx, &FetchKey::from(alias))
             .map_ok(|maybe_stream| async move {

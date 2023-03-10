@@ -16,7 +16,6 @@ use changeset_fetcher::ArcChangesetFetcher;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures::future::try_join;
 use futures::future::try_join_all;
 use futures::future::BoxFuture;
@@ -258,17 +257,16 @@ impl BundlePreparer {
         filter_changesets: Arc<dyn FilterExistingChangesets>,
     ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
         let (bytes, timestamps) = crate::bundle_generator::create_bundle(
-            ctx.clone(),
-            repo.clone(),
-            bookmark_name.clone(),
-            bookmark_change.clone(),
+            ctx,
+            repo,
+            bookmark_name,
+            bookmark_change,
             hg_server_heads.to_vec(),
             session_lfs_params,
-            filenode_verifier.clone(),
+            filenode_verifier,
             push_vars,
             filter_changesets,
         )
-        .compat()
         .await?;
 
         let mut bcs_ids = vec![];

@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
@@ -19,11 +20,8 @@ use filestore::FetchKey;
 use futures::future;
 use futures::pin_mut;
 use futures::stream;
-use futures::FutureExt;
 use futures::StreamExt;
-use futures::TryFutureExt;
 use futures::TryStreamExt;
-use futures_old::Future;
 use gotham_ext::body_ext::BodyExt;
 use http::status::StatusCode;
 use http::uri::Uri;
@@ -78,7 +76,7 @@ pub struct LfsVerifier {
 }
 
 impl LfsVerifier {
-    pub fn new(batch_uri: Uri, blobstore: Arc<dyn Blobstore>) -> Result<Self, Error> {
+    pub fn new(batch_uri: Uri, blobstore: Arc<dyn Blobstore>) -> Result<Self> {
         let connector = HttpsConnector::new()?;
         let client = Client::builder().build(connector);
 
@@ -93,65 +91,60 @@ impl LfsVerifier {
         })
     }
 
-    pub fn ensure_lfs_presence(
-        &self,
-        ctx: CoreContext,
-        blobs: &[(Sha256, u64)],
-    ) -> impl Future<Item = (), Error = Error> {
+    pub async fn ensure_lfs_presence<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobs: &'a [(Sha256, u64)],
+    ) -> Result<()> {
         let uri = self.inner.batch_uri.clone();
         let blobstore = self.inner.blobstore.clone();
         let client = self.inner.client.clone();
 
         let batch = build_upload_request_batch(blobs);
 
-        async move {
-            let body =
-                Bytes::from(serde_json::to_vec(&batch).context(ErrorKind::SerializationFailed)?);
+        let body = Bytes::from(serde_json::to_vec(&batch).context(ErrorKind::SerializationFailed)?);
 
-            let req = Request::post(uri)
-                .body(body.into())
-                .context(ErrorKind::RequestCreationFailed)?;
+        let req = Request::post(uri)
+            .body(body.into())
+            .context(ErrorKind::RequestCreationFailed)?;
 
-            let response = client
-                .request(req)
-                .await
-                .context(ErrorKind::BatchRequestNoResponse)?;
+        let response = client
+            .request(req)
+            .await
+            .context(ErrorKind::BatchRequestNoResponse)?;
 
-            let (head, body) = response.into_parts();
+        let (head, body) = response.into_parts();
 
-            if !head.status.is_success() {
-                return Result::<_, Error>::Err(ErrorKind::BatchRequestFailed(head.status).into())?;
-            }
-
-            let body = body
-                .try_concat_body(&head.headers)
-                .context(ErrorKind::BatchRequestReadFailed)?
-                .await
-                .context(ErrorKind::BatchRequestReadFailed)?;
-
-            let batch = serde_json::from_slice::<ResponseBatch>(&body)
-                .context(ErrorKind::DeserializationFailed)?;
-
-            let missing_objects = find_missing_objects(batch);
-
-            if missing_objects.is_empty() {
-                return Ok(());
-            }
-
-            for object in &missing_objects {
-                warn!(ctx.logger(), "missing {:?} object, uploading", object);
-            }
-
-            stream::iter(missing_objects)
-                .map(|object| upload(&ctx, &client, object, blobstore.clone()))
-                .buffer_unordered(100)
-                .try_for_each(|()| future::ready(Ok(())))
-                .await?;
-
-            Result::<_, Error>::Ok(())
+        if !head.status.is_success() {
+            return Result::<_, Error>::Err(ErrorKind::BatchRequestFailed(head.status).into())?;
         }
-        .boxed()
-        .compat()
+
+        let body = body
+            .try_concat_body(&head.headers)
+            .context(ErrorKind::BatchRequestReadFailed)?
+            .await
+            .context(ErrorKind::BatchRequestReadFailed)?;
+
+        let batch = serde_json::from_slice::<ResponseBatch>(&body)
+            .context(ErrorKind::DeserializationFailed)?;
+
+        let missing_objects = find_missing_objects(batch);
+
+        if missing_objects.is_empty() {
+            return Ok(());
+        }
+
+        for object in &missing_objects {
+            warn!(ctx.logger(), "missing {:?} object, uploading", object);
+        }
+
+        stream::iter(missing_objects)
+            .map(|object| upload(ctx, &client, object, blobstore.clone()))
+            .buffer_unordered(100)
+            .try_for_each(|()| future::ready(Ok(())))
+            .await?;
+
+        Result::<_, Error>::Ok(())
     }
 }
 
@@ -190,7 +183,7 @@ async fn upload<'a>(
     client: &'a HttpsHyperClient,
     resp_object: ResponseObject,
     blobstore: Arc<dyn Blobstore>,
-) -> Result<(), Error> {
+) -> Result<()> {
     match resp_object.status {
         ObjectStatus::Ok { actions, .. } => match actions.get(&Operation::Upload) {
             Some(action) => {

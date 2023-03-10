@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
@@ -18,20 +19,14 @@ use bytes_old::Bytes as BytesOld;
 use changeset_fetcher::ChangesetFetcherArc;
 use cloned::cloned;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
+use futures::future;
 use futures::stream;
-use futures::Future as NewFuture;
-use futures::FutureExt;
+use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
-use futures_01_ext::try_boxfuture;
-use futures_01_ext::FutureExt as _;
 use futures_01_ext::StreamExt as _;
-use futures_old::future::IntoFuture;
-use futures_old::stream as stream_old;
-use futures_old::Future;
-use futures_old::Stream;
 use getbundle_response::create_filenodes;
 use getbundle_response::create_manifest_entries_stream;
 use getbundle_response::get_manifests_and_filenodes;
@@ -51,6 +46,7 @@ use mercurial_types::MPath;
 use mononoke_types::datetime::Timestamp;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndexArc;
@@ -64,26 +60,25 @@ use crate::Repo;
 pub trait FilterExistingChangesets: Send + Sync {
     async fn filter(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_ids: Vec<(ChangesetId, HgChangesetId)>,
-    ) -> Result<Vec<(ChangesetId, HgChangesetId)>, Error>;
+    ) -> Result<Vec<(ChangesetId, HgChangesetId)>>;
 }
 
-pub fn create_bundle(
-    ctx: CoreContext,
-    repo: Repo,
-    bookmark: BookmarkKey,
-    bookmark_change: BookmarkChange,
+pub async fn create_bundle<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a Repo,
+    bookmark: &'a BookmarkKey,
+    bookmark_change: &'a BookmarkChange,
     hg_server_heads: Vec<ChangesetId>,
     lfs_params: SessionLfsParams,
-    filenode_verifier: FilenodeVerifier,
+    filenode_verifier: &'a FilenodeVerifier,
     push_vars: Option<HashMap<String, bytes::Bytes>>,
     filter_changesets: Arc<dyn FilterExistingChangesets>,
-) -> impl Future<Item = (BytesOld, HashMap<HgChangesetId, (ChangesetId, Timestamp)>), Error = Error>
-{
-    let commits_to_push = find_commits_to_push(
-        ctx.clone(),
-        repo.clone(),
+) -> Result<(BytesOld, HashMap<HgChangesetId, (ChangesetId, Timestamp)>)> {
+    let mut commits_to_push: Vec<_> = find_commits_to_push(
+        ctx,
+        repo,
         // Always add "from" bookmark, because is must to be on the hg server
         // If it's not then the push will fail anyway
         hg_server_heads
@@ -91,47 +86,32 @@ pub fn create_bundle(
             .chain(bookmark_change.get_from().into_iter()),
         bookmark_change.get_to(),
     )
-    .collect()
-    .map(|reversed| reversed.into_iter().rev().collect());
+    .try_collect()
+    .await?;
+    commits_to_push.reverse();
+    let commits_to_push = filter_changesets.filter(ctx, commits_to_push).await?;
 
-    commits_to_push
-        .and_then({
-            cloned!(ctx);
-            move |commits_to_push| {
-                #[allow(clippy::redundant_closure_call)]
-                (async move || filter_changesets.filter(ctx, commits_to_push).await)()
-                    .boxed()
-                    .compat()
-            }
-        })
-        .and_then({
-            move |commits_to_push: Vec<_>| {
-                debug!(
-                    ctx.logger(),
-                    "generating a bundle with {} commits",
-                    commits_to_push.len()
-                );
-                let bundle = create_bundle_impl(
-                    ctx.clone(),
-                    repo.clone(),
-                    bookmark,
-                    bookmark_change,
-                    commits_to_push
-                        .clone()
-                        .into_iter()
-                        .map(|(_, hg_cs_id)| hg_cs_id)
-                        .collect(),
-                    lfs_params,
-                    filenode_verifier,
-                    push_vars,
-                );
-                let timestamps = fetch_timestamps(ctx, repo, commits_to_push)
-                    .boxed()
-                    .compat();
-                bundle.join(timestamps)
-            }
-        })
-        .boxify()
+    debug!(
+        ctx.logger(),
+        "generating a bundle with {} commits",
+        commits_to_push.len()
+    );
+    let bundle = create_bundle_impl(
+        ctx,
+        repo,
+        bookmark,
+        bookmark_change,
+        commits_to_push
+            .clone()
+            .into_iter()
+            .map(|(_, hg_cs_id)| hg_cs_id)
+            .collect(),
+        lfs_params,
+        filenode_verifier,
+        push_vars,
+    );
+    let timestamps = fetch_timestamps(ctx.clone(), repo.clone(), commits_to_push);
+    future::try_join(bundle, timestamps).await
 }
 
 #[derive(Clone)]
@@ -167,12 +147,8 @@ impl BookmarkChange {
         }
     }
 
-    fn get_from_hg(
-        &self,
-        ctx: CoreContext,
-        repo: &Repo,
-    ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
-        Self::maybe_get_hg(ctx, self.get_from(), repo)
+    async fn get_from_hg(&self, ctx: &CoreContext, repo: &Repo) -> Result<Option<HgChangesetId>> {
+        Self::maybe_get_hg(ctx, self.get_from(), repo).await
     }
 
     fn get_to(&self) -> Option<ChangesetId> {
@@ -185,29 +161,19 @@ impl BookmarkChange {
         }
     }
 
-    fn get_to_hg(
-        &self,
-        ctx: CoreContext,
-        repo: &Repo,
-    ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
-        Self::maybe_get_hg(ctx, self.get_to(), repo)
+    async fn get_to_hg(&self, ctx: &CoreContext, repo: &Repo) -> Result<Option<HgChangesetId>> {
+        Self::maybe_get_hg(ctx, self.get_to(), repo).await
     }
 
-    fn maybe_get_hg(
-        ctx: CoreContext,
+    async fn maybe_get_hg(
+        ctx: &CoreContext,
         maybe_cs: Option<ChangesetId>,
         repo: &Repo,
-    ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
-        cloned!(repo);
-        async move {
-            let res = match maybe_cs {
-                Some(cs_id) => Some(repo.derive_hg_changeset(&ctx, cs_id).await?),
-                None => None,
-            };
-            Ok(res)
-        }
-        .boxed()
-        .compat()
+    ) -> Result<Option<HgChangesetId>> {
+        Ok(match maybe_cs {
+            Some(cs_id) => Some(repo.derive_hg_changeset(ctx, cs_id).await?),
+            None => None,
+        })
     }
 }
 
@@ -219,11 +185,11 @@ pub enum FilenodeVerifier {
 }
 
 impl FilenodeVerifier {
-    fn verify_entries(
-        &self,
-        ctx: CoreContext,
-        filenode_entries: &HashMap<MPath, Vec<PreparedFilenodeEntry>>,
-    ) -> impl NewFuture<Output = Result<(), Error>> {
+    async fn verify_entries<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        filenode_entries: &'a HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+    ) -> Result<()> {
         let lfs_blobs: Vec<(Sha256, u64)> = filenode_entries
             .values()
             .flat_map(|entries| entries.iter())
@@ -234,152 +200,137 @@ impl FilenodeVerifier {
             })
             .collect();
 
-        let this = self.clone();
-
-        async move {
-            match this {
-                Self::NoopVerifier => {}
-                Self::LfsVerifier(lfs_verifier) => {
-                    lfs_verifier
-                        .ensure_lfs_presence(ctx, &lfs_blobs)
-                        .compat()
-                        .await?;
-                }
-                // Verification for darkstorm backups - will upload large files bypassing LFS server.
-                Self::DarkstormVerifier(ds_verifier) => {
-                    ds_verifier.upload(ctx, &lfs_blobs).await?;
-                }
+        match self {
+            Self::NoopVerifier => {}
+            Self::LfsVerifier(lfs_verifier) => {
+                lfs_verifier.ensure_lfs_presence(ctx, &lfs_blobs).await?;
             }
-
-            Ok(())
+            // Verification for darkstorm backups - will upload large files bypassing LFS server.
+            Self::DarkstormVerifier(ds_verifier) => {
+                ds_verifier.upload(ctx, &lfs_blobs).await?;
+            }
         }
+
+        Ok(())
     }
 }
 
-fn create_bundle_impl(
-    ctx: CoreContext,
-    repo: Repo,
-    bookmark: BookmarkKey,
-    bookmark_change: BookmarkChange,
+async fn create_bundle_impl(
+    ctx: &CoreContext,
+    repo: &Repo,
+    bookmark: &BookmarkKey,
+    bookmark_change: &BookmarkChange,
     commits_to_push: Vec<HgChangesetId>,
     session_lfs_params: SessionLfsParams,
-    filenode_verifier: FilenodeVerifier,
+    filenode_verifier: &FilenodeVerifier,
     push_vars: Option<HashMap<String, bytes::Bytes>>,
-) -> impl Future<Item = BytesOld, Error = Error> {
-    let changelog_entries = stream_old::iter_ok(commits_to_push.clone())
-        .map({
-            cloned!(ctx, repo);
-            move |hg_cs_id| {
-                cloned!(ctx, repo);
-                async move { hg_cs_id.load(&ctx, repo.repo_blobstore()).await }
-                    .boxed()
-                    .compat()
-                    .from_err()
-                    .map(move |cs| (hg_cs_id, cs))
-            }
-        })
-        .buffered(100)
-        .and_then(|(hg_cs_id, cs)| {
-            let revlogcs = RevlogChangeset::new_from_parts(
-                cs.parents().clone(),
-                cs.manifestid().clone(),
-                cs.user().into(),
-                cs.time().clone(),
-                cs.extra().clone(),
-                cs.files().into(),
-                cs.message().into(),
-            );
+) -> Result<BytesOld> {
+    let any_commits = !commits_to_push.is_empty();
+    let changelog_entries = {
+        // These clones are not necessary for futures 0.3 but we need compat for
+        // hg methods
+        cloned!(ctx);
+        let blobstore = repo.repo_blobstore_arc();
+        stream::iter(commits_to_push.clone())
+            .map(move |hg_cs_id| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let cs = hg_cs_id.load(&ctx, &blobstore).await?;
+                    Ok((hg_cs_id, cs))
+                }
+            })
+            .buffered(100)
+            .and_then(async move |(hg_cs_id, cs)| {
+                let revlogcs = RevlogChangeset::new_from_parts(
+                    cs.parents().clone(),
+                    cs.manifestid().clone(),
+                    cs.user().into(),
+                    cs.time().clone(),
+                    cs.extra().clone(),
+                    cs.files().into(),
+                    cs.message().into(),
+                );
 
-            let mut v = Vec::new();
-            mercurial_revlog::changeset::serialize_cs(&revlogcs, &mut v)?;
-            Ok((
-                hg_cs_id.into_nodehash(),
-                HgBlobNode::new(bytes::Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
-            ))
-        });
-
-    let entries = {
-        cloned!(ctx, repo, commits_to_push, session_lfs_params);
-        async move {
-            get_manifests_and_filenodes(&ctx, &repo, commits_to_push, &session_lfs_params).await
-        }
-        .boxed()
-        .compat()
+                let mut v = Vec::new();
+                mercurial_revlog::changeset::serialize_cs(&revlogcs, &mut v)?;
+                Ok((
+                    hg_cs_id.into_nodehash(),
+                    HgBlobNode::new(bytes::Bytes::from(v), revlogcs.p1(), revlogcs.p2()),
+                ))
+            })
     };
 
-    (
+    let entries = get_manifests_and_filenodes(ctx, repo, commits_to_push, &session_lfs_params);
+
+    let ((manifests, prepared_filenode_entries), maybe_from, maybe_to) = future::try_join3(
         entries,
-        bookmark_change.get_from_hg(ctx.clone(), &repo),
-        bookmark_change.get_to_hg(ctx.clone(), &repo),
+        bookmark_change.get_from_hg(ctx, repo),
+        bookmark_change.get_to_hg(ctx, repo),
     )
-        .into_future()
-        .and_then(
-            move |((manifests, prepared_filenode_entries), maybe_from, maybe_to)| {
-                let mut bundle2_parts =
-                    vec![try_boxfuture!(parts::replycaps_part(create_capabilities()))];
+    .await?;
 
-                match push_vars {
-                    Some(push_vars) if !push_vars.is_empty() => {
-                        bundle2_parts.push(try_boxfuture!(parts::pushvars_part(push_vars)))
-                    }
-                    _ => {}
-                }
+    let mut bundle2_parts = vec![parts::replycaps_part(create_capabilities())?];
 
-                debug!(
-                    ctx.logger(),
-                    "prepared {} manifests and {} filenodes",
-                    manifests.len(),
-                    prepared_filenode_entries.len()
-                );
-                let cg_version = if session_lfs_params.threshold.is_some() {
-                    CgVersion::Cg3Version
-                } else {
-                    CgVersion::Cg2Version
-                };
+    match push_vars {
+        Some(push_vars) if !push_vars.is_empty() => {
+            bundle2_parts.push(parts::pushvars_part(push_vars)?)
+        }
+        _ => {}
+    }
 
-                // Check that the filenodes pass the verifier prior to serializing them.
-                let verify_ok = filenode_verifier
-                    .verify_entries(ctx.clone(), &prepared_filenode_entries)
-                    .boxed()
-                    .compat();
+    debug!(
+        ctx.logger(),
+        "prepared {} manifests and {} filenodes",
+        manifests.len(),
+        prepared_filenode_entries.len()
+    );
+    let cg_version = if session_lfs_params.threshold.is_some() {
+        CgVersion::Cg3Version
+    } else {
+        CgVersion::Cg2Version
+    };
 
-                let filenode_entries =
-                    create_filenodes(ctx.clone(), repo.clone(), prepared_filenode_entries).boxify();
+    // Check that the filenodes pass the verifier prior to serializing them.
 
-                let filenode_entries = verify_ok
-                    .and_then(move |_| Ok(filenode_entries))
-                    .flatten_stream()
-                    .boxify();
+    let filenode_entries = stream::once({
+        cloned!(ctx, repo, filenode_verifier);
+        async move {
+            filenode_verifier
+                .verify_entries(&ctx, &prepared_filenode_entries)
+                .await?;
+            anyhow::Ok(
+                create_filenodes(ctx.clone(), repo.clone(), prepared_filenode_entries).compat(),
+            )
+        }
+    })
+    .try_flatten()
+    .boxed()
+    .compat();
 
-                if !commits_to_push.is_empty() {
-                    bundle2_parts.push(try_boxfuture!(parts::changegroup_part(
-                        changelog_entries,
-                        Some(filenode_entries),
-                        cg_version,
-                    )));
+    if any_commits {
+        bundle2_parts.push(parts::changegroup_part(
+            changelog_entries.boxed().compat(),
+            Some(filenode_entries.boxify()),
+            cg_version,
+        )?);
 
-                    bundle2_parts.push(try_boxfuture!(parts::treepack_part(
-                        create_manifest_entries_stream(
-                            ctx,
-                            repo.repo_blobstore().clone(),
-                            manifests
-                        ),
-                        parts::StoreInHgCache::Yes
-                    )));
-                }
+        bundle2_parts.push(parts::treepack_part(
+            create_manifest_entries_stream(ctx.clone(), repo.repo_blobstore().clone(), manifests),
+            parts::StoreInHgCache::Yes,
+        )?);
+    }
 
-                bundle2_parts.push(try_boxfuture!(parts::bookmark_pushkey_part(
-                    bookmark.to_string(),
-                    maybe_from.map(|x| x.to_string()).unwrap_or_default(),
-                    maybe_to.map(|x| x.to_string()).unwrap_or_default(),
-                )));
+    bundle2_parts.push(parts::bookmark_pushkey_part(
+        bookmark.to_string(),
+        maybe_from.map(|x| x.to_string()).unwrap_or_default(),
+        maybe_to.map(|x| x.to_string()).unwrap_or_default(),
+    )?);
 
-                let compression = None;
-                create_bundle_stream(bundle2_parts, compression)
-                    .concat2()
-                    .boxify()
-            },
-        )
+    let compression = None;
+    create_bundle_stream(bundle2_parts, compression)
+        .compat()
+        .try_concat()
+        .await
 }
 
 async fn fetch_timestamps(
@@ -405,12 +356,12 @@ async fn fetch_timestamps(
     .await
 }
 
-fn find_commits_to_push(
-    ctx: CoreContext,
-    repo: Repo,
+fn find_commits_to_push<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a Repo,
     hg_server_heads: impl IntoIterator<Item = ChangesetId>,
     maybe_to_cs_id: Option<ChangesetId>,
-) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
+) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> + 'a {
     let lca_hint = repo.skiplist_index_arc();
     DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),
@@ -419,16 +370,12 @@ fn find_commits_to_push(
         maybe_to_cs_id.into_iter().collect(),
         hg_server_heads.into_iter().collect(),
     )
-    .map(move |bcs_id| {
-        cloned!(ctx, repo);
-        async move {
-            let hg_cs_id = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-            Ok((bcs_id, hg_cs_id))
-        }
-        .boxed()
-        .compat()
+    .compat()
+    .map_ok(async move |bcs_id| {
+        let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
+        Ok((bcs_id, hg_cs_id))
     })
-    .buffered(100)
+    .try_buffered(100)
 }
 
 // TODO(stash): this should generate different capabilities depending on whether client
