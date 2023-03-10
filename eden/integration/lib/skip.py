@@ -199,8 +199,11 @@ elif sys.platform.startswith("darwin"):
     # we should disable these test.
     TEST_DISABLED["chown_test.ChownTest"] = True
 
-    # I'm not sure if overlay corruption logic even exists on macOS?
-    TEST_DISABLED["corrupt_overlay_test.CorruptOverlayTest"] = True
+    # T89441739
+    TEST_DISABLED["corrupt_overlay_test.CorruptOverlayTest"] = [
+        "test_unmount_succeeds",
+        "test_unlink_deletes_corrupted_files",
+    ]
 
     # Assertion error (output doesn't match expected output)
     TEST_DISABLED["debug_getpath_test.DebugGetPathTest"] = [
