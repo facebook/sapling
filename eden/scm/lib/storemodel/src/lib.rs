@@ -64,6 +64,10 @@ pub trait ReadRootTreeIds {
 /// writing storage migration.
 #[auto_impl::auto_impl(Arc)]
 pub trait TreeStore {
+    /// Read the contents of a directory.
+    ///
+    /// The result is opaque bytes data, encoded using the format specified by `format()`.
+    /// To parse the bytes consider `manifest_tree::TreeEntry`.
     fn get(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<minibytes::Bytes>;
 
     fn insert(&self, path: &RepoPath, hgid: HgId, data: minibytes::Bytes) -> anyhow::Result<()>;
