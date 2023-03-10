@@ -250,7 +250,10 @@ elif sys.platform.startswith("darwin"):
         "test_restart",
     ]
 
-    # Requires the use of passwordless `sudo`
+    # Broken on NFS since NFS will just hang with the message "nfs server
+    # edenfs:: not responding". There was an attempt to fix this with commit
+    # 1f5512cf74ca, but it seems like something in test teardown is causing
+    # hangs still.
     TEST_DISABLED["stale_test.StaleTest"] = True
 
     # CalledProcessError (same as health_test above?). Seems like
