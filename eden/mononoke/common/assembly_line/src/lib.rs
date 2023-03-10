@@ -6,6 +6,10 @@
  */
 
 #![feature(unboxed_closures)]
+#![feature(fn_traits)]
+#![feature(type_alias_impl_trait)]
+
+use std::marker::PhantomData;
 
 use futures::future;
 use futures::stream::FusedStream;
@@ -31,23 +35,52 @@ pub trait AssemblyLine: Stream + Sized {
 
 impl<S: Stream> AssemblyLine for S {}
 
-pub struct TryAssemblyLine;
+/// This overly complicated struct and FnMut implementations are used for
+/// TryAssemblyLine because we need to name some types as we can't use
+/// impl Trait in trait outputs in Rust yet.
+pub struct ResultWrapper<F, I, T, Err>(F, PhantomData<(I, T, Err)>)
+where
+    F: FnMut<(I,)>,
+    F::Output: Future<Output = Result<T, Err>>;
 
-impl TryAssemblyLine {
-    pub fn try_next_step<S, F, O>(
-        stream: S,
-        mut step_fn: F,
-    ) -> impl Stream<Item = Result<O, S::Error>>
-    where
-        S: TryStream + FusedStream,
-        F: FnMut<(S::Ok,)>,
-        F::Output: Future<Output = Result<O, S::Error>>,
-        // This is always true, not sure why I need this bound
-        S: Stream<Item = Result<S::Ok, S::Error>>,
-    {
-        NextStep::new(stream, move |res| match res {
-            Ok(ok) => step_fn(ok).left_future(),
-            Err(err) => future::ready(Err(err)).right_future(),
-        })
+impl<F, I, T, Err> FnOnce<(Result<I, Err>,)> for ResultWrapper<F, I, T, Err>
+where
+    F: FnMut<(I,)>,
+    F::Output: Future<Output = Result<T, Err>>,
+{
+    type Output = future::Either<F::Output, future::Ready<Result<T, Err>>>;
+    extern "rust-call" fn call_once(mut self, args: (Result<I, Err>,)) -> Self::Output {
+        self.call_mut(args)
     }
 }
+
+impl<F, I, T, Err> FnMut<(Result<I, Err>,)> for ResultWrapper<F, I, T, Err>
+where
+    F: FnMut<(I,)>,
+    F::Output: Future<Output = Result<T, Err>>,
+{
+    extern "rust-call" fn call_mut(&mut self, (res,): (Result<I, Err>,)) -> Self::Output {
+        match res {
+            Ok(ok) => self.0.call_mut((ok,)).left_future(),
+            Err(err) => future::ready(Err(err)).right_future(),
+        }
+    }
+}
+
+pub trait TryAssemblyLine: TryStream + Sized {
+    fn try_next_step<F, O>(
+        self,
+        step_fn: F,
+    ) -> NextStep<Self, ResultWrapper<F, Self::Ok, O, Self::Error>>
+    where
+        F: FnMut<(Self::Ok,)>,
+        F::Output: Future<Output = Result<O, Self::Error>>,
+        Self: FusedStream,
+        // This is always true, not sure why I need this bound
+        Self: Stream<Item = Result<Self::Ok, Self::Error>>,
+    {
+        NextStep::new(self, ResultWrapper(step_fn, PhantomData::default()))
+    }
+}
+
+impl<S: TryStream> TryAssemblyLine for S {}

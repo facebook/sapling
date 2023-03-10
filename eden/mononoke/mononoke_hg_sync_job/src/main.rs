@@ -1393,7 +1393,7 @@ async fn run<'a>(
             );
 
             cloned!(filter_changesets);
-            let s = loop_over_log_entries(
+            loop_over_log_entries(
                 ctx,
                 &bookmarks,
                 start_id,
@@ -1451,57 +1451,55 @@ async fn run<'a>(
                 }
             })
             .try_buffered(bundle_buffer_size)
-            .map_err(anyhow::Error::from);
-            TryAssemblyLine::try_next_step(
-                s.fuse(),
-                async move |bundles: Vec<CombinedBookmarkUpdateLogEntry>| {
-                    for bundle in bundles {
-                        if !can_continue() {
-                            break;
-                        }
-                        let (stats, res) = sync_single_combined_entry(
-                            ctx,
-                            &bundle,
-                            hg_repo,
-                            base_retry_delay_ms,
-                            retry_num,
-                            globalrev_syncer,
-                        )
-                        .watched(ctx.logger())
-                        .timed()
-                        .await;
-                        let res = bind_sync_result(&bundle.components, res);
-                        let res = match res {
-                            Ok(ok) => Ok((stats, ok)),
-                            Err(err) => Err((Some(stats), err)),
-                        };
-                        let res = reporting_handler(res).watched(ctx.logger()).await;
-                        let entry = outcome_handler(res).watched(ctx.logger()).await?;
-                        let next_id = get_id_to_search_after(&entry);
-
-                        retry_always(
-                            ctx.logger(),
-                            |_| async {
-                                let success = replayed_sync_counter
-                                    .set_counter(ctx, next_id)
-                                    .watched(ctx.logger())
-                                    .await?;
-
-                                if success {
-                                    Ok(())
-                                } else {
-                                    bail!("failed to update counter")
-                                }
-                            },
-                            base_retry_delay_ms,
-                            retry_num,
-                        )
-                        .watched(ctx.logger())
-                        .await?;
+            .map_err(anyhow::Error::from)
+            .fuse()
+            .try_next_step(async move |bundles: Vec<CombinedBookmarkUpdateLogEntry>| {
+                for bundle in bundles {
+                    if !can_continue() {
+                        break;
                     }
-                    Ok(())
-                },
-            )
+                    let (stats, res) = sync_single_combined_entry(
+                        ctx,
+                        &bundle,
+                        hg_repo,
+                        base_retry_delay_ms,
+                        retry_num,
+                        globalrev_syncer,
+                    )
+                    .watched(ctx.logger())
+                    .timed()
+                    .await;
+                    let res = bind_sync_result(&bundle.components, res);
+                    let res = match res {
+                        Ok(ok) => Ok((stats, ok)),
+                        Err(err) => Err((Some(stats), err)),
+                    };
+                    let res = reporting_handler(res).watched(ctx.logger()).await;
+                    let entry = outcome_handler(res).watched(ctx.logger()).await?;
+                    let next_id = get_id_to_search_after(&entry);
+
+                    retry_always(
+                        ctx.logger(),
+                        |_| async {
+                            let success = replayed_sync_counter
+                                .set_counter(ctx, next_id)
+                                .watched(ctx.logger())
+                                .await?;
+
+                            if success {
+                                Ok(())
+                            } else {
+                                bail!("failed to update counter")
+                            }
+                        },
+                        base_retry_delay_ms,
+                        retry_num,
+                    )
+                    .watched(ctx.logger())
+                    .await?;
+                }
+                Ok(())
+            })
             .try_collect::<()>()
             .await
         }
