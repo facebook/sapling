@@ -10,7 +10,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobrepo::BlobRepo;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkName;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
@@ -56,7 +58,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
 
     // Can create public bookmarks on existing changesets (ancestors of trunk).
-    repo.create_bookmark("bookmark1", changesets["A"], None)
+    repo.create_bookmark(&BookmarkKey::new("bookmark1")?, changesets["A"], None)
         .await?;
     let bookmark1 = repo
         .resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
@@ -65,7 +67,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(bookmark1.id(), changesets["A"]);
 
     // Can create public bookmarks on other changesets (not ancestors of trunk).
-    repo.create_bookmark("bookmark2", changesets["F"], None)
+    repo.create_bookmark(&BookmarkKey::new("bookmark2")?, changesets["F"], None)
         .await?;
     let bookmark2 = repo
         .resolve_bookmark("bookmark2", BookmarkFreshness::MostRecent)
@@ -74,13 +76,37 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(bookmark2.id(), changesets["F"]);
 
     // Can create scratch bookmarks.
-    repo.create_bookmark("scratch/bookmark3", changesets["G"], None)
-        .await?;
+    repo.create_bookmark(
+        &BookmarkKey::new("scratch/bookmark3")?,
+        changesets["G"],
+        None,
+    )
+    .await?;
     let bookmark3 = repo
         .resolve_bookmark("scratch/bookmark3", BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(bookmark3.id(), changesets["G"]);
+
+    // Can create tag bookmark
+    // Note: once `resolve_bookmark` supports category, we will be able to confirm that the
+    // bookmark exists.
+    repo.create_bookmark(
+        &BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag),
+        changesets["B"],
+        None,
+    )
+    .await?;
+
+    // Can create note bookmark
+    // Note: once `resolve_bookmark` supports category, we will be able to confirm that the
+    // bookmark exists.
+    repo.create_bookmark(
+        &BookmarkKey::with_name_and_category(BookmarkName::new("note1")?, BookmarkCategory::Note),
+        changesets["D"],
+        None,
+    )
+    .await?;
 
     // F is now public.  G is not.
     let stack = repo.stack(vec![changesets["G"]], 10).await?;
@@ -149,12 +175,16 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
 
-    repo.create_bookmark("bookmark1", changesets["A"], None)
+    repo.create_bookmark(&BookmarkKey::new("bookmark1")?, changesets["A"], None)
         .await?;
-    repo.create_bookmark("bookmark2", changesets["F"], None)
+    repo.create_bookmark(&BookmarkKey::new("bookmark2")?, changesets["F"], None)
         .await?;
-    repo.create_bookmark("scratch/bookmark3", changesets["G"], None)
-        .await?;
+    repo.create_bookmark(
+        &BookmarkKey::new("scratch/bookmark3")?,
+        changesets["G"],
+        None,
+    )
+    .await?;
 
     // Can delete public bookmarks.
     repo.delete_bookmark("bookmark1", None, None).await?;

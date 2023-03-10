@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 
+use bookmarks::BookmarkKey;
 use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
@@ -32,6 +33,7 @@ use mononoke_api::CreateChangeFile;
 use mononoke_api::CreateCopyInfo;
 use mononoke_api::FileId;
 use mononoke_api::FileType;
+use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
@@ -594,8 +596,12 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
         let pushvars = convert_pushvars(params.pushvars);
 
-        repo.create_bookmark(&params.bookmark, changeset.id(), pushvars.as_ref())
-            .await?;
+        repo.create_bookmark(
+            &BookmarkKey::new(&params.bookmark).map_err(Into::<MononokeError>::into)?,
+            changeset.id(),
+            pushvars.as_ref(),
+        )
+        .await?;
         Ok(thrift::RepoCreateBookmarkResponse {
             ..Default::default()
         })

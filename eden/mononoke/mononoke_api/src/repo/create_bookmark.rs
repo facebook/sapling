@@ -25,14 +25,11 @@ impl RepoContext {
     /// Create a bookmark.
     pub async fn create_bookmark(
         &self,
-        bookmark: impl AsRef<str>,
+        bookmark: &BookmarkKey,
         target: ChangesetId,
         pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
         self.start_write()?;
-
-        let bookmark = bookmark.as_ref();
-        let bookmark = BookmarkKey::new(bookmark)?;
 
         fn make_create_op<'a>(
             bookmark: &'a BookmarkKey,
@@ -50,11 +47,11 @@ impl RepoContext {
             op
         }
         if let Some(redirector) = self.push_redirector.as_ref() {
-            let large_bookmark = redirector.small_to_large_bookmark(&bookmark).await?;
-            if large_bookmark == bookmark {
+            let large_bookmark = redirector.small_to_large_bookmark(bookmark).await?;
+            if &large_bookmark == bookmark {
                 return Err(MononokeError::InvalidRequest(format!(
                     "Cannot create shared bookmark '{}' from small repo",
-                    bookmark
+                    bookmark.name()
                 )));
             }
             let ctx = self.ctx();
@@ -73,7 +70,7 @@ impl RepoContext {
             // Wait for bookmark to catch up on small repo
             redirector.backsync_latest(ctx).await?;
         } else {
-            make_create_op(&bookmark, target, pushvars)
+            make_create_op(bookmark, target, pushvars)
                 .run(
                     self.ctx(),
                     self.authorization_context(),
@@ -83,7 +80,6 @@ impl RepoContext {
                 )
                 .await?;
         }
-
         Ok(())
     }
 }
