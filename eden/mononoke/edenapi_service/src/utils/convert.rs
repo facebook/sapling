@@ -83,7 +83,7 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
         files: cs
             .files
             .into_iter()
-            .map(|file| to_mpath(&file)?.context(ErrorKind::UnexpectedEmptyPath))
+            .map(|file| to_mpath(file)?.context(ErrorKind::UnexpectedEmptyPath))
             .collect::<Result<_, _>>()?,
         message: cs.message,
         time: DateTime::from_timestamp(cs.time, cs.tz)?,

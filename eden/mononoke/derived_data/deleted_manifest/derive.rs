@@ -394,13 +394,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             }
         };
 
-        Ok((
-            fold_node,
-            recurse_entries
-                .into_iter()
-                .map(|(_, node)| node)
-                .collect::<Vec<_>>(),
-        ))
+        Ok((fold_node, recurse_entries.into_values().collect::<Vec<_>>()))
     }
 
     async fn save_manifest(

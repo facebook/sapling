@@ -1193,7 +1193,7 @@ async fn run_sync_commit_and_ancestors<'a>(
     for ancestor in unsynced_ancestors {
         commit_syncer
             .unsafe_sync_commit(
-                &ctx,
+                ctx,
                 ancestor,
                 CandidateSelectionHint::Only,
                 CommitSyncContext::AdminChangeMapping,
@@ -1269,7 +1269,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
 
     let resulting_changeset_args = cs_args_from_matches(sub_m).compat().await?;
     let deletion_cs_id = create_and_save_bonsai(
-        &ctx,
+        ctx,
         large_repo,
         vec![cs_id],
         to_delete

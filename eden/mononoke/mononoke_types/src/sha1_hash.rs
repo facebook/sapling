@@ -205,8 +205,8 @@ impl Sha1Prefix {
             let max_tail = &SHA1_MAX[bytes.len()..];
 
             Ok(Sha1Prefix(
-                Sha1::from_bytes(&(bytes.iter().chain(min_tail).copied().collect::<Vec<_>>()))?,
-                Sha1::from_bytes(&(bytes.iter().chain(max_tail).copied().collect::<Vec<_>>()))?,
+                Sha1::from_bytes(bytes.iter().chain(min_tail).copied().collect::<Vec<_>>())?,
+                Sha1::from_bytes(bytes.iter().chain(max_tail).copied().collect::<Vec<_>>())?,
             ))
         }
     }

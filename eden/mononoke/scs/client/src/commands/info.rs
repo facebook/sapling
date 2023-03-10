@@ -335,7 +335,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
 
     match args.path.as_deref() {
-        Some(&[ref path]) => {
+        Some([path]) => {
             let path = path.clone();
             path_info(app, args, repo, path.clone()).await
         }

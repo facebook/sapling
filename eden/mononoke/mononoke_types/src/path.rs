@@ -1443,10 +1443,10 @@ mod test {
     #[test]
     fn bad_path4() {
         let p = vec![97; 255];
-        assert!(MPath::new(&p).is_ok());
+        assert!(MPath::new(p).is_ok());
 
         let p = vec![97; 256];
-        assert!(MPath::new(&p).is_err());
+        assert!(MPath::new(p).is_err());
     }
 
     #[test]

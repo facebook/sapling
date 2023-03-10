@@ -78,13 +78,13 @@ impl CgPartSequence {
                 .chain(
                     self.filelogs
                         .iter()
-                        .filter(|&&(ref parts, _)| {
+                        .filter(|&(parts, _)| {
                             // If there are no filelog parts, it isn't valid to return a
                             // SectionEnd since that won't be referring to anything. So
                             // just skip the whole filelog.
                             !parts.is_empty()
                         })
-                        .flat_map(|&(ref parts, ref end)| parts.iter().chain(iter::once(end))),
+                        .flat_map(|(parts, end)| parts.iter().chain(iter::once(end))),
                 )
                 .chain(iter::once(&self.end)),
         )
@@ -240,7 +240,7 @@ impl Arbitrary for changegroup::Part {
         use crate::changegroup::Part::CgChunk;
 
         match self {
-            &CgChunk(ref section, ref delta_chunk) => {
+            CgChunk(section, delta_chunk) => {
                 // Keep the section the same, but shrink the delta chunk.
                 let section = section.clone();
                 Box::new(

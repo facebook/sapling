@@ -97,7 +97,7 @@ impl ChunkBuilder {
         // Changeset and manifest sections are implicitly encoded, so we don't
         // need to do anything there.
         // TODO: will need to encode tree manifests here as well
-        if let &Section::Filelog(ref f) = section {
+        if let Section::Filelog(f) = section {
             let f_vec = f.to_vec();
             // Note that the filename length must include the four bytes for itself.
             BigEndian::write_i32(&mut self.inner[0..], (f_vec.len() + 4) as i32);

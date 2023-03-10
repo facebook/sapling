@@ -271,7 +271,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     let app_errors = stream.app_errors();
     assert_eq!(app_errors.len(), 1);
     assert_matches!(&app_errors[0],
-                    &ErrorKind::BundleUnknownPart(ref header)
+                    ErrorKind::BundleUnknownPart(header)
                     if header.part_type() == &PartHeaderType::Listkeys && header.mandatory());
 }
 

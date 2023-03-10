@@ -759,7 +759,7 @@ async fn find_changed_files(
         .try_collect::<HashMap<_, _>>()
         .await?;
 
-    let ids: HashSet<_> = id_to_bcs.iter().map(|(id, _)| *id).collect();
+    let ids: HashSet<_> = id_to_bcs.keys().copied().collect();
 
     let file_changes_futs: Vec<_> = id_to_bcs
         .into_iter()

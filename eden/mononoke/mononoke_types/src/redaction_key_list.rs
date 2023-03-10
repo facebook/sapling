@@ -37,7 +37,7 @@ impl BlobstoreValue for RedactionKeyList {
 
     fn into_blob(self) -> RedactionKeyListBlob {
         let thrift = self.into_thrift();
-        let data = compact_protocol::serialize(&thrift);
+        let data = compact_protocol::serialize(thrift);
         let mut context = RedactionKeyListIdContext::new();
         context.update(&data);
         let id = context.finish();

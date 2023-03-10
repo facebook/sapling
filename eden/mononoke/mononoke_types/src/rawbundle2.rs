@@ -94,7 +94,7 @@ impl BlobstoreValue for RawBundle2 {
         context.update(self.as_bytes());
         let id = context.finish();
         let thrift = self.into_thrift();
-        let data = compact_protocol::serialize(&thrift);
+        let data = compact_protocol::serialize(thrift);
         Blob::new(id, data)
     }
 

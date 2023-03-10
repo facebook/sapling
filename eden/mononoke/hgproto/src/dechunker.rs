@@ -118,7 +118,7 @@ where
     fn consume_chunk(&mut self, amt: usize) {
         if amt > 0 {
             let chunk_size = match &self.state {
-                &ReadingChunk(ref chunk_size) => *chunk_size,
+                ReadingChunk(ref chunk_size) => *chunk_size,
                 _ => panic!("Trying to consume bytes while internally not reading chunk yet"),
             };
 

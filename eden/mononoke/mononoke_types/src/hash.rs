@@ -243,8 +243,8 @@ impl Blake2Prefix {
             let min_tail: Vec<u8> = vec![0x00; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
             let max_tail: Vec<u8> = vec![0xff; BLAKE2_HASH_LENGTH_BYTES - bytes.len()];
             Ok(Blake2Prefix(
-                Blake2::from_bytes(&(bytes.iter().chain(&min_tail).cloned().collect::<Vec<_>>()))?,
-                Blake2::from_bytes(&(bytes.iter().chain(&max_tail).cloned().collect::<Vec<_>>()))?,
+                Blake2::from_bytes(bytes.iter().chain(&min_tail).cloned().collect::<Vec<_>>())?,
+                Blake2::from_bytes(bytes.iter().chain(&max_tail).cloned().collect::<Vec<_>>())?,
             ))
         }
     }

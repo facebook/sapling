@@ -122,8 +122,8 @@ impl ChunkBuilder {
             (Kind::File, &RepoPath::RootPath) => bail!(ErrorKind::WirePackEncode(
                 "attempted to encode a zero-length filename into a file wirepack".into()
             )),
-            (Kind::Tree, &RepoPath::DirectoryPath(ref dir_path)) => Some(verify_path(dir_path)?),
-            (Kind::File, &RepoPath::FilePath(ref file_path)) => Some(verify_path(file_path)?),
+            (Kind::Tree, RepoPath::DirectoryPath(dir_path)) => Some(verify_path(dir_path)?),
+            (Kind::File, RepoPath::FilePath(file_path)) => Some(verify_path(file_path)?),
             (kind, path) => bail!(ErrorKind::WirePackEncode(format!(
                 "attempted to encode incompatible path into wirepack (kind: {}, path: {:?})",
                 kind, path

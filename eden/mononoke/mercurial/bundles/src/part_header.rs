@@ -221,21 +221,21 @@ impl PartHeader {
         aparams.sort();
 
         // param sizes
-        for &(ref key, ref val) in &mparams {
+        for (ref key, ref val) in &mparams {
             out_buf.put_u8(key.len() as u8);
             out_buf.put_u8(val.len() as u8);
         }
-        for &(ref key, ref val) in &aparams {
+        for (ref key, ref val) in &aparams {
             out_buf.put_u8(key.len() as u8);
             out_buf.put_u8(val.len() as u8);
         }
 
         // the actual params themselves
-        for &(ref key, ref val) in &mparams {
+        for (ref key, ref val) in &mparams {
             out_buf.put_slice(key.as_bytes());
             out_buf.put_slice(val);
         }
-        for &(ref key, ref val) in &aparams {
+        for (ref key, ref val) in &aparams {
             out_buf.put_slice(key.as_bytes());
             out_buf.put_slice(val);
         }

@@ -87,8 +87,8 @@ fn validate_common_commit_sync_config(
 
     let bookmark_prefixes: Vec<&AsciiString> = common_commit_sync_config
         .small_repos
-        .iter()
-        .map(|(_, sr)| &sr.bookmark_prefix)
+        .values()
+        .map(|sr| &sr.bookmark_prefix)
         .collect();
 
     // No two small repos can have the bookmark prefix as prefix of another

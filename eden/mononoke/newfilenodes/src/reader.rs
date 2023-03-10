@@ -192,7 +192,7 @@ impl FilenodesReader {
         let key = filenode_cache_key(repo_id, &pwh, &filenode);
 
         if let Some(cached) = self.local_cache.get_filenode(&key) {
-            return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
+            return Ok(FilenodeResult::Present(Some(cached)));
         }
 
         let ctx = ctx.clone();
@@ -203,7 +203,7 @@ impl FilenodesReader {
                     // Now that we acquired the permit, check our cache again, in case the previous permit
                     // owner just filed the cache with the filenode we're looking for.
                     if let Some(cached) = self.local_cache.get_filenode(&key) {
-                        return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
+                        return Ok(FilenodeResult::Present(Some(cached)));
                     }
 
                     STATS::get_local_cache_misses.add_value(1);
@@ -238,7 +238,7 @@ impl FilenodesReader {
                             return Ok(FilenodeResult::Disabled);
                         }
                         Ok(FilenodeResult::Present(Some(res))) => {
-                            return Ok(FilenodeResult::Present(Some(res.try_into()?)));
+                            return Ok(FilenodeResult::Present(Some(res)));
                         }
                         Ok(FilenodeResult::Present(None))
                         | Err(ErrorKind::FixedCopyInfoMissing(_))
@@ -278,10 +278,7 @@ impl FilenodesReader {
                     .await?;
 
                     match res {
-                        FilenodeResult::Present(res) => {
-                            let res = res.map(|res| res.try_into()).transpose()?;
-                            Ok(FilenodeResult::Present(res))
-                        }
+                        FilenodeResult::Present(res) => Ok(FilenodeResult::Present(res)),
                         FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
                     }
                 }

@@ -310,7 +310,7 @@ impl RevlogInner {
         if self.header.features.contains(parser::Features::INLINE) {
             self.idxoff.get(&idx).cloned()
         } else {
-            Some(idx * self.entry_size(None) as usize)
+            Some(idx * self.entry_size(None))
         }
     }
 

@@ -570,6 +570,6 @@ where
             path,
             parents: parent_subtrees,
         },
-        deps.into_iter().map(|(_name, dep)| dep).collect(),
+        deps.into_values().collect(),
     ))
 }

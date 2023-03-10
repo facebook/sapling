@@ -270,10 +270,7 @@ fn get_commit_ids_impl(matches: &ArgMatches) -> Result<Vec<CommitId>, Error> {
             commit_ids.insert(index, CommitId::Resolve(value.to_string()));
         }
     }
-    Ok(commit_ids
-        .into_iter()
-        .map(|(_index, commit_id)| commit_id)
-        .collect())
+    Ok(commit_ids.into_values().collect())
 }
 
 // Unfortunately we can't use clap derive API here directly because we care about

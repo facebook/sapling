@@ -279,7 +279,7 @@ where
                                 subentry.path_tree = path_tree;
                             }
 
-                            let deps = deps.into_iter().map(|(_name, dep)| dep).collect();
+                            let deps = deps.into_values().collect();
                             Ok((
                                 FoldState::CreateTrees(path, name, parent, maybe_file_deletion),
                                 deps,

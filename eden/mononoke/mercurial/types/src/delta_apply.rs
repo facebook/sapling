@@ -67,7 +67,7 @@ impl FragmentWrapperIterator {
                 start: frag.start as i64,
                 end: frag.end as i64,
                 len: frag.content_length() as i64,
-                content_start: offset as i64,
+                content_start: offset,
             };
             offset += frag.content_length() as i64;
             frag_wrappers.push(frag_wrapper);

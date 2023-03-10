@@ -599,7 +599,7 @@ impl BlameData {
             seen_csid_indexes.insert(range.csid_index as usize);
         }
         self.csids
-            .retain(|index, _| seen_csid_indexes.contains(index as usize));
+            .retain(|index, _| seen_csid_indexes.contains(index));
     }
 
     fn from_thrift(blame: thrift::BlameDataV2) -> Result<BlameData> {

@@ -252,7 +252,7 @@ pub trait MegarepoOp {
                     let size = envelope.content_size();
                     let content_id = envelope.content_id();
 
-                    Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
+                    Ok((path, FileChange::tracked(content_id, ty, size, None)))
                 }
                 BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
             }
@@ -481,8 +481,8 @@ pub trait MegarepoOp {
         let linkfiles: HashSet<MononokePath> = source
             .mapping
             .linkfiles
-            .iter()
-            .map(|(dst, _src)| dst.try_into())
+            .keys()
+            .map(|dst| dst.try_into())
             .try_collect()?;
         all_paths.extend(linkfiles.into_iter());
         Ok(all_paths)

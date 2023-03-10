@@ -140,7 +140,7 @@ fn snapshot_name() -> String {
 
 fn snapshot_path(shared_local_path: &Path, repo_id: RepositoryId) -> PathBuf {
     let name = format!("{}{}", repo_id.prefix(), snapshot_name());
-    shared_local_path.join(&name)
+    shared_local_path.join(name)
 }
 
 async fn load_snapshot(

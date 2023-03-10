@@ -91,7 +91,7 @@ impl ChangedFilesInfo {
             .file_changes_map()
             .values()
             .map(|fc| fc.size().unwrap_or(0))
-            .sum::<u64>() as u64;
+            .sum::<u64>();
 
         Self {
             changed_files_count,

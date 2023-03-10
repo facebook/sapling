@@ -176,7 +176,7 @@ async fn basic_create_git_tree(fb: FacebookInit) -> Result<()> {
     let git_tree_hash = git_hash::oid::try_from_bytes(sha1_hash.as_ref())?;
     repo_ctx.upload_git_object(git_tree_hash, bytes).await?;
 
-    let output = repo_ctx.create_git_tree(&git_tree_hash).await;
+    let output = repo_ctx.create_git_tree(git_tree_hash).await;
     output.expect("Expected git tree to be created successfully");
     Ok(())
 }

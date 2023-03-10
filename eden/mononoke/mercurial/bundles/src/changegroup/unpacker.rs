@@ -98,7 +98,7 @@ impl Part {
     /// When self does not contain a CgDeltaChunk (it is a SectionEnd or End).
     pub fn chunk(&self) -> &CgDeltaChunk {
         match self {
-            &Part::CgChunk(_, ref chunk) => chunk,
+            Part::CgChunk(_, chunk) => chunk,
             _ => panic!("this Part does not contain a CgDeltaChunk"),
         }
     }
