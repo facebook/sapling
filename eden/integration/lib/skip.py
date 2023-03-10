@@ -283,9 +283,6 @@ elif sys.platform.startswith("darwin"):
         "test_pid_fetch_counts",
     ]
 
-    # Assertion error (output doesn't match expected result)
-    TEST_DISABLED["unicode_test.UnicodeTest"] = True
-
     # OSError: AF_UNIX path too long
     TEST_DISABLED["unixsocket_test.UnixSocketTest"] = True
 
