@@ -17,7 +17,6 @@ use types::RepoPathBuf;
 
 use super::watchmanfs::detect_changes;
 use crate::filechangedetector::FileChangeDetectorTrait;
-use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
@@ -30,27 +29,35 @@ const EXIST_NEXT: StateFlags = StateFlags::EXIST_NEXT;
 struct TestFileChangeDetector {
     changed_files: Vec<RepoPathBuf>,
     deleted_files: Vec<RepoPathBuf>,
+
+    results: Vec<Result<ResolvedFileChangeResult>>,
 }
 
 impl FileChangeDetectorTrait for TestFileChangeDetector {
-    fn has_changed(&mut self, _ts: &mut TreeState, path: &RepoPath) -> Result<FileChangeResult> {
+    fn submit(&mut self, _ts: &mut TreeState, path: &RepoPath) {
         if self.changed_files.contains(&path.to_owned()) {
-            return Ok(FileChangeResult::Yes(ChangeType::Changed(path.to_owned())));
+            self.results
+                .push(Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(
+                    path.to_owned(),
+                ))));
+        } else if self.deleted_files.contains(&path.to_owned()) {
+            self.results
+                .push(Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(
+                    path.to_owned(),
+                ))));
+        } else {
+            self.results
+                .push(Ok(ResolvedFileChangeResult::No(path.to_owned())));
         }
-
-        if self.deleted_files.contains(&path.to_owned()) {
-            return Ok(FileChangeResult::Yes(ChangeType::Deleted(path.to_owned())));
-        }
-
-        Ok(FileChangeResult::No)
     }
+}
 
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {
-        Box::new(vec![].into_iter())
-    }
+impl IntoIterator for TestFileChangeDetector {
+    type Item = Result<ResolvedFileChangeResult>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
-    fn maybe_count(&self) -> usize {
-        0
+    fn into_iter(self) -> Self::IntoIter {
+        self.results.into_iter()
     }
 }
 

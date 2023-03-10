@@ -100,7 +100,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
             seen: HashSet::new(),
             tree_iter: None,
             lookup_iter: None,
-            file_change_detector,
+            file_change_detector: Some(file_change_detector),
         };
         Ok(Box::new(pending_changes))
     }
@@ -115,7 +115,7 @@ pub struct PendingChanges<M: Matcher + Clone + Send + Sync + 'static> {
     seen: HashSet<RepoPathBuf>,
     tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
     lookup_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
-    file_change_detector: FileChangeDetector,
+    file_change_detector: Option<FileChangeDetector>,
 }
 
 #[derive(PartialEq)]
@@ -149,11 +149,11 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                     let file = ts.normalize(file.as_ref())?;
                     let path = RepoPath::from_utf8(file.as_ref())?;
                     self.seen.insert(path.to_owned());
-                    let changed = self.file_change_detector.has_changed_with_fresh_metadata(
-                        &mut ts,
-                        path,
-                        Some(metadata),
-                    )?;
+                    let changed = self
+                        .file_change_detector
+                        .as_mut()
+                        .unwrap()
+                        .has_changed_with_fresh_metadata(&mut ts, path, Some(metadata))?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
                         return Ok(Some(PendingChangeResult::File(change_type)));
@@ -221,21 +221,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                 }
             }
 
-            let changed = match self.file_change_detector.has_changed(&mut ts, path) {
-                Ok(result) => result,
-                Err(e) => {
-                    results.push(Err(e));
-                    continue;
-                }
-            };
-
-            if let FileChangeResult::Yes(change_type) = changed {
-                // We expect the change type to be deleted here because in an ideal world we
-                // wouldn't see any paths that exist on disk that weren't found by the walk phase,
-                // but there can be ignored files that the walk ignores but that are in the
-                // dirstate. So we compare them here to see if they changed.
-                results.push(Ok(PendingChangeResult::File(change_type)));
-            }
+            self.file_change_detector
+                .as_mut()
+                .unwrap()
+                .submit(&mut ts, path);
         }
         results
     }
@@ -267,7 +256,9 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
             .get_or_insert_with(|| {
                 let iter = self
                     .file_change_detector
-                    .resolve_maybes()
+                    .take()
+                    .unwrap()
+                    .into_iter()
                     .filter_map(|result| match result {
                         Ok(ResolvedFileChangeResult::Yes(change_type)) => {
                             Some(Ok(PendingChangeResult::File(change_type)))

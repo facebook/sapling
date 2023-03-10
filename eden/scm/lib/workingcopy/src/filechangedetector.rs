@@ -81,22 +81,20 @@ impl FileChangeResult {
     }
 }
 
+#[derive(Debug)]
 pub enum ResolvedFileChangeResult {
     Yes(ChangeType),
     No(RepoPathBuf),
 }
 
-pub trait FileChangeDetectorTrait {
-    fn has_changed(&mut self, ts: &mut TreeState, path: &RepoPath) -> Result<FileChangeResult>;
-
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>;
-
-    fn maybe_count(&self) -> usize;
+pub trait FileChangeDetectorTrait: IntoIterator<Item = Result<ResolvedFileChangeResult>> {
+    fn submit(&mut self, ts: &mut TreeState, path: &RepoPath);
 }
 
 pub struct FileChangeDetector {
     vfs: VFS,
     last_write: HgModifiedTime,
+    results: Vec<Result<ResolvedFileChangeResult>>,
     lookups: Vec<RepoPathBuf>,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
@@ -109,11 +107,11 @@ impl FileChangeDetector {
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
     ) -> Self {
-        let lookups: Vec<RepoPathBuf> = vec![];
         FileChangeDetector {
             vfs,
             last_write,
-            lookups,
+            lookups: Vec::new(),
+            results: Vec::new(),
             manifest,
             store,
         }
@@ -246,25 +244,38 @@ impl FileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for FileChangeDetector {
-    fn has_changed(&mut self, ts: &mut TreeState, path: &RepoPath) -> Result<FileChangeResult> {
+    fn submit(&mut self, ts: &mut TreeState, path: &RepoPath) {
         let metadata = match self.vfs.metadata(path) {
             Ok(metadata) => Some(metadata),
             Err(e) => match e.downcast_ref::<std::io::Error>() {
                 Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-                _ => return Err(e),
+                _ => {
+                    self.results.push(Err(e));
+                    return;
+                }
             },
         };
 
-        self.has_changed_with_fresh_metadata(ts, path, metadata)
+        match self.has_changed_with_fresh_metadata(ts, path, metadata) {
+            Ok(res) => match res {
+                FileChangeResult::Yes(change) => {
+                    self.results.push(Ok(ResolvedFileChangeResult::Yes(change)))
+                }
+                FileChangeResult::No => self
+                    .results
+                    .push(Ok(ResolvedFileChangeResult::No(path.to_owned()))),
+                FileChangeResult::Maybe => self.lookups.push(path.to_owned()),
+            },
+            Err(err) => self.results.push(Err(err)),
+        };
     }
+}
 
-    fn maybe_count(&self) -> usize {
-        self.lookups.len()
-    }
+impl IntoIterator for FileChangeDetector {
+    type Item = Result<ResolvedFileChangeResult>;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
-    fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {
-        let mut results = Vec::<Result<ResolvedFileChangeResult>>::new();
-
+    fn into_iter(mut self) -> Self::IntoIter {
         // First, get the keys for the paths from the current manifest.
         let matcher = ExactMatcher::new(self.lookups.iter(), self.vfs.case_sensitive());
         let keys = self
@@ -275,7 +286,7 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                 let file = match result {
                     Ok(file) => file,
                     Err(e) => {
-                        results.push(Err(e));
+                        self.results.push(Err(e));
                         return None;
                     }
                 };
@@ -317,9 +328,7 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                 .collect::<Vec<_>>()
                 .await
         });
-        results.extend(comparisons);
-        Box::new(results.into_iter())
+        self.results.extend(comparisons);
+        self.results.into_iter()
     }
-    // TODO: after finishing these comparisons, update the cached mtimes of files so we
-    // don't have to do a comparison again next time.
 }

@@ -39,7 +39,6 @@ use super::treestate::set_clock;
 use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
-use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
@@ -277,39 +276,21 @@ pub fn detect_changes(
         .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)));
 
     let bar = ProgressBar::register_new(
-        "comparing mtime",
+        "comparing mtimes",
         combined_needs_check.clone().count() as u64,
         "",
     );
 
     for needs_check in combined_needs_check {
-        match file_change_detector.has_changed(ts, needs_check) {
-            Ok(FileChangeResult::Yes(change)) => {
-                pending_changes.push(Ok(PendingChangeResult::File(change)));
-                if !ts_need_check.contains(needs_check) {
-                    needs_mark.push(needs_check.clone());
-                }
-            }
-            Ok(FileChangeResult::No) => {
-                if ts_need_check.contains(needs_check) {
-                    needs_clear.push(needs_check.clone());
-                }
-            }
-            // Handled below in next loop.
-            Ok(FileChangeResult::Maybe) => {}
-            Err(e) => pending_changes.push(Err(e)),
-        }
-
+        file_change_detector.submit(ts, needs_check);
         bar.increase_position(1);
     }
 
-    let bar = ProgressBar::register_new(
-        "comparing contents",
-        file_change_detector.maybe_count() as u64,
-        "",
-    );
+    drop(bar);
 
-    for result in file_change_detector.resolve_maybes() {
+    let _bar = ProgressBar::register_new("comparing contents", 0, "");
+
+    for result in file_change_detector {
         match result {
             Ok(ResolvedFileChangeResult::Yes(change)) => {
                 let path = change.get_path();
@@ -325,8 +306,6 @@ pub fn detect_changes(
             }
             Err(e) => pending_changes.push(Err(e)),
         }
-
-        bar.increase_position(1);
     }
 
     if wm_fresh_instance {
