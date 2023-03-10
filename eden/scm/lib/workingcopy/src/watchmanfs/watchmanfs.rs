@@ -39,6 +39,7 @@ use super::treestate::set_clock;
 use crate::filechangedetector::ArcReadFileContents;
 use crate::filechangedetector::FileChangeDetector;
 use crate::filechangedetector::FileChangeDetectorTrait;
+use crate::filechangedetector::ParallelDetector;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
@@ -167,13 +168,6 @@ impl PendingChanges for WatchmanFileSystem {
 
         let manifests = WorkingCopy::current_manifests(ts, &self.tree_resolver)?;
 
-        let file_change_detector = FileChangeDetector::new(
-            self.vfs.clone(),
-            last_write.try_into()?,
-            manifests[0].clone(),
-            self.store.clone(),
-        );
-
         let mut wm_errors: Vec<ParseError> = Vec::new();
         let wm_needs_check: Vec<RepoPathBuf> = result
             .files
@@ -190,14 +184,39 @@ impl PendingChanges for WatchmanFileSystem {
             })
             .collect();
 
-        let mut pending_changes = detect_changes(
-            matcher,
-            file_change_detector,
-            ts,
-            wm_needs_check,
-            result.is_fresh_instance,
-            self.vfs.case_sensitive(),
-        )?;
+        let worker_count = config.get_or("workingcopy", "watchman-worker-count", || 10)?;
+        let mut pending_changes = if worker_count == 0 {
+            let detector = FileChangeDetector::new(
+                self.vfs.clone(),
+                last_write.try_into()?,
+                manifests[0].clone(),
+                self.store.clone(),
+            );
+            detect_changes(
+                matcher,
+                detector,
+                ts,
+                wm_needs_check,
+                result.is_fresh_instance,
+                self.vfs.case_sensitive(),
+            )?
+        } else {
+            let detector = ParallelDetector::new(
+                self.vfs.clone(),
+                last_write.try_into()?,
+                manifests[0].clone(),
+                self.store.clone(),
+                worker_count,
+            );
+            detect_changes(
+                matcher,
+                detector,
+                ts,
+                wm_needs_check,
+                result.is_fresh_instance,
+                self.vfs.case_sensitive(),
+            )?
+        };
 
         // Add back path errors into the pending changes. The caller
         // of pending_changes must choose how to handle these.
@@ -276,19 +295,14 @@ pub fn detect_changes(
         .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)));
 
     let bar = ProgressBar::register_new(
-        "comparing mtimes",
+        "comparing files",
         combined_needs_check.clone().count() as u64,
         "",
     );
 
     for needs_check in combined_needs_check {
         file_change_detector.submit(ts, needs_check);
-        bar.increase_position(1);
     }
-
-    drop(bar);
-
-    let _bar = ProgressBar::register_new("comparing contents", 0, "");
 
     for result in file_change_detector {
         match result {
@@ -306,6 +320,8 @@ pub fn detect_changes(
             }
             Err(e) => pending_changes.push(Err(e)),
         }
+
+        bar.increase_position(1);
     }
 
     if wm_fresh_instance {
