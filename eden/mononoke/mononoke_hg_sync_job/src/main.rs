@@ -1383,16 +1383,19 @@ async fn run<'a>(
                 try_join(counter, repo_parts).watched(ctx.logger()).await?;
 
             let outcome_handler = build_outcome_handler(ctx, lock_via);
+            let overlay = &Arc::new(Mutex::new(overlay));
             borrowed!(
                 outcome_handler,
                 can_continue,
                 hg_repo,
                 reporting_handler,
                 globalrev_syncer,
-                replayed_sync_counter
+                replayed_sync_counter,
+                bundle_preparer: &Arc<BundlePreparer>,
+                filter_changesets: &Arc<dyn FilterExistingChangesets>,
             );
 
-            cloned!(filter_changesets);
+            let mut seen_first = false;
             loop_over_log_entries(
                 ctx,
                 &bookmarks,
@@ -1403,55 +1406,44 @@ async fn run<'a>(
                 unlock_via,
             )
             .try_filter(|entries| future::ready(!entries.is_empty()))
-            .scan(Arc::new(Mutex::new(overlay)), |overlay, entries_res| {
-                cloned!(ctx, overlay, bundle_preparer);
-                async move {
-                    let entries = match entries_res {
-                        Ok(entries) => entries,
-                        Err(err) => {
-                            return Some(Err(AnonymousError { cause: err }));
-                        }
-                    };
-                    let batches = bundle_preparer
-                        .prepare_batches(&ctx, overlay, entries, max_commits_per_combined_bundle)
-                        .await
-                        .map_err(|cause| AnonymousError { cause });
-                    Some(batches)
-                }
+            .and_then(|entries| async move {
+                bundle_preparer
+                    .prepare_batches(
+                        ctx,
+                        overlay.clone(),
+                        entries,
+                        max_commits_per_combined_bundle,
+                    )
+                    .await
             })
+            // Compiler bug: Prevents higher-ranked lifetime error
+            .boxed()
             .try_filter(|batches| future::ready(!batches.is_empty()))
-            .scan(false, move |seen_first, mut batches_res| {
-                if let Ok(batches) = batches_res.as_mut() {
-                    if !*seen_first {
-                        // In the case that the sync job failed to update the
-                        // "latest-replayed-request" counter during its previous
-                        // run, the first batch might contain entries that were
-                        // already synced to the hg server. Syncing them again
-                        // would result in an error. Let's try to detect this case
-                        // and adjust the first batch to skip the already-synced
-                        // commits, if possible.
-                        if let Some(first) = batches.first_mut() {
-                            first.maybe_adjust(ctx);
-                            *seen_first = true;
-                        }
+            .map_ok(|mut batches| {
+                if !seen_first {
+                    // In the case that the sync job failed to update the
+                    // "latest-replayed-request" counter during its previous
+                    // run, the first batch might contain entries that were
+                    // already synced to the hg server. Syncing them again
+                    // would result in an error. Let's try to detect this case
+                    // and adjust the first batch to skip the already-synced
+                    // commits, if possible.
+                    if let Some(first) = batches.first_mut() {
+                        first.maybe_adjust(ctx);
+                        seen_first = true;
                     }
                 }
-                future::ready(Some(batches_res))
+                batches
             })
-            .map_ok(|batches| {
-                cloned!(filter_changesets, bundle_preparer, ctx);
-                async move {
+            .map_ok(|batches| async move {
+                anyhow::Ok(
                     bundle_preparer
-                        .prepare_bundles(ctx.clone(), batches, filter_changesets)
+                        .prepare_bundles(ctx.clone(), batches, filter_changesets.clone())
                         .watched(ctx.logger())
-                        .await
-                        .map_err(|cause| AnonymousError {
-                            cause: cause.into(),
-                        })
-                }
+                        .await?,
+                )
             })
             .try_buffered(bundle_buffer_size)
-            .map_err(anyhow::Error::from)
             .fuse()
             .try_next_step(async move |bundles: Vec<CombinedBookmarkUpdateLogEntry>| {
                 for bundle in bundles {
