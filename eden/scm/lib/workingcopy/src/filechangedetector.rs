@@ -80,6 +80,8 @@ pub trait FileChangeDetectorTrait {
     fn has_changed(&mut self, ts: &mut TreeState, path: &RepoPath) -> Result<FileChangeResult>;
 
     fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send>;
+
+    fn maybe_count(&self) -> usize;
 }
 
 pub struct FileChangeDetector {
@@ -246,6 +248,10 @@ impl FileChangeDetectorTrait for FileChangeDetector {
         };
 
         self.has_changed_with_fresh_metadata(ts, path, metadata)
+    }
+
+    fn maybe_count(&self) -> usize {
+        self.lookups.len()
     }
 
     fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {

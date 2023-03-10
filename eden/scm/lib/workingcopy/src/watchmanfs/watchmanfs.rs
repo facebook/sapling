@@ -272,10 +272,17 @@ pub fn detect_changes(
         treestate_needs_check = ts_need_check.len(),
     );
 
-    for needs_check in ts_need_check
+    let combined_needs_check = ts_need_check
         .iter()
-        .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)))
-    {
+        .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)));
+
+    let bar = ProgressBar::register_new(
+        "comparing mtime",
+        combined_needs_check.clone().count() as u64,
+        "",
+    );
+
+    for needs_check in combined_needs_check {
         match file_change_detector.has_changed(ts, needs_check) {
             Ok(FileChangeResult::Yes(change)) => {
                 pending_changes.push(Ok(PendingChangeResult::File(change)));
@@ -292,7 +299,15 @@ pub fn detect_changes(
             Ok(FileChangeResult::Maybe) => {}
             Err(e) => pending_changes.push(Err(e)),
         }
+
+        bar.increase_position(1);
     }
+
+    let bar = ProgressBar::register_new(
+        "comparing contents",
+        file_change_detector.maybe_count() as u64,
+        "",
+    );
 
     for result in file_change_detector.resolve_maybes() {
         match result {
@@ -310,6 +325,8 @@ pub fn detect_changes(
             }
             Err(e) => pending_changes.push(Err(e)),
         }
+
+        bar.increase_position(1);
     }
 
     if wm_fresh_instance {

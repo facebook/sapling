@@ -48,6 +48,10 @@ impl FileChangeDetectorTrait for TestFileChangeDetector {
     fn resolve_maybes(&self) -> Box<dyn Iterator<Item = Result<ResolvedFileChangeResult>> + Send> {
         Box::new(vec![].into_iter())
     }
+
+    fn maybe_count(&self) -> usize {
+        0
+    }
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
