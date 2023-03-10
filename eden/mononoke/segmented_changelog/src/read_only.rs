@@ -82,7 +82,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             );
         }
         let constraints = FirstAncestorConstraint::KnownUniversally {
-            heads: DagIdSet::from_spans(master_head_dag_ids.into_iter().map(|(_k, v)| v)),
+            heads: DagIdSet::from_spans(master_head_dag_ids.into_values()),
         };
         let cs_to_vlocation: HashMap<ChangesetId, Result<Option<Location<_>>>> = cs_to_dag_id
             .into_iter()

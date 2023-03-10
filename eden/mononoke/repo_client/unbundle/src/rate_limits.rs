@@ -99,7 +99,7 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         }
     };
 
-    let max_value = limit.raw_config.limit as f64;
+    let max_value = limit.raw_config.limit;
     let interval = limit.window.as_secs() as u32;
 
     let counter = GlobalTimeWindowCounterBuilder::build(
@@ -212,7 +212,7 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
             limit_name: COMMITS_PER_AUTHOR_LIMIT_NAME.to_string(),
             limit: limit.clone(),
             entity: author,
-            value: count as f64,
+            value: count,
         }),
         Err(_) => {
             ctx.scuba()
@@ -255,7 +255,7 @@ fn dispatch_counter_checks_and_bumps<'a>(
     counters: Vec<(BoxGlobalTimeWindowCounter, String, u64)>,
     enforced: bool,
 ) -> impl Iterator<Item = BoxFuture<'a, Result<(), (String, f64)>>> + 'a {
-    let max_value = limit.raw_config.limit as f64;
+    let max_value = limit.raw_config.limit;
     let interval = limit.window.as_secs() as u32;
 
     counters.into_iter().map(move |(counter, author, bump)| {

@@ -73,7 +73,7 @@ pub(crate) fn split_changegroup(
         .try_filter_map({
             let mut seen_path = None;
             move |part| {
-                if let &Some(ref seen_path) = &seen_path {
+                if let Some(seen_path) = &seen_path {
                     match &part {
                         &Part::CgChunk(Section::Filelog(ref path), _)
                         | &Part::SectionEnd(Section::Filelog(ref path)) => {

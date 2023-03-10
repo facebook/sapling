@@ -50,7 +50,7 @@ impl UnionNodeStream {
     }
 
     fn gc_finished_inputs(&mut self) {
-        self.inputs.retain(|&(_, ref state)| {
+        self.inputs.retain(|(_, state)| {
             if let Ok(Async::Ready(None)) = *state {
                 false
             } else {
@@ -111,13 +111,13 @@ impl Stream for UnionNodeStream {
 
             // Return any errors
             {
-                if self.inputs.iter().any(|&(_, ref state)| state.is_err()) {
+                if self.inputs.iter().any(|(_, state)| state.is_err()) {
                     let inputs = std::mem::take(&mut self.inputs);
-                    let (_, err) = inputs
+                    let err = inputs
                         .into_iter()
-                        .find(|&(_, ref state)| state.is_err())
+                        .find_map(|(_, state)| state.err())
                         .unwrap();
-                    return Err(err.unwrap_err());
+                    return Err(err);
                 }
             }
 

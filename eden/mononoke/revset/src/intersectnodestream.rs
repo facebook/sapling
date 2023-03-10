@@ -90,7 +90,7 @@ impl IntersectNodeStream {
         } else {
             self.inputs
                 .iter()
-                .map(|&(_, ref state)| match state {
+                .map(|(_, state)| match state {
                     &Ok(Async::Ready(None)) => true,
                     _ => false,
                 })
@@ -123,11 +123,11 @@ impl Stream for IntersectNodeStream {
 
             // Return any errors
             {
-                if self.inputs.iter().any(|&(_, ref state)| state.is_err()) {
+                if self.inputs.iter().any(|(_, state)| state.is_err()) {
                     let inputs = std::mem::take(&mut self.inputs);
                     let (_, err) = inputs
                         .into_iter()
-                        .find(|&(_, ref state)| state.is_err())
+                        .find(|(_, state)| state.is_err())
                         .unwrap();
                     return Err(err.unwrap_err());
                 }

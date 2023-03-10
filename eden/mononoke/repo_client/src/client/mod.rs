@@ -360,7 +360,7 @@ fn bundle2caps() -> String {
 
     let mut encodedcaps = vec![];
 
-    for &(ref key, ref value) in &caps {
+    for (key, value) in &caps {
         let encodedkey = key.to_string();
         if !value.is_empty() {
             let encodedvalue = value.join(",");
@@ -948,9 +948,9 @@ impl RepoClient {
                             ctx.perf_counters()
                                 .add_to_counter(PerfCounterType::GetpackResponseSize, len);
 
-                            STATS::total_fetched_file_size.add_value(len as i64);
+                            STATS::total_fetched_file_size.add_value(len);
                             if ctx.session().is_quicksand() {
-                                STATS::quicksand_fetched_file_size.add_value(len as i64);
+                                STATS::quicksand_fetched_file_size.add_value(len);
                             }
                         }
                     })
@@ -1318,7 +1318,7 @@ impl HgCommands for RepoClient {
             // Heads are all the commits that has a publishing bookmarks
             // that points to it.
             self.get_publishing_bookmarks_maybe_stale(ctx)
-                .map(|map| map.into_iter().map(|(_, hg_cs_id)| hg_cs_id).collect())
+                .map(|map| map.into_values().collect())
                 .compat()
                 .timeout(default_timeout())
                 .flatten_err()
