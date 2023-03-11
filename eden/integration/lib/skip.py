@@ -201,13 +201,6 @@ elif sys.platform.startswith("darwin"):
         "test_unlink_deletes_corrupted_files",
     ]
 
-    # Assertion error (output doesn't match expected output)
-    TEST_DISABLED["debug_getpath_test.DebugGetPathTest"] = [
-        "test_getpath_unlinked_inode",
-        "test_getpath_unloaded_inode_rename_parent",
-        "test_getpath_unloaded_inode",
-    ]
-
     # CalledProcessError
     TEST_DISABLED["health_test.HealthOfFakeEdenFSTest"] = True
 
