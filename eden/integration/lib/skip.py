@@ -268,12 +268,6 @@ elif sys.platform.startswith("darwin"):
     # OSError: AF_UNIX path too long
     TEST_DISABLED["unixsocket_test.UnixSocketTest"] = True
 
-    # Output doesn't match expected result
-    TEST_DISABLED["unlink_test.UnlinkTest"] = [
-        "test_unlink_dir",
-        "test_unlink_empty_dir",
-    ]
-
     # EdenFS on macOS uses NFSv3, which doesn't support extended attributes.
     TEST_DISABLED["xattr_test.XattrTest"] = True
 

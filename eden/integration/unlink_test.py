@@ -8,6 +8,7 @@ import errno
 import os
 import shutil
 import sys
+from typing import Tuple
 
 from .lib import testcase
 
@@ -47,41 +48,38 @@ class UnlinkTest(testcase.EdenRepoTest):
             msg="unlink raises ENOENT for nonexistent file",
         )
 
+    def get_expected_errno(self) -> Tuple[int, str]:
+        if sys.platform == "linux":
+            return errno.EISDIR, "EISDIR"
+        elif sys.platform == "win32":
+            return errno.EACCES, "EACCES"
+        else:
+            return errno.EPERM, "EPERM"
+
     def test_unlink_dir(self) -> None:
         adir = os.path.join(self.mount, "adir")
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
 
-        if sys.platform != "win32":
-            self.assertEqual(
-                context.exception.errno,
-                errno.EISDIR,
-                msg="unlink on a dir raises EISDIR",
-            )
-        else:
-            self.assertEqual(
-                context.exception.errno,
-                errno.EACCES,
-                msg="unlink on a dir raises EACCES",
-            )
+        err, errstr = self.get_expected_errno()
+        self.assertEqual(
+            context.exception.errno,
+            err,
+            msg=f"unlink on a dir raises {errstr}",
+        )
 
     def test_unlink_empty_dir(self) -> None:
         adir = os.path.join(self.mount, "an-empty-dir")
         os.mkdir(adir)
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
-        if sys.platform != "win32":
-            self.assertEqual(
-                context.exception.errno,
-                errno.EISDIR,
-                msg="unlink on an empty dir raises EISDIR",
-            )
-        else:
-            self.assertEqual(
-                context.exception.errno,
-                errno.EACCES,
-                msg="unlink on an empty dir raises EACCES",
-            )
+
+        err, errstr = self.get_expected_errno()
+        self.assertEqual(
+            context.exception.errno,
+            err,
+            msg=f"unlink on an empty dir raises {errstr}",
+        )
 
     def test_rmdir_file(self) -> None:
         filename = os.path.join(self.mount, "hello")
