@@ -185,9 +185,6 @@ elif sys.platform.startswith("darwin"):
     ]
     TEST_DISABLED["snapshot.test_snapshots.Testbasic-20210712"] = True
 
-    TEST_DISABLED["basic_test.BasicTest"] = [
-        "test_remove_checkout",  # Fails due to /proc/mounts not existing on macOS
-    ]
     TEST_DISABLED["basic_test.PosixTest"] = [
         "test_create_using_mknod",  # PermissionDenied
         "test_statvfs",  # NFS block size appears to be too small.
@@ -213,13 +210,6 @@ elif sys.platform.startswith("darwin"):
 
     # CalledProcessError
     TEST_DISABLED["health_test.HealthOfFakeEdenFSTest"] = True
-
-    # /proc/mounts DNE on macOS
-    TEST_DISABLED["mount_test.MountTest"] = [
-        "test_double_unmount",
-        "test_remount_creates_mount_point_dir",
-        "test_unmount_remount",
-    ]
 
     # eden clone fails bc Git not supported?
     TEST_DISABLED["remount_test.RemountTest"] = [
