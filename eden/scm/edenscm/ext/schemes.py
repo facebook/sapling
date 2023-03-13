@@ -97,7 +97,7 @@ def expandscheme(path):
 schemes = {}
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     schemes.update(dict(ui.configitems("schemes")))
     for scheme, url in schemes.items():
         if (
@@ -117,7 +117,7 @@ def extsetup(ui):
 
 
 @command("debugexpandscheme", norepo=True)
-def debugexpandscheme(ui, url, **opts):
+def debugexpandscheme(ui, url, **opts) -> None:
     """given a repo path, provide the scheme-expanded path"""
     repo = hg._peerlookup(url)
     if isinstance(repo, ShortRepository):
@@ -126,7 +126,7 @@ def debugexpandscheme(ui, url, **opts):
 
 
 @command("debugexpandpaths")
-def debugexpandpaths(ui, repo, *args, **opts):
+def debugexpandpaths(ui, repo, *args, **opts) -> None:
     """given a repo path, provide the scheme-expanded path"""
     for name, path in sorted(pycompat.iteritems(ui.paths)):
         url = path.rawloc
