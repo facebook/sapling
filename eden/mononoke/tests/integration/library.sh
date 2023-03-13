@@ -64,11 +64,15 @@ function get_configerator_relative_path {
   realpath --relative-to "${LOCAL_CONFIGERATOR_PATH}" "$1"
 }
 
-CACHE_ARGS=(
-  --cache-mode=local-only
-  --cache-size-gb=1
-  --cachelib-disable-cacheadmin
-)
+if [[ -n "$ENABLE_LOCAL_CACHE" ]]; then
+  CACHE_ARGS=(
+    --cache-mode=local-only
+    --cache-size-gb=1
+    --cachelib-disable-cacheadmin
+  )
+else
+  CACHE_ARGS=( --cache-mode=disabled )
+fi
 
 COMMON_ARGS=(
   --mysql-master-only
