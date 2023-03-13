@@ -602,7 +602,7 @@ fn spawn_stream_completion<T>(
 fn inner_multi_put(
     ctx: &CoreContext,
     blobstores: Arc<[TimedStore]>,
-    key: &String,
+    key: &str,
     value: &BlobstoreBytes,
     put_behaviour: Option<PutBehaviour>,
     scuba: &Scuba,
@@ -611,10 +611,12 @@ fn inner_multi_put(
     let put_futs: FuturesUnordered<_> = blobstores
         .iter()
         .map(|bs| {
+            // Note: the key used to be passed in as a `&String` and `cloned!` and that triggered
+            // a clippy crash for some reason. See D44027145 for context.
+            let key = key.to_string();
             cloned!(
                 bs,
                 ctx,
-                key,
                 value,
                 put_behaviour,
                 scuba.inner_blobstores_scuba,
