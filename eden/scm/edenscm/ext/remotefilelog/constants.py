@@ -6,6 +6,7 @@
 from __future__ import absolute_import
 
 import struct
+from typing import List, Optional
 
 from edenscm.i18n import _
 
@@ -13,21 +14,21 @@ from edenscm.i18n import _
 REQUIREMENT = "remotefilelog"
 
 FILENAMESTRUCT = "!H"
-FILENAMESIZE = struct.calcsize(FILENAMESTRUCT)
+FILENAMESIZE: int = struct.calcsize(FILENAMESTRUCT)
 
 NODESIZE = 20
 PACKREQUESTCOUNTSTRUCT = "!I"
 
 NODECOUNTSTRUCT = "!I"
-NODECOUNTSIZE = struct.calcsize(NODECOUNTSTRUCT)
+NODECOUNTSIZE: int = struct.calcsize(NODECOUNTSTRUCT)
 
 PATHCOUNTSTRUCT = "!I"
-PATHCOUNTSIZE = struct.calcsize(PATHCOUNTSTRUCT)
+PATHCOUNTSIZE: int = struct.calcsize(PATHCOUNTSTRUCT)
 
 FILEPACK_CATEGORY = ""
 TREEPACK_CATEGORY = "manifests"
 
-ALL_CATEGORIES = [FILEPACK_CATEGORY, TREEPACK_CATEGORY]
+ALL_CATEGORIES: List[str] = [FILEPACK_CATEGORY, TREEPACK_CATEGORY]
 
 # revision metadata keys. must be a single character.
 METAKEYFLAG = "f"  # revlog flag
@@ -39,7 +40,7 @@ REDACTED_CONTENT = b"PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCIm
 REDACTED_MESSAGE = b"This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.\n"
 
 
-def getunits(category):
+def getunits(category) -> Optional[str]:
     if category == FILEPACK_CATEGORY:
         return _("files")
     if category == TREEPACK_CATEGORY:
