@@ -35,7 +35,7 @@ usedinternally = {
 }
 
 
-def extsetup(ui):
+def extsetup(ui) -> None:
     entry = extensions.wrapcommand(commands.table, "commit", _commit)
     options = entry[1]
     options.append(
