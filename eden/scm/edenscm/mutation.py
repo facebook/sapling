@@ -160,7 +160,7 @@ def recordentries(repo, entries, skipexisting: bool = True, raw: bool = False) -
     return count
 
 
-def getdag(repo, *nodes, predecessors=True, successors=True):
+def getdag(repo, *nodes, predecessors: bool = True, successors: bool = True):
     """Get 1:1 mutation subgraph for selected nodes
 
     If successors is True, follow successors.
