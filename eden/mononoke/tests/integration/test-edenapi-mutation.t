@@ -2,7 +2,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License found in the LICENSE file in the root
-# directory of this source tree. 
+# directory of this source tree.
 
 #testcases commitgraph commitgraph_v2
 
@@ -92,6 +92,8 @@ Test mutations on client 1
   $ hgedenapi up 8b2dca0c8a72 -q
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': None}
   DEBUG pull::httphashlookup: edenapi hash lookups: ['8b2dca0c8a726d66bf26d47835a356cc4286facd']
+  DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
+  DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
   $ hgedenapi cloud join -q
   $ mkcommit A
   $ hg log -T{node} -r .
