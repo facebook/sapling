@@ -218,11 +218,6 @@ pub fn file_changed_given_metadata(
     Ok(FileChangeResult::No)
 }
 
-fn get_treestate(ts: &mut TreeState, path: &RepoPath) -> Result<Option<FileStateV2>> {
-    let normalized = ts.normalize(path.as_ref())?;
-    ts.get(normalized.as_ref()).map(|s| s.cloned())
-}
-
 impl FileChangeDetector {
     pub fn has_changed_with_fresh_metadata(
         &mut self,
@@ -235,7 +230,7 @@ impl FileChangeDetector {
             path,
             self.last_write,
             metadata,
-            get_treestate(ts, path)?,
+            ts.normalized_get(path)?,
         );
 
         if matches!(res, Ok(FileChangeResult::Maybe)) {
@@ -540,7 +535,7 @@ impl ParallelDetector {
 
 impl FileChangeDetectorTrait for ParallelDetector {
     fn submit(&mut self, ts: &mut TreeState, path: &RepoPath) {
-        let state = match get_treestate(ts, path) {
+        let state = match ts.normalized_get(path) {
             Ok(state) => state,
             Err(err) => {
                 self.result_send.send(Err(err)).unwrap();

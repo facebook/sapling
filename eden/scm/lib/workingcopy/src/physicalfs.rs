@@ -146,7 +146,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 
                     // On case insensitive systems, normalize the path so duplicate paths with
                     // different case can be detected in the seen set.
-                    let file = ts.normalize(file.as_ref())?;
+                    let file = ts.normalize_path(file.as_ref())?;
                     let path = RepoPath::from_utf8(file.as_ref())?;
                     self.seen.insert(path.to_owned());
                     let changed = self
@@ -193,7 +193,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
         let mut ts = self.treestate.lock();
 
         for path in tracked.into_iter() {
-            let cow_path = match ts.normalize(path.as_ref()) {
+            let cow_path = match ts.normalize_path(path.as_ref()) {
                 Ok(path) => path,
                 Err(e) => {
                     results.push(Err(e));

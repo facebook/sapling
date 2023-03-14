@@ -251,35 +251,39 @@ impl TreeState {
         )
     }
 
-    pub fn get_ignorecase(&mut self, path: &[u8]) -> Result<Vec<(Key, FileStateV2)>> {
-        let paths = self.get_keys_ignorecase(&path)?;
-        let mut results = vec![];
-        for path in paths.into_iter() {
-            if let Some(state) = self.get(&path)? {
-                results.push((path, state.clone()));
+    fn normalize_path_and_get<'a>(
+        &mut self,
+        path: &'a [u8],
+    ) -> Result<(Cow<'a, [u8]>, Option<FileStateV2>)> {
+        if self.case_sensitive {
+            return Ok((Cow::Borrowed(path), self.get(path)?.cloned()));
+        }
+
+        let mut best = None;
+        for key in self.get_keys_ignorecase(path)? {
+            let state = match self.get(&key)? {
+                None => continue,
+                Some(state) => state.clone(),
+            };
+
+            // If there are multiple matches, prefer the format for the version that still exists.
+            if best.is_none() || state.state.intersects(StateFlags::EXIST_NEXT) {
+                best = Some((Cow::Owned(key.into()), state));
             }
         }
-        Ok(results)
+
+        match best {
+            Some((path, state)) => Ok((path, Some(state))),
+            None => Ok((Cow::Borrowed(path), None)),
+        }
     }
 
-    pub fn normalize<'a>(&mut self, path: &'a [u8]) -> Result<Cow<'a, [u8]>> {
-        Ok(if self.case_sensitive {
-            Cow::Borrowed(path)
-        } else {
-            let mut best = None;
-            for (key, state) in self.get_ignorecase(&path)?.into_iter() {
-                // If there are multiple matches, prefer the format for the version that still exists.
-                if state.state.intersects(StateFlags::EXIST_NEXT) {
-                    best = Some(key);
-                } else if best.is_none() {
-                    best = Some(key);
-                }
-            }
-            match best {
-                Some(best) => Cow::Owned(best.into()),
-                None => Cow::Borrowed(path),
-            }
-        })
+    pub fn normalize_path<'a>(&mut self, path: &'a [u8]) -> Result<Cow<'a, [u8]>> {
+        Ok(self.normalize_path_and_get(path)?.0)
+    }
+
+    pub fn normalized_get<K: AsRef<[u8]>>(&mut self, path: K) -> Result<Option<FileStateV2>> {
+        Ok(self.normalize_path_and_get(path.as_ref())?.1)
     }
 
     /// Get the aggregated state of a directory. This is useful, for example, to tell if a
@@ -696,20 +700,29 @@ mod tests {
         let mut rng = ChaChaRng::from_seed([0; 32]);
         let mut file = rng.gen();
         state.insert(b"dir/file", &file).unwrap();
-        assert_eq!(state.normalize(b"dir/file").unwrap().as_ref(), b"dir/file");
-        assert_eq!(state.normalize(b"dir/FILE").unwrap().as_ref(), b"dir/FILE");
-        assert_eq!(state.normalize(b"DIR/file").unwrap().as_ref(), b"DIR/file");
+        assert_eq!(
+            state.normalize_path(b"dir/file").unwrap().as_ref(),
+            b"dir/file"
+        );
+        assert_eq!(
+            state.normalize_path(b"dir/FILE").unwrap().as_ref(),
+            b"dir/FILE"
+        );
+        assert_eq!(
+            state.normalize_path(b"DIR/file").unwrap().as_ref(),
+            b"DIR/file"
+        );
 
         file.state = StateFlags::EXIST_NEXT;
         state.insert(b"dir/RENAME", &file).unwrap();
         file.state = StateFlags::EXIST_P1;
         state.insert(b"dir/rename", &file).unwrap();
         assert_eq!(
-            state.normalize(b"dir/rename").unwrap().as_ref(),
+            state.normalize_path(b"dir/rename").unwrap().as_ref(),
             b"dir/rename"
         );
         assert_eq!(
-            state.normalize(b"dir/RENAME").unwrap().as_ref(),
+            state.normalize_path(b"dir/RENAME").unwrap().as_ref(),
             b"dir/RENAME"
         );
     }
@@ -723,15 +736,15 @@ mod tests {
         let mut file = rng.gen();
         state.insert(b"dir/file", &file).unwrap();
         assert_eq!(
-            std::str::from_utf8(state.normalize(b"dir/file").unwrap().as_ref()).unwrap(),
+            std::str::from_utf8(state.normalize_path(b"dir/file").unwrap().as_ref()).unwrap(),
             "dir/file"
         );
         assert_eq!(
-            std::str::from_utf8(state.normalize(b"dir/FILE").unwrap().as_ref()).unwrap(),
+            std::str::from_utf8(state.normalize_path(b"dir/FILE").unwrap().as_ref()).unwrap(),
             "dir/file"
         );
         assert_eq!(
-            std::str::from_utf8(state.normalize(b"DIR/file").unwrap().as_ref()).unwrap(),
+            std::str::from_utf8(state.normalize_path(b"DIR/file").unwrap().as_ref()).unwrap(),
             "dir/file"
         );
 
@@ -741,11 +754,11 @@ mod tests {
         file.state = StateFlags::EXIST_P1;
         state.insert(b"dir/rename", &file).unwrap();
         assert_eq!(
-            std::str::from_utf8(state.normalize(b"dir/rename").unwrap().as_ref()).unwrap(),
+            std::str::from_utf8(state.normalize_path(b"dir/rename").unwrap().as_ref()).unwrap(),
             "dir/RENAME"
         );
         assert_eq!(
-            std::str::from_utf8(state.normalize(b"dir/RENAME").unwrap().as_ref()).unwrap(),
+            std::str::from_utf8(state.normalize_path(b"dir/RENAME").unwrap().as_ref()).unwrap(),
             "dir/RENAME"
         );
     }

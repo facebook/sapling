@@ -74,10 +74,7 @@ pub fn compute_status(
         };
 
         let mut treestate = treestate.lock();
-
-        let normalized = treestate.normalize(path.as_ref())?;
-        let path = RepoPathBuf::from_utf8(normalized.to_vec())?;
-        match treestate.get(&normalized)? {
+        match treestate.normalized_get(&path)? {
             Some(state) => {
                 let exist_parent = state
                     .state
