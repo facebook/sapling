@@ -301,7 +301,7 @@ pub fn detect_changes(
     );
 
     for needs_check in combined_needs_check {
-        file_change_detector.submit(ts, needs_check);
+        file_change_detector.submit(ts.normalized_get(needs_check)?, needs_check);
     }
 
     for result in file_change_detector {

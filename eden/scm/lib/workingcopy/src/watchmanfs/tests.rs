@@ -36,7 +36,7 @@ struct TestFileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for TestFileChangeDetector {
-    fn submit(&mut self, _ts: &mut TreeState, path: &RepoPath) {
+    fn submit(&mut self, _state: Option<FileStateV2>, path: &RepoPath) {
         if self.changed_files.contains(&path.to_owned()) {
             self.results
                 .push(Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(

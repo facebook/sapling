@@ -153,7 +153,11 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                         .file_change_detector
                         .as_mut()
                         .unwrap()
-                        .has_changed_with_fresh_metadata(&mut ts, path, Some(metadata))?;
+                        .has_changed_with_fresh_metadata(
+                            ts.normalized_get(path)?,
+                            path,
+                            Some(metadata),
+                        )?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
                         return Ok(Some(PendingChangeResult::File(change_type)));
@@ -183,50 +187,49 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
     }
 
     fn get_tree_entries(&mut self) -> Vec<Result<PendingChangeResult>> {
-        let mut results = vec![];
-        let tracked = self.get_tracked_from_p1();
-        if let Err(e) = tracked {
-            results.push(Err(e));
-            return results;
-        }
-        let tracked = tracked.unwrap();
+        let tracked = match self.get_tracked_from_p1() {
+            Err(e) => return vec![Err(e)],
+            Ok(tracked) => tracked,
+        };
         let mut ts = self.treestate.lock();
 
-        for path in tracked.into_iter() {
-            let cow_path = match ts.normalize_path(path.as_ref()) {
-                Ok(path) => path,
-                Err(e) => {
-                    results.push(Err(e));
-                    continue;
-                }
-            };
-            let path: &RepoPath = match RepoPath::from_utf8(cow_path.as_ref()) {
-                Ok(path) => path,
-                Err(e) => {
-                    results.push(Err(e.into()));
-                    continue;
-                }
-            };
-            // Skip this path if we've seen it or it doesn't match the matcher.
-            if self.seen.contains(path) {
-                continue;
-            } else {
-                match self.matcher.matches_file(path) {
-                    Err(e) => {
-                        results.push(Err(e));
-                        continue;
+        tracked
+            .into_iter()
+            .filter_map(|path| {
+                let cow_path = match ts.normalize_path(path.as_ref()) {
+                    Ok(path) => path,
+                    Err(e) => return Some(Err(e)),
+                };
+                let path: &RepoPath = match RepoPath::from_utf8(cow_path.as_ref()) {
+                    Ok(path) => path,
+                    Err(e) => return Some(Err(e.into())),
+                };
+                // Skip this path if we've seen it or it doesn't match the matcher.
+                if self.seen.contains(path) {
+                    return None;
+                } else {
+                    match self.matcher.matches_file(path) {
+                        Err(e) => {
+                            return Some(Err(e));
+                        }
+                        Ok(false) => return None,
+                        Ok(true) => {}
                     }
-                    Ok(false) => continue,
-                    Ok(true) => {}
                 }
-            }
 
-            self.file_change_detector
-                .as_mut()
-                .unwrap()
-                .submit(&mut ts, path);
-        }
-        results
+                let ts_state = match ts.normalized_get(path) {
+                    Err(err) => return Some(Err(err)),
+                    Ok(state) => state,
+                };
+
+                self.file_change_detector
+                    .as_mut()
+                    .unwrap()
+                    .submit(ts_state, path);
+
+                None
+            })
+            .collect()
     }
 
     /// Returns the files in the treestate that are from p1.

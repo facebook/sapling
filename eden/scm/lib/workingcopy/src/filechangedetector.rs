@@ -23,7 +23,6 @@ use storemodel::minibytes::Bytes;
 use storemodel::ReadFileContents;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
-use treestate::treestate::TreeState;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -92,7 +91,7 @@ pub enum ResolvedFileChangeResult {
 }
 
 pub trait FileChangeDetectorTrait: IntoIterator<Item = Result<ResolvedFileChangeResult>> {
-    fn submit(&mut self, ts: &mut TreeState, path: &RepoPath);
+    fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath);
 }
 
 pub struct FileChangeDetector {
@@ -221,17 +220,11 @@ pub fn file_changed_given_metadata(
 impl FileChangeDetector {
     pub fn has_changed_with_fresh_metadata(
         &mut self,
-        ts: &mut TreeState,
+        state: Option<FileStateV2>,
         path: &RepoPath,
         metadata: Option<Metadata>,
     ) -> Result<FileChangeResult> {
-        let res = file_changed_given_metadata(
-            &self.vfs,
-            path,
-            self.last_write,
-            metadata,
-            ts.normalized_get(path)?,
-        );
+        let res = file_changed_given_metadata(&self.vfs, path, self.last_write, metadata, state);
 
         if matches!(res, Ok(FileChangeResult::Maybe)) {
             self.lookups.push(path.to_owned());
@@ -242,7 +235,7 @@ impl FileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for FileChangeDetector {
-    fn submit(&mut self, ts: &mut TreeState, path: &RepoPath) {
+    fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath) {
         let metadata = match self.vfs.metadata(path) {
             Ok(metadata) => Some(metadata),
             Err(e) => match e.downcast_ref::<std::io::Error>() {
@@ -254,7 +247,7 @@ impl FileChangeDetectorTrait for FileChangeDetector {
             },
         };
 
-        match self.has_changed_with_fresh_metadata(ts, path, metadata) {
+        match self.has_changed_with_fresh_metadata(state, path, metadata) {
             Ok(res) => match res {
                 FileChangeResult::Yes(change) => {
                     self.results.push(Ok(ResolvedFileChangeResult::Yes(change)))
@@ -534,14 +527,7 @@ impl ParallelDetector {
 }
 
 impl FileChangeDetectorTrait for ParallelDetector {
-    fn submit(&mut self, ts: &mut TreeState, path: &RepoPath) {
-        let state = match ts.normalized_get(path) {
-            Ok(state) => state,
-            Err(err) => {
-                self.result_send.send(Err(err)).unwrap();
-                return;
-            }
-        };
+    fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath) {
         self.check_metadata_send
             .as_ref()
             .unwrap()
