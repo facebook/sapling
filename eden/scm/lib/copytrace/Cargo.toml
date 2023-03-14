@@ -9,4 +9,8 @@ edition = "2021"
 anyhow = "1.0.65"
 dag = { version = "0.1.0", path = "../dag" }
 git2 = "0.14"
+manifest = { version = "0.1.0", path = "../manifest" }
+manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
+pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
+storemodel = { version = "0.1.0", path = "../storemodel" }
 types = { version = "0.1.0", path = "../types" }
