@@ -12,6 +12,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Result;
+use async_runtime::block_on;
 use async_trait::async_trait;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -45,7 +46,24 @@ where
     type Error = anyhow::Error;
 
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
-        stream_data_from_remote_data_store(self.0.clone(), keys).boxed()
+        stream_data_from_remote_data_store(self.0.clone(), keys)
+            .map(|result| match result {
+                Ok((data, key, _copy_from)) => Ok((data, key)),
+                Err(err) => Err(err),
+            })
+            .boxed()
+    }
+
+    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>> {
+        let items = block_on(
+            stream_data_from_remote_data_store(self.0.clone(), keys)
+                .map(|result| match result {
+                    Ok((_data, key, copy_from)) => Ok((key, copy_from)),
+                    Err(err) => Err(err),
+                })
+                .collect::<Vec<_>>(),
+        );
+        items.into_iter().collect()
     }
 }
 
@@ -54,7 +72,24 @@ impl ReadFileContents for ArcFileStore {
     type Error = anyhow::Error;
 
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
-        stream_data_from_scmstore(self.0.clone(), keys).boxed()
+        stream_data_from_scmstore(self.0.clone(), keys)
+            .map(|result| match result {
+                Ok((data, key, _copy_from)) => Ok((data, key)),
+                Err(err) => Err(err),
+            })
+            .boxed()
+    }
+
+    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>> {
+        let items = block_on(
+            stream_data_from_scmstore(self.0.clone(), keys)
+                .map(|result| match result {
+                    Ok((_data, key, copy_from)) => Ok((key, copy_from)),
+                    Err(err) => Err(err),
+                })
+                .collect::<Vec<_>>(),
+        );
+        items.into_iter().collect()
     }
 }
 
@@ -70,7 +105,7 @@ const FETCH_PARALLELISM: usize = 20;
 fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
     store: DS,
     keys: Vec<Key>,
-) -> impl Stream<Item = Result<(Bytes, Key)>> {
+) -> impl Stream<Item = Result<(Bytes, Key, Option<Key>)>> {
     stream::iter(keys.into_iter().map(StoreKey::HgId))
         .chunks(PREFETCH_CHUNK_SIZE)
         .map(move |chunk| {
@@ -90,9 +125,8 @@ fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
                             let store_result = store.get(store_key.clone());
                             let result = match store_result {
                                 Err(err) => Err(err),
-                                Ok(StoreResult::Found(data)) => {
-                                    strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
-                                }
+                                Ok(StoreResult::Found(data)) => strip_metadata(&data.into())
+                                    .map(|(d, copy_from)| (d, key.clone(), copy_from)),
                                 Ok(StoreResult::NotFound(k)) => {
                                     Err(format_err!("{:?} not found in store", k))
                                 }
@@ -120,7 +154,7 @@ fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
 fn stream_data_from_scmstore(
     store: Arc<FileStore>,
     keys: Vec<Key>,
-) -> impl Stream<Item = Result<(Bytes, Key)>> {
+) -> impl Stream<Item = Result<(Bytes, Key, Option<Key>)>> {
     stream::iter(keys.into_iter())
         .chunks(PREFETCH_CHUNK_SIZE)
         .map(move |chunk| {
@@ -134,7 +168,9 @@ fn stream_data_from_scmstore(
                 ) {
                     let result = match result {
                         Err(err) => Err(err.into()),
-                        Ok((key, mut file)) => file.file_content().map(|content| (content, key)),
+                        Ok((key, mut file)) => file
+                            .file_content_with_copy_info()
+                            .map(|(content, copy_from)| (content, key, copy_from)),
                     };
                     let is_err = result.is_err();
                     data.push(result);

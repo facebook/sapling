@@ -46,6 +46,11 @@ pub trait ReadFileContents {
         &self,
         keys: Vec<Key>,
     ) -> BoxStream<Result<(minibytes::Bytes, Key), Self::Error>>;
+
+    /// Read rename metadata of sepcified files.
+    ///
+    /// The result is a vector of (key, Option<rename_from_key>) pairs for success case.
+    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>, Self::Error>;
 }
 
 pub trait RefreshableReadFileContents: ReadFileContents {

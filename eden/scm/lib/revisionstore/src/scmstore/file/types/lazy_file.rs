@@ -89,6 +89,18 @@ impl LazyFile {
         })
     }
 
+    /// The file content, as would be found in the working copy, and also with copy info
+    pub(crate) fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
+        use LazyFile::*;
+        Ok(match self {
+            IndexedLog(ref mut entry) => strip_metadata(&entry.content()?)?,
+            Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
+            ContentStore(ref blob, _) => strip_metadata(blob)?,
+            EdenApi(ref entry) => strip_metadata(&entry.data()?.into())?,
+            Memcache(ref entry) => strip_metadata(&entry.data)?,
+        })
+    }
+
     /// The file content, as would be encoded in the Mercurial blob (with copy header)
     pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;

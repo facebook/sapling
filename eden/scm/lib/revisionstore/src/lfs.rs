@@ -1041,6 +1041,11 @@ impl LfsPointersEntry {
     pub(crate) fn size(&self) -> u64 {
         self.size
     }
+
+    /// Returns the copy_from of the file referenced by this LfsPointersEntry
+    pub(crate) fn copy_from(&self) -> &Option<Key> {
+        &self.copy_from
+    }
 }
 
 impl HgIdMutableDeltaStore for LfsMultiplexer {

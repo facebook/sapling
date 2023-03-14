@@ -10,6 +10,7 @@ use std::ops::BitOr;
 use anyhow::anyhow;
 use anyhow::Result;
 use minibytes::Bytes;
+use types::Key;
 
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
@@ -64,6 +65,13 @@ impl StoreFile {
             .as_mut()
             .ok_or_else(|| anyhow!("no content available"))?
             .file_content()
+    }
+
+    pub fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
+        self.content
+            .as_mut()
+            .ok_or_else(|| anyhow!("no content available"))?
+            .file_content_with_copy_info()
     }
 }
 

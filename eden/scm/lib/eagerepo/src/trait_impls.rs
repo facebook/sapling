@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use hgstore::separate_metadata;
+use hgstore::strip_metadata;
 use storemodel::types;
 use storemodel::ReadFileContents;
 use storemodel::RefreshableReadFileContents;
@@ -42,6 +43,19 @@ impl ReadFileContents for EagerRepoStore {
             Ok((data, k))
         });
         futures::stream::iter(iter).boxed()
+    }
+
+    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>, Self::Error> {
+        keys.into_iter()
+            .map(|k| {
+                let id = k.hgid;
+                let copy_from = match self.get_content(id)? {
+                    Some(data) => strip_metadata(&data)?.1,
+                    None => anyhow::bail!("no such file: {:?}", &k),
+                };
+                Ok((k, copy_from))
+            })
+            .collect()
     }
 }
 

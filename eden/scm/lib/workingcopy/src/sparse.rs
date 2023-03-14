@@ -536,5 +536,12 @@ inc
             }))
             .boxed()
         }
+
+        fn read_rename_metadata(
+            &self,
+            _keys: Vec<Key>,
+        ) -> Result<Vec<(Key, Option<Key>)>, Self::Error> {
+            Ok(vec![])
+        }
     }
 }
