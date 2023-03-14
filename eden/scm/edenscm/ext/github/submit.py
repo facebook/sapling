@@ -160,7 +160,7 @@ async def update_commits_in_stack(
     if not partitions:
         ui.status_err(_("no commits to submit\n"))
         return 0
-    origin = get_origin(ui)
+    origin = get_push_origin(ui)
     use_placeholder_strategy = ui.configbool("github", "placeholder-strategy")
     if use_placeholder_strategy:
         params = await create_placeholder_strategy_params(
@@ -612,12 +612,12 @@ async def get_repository_for_origin(origin: str, hostname: str) -> Repository:
     return await get_repo(hostname, origin_owner, origin_name)
 
 
-def get_origin(ui) -> str:
+def get_push_origin(ui) -> str:
     test_url = os.environ.get("SL_TEST_GH_URL")
     if test_url:
         origin = test_url
     else:
-        origin = ui.config("paths", "default")
+        origin = ui.expandpath("default-push", "default")
     if origin:
         return origin
     else:

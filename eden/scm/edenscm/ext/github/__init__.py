@@ -113,7 +113,17 @@ subcmd = pull_request_command.subcommand(
     ],
 )
 def submit_cmd(ui, repo, *args, **opts):
-    """create or update GitHub pull requests from local commits"""
+    """create or update GitHub pull requests from local commits
+
+    Commit(s) will be pushed to ``default-push``, if configured, else
+    ``default`` (see :prog:`help urls` and :prog:`help path`).
+
+    Pull request(s) will be created against ``default``. If
+    ``default`` is a fork, they will be created against default's
+    upstream repository.
+
+    Returns 0 on success.
+    """
     return submit.submit(ui, repo, *args, **opts)
 
 
