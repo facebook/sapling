@@ -41,7 +41,7 @@ def commonancestorsheads(pfunc, *nodes):
         return nodes
 
     allseen = (1 << len(nodes)) - 1
-    seen = [0] * (max(nodes) + 1)
+    seen = collections.defaultdict(int)
     for i, n in enumerate(nodes):
         seen[n] = 1 << i
     poison = 1 << (i + 1)

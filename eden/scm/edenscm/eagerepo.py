@@ -5,7 +5,7 @@
 
 import bindings
 
-from . import error, filelog, revlog
+from . import ancestor, error, filelog, revlog
 from .i18n import _
 from .node import bin, nullid
 
@@ -93,6 +93,9 @@ class eagerfilelog(object):
 
     def revision(self, node, raw=True):
         return self._get_content(node)
+
+    def commonancestorsheads(self, a, b):
+        return list(ancestor.commonancestorsheads(self.parents, a, b))
 
     def _get_sha1_blob(self, node):
         """get the SHA1 prefixed (sorted([p1, p2])) content"""
