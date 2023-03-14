@@ -17,7 +17,7 @@ use crate::scmstore::value::StoreValue;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileAuxData;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StoreFile {
     // TODO(meyer): We'll probably eventually need a better "canonical lazy file" abstraction, since EdenApi FileEntry won't always carry content
     pub(crate) content: Option<LazyFile>,
@@ -82,15 +82,6 @@ impl BitOr for StoreFile {
         StoreFile {
             content: self.content.or(rhs.content),
             aux_data: self.aux_data.or(rhs.aux_data),
-        }
-    }
-}
-
-impl Default for StoreFile {
-    fn default() -> Self {
-        StoreFile {
-            content: None,
-            aux_data: None,
         }
     }
 }
