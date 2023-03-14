@@ -60,8 +60,8 @@ use crate::HgPython;
 pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let now = SystemTime::now();
 
-    // The pfcserver does not want tracing or blackbox setup, or going through
-    // the Rust command table. Bypass them.
+    // The pfcserver does not want tracing or blackbox or ctrlc setup,
+    // or going through the Rust command table. Bypass them.
     if args.get(1).map(|s| s.as_ref()) == Some("start-pfc-server") {
         return HgPython::new(&args).run_hg(args, io, &ConfigSet::new());
     }
@@ -97,6 +97,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         }
         Ok(res) => res,
     };
+
+    setup_ctrlc();
 
     let scenario = setup_fail_points();
     setup_eager_repo();
@@ -785,4 +787,33 @@ fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
     } else {
         Some(FailScenario::setup())
     }
+}
+
+fn setup_ctrlc() {
+    // ctrlc with the "termination" feature would register SIGINT, SIGTERM and
+    // SIGHUP handlers.
+    //
+    // If you change this function, ensure to check Ctrl+C and SIGTERM works for
+    // these cases:
+    // - Python, native code released GIL: dbsh -c 'b.sleep(1000, False)'
+    // - Python, native code took GIL: dbsh -c 'b.sleep(1000, True)'
+    // - Rust: debugracyoutput
+    // - Pager, block on `write`: log --pager=always
+    // - Pager, block on `wait`: log -r . --pager=always --config pager.interface=full
+    let _ = ctrlc::set_handler(|| {
+        // Minimal cleanup then just exit. Our main storage (indexedlog,
+        // metalog) is SIGKILL-safe, if "finally" (Python) or "Drop" (Rust) does
+        // not run, it won't corrupt the repo data.
+
+        // Exit pager to restore terminal states (ex. quit raw mode)
+        if let Ok(io) = clidispatch::io::IO::main() {
+            let _ = io.quit_pager();
+        }
+
+        // Run atexit handlers.
+        atexit::drop_queued();
+
+        // "exit" tries to call "Drop"s but we don't rely on "Drop" for data integrity.
+        std::process::exit(128 | libc::SIGINT);
+    });
 }

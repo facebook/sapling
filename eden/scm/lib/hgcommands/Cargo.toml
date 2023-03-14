@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0.65", features = ["backtrace"] }
 async-runtime = { version = "0.1.0", path = "../async-runtime" }
+atexit = { version = "0.1.0", path = "../util/atexit" }
 bindings = { path = "../../edenscmnative/bindings", default-features = false }
 blackbox = { version = "0.1.0", path = "../blackbox" }
 checkout = { version = "0.1.0", path = "../checkout" }
@@ -20,6 +21,7 @@ configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 cpython = { version = "0.7.1", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext", default-features = false }
+ctrlc = { version = "3.1", features = ["termination"] }
 dag = { version = "0.1.0", path = "../dag" }
 debugtop = { version = "0.1.0", path = "../debugtop" }
 eagerepo = { version = "0.1.0", path = "../eagerepo" }
