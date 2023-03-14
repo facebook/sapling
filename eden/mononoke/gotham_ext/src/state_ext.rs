@@ -12,7 +12,7 @@ pub trait StateExt {
     fn short_request_id(&self) -> &str;
 }
 
-const SHORT_ID_LEN: usize = 5;
+const SHORT_ID_LEN: usize = 7;
 
 impl StateExt for State {
     fn short_request_id(&self) -> &str {
