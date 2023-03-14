@@ -19,6 +19,15 @@ Stop tracking ignored files removes them from treestate. The migration only happ
   $ hg status --debug 2>&1 | grep tracking
   stop tracking ignored files
   $ hg status
+
+Make sure Rust status doesn't track ignored files
+  $ hg dbsh << 'EOS'
+  > watchman_command = repo._watchmanclient.command
+  > # Simulate watchman restart
+  > watchman_command('watch-del-all')
+  > EOS
+  $ hg status --config status.use-rust=true --config workingcopy.use-rust=true
+
   $ hg debugtree list
 
 Start tracking ignored files adds them to treestate. The migration only happens once.

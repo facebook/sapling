@@ -38,6 +38,7 @@ impl PendingChanges for EdenFileSystem {
     fn pending_changes(
         &self,
         _matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         _last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,

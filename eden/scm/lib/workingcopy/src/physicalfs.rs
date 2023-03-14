@@ -70,6 +70,7 @@ impl PendingChangesTrait for PhysicalFileSystem {
     fn pending_changes(
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        _ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         _config: &dyn Config,
         _io: &IO,

@@ -139,6 +139,7 @@ fn check(mut tc: TestCase) -> Result<()> {
     //
     let mut changes = detect_changes(
         matcher,
+        Arc::new(NeverMatcher::new()),
         stub_detector,
         &mut ts,
         wm_changes,

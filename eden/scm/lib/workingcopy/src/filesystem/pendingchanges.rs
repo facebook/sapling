@@ -39,7 +39,10 @@ pub enum PendingChangeResult {
 pub trait PendingChanges {
     fn pending_changes(
         &self,
+        // The full matcher including user specified filters.
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        // Git ignore matcher, except won't match committed files.
+        ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,

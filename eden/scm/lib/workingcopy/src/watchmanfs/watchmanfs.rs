@@ -23,6 +23,7 @@ use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::ExactMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::NeverMatcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
 use serde::Deserialize;
@@ -129,6 +130,7 @@ impl PendingChanges for WatchmanFileSystem {
     fn pending_changes(
         &self,
         matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+        mut ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
         last_write: SystemTime,
         config: &dyn Config,
         io: &IO,
@@ -184,6 +186,11 @@ impl PendingChanges for WatchmanFileSystem {
             })
             .collect();
 
+        if config.get_or_default::<bool>("fsmonitor", "track-ignore-files")? {
+            // If we want to track ignored files, say that nothing is ignored.
+            ignore_matcher = Arc::new(NeverMatcher::new());
+        }
+
         let worker_count = config.get_or("workingcopy", "watchman-worker-count", || 10)?;
         let mut pending_changes = if worker_count == 0 {
             let detector = FileChangeDetector::new(
@@ -194,6 +201,7 @@ impl PendingChanges for WatchmanFileSystem {
             );
             detect_changes(
                 matcher,
+                ignore_matcher,
                 detector,
                 ts,
                 wm_needs_check,
@@ -210,6 +218,7 @@ impl PendingChanges for WatchmanFileSystem {
             );
             detect_changes(
                 matcher,
+                ignore_matcher,
                 detector,
                 ts,
                 wm_needs_check,
@@ -270,6 +279,7 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
 // in the treestate.
 pub fn detect_changes(
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
+    ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
     ts: &mut TreeState,
     wm_need_check: Vec<RepoPathBuf>,
@@ -301,7 +311,21 @@ pub fn detect_changes(
     );
 
     for needs_check in combined_needs_check {
-        file_change_detector.submit(ts.normalized_get(needs_check)?, needs_check);
+        let state = ts.normalized_get(needs_check)?;
+
+        let is_tracked = match &state {
+            Some(state) => state
+                .state
+                .intersects(StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT),
+            None => false,
+        };
+        // Skip ignored files to reduce work. We short circuit with an
+        // "untracked" check to minimize use of the GitignoreMatcher.
+        if !is_tracked && ignore_matcher.matches_file(needs_check)? {
+            continue;
+        }
+
+        file_change_detector.submit(state, needs_check);
     }
 
     for result in file_change_detector {

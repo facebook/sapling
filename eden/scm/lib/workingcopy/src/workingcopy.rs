@@ -303,13 +303,13 @@ impl WorkingCopy {
 
         let manifests =
             WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
-        let mut non_ignore_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> =
+        let mut manifest_matchers: Vec<Arc<dyn Matcher + Send + Sync + 'static>> =
             Vec::with_capacity(manifests.len());
 
         let case_sensitive = self.vfs.case_sensitive();
 
         for manifest in manifests.iter() {
-            non_ignore_matchers.push(Arc::new(manifest_tree::ManifestMatcher::new(
+            manifest_matchers.push(Arc::new(manifest_tree::ManifestMatcher::new(
                 manifest.clone(),
                 case_sensitive,
             )));
@@ -320,18 +320,21 @@ impl WorkingCopy {
             self.sparse_matcher(&manifests)?,
         ]));
 
-        let matcher = Arc::new(DifferenceMatcher::new(
-            matcher,
-            DifferenceMatcher::new(
-                self.ignore_matcher.clone(),
-                UnionMatcher::new(non_ignore_matchers),
-            ),
+        // The GitignoreMatcher minus files in the repo. In other
+        // words, it does not match an ignored file that has been
+        // previously committed.
+        let ignore_matcher = Arc::new(DifferenceMatcher::new(
+            self.ignore_matcher.clone(),
+            UnionMatcher::new(manifest_matchers),
         ));
+
+        let matcher = Arc::new(DifferenceMatcher::new(matcher, ignore_matcher.clone()));
+
         let pending_changes = self
             .filesystem
             .lock()
             .inner
-            .pending_changes(matcher.clone(), last_write, config, io)?
+            .pending_changes(matcher.clone(), ignore_matcher, last_write, config, io)?
             .filter_map(|result| match result {
                 Ok(PendingChangeResult::File(change_type)) => {
                     match matcher.matches_file(change_type.get_path()) {
