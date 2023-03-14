@@ -358,6 +358,14 @@ def gitcommittext(
     #
     # Updating submodules
     committer = (extra.get("committer") if extra else None) or user
+
+    # Bail out early with concise error if usernames are not valid.
+    try:
+        gituser.parse_username(committer)
+        gituser.parse_username(user)
+    except ValueError as ex:
+        raise error.Abort(ex)
+
     committerdate = (extra.get("committer_date") if extra else None) or date
     parent_entries = "".join(f"parent {hex(p)}\n" for p in parents)
     pre_sig_text = f"""\

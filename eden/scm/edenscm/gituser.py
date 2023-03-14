@@ -5,7 +5,6 @@
 
 from typing import Tuple
 
-from edenscm import error
 from edenscm.i18n import _
 
 
@@ -43,12 +42,46 @@ def parse_username(username: str) -> Tuple[str, str]:
     >>> parse_username('')
     Traceback (most recent call last):
      ...
-    ValueError: Invalid username: ``
+    ValueError: invalid Git username: ``
+    >>> parse_username('Alyssa <> Hacker')
+    Traceback (most recent call last):
+     ...
+    ValueError: invalid '<' or '>' in Git username: `Alyssa <> Hacker`
+    >>> parse_username('Alyssa < Hacker <alyssa@example.com>')
+    Traceback (most recent call last):
+     ...
+    ValueError: invalid '<' or '>' in Git username: `Alyssa < Hacker <alyssa@example.com>`
+    >>> parse_username('Alyssa Hacker <alyssa@example.com')
+    Traceback (most recent call last):
+     ...
+    ValueError: invalid '<' or '>' in Git username: `Alyssa Hacker <alyssa@example.com`
+    >>> parse_username('Alyssa Hacker alyssa@example.com>')
+    Traceback (most recent call last):
+     ...
+    ValueError: invalid '<' or '>' in Git username: `Alyssa Hacker alyssa@example.com>`
     """
     username = username.strip()
     email_start = username.rfind("<")
-    if username.endswith(">") and email_start != -1:
-        email = username[email_start + 1 : -1]
+    email_end = username.rfind(">")
+
+    # Validate bad '<' or '>' at least since we make the user input them
+    # manually (as opposed to Git which separates name/email).
+    if (
+        # more than 1 "<"
+        email_start != username.find("<")
+        # more than 1 ">"
+        or email_end != username.find(">")
+        # missing "<" or ">"
+        or (email_start == -1) != (email_end == -1)
+        # ">" before "<"
+        or email_end < email_start
+        # ">" not at end
+        or (email_end != -1 and email_end != len(username) - 1)
+    ):
+        raise ValueError(f"invalid '<' or '>' in Git username: `{username}`")
+
+    if email_start != -1:
+        email = username[email_start + 1 : email_end]
         name = username[:email_start]
     else:
         name = username
@@ -65,7 +98,7 @@ def parse_username(username: str) -> Tuple[str, str]:
                 # Use email for both name and email in this case.
                 name = email
         else:
-            raise ValueError(f"Invalid username: `{username}`")
+            raise ValueError(f"invalid Git username: `{username}`")
     return (name, email)
 
 
