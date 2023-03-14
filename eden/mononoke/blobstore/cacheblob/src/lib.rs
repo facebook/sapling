@@ -23,7 +23,6 @@ pub use crate::locking_cache::LeaseOps;
 
 mod memcache_cache_lease;
 pub use crate::memcache_cache_lease::new_memcache_blobstore;
-pub use crate::memcache_cache_lease::new_memcache_blobstore_no_lease;
 pub use crate::memcache_cache_lease::MemcacheOps;
 
 mod mem_writes;

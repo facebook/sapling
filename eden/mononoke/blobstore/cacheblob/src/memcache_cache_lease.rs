@@ -195,22 +195,6 @@ where
     ))
 }
 
-pub fn new_memcache_blobstore_no_lease<T>(
-    fb: FacebookInit,
-    blobstore: T,
-    backing_store_name: &'static str,
-    backing_store_params: impl ToString,
-) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, DummyLease, T>>>
-where
-    T: Blobstore + Clone,
-{
-    let cache_ops = MemcacheOps::new(fb, backing_store_name, backing_store_params)?;
-    Ok(CountedBlobstore::new(
-        "memcache".to_string(),
-        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore, true),
-    ))
-}
-
 #[async_trait]
 impl CacheOps for MemcacheOps {
     const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheHits);

@@ -18,7 +18,7 @@ use blobstore_factory::make_sql_blobstore_xdb;
 use blobstore_factory::ReadOnlyStorage;
 use bytes::Bytes;
 use bytes::BytesMut;
-use cacheblob::new_memcache_blobstore_no_lease;
+use cacheblob::new_memcache_blobstore;
 use cached_config::ConfigStore;
 use clap_old::Arg;
 use clap_old::SubCommand;
@@ -239,7 +239,7 @@ async fn get_blob<'a>(
     };
 
     let blob: Arc<dyn Blobstore> = if matches.is_present(ARG_MEMCACHE) {
-        Arc::new(new_memcache_blobstore_no_lease(fb, blob, NAME, "")?)
+        Arc::new(new_memcache_blobstore(fb, blob, NAME, "")?)
     } else {
         blob
     };

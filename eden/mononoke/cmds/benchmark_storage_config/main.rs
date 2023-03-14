@@ -13,7 +13,7 @@ use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
-use cacheblob::new_memcache_blobstore_no_lease;
+use cacheblob::new_memcache_blobstore;
 use cacheblob::CachelibBlobstoreOptions;
 use clap_old::Arg;
 use cmdlib::args;
@@ -142,7 +142,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
                 )
                 .context("repo_factory::cachelib_blobstore failed")?;
                 Arc::new(
-                    new_memcache_blobstore_no_lease(fb, cachelib_blobstore, "benchmark", "")
+                    new_memcache_blobstore(fb, cachelib_blobstore, "benchmark", "")
                         .context("Memcache blobstore issues")?,
                 )
             }
