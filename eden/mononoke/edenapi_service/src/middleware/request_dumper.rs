@@ -17,6 +17,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::Middleware;
+use gotham_ext::state_ext::StateExt;
 use http::HeaderMap;
 use hyper::Body;
 use hyper::Response;
@@ -60,6 +61,10 @@ fn get_content_len(headers: &HeaderMap) -> Option<usize> {
 
 impl RequestDumper {
     pub fn add_http_req_prefix(&mut self, state: &State, headers: &HeaderMap) -> Result<()> {
+        // Log request_id to match between scuba tables.
+        self.logger
+            .add("request_id", state.short_request_id().to_string());
+
         let method = http::method::Method::try_borrow_from(state)
             .context("Method not present in State")?
             .as_str();
