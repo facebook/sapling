@@ -242,12 +242,7 @@ fn test_detect_changes() -> Result<()> {
                     Some(state_before)
                 };
                 let state_after = if state_after.is_empty() {
-                    if state_before.is_none() {
-                        None
-                    } else {
-                        // FIXME: This should ideally be None too.
-                        Some(state_after)
-                    }
+                    None
                 } else {
                     Some(state_after)
                 };

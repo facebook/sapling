@@ -65,7 +65,15 @@ pub fn clear_needs_check(ts: &mut TreeState, path: &RepoPathBuf) -> Result<bool>
             state: filestate.state & !StateFlags::NEED_CHECK,
             ..filestate
         };
-        ts.insert(path, &filestate)?;
+
+        if filestate.state.is_empty() {
+            // No other flags means it was ignored/untracked, but now we don't
+            // care about it (either it was deleted, or we aren't tracking
+            // ignored files anymore).
+            ts.remove(path)?;
+        } else {
+            ts.insert(path, &filestate)?;
+        }
         return Ok(true);
     }
     Ok(false)

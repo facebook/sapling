@@ -41,4 +41,3 @@ This is the code under test - we need to notice things were deleted while watchm
   missing: 0100644 0 * EXIST_P1 EXIST_NEXT NEED_CHECK  (glob)
   modified: 0100644 0 * EXIST_P1 EXIST_NEXT NEED_CHECK  (glob)
   removed: 00 0 * EXIST_P1 NEED_CHECK  (glob)
-  untracked: 0666 -1 *  (glob)
