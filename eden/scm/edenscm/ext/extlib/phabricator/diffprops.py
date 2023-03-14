@@ -6,9 +6,10 @@
 from __future__ import absolute_import
 
 import re
+from typing import Pattern
 
 
-diffrevisionregex = re.compile(r"^Differential Revision:.*/D(\d+)", re.M)
+diffrevisionregex: Pattern[str] = re.compile(r"^Differential Revision:.*/D(\d+)", re.M)
 
 
 def parserevfromcommitmsg(description):
