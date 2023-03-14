@@ -16,6 +16,7 @@ use anyhow::Result;
 use configmodel::convert::ByteCount;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use hgstore::strip_metadata;
 use hgtime::HgTime;
 use minibytes::Bytes;
 use regex::Regex;
@@ -23,7 +24,6 @@ use tracing::info_span;
 use types::Key;
 use types::RepoPathBuf;
 
-use crate::datastore::strip_metadata;
 use crate::datastore::ContentDataStore;
 use crate::datastore::ContentMetadata;
 use crate::datastore::Delta;
@@ -129,7 +129,7 @@ impl ContentStore {
 
 impl LegacyStore for ContentStore {
     /// Some blobs may contain copy-from metadata, let's strip it. For more details about the
-    /// copy-from metadata, see `datastore::strip_metadata`.
+    /// copy-from metadata, see `strip_metadata`.
     ///
     /// XXX: This should only be used on `ContentStore` that are storing actual
     /// file content, tree stores should use the `get` method instead.

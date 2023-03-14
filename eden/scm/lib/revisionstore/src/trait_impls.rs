@@ -17,13 +17,13 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::Stream;
 use futures::StreamExt;
+use hgstore::strip_metadata;
 use minibytes::Bytes;
 use storemodel::ReadFileContents;
 use storemodel::RefreshableReadFileContents;
 use tokio::runtime::Handle;
 use types::Key;
 
-use crate::datastore::strip_metadata;
 use crate::scmstore::fetch::FetchMode;
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileStore;

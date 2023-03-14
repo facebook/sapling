@@ -105,6 +105,7 @@ members = [
   "lib/spawn-ext",
   "lib/status",
   "lib/storemodel",
+  "lib/storemodel/hgstore",
   "lib/streams",
   "lib/third-party/conch-parser",
   "lib/third-party/streampager",
