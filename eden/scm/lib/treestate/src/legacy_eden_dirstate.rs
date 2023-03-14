@@ -26,7 +26,6 @@ use util::file::atomic_write;
 
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
-use crate::metadata::Metadata;
 
 /// Reader and writer functions to a legacy Eden dirstate. Note carefully that
 /// a legacy Eden dirstate has a different binary format to a legacy dirstate
@@ -44,18 +43,18 @@ const MERGE_OTHER_PARENT: i8 = -2;
 
 pub fn read_eden_dirstate(
     dirstate_path: &Path,
-) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
+) -> Result<(BTreeMap<String, String>, HashMap<Box<[u8]>, FileStateV2>)> {
     let mut dirstate = File::open(dirstate_path)?;
     deserialize_dirstate(&mut dirstate)
 }
 
 pub fn write_eden_dirstate(
     dirstate_path: &Path,
-    metadata: Metadata,
+    metadata: BTreeMap<String, String>,
     entries: HashMap<Box<[u8]>, FileStateV2>,
 ) -> Result<()> {
     let mut dirstate_bytes = Vec::new();
-    serialize_dirstate(&mut dirstate_bytes, &metadata, &entries)?;
+    serialize_dirstate(&mut dirstate_bytes, metadata, &entries)?;
     atomic_write(dirstate_path, |f| f.write_all(&dirstate_bytes))
         .map(|_| ())
         .map_err(|e| anyhow!(e))
@@ -150,19 +149,18 @@ impl<T: Write> Write for Writer<T> {
 //     remaining 32 bytes are used for the hash.
 fn serialize_dirstate(
     dirstate: impl Write,
-    metadata: &Metadata,
+    metadata: BTreeMap<String, String>,
     treestate: &HashMap<Box<[u8]>, FileStateV2>,
 ) -> Result<()> {
     let mut writer = Writer::new(dirstate);
 
     let p1 = metadata
-        .0
         .get("p1")
         .ok_or_else(|| anyhow!("Treestate is missing necessary P1 node"))?;
     let p1 = HgId::from_str(p1)?;
     writer.write_hgid(&p1)?;
 
-    if let Some(p2) = metadata.0.get("p2") {
+    if let Some(p2) = metadata.get("p2") {
         let p2 = HgId::from_str(p2)?;
         writer.write_hgid(&p2)?;
     } else {
@@ -237,7 +235,7 @@ fn serialize_entry(mut dirstate: impl Write, path: &[u8], state: &FileStateV2) -
 
 fn deserialize_dirstate(
     dirstate: impl Read,
-) -> Result<(Metadata, HashMap<Box<[u8]>, FileStateV2>)> {
+) -> Result<(BTreeMap<String, String>, HashMap<Box<[u8]>, FileStateV2>)> {
     let mut reader = Reader::new(dirstate);
     let mut p1 = [0; 20];
     reader.read_exact(&mut p1)?;
@@ -252,7 +250,6 @@ fn deserialize_dirstate(
     if !p2.is_null() {
         metadata.insert("p2".to_string(), p2.to_string());
     }
-    let metadata = Metadata(metadata);
 
     let _version = reader.read_u32::<BigEndian>()?;
 
@@ -345,6 +342,7 @@ fn read_path(dirstate: impl Read, size: u16) -> Result<Box<[u8]>> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::collections::HashMap;
 
     use pretty_assertions::assert_eq;
@@ -388,7 +386,7 @@ mod tests {
         0xf6, 0x43, 0x2a, 0xbe, 0xbf,
     ];
 
-    fn treestate() -> (Metadata, HashMap<Box<[u8]>, FileStateV2>) {
+    fn treestate() -> (BTreeMap<String, String>, HashMap<Box<[u8]>, FileStateV2>) {
         let mut metadata_bytes = b"p1=c94c85ea63ba784164f85d3c8c89b25706ec7a7f".as_slice();
         let metadata = Metadata::deserialize(&mut metadata_bytes).unwrap();
         let entries = vec![
@@ -447,7 +445,7 @@ mod tests {
         .map(|(key, value)| (key.as_bytes().to_vec().into_boxed_slice(), value.clone()))
         .collect::<HashMap<_, _>>();
 
-        (metadata, entries)
+        (metadata.0, entries)
     }
 
     #[test]
@@ -475,7 +473,7 @@ mod tests {
     fn serialize_test() {
         let (in_metadata, in_entries) = treestate();
         let mut dirstate = Vec::new();
-        serialize_dirstate(&mut dirstate, &in_metadata, &in_entries).unwrap();
+        serialize_dirstate(&mut dirstate, in_metadata.clone(), &in_entries).unwrap();
 
         let (out_metadata, out_entries) = deserialize_dirstate(&mut dirstate.as_slice()).unwrap();
 
@@ -500,7 +498,7 @@ mod tests {
     fn write_checksum_test() {
         let (metadata, entries) = treestate();
         let mut dirstate = Vec::new();
-        serialize_dirstate(&mut dirstate, &metadata, &entries).unwrap();
+        serialize_dirstate(&mut dirstate, metadata, &entries).unwrap();
         assert_eq!(dirstate.len(), 215);
 
         let mut hasher = Sha256::new();

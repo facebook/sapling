@@ -67,11 +67,12 @@ pub fn flush(root: &Path, treestate: &mut TreeState, locker: &RepoLocker) -> Res
             }
         }
 
-        dirstate.p1 = treestate
-            .get_metadata_by_key("p1")?
+        let metadata = treestate.metadata()?;
+        dirstate.p1 = metadata
+            .get("p1")
             .map_or(Ok(NULL_ID), |p| HgId::from_hex(p.as_bytes()))?;
-        dirstate.p2 = treestate
-            .get_metadata_by_key("p2")?
+        dirstate.p2 = metadata
+            .get("p2")
             .map_or(Ok(NULL_ID), |p| HgId::from_hex(p.as_bytes()))?;
         let treestate_fields = dirstate.tree_state.as_mut().ok_or_else(|| {
             anyhow!(

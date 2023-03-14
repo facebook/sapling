@@ -395,14 +395,14 @@ py_class!(pub class treestate |py| {
 
     def getmetadata(&self) -> PyResult<PyBytes> {
         let state = self.state(py).lock();
-        let metadata = PyBytes::new(py, state.get_metadata());
+        let metadata = PyBytes::new(py, state.metadata_bytes());
         Ok(metadata)
     }
 
     def setmetadata(&self, metadata: PyBytes) -> PyResult<PyObject> {
         let mut state = self.state(py).lock();
         let metadata = metadata.data(py);
-        state.set_metadata(metadata);
+        state.set_metadata_bytes(metadata);
         Ok(py.None())
     }
 });

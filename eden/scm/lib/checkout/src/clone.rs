@@ -26,7 +26,6 @@ use storemodel::ReadFileContents;
 use tracing::instrument;
 use treestate::dirstate::Dirstate;
 use treestate::dirstate::TreeStateFields;
-use treestate::metadata::Metadata;
 use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
@@ -182,10 +181,7 @@ impl CheckoutState {
 
         plan.blocking_apply_store(&file_store)?;
 
-        let ts_meta = Metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]));
-        let mut ts_buf: Vec<u8> = Vec::new();
-        ts_meta.serialize(&mut ts_buf)?;
-        ts.set_metadata(&ts_buf);
+        ts.set_metadata(BTreeMap::from([("p1".to_string(), target.to_hex())]))?;
 
         update_dirstate(&plan, ts, &vfs)?;
         flush_dirstate(config, ts, dot_path, target)?;

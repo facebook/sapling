@@ -15,8 +15,6 @@ use repolock::RepoLocker;
 use treestate::dirstate;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
-use treestate::metadata::Metadata;
-use treestate::serialization::Serializable;
 use treestate::treestate::TreeState;
 use treestate::ErrorKind;
 use types::path::ParseError;
@@ -88,12 +86,7 @@ pub fn set_clock(ts: &mut TreeState, clock: Clock) -> Result<()> {
         )),
     }?;
 
-    let mut metadata_buf = ts.get_metadata();
-    let mut metadata = Metadata::deserialize(&mut metadata_buf)?;
-    metadata.0.insert("clock".to_string(), clock_string);
-    let mut metadata_buf = vec![];
-    metadata.serialize(&mut metadata_buf)?;
-    ts.set_metadata(&metadata_buf);
+    ts.update_metadata(&[("clock".to_string(), Some(clock_string))])?;
 
     Ok(())
 }
@@ -131,10 +124,8 @@ pub fn list_needs_check(
 }
 
 pub fn get_clock(ts: &mut TreeState) -> Result<Option<Clock>> {
-    let mut metadata_buf = ts.get_metadata();
-    let metadata = Metadata::deserialize(&mut metadata_buf)?;
-    Ok(metadata
-        .0
+    Ok(ts
+        .metadata()?
         .get(&"clock".to_string())
         .map(|clock| Clock::Spec(ClockSpec::StringClock(clock.clone()))))
 }

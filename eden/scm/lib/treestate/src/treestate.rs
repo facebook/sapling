@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Cursor;
@@ -119,13 +120,10 @@ impl TreeState {
         case_sensitive: bool,
     ) -> Result<Self> {
         let store = FileStore::in_memory()?;
-        let mut root = TreeStateRoot::default();
+        let root = TreeStateRoot::default();
         let tree = Tree::new();
 
         let (metadata, entries) = read_eden_dirstate(eden_dirstate_path.as_ref())?;
-        let mut buf = Vec::new();
-        metadata.serialize(&mut buf)?;
-        root.set_metadata(buf.into_boxed_slice());
 
         let path = eden_dirstate_path.as_ref().to_path_buf();
         let mut treestate = TreeState {
@@ -136,6 +134,8 @@ impl TreeState {
             eden_dirstate_path: Some(path),
             case_sensitive,
         };
+
+        treestate.set_metadata(metadata)?;
 
         for (key, state) in entries {
             treestate.insert(key, &state)?;
@@ -198,8 +198,7 @@ impl TreeState {
         // TODO: Clean up once we migrate EdenFS to TreeState and no longer
         // need to write to legacy eden dirstate format.
         if let Some(eden_dirstate_path) = self.eden_dirstate_path.clone() {
-            let mut metadata_buf = self.get_metadata();
-            let metadata = Metadata::deserialize(&mut metadata_buf)?;
+            let metadata = self.metadata()?;
             let entries = self.flatten_tree()?;
             write_eden_dirstate(&eden_dirstate_path, metadata, entries)?;
         }
@@ -296,46 +295,49 @@ impl TreeState {
         self.tree.file_count() as usize
     }
 
-    pub fn set_metadata<T: AsRef<[u8]>>(&mut self, metadata: T) {
+    pub fn set_metadata_bytes<T: AsRef<[u8]>>(&mut self, metadata: T) {
         self.root
             .set_metadata(Vec::from(metadata.as_ref()).into_boxed_slice());
     }
 
-    pub fn get_metadata(&self) -> &[u8] {
+    pub fn set_metadata(&mut self, metadata: BTreeMap<String, String>) -> Result<()> {
+        let mut buf = Vec::new();
+        Metadata(metadata).serialize(&mut buf)?;
+        self.set_metadata_bytes(buf);
+        Ok(())
+    }
+
+    pub fn metadata_bytes(&self) -> &[u8] {
         self.root.metadata().deref()
     }
 
-    pub fn get_metadata_by_key(&self, key: &str) -> Result<Option<String>> {
-        let mut metadata_buf = self.get_metadata();
-        let metadata = Metadata::deserialize(&mut metadata_buf)?;
-        Ok(metadata.0.get(key).cloned())
+    pub fn metadata(&self) -> Result<BTreeMap<String, String>> {
+        let metadata = Metadata::deserialize(&mut self.metadata_bytes())?;
+        Ok(metadata.0)
     }
 
-    pub fn set_metadata_by_keys(&mut self, new: &[(String, Option<String>)]) -> Result<()> {
-        let mut metadata_buf = self.get_metadata();
-        let mut metadata = Metadata::deserialize(&mut metadata_buf)?;
+    pub fn update_metadata(&mut self, new: &[(String, Option<String>)]) -> Result<()> {
+        let mut metadata = self.metadata()?;
 
         for (key, value) in new.iter() {
             match value {
-                Some(value) => metadata.0.insert(key.to_string(), value.to_string()),
-                None => metadata.0.remove(key),
+                Some(value) => metadata.insert(key.to_string(), value.to_string()),
+                None => metadata.remove(key),
             };
         }
 
         let mut buf = Vec::new();
-        metadata.serialize(&mut buf)?;
+        Metadata(metadata).serialize(&mut buf)?;
         self.root.set_metadata(buf.into_boxed_slice());
         Ok(())
     }
 
     pub fn parents<'a>(&'a self) -> impl Iterator<Item = Result<HgId>> + 'a {
-        (1..).map_while(|i| {
-            self.get_metadata_by_key(&format!("p{}", i)).map_or_else(
-                |err| Some(Err(err)),
-                |metadata| {
-                    metadata.map(|parent_hash| HgId::from_str(&parent_hash).map_err(|e| e.into()))
-                },
-            )
+        (1..).map_while(|i| match self.metadata() {
+            Err(err) => Some(Err(err)),
+            Ok(metadata) => metadata
+                .get(&format!("p{}", i))
+                .map(|parent_hash| HgId::from_str(parent_hash).map_err(|e| e.into())),
         })
     }
 
@@ -352,7 +354,7 @@ impl TreeState {
         if values.len() == 1 {
             values.push(("p2".to_string(), None));
         }
-        self.set_metadata_by_keys(&values)
+        self.update_metadata(&values)
     }
 
     pub fn has_dir<P: AsRef<[u8]>>(&mut self, path: P) -> Result<bool> {
@@ -469,7 +471,7 @@ mod tests {
     fn test_new() {
         let dir = tempdir().expect("tempdir");
         let state = TreeState::new(dir.path(), true).expect("open").0;
-        assert!(state.get_metadata().is_empty());
+        assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
 
@@ -484,7 +486,7 @@ mod tests {
             true,
         )
         .expect("open");
-        assert!(state.get_metadata().is_empty());
+        assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
 
@@ -499,7 +501,7 @@ mod tests {
             true,
         )
         .expect("open");
-        assert!(state.get_metadata().is_empty());
+        assert!(state.metadata_bytes().is_empty());
         assert_eq!(state.len(), 0);
     }
 
@@ -507,61 +509,61 @@ mod tests {
     fn test_set_metadata() {
         let dir = tempdir().expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
-        state.set_metadata(b"foobar");
+        state.set_metadata_bytes(b"foobar");
         let orig_name = state.file_name().unwrap();
         let block_id1 = state.flush().expect("flush");
         let block_id2 = state.write_new(dir.path()).expect("write_as");
         let new_name = state.file_name().unwrap();
         let state =
             TreeState::open(dir.path().join(orig_name), block_id1.into(), true).expect("open");
-        assert_eq!(state.get_metadata()[..], b"foobar"[..]);
+        assert_eq!(state.metadata_bytes()[..], b"foobar"[..]);
         let state =
             TreeState::open(dir.path().join(new_name), block_id2.into(), true).expect("open");
-        assert_eq!(state.get_metadata()[..], b"foobar"[..]);
+        assert_eq!(state.metadata_bytes()[..], b"foobar"[..]);
     }
 
     #[test]
-    fn test_set_metadata_by_keys() {
+    fn test_update_metadata() {
         let dir = tempdir().expect("tempdir");
         let mut state = TreeState::new(dir.path(), true).expect("open").0;
         state
-            .set_metadata_by_keys(&[
+            .update_metadata(&[
                 ("key1".to_string(), Some("value1".to_string())),
                 ("key2".to_string(), Some("value2".to_string())),
             ])
             .unwrap();
         assert_eq!(
-            state.get_metadata_by_key("key1").unwrap(),
+            state.metadata().unwrap().get("key1").cloned(),
             Some("value1".to_string())
         );
         assert_eq!(
-            state.get_metadata_by_key("key2").unwrap(),
+            state.metadata().unwrap().get("key2").cloned(),
             Some("value2".to_string())
         );
 
         state
-            .set_metadata_by_keys(&[("key1".to_string(), Some("value1.b".to_string()))])
+            .update_metadata(&[("key1".to_string(), Some("value1.b".to_string()))])
             .unwrap();
         assert_eq!(
-            state.get_metadata_by_key("key1").unwrap(),
+            state.metadata().unwrap().get("key1").cloned(),
             Some("value1.b".to_string())
         );
         assert_eq!(
-            state.get_metadata_by_key("key2").unwrap(),
+            state.metadata().unwrap().get("key2").cloned(),
             Some("value2".to_string())
         );
 
         state
-            .set_metadata_by_keys(&[
+            .update_metadata(&[
                 ("key1".to_string(), Some("value1.c".to_string())),
                 ("key2".to_string(), None),
             ])
             .unwrap();
         assert_eq!(
-            state.get_metadata_by_key("key1").unwrap(),
+            state.metadata().unwrap().get("key1").cloned(),
             Some("value1.c".to_string())
         );
-        assert_eq!(state.get_metadata_by_key("key2").unwrap(), None);
+        assert_eq!(state.metadata().unwrap().get("key2"), None);
     }
 
     // Some random paths extracted from fb-ext, plus some manually added entries, shuffled.
