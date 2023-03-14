@@ -10,6 +10,7 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use hgstore::separate_metadata;
 use storemodel::types;
 use storemodel::ReadFileContents;
 use storemodel::RefreshableReadFileContents;
@@ -35,7 +36,7 @@ impl ReadFileContents for EagerRepoStore {
         let iter = keys.into_iter().map(|k| {
             let id = k.hgid;
             let data = match self.get_content(id)? {
-                Some(data) => data,
+                Some(data) => separate_metadata(&data)?.0,
                 None => anyhow::bail!("no such file: {:?}", &k),
             };
             Ok((data, k))
