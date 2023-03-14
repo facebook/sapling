@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import contextlib
+import sys
 import unittest
 import warnings
 from pathlib import Path
@@ -48,6 +49,14 @@ class EdenTestCaseBase(IsolatedAsyncioTestCase):
         super().setUp()
         self.exit_stack = contextlib.ExitStack()
         self.addCleanup(self.exit_stack.close)
+
+        # macOS by default has us using a temporary directory with a long path
+        # under /private/var/folders.  This can cause tests that use unix-domain
+        # sockets to fail, so here we set an environment variable to override
+        # our temporary directory to /tmp.
+        if sys.platform == "darwin":
+            self.setenv("TMPDIR", "/tmp")
+
         self.temp_mgr = self.exit_stack.enter_context(
             TempFileManager(self._get_tmp_prefix())
         )

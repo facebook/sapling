@@ -247,9 +247,6 @@ elif sys.platform.startswith("darwin"):
         "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
     ]
 
-    # Various errors for startup
-    TEST_DISABLED["start_test.StartFakeEdenFSTest"] = True
-
     # Broken on NFS (T89440036)
     TEST_DISABLED["stats_test.FUSEStatsTest"] = True
 

@@ -107,9 +107,6 @@ class EdenTestCase(EdenTestCaseBase):
         # during integration tests
         self.setenv("INTEGRATION_TEST", "1")
 
-        if sys.platform == "darwin":
-            self.setenv("TMPDIR", "/tmp")
-
         self.setup_eden_test()
         self.report_time("test setup done")
 
