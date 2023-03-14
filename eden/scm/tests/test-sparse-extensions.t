@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
   $ setconfig workingcopy.ruststatus=False
+  $ setconfig fsmonitor.track-ignore-files=true
 
 # test sparse interaction with other extensions
 

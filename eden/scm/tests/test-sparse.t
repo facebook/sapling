@@ -2,6 +2,11 @@
   $ setconfig workingcopy.ruststatus=False
   $ configure modernclient
 
+BUG: this shouldn't be necessary, but currently "hg add -s ..." or "hg sparse
+include ..." doesn't work for untracked files not previously in the sparse
+profile.
+  $ setconfig fsmonitor.track-ignore-files=true
+
 test sparse
 
   $ enable sparse

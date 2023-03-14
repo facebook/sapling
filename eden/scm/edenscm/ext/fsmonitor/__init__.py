@@ -239,7 +239,7 @@ configitem("fsmonitor", "blacklistusers", default=list)
 configitem("fsmonitor", "detectrace", default=False)
 configitem("fsmonitor", "mode", default="on")
 configitem("fsmonitor", "timeout", default=10)
-configitem("fsmonitor", "track-ignore-files", default=True)
+configitem("fsmonitor", "track-ignore-files", default=False)
 configitem("fsmonitor", "walk_on_invalidate", default=False)
 configitem("fsmonitor", "dirstate-nonnormal-file-threshold", default=200)
 configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
@@ -876,7 +876,7 @@ def overridestatus(
 def poststatustreestate(wctx, status):
     repo = wctx._repo
     dirstate = repo.dirstate
-    oldtrackignored = (dirstate.getmeta("track-ignored") or "1") == "1"
+    oldtrackignored = (dirstate.getmeta("track-ignored") or "0") == "1"
     newtrackignored = repo.ui.configbool("fsmonitor", "track-ignore-files")
 
     if oldtrackignored != newtrackignored:

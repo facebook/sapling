@@ -137,7 +137,26 @@ impl PendingChanges for WatchmanFileSystem {
     ) -> Result<Box<dyn Iterator<Item = Result<PendingChangeResult>>>> {
         let ts = &mut *self.treestate.lock();
 
-        let prev_clock = get_clock(ts)?;
+        let ts_metadata = ts.metadata()?;
+        let mut prev_clock = get_clock(&ts_metadata)?;
+
+        let track_ignored = config.get_or_default::<bool>("fsmonitor", "track-ignore-files")?;
+        let ts_track_ignored = ts_metadata.get("track-ignored").map(|v| v.as_ref()) == Some("1");
+        if track_ignored != ts_track_ignored {
+            // If track-ignore-files has changed, trigger a migration by
+            // unsetting the clock. Watchman will do a full crawl and report
+            // fresh instance.
+            prev_clock = None;
+
+            // Store new value of track ignored so we don't migrate again.
+            let md_value = if track_ignored {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            };
+            tracing::info!(track_ignored = md_value, "migrating track-ignored");
+            ts.update_metadata(&[("track-ignored".to_string(), Some(md_value))])?;
+        }
 
         let result = async_runtime::block_on(self.query_result(WatchmanConfig {
             clock: prev_clock.clone(),
@@ -186,8 +205,9 @@ impl PendingChanges for WatchmanFileSystem {
             })
             .collect();
 
-        if config.get_or_default::<bool>("fsmonitor", "track-ignore-files")? {
+        if track_ignored {
             // If we want to track ignored files, say that nothing is ignored.
+            // Note that the "full" matcher will still skip ignored files.
             ignore_matcher = Arc::new(NeverMatcher::new());
         }
 
@@ -288,6 +308,8 @@ pub fn detect_changes(
 ) -> Result<WatchmanPendingChanges> {
     let (ts_need_check, ts_errors) = list_needs_check(ts, matcher)?;
 
+    // NB: ts_need_check is filtered by the matcher, so it does not
+    // necessarily contain all NEED_CHECK entries in the treestate.
     let ts_need_check: HashSet<_> = ts_need_check.into_iter().collect();
 
     let mut pending_changes: Vec<Result<PendingChangeResult>> =
@@ -349,24 +371,36 @@ pub fn detect_changes(
     }
 
     if wm_fresh_instance {
+        let was_deleted_matcher = Arc::new(DifferenceMatcher::new(
+            AlwaysMatcher::new(),
+            ExactMatcher::new(wm_need_check.iter(), fs_case_sensitive),
+        ));
+
         // On fresh instance, watchman returns all files present on
         // disk. We need to catch the case where a tracked file has been
         // deleted while watchman wasn't running. To do that, report a
         // pending "delete" change for all EXIST_NEXT files that were
         // _not_ in the list we got from watchman.
-        let was_deleted_matcher = DifferenceMatcher::new(
-            AlwaysMatcher::new(),
-            ExactMatcher::new(wm_need_check.iter(), fs_case_sensitive),
-        );
-
         walk_treestate(
             ts,
-            Arc::new(was_deleted_matcher),
+            was_deleted_matcher.clone(),
             StateFlags::EXIST_NEXT,
             StateFlags::NEED_CHECK,
             |path, _state| {
                 needs_mark.push(path.clone());
                 pending_changes.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
+                Ok(())
+            },
+        )?;
+
+        // Clear out ignored/untracked files that have been deleted.
+        walk_treestate(
+            ts,
+            was_deleted_matcher,
+            StateFlags::NEED_CHECK,
+            StateFlags::EXIST_NEXT | StateFlags::EXIST_P1 | StateFlags::EXIST_P2,
+            |path, _state| {
+                needs_clear.push(path);
                 Ok(())
             },
         )?;

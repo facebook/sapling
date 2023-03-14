@@ -279,7 +279,7 @@ fn test_detect_changes_fresh_instance() -> Result<()> {
         wm_changed: false,
         wm_fresh_instance: true,
         disk_changed: Some(Deleted),
-        state_after: Some(NEED_CHECK),
+        state_after: None,
         pending_change: Some(Deleted),
         matcher: Always,
     })?;

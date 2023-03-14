@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -123,9 +124,8 @@ pub fn list_needs_check(
     Ok((needs_check, parse_errs))
 }
 
-pub fn get_clock(ts: &mut TreeState) -> Result<Option<Clock>> {
-    Ok(ts
-        .metadata()?
+pub fn get_clock(metadata: &BTreeMap<String, String>) -> Result<Option<Clock>> {
+    Ok(metadata
         .get(&"clock".to_string())
         .map(|clock| Clock::Spec(ClockSpec::StringClock(clock.clone()))))
 }
