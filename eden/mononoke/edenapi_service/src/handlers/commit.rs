@@ -77,6 +77,7 @@ use super::HandlerInfo;
 use super::HandlerResult;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
+use crate::middleware::request_dumper::RequestDumper;
 use crate::middleware::RequestContext;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::custom_cbor_stream;
@@ -196,6 +197,11 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     let hg_repo_ctx = get_repo(sctx, &rctx, &params.repo, None).await?;
 
     let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
+
+    if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
+        rd.add_request(&batch);
+    };
+
     let master_heads = batch
         .master_heads
         .into_iter()

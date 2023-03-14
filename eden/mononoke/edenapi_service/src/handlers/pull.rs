@@ -25,6 +25,7 @@ use crate::context::ServerContext;
 use crate::errors::MononokeErrorExt;
 use crate::handlers::EdenApiMethod;
 use crate::handlers::HandlerInfo;
+use crate::middleware::request_dumper::RequestDumper;
 use crate::middleware::RequestContext;
 use crate::utils::cbor;
 use crate::utils::get_repo;
@@ -45,6 +46,9 @@ pub async fn pull_lazy(state: &mut State) -> Result<BytesBody<Bytes>, HttpError>
 
     state.put(HandlerInfo::new(&params.repo, EdenApiMethod::PullLazy));
     let request = parse_wire_request::<WirePullLazyRequest>(state).await?;
+    if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
+        rd.add_request(&request);
+    };
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
@@ -89,6 +93,9 @@ pub async fn pull_fast_forward_master(state: &mut State) -> Result<BytesBody<Byt
         EdenApiMethod::PullFastForwardMaster,
     ));
     let request = parse_wire_request::<WirePullFastForwardRequest>(state).await?;
+    if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
+        rd.add_request(&request);
+    };
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();

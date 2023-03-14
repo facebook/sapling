@@ -54,6 +54,7 @@ use super::HandlerInfo;
 use super::HandlerResult;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
+use crate::middleware::request_dumper::RequestDumper;
 use crate::middleware::RequestContext;
 use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
@@ -80,6 +81,9 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     let repo = get_repo(sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
+    if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
+        rd.add_request(&request);
+    };
     repo.ctx()
         .perf_counters()
         .add_to_counter(PerfCounterType::EdenapiTrees, request.keys.len() as i64);
