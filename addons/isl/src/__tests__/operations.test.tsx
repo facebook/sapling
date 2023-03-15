@@ -16,6 +16,8 @@ import {
   simulateMessageFromServer,
   TEST_COMMIT_HISTORY,
   simulateRepoConnected,
+  dragAndDropCommits,
+  COMMIT,
 } from '../testUtils';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
@@ -343,6 +345,145 @@ describe('operations', () => {
         });
       });
       expect(screen.queryByTestId('queued-commands')).not.toBeInTheDocument();
+    });
+
+    it('force clears optimistic state after fetching after an operation has finished', () => {
+      const commitsBeforeOperations = {
+        value: [
+          COMMIT('e', 'Commit E', 'd', {isHead: true}),
+          COMMIT('d', 'Commit D', 'c'),
+          COMMIT('c', 'Commit C', 'b'),
+          COMMIT('b', 'Commit B', 'a'),
+          COMMIT('a', 'Commit A', '1'),
+          COMMIT('1', 'public', '0', {phase: 'public'}),
+        ],
+      };
+      const commitsAfterOptions = {
+        value: [
+          COMMIT('e2', 'Commit E', 'd2'),
+          COMMIT('d2', 'Commit D', 'c2', {isHead: true}), // goto
+          COMMIT('c2', 'Commit C', 'a'), // rebased
+          COMMIT('b', 'Commit B', 'a'),
+          COMMIT('a', 'Commit A', '1'),
+          COMMIT('1', 'public', '0', {phase: 'public'}),
+        ],
+      };
+
+      act(() =>
+        simulateMessageFromServer({
+          type: 'smartlogCommits',
+          subscriptionID: 'latestCommits',
+          commits: commitsBeforeOperations,
+          fetchStartTimestamp: 1,
+          fetchCompletedTimestamp: 2,
+        }),
+      );
+
+      //  100     200      300      400      500      600      700
+      //  |--------|--------|--------|--------|--------|--------|
+      //  <----- rebase ---->
+      //  ...................<----- goto ----->
+      //                                 <----fetch1--->  (no effect)
+      //                                            <---fetch2-->   (clears optimistic state)
+
+      // t=100 simulate spawn rebase
+      // t=200 simulate queue goto
+      // t=300 simulate exit rebase
+      //       expect optimistic "You were here..."
+      // t=400 simulate spawn goto
+      // t=500 simulate exit goto
+      //       expect optimistic "You were here..."
+      // t=600 simulate new commits fetch started @ t=450, with new head
+      //       no effect
+      // t=700 simulate new commits fetch started @ t=550, with new head
+      // BEFORE: Optimistic state wouldn't resolve, so "You were here..." would stick
+      // AFTER: Optimistic state forced to resolve, so "You were here..." is gone
+
+      dragAndDropCommits('c', 'a');
+      fireEvent.click(screen.getByText('Run Rebase'));
+      clickGoto('d'); // checkout d, which is now optimistic from the rebase, since it'll actually become d2.
+
+      act(() =>
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'spawn',
+          queue: [],
+        }),
+      );
+      act(() =>
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '2',
+          kind: 'queue',
+          queue: ['2'],
+        }),
+      );
+      act(() =>
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '1',
+          kind: 'exit',
+          exitCode: 0,
+          timestamp: 300,
+        }),
+      );
+      act(() =>
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '2',
+          kind: 'spawn',
+          queue: [],
+        }),
+      );
+      act(() =>
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '2',
+          kind: 'exit',
+          exitCode: 0,
+          timestamp: 500,
+        }),
+      );
+      act(() =>
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: '2',
+          kind: 'exit',
+          exitCode: 0,
+          timestamp: 500,
+        }),
+      );
+
+      act(() =>
+        simulateMessageFromServer({
+          type: 'smartlogCommits',
+          subscriptionID: 'latestCommits',
+          commits: commitsAfterOptions,
+          fetchStartTimestamp: 400, // before goto finished
+          fetchCompletedTimestamp: 450,
+        }),
+      );
+
+      // this latest fetch started before the goto finished, so we don't know that it has all the information
+      // included. So the optimistic state remains.
+      expect(screen.getByText('You were here...')).toBeInTheDocument();
+
+      act(() =>
+        simulateMessageFromServer({
+          type: 'smartlogCommits',
+          subscriptionID: 'latestCommits',
+          commits: commitsAfterOptions,
+          fetchStartTimestamp: 550, // after goto finished
+          fetchCompletedTimestamp: 600,
+        }),
+      );
+
+      // This latest fetch started AFTER the goto finished, so we can be sure
+      // it accounts for that operation.
+      // So the optimistic state should be cleared out, even though we didn't
+      // detect that the optimistic state should have resolved according to the applier.
+      expect(screen.queryByText('You were here...')).not.toBeInTheDocument();
     });
   });
 });
