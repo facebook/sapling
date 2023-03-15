@@ -23,8 +23,6 @@ use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::stream;
-use futures::stream::FuturesOrdered;
-use futures::stream::FuturesUnordered;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -373,13 +371,17 @@ async fn verify_deleted_files_existed_in_a_parent(
     }
 
     // Filter the deleted files to those that existed in a parent.
-    let parent_files: BTreeSet<_> = parent_ctxs
-        .iter()
-        .map(|parent_ctx| get_matching_files(parent_ctx, &deleted_files))
-        .collect::<FuturesUnordered<_>>()
-        .try_flatten()
-        .try_collect()
-        .await?;
+    let deleted_files = &deleted_files;
+    let parent_files: BTreeSet<_> = stream::iter(
+        parent_ctxs
+            .iter()
+            .map(|parent_ctx| async move { get_matching_files(parent_ctx, deleted_files).await }),
+    )
+    .boxed()
+    .buffered(10)
+    .try_flatten()
+    .try_collect()
+    .await?;
 
     // Quickly check if all deleted files existed by comparing set lengths.
     if deleted_files.len() == parent_files.len() {
@@ -444,9 +446,8 @@ async fn verify_prefix_files_deleted(
     }
     // Check that any prefix path that exists in any parent is being deleted.
     borrowed!(prefix_paths);
-    parent_ctxs
-        .iter()
-        .map(|parent_ctx| async move {
+    stream::iter(parent_ctxs.iter().map(Ok))
+        .try_for_each_concurrent(10, |parent_ctx| async move {
             parent_ctx
                 .paths(prefix_paths.iter().cloned())
                 .await?
@@ -465,8 +466,6 @@ async fn verify_prefix_files_deleted(
                 })
                 .await
         })
-        .collect::<FuturesUnordered<_>>()
-        .try_for_each(|_| async { Ok(()) })
         .await
 }
 
@@ -480,15 +479,13 @@ async fn check_addless_union_conflicts(
         return Ok(());
     }
 
-    let root_fsnodes: Vec<_> = {
-        let futs: FuturesUnordered<_> = changesets
-            .iter()
-            .map(|cs_ctx| cs_ctx.root_fsnode_id())
-            .collect();
-        futs.map_ok(|root| root.into_fsnode_id())
-            .try_collect()
-            .await?
-    };
+    let root_fsnodes: Vec<_> = stream::iter(changesets.iter().map(|cs_ctx| async move {
+        Ok::<_, MononokeError>(cs_ctx.root_fsnode_id().await?.into_fsnode_id())
+    }))
+    .boxed()
+    .buffered(10)
+    .try_collect()
+    .await?;
 
     let store = &repo_blobstore;
 
@@ -661,9 +658,8 @@ impl RepoContext {
         }
 
         // Obtain contexts for each of the parents (which should exist).
-        let stack_parent_ctxs: Vec<_> = stack_parents
-            .iter()
-            .map(|parent_id| async move {
+        let stack_parent_ctxs: Vec<_> =
+            stream::iter(stack_parents.iter().map(|parent_id| async move {
                 let parent_ctx = self
                     .changeset(ChangesetSpecifier::Bonsai(parent_id.clone()))
                     .await?
@@ -674,8 +670,9 @@ impl RepoContext {
                         ))
                     })?;
                 Ok::<_, MononokeError>(parent_ctx)
-            })
-            .collect::<FuturesOrdered<_>>()
+            }))
+            .boxed()
+            .buffered(10)
             .try_collect()
             .await?;
         borrowed!(stack_parent_ctxs);
@@ -877,9 +874,8 @@ impl RepoContext {
                     .zip(stack_changes_stack.iter())
                     .map(|(changes, stack_changes)| async move {
                         let stack_changes = stack_changes.as_ref();
-                        let (stats, result) = changes
-                            .into_iter()
-                            .map(|(path, mut change)| async move {
+                        let (stats, result) = stream::iter(changes.into_iter().map(
+                            |(path, mut change)| async move {
                                 change
                                     .resolve(
                                         self.ctx(),
@@ -890,11 +886,12 @@ impl RepoContext {
                                     )
                                     .await?;
                                 Ok::<_, MononokeError>((path, change))
-                            })
-                            .collect::<FuturesUnordered<_>>()
-                            .try_collect::<SortedVectorMap<MPath, CreateChange>>()
-                            .timed()
-                            .await;
+                            },
+                        ))
+                        .buffered(1000)
+                        .try_collect::<SortedVectorMap<MPath, CreateChange>>()
+                        .timed()
+                        .await;
                         let mut scuba = self.ctx().scuba().clone();
                         scuba.add_future_stats(&stats);
                         scuba.log_with_msg(
