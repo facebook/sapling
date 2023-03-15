@@ -36,7 +36,7 @@ define_stats! {
     find_by_changeset_id_prefix: timeseries(Sum),
 }
 
-const INSERT_MAX: usize = 1_000;
+const INSERT_MAX: usize = 2_000;
 
 pub struct SqlIdMap {
     connections: SqlConnections,
