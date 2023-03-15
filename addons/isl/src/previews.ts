@@ -11,6 +11,7 @@ import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
 import {
+  latestUncommittedChangesData,
   mergeConflicts,
   latestCommitTree,
   latestCommitTreeMap,
@@ -365,14 +366,10 @@ export const treeWithPreviews = selector({
  * when ongoingOperation is used elsewhere in the tree
  */
 export function useMarkOperationsCompleted(): void {
-  // TODO: re-write this using treeWithPreviews.
-  // `treeWithPreviews` should make the determination of which operations
-  // should be marked as completed, so we don't duplicate the
-  // traversal of the previews here and it already knows everything about previews.
   const trees = useRecoilValue(latestCommitTree);
   const headCommit = useRecoilValue(latestHeadCommit);
   const treeMap = useRecoilValue(latestCommitTreeMap);
-  const uncommittedChanges = useRecoilValue(latestUncommittedChanges);
+  const uncommittedChanges = useRecoilValue(latestUncommittedChangesData);
   const conflicts = useRecoilValue(mergeConflicts);
 
   const [list, setOperationList] = useRecoilState(operationList);
@@ -388,7 +385,7 @@ export function useMarkOperationsCompleted(): void {
       treeMap,
     };
     const uncommittedContext = {
-      uncommittedChanges,
+      uncommittedChanges: uncommittedChanges.changes,
     };
     const mergeConflictsContext = {
       conflicts,

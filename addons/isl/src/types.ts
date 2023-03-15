@@ -202,6 +202,8 @@ export type SubscribeUncommittedChanges = {
 export type UncommittedChanges = Array<ChangedFile>;
 export type FetchedUncommittedChanges = {
   files: Result<UncommittedChanges>;
+  fetchStartTimestamp: number;
+  fetchCompletedTimestamp: number;
 };
 
 export type UncommittedChangesEvent = {
@@ -224,6 +226,8 @@ export type SubscribeSmartlogCommits = {
 export type SmartlogCommits = Array<CommitInfo>;
 export type FetchedCommits = {
   commits: Result<SmartlogCommits>;
+  fetchStartTimestamp: number;
+  fetchCompletedTimestamp: number;
 };
 
 export type SmartlogCommitsEvent = {
@@ -242,6 +246,8 @@ type ConflictInfo = {
   toContinue: string;
   toAbort: string;
   files: Array<ChangedFile>;
+  fetchStartTimestamp: number;
+  fetchCompletedTimestamp: number;
 };
 export type MergeConflicts =
   | ({state: 'loading'} & AllUndefined<ConflictInfo>)

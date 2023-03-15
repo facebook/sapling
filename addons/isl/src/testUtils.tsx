@@ -70,6 +70,8 @@ export function simulateCommits(commits: Result<SmartlogCommits>) {
     type: 'smartlogCommits',
     subscriptionID: 'latestCommits',
     commits,
+    fetchStartTimestamp: 1,
+    fetchCompletedTimestamp: 2,
   });
 }
 export function simulateUncommittedChangedFiles(files: Result<UncommittedChanges>) {
@@ -77,6 +79,8 @@ export function simulateUncommittedChangedFiles(files: Result<UncommittedChanges
     type: 'uncommittedChanges',
     subscriptionID: 'latestUncommittedChanges',
     files,
+    fetchStartTimestamp: 1,
+    fetchCompletedTimestamp: 2,
   });
 }
 export function simulateRepoConnected() {

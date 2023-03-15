@@ -94,21 +94,25 @@ export const serverCwd = selector<string>({
 });
 
 type FetchedUncommittedChangesData = {
+  fetchStartTimestamp: number;
+  fetchCompletedTimestamp: number;
   changes: Array<ChangedFile>;
   error?: Error;
 };
 export const latestUncommittedChangesData = atom<FetchedUncommittedChangesData>({
   key: 'latestUncommittedChangesData',
-  default: {changes: []},
+  default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, changes: []},
   effects: [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('uncommittedChanges', event => {
-        const {files} = event;
+        const {fetchStartTimestamp, fetchCompletedTimestamp, files} = event;
         if (files.error != null) {
           // leave existing file changes in place
           setSelf(last =>
             last instanceof DefaultValue
               ? {
+                  fetchStartTimestamp: 0,
+                  fetchCompletedTimestamp: 0,
                   changes: [],
                   error: files.error,
                 }
@@ -116,7 +120,7 @@ export const latestUncommittedChangesData = atom<FetchedUncommittedChangesData>(
           );
           return;
         }
-        setSelf({changes: files.value});
+        setSelf({fetchStartTimestamp, fetchCompletedTimestamp, changes: files.value});
       });
       return () => disposable.dispose();
     },
@@ -170,21 +174,25 @@ export const mergeConflicts = atom<MergeConflicts | undefined>({
 });
 
 type FetchedCommitData = {
+  fetchStartTimestamp: number;
+  fetchCompletedTimestamp: number;
   commits: Array<CommitInfo>;
   error?: Error;
 };
 export const latestCommitsData = atom<FetchedCommitData>({
   key: 'latestCommitsData',
-  default: {commits: []},
+  default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, commits: []},
   effects: [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('smartlogCommits', event => {
-        const {commits} = event;
+        const {fetchStartTimestamp, fetchCompletedTimestamp, commits} = event;
         if (commits.error != null) {
           // leave existing commits in place
           setSelf(last =>
             last instanceof DefaultValue
               ? {
+                  fetchStartTimestamp: 0,
+                  fetchCompletedTimestamp: 0,
                   commits: [],
                   error: commits.error,
                 }
@@ -192,7 +200,7 @@ export const latestCommitsData = atom<FetchedCommitData>({
           );
           return;
         }
-        setSelf({commits: commits.value});
+        setSelf({fetchStartTimestamp, fetchCompletedTimestamp, commits: commits.value});
       });
       return () => disposable.dispose();
     },

@@ -330,6 +330,7 @@ export class Repository {
     // we're already in a conflict and need to re-check if a conflict was resolved.
 
     let output: ResolveCommandConflictOutput;
+    const fetchStartTimestamp = Date.now();
     try {
       // TODO: is this command fast on large files? it includes full conflicting file contents!
       // `sl resolve --list --all` does not seem to give any way to disambiguate (all conflicts resolved) and (not in merge)
@@ -357,6 +358,8 @@ export class Repository {
         toContinue: data.command_details.to_continue,
         toAbort: data.command_details.to_abort,
         files: [],
+        fetchStartTimestamp,
+        fetchCompletedTimestamp: Date.now(),
       };
       if (previousConflicts?.files != null && previousConflicts.files.length > 0) {
         // we saw conflicts before, some of which might now be resolved. Preserve previous ordering.
@@ -540,6 +543,7 @@ export class Repository {
   }
 
   fetchUncommittedChanges = serializeAsyncCall(async () => {
+    const fetchStartTimestamp = Date.now();
     try {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
@@ -550,6 +554,8 @@ export class Repository {
       }));
 
       this.uncommittedChanges = {
+        fetchStartTimestamp,
+        fetchCompletedTimestamp: Date.now(),
         files: {value: files},
       };
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
@@ -563,6 +569,8 @@ export class Repository {
       }
       // emit an error, but don't save it to this.uncommittedChanges
       this.uncommittedChangesEmitter.emit('change', {
+        fetchStartTimestamp,
+        fetchCompletedTimestamp: Date.now(),
         files: {error: err instanceof Error ? err : new Error(err as string)},
       });
     }
@@ -603,6 +611,7 @@ export class Repository {
   }
 
   fetchSmartlogCommits = serializeAsyncCall(async () => {
+    const fetchStartTimestamp = Date.now();
     try {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
       const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
@@ -615,12 +624,16 @@ export class Repository {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
       }
       this.smartlogCommits = {
+        fetchStartTimestamp,
+        fetchCompletedTimestamp: Date.now(),
         commits: {value: commits},
       };
       this.smartlogCommitsChangesEmitter.emit('change', this.smartlogCommits);
     } catch (err) {
       this.logger.error('Error fetching commits: ', err);
       this.smartlogCommitsChangesEmitter.emit('change', {
+        fetchStartTimestamp,
+        fetchCompletedTimestamp: Date.now(),
         commits: {error: err instanceof Error ? err : new Error(err as string)},
       });
     }

@@ -76,6 +76,8 @@ describe('CommitTreeList', () => {
               {path: 'src/file2.js', status: 'U'},
               {path: 'src/file3.js', status: 'Resolved'},
             ],
+            fetchStartTimestamp: 1,
+            fetchCompletedTimestamp: 2,
           },
         });
       });
@@ -114,6 +116,8 @@ describe('CommitTreeList', () => {
               {path: 'src/file2.js', status: 'Resolved'},
               {path: 'src/file3.js', status: 'Resolved'},
             ],
+            fetchStartTimestamp: 1,
+            fetchCompletedTimestamp: 2,
           },
         });
       });
