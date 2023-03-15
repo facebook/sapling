@@ -853,6 +853,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoPrepareCommitsParams,
         ) -> Result<thrift::RepoPrepareCommitsResponse, service::RepoPrepareCommitsExn>;
 
+        async fn repo_upload_file_content(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoUploadFileContentParams,
+        ) -> Result<thrift::RepoUploadFileContentResponse, service::RepoUploadFileContentExn>;
+
         async fn megarepo_add_sync_target_config(
             params: thrift::MegarepoAddConfigParams,
         ) -> Result<thrift::MegarepoAddConfigResponse, service::MegarepoAddSyncTargetConfigExn>;

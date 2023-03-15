@@ -35,6 +35,7 @@ use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
+use mononoke_api::StoreRequest;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -735,6 +736,46 @@ impl SourceControlServiceImpl {
             }
         };
         Ok(thrift::RepoPrepareCommitsResponse {
+            ..Default::default()
+        })
+    }
+
+    pub(crate) async fn repo_upload_file_content(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoUploadFileContentParams,
+    ) -> Result<thrift::RepoUploadFileContentResponse, errors::ServiceError> {
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity)
+            .await?;
+        let mut store_request = StoreRequest::new(
+            params
+                .data
+                .len()
+                .try_into()
+                .expect("usize should convert to u64"),
+        );
+        if let Some(expected_content_sha1) = &params.expected_content_sha1 {
+            store_request.sha1 = Some(Sha1::from_request(expected_content_sha1)?);
+        }
+        if let Some(expected_content_sha256) = &params.expected_content_sha256 {
+            store_request.sha256 = Some(Sha256::from_request(expected_content_sha256)?);
+        }
+        if params.expected_content_seeded_blake3.is_some() {
+            return Err(errors::invalid_request(
+                "Seeded blake3 not yet implemented for file upload",
+            )
+            .into());
+        }
+
+        let id = repo
+            .upload_file_content(params.data.into(), &store_request)
+            .await?
+            .as_ref()
+            .to_vec();
+        Ok(thrift::RepoUploadFileContentResponse {
+            id,
             ..Default::default()
         })
     }

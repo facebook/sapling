@@ -9,6 +9,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
+use crate::scuba_common::hex;
 use crate::scuba_common::report_megarepo_target;
 use crate::scuba_common::Reported;
 
@@ -50,6 +51,12 @@ impl AddScubaResponse for thrift::RepoBookmarkInfoResponse {}
 impl AddScubaResponse for thrift::RepoStackInfoResponse {}
 
 impl AddScubaResponse for thrift::RepoPrepareCommitsResponse {}
+
+impl AddScubaResponse for thrift::RepoUploadFileContentResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("response_id", hex(&self.id));
+    }
+}
 
 impl AddScubaResponse for thrift::CommitCompareResponse {}
 

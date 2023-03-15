@@ -169,6 +169,12 @@ impl AddScubaParams for thrift::RepoStackInfoParams {}
 
 impl AddScubaParams for thrift::RepoPrepareCommitsParams {}
 
+impl AddScubaParams for thrift::RepoUploadFileContentParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_data_len", self.data.len());
+    }
+}
+
 impl AddScubaParams for thrift::CommitCompareParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         if let Some(other_commit_id) = self.other_commit_id.as_ref() {

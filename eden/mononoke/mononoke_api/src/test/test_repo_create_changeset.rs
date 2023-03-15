@@ -19,6 +19,7 @@ use fixtures::Linear;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::try_join;
+use mononoke_types::hash::Sha256;
 use repo_derived_data::RepoDerivedDataArc;
 use smallvec::SmallVec;
 
@@ -32,6 +33,7 @@ use crate::Mononoke;
 use crate::MononokeError;
 use crate::MononokePath;
 use crate::RepoContext;
+use crate::StoreRequest;
 
 #[fbinit::test]
 async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
@@ -81,6 +83,20 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
         ),
     );
 
+    // Pre-upload the file content for the second commit, and check its hash
+    // on the way.
+    let file_id = repo
+        .upload_file_content(
+            Bytes::from("TEST CREATE2\n"),
+            &StoreRequest::with_sha256(
+                13,
+                Sha256::from_str(
+                    "877f6bb6e0aeebc78c9b784ed633ef87019110bd61f867f0a4bf747085fec645",
+                )?,
+            ),
+        )
+        .await?;
+
     let cs = repo
         .create_changeset(
             parents,
@@ -99,9 +115,10 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     changes.insert(
         MononokePath::try_from("TEST_CREATE")?,
         CreateChange::Tracked(
-            CreateChangeFile::New {
-                bytes: Bytes::from("TEST CREATE2\n"),
+            CreateChangeFile::Existing {
+                file_id,
                 file_type: FileType::Regular,
+                maybe_size: None,
             },
             None,
         ),

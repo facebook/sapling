@@ -45,6 +45,7 @@ use bookmarks::BookmarksArc;
 use bookmarks::BookmarksRef;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::Freshness;
+use bytes::Bytes;
 use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use changeset_fetcher::ChangesetFetcher;
@@ -73,6 +74,8 @@ use fbinit::FacebookInit;
 use filestore::Alias;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
+use filestore::FilestoreConfigRef;
+pub use filestore::StoreRequest;
 use futures::compat::Stream01CompatExt;
 use futures::stream;
 use futures::stream::Stream;
@@ -99,6 +102,7 @@ use mononoke_repos::MononokeRepos;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use mononoke_types::ContentId;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
@@ -1523,6 +1527,22 @@ impl RepoContext {
         hash: GitSha1,
     ) -> Result<Option<FileContext>, MononokeError> {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::GitSha1(hash))).await
+    }
+
+    pub async fn upload_file_content(
+        &self,
+        content: Bytes,
+        store_request: &StoreRequest,
+    ) -> Result<ContentId, MononokeError> {
+        let metadata = filestore::store(
+            self.repo.repo_blobstore(),
+            *self.repo.filestore_config(),
+            &self.ctx,
+            store_request,
+            stream::once(async move { Ok(content) }),
+        )
+        .await?;
+        Ok(metadata.content_id)
     }
 
     fn get_target_repo_and_lca_hint(
