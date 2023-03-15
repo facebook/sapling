@@ -80,7 +80,10 @@ if sys.platform == "win32":
         "start_test.StartFakeEdenFSTestManaged": True,
         "start_test.StartTest": True,
         "start_test.StartWithRepoTestHg": True,
-        "stats_test.FUSEStatsTest": True,
+        "stats_test.GenericStatsTest": [
+            "test_writing_untracked_file_bumps_write_counter",  # counter not implemented for PrjFS (T147665665)
+            "test_summary_counters_available",  # counter not implemented for PrjFS (T147669123)
+        ],
         "stop_test.AutoStopTest": True,
         "stop_test.StopTestAdHoc": True,
         "stop_test.StopTestManaged": True,
@@ -247,8 +250,11 @@ elif sys.platform.startswith("darwin"):
         "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
     ]
 
-    # Broken on NFS (T89440036)
-    TEST_DISABLED["stats_test.FUSEStatsTest"] = True
+    # On NFS, we don't have the per-mount live_request counters implemented.
+    # We can enable this test once those are added (T147665665)
+    TEST_DISABLED["stats_test.GenericStatsTest"] = [
+        "test_summary_counters_available",
+    ]
 
     # Various errors (See NFS specific skips for more takeover failures)
     TEST_DISABLED["takeover_test.TakeoverTestHg"] = True
@@ -310,7 +316,15 @@ if sys.platform.startswith("linux"):
             "test_chown_uid_as_nonroot_fails",
             "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
         ],
-        "stats_test.CountersTest": True,  # T89440036
+        "stats_test.GenericStatsTest": [
+            # On NFS, we don't have the per-mount live_request counters.
+            # We can enable this test once those are added (T147665665).
+            "test_summary_counters_available",
+        ],
+        "stats_test.CountersTest": [
+            # Same as above test: (T147665665).
+            "test_mount_unmount_counters"
+        ],
         # T89440575: We aren't able to get fetch counts by PID on NFS, which
         # doesn't provide any information about client processes.
         "thrift_test.ThriftTest": ["test_pid_fetch_counts"],

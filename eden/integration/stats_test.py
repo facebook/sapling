@@ -6,6 +6,7 @@
 
 import logging
 import os
+import sys
 import time
 import typing
 from pathlib import Path, PurePath
@@ -27,17 +28,24 @@ logger = logging.getLogger(__name__)
 
 
 @testcase.eden_test
-class FUSEStatsTest(testcase.EdenRepoTest):
+class GenericStatsTest(testcase.EdenRepoTest):
+    def protocol_type(self) -> str:
+        if sys.platform == "linux" or sys.platform == "darwin":
+            return "nfs" if self.use_nfs() else "fuse"
+        else:
+            return "prjfs"
+
     def test_reading_committed_file_bumps_read_counter(self) -> None:
         counters_before = self.get_counters()
         path = Path(self.mount) / "file"
         path.read_bytes()
 
+        counter_name = self.protocol_type() + ".read_us.count"
         self.poll_until_counter_condition(
             lambda counters_after: self.assertGreater(
-                counters_after["fuse.read_us.count"],
-                counters_before.get("fuse.read_us.count", 0),
-                f"Reading {path} should increment fuse.read_us.count",
+                counters_after[counter_name],
+                counters_before.get(counter_name, 0),
+                f"Reading {path} should increment {counter_name}",
             )
         )
 
@@ -46,20 +54,22 @@ class FUSEStatsTest(testcase.EdenRepoTest):
         path = Path(self.mount) / "new_file"
         path.write_bytes(b"hello")
 
+        counter_name = self.protocol_type() + ".write_us.count"
         self.poll_until_counter_condition(
             lambda counters_after: self.assertGreater(
-                counters_after["fuse.write_us.count"],
-                counters_before.get("fuse.write_us.count", 0),
-                f"Writing to {path} should increment fuse.write_us.count",
+                counters_after[counter_name],
+                counters_before.get(counter_name, 0),
+                f"Writing to {path} should increment {counter_name}",
             )
         )
 
     def test_summary_counters_available(self) -> None:
         mountName = PurePath(self.mount).name
+        protocol_name = self.protocol_type()
         counter_names_to_check = [
-            f"fuse.{mountName}.live_requests.count",
-            f"fuse.{mountName}.live_requests.max_duration_us",
-            f"fuse.{mountName}.pending_requests.count",
+            f"{protocol_name}.{mountName}.live_requests.count",
+            f"{protocol_name}.{mountName}.live_requests.max_duration_us",
+            f"{protocol_name}.{mountName}.pending_requests.count",
         ]
 
         counters = self.get_counters()
