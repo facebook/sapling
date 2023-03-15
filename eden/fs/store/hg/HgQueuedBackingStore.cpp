@@ -398,8 +398,8 @@ std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
     throw;
   }
 
-  auto metadata = backingStore_->getDatapackStore().getLocalBlobMetadata(
-      proxyHash.revHash());
+  auto metadata =
+      backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash);
   if (!metadata) {
     stats_->increment(&HgBackingStoreStats::auxMetadataMiss);
   }

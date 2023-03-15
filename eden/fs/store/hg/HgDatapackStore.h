@@ -70,7 +70,7 @@ class HgDatapackStore {
   /**
    * Reads blob metadata from hg cache.
    */
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(const Hash20& id);
+  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(const HgProxyHash& id);
 
   /**
    * Flush any pending writes to disk.

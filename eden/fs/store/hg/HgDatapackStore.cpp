@@ -248,8 +248,9 @@ std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
 }
 
 std::unique_ptr<BlobMetadata> HgDatapackStore::getLocalBlobMetadata(
-    const Hash20& id) {
-  auto metadata = store_.getBlobMetadata(id.getBytes(), true /*local_only*/);
+    const HgProxyHash& hgInfo) {
+  auto metadata =
+      store_.getBlobMetadata(hgInfo.byteHash(), true /*local_only*/);
   if (metadata) {
     return std::make_unique<BlobMetadata>(
         BlobMetadata{Hash20{metadata->content_sha1}, metadata->total_size});

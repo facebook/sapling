@@ -3138,7 +3138,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
 
     auto metadata = hgBackingStore->getHgBackingStore()
                         .getDatapackStore()
-                        .getLocalBlobMetadata(proxyHash.revHash());
+                        .getLocalBlobMetadata(proxyHash);
     blobFutures.emplace_back(ImmediateFuture<BlobMetadataWithOrigin>{
         transformToBlobMetadataFromOrigin(
             edenMount,
