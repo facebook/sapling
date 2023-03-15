@@ -9,6 +9,7 @@ use std::marker::PhantomData;
 use std::num::NonZeroU64;
 use std::panic::RefUnwindSafe;
 
+use futures_stats::FutureStats;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
@@ -328,6 +329,13 @@ impl ScubaMiddlewareState {
         let mut scuba = state.try_borrow_mut::<Self>();
         if let Some(ref mut scuba) = scuba {
             scuba.0.sampled_unless_verbose(rate);
+        }
+    }
+
+    pub fn try_set_future_stats(state: &mut State, future_stats: &FutureStats) {
+        let mut scuba = state.try_borrow_mut::<Self>();
+        if let Some(ref mut scuba) = scuba {
+            scuba.0.add_future_stats(future_stats);
         }
     }
 

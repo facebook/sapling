@@ -14,6 +14,7 @@ use edenapi_types::ToWire;
 use futures::stream::TryStreamExt;
 use futures::FutureExt;
 use futures::Stream;
+use futures_stats::futures03::TimedFutureExt;
 use gotham::handler::HandlerError as GothamHandlerError;
 use gotham::handler::HandlerFuture;
 use gotham::middleware::state::StateMiddleware;
@@ -202,7 +203,8 @@ macro_rules! define_handler {
     ($name:ident, $func:path) => {
         fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
             async move {
-                let res = $func(&mut state).await;
+                let (future_stats, res) = $func(&mut state).timed().await;
+                ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
                 build_response(res, state, &JsonErrorFomatter)
             }
             .boxed()
@@ -234,7 +236,7 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
 where
     <Handler as EdenApiHandler>::Request: std::fmt::Debug,
 {
-    let res = async {
+    let (future_stats, res) = async {
         let path = Handler::PathExtractor::take_from(&mut state);
         let query_string = Handler::QueryStringExtractor::take_from(&mut state);
         let content_encoding = ContentEncoding::from_state(&state);
@@ -261,7 +263,9 @@ where
             Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),
         }
     }
+    .timed()
     .await;
+    ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
 
     build_response(res, state, &JsonErrorFomatter)
 }
