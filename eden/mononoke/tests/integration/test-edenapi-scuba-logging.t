@@ -33,11 +33,13 @@ Run a few requests that use different codepaths for logging server-side
 
   $ cat "$SCUBA" | summarize_scuba_json "EdenAPI.*" \
   >     .normal.log_tag .normal.http_method .normal.http_path \
-  >     .int.poll_count .int.poll_time_us
+  >     .int.poll_count .int.poll_time_us \
+  >     .int.max_poll_time_us
   {
     "http_method": "GET",
     "http_path": "/repos",
     "log_tag": "EdenAPI Request Processed",
+    "max_poll_time_us": \d*, (re)
     "poll_count": \d*, (re)
     "poll_time_us": \d* (re)
   }
@@ -45,6 +47,7 @@ Run a few requests that use different codepaths for logging server-side
     "http_method": "POST",
     "http_path": "/repo/lookup",
     "log_tag": "EdenAPI Request Processed",
+    "max_poll_time_us": \d*, (re)
     "poll_count": \d*, (re)
     "poll_time_us": \d* (re)
   }
@@ -52,6 +55,7 @@ Run a few requests that use different codepaths for logging server-side
     "http_method": "PUT",
     "http_path": "/repo/upload/file/sha1/03cfd743661f07975fa2f1220c5194cbaff48451",
     "log_tag": "EdenAPI Request Processed",
+    "max_poll_time_us": \d*, (re)
     "poll_count": \d*, (re)
     "poll_time_us": \d* (re)
   }
@@ -59,6 +63,7 @@ Run a few requests that use different codepaths for logging server-side
     "http_method": "POST",
     "http_path": "/repo/commit/graph",
     "log_tag": "EdenAPI Request Processed",
+    "max_poll_time_us": \d*, (re)
     "poll_count": \d*, (re)
     "poll_time_us": \d* (re)
   }

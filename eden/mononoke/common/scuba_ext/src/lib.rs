@@ -234,6 +234,10 @@ impl MononokeScubaSampleBuilder {
             .add("poll_count", stats.poll_count)
             .add("poll_time_us", stats.poll_time.as_micros_unchecked())
             .add(
+                "max_poll_time_us",
+                stats.max_poll_time.as_micros_unchecked(),
+            )
+            .add(
                 "completion_time_us",
                 stats.completion_time.as_micros_unchecked(),
             );
