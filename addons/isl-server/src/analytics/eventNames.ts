@@ -37,6 +37,9 @@ export type TrackEventName =
   | 'SetConfigOperation'
   | 'UncommitOperation'
   // @fb-only
+  | 'OptimisticFilesStateForceResolved'
+  | 'OptimisticCommitsStateForceResolved'
+  | 'OptimisticConflictsStateForceResolved'
   | 'UnsubmittedStarRating'
   | 'UploadImage'
   | 'RunVSCodeCommand'

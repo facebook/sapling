@@ -10,7 +10,10 @@ import type {Operation} from './operations/Operation';
 import type {OperationInfo, OperationList} from './serverAPIState';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, UncommittedChanges} from './types';
 
+import {tracker} from './analytics';
+import {getOpName} from './operations/Operation';
 import {
+  latestCommitsData,
   latestUncommittedChangesData,
   mergeConflicts,
   latestCommitTree,
@@ -22,7 +25,7 @@ import {
 } from './serverAPIState';
 import {useEffect} from 'react';
 import {atom, selector, useRecoilState, useRecoilValue} from 'recoil';
-import {notEmpty} from 'shared/utils';
+import {notEmpty, unwrap} from 'shared/utils';
 
 export enum CommitPreview {
   REBASE_ROOT = 'rebase-root',
@@ -366,6 +369,7 @@ export const treeWithPreviews = selector({
  * when ongoingOperation is used elsewhere in the tree
  */
 export function useMarkOperationsCompleted(): void {
+  const fetchedCommits = useRecoilValue(latestCommitsData);
   const trees = useRecoilValue(latestCommitTree);
   const headCommit = useRecoilValue(latestHeadCommit);
   const treeMap = useRecoilValue(latestCommitTreeMap);
@@ -457,11 +461,15 @@ export function useMarkOperationsCompleted(): void {
         if (operation.operation.makeOptimisticUncommittedChangesApplier != null) {
           const optimisticApplier =
             operation.operation.makeOptimisticUncommittedChangesApplier(uncommittedChangesContext);
-          if (
-            operation.exitCode != null &&
-            (optimisticApplier == null || operation.exitCode !== 0)
-          ) {
-            files = true;
+          if (operation.exitCode != null) {
+            if (optimisticApplier == null || operation.exitCode !== 0) {
+              files = true;
+            } else if (
+              uncommittedChanges.fetchStartTimestamp > unwrap(operation.endTime).valueOf()
+            ) {
+              tracker.track('OptimisticFilesStateForceResolved', {extras: {}});
+              files = true;
+            }
           }
         } else if (operation.exitCode != null) {
           files = true;
@@ -472,11 +480,18 @@ export function useMarkOperationsCompleted(): void {
         if (operation.operation.makeOptimisticMergeConflictsApplier != null) {
           const optimisticApplier =
             operation.operation.makeOptimisticMergeConflictsApplier(mergeConflictsContext);
-          if (
-            operation.exitCode != null &&
-            (optimisticApplier == null || operation.exitCode !== 0)
-          ) {
-            conflicts = true;
+          if (operation.exitCode != null) {
+            if (optimisticApplier == null || operation.exitCode !== 0) {
+              conflicts = true;
+            } else if (
+              (mergeConflictsContext.conflicts?.fetchStartTimestamp ?? 0) >
+              unwrap(operation.endTime).valueOf()
+            ) {
+              tracker.track('OptimisticConflictsStateForceResolved', {
+                extras: {operation: getOpName(operation.operation)},
+              });
+              conflicts = true;
+            }
           }
         } else if (operation.exitCode != null) {
           conflicts = true;
@@ -486,11 +501,13 @@ export function useMarkOperationsCompleted(): void {
       if (operation != null && !operation.hasCompletedOptimisticState) {
         if (operation.operation.makeOptimisticApplier != null) {
           const optimisticApplier = operation.operation.makeOptimisticApplier(context);
-          if (
-            operation.exitCode != null &&
-            (optimisticApplier == null || operation.exitCode !== 0)
-          ) {
-            commits = true;
+          if (operation.exitCode != null) {
+            if (optimisticApplier == null || operation.exitCode !== 0) {
+              commits = true;
+            } else if (fetchedCommits.fetchStartTimestamp > unwrap(operation.endTime).valueOf()) {
+              tracker.track('OptimisticCommitsStateForceResolved', {extras: {}});
+              commits = true;
+            }
           }
         } else if (operation.exitCode != null) {
           commits = true;
@@ -502,7 +519,16 @@ export function useMarkOperationsCompleted(): void {
       }
       return undefined;
     }
-  }, [list, setOperationList, headCommit, trees, treeMap, uncommittedChanges, conflicts]);
+  }, [
+    list,
+    setOperationList,
+    headCommit,
+    trees,
+    treeMap,
+    uncommittedChanges,
+    conflicts,
+    fetchedCommits,
+  ]);
 }
 
 /** Set of info about commit tree to generate appropriate previews */

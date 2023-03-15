@@ -49,3 +49,8 @@ export abstract class Operation {
     context: MergeConflictsPreviewContext,
   ): ApplyMergeConflictsPreviewsFuncType | undefined;
 }
+
+/** Access static opName field of an operation */
+export function getOpName(op: Operation): string {
+  return (op.constructor as unknown as {opName: string}).opName;
+}
