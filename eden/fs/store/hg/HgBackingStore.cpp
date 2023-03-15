@@ -31,7 +31,6 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
-#include "eden/fs/store/TreeMetadata.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
@@ -268,15 +267,11 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  auto treeMetadataFuture =
-      folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
   // When aux metadata is enabled hg fetches file metadata along with get tree
   // request, no need for separate network call!
   return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
-      .thenValue([this,
-                  watch,
-                  treeMetadataFuture = std::move(treeMetadataFuture),
-                  config = config_](std::unique_ptr<Tree>&& result) mutable {
+      .thenValue([this, watch, config = config_](
+                     std::unique_ptr<Tree>&& result) mutable {
         stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
         return std::move(result);
       });

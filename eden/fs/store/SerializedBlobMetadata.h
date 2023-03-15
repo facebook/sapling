@@ -15,8 +15,6 @@
 
 namespace facebook::eden {
 
-class TreeMetadata;
-
 class SerializedBlobMetadata {
  public:
   explicit SerializedBlobMetadata(const BlobMetadata& metadata);
@@ -37,8 +35,6 @@ class SerializedBlobMetadata {
    * - hash (20 bytes)
    */
   std::array<uint8_t, SIZE> data_;
-
-  friend class TreeMetadata;
 };
 
 } // namespace facebook::eden

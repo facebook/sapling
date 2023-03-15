@@ -28,7 +28,6 @@ class Blob;
 class EdenConfig;
 class StoreResult;
 class Tree;
-class TreeMetadata;
 
 /*
  * LocalStore stores objects (trees and blobs) locally on disk.

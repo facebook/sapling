@@ -21,7 +21,6 @@
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
-#include "eden/fs/store/TreeMetadata.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
