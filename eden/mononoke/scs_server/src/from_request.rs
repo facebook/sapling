@@ -16,6 +16,7 @@ use bookmarks_movement::BookmarkKindRestrictions;
 use bytes::Bytes;
 use chrono::DateTime;
 use chrono::FixedOffset;
+use chrono::Local;
 use chrono::TimeZone;
 use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
@@ -32,6 +33,7 @@ use mononoke_api::ChangesetPrefixSpecifier;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CopyInfo;
 use mononoke_api::CreateCopyInfo;
+use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::HgChangesetId;
@@ -45,6 +47,7 @@ use source_control as thrift;
 use crate::commit_id::CommitIdExt;
 use crate::errors;
 
+/// Convert an item from a thrift request to the internal type.
 pub(crate) trait FromRequest<T: ?Sized> {
     fn from_request(t: &T) -> Result<Self, thrift::RequestError>
     where
@@ -326,6 +329,45 @@ impl FromRequest<thrift::RepoCreateCommitParamsFileCopyInfo> for CreateCopyInfo 
             ))
         })?;
         Ok(CreateCopyInfo::new(path, parent_index))
+    }
+}
+
+impl FromRequest<thrift::RepoCreateCommitParamsCommitInfo> for CreateInfo {
+    fn from_request(
+        info: &thrift::RepoCreateCommitParamsCommitInfo,
+    ) -> Result<Self, thrift::RequestError> {
+        let author = info.author.clone();
+        let author_date = info.date.as_ref().map_or_else(
+            || {
+                let now = Local::now();
+                Ok(now.with_timezone(now.offset()))
+            },
+            <DateTime<FixedOffset>>::from_request,
+        )?;
+        let committer = info.committer.clone();
+        let committer_date = info
+            .committer_date
+            .as_ref()
+            .map(<DateTime<FixedOffset>>::from_request)
+            .transpose()?;
+        let message = info.message.clone();
+        let extra = info.extra.clone();
+        let git_extra_headers = info.git_extra_headers.as_ref().map(|headers| {
+            headers
+                .iter()
+                .map(|(k, v)| (k.0.clone(), v.clone()))
+                .collect()
+        });
+
+        Ok(CreateInfo {
+            author,
+            author_date,
+            committer,
+            committer_date,
+            message,
+            extra,
+            git_extra_headers,
+        })
     }
 }
 

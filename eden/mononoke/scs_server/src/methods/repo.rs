@@ -9,9 +9,6 @@ use std::collections::BTreeMap;
 
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
-use chrono::DateTime;
-use chrono::FixedOffset;
-use chrono::Local;
 use context::CoreContext;
 use derived_data_manager::manager::derive::BatchDeriveOptions;
 use derived_data_manager::BonsaiDerivable;
@@ -36,6 +33,7 @@ use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokePath;
+use mononoke_api::RepoContext;
 use mononoke_api::StoreRequest;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
@@ -271,30 +269,20 @@ impl SourceControlServiceImpl {
         })
     }
 
-    /// Create a new commit.
-    pub(crate) async fn repo_create_commit(
-        &self,
-        ctx: CoreContext,
-        repo: thrift::RepoSpecifier,
-        params: thrift::RepoCreateCommitParams,
-    ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
-        let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity.clone())
-            .await?;
-        let parents: Vec<_> = params
-            .parents
-            .into_iter()
-            .map(|parent| {
-                let repo = &repo;
-                async move {
-                    let changeset_specifier = ChangesetSpecifier::from_request(&parent)
-                        .context("invalid commit id for parent")?;
-                    let changeset = repo
-                        .changeset(changeset_specifier)
-                        .await?
-                        .ok_or_else(|| errors::commit_not_found(parent.to_string()))?;
-                    Ok::<_, errors::ServiceError>(changeset.id())
-                }
+    async fn convert_create_commit_parents(
+        repo: &RepoContext,
+        parents: &[thrift::CommitId],
+    ) -> Result<Vec<ChangesetId>, errors::ServiceError> {
+        let parents: Vec<_> = parents
+            .iter()
+            .map(|parent| async move {
+                let changeset_specifier = ChangesetSpecifier::from_request(parent)
+                    .context("invalid commit id for parent")?;
+                let changeset = repo
+                    .changeset(changeset_specifier)
+                    .await?
+                    .ok_or_else(|| errors::commit_not_found(parent.to_string()))?;
+                Ok::<_, errors::ServiceError>(changeset.id())
             })
             .collect::<FuturesOrdered<_>>()
             .try_collect()
@@ -307,156 +295,148 @@ impl SourceControlServiceImpl {
             .into());
         }
 
-        // Convert changes to actions
-        let file_changes = params
-            .changes
-            .into_iter()
-            .map(|(path, change)| {
-                let repo = &repo;
-                async move {
-                    let path = MononokePath::try_from(&path).map_err(|e| {
-                        errors::invalid_request(format!("invalid path '{}': {}", path, e))
-                    })?;
-                    let change = match change {
-                        thrift::RepoCreateCommitParamsChange::changed(c) => {
-                            let file_type = FileType::from_request(&c.r#type)?;
-                            let copy_info = c
-                                .copy_info
-                                .as_ref()
-                                .map(CreateCopyInfo::from_request)
-                                .transpose()?;
-                            match c.content {
-                                thrift::RepoCreateCommitParamsFileContent::id(id) => {
-                                    let file_id = FileId::from_request(&id)?;
-                                    let file = repo.file(file_id).await?.ok_or_else(|| {
-                                        errors::file_not_found(file_id.to_string())
-                                    })?;
-                                    CreateChange::Tracked(
-                                        CreateChangeFile::Existing {
-                                            file_id: file.id().await?,
-                                            file_type,
-                                            maybe_size: None,
-                                        },
-                                        copy_info,
-                                    )
-                                }
-                                thrift::RepoCreateCommitParamsFileContent::content_sha1(sha) => {
-                                    let sha = Sha1::from_request(&sha)?;
-                                    let file = repo
-                                        .file_by_content_sha1(sha)
-                                        .await?
-                                        .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                                    CreateChange::Tracked(
-                                        CreateChangeFile::Existing {
-                                            file_id: file.id().await?,
-                                            file_type,
-                                            maybe_size: None,
-                                        },
-                                        copy_info,
-                                    )
-                                }
-                                thrift::RepoCreateCommitParamsFileContent::content_sha256(sha) => {
-                                    let sha = Sha256::from_request(&sha)?;
-                                    let file = repo
-                                        .file_by_content_sha256(sha)
-                                        .await?
-                                        .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                                    CreateChange::Tracked(
-                                        CreateChangeFile::Existing {
-                                            file_id: file.id().await?,
-                                            file_type,
-                                            maybe_size: None,
-                                        },
-                                        copy_info,
-                                    )
-                                }
-                                thrift::RepoCreateCommitParamsFileContent::content_gitsha1(sha) => {
-                                    let sha = GitSha1::from_request(&sha)?;
-                                    let file = repo
-                                        .file_by_content_gitsha1(sha)
-                                        .await?
-                                        .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
-                                    CreateChange::Tracked(
-                                        CreateChangeFile::Existing {
-                                            file_id: file.id().await?,
-                                            file_type,
-                                            maybe_size: None,
-                                        },
-                                        copy_info,
-                                    )
-                                }
-                                thrift::RepoCreateCommitParamsFileContent::data(data) => {
-                                    CreateChange::Tracked(
-                                        CreateChangeFile::New {
-                                            bytes: Bytes::from(data),
-                                            file_type,
-                                        },
-                                        copy_info,
-                                    )
-                                }
-                                thrift::RepoCreateCommitParamsFileContent::UnknownField(t) => {
-                                    return Err(errors::invalid_request(format!(
-                                        "file content type not supported: {}",
-                                        t
-                                    ))
-                                    .into());
-                                }
-                            }
-                        }
-                        thrift::RepoCreateCommitParamsChange::deleted(_d) => CreateChange::Deletion,
-                        thrift::RepoCreateCommitParamsChange::UnknownField(t) => {
-                            return Err(errors::invalid_request(format!(
-                                "file change type not supported: {}",
-                                t
-                            ))
-                            .into());
-                        }
-                    };
-                    Ok::<_, errors::ServiceError>((path, change))
+        Ok(parents)
+    }
+
+    async fn convert_create_commit_change(
+        repo: &RepoContext,
+        change: thrift::RepoCreateCommitParamsChange,
+    ) -> Result<CreateChange, errors::ServiceError> {
+        let change = match change {
+            thrift::RepoCreateCommitParamsChange::changed(c) => {
+                let file_type = FileType::from_request(&c.r#type)?;
+                let copy_info = c
+                    .copy_info
+                    .as_ref()
+                    .map(CreateCopyInfo::from_request)
+                    .transpose()?;
+                match c.content {
+                    thrift::RepoCreateCommitParamsFileContent::id(id) => {
+                        let file_id = FileId::from_request(&id)?;
+                        let file = repo
+                            .file(file_id)
+                            .await?
+                            .ok_or_else(|| errors::file_not_found(file_id.to_string()))?;
+                        CreateChange::Tracked(
+                            CreateChangeFile::Existing {
+                                file_id: file.id().await?,
+                                file_type,
+                                maybe_size: None,
+                            },
+                            copy_info,
+                        )
+                    }
+                    thrift::RepoCreateCommitParamsFileContent::content_sha1(sha) => {
+                        let sha = Sha1::from_request(&sha)?;
+                        let file = repo
+                            .file_by_content_sha1(sha)
+                            .await?
+                            .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                        CreateChange::Tracked(
+                            CreateChangeFile::Existing {
+                                file_id: file.id().await?,
+                                file_type,
+                                maybe_size: None,
+                            },
+                            copy_info,
+                        )
+                    }
+                    thrift::RepoCreateCommitParamsFileContent::content_sha256(sha) => {
+                        let sha = Sha256::from_request(&sha)?;
+                        let file = repo
+                            .file_by_content_sha256(sha)
+                            .await?
+                            .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                        CreateChange::Tracked(
+                            CreateChangeFile::Existing {
+                                file_id: file.id().await?,
+                                file_type,
+                                maybe_size: None,
+                            },
+                            copy_info,
+                        )
+                    }
+                    thrift::RepoCreateCommitParamsFileContent::content_gitsha1(sha) => {
+                        let sha = GitSha1::from_request(&sha)?;
+                        let file = repo
+                            .file_by_content_gitsha1(sha)
+                            .await?
+                            .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                        CreateChange::Tracked(
+                            CreateChangeFile::Existing {
+                                file_id: file.id().await?,
+                                file_type,
+                                maybe_size: None,
+                            },
+                            copy_info,
+                        )
+                    }
+                    thrift::RepoCreateCommitParamsFileContent::data(data) => CreateChange::Tracked(
+                        CreateChangeFile::New {
+                            bytes: Bytes::from(data),
+                            file_type,
+                        },
+                        copy_info,
+                    ),
+                    thrift::RepoCreateCommitParamsFileContent::UnknownField(t) => {
+                        return Err(errors::invalid_request(format!(
+                            "file content type not supported: {}",
+                            t
+                        ))
+                        .into());
+                    }
                 }
+            }
+            thrift::RepoCreateCommitParamsChange::deleted(_d) => CreateChange::Deletion,
+            thrift::RepoCreateCommitParamsChange::UnknownField(t) => {
+                return Err(errors::invalid_request(format!(
+                    "file change type not supported: {}",
+                    t
+                ))
+                .into());
+            }
+        };
+        Ok(change)
+    }
+
+    async fn convert_create_commit_changes(
+        repo: &RepoContext,
+        changes: BTreeMap<String, thrift::RepoCreateCommitParamsChange>,
+    ) -> Result<BTreeMap<MononokePath, CreateChange>, errors::ServiceError> {
+        let changes = changes
+            .into_iter()
+            .map(|(path, change)| async move {
+                let path = MononokePath::try_from(&path).map_err(|e| {
+                    errors::invalid_request(format!("invalid path '{}': {}", path, e))
+                })?;
+                let change = Self::convert_create_commit_change(repo, change).await?;
+                Ok::<_, errors::ServiceError>((path, change))
             })
             .collect::<FuturesOrdered<_>>()
             .try_collect()
             .await?;
 
-        let author = params.info.author;
-        let author_date = params.info.date.as_ref().map_or_else(
-            || {
-                let now = Local::now();
-                Ok(now.with_timezone(now.offset()))
-            },
-            <DateTime<FixedOffset>>::from_request,
-        )?;
-        let committer = params.info.committer;
-        let committer_date = params
-            .info
-            .committer_date
-            .as_ref()
-            .map(<DateTime<FixedOffset>>::from_request)
-            .transpose()?;
-        let message = params.info.message;
-        let extra = params.info.extra;
-        let git_extra_headers = params
-            .info
-            .git_extra_headers
-            .map(|headers| headers.into_iter().map(|(k, v)| (k.0, v)).collect());
+        Ok(changes)
+    }
+
+    /// Create a new commit.
+    pub(crate) async fn repo_create_commit(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoCreateCommitParams,
+    ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
+
+        let parents = Self::convert_create_commit_parents(&repo, &params.parents).await?;
+        let info = CreateInfo::from_request(&params.info)?;
+        let changes = Self::convert_create_commit_changes(&repo, params.changes).await?;
         let bubble = None;
 
         let changeset = repo
-            .create_changeset(
-                parents,
-                CreateInfo {
-                    author,
-                    author_date,
-                    committer,
-                    committer_date,
-                    message,
-                    extra,
-                    git_extra_headers,
-                },
-                file_changes,
-                bubble,
-            )
+            .create_changeset(parents, info, changes, bubble)
             .await?;
 
         // If you ask for a git identity back, then we'll assume that you supplied one to us
