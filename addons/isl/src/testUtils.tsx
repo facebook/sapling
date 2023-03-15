@@ -254,6 +254,20 @@ export const dragAndDrop = (elemDrag: HTMLElement, elemDrop: HTMLElement) => {
   });
 };
 
+export function dragAndDropCommits(draggedCommit: Hash | HTMLElement, onto: Hash) {
+  const draggableCommit =
+    typeof draggedCommit !== 'string'
+      ? draggedCommit
+      : within(screen.getByTestId(`commit-${draggedCommit}`)).queryByTestId('draggable-commit');
+  expect(draggableCommit).toBeDefined();
+  const dragTargetComit = screen.queryByTestId(`commit-${onto}`)?.querySelector('.commit-details');
+  expect(dragTargetComit).toBeDefined();
+
+  act(() => {
+    dragAndDrop(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
+  });
+}
+
 /**
  * Despite catching the error in our error boundary, react + jsdom still
  * print big scary messages to console.warn when we throw an error.

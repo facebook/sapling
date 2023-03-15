@@ -13,10 +13,10 @@ import {
   resetTestMessages,
   expectMessageSentToServer,
   simulateCommits,
-  dragAndDrop,
   expectMessageNOTSentToServer,
   closeCommitInfoSidebar,
   TEST_COMMIT_HISTORY,
+  dragAndDropCommits,
 } from '../../testUtils';
 import {CommandRunner, SucceedableRevset} from '../../types';
 import {fireEvent, render, screen, within} from '@testing-library/react';
@@ -41,22 +41,6 @@ describe('rebase operation', () => {
       });
     });
   });
-
-  const dragAndDropCommits = (draggedCommit: Hash | HTMLElement, onto: Hash) => {
-    const draggableCommit =
-      typeof draggedCommit !== 'string'
-        ? draggedCommit
-        : within(screen.getByTestId(`commit-${draggedCommit}`)).queryByTestId('draggable-commit');
-    expect(draggableCommit).toBeDefined();
-    const dragTargetComit = screen
-      .queryByTestId(`commit-${onto}`)
-      ?.querySelector('.commit-details');
-    expect(dragTargetComit).toBeDefined();
-
-    act(() => {
-      dragAndDrop(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
-    });
-  };
 
   const getCommitWithPreview = (hash: Hash, preview: CommitPreview): HTMLElement => {
     const previewOfCommit = screen
