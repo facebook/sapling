@@ -391,6 +391,9 @@ export default class ServerToClientAPI {
           operation,
           progress => {
             this.postMessage({type: 'operationProgress', ...progress});
+            if (progress.kind === 'queue') {
+              this.tracker.track('QueueOperation', {extras: {operation: operation.trackEventName}});
+            }
           },
           this.tracker,
           cwd,

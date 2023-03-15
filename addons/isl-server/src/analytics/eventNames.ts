@@ -40,6 +40,7 @@ export type TrackEventName =
   | 'OptimisticFilesStateForceResolved'
   | 'OptimisticCommitsStateForceResolved'
   | 'OptimisticConflictsStateForceResolved'
+  | 'QueueOperation'
   | 'UnsubmittedStarRating'
   | 'UploadImage'
   | 'RunVSCodeCommand'
