@@ -818,6 +818,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoCreateCommitParams,
         ) -> Result<thrift::RepoCreateCommitResponse, service::RepoCreateCommitExn>;
 
+        async fn repo_create_stack(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoCreateStackParams,
+        ) -> Result<thrift::RepoCreateStackResponse, service::RepoCreateStackExn>;
+
         async fn repo_bookmark_info(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoBookmarkInfoParams,

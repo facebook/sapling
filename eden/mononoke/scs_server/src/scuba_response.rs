@@ -32,6 +32,19 @@ impl AddScubaResponse for thrift::RepoCreateCommitResponse {
     }
 }
 
+impl AddScubaResponse for thrift::RepoCreateStackResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        if let Some(id) = self
+            .commit_ids
+            .last()
+            .and_then(|id| id.get(&thrift::CommitIdentityScheme::BONSAI))
+        {
+            scuba.add("commit", id.to_string());
+        }
+        scuba.add("response_commit_count", self.commit_ids.len());
+    }
+}
+
 impl AddScubaResponse for thrift::RepoCreateBookmarkResponse {}
 
 impl AddScubaResponse for thrift::RepoMoveBookmarkResponse {}

@@ -15,7 +15,9 @@ use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivedDataManager;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join_all;
+use futures::stream;
 use futures::stream::FuturesOrdered;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use maplit::btreemap;
@@ -452,6 +454,66 @@ impl SourceControlServiceImpl {
         let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;
         Ok(thrift::RepoCreateCommitResponse {
             ids,
+            ..Default::default()
+        })
+    }
+
+    /// Create a new stack of commits.
+    pub(crate) async fn repo_create_stack(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoCreateStackParams,
+    ) -> Result<thrift::RepoCreateStackResponse, errors::ServiceError> {
+        let repo = self
+            .repo_for_service(ctx, &repo, params.service_identity.clone())
+            .await?;
+        let repo = &repo;
+
+        let stack_parents = Self::convert_create_commit_parents(repo, &params.parents).await?;
+        let info_stack = params
+            .commits
+            .iter()
+            .map(|commit| CreateInfo::from_request(&commit.info))
+            .collect::<Result<Vec<_>, _>>()?;
+        let changes_stack =
+            stream::iter(
+                params.commits.into_iter().map({
+                    |commit| async move {
+                        Self::convert_create_commit_changes(repo, commit.changes).await
+                    }
+                }),
+            )
+            .buffered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+        let bubble = None;
+
+        let stack = repo
+            .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
+            .await?;
+
+        // If you ask for a git identity back, then we'll assume that you supplied one to us
+        // and set it. Later, when we can derive a git commit hash, this'll become more
+        // open, because we'll only do the check if you ask for a hash different to the
+        // one we would derive
+        if params
+            .identity_schemes
+            .contains(&thrift::CommitIdentityScheme::GIT)
+        {
+            for changeset in stack.iter() {
+                repo.set_git_mapping_from_changeset(changeset).await?;
+            }
+        }
+        let identity_schemes = &params.identity_schemes;
+        let commit_ids = stream::iter(stack.into_iter().map(|changeset| async move {
+            map_commit_identity(&changeset, identity_schemes).await
+        }))
+        .buffered(10)
+        .try_collect::<Vec<_>>()
+        .await?;
+        Ok(thrift::RepoCreateStackResponse {
+            commit_ids,
             ..Default::default()
         })
     }
