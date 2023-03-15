@@ -177,6 +177,7 @@ describe('CommitTreeList', () => {
           kind: 'exit',
           exitCode: 0,
           id: 'foo',
+          timestamp: 1234,
         });
       });
 

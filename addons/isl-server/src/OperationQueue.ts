@@ -63,7 +63,7 @@ export class OperationQueue {
           onProgress({id: operation.id, kind: 'stderr', message: args[1]});
           break;
         case 'exit':
-          onProgress({id: operation.id, kind: 'exit', exitCode: args[1]});
+          onProgress({id: operation.id, kind: 'exit', exitCode: args[1], timestamp: Date.now()});
           break;
       }
     };

@@ -509,7 +509,7 @@ export class Repository {
       onProgress('stderr', data.toString());
     });
     execution.on('exit', exitCode => {
-      onProgress('exit', exitCode);
+      onProgress('exit', exitCode || 0);
     });
     signal.addEventListener('abort', () => {
       this.logger.log('kill operation: ', command, cwdRelativeArgs.join(' '));

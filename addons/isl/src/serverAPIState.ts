@@ -11,6 +11,7 @@ import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
 import type {ChangedFile, CommitInfo, Hash, MergeConflicts, RepoInfo} from './types';
 import type {CallbackInterface} from 'recoil';
+import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
 import messageBus from './MessageBus';
@@ -347,9 +348,7 @@ export const haveCommitsLoadedYet = selector<boolean>({
 export type OperationInfo = {
   operation: Operation;
   startTime?: Date;
-  endTime?: Date;
   commandOutput?: Array<string>;
-  exitCode?: number | null;
   /** if true, we have sent "abort" request, the process might have exited or is going to exit soon */
   aborting?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic commit state to show */
@@ -358,7 +357,10 @@ export type OperationInfo = {
   hasCompletedUncommittedChangesOptimisticState?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic changes to merge conflicts to show */
   hasCompletedMergeConflictsOptimisticState?: boolean;
-};
+} & EnsureAssignedTogether<{
+  endTime: Date;
+  exitCode: number;
+}>;
 
 /**
  * Bundle history of previous operations together with the current operation,
@@ -437,7 +439,11 @@ export const operationList = atom<OperationList>({
 
               return {
                 ...current,
-                currentOperation: {...currentOperation, exitCode: progress.exitCode},
+                currentOperation: {
+                  ...currentOperation,
+                  exitCode: progress.exitCode,
+                  endTime: new Date(progress.timestamp),
+                },
               };
             });
             break;

@@ -162,6 +162,7 @@ describe('operations', () => {
         id: '1',
         kind: 'exit',
         exitCode: 0,
+        timestamp: 1234,
       });
     });
 
@@ -187,6 +188,7 @@ describe('operations', () => {
         id: '1',
         kind: 'exit',
         exitCode: -1,
+        timestamp: 1234,
       });
     });
 
@@ -215,6 +217,7 @@ describe('operations', () => {
         id: '1',
         kind: 'exit',
         exitCode: 130,
+        timestamp: 1234,
       });
     });
     expect(abortButton()).toBeNull();
@@ -295,6 +298,7 @@ describe('operations', () => {
           id: '1',
           kind: 'exit',
           exitCode: 0,
+          timestamp: 1234,
         });
         simulateMessageFromServer({
           type: 'operationProgress',
@@ -335,6 +339,7 @@ describe('operations', () => {
           id: '1',
           kind: 'exit',
           exitCode: -1,
+          timestamp: 1234,
         });
       });
       expect(screen.queryByTestId('queued-commands')).not.toBeInTheDocument();

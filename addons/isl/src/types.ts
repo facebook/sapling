@@ -273,11 +273,11 @@ export type OperationProgress =
   | {id: string; kind: 'spawn'; queue: Array<string>}
   | {id: string; kind: 'stderr'; message: string}
   | {id: string; kind: 'stdout'; message: string}
-  | {id: string; kind: 'exit'; exitCode: number | null}
+  | {id: string; kind: 'exit'; exitCode: number; timestamp: number}
   | {id: string; kind: 'error'; error: string};
 
 export type OperationCommandProgressReporter = (
-  ...args: ['spawn'] | ['stdout', string] | ['stderr', string] | ['exit', number | null]
+  ...args: ['spawn'] | ['stdout', string] | ['stderr', string] | ['exit', number]
 ) => void;
 
 export type OperationProgressEvent = {type: 'operationProgress'} & OperationProgress;
