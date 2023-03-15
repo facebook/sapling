@@ -295,29 +295,36 @@ fn is_prefix_changed(path: &MononokePath, paths: &PathTree<CreateChangeType>) ->
         .any(|prefix| paths.get(prefix.as_mpath()) == Some(&CreateChangeType::Change))
 }
 
-/// Verify that any files in `prefix_paths` that exist in `parent_ctx` have
+/// Verify that any files in `prefix_paths` that exist in any of `parent_ctxs` have
 /// been marked as deleted in `path_changes`.
 async fn verify_prefix_files_deleted(
-    parent_ctx: &ChangesetContext,
+    parent_ctxs: &[ChangesetContext],
     prefix_paths: &BTreeSet<MononokePath>,
     path_changes: &PathTree<CreateChangeType>,
 ) -> Result<(), MononokeError> {
-    parent_ctx
-        .paths(prefix_paths.iter().cloned())
-        .await?
-        .try_for_each(|prefix_path| async move {
-            if prefix_path.is_file().await?
-                && path_changes.get(prefix_path.path().as_mpath())
-                    != Some(&CreateChangeType::Deletion)
-            {
-                Err(MononokeError::InvalidRequest(format!(
-                    "Creating files inside '{}' requires deleting the file at that path",
-                    prefix_path.path()
-                )))
-            } else {
-                Ok(())
-            }
+    parent_ctxs
+        .iter()
+        .map(|parent_ctx| async move {
+            parent_ctx
+                .paths(prefix_paths.iter().cloned())
+                .await?
+                .try_for_each(|prefix_path| async move {
+                    if prefix_path.is_file().await?
+                        && path_changes.get(prefix_path.path().as_mpath())
+                            != Some(&CreateChangeType::Deletion)
+                    {
+                        Err(MononokeError::InvalidRequest(format!(
+                            "Creating files inside '{}' requires deleting the file at that path",
+                            prefix_path.path()
+                        )))
+                    } else {
+                        Ok(())
+                    }
+                })
+                .await
         })
+        .collect::<FuturesUnordered<_>>()
+        .try_for_each(|_| async { Ok(()) })
         .await
 }
 
@@ -504,15 +511,7 @@ impl RepoContext {
             .try_collect()
             .await?;
 
-        // Check that changes are valid according to bonsai rules:
-        // (1) deletions and copy-from info must reference a real path in a
-        //     valid parent.
-        // (2) deletions for paths where a prefix directory has been replaced
-        //     by a file should be dropped, as the deletion is implicit from the
-        //     file change for the prefix path.
-        // (3) conversely, when a file has been replaced by a directory, there
-        //     must be a delete for the file.
-        //
+        // Collect together information about the new commit.
 
         // Extract the set of deleted files.
         let tracked_deletion_files: BTreeSet<_> = changes
@@ -520,21 +519,6 @@ impl RepoContext {
             .filter(|(_path, change)| matches!(change, CreateChange::Deletion))
             .map(|(path, _change)| path.clone())
             .collect();
-
-        // Check deleted files existed in a parent. (1)
-        let fut_verify_deleted_files_existed = async {
-            // This does NOT consider "missing" (untracked deletion) files as it is NOT
-            // necessary for them to exist in a parent. If they don't exist on a parent,
-            // this means the file was "hg added" and then manually deleted.
-            let (stats, result) =
-                verify_deleted_files_existed_in_a_parent(&parent_ctxs, tracked_deletion_files)
-                    .timed()
-                    .await;
-            let mut scuba = self.ctx().scuba().clone();
-            scuba.add_future_stats(&stats);
-            scuba.log_with_msg("Verify deleted files existed in a parent", None);
-            result
-        };
 
         // Build a path tree recording each path that has been created or deleted.
         let path_changes = PathTree::from_iter(
@@ -549,46 +533,6 @@ impl RepoContext {
             .filter(|(_path, change)| change.change_type() == CreateChangeType::Change)
             .flat_map(|(path, _change)| path.clone().prefixes())
             .collect();
-
-        // Check changes that replace a file with a directory also delete
-        // this replaced file. (3)
-        let fut_verify_prefix_files_deleted = async {
-            let (stats, result) = parent_ctxs
-                .iter()
-                .map(|parent_ctx| {
-                    verify_prefix_files_deleted(parent_ctx, &prefix_paths, &path_changes)
-                })
-                .collect::<FuturesUnordered<_>>()
-                .try_for_each(|_| async { Ok(()) })
-                .timed()
-                .await;
-            let mut scuba = self.ctx().scuba().clone();
-            scuba.add_future_stats(&stats);
-            scuba.log_with_msg("Verify prefix files in parents have been deleted", None);
-            result
-        };
-
-        // Check for merge conflicts
-        let merge_conflicts_fut = async {
-            let (stats, result) = check_addless_union_conflicts(
-                self.ctx(),
-                match &bubble {
-                    Some(bubble) => {
-                        bubble.wrap_repo_blobstore(self.blob_repo().repo_blobstore().clone())
-                    }
-                    None => self.blob_repo().repo_blobstore().clone(),
-                },
-                parent_ctxs.as_slice(),
-                &path_changes,
-            )
-            .timed()
-            .await;
-
-            let mut scuba = self.ctx().scuba().clone();
-            scuba.add_future_stats(&stats);
-            scuba.log_with_msg("Verify all merge conflicts are resolved", None);
-            result
-        };
 
         // Convert change paths into the form needed for the bonsai changeset.
         let changes: Vec<(MPath, CreateChange)> = changes
@@ -613,9 +557,68 @@ impl RepoContext {
             })
             .collect::<Result<_, _>>()?;
 
+        // Check that changes are valid according to bonsai rules:
+        // (1) deletions and copy-from info must reference a real path in a
+        //     valid parent.
+        // (2) deletions for paths where a prefix directory has been replaced
+        //     by a file should be dropped, as the deletion is implicit from the
+        //     file change for the prefix path.
+        // (3) conversely, when a file has been replaced by a directory, there
+        //     must be a delete for the file.
+
+        // Check deleted files existed in a parent. (1)
+        let verify_deleted_files_existed_fut = async {
+            // This does NOT consider "missing" (untracked deletion) files as it is NOT
+            // necessary for them to exist in a parent. If they don't exist on a parent,
+            // this means the file was "hg added" and then manually deleted.
+            let (stats, result) =
+                verify_deleted_files_existed_in_a_parent(&parent_ctxs, tracked_deletion_files)
+                    .timed()
+                    .await;
+            let mut scuba = self.ctx().scuba().clone();
+            scuba.add_future_stats(&stats);
+            scuba.log_with_msg("Verify deleted files existed in a parent", None);
+            result
+        };
+
+        // Check changes that replace a file with a directory also delete
+        // this replaced file. (3)
+        let verify_prefix_files_deleted_fut = async {
+            let (stats, result) =
+                verify_prefix_files_deleted(&parent_ctxs, &prefix_paths, &path_changes)
+                    .timed()
+                    .await;
+            let mut scuba = self.ctx().scuba().clone();
+            scuba.add_future_stats(&stats);
+            scuba.log_with_msg("Verify prefix files in parents have been deleted", None);
+            result
+        };
+
+        // Check for merge conflicts
+        let verify_no_merge_conflicts_fut = async {
+            let (stats, result) = check_addless_union_conflicts(
+                self.ctx(),
+                match &bubble {
+                    Some(bubble) => {
+                        bubble.wrap_repo_blobstore(self.blob_repo().repo_blobstore().clone())
+                    }
+                    None => self.blob_repo().repo_blobstore().clone(),
+                },
+                parent_ctxs.as_slice(),
+                &path_changes,
+            )
+            .timed()
+            .await;
+
+            let mut scuba = self.ctx().scuba().clone();
+            scuba.add_future_stats(&stats);
+            scuba.log_with_msg("Verify all merge conflicts are resolved", None);
+            result
+        };
+
         // Resolve the changes into bonsai changes. This also checks (1) for
         // copy-from info.
-        let file_changes_fut = async {
+        let resolve_file_changes_fut = async {
             let (stats, result) = changes
                 .into_iter()
                 .map(|(path, change)| {
@@ -651,10 +654,10 @@ impl RepoContext {
         };
 
         let ((), (), (), file_changes) = try_join!(
-            fut_verify_deleted_files_existed,
-            fut_verify_prefix_files_deleted,
-            merge_conflicts_fut,
-            file_changes_fut,
+            verify_deleted_files_existed_fut,
+            verify_prefix_files_deleted_fut,
+            verify_no_merge_conflicts_fut,
+            resolve_file_changes_fut,
         )?;
 
         let author_date = MononokeDateTime::new(info.author_date);
