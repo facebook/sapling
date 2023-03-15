@@ -580,7 +580,7 @@ impl RepoContext {
             .iter()
             .map(|changeset| CommitInfo::new(changeset, bubble_id))
             .collect();
-        blobrepo::save_bonsai_changesets(changesets, self.ctx().clone(), repo).await?;
+        changesets_creation::save_changesets(self.ctx(), repo, changesets).await?;
 
         log_new_commits(self.ctx(), repo, None, commit_infos).await;
 

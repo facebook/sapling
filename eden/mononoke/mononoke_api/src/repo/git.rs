@@ -187,13 +187,9 @@ impl RepoContext {
             .map_err(|e| GitError::InvalidBonsai(git_tree_hash.to_hex().to_string(), e.into()))?;
 
         // Store the created changeset
-        blobrepo::save_bonsai_changesets(
-            vec![changeset.clone()],
-            self.ctx().clone(),
-            self.inner_repo(),
-        )
-        .await
-        .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
+        changesets_creation::save_changesets(self.ctx(), self.inner_repo(), vec![changeset])
+            .await
+            .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
     }
 
     /// Create a new annotated tag in the repository.
