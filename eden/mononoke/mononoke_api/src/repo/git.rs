@@ -260,7 +260,7 @@ impl RepoContext {
 
         let new_changeset_id = new_changeset.get_changeset_id();
 
-        self.save_changeset(new_changeset, self.inner_repo(), None)
+        self.save_changesets(vec![new_changeset], self.inner_repo(), None)
             .await?;
 
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))

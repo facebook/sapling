@@ -511,6 +511,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct PathTree<V> {
     pub value: V,
     pub subentries: BTreeMap<MPathElement, Self>,
@@ -550,6 +551,16 @@ where
             }
         }
         Some(&tree.value)
+    }
+
+    pub fn insert_and_prune(&mut self, path: Option<MPath>, value: V) {
+        let mut node = path.into_iter().flatten().fold(self, |node, element| {
+            node.subentries
+                .entry(element)
+                .or_insert_with(Default::default)
+        });
+        node.value = value;
+        node.subentries.clear();
     }
 }
 
