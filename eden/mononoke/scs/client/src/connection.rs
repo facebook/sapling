@@ -20,7 +20,7 @@ use x2pclient::X2pClientBuilder;
 
 const DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 
-const CONN_TIMEOUT_MS: u32 = 1000;
+const CONN_TIMEOUT_MS: u32 = 5000;
 const RECV_TIMEOUT_MS: u32 = 30_000;
 
 #[derive(Clone)]
