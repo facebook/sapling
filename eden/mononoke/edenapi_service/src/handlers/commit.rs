@@ -60,6 +60,7 @@ use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::CreateInfo;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
@@ -380,12 +381,16 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
             .repo()
             .create_changeset(
                 parents,
-                cs.author,
-                DateTime::from_timestamp(cs.time, cs.tz)?.into(),
-                None,
-                None,
-                cs.message,
-                cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
+                CreateInfo {
+                    author: cs.author,
+                    author_date: DateTime::from_timestamp(cs.time, cs.tz)?.into(),
+                    committer: None,
+                    committer_date: None,
+                    message: cs.message,
+                    extra: cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
+                    // TODO(rajshar): Need to allow passing git_extra_headers through Eden API as well.
+                    git_extra_headers: None,
+                },
                 cs.file_changes
                     .into_iter()
                     .map(|(path, fc)| {
@@ -399,7 +404,6 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
                     None => None,
                 }
                 .as_ref(),
-                None, //TODO(rajshar): Need to allow passing git_extra_headers through Eden API as well.
             )
             .await
             .with_context(|| anyhow!("When creating bonsai changeset"))?

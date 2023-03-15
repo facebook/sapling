@@ -31,6 +31,7 @@ use mononoke_api::ChangesetSpecifierPrefixResolution;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
 use mononoke_api::CreateCopyInfo;
+use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::MononokeError;
@@ -444,15 +445,17 @@ impl SourceControlServiceImpl {
         let changeset = repo
             .create_changeset(
                 parents,
-                author,
-                author_date,
-                committer,
-                committer_date,
-                message,
-                extra,
+                CreateInfo {
+                    author,
+                    author_date,
+                    committer,
+                    committer_date,
+                    message,
+                    extra,
+                    git_extra_headers,
+                },
                 file_changes,
                 bubble,
-                git_extra_headers,
             )
             .await?;
 

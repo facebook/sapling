@@ -28,6 +28,7 @@ use crate::ChangesetId;
 use crate::CoreContext;
 use crate::CreateChange;
 use crate::CreateChangeFile;
+use crate::CreateInfo;
 use crate::FileType;
 use crate::Mononoke;
 use crate::MononokeError;
@@ -100,15 +101,17 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     let cs = repo
         .create_changeset(
             parents,
-            author.clone(),
-            author_date,
-            committer.clone(),
-            committer_date,
-            message.clone(),
-            extra.clone(),
+            CreateInfo {
+                author: author.clone(),
+                author_date,
+                committer: committer.clone(),
+                committer_date,
+                message: message.clone(),
+                extra: extra.clone(),
+                git_extra_headers: None,
+            },
             changes.clone(),
             bubble,
-            None,
         )
         .await?;
 
@@ -126,15 +129,17 @@ async fn create_commit(fb: FacebookInit, derived_data_to_derive: &str) -> Result
     let second_cs = repo
         .create_changeset(
             vec![cs.id()],
-            author,
-            author_date,
-            committer,
-            committer_date,
-            message,
-            extra,
+            CreateInfo {
+                author,
+                author_date,
+                committer,
+                committer_date,
+                message,
+                extra,
+                git_extra_headers: None,
+            },
             changes,
             bubble,
-            None,
         )
         .await?;
 
@@ -247,15 +252,17 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             Some(maplit::btreemap! {SmallVec::new() => Bytes::from_static(b"world")});
         repo.create_changeset(
             parents,
-            author,
-            author_date,
-            committer,
-            committer_date,
-            message,
-            extra,
+            CreateInfo {
+                author,
+                author_date,
+                committer,
+                committer_date,
+                message,
+                extra,
+                git_extra_headers,
+            },
             changes,
             bubble,
-            git_extra_headers,
         )
         .await
     }
@@ -383,15 +390,17 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
         let git_extra_headers = None;
         repo.create_changeset(
             parents,
-            author.clone(),
-            author_date,
-            committer.clone(),
-            committer_date,
-            message.clone(),
-            extra.clone(),
+            CreateInfo {
+                author: author.clone(),
+                author_date,
+                committer: committer.clone(),
+                committer_date,
+                message: message.clone(),
+                extra: extra.clone(),
+                git_extra_headers,
+            },
             changes.clone(),
             bubble,
-            git_extra_headers,
         )
         .await
     }
@@ -489,15 +498,17 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
             Some(maplit::btreemap! {SmallVec::new() => Bytes::from_static(b"world")});
         repo.create_changeset(
             parents,
-            author.clone(),
-            author_date,
-            committer.clone(),
-            committer_date,
-            message.clone(),
-            extra.clone(),
+            CreateInfo {
+                author: author.clone(),
+                author_date,
+                committer: committer.clone(),
+                committer_date,
+                message: message.clone(),
+                extra: extra.clone(),
+                git_extra_headers,
+            },
             changes.clone(),
             bubble,
-            git_extra_headers,
         )
         .await
     }
@@ -604,15 +615,17 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
             Some(maplit::btreemap! {SmallVec::new() => Bytes::from_static(b"world")});
         repo.create_changeset(
             parents,
-            author.clone(),
-            author_date,
-            committer.clone(),
-            committer_date,
-            message.clone(),
-            extra.clone(),
+            CreateInfo {
+                author: author.clone(),
+                author_date,
+                committer: committer.clone(),
+                committer_date,
+                message: message.clone(),
+                extra: extra.clone(),
+                git_extra_headers,
+            },
             changes.clone(),
             bubble,
-            git_extra_headers,
         )
         .await
     }

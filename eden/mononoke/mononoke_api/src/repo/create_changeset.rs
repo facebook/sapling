@@ -221,6 +221,17 @@ impl CreateChange {
     }
 }
 
+/// Commit info for a newly created commit.
+pub struct CreateInfo {
+    pub author: String,
+    pub author_date: DateTime<FixedOffset>,
+    pub committer: Option<String>,
+    pub committer_date: Option<DateTime<FixedOffset>>,
+    pub message: String,
+    pub extra: BTreeMap<String, Vec<u8>>,
+    pub git_extra_headers: Option<BTreeMap<SmallVec<[u8; 24]>, Bytes>>,
+}
+
 /// Verify that all deleted files existed in at least one of the parents.
 async fn verify_deleted_files_existed_in_a_parent(
     parent_ctxs: &[ChangesetContext],
@@ -449,17 +460,11 @@ impl RepoContext {
     pub async fn create_changeset(
         &self,
         parents: Vec<ChangesetId>,
-        author: String,
-        author_date: DateTime<FixedOffset>,
-        committer: Option<String>,
-        committer_date: Option<DateTime<FixedOffset>>,
-        message: String,
-        extra: BTreeMap<String, Vec<u8>>,
+        info: CreateInfo,
         changes: BTreeMap<MononokePath, CreateChange>,
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-        git_extra_headers: Option<BTreeMap<SmallVec<[u8; 24]>, Bytes>>,
     ) -> Result<ChangesetContext, MononokeError> {
         self.start_write()?;
         self.authorization_context()
@@ -652,21 +657,21 @@ impl RepoContext {
             file_changes_fut,
         )?;
 
-        let author_date = MononokeDateTime::new(author_date);
-        let committer_date = committer_date.map(MononokeDateTime::new);
-        let hg_extra = extra.into();
-        let git_extra_headers = git_extra_headers.map(SortedVectorMap::from);
+        let author_date = MononokeDateTime::new(info.author_date);
+        let committer_date = info.committer_date.map(MononokeDateTime::new);
+        let hg_extra = info.extra.into();
+        let git_extra_headers = info.git_extra_headers.map(SortedVectorMap::from);
 
         // Create the new Bonsai Changeset. The `freeze` method validates
         // that the bonsai changeset is internally consistent.
 
         let new_changeset = BonsaiChangesetMut {
             parents,
-            author,
+            author: info.author,
             author_date,
-            committer,
+            committer: info.committer,
             committer_date,
-            message,
+            message: info.message,
             hg_extra,
             git_extra_headers,
             git_tree_hash: None,

@@ -68,6 +68,7 @@ pub use crate::path::MononokePath;
 pub use crate::repo::create_changeset::CreateChange;
 pub use crate::repo::create_changeset::CreateChangeFile;
 pub use crate::repo::create_changeset::CreateCopyInfo;
+pub use crate::repo::create_changeset::CreateInfo;
 pub use crate::repo::land_stack::PushrebaseOutcome;
 pub use crate::repo::BookmarkFreshness;
 pub use crate::repo::BookmarkInfo;
