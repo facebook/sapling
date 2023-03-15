@@ -867,6 +867,28 @@ struct RepoCreateCommitParams {
   5: optional string service_identity;
 }
 
+struct RepoCreateStackParamsCommit {
+  /// The info for the new commit.
+  1: RepoCreateCommitParamsCommitInfo info;
+
+  /// A mapping from path to the change that is made at that path.
+  3: map<string, RepoCreateCommitParamsChange> changes;
+}
+
+struct RepoCreateStackParams {
+  /// The stack of commits to create, in topological order, starting with the first commit.
+  1: list<RepoCreateStackParamsCommit> commits;
+
+  /// The parents of the first commit in the stack.
+  2: list<CommitId> parents;
+
+  /// Commit identity schemes to return.
+  4: set<CommitIdentityScheme> identity_schemes;
+
+  /// Service identity to use for this stack creation.
+  5: optional string service_identity;
+}
+
 struct RepoCreateBookmarkParams {
   /// The name of the bookmark to move.
   1: string bookmark;
@@ -983,6 +1005,29 @@ struct RepoPrepareCommitsParams {
   1: list<CommitId> commits;
   /// The type of data that we want to derive
   2: DerivedDataType derived_data_type;
+}
+
+struct RepoUploadFileContentParams {
+  /// Content of the new file.
+  1: binary data;
+
+  /// The expected content sha1 of the file.
+  ///
+  /// If provided, it will be an error if the content does not match this hash.
+  2: optional binary expected_content_sha1;
+
+  /// The expected content sha256 of the file.
+  ///
+  /// If provided, it will be an error if the content does not match this hash.
+  3: optional binary expected_content_sha256;
+
+  /// The expected content seeded-blake3 of the file.
+  ///
+  /// If provided, it will be an error if the content does not match this hash.
+  4: optional binary expected_content_seeded_blake3;
+
+  /// The identity of the service making the upload file content request.
+  5: optional string service_identity;
 }
 
 struct CommitLookupParams {
@@ -1591,6 +1636,11 @@ struct RepoCreateCommitResponse {
   1: map<CommitIdentityScheme, CommitId> ids;
 }
 
+struct RepoCreateStackResponse {
+  /// The IDs of the created commits in the stack.
+  1: list<map<CommitIdentityScheme, CommitId>> commit_ids;
+}
+
 struct RepoCreateBookmarkResponse {}
 
 struct RepoMoveBookmarkResponse {}
@@ -1602,6 +1652,12 @@ struct RepoLandStackResponse {
 }
 
 struct RepoPrepareCommitsResponse {}
+
+struct RepoUploadFileContentResponse {
+  /// The id of the uploaded file, which can be used in subsequent
+  /// repo_create_commit requests.
+  1: binary id;
+}
 
 struct CommitCompareResponse {
   /// List of the files that are different between commits with their metadata
@@ -1999,6 +2055,13 @@ service SourceControlService extends fb303_core.BaseService {
     2: RepoCreateCommitParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
+  /// Create a stack of new commits.  A stack is a linear chain of commits
+  /// where each commit is the single immediate child of the previous commit.
+  RepoCreateStackResponse repo_create_stack(
+    1: RepoSpecifier repo,
+    2: RepoCreateStackParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
   /// Create a bookmark.
   RepoCreateBookmarkResponse repo_create_bookmark(
     1: RepoSpecifier repo,
@@ -2032,6 +2095,12 @@ service SourceControlService extends fb303_core.BaseService {
   RepoPrepareCommitsResponse repo_prepare_commits(
     1: RepoSpecifier repo,
     2: RepoPrepareCommitsParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  /// Upload new file content
+  RepoUploadFileContentResponse repo_upload_file_content(
+    1: RepoSpecifier repo,
+    2: RepoUploadFileContentParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   /// Commit methods
