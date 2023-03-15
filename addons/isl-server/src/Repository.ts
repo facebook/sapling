@@ -16,7 +16,6 @@ import type {
   SmartlogCommits,
   SuccessorInfo,
   UncommittedChanges,
-  Result,
   ChangedFile,
   RepoInfo,
   OperationCommandProgressReporter,
@@ -31,6 +30,8 @@ import type {
   Revset,
   PreferredSubmitCommand,
   RepoRelativePath,
+  FetchedUncommittedChanges,
+  FetchedCommits,
 } from 'isl/src/types';
 
 import {Internal} from './Internal';
@@ -142,12 +143,12 @@ export class Repository {
   public IGNORE_COMMIT_MESSAGE_LINES_REGEX = /^((?:HG|SL):.*)/gm;
 
   private mergeConflicts: MergeConflicts | undefined = undefined;
-  private uncommittedChanges: UncommittedChanges | null = null;
-  private smartlogCommits: SmartlogCommits | null = null;
+  private uncommittedChanges: FetchedUncommittedChanges | null = null;
+  private smartlogCommits: FetchedCommits | null = null;
 
   private mergeConflictsEmitter = new TypedEventEmitter<'change', MergeConflicts | undefined>();
-  private uncommittedChangesEmitter = new TypedEventEmitter<'change', UncommittedChanges>();
-  private smartlogCommitsChangesEmitter = new TypedEventEmitter<'change', SmartlogCommits>();
+  private uncommittedChangesEmitter = new TypedEventEmitter<'change', FetchedUncommittedChanges>();
+  private smartlogCommitsChangesEmitter = new TypedEventEmitter<'change', FetchedCommits>();
 
   private smartlogCommitsBeginFetchingEmitter = new TypedEventEmitter<'start', undefined>();
   private uncommittedChangesBeginFetchingEmitter = new TypedEventEmitter<'start', undefined>();
@@ -245,10 +246,10 @@ export class Repository {
 
     // refetch summaries whenever we see new diffIds
     const seenDiffs = new Set();
-    const subscription = this.subscribeToSmartlogCommitsChanges(commits => {
-      if (commits.value) {
+    const subscription = this.subscribeToSmartlogCommitsChanges(fetched => {
+      if (fetched.commits.value) {
         const newDiffs = [];
-        const diffIds = commits.value
+        const diffIds = fetched.commits.value
           .filter(commit => commit.diffId != null)
           .map(commit => commit.diffId);
         for (const diffId of diffIds) {
@@ -523,21 +524,17 @@ export class Repository {
   }
 
   /** Return the latest fetched value for UncommittedChanges. */
-  getUncommittedChanges(): UncommittedChanges | null {
+  getUncommittedChanges(): FetchedUncommittedChanges | null {
     return this.uncommittedChanges;
   }
 
   subscribeToUncommittedChanges(
-    callback: (result: Result<UncommittedChanges>) => unknown,
+    callback: (result: FetchedUncommittedChanges) => unknown,
   ): Disposable {
-    const onData = (data: UncommittedChanges) => callback({value: data});
-    const onError = (error: Error) => callback({error});
-    this.uncommittedChangesEmitter.on('change', onData);
-    this.uncommittedChangesEmitter.on('error', onError);
+    this.uncommittedChangesEmitter.on('change', callback);
     return {
       dispose: () => {
-        this.uncommittedChangesEmitter.off('change', onData);
-        this.uncommittedChangesEmitter.off('error', onError);
+        this.uncommittedChangesEmitter.off('change', callback);
       },
     };
   }
@@ -547,10 +544,14 @@ export class Repository {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
       const proc = await this.runCommand(['status', '-Tjson']);
-      this.uncommittedChanges = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
+      const files = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
         ...change,
         path: removeLeadingPathSep(change.path),
       }));
+
+      this.uncommittedChanges = {
+        files: {value: files},
+      };
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
       this.logger.error('Error fetching files: ', err);
@@ -560,26 +561,23 @@ export class Repository {
           return;
         }
       }
-      this.uncommittedChangesEmitter.emit('error', err as Error);
+      // emit an error, but don't save it to this.uncommittedChanges
+      this.uncommittedChangesEmitter.emit('change', {
+        files: {error: err instanceof Error ? err : new Error(err as string)},
+      });
     }
   });
 
   /** Return the latest fetched value for SmartlogCommits. */
-  getSmartlogCommits(): SmartlogCommits | null {
+  getSmartlogCommits(): FetchedCommits | null {
     return this.smartlogCommits;
   }
 
-  subscribeToSmartlogCommitsChanges(callback: (result: Result<SmartlogCommits>) => unknown) {
-    const onData = (data: SmartlogCommits) => {
-      callback({value: data});
-    };
-    const onError = (error: Error) => callback({error});
-    this.smartlogCommitsChangesEmitter.on('change', onData);
-    this.smartlogCommitsChangesEmitter.on('error', onError);
+  subscribeToSmartlogCommitsChanges(callback: (result: FetchedCommits) => unknown) {
+    this.smartlogCommitsChangesEmitter.on('change', callback);
     return {
       dispose: () => {
-        this.smartlogCommitsChangesEmitter.off('change', onData);
-        this.smartlogCommitsChangesEmitter.off('error', onError);
+        this.smartlogCommitsChangesEmitter.off('change', callback);
       },
     };
   }
@@ -612,25 +610,30 @@ export class Repository {
         ? 'smartlog() + .'
         : `smartlog() and date(-${visibleCommitDayRange}) + .`;
       const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
-      this.smartlogCommits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
-      if (this.smartlogCommits.length === 0) {
+      const commits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
+      if (commits.length === 0) {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
       }
+      this.smartlogCommits = {
+        commits: {value: commits},
+      };
       this.smartlogCommitsChangesEmitter.emit('change', this.smartlogCommits);
     } catch (err) {
       this.logger.error('Error fetching commits: ', err);
-      this.smartlogCommitsChangesEmitter.emit('error', err as Error);
+      this.smartlogCommitsChangesEmitter.emit('change', {
+        commits: {error: err instanceof Error ? err : new Error(err as string)},
+      });
     }
   });
 
   /** Watch for changes to the head commit, e.g. from checking out a new commit */
   subscribeToHeadCommit(callback: (head: CommitInfo) => unknown) {
-    let headCommit = this.smartlogCommits?.find(commit => commit.isHead);
+    let headCommit = this.smartlogCommits?.commits.value?.find(commit => commit.isHead);
     if (headCommit != null) {
       callback(headCommit);
     }
-    const onData = (data: SmartlogCommits) => {
-      const newHead = data.find(commit => commit.isHead);
+    const onData = (data: FetchedCommits) => {
+      const newHead = data?.commits.value?.find(commit => commit.isHead);
       if (newHead != null && newHead.hash !== headCommit?.hash) {
         callback(newHead);
         headCommit = newHead;
@@ -660,7 +663,7 @@ export class Repository {
   public getAllDiffIds(): Array<DiffId> {
     return (
       this.getSmartlogCommits()
-        ?.map(commit => commit.diffId)
+        ?.commits.value?.map(commit => commit.diffId)
         .filter(notEmpty) ?? []
     );
   }

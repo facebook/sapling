@@ -93,22 +93,30 @@ export const serverCwd = selector<string>({
   },
 });
 
-/**
- * Latest fetched uncommitted file changes from the server, without any previews.
- * Prefer using `uncommittedChangesWithPreviews`, since it includes optimistic state
- * and previews.
- */
-export const latestUncommittedChanges = atom<Array<ChangedFile>>({
-  key: 'latestUncommittedChanges',
-  default: [],
+type FetchedUncommittedChangesData = {
+  changes: Array<ChangedFile>;
+  error?: Error;
+};
+export const latestUncommittedChangesData = atom<FetchedUncommittedChangesData>({
+  key: 'latestUncommittedChangesData',
+  default: {changes: []},
   effects: [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('uncommittedChanges', event => {
-        if (event.files.error) {
+        const {files} = event;
+        if (files.error != null) {
           // leave existing file changes in place
+          setSelf(last =>
+            last instanceof DefaultValue
+              ? {
+                  changes: [],
+                  error: files.error,
+                }
+              : {...last, error: files.error},
+          );
           return;
         }
-        setSelf(event.files.value);
+        setSelf({changes: files.value});
       });
       return () => disposable.dispose();
     },
@@ -120,6 +128,25 @@ export const latestUncommittedChanges = atom<Array<ChangedFile>>({
         }),
       ),
   ],
+});
+
+/**
+ * Latest fetched uncommitted file changes from the server, without any previews.
+ * Prefer using `uncommittedChangesWithPreviews`, since it includes optimistic state
+ * and previews.
+ */
+export const latestUncommittedChanges = selector<Array<ChangedFile>>({
+  key: 'latestUncommittedChanges',
+  get: ({get}) => {
+    return get(latestUncommittedChangesData).changes;
+  },
+});
+
+export const uncommittedChangesFetchError = selector<Error | undefined>({
+  key: 'uncommittedChangesFetchError',
+  get: ({get}) => {
+    return get(latestUncommittedChangesData).error;
+  },
 });
 
 export const mergeConflicts = atom<MergeConflicts | undefined>({
@@ -142,17 +169,30 @@ export const mergeConflicts = atom<MergeConflicts | undefined>({
   ],
 });
 
-export const latestCommits = atom<Array<CommitInfo>>({
-  key: 'latestCommits',
-  default: [],
+type FetchedCommitData = {
+  commits: Array<CommitInfo>;
+  error?: Error;
+};
+export const latestCommitsData = atom<FetchedCommitData>({
+  key: 'latestCommitsData',
+  default: {commits: []},
   effects: [
     ({setSelf}) => {
       const disposable = serverAPI.onMessageOfType('smartlogCommits', event => {
-        if (event.commits.error) {
+        const {commits} = event;
+        if (commits.error != null) {
           // leave existing commits in place
+          setSelf(last =>
+            last instanceof DefaultValue
+              ? {
+                  commits: [],
+                  error: commits.error,
+                }
+              : {...last, error: commits.error},
+          );
           return;
         }
-        setSelf(event.commits.value);
+        setSelf({commits: commits.value});
       });
       return () => disposable.dispose();
     },
@@ -164,6 +204,20 @@ export const latestCommits = atom<Array<CommitInfo>>({
         }),
       ),
   ],
+});
+
+export const latestCommits = selector<Array<CommitInfo>>({
+  key: 'latestCommits',
+  get: ({get}) => {
+    return get(latestCommitsData).commits;
+  },
+});
+
+export const commitFetchError = selector<Error | undefined>({
+  key: 'commitFetchError',
+  get: ({get}) => {
+    return get(latestCommitsData).error;
+  },
 });
 
 export const isFetchingCommits = atom<boolean>({
@@ -239,32 +293,6 @@ export const commitsShownRange = atom<number | undefined>({
       return () => {
         disposables.forEach(d => d.dispose());
       };
-    },
-  ],
-});
-
-export const commitFetchError = atom<Error | undefined>({
-  key: 'commitFetchError',
-  default: undefined,
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('smartlogCommits', event => {
-        setSelf(event.commits.error); // set even if error is undefined as a way of clearing the error
-      });
-      return () => disposable.dispose();
-    },
-  ],
-});
-
-export const uncommittedChangesFetchError = atom<Error | undefined>({
-  key: 'uncommittedChangesFetchError',
-  default: undefined,
-  effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('uncommittedChanges', event => {
-        setSelf(event.files.error); // set even if error is undefined as a way of clearing the error
-      });
-      return () => disposable.dispose();
     },
   ],
 });

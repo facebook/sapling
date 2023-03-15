@@ -21,7 +21,7 @@ import {
   commitFetchError,
   commitsShownRange,
   isFetchingAdditionalCommits,
-  latestUncommittedChanges,
+  latestUncommittedChangesData,
   useRunOperation,
 } from './serverAPIState';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
@@ -36,7 +36,7 @@ export function CommitTreeList() {
   // so we don't miss the first returned uncommitted changes mesage.
   // TODO: This is a little ugly, is there a better way to tell recoil to start the subscription immediately?
   // Or should we queue/cache messages?
-  useRecoilState(latestUncommittedChanges);
+  useRecoilState(latestUncommittedChangesData);
   useRecoilState(pageVisibility);
 
   useMarkOperationsCompleted();

@@ -124,7 +124,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
     const conflicts = this.repo.getMergeConflicts()?.files;
 
     // only show merge conflicts if they are given
-    const fileChanges = conflicts ?? data ?? [];
+    const fileChanges = conflicts ?? data?.files?.value ?? [];
 
     const changes: Array<vscode.SourceControlResourceState> = [];
     const untracked: Array<vscode.SourceControlResourceState> = [];

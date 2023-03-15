@@ -13,9 +13,7 @@ import type {
   ServerToClientMessage,
   ClientToServerMessage,
   Disposable,
-  SmartlogCommits,
   SmartlogCommitsEvent,
-  UncommittedChanges,
   UncommittedChangesEvent,
   Result,
   MergeConflicts,
@@ -24,6 +22,8 @@ import type {
   PlatformSpecificClientToServerMessages,
   FileABugProgress,
   ClientToServerMessageWithPayload,
+  FetchedUncommittedChanges,
+  FetchedCommits,
 } from 'isl/src/types';
 
 import {Internal} from './Internal';
@@ -305,18 +305,18 @@ export default class ServerToClientAPI {
         }
         this.hasSubscribedToUncommittedChanges = true;
         const {subscriptionID} = data;
-        const postUncommittedChanges = (result: Result<UncommittedChanges>) => {
+        const postUncommittedChanges = (result: FetchedUncommittedChanges) => {
           const message: UncommittedChangesEvent = {
             type: 'uncommittedChanges',
             subscriptionID,
-            files: result,
+            ...result,
           };
           this.postMessage(message);
         };
 
         const uncommittedChanges = repo.getUncommittedChanges();
         if (uncommittedChanges != null) {
-          postUncommittedChanges({value: uncommittedChanges});
+          postUncommittedChanges(uncommittedChanges);
         }
 
         // send changes as they come in from watchman
@@ -337,18 +337,18 @@ export default class ServerToClientAPI {
         }
         this.hasSubscribedToSmartlogCommits = true;
         const {subscriptionID} = data;
-        const postSmartlogCommits = (result: Result<SmartlogCommits>) => {
+        const postSmartlogCommits = (result: FetchedCommits) => {
           const message: SmartlogCommitsEvent = {
             type: 'smartlogCommits',
             subscriptionID,
-            commits: result,
+            ...result,
           };
           this.postMessage(message);
         };
 
         const smartlogCommits = repo.getSmartlogCommits();
         if (smartlogCommits != null) {
-          postSmartlogCommits({value: smartlogCommits});
+          postSmartlogCommits(smartlogCommits);
         }
         // send changes as they come from file watcher
         this.repoDisposables.push(repo.subscribeToSmartlogCommitsChanges(postSmartlogCommits));

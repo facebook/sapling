@@ -200,12 +200,14 @@ export type SubscribeUncommittedChanges = {
 };
 
 export type UncommittedChanges = Array<ChangedFile>;
+export type FetchedUncommittedChanges = {
+  files: Result<UncommittedChanges>;
+};
 
 export type UncommittedChangesEvent = {
   type: 'uncommittedChanges';
   subscriptionID: string;
-  files: Result<UncommittedChanges>;
-};
+} & FetchedUncommittedChanges;
 
 export type BeganFetchingUncommittedChangesEvent = {
   type: 'beganFetchingUncommittedChangesEvent';
@@ -220,12 +222,14 @@ export type SubscribeSmartlogCommits = {
 };
 
 export type SmartlogCommits = Array<CommitInfo>;
+export type FetchedCommits = {
+  commits: Result<SmartlogCommits>;
+};
 
 export type SmartlogCommitsEvent = {
   type: 'smartlogCommits';
   subscriptionID: string;
-  commits: Result<SmartlogCommits>;
-};
+} & FetchedCommits;
 
 export type BeganFetchingSmartlogCommitsEvent = {
   type: 'beganFetchingSmartlogCommitsEvent';
