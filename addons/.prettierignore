@@ -6,6 +6,7 @@
 /isl-server/coverage/
 /isl-server/src/facebook/phabricator/generated/
 /isl-server/src/github/generated/
+/isl-standalone/src-tauri/target/
 /vscode/coverage/
 /vscode/dist/
 /vscode-build
@@ -15,3 +16,4 @@
 /reviewstack.dev/build/
 /reviewstack.dev/public/generated/
 /shared/third-party/github/schema.docs.graphql
+/shared/coverage

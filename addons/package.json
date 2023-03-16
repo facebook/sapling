@@ -6,6 +6,7 @@
     "isl-server",
     "reviewstack",
     "reviewstack.dev",
+    "isl-standalone",
     "textmate",
     "vscode"
   ],
