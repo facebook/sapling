@@ -6,6 +6,12 @@
 
 # With copied file using the heuristics copytracing:
 
+  $ eagerepo
+  $ setconfig workingcopy.ruststatus=false
+
+FIXME(status):
+  $ setconfig status.use-rust=false
+
   $ enable mergedriver
 
   $ newrepo

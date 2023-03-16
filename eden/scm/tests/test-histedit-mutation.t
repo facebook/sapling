@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ configure mutation
   $ . "$TESTDIR/histedit-helpers.sh"
 

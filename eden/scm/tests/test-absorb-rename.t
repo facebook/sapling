@@ -2,6 +2,10 @@
 #debugruntest-compatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
+  $ setconfig workingcopy.ruststatus=false
+FIXME(status):
+  $ setconfig status.use-rust=false
   $ configure mutation-norecord
   $ enable absorb
   $ setconfig diff.git=1

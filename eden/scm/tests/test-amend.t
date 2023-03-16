@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+
   $ enable amend
   $ setconfig diff.git=1
 
@@ -8,8 +10,7 @@
 
 Basic amend
 
-  $ hg init repo1
-  $ cd repo1
+  $ newclientrepo repo1
   $ hg debugdrawdag <<'EOS'
   > B
   > |

@@ -3,6 +3,7 @@
 
 # init
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ echo a > a

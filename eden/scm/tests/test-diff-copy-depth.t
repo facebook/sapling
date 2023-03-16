@@ -1,9 +1,10 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+
   $ for i in aaa zzz; do
-  >     hg init t
-  >     cd t
+  >     newclientrepo
   > 
   >     echo
   >     echo "-- With $i"

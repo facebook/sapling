@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig status.use-rust=false
   $ hg init t
   $ cd t
   $ echo a > a

@@ -4,6 +4,8 @@
   $ enable amend rebase
   $ setconfig merge.printcandidatecommmits=True
 
+  $ eagerepo
+
 Encountering a merge conflict prints the number of textual conflicts in each file:
   $ newrepo
   $ hg debugdrawdag <<'EOS'

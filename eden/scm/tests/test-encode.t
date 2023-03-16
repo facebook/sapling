@@ -1,9 +1,9 @@
 #chg-compatible
-#debugruntest-compatible
 
 #require gzip gunzip tr
 
   $ setconfig workingcopy.ruststatus=False
+  $ setconfig status.use-rust=false
 Test encode/decode filters
 
   $ hg init repo

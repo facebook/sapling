@@ -5,12 +5,14 @@
 
 #require eol-in-paths
 
+  $ eagerepo
+  $ setconfig workingcopy.ruststatus=false
+
 https://bz.mercurial-scm.org/352
 
 test issue352
 
-  $ hg init foo
-  $ cd foo
+  $ newclientrepo
   $ A=`printf 'he\rllo'`
   $ echo foo > "$A"
   $ hg add
@@ -70,8 +72,7 @@ https://bz.mercurial-scm.org/2036
 
 test issue2039
 
-  $ hg init bar
-  $ cd bar
+  $ newclientrepo
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > color =
@@ -84,9 +85,8 @@ test issue2039
   $ touch "$B"
 
   $ hg status --color=always
-  foo
-  bar: Failed to validate "foo\nbar". Invalid byte: 10.
-  foo
-  bar.baz: Failed to validate "foo\nbar.baz". Invalid byte: 10.
+  abort: path error at 'foo
+  bar.baz': Failed to validate "foo\nbar.baz". Invalid byte: 10.
+  [255]
 
   $ cd ..

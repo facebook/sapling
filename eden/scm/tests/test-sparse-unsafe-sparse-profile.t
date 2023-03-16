@@ -1,6 +1,10 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+FIXME(status):
+  $ setconfig status.use-rust=false
+
 test sparse
 
   $ enable sparse

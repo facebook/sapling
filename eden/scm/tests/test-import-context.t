@@ -3,6 +3,8 @@
 
 Test applying context diffs
 
+  $ eagerepo
+
   $ cat > writepatterns.py <<EOF
   > import sys
   > 

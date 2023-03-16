@@ -2,6 +2,8 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
+
   $ configure mutation-norecord
   $ enable morestatus fbhistedit histedit rebase reset
   $ setconfig morestatus.show=true
@@ -19,8 +21,7 @@
   > }
 
 Test An empty repo should return no extra output
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo
   $ hg status
 
 Test status on histedit stop

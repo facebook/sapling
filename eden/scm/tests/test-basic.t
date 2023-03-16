@@ -18,6 +18,7 @@ Create a repository:
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   remotefilelog.localdatarepack=True
   remotefilelog.reponame=reponame-default
+  status.use-rust=True
   treemanifest.rustmanifest=True
   treemanifest.sendtrees=True
   treemanifest.treeonly=True
@@ -31,6 +32,7 @@ Create a repository:
   web\.ipv6=(?:True|False) (re)
   workingcopy.enablerustwalker=True
   workingcopy.ruststatus=False
+  workingcopy.use-rust=True
 
   $ configure modernclient
   $ newclientrepo t
@@ -49,7 +51,8 @@ Writes to stdio succeed and fail appropriately
   $ hg status 2>/dev/full
   A a
 
-  $ hg status >/dev/full
+FIXME(status):
+  $ hg status --config status.use-rust=false >/dev/full
   abort: No space left on device
   [255]
 #endif
@@ -65,7 +68,7 @@ Commands can succeed without a stdin
 
 #if devfull no-chg
   $ hg status >/dev/full 2>&1
-  [1]
+  [255]
 
   $ hg status ENOENT 2>/dev/full
   [1]

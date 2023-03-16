@@ -4,6 +4,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ eagerepo
+FIXME(status):
+  $ setconfig status.use-rust=false
   $ setconfig workingcopy.ruststatus=False
 
   $ enable sparse

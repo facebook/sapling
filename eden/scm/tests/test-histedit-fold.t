@@ -10,6 +10,7 @@ case.
 Initialization
 ---------------
 
+  $ eagerepo
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit

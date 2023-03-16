@@ -8,9 +8,8 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-#if fsmonitor
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
-#endif
 
 # Prepare test functions
 

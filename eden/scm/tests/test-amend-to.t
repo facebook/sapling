@@ -1,12 +1,13 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ configure modern
+  $ eagerepo
+
   $ configure mutation
   $ setconfig diff.git=True
 
 Test adding, modifying, removing, and renaming files in amend.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ echo bar > bar
   $ echo baz > baz
@@ -55,7 +56,7 @@ Test adding, modifying, removing, and renaming files in amend.
 
 
 Test removing, modifying and renaming files in subsequent commit.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ echo bar > bar
   $ echo baz > baz
@@ -125,7 +126,7 @@ Test removing, modifying and renaming files in subsequent commit.
 
 
 Test three way merge during rebase.
-  $ newrepo
+  $ newclientrepo
   $ printf "one\n\ntwo\n\nthree\n" > foo
   $ hg ci -m "one" -Aq
   $ printf "one\n\ntwo\n\nfour\n" > foo
@@ -165,7 +166,7 @@ Test three way merge during rebase.
 
 
 Test replacing file with directory.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > bar
@@ -202,7 +203,7 @@ Test replacing file with directory.
 
 
 Test replacing file with symlink.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > bar
@@ -231,7 +232,7 @@ Test replacing file with symlink.
 
 
 Test replacing file with symlink in subsequent commit.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > bar
@@ -269,7 +270,7 @@ Test replacing file with symlink in subsequent commit.
 
 
 Test renaming a file modified by later commit (not supported).
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar >> foo
@@ -306,7 +307,7 @@ Test renaming a file modified by later commit (not supported).
 
 
 Test conflict during initial patch.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > foo
@@ -344,7 +345,7 @@ Test conflict during initial patch.
 
 
 Test conflict during rebase.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > foo
@@ -387,7 +388,7 @@ Test conflict during rebase.
 
 
 Test amending when target commit has other children.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "root" -Aq
   $ echo bar > bar
@@ -439,7 +440,7 @@ Test amending when target commit has other children.
 
 
 Test amending a renamed file (don't lose copysource).
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ hg mv foo bar
@@ -467,7 +468,7 @@ Test amending a renamed file (don't lose copysource).
 
 
 Test rebasing across multiple changes to multiple files.
-  $ newrepo
+  $ newclientrepo
   $ echo baz > baz
   $ hg ci -m "zero" -Aq
   $ echo foo > foo
@@ -533,7 +534,7 @@ Test rebasing across multiple changes to multiple files.
   
 
 Test amending past other changes to the file
-  $ newrepo
+  $ newclientrepo
   $ echo baz_begin > baz
   $ echo >> baz
   $ echo >> baz
@@ -582,7 +583,7 @@ Test amending past other changes to the file
 
 
 Test various error cases.
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ hg debugmakepublic .
@@ -615,7 +616,7 @@ Test various error cases.
 
 
 Test modifying in interactive mode combined with to
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ echo baz > baz
   $ hg ci -m "one" -Aq
@@ -696,7 +697,7 @@ Test modifying in interactive mode combined with to
 
 
 Test adding, renaming, removing files in interactive mode combined with to
-  $ newrepo
+  $ newclientrepo
   $ echo bar > bar
   $ echo qux > qux
   $ hg ci -m "one" -Aq
@@ -758,7 +759,7 @@ Test adding, renaming, removing files in interactive mode combined with to
 
 
 Test combining --include with --to
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > bar
@@ -791,7 +792,7 @@ Test combining --include with --to
 
 
 Test combining --exclude with --to
-  $ newrepo
+  $ newclientrepo
   $ echo foo > foo
   $ hg ci -m "one" -Aq
   $ echo bar > bar

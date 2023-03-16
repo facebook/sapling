@@ -1,8 +1,9 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ hg init a
-  $ cd a
+  $ eagerepo
+
+  $ newclientrepo
   $ touch empty1
   $ hg add empty1
   $ hg commit -m 'add empty1'

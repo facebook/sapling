@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
   $ hg init repo
   $ cd repo
 
@@ -24,7 +24,7 @@
   $ hg id
   dfab7f3c2efb
 
-  $ hg goto -C 0
+  $ hg goto -C c3fa057dd86f
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   c3fa057dd86f
@@ -47,7 +47,7 @@
   $ hg id
   dfab7f3c2efb
 
-  $ hg goto -C 0
+  $ hg goto -C c3fa057dd86f
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'changed file1 different' >> file1
 

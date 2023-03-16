@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ echo foo > a

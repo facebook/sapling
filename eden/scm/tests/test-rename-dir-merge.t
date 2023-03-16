@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
+  $ setconfig status.use-rust=false
 
   $ hg init t
   $ cd t

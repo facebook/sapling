@@ -2,6 +2,8 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
+
 Tests the behavior of the DEFAULT_EXTENSIONS constant in extensions.py
 
   $ hg init a

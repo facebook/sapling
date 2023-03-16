@@ -9,10 +9,8 @@
 # a file-level merge failed
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-#if fsmonitor
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
-#endif
-
   $ hg init repo
   $ cd repo
 

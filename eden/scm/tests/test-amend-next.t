@@ -1,13 +1,15 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+
 Set up test environment.
   $ configure mutation-norecord
   $ enable amend rebase
   $ showgraph() {
   >   hg log --graph -T "{bookmarks} {desc|firstline}" | sed \$d
   > }
-  $ newrepo
+  $ newclientrepo
 
 Check help text for new options and removal of unsupported options.
   $ hg next --help

@@ -1,7 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ configure modern
+  $ eagerepo
   $ setconfig workingcopy.use-rust=True
   $ setconfig edenapi.url=https://test_fail/foo
   $ hg init testrepo
@@ -16,5 +16,5 @@ Test failed fallback
   $ hg addremove
   adding something
   $ hg commit -m "Added something"
-  $ hg --config commands.force-rust=status st
+  $ hg --config commands.force-rust=status st -i
   [197]

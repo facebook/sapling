@@ -8,6 +8,7 @@
 # https://bz.mercurial-scm.org/612
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ mkdir src

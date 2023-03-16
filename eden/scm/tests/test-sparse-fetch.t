@@ -42,6 +42,8 @@ def collectprefetch(command):
   $ setconfig experimental.copytrace=off copytrace.fastcopytrace=true perftweaks.disablecasecheck=true
   $ enable sparse treemanifest rebase copytrace
 
+  $ setconfig status.use-rust=false workingcopy.ruststatus=false
+
   $ newrepo
   $ drawdag << 'EOS'
   > B  # B/x/x/y/z=B1

@@ -6,8 +6,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+  $ eagerepo
   $ enable rebase
-  $ newrepo
+  $ newclientrepo
   $ drawdag << 'EOS'
   > D    # A/A=1\n
   > |    # B/A=(removed)

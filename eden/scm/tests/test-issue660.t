@@ -9,6 +9,7 @@
 # https://bz.mercurial-scm.org/322
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
 
 #if fsmonitor
   $ setconfig workingcopy.ruststatus=False

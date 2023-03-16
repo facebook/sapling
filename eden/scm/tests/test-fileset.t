@@ -2,6 +2,7 @@
 #debugruntest-compatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ fileset() {
   >   hg debugfileset "$@"

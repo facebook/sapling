@@ -4,8 +4,9 @@
 Test for the full copytracing algorithm
 =======================================
 
-  $ hg init t
-  $ cd t
+  $ eagerepo
+
+  $ newclientrepo t
 
   $ echo 1 > a
   $ hg ci -qAm "first"
@@ -102,8 +103,7 @@ Test disabling copy tracing
 
 Verify disabling copy tracing still keeps copies from rebase source
 
-  $ hg init copydisable
-  $ cd copydisable
+  $ newclientrepo copydisable
   $ touch a
   $ hg ci -Aqm 'add a'
   $ touch b
@@ -134,8 +134,7 @@ Verify disabling copy tracing still keeps copies from rebase source
 
 Verify we duplicate existing copies, instead of detecting them
 
-  $ hg init copydisable3
-  $ cd copydisable3
+  $ newclientrepo copydisable3
   $ touch a
   $ hg ci -Aqm 'add a'
   $ hg cp a b

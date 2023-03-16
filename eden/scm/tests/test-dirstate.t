@@ -2,8 +2,12 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ setconfig format.dirstate=2
+
+FIXME(status):
+  $ setconfig status.use-rust=false
 
 ------ Test dirstate._dirs refcounting
 

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ hg init a
   $ cd a

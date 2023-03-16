@@ -4,6 +4,7 @@
 Set up a repo
 
   $ setconfig ui.interactive=true
+  $ eagerepo
 
   $ hg init a
   $ cd a
@@ -84,7 +85,7 @@ Select no files
 
 With "copy from"
 
-  $ newrepo
+  $ newclientrepo
   $ cat > A << EOF
   > 1
   > 2

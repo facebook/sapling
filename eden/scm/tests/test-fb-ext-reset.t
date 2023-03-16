@@ -6,6 +6,7 @@
 # GNU General Public License version 2.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig status.use-rust=false workingcopy.ruststatus=false
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > reset=

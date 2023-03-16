@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+
   $ hg init repo
   $ cd repo
 

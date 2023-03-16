@@ -1,7 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 #inprocess-hg-incompatible
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig workingcopy.ruststatus=False status.use-rust=false
   $ setconfig experimental.allowfilepeer=True
 
   $ HGMERGE=true; export HGMERGE

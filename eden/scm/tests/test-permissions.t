@@ -1,7 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
+  $ setconfig workingcopy.ruststatus=False status.use-rust=false
   $ disable treemanifest
 #require unix-permissions no-root
 

@@ -1,6 +1,9 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+  $ setconfig status.use-rust=false
+
   $ HGFOO=BAR; export HGFOO
   $ readconfig <<'EOF'
   > [alias]

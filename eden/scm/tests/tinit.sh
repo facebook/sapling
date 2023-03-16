@@ -227,6 +227,11 @@ configure() {
   done
 }
 
+eagerepo() {
+  configure modernclient
+  setconfig format.use-eager-repo=True
+}
+
 # Enable extensions
 enable() {
   for name in "$@"

@@ -1,5 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
+  $ eagerepo
+FIXME(status):
+  $ setconfig status.use-rust=false
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
@@ -7,7 +10,7 @@
 
 == tests added in 0.7 ==
 
-  $ hg init test-symlinks-0.7; cd test-symlinks-0.7;
+  $ newclientrepo test-symlinks-0.7
   $ touch foo; ln -s foo bar; ln -s nonexistent baz
 
 import with add and addremove -- symlink walking should _not_ screwup.
@@ -42,7 +45,7 @@ Assert screamed here before, should go by without consequence
 
 == fifo & ignore ==
 
-  $ hg init test; cd test;
+  $ newclientrepo
 
   $ mkdir dir
   $ touch a.c dir/a.o dir/b.o
@@ -212,8 +215,7 @@ commit and update back
   $ cd ..
 
 
-  $ hg init b
-  $ cd b
+  $ newclientrepo
   $ ln -s nothing dangling
   $ hg commit -m 'commit symlink without adding' dangling
   abort: dangling: file not tracked!

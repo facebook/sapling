@@ -1,7 +1,11 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
+FIXME(status):
+  $ setconfig status.use-rust=false
+
 Emulate situations where NEED_CHECK was added to normal files and there should
 be a way to remove them.
 

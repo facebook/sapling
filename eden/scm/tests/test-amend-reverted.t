@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
+
   $ enable amend
   $ setconfig diff.git=1
 

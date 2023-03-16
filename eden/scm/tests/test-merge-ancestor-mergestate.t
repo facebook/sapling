@@ -9,6 +9,7 @@
 # Verify ancestry data is readable by mergedrivers by looking at mergestate:
 
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ eagerepo
   $ newrepo
   $ enable rebase
   $ setconfig 'experimental.evolution='
@@ -65,5 +66,5 @@
   $ hg rebase -r 25a05a650d8b -d 17085bf4ec19
   rebasing 25a05a650d8b "F" (F)
   ancestor nodes = ['0b21084cb21221e8ac6138fc5e92460d37525d21']
-  ancestor revs = [9]
+  ancestor revs = [9] (glob)
   merging file

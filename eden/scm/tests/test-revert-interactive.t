@@ -14,7 +14,7 @@ Revert interactive tests
 10 run the same test than 8 from within folder1 and check same expectations
 
   $ setconfig ui.interactive=true
-
+  $ eagerepo
 
   $ mkdir -p a/folder1 a/folder2
   $ cd a

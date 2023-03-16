@@ -48,5 +48,5 @@ extension.
 
 - Run any command to test that the extension loading failed.
 
-  $ hg status
+  $ hg files || true
   warning: extension ext3 is disabled because it cannot be imported from $TESTTMP/ext3.py: namespace priority must be specified

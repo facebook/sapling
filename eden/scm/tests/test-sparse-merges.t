@@ -3,10 +3,11 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
+
 test merging things outside of the sparse checkout
 
-  $ hg init myrepo
-  $ cd myrepo
+  $ newclientrepo
   $ enable sparse
 
   $ echo foo > foo

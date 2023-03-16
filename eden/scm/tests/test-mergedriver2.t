@@ -1,13 +1,15 @@
 #chg-compatible
 #debugruntest-compatible
 
-  $ setconfig workingcopy.ruststatus=False
 Test adding, removing, changing files in both merge parents, without telling
 mergedriver the exact file list to change at "preprocess" time.
 
   $ enable mergedriver
 
-  $ newrepo
+  $ eagerepo
+  $ setconfig workingcopy.ruststatus=false
+  $ hg init repo
+  $ cd repo
   $ drawdag << 'EOS'
   > B C  # C/A=1
   > |/   # B/A=2

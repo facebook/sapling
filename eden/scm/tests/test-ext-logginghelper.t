@@ -2,6 +2,8 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ eagerepo
+
   $ enable logginghelper
   $ enable sampling
   $ setconfig sampling.key.logginghelper=logginghelper

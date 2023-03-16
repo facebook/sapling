@@ -3,7 +3,6 @@
 
   $ configure modernclient
   $ enable sparse
-  $ setconfig workingcopy.use-rust=true
 
 Don't crash with lots of rules
 

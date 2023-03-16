@@ -3,6 +3,7 @@
 
 Test new conflict switching:
 
+  $ eagerepo
   $ configure mutation-norecord
   $ newrepo
   $ enable amend morestatus rebase

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ disable treemanifest
 
@@ -8,8 +9,7 @@ Set up a repo
 
   $ setconfig ui.interactive=true
 
-  $ hg init a
-  $ cd a
+  $ newclientrepo a
 
 Select no files
 
@@ -215,16 +215,15 @@ Rename and change binary file
   
 
   $ hg tip -p
-  commit:      121c8f7bde73
+  commit:      8010fe31f3b2
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     binary-change-rename
   
-  diff -r c0f95062740f -r 121c8f7bde73 tip.bundle
+  diff -r c0f95062740f -r 8010fe31f3b2 tip.bundle
   Binary file tip.bundle has changed
-  diff -r c0f95062740f -r 121c8f7bde73 top.bundle
+  diff -r c0f95062740f -r 8010fe31f3b2 top.bundle
   Binary file top.bundle has changed
-  
 
 Add plain file
 
@@ -255,12 +254,12 @@ Add plain file
   record this change to 'plain'? [Ynesfdaq?] y
   
   $ hg tip -p
-  commit:      25bd6137b6e6
+  commit:      a9b8edc30675
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     plain
   
-  diff -r 121c8f7bde73 -r 25bd6137b6e6 plain
+  diff -r 8010fe31f3b2 -r a9b8edc30675 plain
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:07 1970 +0000
   @@ -0,0 +1,10 @@
@@ -274,7 +273,6 @@ Add plain file
   +8
   +9
   +10
-  
 Modify end of plain file with username unset
 
   $ echo 11 >> plain
@@ -320,10 +318,9 @@ Modify end of plain file, no EOL
    9
    10
    11
-  +e00f3f2749af0e3a5233781c507904e161807344
+  +00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
   \ No newline at end of file
   record this change to 'plain'? [Ynesfdaq?] y
-  
 
 Record showfunc should preserve function across sections
 
@@ -462,9 +459,9 @@ Modify end of plain file, add EOL
    9
    10
    11
-  -e00f3f2749af0e3a5233781c507904e161807344
+  -00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
   \ No newline at end of file
-  +e00f3f2749af0e3a5233781c507904e161807344
+  +00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
   record change 1/2 to 'plain'? [Ynesfdaq?] y
   
   diff --git a/plain2 b/plain2
@@ -474,7 +471,6 @@ Modify end of plain file, add EOL
   @@ -0,0 +1,1 @@
   +1
   record change 2/2 to 'plain2'? [Ynesfdaq?] y
-  
 Modify beginning, trim end, record both, add another file to test
 changes numbering
 
@@ -508,7 +504,7 @@ changes numbering
    9
    10
   -11
-  -e00f3f2749af0e3a5233781c507904e161807344
+  -00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
   record change 2/3 to 'plain'? [Ynesfdaq?] y
   
   diff --git a/plain2 b/plain2
@@ -519,15 +515,14 @@ changes numbering
    1
   +2
   record change 3/3 to 'plain2'? [Ynesfdaq?] y
-  
 
   $ hg tip -p
-  commit:      0e4b75d875cd
+  commit:      b569ab03dbee
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     begin-and-end
   
-  diff -r 05c5c95d7872 -r 0e4b75d875cd plain
+  diff -r dc1f1077bf9f -r b569ab03dbee plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,4 +1,4 @@
@@ -541,14 +536,13 @@ changes numbering
    9
    10
   -11
-  -e00f3f2749af0e3a5233781c507904e161807344
-  diff -r 05c5c95d7872 -r 0e4b75d875cd plain2
+  -00ddd3d9b33c5a4a7922edfe5a0c5222954aedce
+  diff -r dc1f1077bf9f -r b569ab03dbee plain2
   --- a/plain2	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain2	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,1 +1,2 @@
    1
   +2
-  
 
 Trim beginning, modify end
 
@@ -593,12 +587,12 @@ Record end
   
 
   $ hg tip -p
-  commit:      1a962fbf33f8
+  commit:      e9da96cfc0f8
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     end-only
   
-  diff -r 0e4b75d875cd -r 1a962fbf33f8 plain
+  diff -r b569ab03dbee -r e9da96cfc0f8 plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
   @@ -7,4 +7,4 @@
@@ -607,7 +601,6 @@ Record end
    9
   -10
   +10.new
-  
 
 Record beginning
 
@@ -630,12 +623,12 @@ Record beginning
   
 
   $ hg tip -p
-  commit:      848213c8ae97
+  commit:      7f2da95f4096
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     begin-only
   
-  diff -r 1a962fbf33f8 -r 848213c8ae97 plain
+  diff -r e9da96cfc0f8 -r 7f2da95f4096 plain
   --- a/plain	Thu Jan 01 00:00:11 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
   @@ -1,6 +1,3 @@
@@ -645,7 +638,6 @@ Record beginning
    4
    5
    6
-  
 
 Add to beginning, trim from end
 
@@ -737,12 +729,12 @@ Record beginning, middle, and test that format-breaking diffopts are ignored
   
 
   $ hg tip -p
-  commit:      62a02df29cdd
+  commit:      a5c0a12f0235
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     middle-only
   
-  diff -r f1e4597e3c10 -r 62a02df29cdd plain
+  diff -r 88ce78cf17b7 -r a5c0a12f0235 plain
   --- a/plain	Thu Jan 01 00:00:13 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
   @@ -1,5 +1,10 @@
@@ -756,7 +748,6 @@ Record beginning, middle, and test that format-breaking diffopts are ignored
    6
    7
    8
-  
 
 Record end
 
@@ -778,12 +769,12 @@ Record end
   
 
   $ hg tip -p
-  commit:      40f1eaffc151
+  commit:      4ffeb9282c99
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     end-only
   
-  diff -r 62a02df29cdd -r 40f1eaffc151 plain
+  diff -r a5c0a12f0235 -r 4ffeb9282c99 plain
   --- a/plain	Thu Jan 01 00:00:14 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
   @@ -9,3 +9,5 @@
@@ -792,7 +783,6 @@ Record end
    9
   +10
   +11
-  
 
   $ mkdir subdir
   $ cd subdir
@@ -816,18 +806,17 @@ Record end
   
 
   $ hg tip -p
-  commit:      3698085a8c2a
+  commit:      6309590ad942
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     subdir-change
   
-  diff -r e041290b8096 -r 3698085a8c2a subdir/a
+  diff -r 27c5b0b459d7 -r 6309590ad942 subdir/a
   --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   @@ -1,1 +1,2 @@
    a
   +a
-  
 
   $ echo a > f1
   $ echo b > f2
@@ -923,18 +912,17 @@ s, all
   
 
   $ hg tip -p
-  commit:      b6ec082e5d4f
+  commit:      f139a299e085
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     x
   
-  diff -r 463ebd26c954 -r b6ec082e5d4f subdir/f2
+  diff -r ad5a0baef030 -r f139a299e085 subdir/f2
   --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
   +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
   @@ -1,1 +1,2 @@
    b
   +b
-  
 
 f
 
@@ -947,18 +935,17 @@ f
   
 
   $ hg tip -p
-  commit:      f0c58857264c
+  commit:      d135c576a1ac
   user:        test
   date:        Thu Jan 01 00:00:19 1970 +0000
   summary:     y
   
-  diff -r b6ec082e5d4f -r f0c58857264c subdir/f1
+  diff -r f139a299e085 -r d135c576a1ac subdir/f1
   --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
   +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
   @@ -1,1 +1,2 @@
    a
   +a
-  
 
 #if execbit
 
@@ -985,7 +972,7 @@ Preserve chmod +x
   
 
   $ hg tip --config diff.git=True -p
-  commit:      04dff1450229
+  commit:      06001480afb9
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
   summary:     z
@@ -999,7 +986,6 @@ Preserve chmod +x
    a
    a
   +a
-  
 
 Preserve execute permission on original
 
@@ -1022,7 +1008,7 @@ Preserve execute permission on original
   
 
   $ hg tip --config diff.git=True -p
-  commit:      e43fd23533b3
+  commit:      449e13be65cb
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
   summary:     aa
@@ -1035,7 +1021,6 @@ Preserve execute permission on original
    a
    a
   +b
-  
 
 Preserve chmod -x
 
@@ -1061,7 +1046,7 @@ Preserve chmod -x
   
 
   $ hg tip --config diff.git=True -p
-  commit:      d685544b7481
+  commit:      3ab8e829a226
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
   summary:     ab
@@ -1076,7 +1061,6 @@ Preserve chmod -x
    a
    b
   +c
-  
 
 #else
 
@@ -1197,7 +1181,7 @@ Mock "Preserve chmod -x"
 
 Abort early when a merge is in progress
 
-  $ newrepo
+  $ newclientrepo
   $ drawdag <<'EOS'
   > Y Z
   > |/
@@ -1474,7 +1458,7 @@ Ignore win32text deprecation warning for now:
   $ hg status -A subdir/f1
   C subdir/f1
   $ hg tip -p
-  commit:      ae3cd1fa0aef
+  commit:      0fe2b8cdc42b
   user:        test
   date:        Thu Jan 01 00:00:24 1970 +0000
   summary:     w1
@@ -1487,7 +1471,6 @@ Ignore win32text deprecation warning for now:
    b
    c
   +d
-  
 
 
 Test --user when ui.username not set
@@ -1543,11 +1526,10 @@ The #if execbit block above changes the hash here on some systems
   $ hg status -A plain3
   C plain3
   $ hg tip
-  commit:      113649fb68c0
+  commit:      70045e73aa67
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     moving_files
-  
 Editing patch of newly added file
 
   $ hg goto -C .
@@ -1607,7 +1589,7 @@ Add new file from within a subdirectory
   
 The #if execbit block above changes the hashes here on some systems
   $ hg tip -p
-  commit:      211b43f781aa
+  commit:      a33d5b0962c3
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
   summary:     newfilesubdir
@@ -1617,7 +1599,6 @@ The #if execbit block above changes the hashes here on some systems
   +++ b/folder/bar	Thu Jan 01 00:00:23 1970 +0000
   @@ -0,0 +1,1 @@
   +foo
-  
   $ cd ..
 
   $ hg status -A folder/bar

@@ -1,6 +1,8 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ setconfig status.use-rust=false workingcopy.ruststatus=false
+
 commit date test
 
   $ hg init test

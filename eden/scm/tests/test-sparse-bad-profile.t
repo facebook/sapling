@@ -2,7 +2,6 @@
 #debugruntest-compatible
 
   $ configure modernclient
-  $ setconfig status.use-rust=true workingcopy.use-rust=true
   $ enable sparse
   $ newclientrepo
 

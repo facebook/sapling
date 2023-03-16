@@ -31,6 +31,10 @@ use-rust=True
 
 [workingcopy]
 enablerustwalker=True
+use-rust=True
+
+[status]
+use-rust=True
 
 [extensions]
 treemanifest=
@@ -71,10 +75,6 @@ contentstorefallback=True
 
 [workingcopy]
 ruststatus=True
-use-rust=True
-
-[status]
-use-rust=True
 """
 
     return content

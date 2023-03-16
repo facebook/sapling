@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ enable mergedriver
 
