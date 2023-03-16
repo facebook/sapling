@@ -9,7 +9,6 @@ use std::fs::symlink_metadata;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use dashmap::DashMap;
@@ -44,6 +43,14 @@ static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
         .collect()
 });
 
+#[derive(thiserror::Error, Debug)]
+pub enum AuditError {
+    #[error("can't read/write file through ancestor symlink \"{0}\"")]
+    ThroughSymlink(RepoPathBuf),
+    #[error("invalid path component \"{0}\"")]
+    InvalidComponent(String),
+}
+
 impl PathAuditor {
     pub fn new(root: impl AsRef<Path>) -> Self {
         let audited = Default::default();
@@ -54,12 +61,14 @@ impl PathAuditor {
     /// Slow path, query the filesystem for unsupported path. Namely, writing through a symlink
     /// outside of the repo is not supported.
     /// XXX: more checks
-    fn audit_fs(&self, path: &RepoPath) -> Result<()> {
+    fn audit_fs(&self, path: &RepoPath) -> Result<(), AuditError> {
         let full_path = self.root.join(path.as_str());
 
         // XXX: Maybe filter by specific errors?
         if let Ok(metadata) = symlink_metadata(&full_path) {
-            ensure!(!metadata.file_type().is_symlink(), "{} is a symlink", path);
+            if metadata.file_type().is_symlink() {
+                return Err(AuditError::ThroughSymlink(path.to_owned()));
+            }
         }
 
         Ok(())
@@ -67,7 +76,8 @@ impl PathAuditor {
 
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
-        audit_invalid_components(path.as_str())?;
+        audit_invalid_components(path.as_str())
+            .with_context(|| format!("Invalid component in \"{}\"", path))?;
 
         let mut needs_recording_index = std::usize::MAX;
         for (i, parent) in path.reverse_parents().enumerate() {
@@ -124,19 +134,16 @@ fn valid_windows_component(component: &str) -> bool {
 /// - `.sl` or `.hg`,
 /// It also checks that no trailing dots are part of the component and checks that shortnames
 /// on Windows are valid.
-fn audit_invalid_components(path: &str) -> Result<()> {
+fn audit_invalid_components(path: &str) -> Result<(), AuditError> {
     let path = if cfg!(not(windows)) {
         path.to_owned()
     } else {
         path.to_lowercase()
     };
     for s in path.split(SEPARATORS) {
-        ensure!(
-            !s.is_empty() && !INVALID_COMPONENTS.contains(&s) && valid_windows_component(s),
-            "Invalid component {} in path {}",
-            s,
-            path.as_str(),
-        );
+        if s.is_empty() || INVALID_COMPONENTS.contains(&s) || !valid_windows_component(s) {
+            return Err(AuditError::InvalidComponent(s.to_owned()));
+        }
     }
     Ok(())
 }
