@@ -126,13 +126,6 @@ The following option can be used to bypass a softblock on fullcheckouts.
    [sparse]
    bypassfullcheckoutwarn = True
 
-The following option can be used to check if a sparse profile includes any files that should not normally
-be included.
-
-    [sparse]
-    unsafe_sparse_profile_marker_files = "somefile, anotherfile"
-    unsafe_sparse_profile_message = "do not do this!"
-
 The following options can be used to tune the behaviour of tree prefetching when sparse profile changes
 
     [sparse]
@@ -541,9 +534,6 @@ def _trackdirstatesizes(lui: "uimod.ui", repo: "localrepo.localrepository") -> N
             and _hassparse(repo)
         ):
             hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
-        f = _find_unsafe_marker_files(repo, lui)
-        if f is not None:
-            hintutil.trigger("sparse-unsafe-profile", f, repo, lui)
 
 
 def _clonesparsecmd(orig, ui, repo, *args, **opts):
@@ -582,9 +572,6 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
                     include=include,
                     exclude=exclude,
                     enableprofile=enableprofile,
-                    # Allow unsafe sparse profiles because usually people call
-                    # fbclone command which already includes a few safeguards.
-                    allowunsafeprofilechanges=True,
                 )
             ret = orig(self, node, overwrite, *args, **kwargs)
             if enableprofile:
@@ -620,9 +607,7 @@ def _setupadd(ui) -> None:
             for pat in pats:
                 dirname, basename = util.split(pat)
                 dirs.add(dirname)
-            _config(
-                ui, repo, list(dirs), opts, include=True, allowunsafeprofilechanges=True
-            )
+            _config(ui, repo, list(dirs), opts, include=True)
         return orig(ui, repo, *pats, **opts)
 
     extensions.wrapcommand(commands.table, "add", _add)
@@ -1772,18 +1757,6 @@ def hintlargecheckout(dirstatesize, repo) -> str:
     )
 
 
-@hint("sparse-unsafe-profile")
-def hintsparseunsafeprofile(file, repo, ui) -> str:
-    msg = _(
-        "Your sparse profile might be incorrect, and it can lead to "
-        "downloading too much data and slower mercurial operations."
-    )
-    additionalmsg = ui.config("sparse", "unsafe_sparse_profile_message")
-    if additionalmsg:
-        msg = "{}\n{}".format(msg, additionalmsg)
-    return msg
-
-
 @hint("sparse-explain-verbose")
 def hintexplainverbose(*profiles) -> str:
     return _(
@@ -1831,15 +1804,6 @@ _deprecate = (
             "force",
             False,
             _("allow changing rules even with pending changes" "(DEPRECATED)"),
-        ),
-        (
-            "",
-            "allow-unsafe-profile-changes",
-            False,
-            _(
-                "allow sparse profile change even if this change might be unsafe"
-                "(DEPRECATED)"
-            ),
         ),
         (
             "I",
@@ -1927,7 +1891,6 @@ def sparse(ui, repo, *pats, **opts) -> None:
     refresh = opts.get("refresh")
     reset = opts.get("reset")
     cwdlist = opts.get("cwd_list")
-    allowunsafeprofilechanges = opts.get("allow_unsafe_profile_changes")
     count = sum(
         [
             include,
@@ -1975,7 +1938,6 @@ def sparse(ui, repo, *pats, **opts) -> None:
             enableprofile=enableprofile,
             disableprofile=disableprofile,
             force=force,
-            allowunsafeprofilechanges=allowunsafeprofilechanges,
         )
         if enableprofile:
             _checknonexistingprofiles(ui, repo, pats)
@@ -2638,19 +2600,12 @@ def _listfilessubcmd(ui, repo, profile: Optional[str], *files, **opts) -> int:
 
 _common_config_opts: List[Tuple[str, str, bool, str]] = [
     ("f", "force", False, _("allow changing rules even with pending changes")),
-    (
-        "",
-        "allow-unsafe-profile-changes",
-        False,
-        _("allow sparse profile change even if this change might be unsafe"),
-    ),
 ]
 
 
 def getcommonopts(opts) -> Dict[str, Any]:
-    allowunsafeprofilechanges = opts.get("allow_unsafe_profile_changes")
     force = opts.get("force")
-    return {"allowunsafeprofilechanges": allowunsafeprofilechanges, "force": force}
+    return {"force": force}
 
 
 @subcmd("reset", _common_config_opts + commands.templateopts)
@@ -2815,7 +2770,6 @@ def _config(
     enableprofile: bool = False,
     disableprofile: bool = False,
     force: bool = False,
-    allowunsafeprofilechanges: bool = False,
 ) -> None:
     _checksparse(repo)
 
@@ -2896,12 +2850,7 @@ def _config(
                 newinclude.difference_update(pats)
                 newexclude.difference_update(pats)
 
-            unsafemarkerfile = _find_unsafe_marker_files(repo, ui)
             repo.writesparseconfig(newinclude, newexclude, newprofiles)
-            # Check that new sparse profile is safe, however do it only
-            # if previous sparse profile was safe as well
-            if unsafemarkerfile is None and not allowunsafeprofilechanges:
-                _validate_new_sparse_config(repo, ui)
 
             fcounts = list(
                 map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
@@ -2920,41 +2869,6 @@ def _config(
             raise
     finally:
         wlock.release()
-
-
-def _find_unsafe_marker_files(repo, ui):
-    if not _hassparse(repo):
-        return None
-    unsafesparseprofilemarkerfiles = ui.configlist(
-        "sparse", "unsafe_sparse_profile_marker_files"
-    )
-    if not unsafesparseprofilemarkerfiles:
-        return None
-    sparsematch = repo.sparsematch()
-    for f in unsafesparseprofilemarkerfiles:
-        if sparsematch(f):
-            return f
-    return None
-
-
-def _validate_new_sparse_config(repo, ui) -> None:
-    unsafemarkerfile = _find_unsafe_marker_files(repo, ui)
-    if unsafemarkerfile is not None:
-        msg = (
-            "'{}' file is included in sparse profile, "
-            + "it might not be safe because it may introduce a large "
-            + "amount of data into your repository"
-        ).format(unsafemarkerfile)
-        additionalmsg = ui.config("sparse", "unsafe_sparse_profile_message")
-        if additionalmsg:
-            msg = "{}\n{}".format(msg, additionalmsg)
-        raise error.Abort(
-            msg,
-            hint=(
-                "If you are know what you are doing re-run with allow-unsafe-profile-changes, "
-                + "otherwise contact Source control @ fb"
-            ),
-        )
 
 
 def _checknonexistingprofiles(ui, repo, profiles) -> None:
