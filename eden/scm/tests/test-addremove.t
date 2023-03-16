@@ -7,8 +7,6 @@
 
   $ eagerepo
   $ setconfig workingcopy.ruststatus=False
-FIXME(status):
-  $ setconfig status.use-rust=false
   $ hg init rep
   $ cd rep
   $ mkdir dir
