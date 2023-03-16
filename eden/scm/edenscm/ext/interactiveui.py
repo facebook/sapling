@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import os
 import sys
+from typing import Union
 
 from edenscm import error, pycompat
 from edenscm.i18n import _
@@ -19,14 +20,14 @@ if not pycompat.iswindows:
     import tty
 
 
-def upline(n=1):
+def upline(n: int = 1) -> None:
     w = sys.stdout
     # ANSI
     # ESC[#A : up # lines
     w.write("\033[%dA" % n)
 
 
-def clearline(n=1):
+def clearline(n: int = 1) -> None:
     w = sys.stdout
     # ANSI
     # ESC[#A : up # lines
@@ -80,7 +81,7 @@ def clearline(n=1):
 # Note: some changes have been made from the source code
 
 
-def getchar(fd):
+def getchar(fd: int) -> Union[None, bytes, str]:
     if not os.isatty(fd):
         # TODO: figure out tests
         return None
@@ -92,12 +93,16 @@ def getchar(fd):
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, attr)
     except termios.error:
+        # pyre-fixme[61]: `ch` is undefined, or not always defined.
         if ch is None:
             ch = ""
+    # pyre-fixme[61]: `ch` is undefined, or not always defined.
     if ch == "\x03":
         raise KeyboardInterrupt()
+    # pyre-fixme[61]: `ch` is undefined, or not always defined.
     if ch == "\x04":
         raise EOFError()
+    # pyre-fixme[61]: `ch` is undefined, or not always defined.
     return ch
 
 
@@ -138,7 +143,7 @@ class viewframe(object):
         pass
 
 
-def view(viewobj):
+def view(viewobj) -> None:
     if pycompat.iswindows:
         raise error.Abort(_("interactive UI does not support Windows"))
     done = False
