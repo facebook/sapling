@@ -51,13 +51,24 @@ impl From<u32> for HgModifiedTime {
     }
 }
 
-impl TryFrom<SystemTime> for HgModifiedTime {
-    type Error = Error;
-    fn try_from(value: SystemTime) -> Result<Self> {
-        Ok(value
-            .duration_since(SystemTime::UNIX_EPOCH)?
-            .as_secs()
-            .into())
+// Mask used to make "crazy" mtimes operable. We basically take
+// "mtime % 2**31-1". Note that 0x7FFFFFFF is in 2038 - not that far off. We may
+// want to reconsider this. https://bz.mercurial-scm.org/show_bug.cgi?id=2608 is
+// the original upstream introduction of this workaround.
+const CRAZY_MTIME_MASK: i64 = 0x7FFFFFFF;
+
+impl From<SystemTime> for HgModifiedTime {
+    fn from(value: SystemTime) -> Self {
+        let signed_epoch = match value.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(d) => d.as_secs() as i64,
+            // value is before UNIX_EPOCH
+            Err(err) => -(err.duration().as_secs() as i64),
+        };
+
+        // Handle crazy mtimes by masking into reasonable range. This is what
+        // dirstate.py does, so we may get some modicum of compatibility by
+        // using the same approach.
+        HgModifiedTime((signed_epoch & CRAZY_MTIME_MASK) as u64)
     }
 }
 
@@ -227,7 +238,7 @@ pub fn file_changed_given_metadata(
 
     let state_mtime: Result<HgModifiedTime> = state.mtime.try_into();
     let state_mtime = state_mtime.map_err(|e| WalkError::InvalidMTime(path.to_owned(), e))?;
-    let mtime: HgModifiedTime = metadata.modified()?.try_into()?;
+    let mtime: HgModifiedTime = metadata.modified()?.into();
 
     if mtime != state_mtime || mtime == last_write {
         tracing::trace!(?path, "maybe (mtime doesn't match)");
