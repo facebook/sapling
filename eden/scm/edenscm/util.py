@@ -69,7 +69,7 @@ from edenscm import tracing
 
 from edenscmnative import osutil
 
-from . import blackbox, encoding, error, fscap, i18n, pycompat, urllibcompat
+from . import blackbox, encoding, error, fscap, i18n, identity, pycompat, urllibcompat
 from .pycompat import decodeutf8, encodeutf8, range
 
 
@@ -184,7 +184,6 @@ sshargs = platform.sshargs
 # pyre-fixme[16]: Module `osutil` has no attribute `statfiles`.
 statfiles = getattr(osutil, "statfiles", platform.statfiles)
 statisexec = platform.statisexec
-statislink = platform.statislink
 syncfile = platform.syncfile
 syncdir = platform.syncdir
 testpid = platform.testpid
@@ -211,11 +210,81 @@ except AttributeError:
 _notset = object()
 
 
+def statislink(st):
+    """check whether a stat result is a symlink"""
+    return st and statmod.S_ISLNK(st.st_mode)
+
+
 def checklink(path: str) -> bool:
+    """check whether the given path is on a symlink-capable filesystem"""
     if os.environ.get("SL_DEBUG_DISABLE_SYMLINKS"):
         return False
 
-    return platform.checklink(path)
+    cap = fscap.getfscap(getfstype(path), fscap.SYMLINK)
+    if cap is not None:
+        return cap
+
+    # mktemp is not racy because symlink creation will fail if the
+    # file already exists
+    while True:
+        ident = identity.sniffdir(path) or identity.default()
+        cachedir = os.path.join(path, ident.dotdir(), "cache")
+        checklink = os.path.join(cachedir, "checklink")
+        # try fast path, read only
+        if os.path.islink(checklink):
+            return True
+        if os.path.isdir(cachedir):
+            checkdir = cachedir
+        else:
+            checkdir = path
+            cachedir = None
+        name = tempfile.mktemp(dir=checkdir, prefix=r"checklink-")
+        try:
+            fd = None
+            if cachedir is None:
+                fd = tempfile.NamedTemporaryFile(dir=checkdir, prefix=r"hg-checklink-")
+                target = os.path.basename(fd.name)
+            else:
+                # create a fixed file to link to; doesn't matter if it
+                # already exists.
+                target = "checklink-target"
+                try:
+                    with open(os.path.join(cachedir, target), "w"):
+                        pass
+                except EnvironmentError as inst:
+                    if inst.errno == errno.EACCES:
+                        # If we can't write to cachedir, just pretend
+                        # that the fs is readonly and by association
+                        # that the fs won't support symlinks. This
+                        # seems like the least dangerous way to avoid
+                        # data loss.
+                        return False
+                    raise
+            try:
+                os.symlink(target, name)
+                if cachedir is None:
+                    unlink(name)
+                else:
+                    try:
+                        os.rename(name, checklink)
+                    except OSError:
+                        unlink(name)
+                return True
+            except OSError as inst:
+                # link creation might race, try again
+                if inst.errno == errno.EEXIST:
+                    continue
+                raise
+            finally:
+                if fd is not None:
+                    fd.close()
+        except AttributeError:
+            return False
+        except OSError as inst:
+            # sshfs might report failure while successfully creating the link
+            if inst.errno == errno.EIO and os.path.exists(name):
+                unlink(name)
+            return False
 
 
 def safehasattr(thing, attr):

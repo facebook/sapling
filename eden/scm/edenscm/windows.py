@@ -290,10 +290,6 @@ def checkexec(path: str) -> bool:
     return False
 
 
-def checklink(path: str) -> bool:
-    return False
-
-
 def setbinary(fd):
     # When run without console, pipes may expose invalid
     # fileno(), usually set to -1.
@@ -601,11 +597,6 @@ def lookupreg(key, valname=None, scope=None):
 
 
 expandglobs = True
-
-
-def statislink(st):
-    """check whether a stat result is a symlink"""
-    return False
 
 
 def statisexec(st):

@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm import posix, util
+from edenscm import util
 
 
 def checklink(path) -> bool:
@@ -15,5 +15,4 @@ def checklink(path) -> bool:
 
 
 def uisetup(ui) -> None:
-    posix.checklink = checklink
     util.checklink = checklink

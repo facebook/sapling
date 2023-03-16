@@ -493,75 +493,6 @@ def _checkexec(path: str) -> bool:
     return False
 
 
-def _checklink(path: str) -> bool:
-    """check whether the given path is on a symlink-capable filesystem"""
-    cap = fscap.getfscap(getfstype(path), fscap.SYMLINK)
-    if cap is not None:
-        return cap
-
-    # mktemp is not racy because symlink creation will fail if the
-    # file already exists
-    while True:
-        ident = identity.sniffdir(path) or identity.default()
-        cachedir = os.path.join(path, ident.dotdir(), "cache")
-        checklink = os.path.join(cachedir, "checklink")
-        # try fast path, read only
-        if os.path.islink(checklink):
-            return True
-        if os.path.isdir(cachedir):
-            checkdir = cachedir
-        else:
-            checkdir = path
-            cachedir = None
-        name = tempfile.mktemp(dir=checkdir, prefix=r"checklink-")
-        try:
-            fd = None
-            if cachedir is None:
-                fd = tempfile.NamedTemporaryFile(dir=checkdir, prefix=r"hg-checklink-")
-                target = os.path.basename(fd.name)
-            else:
-                # create a fixed file to link to; doesn't matter if it
-                # already exists.
-                target = "checklink-target"
-                try:
-                    with open(os.path.join(cachedir, target), "w"):
-                        pass
-                except EnvironmentError as inst:
-                    if inst.errno == errno.EACCES:
-                        # If we can't write to cachedir, just pretend
-                        # that the fs is readonly and by association
-                        # that the fs won't support symlinks. This
-                        # seems like the least dangerous way to avoid
-                        # data loss.
-                        return False
-                    raise
-            try:
-                os.symlink(target, name)
-                if cachedir is None:
-                    unlink(name)
-                else:
-                    try:
-                        os.rename(name, checklink)
-                    except OSError:
-                        unlink(name)
-                return True
-            except OSError as inst:
-                # link creation might race, try again
-                if inst.errno == errno.EEXIST:
-                    continue
-                raise
-            finally:
-                if fd is not None:
-                    fd.close()
-        except AttributeError:
-            return False
-        except OSError as inst:
-            # sshfs might report failure while successfully creating the link
-            if inst.errno == errno.EIO and os.path.exists(name):
-                unlink(name)
-            return False
-
-
 def _checkbrokensymlink(path, msg=None):
     """Check if path or one of its parent directory is a broken symlink.  Raise
     more detailed error about it.
@@ -692,7 +623,6 @@ if pycompat.isdarwin:
         return encoding.hfsignoreclean(enc)
 
     checkexec = _checkexec
-    checklink = _checklink
 
 else:
     # os.path.normcase is a no-op, which doesn't help us on non-native
@@ -706,7 +636,6 @@ else:
     normcasefallback = normcase
 
     checkexec = _checkexec
-    checklink = _checklink
 
 _needsshellquote = None
 
@@ -910,11 +839,6 @@ class cachestat(object):
 
 def executablepath():
     return None  # available on Windows only
-
-
-def statislink(st):
-    """check whether a stat result is a symlink"""
-    return st and stat.S_ISLNK(st.st_mode)
 
 
 def statisexec(st):
