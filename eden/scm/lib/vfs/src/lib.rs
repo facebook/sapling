@@ -12,6 +12,7 @@ mod vfs;
 pub use util::lock::PathLock;
 
 pub use crate::async_vfs::AsyncVfsWriter;
+pub use crate::pathauditor::AuditError;
 pub use crate::pathauditor::PathAuditor;
 pub use crate::vfs::is_executable;
 pub use crate::vfs::is_symlink;

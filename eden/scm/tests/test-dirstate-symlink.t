@@ -7,10 +7,6 @@
 #require symlink
 
   $ eagerepo
-  $ setconfig workingcopy.ruststatus=false
-
-FIXME(status):
-  $ setconfig status.use-rust=false
 
   $ cd $TESTTMP
 

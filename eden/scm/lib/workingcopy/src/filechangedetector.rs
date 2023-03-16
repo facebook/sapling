@@ -249,6 +249,39 @@ pub fn file_changed_given_metadata(
     Ok(FileChangeResult::No)
 }
 
+fn compare_repo_bytes_to_disk(
+    vfs: &VFS,
+    repo_bytes: Bytes,
+    path: RepoPathBuf,
+) -> Result<ResolvedFileChangeResult> {
+    match vfs.read(&path) {
+        Ok(disk_bytes) => {
+            if disk_bytes == repo_bytes {
+                tracing::trace!(?path, "no (contents match)");
+                Ok(ResolvedFileChangeResult::No(path))
+            } else {
+                tracing::trace!(?path, "changed (contents mismatch)");
+                Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(path)))
+            }
+        }
+        Err(e) => {
+            if let Some(e) = e.downcast_ref::<std::io::Error>() {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    tracing::trace!(?path, "deleted (file missing)");
+                    return Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(path)));
+                }
+            }
+
+            if let Some(vfs::AuditError::ThroughSymlink(_)) = e.downcast_ref::<vfs::AuditError>() {
+                tracing::trace!(?path, "deleted (read through symlink)");
+                return Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(path)));
+            }
+
+            Err(e)
+        }
+    }
+}
+
 impl FileChangeDetector {
     pub fn has_changed_with_fresh_metadata(
         &mut self,
@@ -331,24 +364,7 @@ impl IntoIterator for FileChangeDetector {
                         Ok(x) => x,
                         Err(e) => return Err(e),
                     };
-                    let actual = match vfs.read(&key.path) {
-                        Ok(x) => x,
-                        Err(e) => match e.downcast_ref::<std::io::Error>() {
-                            Some(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                                return Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(
-                                    key.path,
-                                )));
-                            }
-                            _ => return Err(e),
-                        },
-                    };
-                    if expected == actual {
-                        tracing::trace!(?key.path, "no (contents match)");
-                        Ok(ResolvedFileChangeResult::No(key.path))
-                    } else {
-                        tracing::trace!(?key.path, "changed (contents mismatch)");
-                        Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(key.path)))
-                    }
+                    compare_repo_bytes_to_disk(&vfs, expected, key.path)
                 })
                 .collect::<Vec<_>>()
                 .await
@@ -446,30 +462,9 @@ impl ParallelDetector {
 
     // Read file bytes from disk and compare to the file's pristine repo bytes.
     fn compare_repo_bytes_to_disk(&self, repo_bytes: Bytes, path: RepoPathBuf) -> Result<()> {
-        match self.vfs.read(&path) {
-            Ok(disk_bytes) => {
-                if disk_bytes == repo_bytes {
-                    tracing::trace!(?path, "no (contents match)");
-                    self.result_send
-                        .send(Ok(ResolvedFileChangeResult::No(path)))?;
-                } else {
-                    tracing::trace!(?path, "changed (contents mismatch)");
-                    self.result_send
-                        .send(Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(path))))?;
-                }
-            }
-            Err(e) => match e.downcast_ref::<std::io::Error>() {
-                Some(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                    self.result_send
-                        .send(Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(path))))?;
-                }
-                _ => {
-                    self.result_send.send(Err(e))?;
-                }
-            },
-        };
-
-        Ok(())
+        Ok(self
+            .result_send
+            .send(compare_repo_bytes_to_disk(&self.vfs, repo_bytes, path))?)
     }
 
     // Fetch the repo contents for all files needing content checks and then
