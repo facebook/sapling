@@ -80,7 +80,7 @@ class RustExtension(object):
     @property
     def dstnametmp(self):
         platform = distutils.util.get_platform()
-        if platform.startswith("win-"):
+        if platform.startswith("win"):
             name = self.name + ".dll"
         elif platform.startswith("macosx"):
             name = "lib" + self.name + ".dylib"
@@ -91,7 +91,7 @@ class RustExtension(object):
     @property
     def dstname(self):
         platform = distutils.util.get_platform()
-        if platform.startswith("win-"):
+        if platform.startswith("win"):
             name = self.name + ".pyd"
         else:
             name = self.name + ".so"
@@ -129,7 +129,7 @@ class RustBinary(object):
     @property
     def dstnametmp(self):
         platform = distutils.util.get_platform()
-        if platform.startswith("win-"):
+        if platform.startswith("win"):
             return self.name + ".exe"
         else:
             return self.name
@@ -137,7 +137,7 @@ class RustBinary(object):
     @property
     def dstname(self):
         platform = distutils.util.get_platform()
-        if platform.startswith("win-"):
+        if platform.startswith("win"):
             return self.final_name + ".exe"
         else:
             return self.final_name
@@ -344,7 +344,7 @@ replace-with = "vendored-sources"
 
         if (
             target.type == "binary"
-            and distutils.util.get_platform().startswith("win-")
+            and distutils.util.get_platform().startswith("win")
             and self.long_paths_support
         ):
             retry = 0
@@ -379,7 +379,7 @@ replace-with = "vendored-sources"
             shutil.copy(pdbsrc, pdbdest)
 
     def set_long_paths_manifest(self, fname):
-        if not distutils.util.get_platform().startswith("win-"):
+        if not distutils.util.get_platform().startswith("win"):
             # This only makes sense on Windows
             distutils.log.info(
                 "skipping set_long_paths_manifest call for %s "
