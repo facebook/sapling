@@ -13,6 +13,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const platforms = {
   androidStudio: 'src/platform/androidStudioPlatform.ts',
   androidStudioRemote: 'src/platform/androidStudioRemotePlatform.ts',
+  standalone: 'src/platform/standalonePlatform.ts',
 };
 
 module.exports = {
