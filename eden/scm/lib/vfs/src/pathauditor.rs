@@ -45,9 +45,9 @@ static INVALID_COMPONENTS: Lazy<Vec<&'static str>> = Lazy::new(|| {
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuditError {
-    #[error("can't read/write file through ancestor symlink \"{0}\"")]
+    #[error("Can't read/write file through ancestor symlink \"{0}\"")]
     ThroughSymlink(RepoPathBuf),
-    #[error("invalid path component \"{0}\"")]
+    #[error("Invalid path component \"{0}\"")]
     InvalidComponent(String),
 }
 
