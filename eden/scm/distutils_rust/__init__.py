@@ -325,6 +325,7 @@ replace-with = "vendored-sources"
         # Homebrew. This affects certain Rust targets, somehow, making them produce
         # a target of the wrong arch (e.g. cross compiling to arm64 from x86)
         env.pop("HOMEBREW_CCCFG", None)
+        env = self.update_cargo_env(env)
 
         if target.cfgs:
             env["RUSTFLAGS"] = (
@@ -453,7 +454,11 @@ replace-with = "vendored-sources"
         self.build_target(target)
 
     try:
-        from distutils_rust.fb import rust_binary_paths, rust_vendored_crate_path
+        from distutils_rust.fb import (
+            rust_binary_paths,
+            rust_vendored_crate_path,
+            update_cargo_env,
+        )
     except ImportError:
 
         def rust_vendored_crate_path(self):
@@ -461,6 +466,9 @@ replace-with = "vendored-sources"
 
         def rust_binary_paths(self):
             return {"cargo": os.environ.get("CARGO_BIN", "cargo")}
+
+        def update_cargo_env(self, env):
+            return env
 
 
 class InstallRustExt(distutils.command.install_scripts.install_scripts):
