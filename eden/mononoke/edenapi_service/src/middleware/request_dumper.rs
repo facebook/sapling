@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::fmt;
 
 use anyhow::bail;
 use anyhow::Context;
