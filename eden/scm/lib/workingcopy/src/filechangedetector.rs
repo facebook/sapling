@@ -134,17 +134,24 @@ pub fn file_changed_given_metadata(
     // First handle when metadata is None (i.e. file doesn't exist).
     let (metadata, state) = match (metadata, state) {
         // File was untracked during crawl but no longer exists.
-        (None, None) => return Ok(FileChangeResult::No),
+        (None, None) => {
+            tracing::trace!(?path, "neither on disk nor in treestate");
+            return Ok(FileChangeResult::No);
+        }
 
         // File was not found but exists in P1: mark as deleted.
         (None, Some(state)) if state.state.intersects(EXIST_P1) => {
+            tracing::trace!(?path, "not on disk, in P1");
             return Ok(FileChangeResult::deleted(path.to_owned()));
         }
 
         // File doesn't exist, isn't in P1 but exists in treestate.
         // This can happen when watchman is tracking that this file needs
         // checking for example.
-        (None, Some(_)) => return Ok(FileChangeResult::No),
+        (None, Some(_)) => {
+            tracing::trace!(?path, "neither on disk nor in P1");
+            return Ok(FileChangeResult::No);
+        }
 
         (Some(m), s) => (m, s),
     };
@@ -158,12 +165,21 @@ pub fn file_changed_given_metadata(
         // If the file is not valid (e.g. a directory or a weird file like
         // a fifo file) but exists in P1 (as a valid file at some previous
         // time) then we consider it now deleted.
-        (true, false) => return Ok(FileChangeResult::deleted(path.to_owned())),
+        (true, false) => {
+            tracing::trace!(?path, "changed (in_parent, !trackable)");
+            return Ok(FileChangeResult::deleted(path.to_owned()));
+        }
         // File not in parent and not trackable - skip it. We can get here if
         // the file was valid during the crawl but no longer is.
-        (false, false) => return Ok(FileChangeResult::No),
+        (false, false) => {
+            tracing::trace!(?path, "no (!in_parent, !trackable)");
+            return Ok(FileChangeResult::No);
+        }
         // File exists but is not in the treestate (untracked)
-        (false, true) => return Ok(FileChangeResult::changed(path.to_owned())),
+        (false, true) => {
+            tracing::trace!(?path, "changed (!in_parent, trackable)");
+            return Ok(FileChangeResult::changed(path.to_owned()));
+        }
         (true, true) => state.unwrap(),
     };
 
@@ -187,6 +203,7 @@ pub fn file_changed_given_metadata(
             vfs.supports_symlinks() && is_symlink(&metadata) != state.is_symlink();
 
         if size_different || exec_different || symlink_different {
+            tracing::trace!(?path, "changed (size or exec or symlink differ)");
             return Ok(FileChangeResult::changed(path.to_owned()));
         }
     }
@@ -194,6 +211,7 @@ pub fn file_changed_given_metadata(
     // If it's marked NEED_CHECK, we always need to do a lookup, regardless of the mtime.
     let needs_check = flags.intersects(NEED_CHECK) || !valid_size;
     if needs_check {
+        tracing::trace!(?path, "maybe (NEED_CHECK)");
         return Ok(FileChangeResult::Maybe);
     }
 
@@ -203,6 +221,7 @@ pub fn file_changed_given_metadata(
     // below to fail and force a lookup, the -1 is handled correctly without special casing. In
     // theory all -1 files should be marked NEED_CHECK above (I think).
     if state.mtime < 0 {
+        tracing::trace!(?path, "maybe (mtime < 0)");
         return Ok(FileChangeResult::Maybe);
     }
 
@@ -211,9 +230,11 @@ pub fn file_changed_given_metadata(
     let mtime: HgModifiedTime = metadata.modified()?.try_into()?;
 
     if mtime != state_mtime || mtime == last_write {
+        tracing::trace!(?path, "maybe (mtime doesn't match)");
         return Ok(FileChangeResult::Maybe);
     }
 
+    tracing::trace!(?path, "no (fallthrough)");
     Ok(FileChangeResult::No)
 }
 
@@ -311,8 +332,10 @@ impl IntoIterator for FileChangeDetector {
                         },
                     };
                     if expected == actual {
+                        tracing::trace!(?key.path, "no (contents match)");
                         Ok(ResolvedFileChangeResult::No(key.path))
                     } else {
+                        tracing::trace!(?key.path, "changed (contents mismatch)");
                         Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(key.path)))
                     }
                 })
@@ -415,9 +438,11 @@ impl ParallelDetector {
         match self.vfs.read(&path) {
             Ok(disk_bytes) => {
                 if disk_bytes == repo_bytes {
+                    tracing::trace!(?path, "no (contents match)");
                     self.result_send
                         .send(Ok(ResolvedFileChangeResult::No(path)))?;
                 } else {
+                    tracing::trace!(?path, "changed (contents mismatch)");
                     self.result_send
                         .send(Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(path))))?;
                 }
