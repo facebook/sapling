@@ -4,8 +4,6 @@
 #require execbit
 
   $ eagerepo
-FIXME(status)
-  $ setconfig status.use-rust=false
   $ setconfig workingcopy.ruststatus=False
   $ hg init repo
   $ cd repo

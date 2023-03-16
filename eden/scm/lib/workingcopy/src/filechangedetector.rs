@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::fs::Metadata;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -15,6 +16,7 @@ use anyhow::Result;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use futures::StreamExt;
+use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
@@ -82,7 +84,7 @@ impl TryFrom<i32> for HgModifiedTime {
 pub enum FileChangeResult {
     Yes(ChangeType),
     No,
-    Maybe,
+    Maybe(Metadata),
 }
 
 impl FileChangeResult {
@@ -101,6 +103,12 @@ pub enum ResolvedFileChangeResult {
     No(RepoPathBuf),
 }
 
+impl ResolvedFileChangeResult {
+    fn changed(path: RepoPathBuf) -> Self {
+        Self::Yes(ChangeType::Changed(path))
+    }
+}
+
 pub trait FileChangeDetectorTrait: IntoIterator<Item = Result<ResolvedFileChangeResult>> {
     fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath);
 }
@@ -109,7 +117,7 @@ pub struct FileChangeDetector {
     vfs: VFS,
     last_write: HgModifiedTime,
     results: Vec<Result<ResolvedFileChangeResult>>,
-    lookups: Vec<RepoPathBuf>,
+    lookups: RepoPathMap<Metadata>,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
 }
@@ -121,10 +129,11 @@ impl FileChangeDetector {
         manifest: Arc<RwLock<TreeManifest>>,
         store: ArcReadFileContents,
     ) -> Self {
+        let case_sensitive = vfs.case_sensitive();
         FileChangeDetector {
             vfs,
             last_write,
-            lookups: Vec::new(),
+            lookups: RepoPathMap::new(case_sensitive),
             results: Vec::new(),
             manifest,
             store,
@@ -223,7 +232,7 @@ pub fn file_changed_given_metadata(
     let needs_check = flags.intersects(NEED_CHECK) || !valid_size;
     if needs_check {
         tracing::trace!(?path, "maybe (NEED_CHECK)");
-        return Ok(FileChangeResult::Maybe);
+        return Ok(FileChangeResult::Maybe(metadata));
     }
 
     // If the mtime has changed or matches the last normal() write time, we need to compare the
@@ -233,7 +242,7 @@ pub fn file_changed_given_metadata(
     // theory all -1 files should be marked NEED_CHECK above (I think).
     if state.mtime < 0 {
         tracing::trace!(?path, "maybe (mtime < 0)");
-        return Ok(FileChangeResult::Maybe);
+        return Ok(FileChangeResult::Maybe(metadata));
     }
 
     let state_mtime: Result<HgModifiedTime> = state.mtime.try_into();
@@ -242,7 +251,7 @@ pub fn file_changed_given_metadata(
 
     if mtime != state_mtime || mtime == last_write {
         tracing::trace!(?path, "maybe (mtime doesn't match)");
-        return Ok(FileChangeResult::Maybe);
+        return Ok(FileChangeResult::Maybe(metadata));
     }
 
     tracing::trace!(?path, "no (fallthrough)");
@@ -291,8 +300,8 @@ impl FileChangeDetector {
     ) -> Result<FileChangeResult> {
         let res = file_changed_given_metadata(&self.vfs, path, self.last_write, metadata, state);
 
-        if matches!(res, Ok(FileChangeResult::Maybe)) {
-            self.lookups.push(path.to_owned());
+        if let Ok(FileChangeResult::Maybe(ref meta)) = res {
+            self.lookups.insert(path.to_owned(), meta.clone());
         }
 
         res
@@ -320,10 +329,69 @@ impl FileChangeDetectorTrait for FileChangeDetector {
                 FileChangeResult::No => self
                     .results
                     .push(Ok(ResolvedFileChangeResult::No(path.to_owned()))),
-                FileChangeResult::Maybe => self.lookups.push(path.to_owned()),
+                FileChangeResult::Maybe(meta) => {
+                    self.lookups.insert(path.to_owned(), meta);
+                }
             },
             Err(err) => self.results.push(Err(err)),
         };
+    }
+}
+
+fn manifest_flags_mismatch(vfs: &VFS, mf_type: FileType, fs_meta: &Metadata) -> bool {
+    if vfs.supports_symlinks() {
+        let is_symlink = is_symlink(fs_meta);
+        if is_symlink != (mf_type == FileType::Symlink) {
+            return true;
+        }
+
+        // Ignore executable check since symlinks always appear executable.
+        if is_symlink {
+            return false;
+        }
+    }
+
+    if vfs.supports_executables() && is_executable(fs_meta) != (mf_type == FileType::Executable) {
+        return true;
+    }
+
+    false
+}
+
+// Allows case insensitive tracking of RepoPathBuf->V. We need this because we
+// "lose" the caseness of a path after it goes through
+// manifest.files(ExectMatcher::new([path], case_sensitive=true)). The manifest
+// file we get back has whatever case is in the manifest, so without this it is
+// impossible to map back to the original path we gave to ExactMatcher.
+struct RepoPathMap<V> {
+    case_sensitive: bool,
+    map: HashMap<RepoPathBuf, V>,
+}
+
+impl<V> RepoPathMap<V> {
+    pub fn new(case_sensitive: bool) -> Self {
+        Self {
+            case_sensitive,
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, key: RepoPathBuf, value: V) -> Option<V> {
+        match self.case_sensitive {
+            true => self.map.insert(key, value),
+            false => self.map.insert(key.to_lower_case(), value),
+        }
+    }
+
+    pub fn get(&self, key: &RepoPathBuf) -> Option<&V> {
+        match self.case_sensitive {
+            true => self.map.get(key),
+            false => self.map.get(&key.to_lower_case()),
+        }
+    }
+
+    pub fn keys(&self) -> std::collections::hash_map::Keys<'_, RepoPathBuf, V> {
+        self.map.keys()
     }
 }
 
@@ -333,14 +401,28 @@ impl IntoIterator for FileChangeDetector {
 
     fn into_iter(mut self) -> Self::IntoIter {
         // First, get the keys for the paths from the current manifest.
-        let matcher = ExactMatcher::new(self.lookups.iter(), self.vfs.case_sensitive());
+
+        let matcher = ExactMatcher::new(self.lookups.keys(), self.vfs.case_sensitive());
         let keys = self
             .manifest
             .read()
             .files(matcher)
             .filter_map(|result| {
                 let file = match result {
-                    Ok(file) => file,
+                    Ok(file) => {
+                        if manifest_flags_mismatch(
+                            &self.vfs,
+                            file.meta.file_type,
+                            self.lookups.get(&file.path).unwrap(),
+                        ) {
+                            tracing::trace!(path=?file.path, "changed (mf flags mismatch disk)");
+                            self.results
+                                .push(Ok(ResolvedFileChangeResult::changed(file.path)));
+                            return None;
+                        }
+
+                        file
+                    }
                     Err(e) => {
                         self.results.push(Err(e));
                         return None;
@@ -391,7 +473,7 @@ pub struct ParallelDetector {
     store: ArcReadFileContents,
     result_send: Sender<Result<ResolvedFileChangeResult>>,
     result_recv: Receiver<Result<ResolvedFileChangeResult>>,
-    check_contents_recv: Receiver<RepoPathBuf>,
+    check_contents_recv: Receiver<(RepoPathBuf, Metadata)>,
     // Store as an option so we can explicitly drop to disconnect the check_contents channel.
     check_metadata_send: Option<Sender<(RepoPathBuf, Option<FileStateV2>)>>,
     worker_count: usize,
@@ -418,7 +500,7 @@ impl ParallelDetector {
 
         // Channel to submit request to compare file's on-disk contents to repo's contents.
         let (check_contents_send, check_contents_recv) =
-            crossbeam::channel::unbounded::<RepoPathBuf>();
+            crossbeam::channel::unbounded::<(RepoPathBuf, Metadata)>();
 
         // Channel for the detector to relay results back to the caller.
         let (result_send, result_recv) =
@@ -476,18 +558,35 @@ impl ParallelDetector {
         // one big batch. The alternative is to perform our own batching so we
         // can start comparing content before finishing comparing metadata, but
         // that probably isn't worth the trouble.
-        let mut lookups = Vec::new();
-        for path in self.check_contents_recv.clone() {
-            lookups.push(path);
+        let mut lookups: RepoPathMap<Metadata> = RepoPathMap::new(self.vfs.case_sensitive());
+        for (path, metadata) in self.check_contents_recv.clone() {
+            lookups.insert(path, metadata);
         }
 
-        let matcher = ExactMatcher::new(lookups.iter(), self.vfs.case_sensitive());
+        let matcher = ExactMatcher::new(lookups.keys(), self.vfs.case_sensitive());
         let keys = self
             .manifest
             .read()
             .files(matcher)
             .filter_map(|result| match result {
-                Ok(file) => Some(Ok(Key::new(file.path, file.meta.hgid))),
+                Ok(file) => {
+                    if manifest_flags_mismatch(
+                        &self.vfs,
+                        file.meta.file_type,
+                        lookups.get(&file.path).unwrap(),
+                    ) {
+                        tracing::trace!(path=?file.path, "changed (mf flags mismatch disk)");
+                        match self
+                            .result_send
+                            .send(Ok(ResolvedFileChangeResult::changed(file.path)))
+                        {
+                            Ok(()) => None,
+                            Err(err) => Some(Err(anyhow!(err))),
+                        }
+                    } else {
+                        Some(Ok(Key::new(file.path, file.meta.hgid)))
+                    }
+                }
                 Err(e) => match self.result_send.send(Err(e)) {
                     Ok(()) => None,
                     Err(err) => Some(Err(anyhow!(err))),
@@ -525,7 +624,7 @@ impl ParallelDetector {
         last_write: HgModifiedTime,
         state: Option<FileStateV2>,
         result_send: &Sender<Result<ResolvedFileChangeResult>>,
-        lookup_send: &Sender<RepoPathBuf>,
+        lookup_send: &Sender<(RepoPathBuf, Metadata)>,
     ) -> Result<()> {
         let metadata = match vfs.metadata(&path) {
             Ok(metadata) => Some(metadata),
@@ -546,8 +645,8 @@ impl ParallelDetector {
                 FileChangeResult::No => {
                     result_send.send(Ok(ResolvedFileChangeResult::No(path)))?;
                 }
-                FileChangeResult::Maybe => {
-                    lookup_send.send(path)?;
+                FileChangeResult::Maybe(meta) => {
+                    lookup_send.send((path, meta))?;
                 }
             },
             Err(err) => result_send.send(Err(err))?,

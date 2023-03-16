@@ -6,9 +6,6 @@
   $ eagerepo
   $ setconfig workingcopy.ruststatus=False
 
-FIXME(status):
-  $ setconfig status.use-rust=false
-
   $ hg init repo
   $ cd repo
   $ echo a > a
