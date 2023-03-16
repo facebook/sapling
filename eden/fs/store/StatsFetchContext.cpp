@@ -125,7 +125,7 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
   auto result = FetchStatistics{};
   result.tree = computeAccessStats(ObjectFetchContext::Tree);
   result.blob = computeAccessStats(ObjectFetchContext::Blob);
-  result.metadata = computeAccessStats(ObjectFetchContext::BlobMetadata);
+  result.blobMetadata = computeAccessStats(ObjectFetchContext::BlobMetadata);
   return result;
 }
 

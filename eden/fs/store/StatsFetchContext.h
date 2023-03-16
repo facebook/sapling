@@ -37,7 +37,7 @@ struct FetchStatistics {
 
   Access tree;
   Access blob;
-  Access metadata;
+  Access blobMetadata;
 };
 
 class StatsFetchContext : public ObjectFetchContext {

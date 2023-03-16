@@ -151,6 +151,10 @@ struct FinishedCheckout {
   bool success = false;
   int64_t fetchedTrees = 0;
   int64_t fetchedBlobs = 0;
+  int64_t fetchedBlobsMetadata = 0;
+  int64_t accessedTrees = 0;
+  int64_t accessedBlobs = 0;
+  int64_t accessedBlobsMetadata = 0;
   int64_t numConflicts = 0;
 
   void populate(DynamicEvent& event) const {
@@ -159,6 +163,10 @@ struct FinishedCheckout {
     event.addBool("success", success);
     event.addInt("fetched_trees", fetchedTrees);
     event.addInt("fetched_blobs", fetchedBlobs);
+    event.addInt("fetched_blobs_metadata", fetchedBlobsMetadata);
+    event.addInt("accessed_trees", accessedTrees);
+    event.addInt("accessed_blobs", accessedBlobs);
+    event.addInt("accessed_blobs_metadata", accessedBlobsMetadata);
     event.addInt("num_conflicts", numConflicts);
   }
 };

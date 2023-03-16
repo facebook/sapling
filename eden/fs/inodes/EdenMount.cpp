@@ -949,9 +949,9 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
                          << " trees (" << fetchStats.tree.cacheHitRate
                          << "% chr), " << fetchStats.blob.accessCount
                          << " blobs (" << fetchStats.blob.cacheHitRate
-                         << "% chr), and " << fetchStats.metadata.accessCount
-                         << " metadata (" << fetchStats.metadata.cacheHitRate
-                         << "% chr).";
+                         << "% chr), and "
+                         << fetchStats.blobMetadata.accessCount << " metadata ("
+                         << fetchStats.blobMetadata.cacheHitRate << "% chr).";
 
               return std::move(resultAndTimes);
             });
@@ -1667,8 +1667,8 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                    << fetchStats.tree.cacheHitRate << "% chr), "
                    << fetchStats.blob.accessCount << " blobs ("
                    << fetchStats.blob.cacheHitRate << "% chr), and "
-                   << fetchStats.metadata.accessCount << " metadata ("
-                   << fetchStats.metadata.cacheHitRate << "% chr).";
+                   << fetchStats.blobMetadata.accessCount << " metadata ("
+                   << fetchStats.blobMetadata.cacheHitRate << "% chr).";
 
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
@@ -1678,6 +1678,10 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         event.success = result.hasValue();
         event.fetchedTrees = fetchStats.tree.fetchCount;
         event.fetchedBlobs = fetchStats.blob.fetchCount;
+        event.fetchedBlobsMetadata = fetchStats.blobMetadata.fetchCount;
+        event.accessedTrees = fetchStats.tree.accessCount;
+        event.accessedBlobs = fetchStats.blob.accessCount;
+        event.accessedBlobsMetadata = fetchStats.blobMetadata.accessCount;
         if (result.hasValue()) {
           auto& conflicts = result.value().conflicts;
           event.numConflicts = conflicts.size();
