@@ -267,6 +267,8 @@ class dirstate(object):
 
     @util.propertycache
     def _checklink(self) -> bool:
+        if pycompat.iswindows and "windowssymlinks" not in self._repo.requirements:
+            return False
         return util.checklink(self._root)
 
     @util.propertycache

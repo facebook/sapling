@@ -336,6 +336,8 @@ class localrepository(object):
         "treestate",
         "storerequirements",
         "lfs",
+        # enable symlinks on Windows
+        "windowssymlinks",
     }
     _basestoresupported = {
         "visibleheads",
@@ -428,9 +430,7 @@ class localrepository(object):
         self.requirements = set()
         self.storerequirements = set()
 
-        # wvfs: rooted at the repository root, used to access the working copy
-        self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
-        self.root = self.wvfs.base
+        self.root = os.path.realpath(util.expandpath(path))
 
         self.baseui = baseui
         self.ui = baseui.copy()
@@ -468,9 +468,6 @@ class localrepository(object):
 
         self._loadextensions()
 
-        cacheaudited = self.ui.configbool("unsafe", "wvfsauditorcache")
-        self.wvfs.audit._cached = cacheaudited
-
         self.supported = self._featuresetup(self.featuresetupfuncs, self._basesupported)
         self.storesupported = self._featuresetup(
             self.storefeaturesetupfuncs, self._basestoresupported
@@ -488,6 +485,21 @@ class localrepository(object):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
+
+        # wvfs: rooted at the repository root, used to access the working copy
+        disablesymlinks = (
+            pycompat.iswindows and "windowssymlinks" not in self.requirements
+        )
+        self.wvfs = vfsmod.vfs(
+            path,
+            expandpath=True,
+            realpath=True,
+            cacheaudited=False,
+            disablesymlinks=disablesymlinks,
+        )
+
+        cacheaudited = self.ui.configbool("unsafe", "wvfsauditorcache")
+        self.wvfs.audit._cached = cacheaudited
 
         cachepath = self.localvfs.join("cache")
         self.sharedpath = self.path

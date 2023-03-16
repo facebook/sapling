@@ -280,8 +280,13 @@ def share(
         checkout = None
 
     sharedpath = srcrepo.sharedpath  # if our source is already sharing
+    requirements = srcrepo.requirements.copy()
 
-    destwvfs = vfsmod.vfs(dest, realpath=True)
+    destwvfs = vfsmod.vfs(
+        dest,
+        realpath=True,
+        disablesymlinks=pycompat.iswindows and "windowssymlinks" not in requirements,
+    )
     destvfs = vfsmod.vfs(
         os.path.join(destwvfs.base, ui.identity.dotdir()), realpath=True
     )
@@ -292,8 +297,6 @@ def share(
     if not destwvfs.isdir():
         destwvfs.mkdir()
     destvfs.makedir()
-
-    requirements = srcrepo.requirements.copy()
 
     if relative:
         try:

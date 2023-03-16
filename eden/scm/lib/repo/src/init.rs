@@ -137,6 +137,12 @@ fn write_requirements(path: &Path, config: &ConfigSet) -> Result<(), InitError> 
     {
         requirements.insert("generaldelta");
     }
+    if config
+        .get_or_default("experimental", "windows-symlinks")
+        .unwrap_or_default()
+    {
+        requirements.insert("windowssymlinks");
+    }
 
     write_requirements_file(path, requirements)
 }

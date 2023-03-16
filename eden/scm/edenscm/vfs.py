@@ -411,6 +411,7 @@ class vfs(abstractvfs):
         cacheaudited: bool = False,
         expandpath: bool = False,
         realpath: bool = False,
+        disablesymlinks: bool = False,
     ) -> None:
         if expandpath:
             base = util.expandpath(base)
@@ -424,9 +425,12 @@ class vfs(abstractvfs):
             self.audit = lambda path, mode=None: True
         self.createmode = None
         self._trustnlink = None
+        self._disablesymlinks = disablesymlinks
 
     @util.propertycache
     def _cansymlink(self) -> bool:
+        if self._disablesymlinks:
+            return False
         return util.checklink(self.base)
 
     @util.propertycache
