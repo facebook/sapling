@@ -681,7 +681,7 @@ def onetimeclientsetup(ui):
                     if fnode:
                         prefetch.append((fname, hex(fnode)))
 
-            repo.fileservice.prefetch(prefetch)
+            repo.fileservice.prefetch(prefetch, fetchhistory=False)
 
         return orig(
             repo,
