@@ -295,6 +295,8 @@ Test extension help:
        arcdiff       (no help text available)
        blackbox      log repository events to a blackbox for debugging
        catnotate     (no help text available)
+       checkserverbookmark
+                     (no help text available)
        chistedit
        clienttelemetry
                      provide information about the client in server telemetry
