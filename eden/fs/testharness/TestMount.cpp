@@ -314,6 +314,7 @@ void TestMount::createMount(Overlay::InodeCatalogType inodeCatalogType) {
       blobCache_,
       serverState_,
       std::move(journal),
+      stats_,
       inodeCatalogType);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
@@ -455,7 +456,8 @@ void TestMount::remount() {
       std::move(objectStore),
       blobCache_,
       serverState_,
-      std::move(journal));
+      std::move(journal),
+      stats_);
   initializeEdenMount();
 }
 
@@ -502,7 +504,8 @@ void TestMount::remountGracefully() {
       std::move(objectStore),
       blobCache_,
       serverState_,
-      std::move(journal));
+      std::move(journal),
+      stats_);
   edenMount_->initialize([](auto) {}, takeoverData)
       .getVia(serverExecutor_.get());
   rootInode_ = edenMount_->getRootInodeUnchecked();

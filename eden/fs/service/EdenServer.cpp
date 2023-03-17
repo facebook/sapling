@@ -1536,7 +1536,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       std::move(objectStore),
       blobCache_,
       serverState_,
-      std::move(journal));
+      std::move(journal),
+      getSharedStats());
   addToMountPoints(edenMount);
 
   registerStats(edenMount);

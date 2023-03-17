@@ -13,6 +13,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 
@@ -46,6 +47,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       CaseSensitivity::Sensitive,
       Overlay::InodeCatalogType::Legacy,
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
 
   auto fileInode = overlay->allocateInodeNumber();

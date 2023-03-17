@@ -291,6 +291,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
+      std::shared_ptr<EdenStats> stats,
       std::optional<Overlay::InodeCatalogType> inodeCatalogType = std::nullopt);
 
   /**
@@ -1113,6 +1114,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
+      std::shared_ptr<EdenStats> stats,
       std::optional<Overlay::InodeCatalogType> inodeCatalogType = std::nullopt);
 
   // Forbidden copy constructor and assignment operator

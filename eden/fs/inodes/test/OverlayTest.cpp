@@ -30,6 +30,7 @@
 #include "eden/fs/inodes/fscatalog/InodePath.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -71,6 +72,7 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
 
@@ -251,6 +253,7 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
@@ -264,6 +267,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         std::make_shared<NullStructuredLogger>(),
+        std::make_shared<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
@@ -273,6 +277,7 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_TRUE(overlay->hadCleanStartup());
@@ -288,6 +293,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         std::make_shared<NullStructuredLogger>(),
+        std::make_shared<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
@@ -301,6 +307,7 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       kPathMapDefaultCaseSensitive,
       kInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   EXPECT_FALSE(overlay->hadCleanStartup());
@@ -343,6 +350,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         kPathMapDefaultCaseSensitive,
         kInodeCatalogType,
         std::make_shared<NullStructuredLogger>(),
+        std::make_shared<EdenStats>(),
         *EdenConfig::createTestEdenConfig());
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }
@@ -753,6 +761,7 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             kPathMapDefaultCaseSensitive,
             kInodeCatalogType,
             std::make_shared<NullStructuredLogger>(),
+            std::make_shared<EdenStats>(),
             *EdenConfig::createTestEdenConfig())} {
     overlay->initialize(EdenConfig::createTestEdenConfig()).get();
   }

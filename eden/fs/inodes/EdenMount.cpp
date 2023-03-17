@@ -224,6 +224,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
+    std::shared_ptr<EdenStats> stats,
     std::optional<Overlay::InodeCatalogType> inodeCatalogType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
@@ -232,6 +233,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
           std::move(blobCache),
           std::move(serverState),
           std::move(journal),
+          std::move(stats),
           std::move(inodeCatalogType)},
       EdenMountDeleter{}};
 }
@@ -242,6 +244,7 @@ EdenMount::EdenMount(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
+    std::shared_ptr<EdenStats> stats,
     std::optional<Overlay::InodeCatalogType> inodeCatalogType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
@@ -263,6 +266,7 @@ EdenMount::EdenMount(
           checkoutConfig_->getCaseSensitive(),
           getInodeCatalogType(inodeCatalogType),
           serverState_->getStructuredLogger(),
+          std::move(stats),
           *serverState_->getEdenConfig())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},

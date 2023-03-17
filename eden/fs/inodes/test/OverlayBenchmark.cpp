@@ -13,6 +13,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
@@ -35,6 +36,7 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
       kPathMapDefaultCaseSensitive,
       kDefaultInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
+      std::make_shared<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   printf("Initalizing Overlay...\n");
 
