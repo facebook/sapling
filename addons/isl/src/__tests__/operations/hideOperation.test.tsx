@@ -28,7 +28,8 @@ describe('hide operation', () => {
     act(() => {
       closeCommitInfoSidebar();
       expectMessageSentToServer({
-        type: 'subscribeSmartlogCommits',
+        type: 'subscribe',
+        kind: 'smartlogCommits',
         subscriptionID: expect.anything(),
       });
       simulateCommits({

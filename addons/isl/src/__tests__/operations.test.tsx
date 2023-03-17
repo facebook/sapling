@@ -8,6 +8,7 @@
 import type {Hash} from '../types';
 
 import App from '../App';
+import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -42,7 +43,8 @@ describe('operations', () => {
     act(() => {
       closeCommitInfoSidebar();
       expectMessageSentToServer({
-        type: 'subscribeSmartlogCommits',
+        type: 'subscribe',
+        kind: 'smartlogCommits',
         subscriptionID: expect.anything(),
       });
       simulateRepoConnected();
@@ -393,11 +395,14 @@ describe('operations', () => {
 
       act(() =>
         simulateMessageFromServer({
-          type: 'smartlogCommits',
-          subscriptionID: 'latestCommits',
-          commits: commitsBeforeOperations,
-          fetchStartTimestamp: 1,
-          fetchCompletedTimestamp: 2,
+          type: 'subscriptionResult',
+          kind: 'smartlogCommits',
+          subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
+          data: {
+            fetchStartTimestamp: 1,
+            fetchCompletedTimestamp: 2,
+            commits: commitsBeforeOperations,
+          },
         }),
       );
 
@@ -479,11 +484,14 @@ describe('operations', () => {
 
       act(() =>
         simulateMessageFromServer({
-          type: 'smartlogCommits',
-          subscriptionID: 'latestCommits',
-          commits: commitsAfterOptions,
-          fetchStartTimestamp: 400, // before goto finished
-          fetchCompletedTimestamp: 450,
+          type: 'subscriptionResult',
+          kind: 'smartlogCommits',
+          subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
+          data: {
+            commits: commitsAfterOptions,
+            fetchStartTimestamp: 400, // before goto finished
+            fetchCompletedTimestamp: 450,
+          },
         }),
       );
 
@@ -493,11 +501,14 @@ describe('operations', () => {
 
       act(() =>
         simulateMessageFromServer({
-          type: 'smartlogCommits',
-          subscriptionID: 'latestCommits',
-          commits: commitsAfterOptions,
-          fetchStartTimestamp: 550, // after goto finished
-          fetchCompletedTimestamp: 600,
+          type: 'subscriptionResult',
+          kind: 'smartlogCommits',
+          subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
+          data: {
+            commits: commitsAfterOptions,
+            fetchStartTimestamp: 550, // after goto finished
+            fetchCompletedTimestamp: 600,
+          },
         }),
       );
 

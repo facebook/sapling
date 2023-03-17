@@ -389,7 +389,7 @@ export function useMarkOperationsCompleted(): void {
       treeMap,
     };
     const uncommittedContext = {
-      uncommittedChanges: uncommittedChanges.changes,
+      uncommittedChanges: uncommittedChanges.files ?? [],
     };
     const mergeConflictsContext = {
       conflicts,

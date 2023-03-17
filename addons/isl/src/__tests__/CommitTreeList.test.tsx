@@ -39,7 +39,8 @@ describe('CommitTreeList', () => {
         simulateRepoConnected();
         closeCommitInfoSidebar();
         expectMessageSentToServer({
-          type: 'subscribeSmartlogCommits',
+          type: 'subscribe',
+          kind: 'smartlogCommits',
           subscriptionID: expect.anything(),
         });
         simulateCommits({
@@ -66,7 +67,8 @@ describe('CommitTreeList', () => {
       beforeEach(() => {
         act(() => {
           expectMessageSentToServer({
-            type: 'subscribeUncommittedChanges',
+            type: 'subscribe',
+            kind: 'uncommittedChanges',
             subscriptionID: expect.anything(),
           });
           simulateUncommittedChangedFiles({

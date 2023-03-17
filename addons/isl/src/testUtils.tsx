@@ -20,6 +20,7 @@ import type {Writable} from 'shared/typeUtils';
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
+import {mostRecentSubscriptionIds} from './serverAPIState';
 import {screen, act, within, fireEvent} from '@testing-library/react';
 import {unwrap} from 'shared/utils';
 
@@ -67,20 +68,26 @@ export function simulateServerDisconnected(): void {
 
 export function simulateCommits(commits: Result<SmartlogCommits>) {
   simulateMessageFromServer({
-    type: 'smartlogCommits',
-    subscriptionID: 'latestCommits',
-    commits,
-    fetchStartTimestamp: 1,
-    fetchCompletedTimestamp: 2,
+    type: 'subscriptionResult',
+    kind: 'smartlogCommits',
+    subscriptionID: mostRecentSubscriptionIds.smartlogCommits,
+    data: {
+      fetchStartTimestamp: 1,
+      fetchCompletedTimestamp: 2,
+      commits,
+    },
   });
 }
 export function simulateUncommittedChangedFiles(files: Result<UncommittedChanges>) {
   simulateMessageFromServer({
-    type: 'uncommittedChanges',
-    subscriptionID: 'latestUncommittedChanges',
-    files,
-    fetchStartTimestamp: 1,
-    fetchCompletedTimestamp: 2,
+    type: 'subscriptionResult',
+    kind: 'uncommittedChanges',
+    subscriptionID: mostRecentSubscriptionIds.uncommittedChanges,
+    data: {
+      fetchStartTimestamp: 1,
+      fetchCompletedTimestamp: 2,
+      files,
+    },
   });
 }
 export function simulateRepoConnected() {

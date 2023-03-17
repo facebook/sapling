@@ -9,8 +9,18 @@ import type {EditedMessage} from './CommitInfoState';
 import type {MessageBusStatus} from './MessageBus';
 import type {CommitTree} from './getCommitTree';
 import type {Operation} from './operations/Operation';
-import type {ChangedFile, CommitInfo, Hash, MergeConflicts, RepoInfo} from './types';
-import type {CallbackInterface} from 'recoil';
+import type {
+  ChangedFile,
+  CommitInfo,
+  Hash,
+  MergeConflicts,
+  RepoInfo,
+  SmartlogCommits,
+  SubscriptionKind,
+  SubscriptionResultsData,
+  UncommittedChanges,
+} from './types';
+import type {AtomEffect, CallbackInterface} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
@@ -21,6 +31,7 @@ import {initialParams} from './urlParams';
 import {firstLine} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
 import {atom, DefaultValue, selector, useRecoilCallback} from 'recoil';
+import {randomId} from 'shared/utils';
 
 const repositoryData = atom<{info: RepoInfo | undefined; cwd: string | undefined}>({
   key: 'repositoryData',
@@ -93,44 +104,26 @@ export const serverCwd = selector<string>({
   },
 });
 
-type FetchedUncommittedChangesData = {
+export const latestUncommittedChangesData = atom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
-  changes: Array<ChangedFile>;
+  files: UncommittedChanges;
   error?: Error;
-};
-export const latestUncommittedChangesData = atom<FetchedUncommittedChangesData>({
+}>({
   key: 'latestUncommittedChangesData',
-  default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, changes: []},
+  default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, files: []},
   effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('uncommittedChanges', event => {
-        const {fetchStartTimestamp, fetchCompletedTimestamp, files} = event;
-        if (files.error != null) {
-          // leave existing file changes in place
-          setSelf(last =>
-            last instanceof DefaultValue
-              ? {
-                  fetchStartTimestamp: 0,
-                  fetchCompletedTimestamp: 0,
-                  changes: [],
-                  error: files.error,
-                }
-              : {...last, error: files.error},
-          );
-          return;
-        }
-        setSelf({fetchStartTimestamp, fetchCompletedTimestamp, changes: files.value});
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onConnectOrReconnect(() =>
-        serverAPI.postMessage({
-          type: 'subscribeUncommittedChanges',
-          subscriptionID: 'latestUncommittedChanges',
-        }),
-      ),
+    subscriptionEffect('uncommittedChanges', (data, {setSelf}) => {
+      setSelf(last => ({
+        ...data,
+        files:
+          data.files.value ??
+          // leave existing files in place if there was no error
+          (last instanceof DefaultValue ? [] : last.files) ??
+          [],
+        error: data.files.error,
+      }));
+    }),
   ],
 });
 
@@ -142,7 +135,7 @@ export const latestUncommittedChangesData = atom<FetchedUncommittedChangesData>(
 export const latestUncommittedChanges = selector<Array<ChangedFile>>({
   key: 'latestUncommittedChanges',
   get: ({get}) => {
-    return get(latestUncommittedChangesData).changes;
+    return get(latestUncommittedChangesData).files;
   },
 });
 
@@ -157,60 +150,32 @@ export const mergeConflicts = atom<MergeConflicts | undefined>({
   key: 'mergeConflicts',
   default: undefined,
   effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('mergeConflicts', event => {
-        setSelf(event.conflicts);
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onConnectOrReconnect(() =>
-        serverAPI.postMessage({
-          type: 'subscribeMergeConflicts',
-          subscriptionID: 'latestMergeConflicts',
-        }),
-      ),
+    subscriptionEffect('mergeConflicts', (data, {setSelf}) => {
+      setSelf(data);
+    }),
   ],
 });
 
-type FetchedCommitData = {
+export const latestCommitsData = atom<{
   fetchStartTimestamp: number;
   fetchCompletedTimestamp: number;
-  commits: Array<CommitInfo>;
+  commits: SmartlogCommits;
   error?: Error;
-};
-export const latestCommitsData = atom<FetchedCommitData>({
+}>({
   key: 'latestCommitsData',
   default: {fetchStartTimestamp: 0, fetchCompletedTimestamp: 0, commits: []},
   effects: [
-    ({setSelf}) => {
-      const disposable = serverAPI.onMessageOfType('smartlogCommits', event => {
-        const {fetchStartTimestamp, fetchCompletedTimestamp, commits} = event;
-        if (commits.error != null) {
-          // leave existing commits in place
-          setSelf(last =>
-            last instanceof DefaultValue
-              ? {
-                  fetchStartTimestamp: 0,
-                  fetchCompletedTimestamp: 0,
-                  commits: [],
-                  error: commits.error,
-                }
-              : {...last, error: commits.error},
-          );
-          return;
-        }
-        setSelf({fetchStartTimestamp, fetchCompletedTimestamp, commits: commits.value});
-      });
-      return () => disposable.dispose();
-    },
-    () =>
-      serverAPI.onConnectOrReconnect(() =>
-        serverAPI.postMessage({
-          type: 'subscribeSmartlogCommits',
-          subscriptionID: 'latestCommits',
-        }),
-      ),
+    subscriptionEffect('smartlogCommits', (data, {setSelf}) => {
+      setSelf(last => ({
+        ...data,
+        commits:
+          data.commits.value ??
+          // leave existing files in place if there was no error
+          (last instanceof DefaultValue ? [] : last.commits) ??
+          [],
+        error: data.commits.error,
+      }));
+    }),
   ],
 });
 
@@ -228,13 +193,60 @@ export const commitFetchError = selector<Error | undefined>({
   },
 });
 
+export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
+  smartlogCommits: '',
+  uncommittedChanges: '',
+  mergeConflicts: '',
+};
+
+/**
+ * Send a subscribeFoo message to the server on initialization,
+ * and send an unsubscribe message on dispose.
+ * Extract subscription response messages via a unique subscriptionID per effect call.
+ */
+function subscriptionEffect<K extends SubscriptionKind, T>(
+  kind: K,
+  onData: (data: SubscriptionResultsData[K], params: Parameters<AtomEffect<T>>[0]) => unknown,
+): AtomEffect<T> {
+  return effectParams => {
+    const subscriptionID = randomId();
+    mostRecentSubscriptionIds[kind] = subscriptionID;
+    const disposable = serverAPI.onMessageOfType('subscriptionResult', event => {
+      if (event.subscriptionID !== subscriptionID || event.kind !== kind) {
+        return;
+      }
+      onData(event.data as SubscriptionResultsData[K], effectParams);
+    });
+
+    const disposeSubscription = serverAPI.onConnectOrReconnect(() => {
+      serverAPI.postMessage({
+        type: 'subscribe',
+        kind,
+        subscriptionID,
+      });
+
+      return () =>
+        serverAPI.postMessage({
+          type: 'unsubscribe',
+          kind,
+          subscriptionID,
+        });
+    });
+
+    return () => {
+      disposable.dispose();
+      disposeSubscription();
+    };
+  };
+}
+
 export const isFetchingCommits = atom<boolean>({
   key: 'isFetchingCommits',
   default: false,
   effects: [
     ({setSelf}) => {
       const disposables = [
-        serverAPI.onMessageOfType('smartlogCommits', () => {
+        serverAPI.onMessageOfType('subscriptionResult', () => {
           setSelf(false); // new commits OR error means the fetch is not running anymore
         }),
         serverAPI.onMessageOfType('beganFetchingSmartlogCommitsEvent', () => {
@@ -254,8 +266,10 @@ export const isFetchingAdditionalCommits = atom<boolean>({
   effects: [
     ({setSelf}) => {
       const disposables = [
-        serverAPI.onMessageOfType('smartlogCommits', () => {
-          setSelf(false);
+        serverAPI.onMessageOfType('subscriptionResult', e => {
+          if (e.kind === 'smartlogCommits') {
+            setSelf(false);
+          }
         }),
         serverAPI.onMessageOfType('beganLoadingMoreCommits', () => {
           setSelf(true);
@@ -274,8 +288,10 @@ export const isFetchingUncommittedChanges = atom<boolean>({
   effects: [
     ({setSelf}) => {
       const disposables = [
-        serverAPI.onMessageOfType('uncommittedChanges', () => {
-          setSelf(false); // new files OR error means the fetch is not running anymore
+        serverAPI.onMessageOfType('subscriptionResult', e => {
+          if (e.kind === 'uncommittedChanges') {
+            setSelf(false); // new files OR error means the fetch is not running anymore
+          }
         }),
         serverAPI.onMessageOfType('beganFetchingUncommittedChangesEvent', () => {
           setSelf(true);

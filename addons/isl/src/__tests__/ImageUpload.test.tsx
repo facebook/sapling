@@ -37,7 +37,8 @@ describe('Image upload inside TextArea ', () => {
     render(<App />);
     act(() => {
       expectMessageSentToServer({
-        type: 'subscribeSmartlogCommits',
+        type: 'subscribe',
+        kind: 'smartlogCommits',
         subscriptionID: expect.anything(),
       });
       simulateCommits({

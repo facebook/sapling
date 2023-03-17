@@ -112,19 +112,23 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
     messageBus.postMessage(payload);
   }
 
-  onConnectOrReconnect(callback: () => unknown): () => void {
+  onConnectOrReconnect(callback: () => (() => unknown) | unknown): () => void {
     let reconnecting = true;
+    let disposeCallback: (() => unknown) | unknown = undefined;
     const disposable = messageBus.onChangeStatus(newStatus => {
       if (newStatus.type === 'reconnecting') {
         reconnecting = true;
       } else if (newStatus.type === 'open') {
         if (reconnecting) {
-          callback();
+          disposeCallback = callback();
         }
         reconnecting = false;
       }
     });
-    return () => disposable.dispose();
+    return () => {
+      disposable.dispose();
+      typeof disposeCallback === 'function' && disposeCallback?.();
+    };
   }
 }
 

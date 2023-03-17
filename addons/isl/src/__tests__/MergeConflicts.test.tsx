@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -44,13 +45,15 @@ describe('CommitTreeList', () => {
 
     act(() => {
       expectMessageSentToServer({
-        type: 'subscribeMergeConflicts',
+        type: 'subscribe',
+        kind: 'mergeConflicts',
         subscriptionID: expect.anything(),
       });
       simulateMessageFromServer({
-        type: 'mergeConflicts',
-        subscriptionID: 'latestUncommittedChanges',
-        conflicts: {
+        type: 'subscriptionResult',
+        kind: 'mergeConflicts',
+        subscriptionID: mostRecentSubscriptionIds.mergeConflicts,
+        data: {
           state: 'loading',
         },
       });
@@ -65,9 +68,10 @@ describe('CommitTreeList', () => {
     beforeEach(() => {
       act(() => {
         simulateMessageFromServer({
-          type: 'mergeConflicts',
-          subscriptionID: 'latestUncommittedChanges',
-          conflicts: {
+          type: 'subscriptionResult',
+          kind: 'mergeConflicts',
+          subscriptionID: mostRecentSubscriptionIds.mergeConflicts,
+          data: {
             state: 'loaded',
             command: 'rebase',
             toContinue: 'rebase --continue',
@@ -105,9 +109,10 @@ describe('CommitTreeList', () => {
 
       act(() => {
         simulateMessageFromServer({
-          type: 'mergeConflicts',
-          subscriptionID: 'latestUncommittedChanges',
-          conflicts: {
+          type: 'subscriptionResult',
+          kind: 'mergeConflicts',
+          subscriptionID: mostRecentSubscriptionIds.mergeConflicts,
+          data: {
             state: 'loaded',
             command: 'rebase',
             toContinue: 'rebase --continue',
@@ -193,9 +198,10 @@ describe('CommitTreeList', () => {
 
       act(() => {
         simulateMessageFromServer({
-          type: 'mergeConflicts',
-          subscriptionID: 'conflicts',
-          conflicts: undefined,
+          type: 'subscriptionResult',
+          kind: 'mergeConflicts',
+          subscriptionID: mostRecentSubscriptionIds.mergeConflicts,
+          data: undefined,
         });
       });
       expect(screen.queryByTestId('conflict-continue-button')).not.toBeInTheDocument();

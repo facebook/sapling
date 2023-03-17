@@ -13,17 +13,14 @@ import type {
   ServerToClientMessage,
   ClientToServerMessage,
   Disposable,
-  SmartlogCommitsEvent,
-  UncommittedChangesEvent,
   Result,
   MergeConflicts,
-  MergeConflictsEvent,
   RepositoryError,
   PlatformSpecificClientToServerMessages,
   FileABugProgress,
   ClientToServerMessageWithPayload,
-  FetchedUncommittedChanges,
   FetchedCommits,
+  FetchedUncommittedChanges,
 } from 'isl/src/types';
 
 import {Internal} from './Internal';
@@ -72,6 +69,7 @@ export default class ServerToClientAPI {
 
   /** Disposables that must be disposed whenever the current repo is changed */
   private repoDisposables: Array<Disposable> = [];
+  private subscriptions = new Map<string, Disposable>();
 
   private queuedMessages: Array<IncomingMessage> = [];
   private currentState:
@@ -291,79 +289,101 @@ export default class ServerToClientAPI {
   private handleIncomingMessageWithRepo(data: WithRepoMessage, repo: Repository, cwd: string) {
     const {logger} = repo;
     switch (data.type) {
-      case 'subscribeUncommittedChanges': {
-        const {subscriptionID} = data;
-        const postUncommittedChanges = (result: FetchedUncommittedChanges) => {
-          const message: UncommittedChangesEvent = {
-            type: 'uncommittedChanges',
-            subscriptionID,
-            ...result,
-          };
-          this.postMessage(message);
-        };
+      case 'subscribe': {
+        const {subscriptionID, kind} = data;
+        switch (kind) {
+          case 'uncommittedChanges': {
+            const postUncommittedChanges = (result: FetchedUncommittedChanges) => {
+              this.postMessage({
+                type: 'subscriptionResult',
+                kind: 'uncommittedChanges',
+                subscriptionID,
+                data: result,
+              });
+            };
 
-        const uncommittedChanges = repo.getUncommittedChanges();
-        if (uncommittedChanges != null) {
-          postUncommittedChanges(uncommittedChanges);
+            const uncommittedChanges = repo.getUncommittedChanges();
+            if (uncommittedChanges != null) {
+              postUncommittedChanges(uncommittedChanges);
+            }
+            const disposables: Array<Disposable> = [];
+
+            // send changes as they come in from watchman
+            disposables.push(repo.subscribeToUncommittedChanges(postUncommittedChanges));
+            // trigger a fetch on startup
+            repo.fetchUncommittedChanges();
+
+            disposables.push(
+              repo.subscribeToUncommittedChangesBeginFetching(() =>
+                this.postMessage({type: 'beganFetchingUncommittedChangesEvent'}),
+              ),
+            );
+            this.subscriptions.set(subscriptionID, {
+              dispose: () => {
+                disposables.forEach(d => d.dispose());
+              },
+            });
+            break;
+          }
+          case 'smartlogCommits': {
+            const postSmartlogCommits = (result: FetchedCommits) => {
+              this.postMessage({
+                type: 'subscriptionResult',
+                kind: 'smartlogCommits',
+                subscriptionID,
+                data: result,
+              });
+            };
+
+            const smartlogCommits = repo.getSmartlogCommits();
+            if (smartlogCommits != null) {
+              postSmartlogCommits(smartlogCommits);
+            }
+            const disposables: Array<Disposable> = [];
+            // send changes as they come from file watcher
+            disposables.push(repo.subscribeToSmartlogCommitsChanges(postSmartlogCommits));
+            // trigger a fetch on startup
+            repo.fetchSmartlogCommits();
+
+            disposables.push(
+              repo.subscribeToSmartlogCommitsBeginFetching(() =>
+                this.postMessage({type: 'beganFetchingSmartlogCommitsEvent'}),
+              ),
+            );
+
+            this.subscriptions.set(subscriptionID, {
+              dispose: () => {
+                disposables.forEach(d => d.dispose());
+              },
+            });
+            break;
+          }
+          case 'mergeConflicts': {
+            const postMergeConflicts = (conflicts: MergeConflicts | undefined) => {
+              this.postMessage({
+                type: 'subscriptionResult',
+                kind: 'mergeConflicts',
+                subscriptionID,
+                data: conflicts,
+              });
+            };
+
+            const mergeConflicts = repo.getMergeConflicts();
+            if (mergeConflicts != null) {
+              postMergeConflicts(mergeConflicts);
+            }
+
+            this.subscriptions.set(subscriptionID, repo.onChangeConflictState(postMergeConflicts));
+            break;
+          }
         }
-
-        // send changes as they come in from watchman
-        this.repoDisposables.push(repo.subscribeToUncommittedChanges(postUncommittedChanges));
-        // trigger a fetch on startup
-        repo.fetchUncommittedChanges();
-
-        this.repoDisposables.push(
-          repo.subscribeToUncommittedChangesBeginFetching(() =>
-            this.postMessage({type: 'beganFetchingUncommittedChangesEvent'}),
-          ),
-        );
-        return;
+        break;
       }
-      case 'subscribeSmartlogCommits': {
-        const {subscriptionID} = data;
-        const postSmartlogCommits = (result: FetchedCommits) => {
-          const message: SmartlogCommitsEvent = {
-            type: 'smartlogCommits',
-            subscriptionID,
-            ...result,
-          };
-          this.postMessage(message);
-        };
-
-        const smartlogCommits = repo.getSmartlogCommits();
-        if (smartlogCommits != null) {
-          postSmartlogCommits(smartlogCommits);
-        }
-        // send changes as they come from file watcher
-        this.repoDisposables.push(repo.subscribeToSmartlogCommitsChanges(postSmartlogCommits));
-        // trigger a fetch on startup
-        repo.fetchSmartlogCommits();
-
-        this.repoDisposables.push(
-          repo.subscribeToSmartlogCommitsBeginFetching(() =>
-            this.postMessage({type: 'beganFetchingSmartlogCommitsEvent'}),
-          ),
-        );
-        return;
-      }
-      case 'subscribeMergeConflicts': {
-        const {subscriptionID} = data;
-        const postMergeConflicts = (conflicts: MergeConflicts | undefined) => {
-          const message: MergeConflictsEvent = {
-            type: 'mergeConflicts',
-            subscriptionID,
-            conflicts,
-          };
-          this.postMessage(message);
-        };
-
-        const mergeConflicts = repo.getMergeConflicts();
-        if (mergeConflicts != null) {
-          postMergeConflicts(mergeConflicts);
-        }
-
-        this.repoDisposables.push(repo.onChangeConflictState(postMergeConflicts));
-        return;
+      case 'unsubscribe': {
+        const subscription = this.subscriptions.get(data.subscriptionID);
+        subscription?.dispose();
+        this.subscriptions.delete(data.subscriptionID);
+        break;
       }
       case 'runOperation': {
         const {operation} = data;

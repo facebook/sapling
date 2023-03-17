@@ -196,13 +196,23 @@ export function SucceedableRevset(revset: Revset): CommandArg {
   return {type: 'succeedable-revset', revset};
 }
 
-/* uncommited changes */
+/* Subscriptions */
 
-export type SubscribeUncommittedChanges = {
-  type: 'subscribeUncommittedChanges';
-  /** Identifier to include in each event published. */
+/**
+ * A subscription allows the client to ask for a stream of events from the server.
+ * The client may send subscribe and corresponding unsubscribe messages.
+ * Subscriptions are indexed by a subscriptionId field.
+ * Responses to subscriptions are of type Fetched<T>
+ */
+export type Subscribe<K extends string> =
+  | {type: `subscribe${K}`; subscriptionID: string}
+  | {type: `unsubscribe${K}`; subscriptionID: string};
+
+/** Reponses to subscriptions, including data and the time duration the fetch lasted */
+export type Fetched<K extends string, V> = {
+  type: `fetched${K}`;
   subscriptionID: string;
-};
+} & V;
 
 export type UncommittedChanges = Array<ChangedFile>;
 export type FetchedUncommittedChanges = {
@@ -211,21 +221,8 @@ export type FetchedUncommittedChanges = {
   fetchCompletedTimestamp: number;
 };
 
-export type UncommittedChangesEvent = {
-  type: 'uncommittedChanges';
-  subscriptionID: string;
-} & FetchedUncommittedChanges;
-
 export type BeganFetchingUncommittedChangesEvent = {
   type: 'beganFetchingUncommittedChangesEvent';
-};
-
-/* smartlog commits */
-
-export type SubscribeSmartlogCommits = {
-  type: 'subscribeSmartlogCommits';
-  /** Identifier to include in each event published. */
-  subscriptionID: string;
 };
 
 export type SmartlogCommits = Array<CommitInfo>;
@@ -235,16 +232,9 @@ export type FetchedCommits = {
   fetchCompletedTimestamp: number;
 };
 
-export type SmartlogCommitsEvent = {
-  type: 'smartlogCommits';
-  subscriptionID: string;
-} & FetchedCommits;
-
 export type BeganFetchingSmartlogCommitsEvent = {
   type: 'beganFetchingSmartlogCommitsEvent';
 };
-
-/* merge conflicts */
 
 type ConflictInfo = {
   command: string;
@@ -259,18 +249,6 @@ export type MergeConflicts =
   | ({
       state: 'loaded';
     } & ConflictInfo);
-
-export type SubscribeMergeConflicts = {
-  type: 'subscribeMergeConflicts';
-  /** Identifier to include in each event published. */
-  subscriptionID: string;
-};
-
-export type MergeConflictsEvent = {
-  type: 'mergeConflicts';
-  subscriptionID: string;
-  conflicts: MergeConflicts | undefined;
-};
 
 /* Operations */
 
@@ -341,6 +319,8 @@ export type ClientToServerMessageWithPayload = {
   id: string;
 } & {hasBinaryPayload: true};
 
+export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
+
 export type ClientToServerMessage =
   | {
       type: 'refresh';
@@ -369,15 +349,27 @@ export type ClientToServerMessage =
       numLines: number;
     }
   | {type: 'loadMoreCommits'}
-  | SubscribeUncommittedChanges
-  | SubscribeSmartlogCommits
-  | SubscribeMergeConflicts
+  | {type: 'subscribe'; kind: SubscriptionKind; subscriptionID: string}
+  | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
   | PlatformSpecificClientToServerMessages;
 
+export type SubscriptionResultsData = {
+  uncommittedChanges: FetchedUncommittedChanges;
+  smartlogCommits: FetchedCommits;
+  mergeConflicts: MergeConflicts | undefined;
+};
+
+export type SubscriptionResult<K extends SubscriptionKind> = {
+  type: 'subscriptionResult';
+  subscriptionID: string;
+  kind: K;
+  data: SubscriptionResultsData[K];
+};
+
 export type ServerToClientMessage =
-  | UncommittedChangesEvent
-  | SmartlogCommitsEvent
-  | MergeConflictsEvent
+  | SubscriptionResult<'smartlogCommits'>
+  | SubscriptionResult<'uncommittedChanges'>
+  | SubscriptionResult<'mergeConflicts'>
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | FileABugProgressMessage
