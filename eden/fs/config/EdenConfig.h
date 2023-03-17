@@ -668,6 +668,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls the max number of blob metadata import requests we batch in
+   * HgBackingStore
+   */
+  ConfigSetting<uint32_t> importBatchSizeBlobMeta{
+      "hg:import-batch-size-blobmeta",
+      1024,
+      this};
+
+  /**
    * Whether fetching trees should fall back on an external hg importer process.
    */
   ConfigSetting<bool> hgTreeFetchFallback{"hg:tree-fetch-fallback", true, this};

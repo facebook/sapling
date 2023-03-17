@@ -43,6 +43,14 @@ class HgImportRequestQueue {
       std::shared_ptr<HgImportRequest> request);
 
   /**
+   * Enqueue an aux data request to the queue.
+   *
+   * Return a future that will complete when the aux data request completes.
+   */
+  folly::Future<std::unique_ptr<BlobMetadata>> enqueueBlobMeta(
+      std::shared_ptr<HgImportRequest> request);
+
+  /**
    * Returns a list of requests from the queue. It returns an empty list while
    * the queue is being destructed. This function will block when there is no
    * item available in the queue.
@@ -87,6 +95,10 @@ class HgImportRequestQueue {
     if constexpr (std::is_same_v<T, Tree>) {
       auto* treeImport = import->getRequest<HgImportRequest::TreeImport>();
       promises = &treeImport->promises;
+    } else if constexpr (std::is_same_v<T, BlobMetadata>) {
+      auto* blobMetaImport =
+          import->getRequest<HgImportRequest::BlobMetaImport>();
+      promises = &blobMetaImport->promises;
     } else {
       static_assert(
           std::is_same_v<T, Blob>,
@@ -130,6 +142,7 @@ class HgImportRequestQueue {
     bool running = true;
     std::vector<std::shared_ptr<HgImportRequest>> treeQueue;
     std::vector<std::shared_ptr<HgImportRequest>> blobQueue;
+    std::vector<std::shared_ptr<HgImportRequest>> blobMetaQueue;
 
     /**
      * Map of a ObjectId to an element in the queue. Any changes to this type

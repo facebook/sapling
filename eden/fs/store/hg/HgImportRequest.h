@@ -56,6 +56,18 @@ class HgImportRequest {
     std::vector<folly::Promise<Response>> promises;
   };
 
+  struct BlobMetaImport {
+    using Response = std::unique_ptr<BlobMetadata>;
+    BlobMetaImport(ObjectId hash, HgProxyHash proxyHash)
+        : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
+
+    ObjectId hash;
+    HgProxyHash proxyHash;
+
+    // See the comment above for BlobImport::promises
+    std::vector<folly::Promise<Response>> promises;
+  };
+
   /**
    * Allocate a blob request.
    */
@@ -69,6 +81,12 @@ class HgImportRequest {
    * Allocate a tree request.
    */
   static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
+      const ObjectId& hash,
+      const HgProxyHash& proxyHash,
+      ImportPriority priority,
+      ObjectFetchContext::Cause cause);
+
+  static std::shared_ptr<HgImportRequest> makeBlobMetaImportRequest(
       const ObjectId& hash,
       const HgProxyHash& proxyHash,
       ImportPriority priority,
@@ -147,10 +165,11 @@ class HgImportRequest {
   HgImportRequest(const HgImportRequest&) = delete;
   HgImportRequest& operator=(const HgImportRequest&) = delete;
 
-  using Request = std::variant<BlobImport, TreeImport>;
+  using Request = std::variant<BlobImport, TreeImport, BlobMetaImport>;
   using Response = std::variant<
       folly::Promise<std::unique_ptr<Blob>>,
-      folly::Promise<std::unique_ptr<Tree>>>;
+      folly::Promise<std::unique_ptr<Tree>>,
+      folly::Promise<std::unique_ptr<BlobMetadata>>>;
 
   Request request_;
   ImportPriority priority_;

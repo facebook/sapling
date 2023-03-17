@@ -33,6 +33,14 @@ folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
       std::move(request));
 }
 
+folly::Future<std::unique_ptr<BlobMetadata>>
+HgImportRequestQueue::enqueueBlobMeta(
+    std::shared_ptr<HgImportRequest> request) {
+  return enqueue<
+      std::unique_ptr<BlobMetadata>,
+      HgImportRequest::BlobMetaImport>(std::move(request));
+}
+
 template <typename Ret, typename ImportType>
 folly::Future<Ret> HgImportRequestQueue::enqueue(
     std::shared_ptr<HgImportRequest> request) {
@@ -41,6 +49,10 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
   std::vector<std::shared_ptr<HgImportRequest>>* queue;
   if constexpr (std::is_same_v<ImportType, HgImportRequest::BlobImport>) {
     queue = &state->blobQueue;
+  } else if constexpr (std::is_same_v<
+                           ImportType,
+                           HgImportRequest::BlobMetaImport>) {
+    queue = &state->blobMetaQueue;
   } else {
     static_assert(std::is_same_v<ImportType, HgImportRequest::TreeImport>);
     queue = &state->treeQueue;
@@ -97,19 +109,26 @@ HgImportRequestQueue::combineAndClearRequestQueues() {
   auto state = state_.lock();
   auto treeQSz = state->treeQueue.size();
   auto blobQSz = state->blobQueue.size();
+  auto blobMetaQSz = state->blobMetaQueue.size();
   XLOGF(
       DBG5,
-      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}",
+      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}, blob metadata queue size = {}",
       treeQSz,
-      blobQSz);
+      blobQSz,
+      blobMetaQSz);
   auto res = std::move(state->treeQueue);
   res.insert(
       res.end(),
       std::make_move_iterator(state->blobQueue.begin()),
       std::make_move_iterator(state->blobQueue.end()));
+  res.insert(
+      res.end(),
+      std::make_move_iterator(state->blobMetaQueue.begin()),
+      std::make_move_iterator(state->blobMetaQueue.end()));
   state->treeQueue.clear();
   state->blobQueue.clear();
-  XCHECK_EQ(res.size(), treeQSz + blobQSz);
+  state->blobMetaQueue.clear();
+  XCHECK_EQ(res.size(), treeQSz + blobQSz + blobMetaQSz);
   return res;
 }
 
@@ -122,6 +141,7 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
     if (!state->running) {
       state->treeQueue.clear();
       state->blobQueue.clear();
+      state->blobMetaQueue.clear();
       return std::vector<std::shared_ptr<HgImportRequest>>();
     }
 
@@ -135,6 +155,15 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
       count = config_->getEdenConfig()->importBatchSizeTree.getValue();
       highestPriority = state->treeQueue.front()->getPriority();
       queue = &state->treeQueue;
+    }
+
+    if (!state->blobMetaQueue.empty()) {
+      auto priority = state->blobMetaQueue.front()->getPriority();
+      if (!queue || priority > highestPriority) {
+        queue = &state->blobMetaQueue;
+        count = config_->getEdenConfig()->importBatchSizeBlobMeta.getValue();
+        highestPriority = priority;
+      }
     }
 
     if (!state->blobQueue.empty()) {
