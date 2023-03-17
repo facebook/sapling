@@ -73,6 +73,14 @@ class HgDatapackStore {
   std::unique_ptr<BlobMetadata> getLocalBlobMetadata(const HgProxyHash& id);
 
   /**
+   * Fetch multiple aux data at once.
+   *
+   * This function returns when all the aux data have been fetched.
+   */
+  void getBlobMetadataBatch(
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
+
+  /**
    * Flush any pending writes to disk.
    *
    * As a side effect, this also reloads the current state of Mercurial's

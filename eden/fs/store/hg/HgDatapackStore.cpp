@@ -258,6 +258,55 @@ std::unique_ptr<BlobMetadata> HgDatapackStore::getLocalBlobMetadata(
   return nullptr;
 }
 
+void HgDatapackStore::getBlobMetadataBatch(
+    const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
+  size_t count = importRequests.size();
+
+  std::vector<sapling::NodeId> requests;
+  requests.reserve(count);
+  for (const auto& importRequest : importRequests) {
+    requests.emplace_back(
+        importRequest->getRequest<HgImportRequest::BlobMetaImport>()
+            ->proxyHash.byteHash());
+  }
+
+  std::vector<RequestMetricsScope> requestsWatches;
+  requestsWatches.reserve(count);
+  for (auto i = 0ul; i < count; i++) {
+    requestsWatches.emplace_back(&liveBatchedBlobMetaWatches_);
+  }
+
+  store_.getBlobMetadataBatch(
+      folly::range(requests),
+      false,
+      [&](size_t index,
+          folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
+        if (auxTry.hasException() &&
+            config_->getEdenConfig()->hgBlobMetaFetchFallback.getValue()) {
+          // The caller will fallback to fetching the blob.
+          // TODO: Remove this.
+          return;
+        }
+
+        XLOGF(DBG9, "Imported aux={}", folly::hexlify(requests[index]));
+        auto& importRequest = importRequests[index];
+        importRequest->getPromise<std::unique_ptr<BlobMetadata>>()->setWith(
+            [&]() -> folly::Try<std::unique_ptr<BlobMetadata>> {
+              if (auxTry.hasException()) {
+                return folly::Try<std::unique_ptr<BlobMetadata>>{
+                    std::move(auxTry).exception()};
+              }
+
+              auto& aux = auxTry.value();
+              return folly::Try{std::make_unique<BlobMetadata>(
+                  Hash20{aux->content_sha1}, aux->total_size)};
+            });
+
+        // Make sure that we're stopping this watch.
+        requestsWatches[index].reset();
+      });
+}
+
 void HgDatapackStore::flush() {
   store_.flush();
 }

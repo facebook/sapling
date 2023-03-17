@@ -686,6 +686,14 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> hgBlobFetchFallback{"hg:blob-fetch-fallback", true, this};
 
+  /**
+   * Whether fetching blob metadata should fall back to fetching blobs.
+   */
+  ConfigSetting<bool> hgBlobMetaFetchFallback{
+      "hg:blobmeta-fetch-fallback",
+      true,
+      this};
+
   // [backingstore]
 
   /**

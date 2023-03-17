@@ -121,6 +121,21 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
+   * Return value of the getBlobMetadata method.
+   */
+  struct GetBlobMetaResult {
+    /**
+     * The retrieved blob metadata.
+     *
+     * Setting this to a nullptr will make the ObjectStore fallback to fetching
+     * the blob and computing the blob metadata from it.
+     */
+    std::unique_ptr<BlobMetadata> blobMeta;
+    /** The fetch origin of the blob metadata. */
+    ObjectFetchContext::Origin origin;
+  };
+
+  /**
    * Fetch blob metadata if available in a local cache. Returns nullptr if not
    * locally available.
    */

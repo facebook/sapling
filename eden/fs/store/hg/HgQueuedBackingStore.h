@@ -171,6 +171,9 @@ class HgQueuedBackingStore final : public BackingStore {
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context);
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
@@ -218,7 +221,7 @@ class HgQueuedBackingStore final : public BackingStore {
       std::vector<std::shared_ptr<HgImportRequest>>&& requests);
   void processTreeImportRequests(
       std::vector<std::shared_ptr<HgImportRequest>>&& requests);
-  void processPrefetchRequests(
+  void processBlobMetaImportRequests(
       std::vector<std::shared_ptr<HgImportRequest>>&& requests);
 
   /**
@@ -243,6 +246,18 @@ class HgQueuedBackingStore final : public BackingStore {
   std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
+
+  /**
+   * Fetch the blob metadata from Mercurial.
+   *
+   * For latency sensitive context, the caller is responsible for checking if
+   * the blob metadata is present locally, as this function will always push
+   * the request at the end of the queue.
+   */
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadataImpl(
+      const ObjectId& id,
+      const HgProxyHash& proxyHash,
+      const ObjectFetchContextPtr& context);
 
   /**
    * Fetch a tree from Mercurial.

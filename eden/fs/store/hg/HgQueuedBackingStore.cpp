@@ -242,6 +242,44 @@ void HgQueuedBackingStore::processTreeImportRequests(
   }
 }
 
+void HgQueuedBackingStore::processBlobMetaImportRequests(
+    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
+  folly::stop_watch<std::chrono::milliseconds> watch;
+
+  for (auto& request : requests) {
+    auto* blobMetaImport =
+        request->getRequest<HgImportRequest::BlobMetaImport>();
+
+    traceBus_->publish(HgImportTraceEvent::start(
+        request->getUnique(),
+        HgImportTraceEvent::BLOBMETA,
+        blobMetaImport->proxyHash,
+        request->getPriority().getClass(),
+        request->getCause()));
+
+    XLOGF(DBG4, "Processing blob meta request for {}", blobMetaImport->hash);
+  }
+
+  backingStore_->getDatapackStore().getBlobMetadataBatch(requests);
+
+  {
+    for (auto& request : requests) {
+      auto* promise = request->getPromise<std::unique_ptr<BlobMetadata>>();
+      if (promise->isFulfilled()) {
+        stats_->addDuration(
+            &HgBackingStoreStats::fetchBlobMetadata, watch.elapsed());
+        continue;
+      }
+
+      // The code waiting on the promise will fallback to fetching the Blob to
+      // compute the blob metadata. We can't trigger a blob fetch here without
+      // the risk of running into a deadlock: if all import thread are in this
+      // code path, there are no free importer to fetch blobs.
+      promise->setValue(nullptr);
+    }
+  }
+}
+
 void HgQueuedBackingStore::processRequest() {
   folly::setThreadName("hgqueue");
   for (;;) {
@@ -257,6 +295,8 @@ void HgQueuedBackingStore::processRequest() {
       processBlobImportRequests(std::move(requests));
     } else if (first->isType<HgImportRequest::TreeImport>()) {
       processTreeImportRequests(std::move(requests));
+    } else if (first->isType<HgImportRequest::BlobMetaImport>()) {
+      processBlobMetaImportRequests(std::move(requests));
     }
   }
 }
@@ -520,6 +560,84 @@ HgQueuedBackingStore::getBlobImpl(
         auto blob = std::move(result).value();
         return GetBlobResult{
             std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
+      });
+}
+
+folly::SemiFuture<BackingStore::GetBlobMetaResult>
+HgQueuedBackingStore::getBlobMetadata(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) {
+  DurationScope scope{stats_, &HgBackingStoreStats::getBlobMetadata};
+
+  HgProxyHash proxyHash;
+  try {
+    proxyHash =
+        HgProxyHash::load(localStore_.get(), id, "getBlobMetadata", *stats_);
+  } catch (const std::exception&) {
+    logMissingProxyHash();
+    throw;
+  }
+
+  logBackingStoreFetch(
+      *context,
+      folly::Range{&proxyHash, 1},
+      ObjectFetchContext::ObjectType::BlobMetadata);
+
+  if (auto metadata =
+          backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash)) {
+    stats_->increment(&ObjectStoreStats::getLocalBlobMetadataFromBackingStore);
+    return folly::makeSemiFuture(GetBlobMetaResult{
+        std::move(metadata), ObjectFetchContext::Origin::FromDiskCache});
+  }
+
+  return getBlobMetadataImpl(id, proxyHash, context)
+      .deferEnsure([scope = std::move(scope)] {});
+}
+
+folly::SemiFuture<BackingStore::GetBlobMetaResult>
+HgQueuedBackingStore::getBlobMetadataImpl(
+    const ObjectId& id,
+    const HgProxyHash& proxyHash,
+    const ObjectFetchContextPtr& context) {
+  auto getBlobMetaFuture = folly::makeFutureWith([&] {
+    XLOG(DBG4) << "make blob meta import request for " << proxyHash.path()
+               << ", hash is:" << id;
+
+    auto request = HgImportRequest::makeBlobMetaImportRequest(
+        id, proxyHash, context->getPriority(), context->getCause());
+    auto unique = request->getUnique();
+
+    auto importTracker =
+        std::make_unique<RequestMetricsScope>(&pendingImportBlobMetaWatches_);
+    traceBus_->publish(HgImportTraceEvent::queue(
+        unique,
+        HgImportTraceEvent::BLOBMETA,
+        proxyHash,
+        context->getPriority().getClass(),
+        context->getCause()));
+
+    return queue_.enqueueBlobMeta(std::move(request))
+        .ensure([this,
+                 unique,
+                 proxyHash,
+                 context = context.copy(),
+                 importTracker = std::move(importTracker)]() {
+          traceBus_->publish(HgImportTraceEvent::finish(
+              unique,
+              HgImportTraceEvent::BLOBMETA,
+              proxyHash,
+              context->getPriority().getClass(),
+              context->getCause()));
+        });
+  });
+
+  return std::move(getBlobMetaFuture)
+      .thenTry([this, id](folly::Try<std::unique_ptr<BlobMetadata>>&& result) {
+        this->queue_.markImportAsFinished<BlobMetadata>(id, result);
+        auto blobMeta = std::move(result).value();
+        stats_->increment(&ObjectStoreStats::getBlobMetadataFromBackingStore);
+        return GetBlobMetaResult{
+            std::move(blobMeta), ObjectFetchContext::Origin::FromNetworkFetch};
       });
 }
 
