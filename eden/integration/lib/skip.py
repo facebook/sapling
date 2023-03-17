@@ -170,8 +170,15 @@ elif sys.platform.startswith("darwin"):
         "test_change_casing_with_untracked",
     ]
 
+    # The remaining tests are failing due to Mercurial issue in asciitransform
+    TEST_DISABLED["hg.add_test.AddTestTreeOnly"] = [
+        "test_debugdirstate",
+        "test_add",
+        "test_add_file_that_would_normally_be_ignored",
+        "test_add_ignored_directory_has_no_effect",
+    ]
+
     # hg tests with misc failures
-    TEST_DISABLED["hg.add_test.AddTestTreeOnly"] = True
     TEST_DISABLED["hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly"] = True
     TEST_DISABLED["hg.files_test.FilesTestTreeOnly"] = True
     TEST_DISABLED["hg.merge_test.MergeTestTreeOnly"] = True
