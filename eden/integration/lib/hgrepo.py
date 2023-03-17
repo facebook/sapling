@@ -167,6 +167,13 @@ class HgRepository(repobase.Repository):
                 env=env,
             )
         except subprocess.CalledProcessError as ex:
+            print("----------- Mercurial Crash Report")
+            print("cmd: ", " ".join(cmd))
+            if ex.stdout:
+                print("stdout: ", ex.stdout.decode())
+            if ex.stderr:
+                print("stderr: ", ex.stderr.decode())
+            print("----------- Mercurial Crash Report End")
             raise HgError(ex) from ex
 
     def hg(

@@ -199,10 +199,10 @@ elif sys.platform.startswith("darwin"):
     TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = [
         "test_update_clean_removes_added_and_removed_statuses",
     ]
+    TEST_DISABLED["hg.split_test.SplitTestTreeOnly"] = True
 
     # hg tests with misc failures
     TEST_DISABLED["hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly"] = True
-    TEST_DISABLED["hg.split_test.SplitTestTreeOnly"] = True
 
     # Assertion error and invalid argument
     TEST_DISABLED["snapshot.test_snapshots.InfraTestsDefault"] = [
