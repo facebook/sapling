@@ -19,7 +19,7 @@ _PR_STATUS_PEEK_AHEAD = 30
 _PR_STATUS_CACHE = "_pr_status_cache"
 
 
-def setup_smartset_prefetch():
+def setup_smartset_prefetch() -> None:
     smartset.prefetchtemplatekw.update(
         {
             "github_pull_request_state": ["pr_status"],
