@@ -290,10 +290,6 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
       "object_store.get_blob_metadata.backing_store"};
   Counter getLocalBlobMetadataFromBackingStore{
       "object_store.get_blob_metadata.backing_store_cache"};
-
-  Counter getBlobSizeFromLocalStore{"object_store.get_blob_size.local_store"};
-  Counter getBlobSizeFromBackingStore{
-      "object_store.get_blob_size.backing_store"};
 };
 
 /**
