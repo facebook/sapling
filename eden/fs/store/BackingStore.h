@@ -107,7 +107,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   struct GetBlobResult {
     /** The retrieved blob. */
     std::unique_ptr<Blob> blob;
-    /** The fetch origin of the tree. */
+    /** The fetch origin of the blob. */
     ObjectFetchContext::Origin origin;
   };
 
