@@ -69,7 +69,17 @@ from edenscm import tracing
 
 from edenscmnative import osutil
 
-from . import blackbox, encoding, error, fscap, i18n, identity, pycompat, urllibcompat
+from . import (
+    blackbox,
+    encoding,
+    error,
+    fscap,
+    i18n,
+    identity,
+    pycompat,
+    redact,
+    urllibcompat,
+)
 from .pycompat import decodeutf8, encodeutf8, range
 
 
@@ -4654,7 +4664,9 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
                 except NotRendered:
                     continue
                 else:
-                    localargs.append("%s = %s" % (argname, reprvalue))
+                    localargs.append(
+                        "%s = %s" % (argname, redact.redactsensitiveinfo(reprvalue))
+                    )
         else:
             line = None
         frameinfos.append((filename, lineno, name, line, localargs))

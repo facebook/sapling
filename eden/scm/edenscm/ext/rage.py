@@ -32,6 +32,7 @@ from edenscm import (
     hintutil,
     progress,
     pycompat,
+    redact,
     registrar,
     util,
 )
@@ -527,7 +528,7 @@ def _makerage(ui, repo, **opts) -> str:
 
     encoding.encoding = oldencoding
     encoding.encodingmode = oldencodingmode
-    return msg
+    return redact.redactsensitiveinfo(msg)
 
 
 @command("rage", rageopts, _("@prog@ rage"))

@@ -40,3 +40,14 @@ Create fake commit cloud  state to be collected by rage
   $ cd repo2
   $ hg rage --preview | grep [c]ommit_cloud_workspace
       "commit_cloud_workspace": "something"
+
+  $ cd ..
+
+Redact sensitive data
+
+  $ cd repo
+  $ echo 'hi' > file.txt
+  $ hg commit -A -m "leaking a secret: access_token: a1b2c3d4f4f6, oh no!"
+  adding file.txt
+  $ hg rage --preview | grep "access_token: a1b2c3d4f4f6"
+  [1]
