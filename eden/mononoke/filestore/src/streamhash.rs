@@ -30,7 +30,6 @@ where
 mod test {
     use bytes::Bytes;
     use futures::stream;
-    use mononoke_types::hash::Blake3;
     use mononoke_types::hash::RichGitSha1;
     use mononoke_types::hash::Sha1;
     use mononoke_types::hash::Sha256;
@@ -38,7 +37,6 @@ mod test {
 
     use super::*;
     use crate::expected_size::ExpectedSize;
-    use crate::incremental_hash::Blake3IncrementalHasher;
     use crate::incremental_hash::ContentIdIncrementalHasher;
     use crate::incremental_hash::GitSha1IncrementalHasher;
     use crate::incremental_hash::Sha1IncrementalHasher;
@@ -216,38 +214,5 @@ mod test {
             ])
             .unwrap()
         );
-    }
-
-    #[tokio::test]
-    async fn seeded_blake3_simple() {
-        let data = Bytes::from(&b"hello, world"[..]); // 8537f0e61caaa8f1aca4eac89bb9f27ba2562dbdd1b1a2d987999c37f159bf18
-        let s = stream::once(future::ready(data));
-
-        let res: Blake3 = hash_stream(Blake3IncrementalHasher::new_seeded(), s).await;
-
-        let hello_world_hash = Blake3::from_bytes([
-            0x85, 0x37, 0xf0, 0xe6, 0x1c, 0xaa, 0xa8, 0xf1, 0xac, 0xa4, 0xea, 0xc8, 0x9b, 0xb9,
-            0xf2, 0x7b, 0xa2, 0x56, 0x2d, 0xbd, 0xd1, 0xb1, 0xa2, 0xd9, 0x87, 0x99, 0x9c, 0x37,
-            0xf1, 0x59, 0xbf, 0x18,
-        ])
-        .unwrap();
-        assert_eq!(res, hello_world_hash);
-    }
-
-    #[tokio::test]
-    async fn seeded_blake3_chunks() {
-        let data = vec![&b"hello"[..], &b", "[..], &b"world"[..]] // 8537f0e61caaa8f1aca4eac89bb9f27ba2562dbdd1b1a2d987999c37f159bf18
-            .into_iter()
-            .map(Bytes::from);
-        let s = stream::iter(data);
-
-        let res: Blake3 = hash_stream(Blake3IncrementalHasher::new_seeded(), s).await;
-        let hello_world_hash = Blake3::from_bytes([
-            0x85, 0x37, 0xf0, 0xe6, 0x1c, 0xaa, 0xa8, 0xf1, 0xac, 0xa4, 0xea, 0xc8, 0x9b, 0xb9,
-            0xf2, 0x7b, 0xa2, 0x56, 0x2d, 0xbd, 0xd1, 0xb1, 0xa2, 0xd9, 0x87, 0x99, 0x9c, 0x37,
-            0xf1, 0x59, 0xbf, 0x18,
-        ])
-        .unwrap();
-        assert_eq!(res, hello_world_hash);
     }
 }

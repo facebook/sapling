@@ -14,7 +14,7 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
-use mononoke_types::ContentMetadataV2;
+use mononoke_types::ContentMetadata;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
 
@@ -59,7 +59,7 @@ impl Bubble {
         other: BubbleId,
         config: FilestoreConfig,
         id: FetchKey,
-    ) -> Result<Option<ContentMetadataV2>> {
+    ) -> Result<Option<ContentMetadata>> {
         self.check_unexpired()?;
         let blobstore = self.wrap_repo_blobstore(repo_blobstore);
         let data = match filestore::get_metadata(&blobstore, ctx, &id).await? {

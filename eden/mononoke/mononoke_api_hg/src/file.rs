@@ -105,7 +105,6 @@ impl HgFileContext {
         let blobstore = self.repo.blob_repo().repo_blobstore();
         filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
             .await?
-            .map(ContentMetadata::from)
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!(
                     "metadata not found for content id {}",

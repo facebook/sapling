@@ -20,7 +20,7 @@ setup configuration
 Check the count of blobstore blobs.  The walker should fetch all blobs, and duplicate
 fetches should be handled by the cache.
   $ ls $TESTTMP/blobstore/blobs/blob-repo0000.* | grep -v .filenode_lookup. | wc -l
-  30
+  27
 
 Base case, sample all in one go. Expecting the same number of keys.
 # TODO(mbthomas): concurrent fetches may not hit in the cache

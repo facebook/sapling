@@ -692,7 +692,7 @@ mod test {
     use futures::stream;
     use hyper::Uri;
     use memblob::Memblob;
-    use mononoke_types::ContentMetadataV2Id;
+    use mononoke_types::ContentMetadataId;
     use mononoke_types_mocks::hash::FOURS_SHA256;
     use mononoke_types_mocks::hash::ONES_SHA256;
     use mononoke_types_mocks::hash::THREES_SHA256;
@@ -1081,7 +1081,7 @@ mod test {
 
         let key = format!(
             "repo0000.{}",
-            ContentMetadataV2Id::from(meta.content_id).blobstore_key()
+            ContentMetadataId::from(meta.content_id).blobstore_key()
         );
 
         let hits = Arc::new(AtomicU64::new(0));

@@ -13,25 +13,19 @@ path = "../cmds/aliasverify.rs"
 
 [dependencies]
 anyhow = "1.0.65"
-async-trait = "0.1.58"
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = { version = "3.2.23", features = ["derive", "env", "regex", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../server/context" }
-executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.22", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
-metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
-mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
-once_cell = "1.12"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
-sharding_lib_ext = { version = "0.1.0", path = "../sharding_lib_ext" }
+sha2 = "0.10.6"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

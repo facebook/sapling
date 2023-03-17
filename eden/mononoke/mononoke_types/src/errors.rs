@@ -37,6 +37,4 @@ pub enum ErrorKind {
     InvalidBonsaiChangeset(String),
     #[error("Failed to parse RepositoryId from '{0}'")]
     FailedToParseRepositoryId(String),
-    #[error("invalid blake3 input: {0}")]
-    InvalidBlake3Input(String),
 }

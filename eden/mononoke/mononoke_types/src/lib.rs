@@ -6,7 +6,6 @@
  */
 
 //! Base types used throughout Mononoke.
-#![feature(round_char_boundary)]
 
 pub mod basename_suffix_skeleton_manifest;
 pub mod blame;
@@ -54,15 +53,6 @@ pub use bonsai_changeset::BonsaiChangesetMut;
 pub use content_chunk::ContentChunk;
 pub use content_metadata::ContentAlias;
 pub use content_metadata::ContentMetadata;
-pub use content_metadata_v2::ends_in_newline;
-pub use content_metadata_v2::first_line;
-pub use content_metadata_v2::is_ascii;
-pub use content_metadata_v2::is_binary;
-pub use content_metadata_v2::is_generated;
-pub use content_metadata_v2::is_partially_generated;
-pub use content_metadata_v2::is_utf8;
-pub use content_metadata_v2::newline_count;
-pub use content_metadata_v2::ContentMetadataV2;
 pub use datetime::DateTime;
 pub use datetime::Timestamp;
 pub use file_change::BasicFileChange;
@@ -97,7 +87,6 @@ pub use typed_hash::ChangesetIdsResolvedFromPrefix;
 pub use typed_hash::ContentChunkId;
 pub use typed_hash::ContentId;
 pub use typed_hash::ContentMetadataId;
-pub use typed_hash::ContentMetadataV2Id;
 pub use typed_hash::DeletedManifestV2Id;
 pub use typed_hash::FastlogBatchId;
 pub use typed_hash::FileUnodeId;

@@ -50,7 +50,7 @@ Check reads throttle by bytes and qps
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  33
+  30
   $ rm blobstore/0/blobs/*
 
 Check writes throttle by qps in Repair mode

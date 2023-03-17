@@ -19,9 +19,9 @@ setup configuration in usual uncompressed way
 
 Check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
-  33
+  30
   $ ls blobstore/1/blobs/ | wc -l
-  33
+  30
 
 Check that the packed sizes are larger due to the packblob wrappers on store 0
   $ PACKED=$(du -s --bytes blobstore/0/blobs/ | cut -f1); UNPACKED=$(du -s --bytes blobstore/1/blobs/ | cut -f1)

@@ -12,7 +12,6 @@ use anyhow::Error;
 use filestore::Alias;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mononoke_types::hash::Blake3;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -154,7 +153,6 @@ impl FromStr for AliasKey {
             AliasType::GitSha1 => Alias::GitSha1(GitSha1::from_str(id)?),
             AliasType::Sha1 => Alias::Sha1(Sha1::from_str(id)?),
             AliasType::Sha256 => Alias::Sha256(Sha256::from_str(id)?),
-            AliasType::SeededBlake3 => Alias::SeededBlake3(Blake3::from_str(id)?),
         };
         Ok(Self(alias))
     }
@@ -197,8 +195,6 @@ mod tests {
     const SAMPLE_BLAKE2: &str = "b847b8838bfe3ae13ea6f8ce2e341c51193587b8392494f6dbab7224b3b116bf";
     const SAMPLE_SHA1: &str = "e797dcabdd6d16ec4ae614165178b60d7054305b";
     const SAMPLE_SHA256: &str = "332ff483aaf1bbc241314576b399f81675a6f81aba205bd3b80b05a4ffda44d4";
-    const SAMPLE_SEEDED_BLAKE3: &str =
-        "8537f0e61caaa8f1aca4eac89bb9f27ba2562dbdd1b1a2d987999c37f159bf18";
     const SAMPLE_PATH: &str = "/foo/bar/baz";
 
     fn test_node_type(node_type: &NodeType) -> Result<(), Error> {
@@ -288,14 +284,6 @@ mod tests {
                 &parse_node(&format!("FileContentMetadata{}{}", NODE_SEP, SAMPLE_BLAKE2))?
                     .get_type()
             ),
-            NodeType::FileContentMetadataV2 => assert_eq!(
-                node_type,
-                &parse_node(&format!(
-                    "FileContentMetadataV2{}{}",
-                    NODE_SEP, SAMPLE_BLAKE2
-                ))?
-                .get_type()
-            ),
             NodeType::AliasContentMapping => {
                 assert_eq!(
                     node_type,
@@ -310,14 +298,6 @@ mod tests {
                     &parse_node(&format!(
                         "AliasContentMapping{}{}{}{}",
                         NODE_SEP, "Sha256", NODE_SEP, SAMPLE_SHA256
-                    ))?
-                    .get_type()
-                );
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!(
-                        "AliasContentMapping{}{}{}{}",
-                        NODE_SEP, "SeededBlake3", NODE_SEP, SAMPLE_SEEDED_BLAKE3
                     ))?
                     .get_type()
                 );

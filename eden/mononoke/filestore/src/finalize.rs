@@ -12,8 +12,7 @@ use context::CoreContext;
 use futures::future;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentAlias;
-use mononoke_types::ContentMetadataV2;
-use strum::IntoEnumIterator;
+use mononoke_types::ContentMetadata;
 
 use crate::errors::ErrorKind;
 use crate::errors::InvalidHash;
@@ -43,21 +42,12 @@ pub async fn finalize<B: Blobstore>(
     ctx: &CoreContext,
     req: Option<&StoreRequest>,
     outcome: Prepared,
-) -> Result<ContentMetadataV2, Error> {
+) -> Result<ContentMetadata, Error> {
     let Prepared {
         sha1,
         sha256,
         git_sha1,
-        seeded_blake3,
         contents,
-        is_ascii,
-        is_binary,
-        is_utf8,
-        ends_in_newline,
-        newline_count,
-        first_line,
-        is_generated,
-        is_partially_generated,
     } = outcome;
 
     let total_size = contents.size();
@@ -65,6 +55,7 @@ pub async fn finalize<B: Blobstore>(
     let blob = contents.into_blob();
     let content_id = *blob.id();
 
+    // If we were provided any hashes in the request, then validate them before we proceed.
     if let Some(req) = req {
         let StoreRequest {
             expected_size,
@@ -72,7 +63,6 @@ pub async fn finalize<B: Blobstore>(
             sha1: req_sha1,
             sha256: req_sha256,
             git_sha1: req_git_sha1,
-            seeded_blake3: req_seeded_blake3,
         } = req;
 
         expected_size.check_equals(total_size)?;
@@ -83,23 +73,13 @@ pub async fn finalize<B: Blobstore>(
             check_hash(*req_sha1, sha1).map_err(InvalidSha1)?;
             check_hash(*req_sha256, sha256).map_err(InvalidSha256)?;
             check_hash(*req_git_sha1, git_sha1).map_err(InvalidGitSha1)?;
-            check_hash(*req_seeded_blake3, seeded_blake3).map_err(InvalidBlake3)?
         }
     }
 
     let alias = ContentAlias::from_content_id(content_id);
-    // Ensure that all aliases are covered, and missing out an alias gives a compile time error.
-    future::try_join_all(Alias::iter().map(|alias_type| match alias_type {
-        Alias::Sha1(_) => AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx, blobstore),
-        Alias::GitSha1(_) => {
-            AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias.clone()).store(ctx, blobstore)
-        }
-        Alias::Sha256(_) => AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx, blobstore),
-        Alias::SeededBlake3(_) => {
-            AliasBlob(Alias::SeededBlake3(seeded_blake3), alias.clone()).store(ctx, blobstore)
-        }
-    }))
-    .await?;
+    let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx, blobstore);
+    let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx, blobstore);
+    let put_git_sha1 = AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias).store(ctx, blobstore);
 
     // Since we don't have atomicity for multiple puts, we need to make sure they're ordered
     // correctly:
@@ -118,23 +98,16 @@ pub async fn finalize<B: Blobstore>(
     // cache, as everything in it can be computed from the content id. Therefore, in principle,
     // if it doesn't get written we can fix it up later.
 
+    future::try_join3(put_sha1, put_sha256, put_git_sha1).await?;
+
     blob.store(ctx, blobstore).await?;
 
-    let metadata = ContentMetadataV2 {
+    let metadata = ContentMetadata {
         total_size,
         content_id,
         sha1,
         git_sha1,
         sha256,
-        seeded_blake3,
-        is_ascii,
-        is_binary,
-        is_utf8,
-        ends_in_newline,
-        newline_count,
-        first_line,
-        is_generated,
-        is_partially_generated,
     };
 
     metadata.clone().into_blob().store(ctx, blobstore).await?;

@@ -23,7 +23,6 @@ use crate::thrift;
 use crate::thrift_field;
 use crate::typed_hash::ContentId;
 use crate::typed_hash::ContentMetadataId;
-use crate::ContentMetadataV2;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ContentAlias(ContentId);
@@ -98,18 +97,6 @@ impl ContentMetadata {
             sha1: Some(self.sha1.into_thrift()),
             git_sha1: Some(self.git_sha1.into_thrift()),
             sha256: Some(self.sha256.into_thrift()),
-        }
-    }
-}
-
-impl std::convert::From<ContentMetadataV2> for ContentMetadata {
-    fn from(data: ContentMetadataV2) -> Self {
-        Self {
-            content_id: data.content_id,
-            git_sha1: data.git_sha1,
-            sha1: data.sha1,
-            sha256: data.sha256,
-            total_size: data.total_size,
         }
     }
 }

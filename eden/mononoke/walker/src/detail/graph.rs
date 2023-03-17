@@ -66,7 +66,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadata;
-use mononoke_types::ContentMetadataV2;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FastlogBatchId;
 use mononoke_types::FileUnodeId;
@@ -358,7 +357,6 @@ create_graph!(
             // Content
             FileContent,
             FileContentMetadata,
-            FileContentMetadataV2,
             AliasContentMapping,
             // Derived
             Blame,
@@ -441,7 +439,7 @@ create_graph!(
         ]
     ),
     // Content
-    (FileContent, ContentId, [FileContentMetadata, FileContentMetadataV2]),
+    (FileContent, ContentId, [FileContentMetadata]),
     (
         FileContentMetadata,
         ContentId,
@@ -449,16 +447,6 @@ create_graph!(
             Sha1Alias(AliasContentMapping),
             Sha256Alias(AliasContentMapping),
             GitSha1Alias(AliasContentMapping)
-        ]
-    ),
-    (
-        FileContentMetadataV2,
-        ContentId,
-        [
-            Sha1Alias(AliasContentMapping),
-            Sha256Alias(AliasContentMapping),
-            GitSha1Alias(AliasContentMapping),
-            SeededBlake3Alias(AliasContentMapping)
         ]
     ),
     (AliasContentMapping, AliasKey, [FileContent]),
@@ -560,7 +548,6 @@ impl NodeType {
             // Content
             NodeType::FileContent => None,
             NodeType::FileContentMetadata => None,
-            NodeType::FileContentMetadataV2 => None,
             NodeType::AliasContentMapping => None,
             // Derived data
             NodeType::Blame => Some(BlameRoot::NAME),
@@ -608,7 +595,6 @@ impl NodeType {
             // Content
             NodeType::FileContent => true,
             NodeType::FileContentMetadata => true,
-            NodeType::FileContentMetadataV2 => true,
             NodeType::AliasContentMapping => true,
             // Derived Data
             NodeType::Blame => false,
@@ -815,7 +801,6 @@ define_type_enum! {
         GitSha1,
         Sha1,
         Sha256,
-        SeededBlake3,
     }
 }
 
@@ -868,7 +853,6 @@ pub enum NodeData {
     // Content
     FileContent(FileContentData),
     FileContentMetadata(Option<ContentMetadata>),
-    FileContentMetadataV2(Option<ContentMetadataV2>),
     AliasContentMapping(ContentId),
     // Derived data
     Blame(Option<Blame>),
@@ -942,7 +926,6 @@ impl Node {
             // Content
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,
-            Node::FileContentMetadataV2(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
             Node::Blame(_) => None,
@@ -985,7 +968,6 @@ impl Node {
             // Content
             Node::FileContent(k) => k.blobstore_key(),
             Node::FileContentMetadata(k) => k.blobstore_key(),
-            Node::FileContentMetadataV2(k) => k.blobstore_key(),
             Node::AliasContentMapping(k) => k.0.blobstore_key(),
             // Derived data
             Node::Blame(k) => k.blobstore_key(),
@@ -1028,7 +1010,6 @@ impl Node {
             // Content
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,
-            Node::FileContentMetadataV2(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
             Node::Blame(_) => None,
@@ -1072,7 +1053,6 @@ impl Node {
             // Content
             Node::FileContent(k) => Some(k.sampling_fingerprint()),
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
-            Node::FileContentMetadataV2(k) => Some(k.sampling_fingerprint()),
             Node::AliasContentMapping(k) => Some(k.0.sampling_fingerprint()),
             // Derived data
             Node::Blame(k) => Some(k.sampling_fingerprint()),

@@ -15,7 +15,7 @@ use context::CoreContext;
 use futures::future::TryFutureExt;
 use mononoke_types::ChunkedFileContents;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadataV2;
+use mononoke_types::ContentMetadata;
 use mononoke_types::FileContents;
 use slog::debug;
 use thiserror::Error;
@@ -41,7 +41,7 @@ pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
     config: FilestoreConfig,
     ctx: &CoreContext,
     content_id: ContentId,
-) -> Result<ContentMetadataV2, Error> {
+) -> Result<ContentMetadata, Error> {
     let file_contents: FileContents = content_id
         .load(ctx, blobstore)
         .map_err(move |err| match err {
@@ -64,18 +64,18 @@ pub async fn rechunk<B: Blobstore + Clone + 'static>(
     filestore_config: FilestoreConfig,
     ctx: &CoreContext,
     content_id: ContentId,
-) -> Result<(ContentMetadataV2, bool), Error> {
+) -> Result<(ContentMetadata, bool), Error> {
     let fetch_key = FetchKey::Canonical(content_id.clone());
     let chunk_size = filestore_config.chunk_size;
     let metadata = get_metadata(blobstore, ctx, &fetch_key).await?;
-    let content_metadata: ContentMetadataV2 = match metadata {
+    let content_metadata: ContentMetadata = match metadata {
         Some(content_metadata) => content_metadata,
         None => return Err(ErrorKind::ContentNotFound(content_id).into()),
     };
 
     match chunk_size {
         Some(chunk_size) if content_metadata.total_size > chunk_size => {
-            let r: Result<(ContentMetadataV2, bool), Error> = rechunk_if_uses_larger_chunk_size(
+            let r: Result<(ContentMetadata, bool), Error> = rechunk_if_uses_larger_chunk_size(
                 blobstore,
                 chunk_size,
                 filestore_config.concurrency,
@@ -144,8 +144,8 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
     expected_chunk_size: u64,
     concurrency: usize,
     ctx: &CoreContext,
-    content_metadata: ContentMetadataV2,
-) -> Result<(ContentMetadataV2, bool), Error> {
+    content_metadata: ContentMetadata,
+) -> Result<(ContentMetadata, bool), Error> {
     let content_id = content_metadata.content_id.clone();
 
     let file_contents: FileContents = content_id
@@ -169,7 +169,7 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
             concurrency,
         };
 
-        let content_metadata: ContentMetadataV2 =
+        let content_metadata: ContentMetadata =
             do_rechunk_file_contents(blobstore, filestore_config, ctx, file_contents, content_id)
                 .await?;
 
@@ -188,7 +188,7 @@ async fn do_rechunk_file_contents<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     file_contents: FileContents,
     content_id: ContentId,
-) -> Result<ContentMetadataV2, Error> {
+) -> Result<ContentMetadata, Error> {
     let req = StoreRequest::with_canonical(file_contents.size(), content_id);
     let file_stream = fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::all())?;
 

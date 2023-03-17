@@ -19,11 +19,11 @@ setup configuration
 
 Base case, check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
-  33
+  30
   $ ls blobstore/1/blobs/ | wc -l
-  33
+  30
   $ ls blobstore/2/blobs/ | wc -l
-  33
+  30
 
 
 Erase the sqllites and blobstore_sync_queue
@@ -36,10 +36,10 @@ Check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
   0
   $ ls blobstore/1/blobs/ | wc -l
-  33
+  30
   $ ls blobstore/2/blobs/ | wc -l
-  33
+  30
 
 Check that healer queue has items
   $ read_blobstore_wal_queue_size
-  33
+  30

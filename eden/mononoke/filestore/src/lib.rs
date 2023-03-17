@@ -26,7 +26,7 @@ use futures::stream::TryStreamExt;
 use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
 use mononoke_types::ContentId;
-use mononoke_types::ContentMetadataV2;
+use mononoke_types::ContentMetadata;
 use mononoke_types::FileContents;
 
 mod alias;
@@ -44,17 +44,13 @@ mod prepare;
 mod rechunk;
 mod streamhash;
 
-pub use alias::add_aliases_to_multiplexer;
 pub use copy::copy;
 pub use fetch::Range;
 pub use fetch_key::Alias;
 pub use fetch_key::AliasBlob;
 pub use fetch_key::FetchKey;
 pub use incremental_hash::hash_bytes;
-pub use incremental_hash::Blake3IncrementalHasher;
-pub use incremental_hash::GitSha1IncrementalHasher;
 pub use incremental_hash::Sha1IncrementalHasher;
-pub use incremental_hash::Sha256IncrementalHasher;
 pub use rechunk::force_rechunk;
 pub use rechunk::rechunk;
 
@@ -63,7 +59,7 @@ mod test;
 
 /// File storage.
 ///
-/// This is a specialized wrapper around a blobstore specifically for user data files (
+/// This is a specialized wrapper around a blobstore specifically for user data files (rather
 /// rather than metadata, trees, etc). Its primary (initial) goals are:
 /// - providing a streaming interface for file access
 /// - maintain multiple aliases for each file using different key schemes
@@ -103,7 +99,6 @@ pub struct StoreRequest {
     pub sha1: Option<hash::Sha1>,
     pub sha256: Option<hash::Sha256>,
     pub git_sha1: Option<hash::RichGitSha1>,
-    pub seeded_blake3: Option<hash::Blake3>,
 }
 
 impl StoreRequest {
@@ -116,7 +111,6 @@ impl StoreRequest {
             sha1: None,
             sha256: None,
             git_sha1: None,
-            seeded_blake3: None,
         }
     }
 
@@ -129,7 +123,6 @@ impl StoreRequest {
             sha1: None,
             sha256: None,
             git_sha1: None,
-            seeded_blake3: None,
         }
     }
 
@@ -142,7 +135,6 @@ impl StoreRequest {
             sha1: Some(sha1),
             sha256: None,
             git_sha1: None,
-            seeded_blake3: None,
         }
     }
 
@@ -155,7 +147,6 @@ impl StoreRequest {
             sha1: None,
             sha256: Some(sha256),
             git_sha1: None,
-            seeded_blake3: None,
         }
     }
 
@@ -168,18 +159,6 @@ impl StoreRequest {
             sha1: None,
             sha256: None,
             git_sha1: Some(git_sha1),
-            seeded_blake3: None,
-        }
-    }
-
-    pub fn with_seeded_blake3(size: u64, seeded_blake3: hash::Blake3) -> Self {
-        Self {
-            expected_size: expected_size::ExpectedSize::new(size),
-            canonical: None,
-            sha1: None,
-            sha256: None,
-            git_sha1: None,
-            seeded_blake3: Some(seeded_blake3),
         }
     }
 
@@ -192,7 +171,6 @@ impl StoreRequest {
                 Self::with_git_sha1(size, hash::RichGitSha1::from_sha1(id, "blob", size))
             }
             Aliased(Alias::Sha256(id)) => Self::with_sha256(size, id),
-            Aliased(Alias::SeededBlake3(id)) => Self::with_seeded_blake3(size, id),
         }
     }
 }
@@ -204,7 +182,7 @@ pub async fn get_metadata<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
-) -> Result<Option<ContentMetadataV2>, Error> {
+) -> Result<Option<ContentMetadata>, Error> {
     let maybe_id = key
         .load(ctx, blobstore)
         .await
@@ -227,7 +205,7 @@ pub async fn get_metadata_readonly<B: Blobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
-) -> Result<Option<Option<ContentMetadataV2>>, Error> {
+) -> Result<Option<Option<ContentMetadata>>, Error> {
     let maybe_id = key
         .load(ctx, blobstore)
         .await
@@ -434,11 +412,11 @@ pub async fn store<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     req: &StoreRequest,
     data: impl Stream<Item = Result<Bytes, Error>> + Send,
-) -> Result<ContentMetadataV2, Error> {
+) -> Result<ContentMetadata, Error> {
     use chunk::Chunks;
 
     let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
-        Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?).await,
+        Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?),
         Chunks::Chunked(expected_size, chunks) => {
             prepare::prepare_chunked(
                 ctx.clone(),

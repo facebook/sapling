@@ -46,7 +46,7 @@ Check counts
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
   $ echo "$BLOBCOUNT"
-  33
+  30
 
 Do a walk of everything, it should all be there
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
@@ -65,7 +65,7 @@ delete the hg blob forms
   $ ls $BLOBPREFIX.* | grep -E '.(filenode_lookup|hgchangeset|hgfilenode|hgmanifest).' | xargs rm
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
   $ echo "$BLOBCOUNT"
-  21
+  18
 
 delete the hg db forms
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where repo_id >= 0";
@@ -89,7 +89,7 @@ check the blobs were re-derived
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
   $ echo "$BLOBCOUNT"
-  39
+  36
 
 check the sql was re-derived back to match base case
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM filenodes where repo_id >= 0";

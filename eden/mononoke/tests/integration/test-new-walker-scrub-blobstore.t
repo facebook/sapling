@@ -54,7 +54,7 @@ Check that multi repo runs for all repos specified
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  44
+  40
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
@@ -68,7 +68,7 @@ Check fails on only the deleted side
 Check can walk fine on the only remaining side
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
   Seen,Loaded: 40,40, repo: repo0
-  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2*,*,0s; Run */s,*/s,2*,*,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:4*,3 HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3*, repo: repo0 (glob)
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,*,*,0s; Run */s,*/s,*,*,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:3*,3 HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3*, repo: repo0 (glob)
 
 Check can walk fine on the multiplex remaining side
   $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
@@ -99,9 +99,9 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo0","scrub",1* (glob)
-  1,"scrub_repair","repo0000.content_metadata2.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo0","scrub",1* (glob)
-  1,"scrub_repair","repo0000.content_metadata2.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo0","scrub",1* (glob)
-  1,"scrub_repair","repo0000.content_metadata2.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo0","scrub",1* (glob)
+  1,"scrub_repair","repo0000.content_metadata.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo0","scrub",1* (glob)
+  1,"scrub_repair","repo0000.content_metadata.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo0","scrub",1* (glob)
+  1,"scrub_repair","repo0000.content_metadata.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.hgchangeset.sha1.112478962961147124edd43549aedd1a335e44bf","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","repo0","scrub",1* (glob)
   1,"scrub_repair","repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0","repo0","scrub",1* (glob)
@@ -143,9 +143,9 @@ Note - we might get duplicate repairs, we just expect that there should not be a
   0,"scrub_repair","repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo0","scrub",1* (glob)
-  0,"scrub_repair","repo0000.content_metadata2.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo0","scrub",1* (glob)
-  0,"scrub_repair","repo0000.content_metadata2.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo0","scrub",1* (glob)
-  0,"scrub_repair","repo0000.content_metadata2.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo0","scrub",1* (glob)
+  0,"scrub_repair","repo0000.content_metadata.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","repo0","scrub",1* (glob)
+  0,"scrub_repair","repo0000.content_metadata.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","repo0","scrub",1* (glob)
+  0,"scrub_repair","repo0000.content_metadata.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.hgchangeset.sha1.112478962961147124edd43549aedd1a335e44bf","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","repo0","scrub",1* (glob)
   0,"scrub_repair","repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0","repo0","scrub",1* (glob)
@@ -163,11 +163,7 @@ Check that all is repaired by running on only the deleted side
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
   $ ls blobstore/0/blobs/* | wc -l
   27
-The output contains seeded_blake3 alias cause walker has not yet been taught to handle it.
   $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/ | grep -E -v blob-repo0002
-  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48
-  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda
-  Only in blobstore/1/blobs/: blob-repo0000.alias.seeded_blake3.6fb4c384e79ac0771a483fcf3c46fb4ea8609f79608e8bcbf710f9887a3b9cf6
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.9915e555ad3fed014aa36a4e48549c1130fddffc7660589f42af5f0520f1118e
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.a0377040953a1a3762b7c59cb526797c1afd7ae6fcebb4d11e3c9186a56edb4e

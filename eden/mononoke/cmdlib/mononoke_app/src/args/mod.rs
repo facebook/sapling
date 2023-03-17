@@ -35,7 +35,6 @@ pub use mysql::MysqlArgs;
 pub use readonly::ReadonlyArgs;
 pub use repo::AsRepoArg;
 pub use repo::MultiRepoArgs;
-pub use repo::OptRepoArgs;
 pub use repo::RepoArg;
 pub use repo::RepoArgs;
 pub use repo::SourceAndTargetRepoArgs;

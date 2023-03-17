@@ -69,7 +69,6 @@ async fn do_lfs_upload(
     .await?;
 
     if let Some(metadata) = metadata {
-        let metadata = ContentMetadata::from(metadata);
         info!(
             ctx.logger(),
             "lfs_upload: reusing blob {:?}", metadata.sha256
@@ -97,7 +96,7 @@ async fn do_lfs_upload(
 
     info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
 
-    Ok(meta.into())
+    Ok(meta)
 }
 
 pub async fn lfs_upload(

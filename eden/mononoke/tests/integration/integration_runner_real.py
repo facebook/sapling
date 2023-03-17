@@ -58,7 +58,6 @@ ALLOW_NETWORK_ACCESS_BY_PREFIX: Set[str] = {
     "test-new-walker",
     "test-derived-data-service",
     "test-cross-repo-and-scs-removing-cross-repo-setup.t",
-    "test-alias-verify",
 }
 
 
