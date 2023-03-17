@@ -34,7 +34,7 @@ class HgImportRequest {
   struct BlobImport {
     using Response = std::unique_ptr<Blob>;
     BlobImport(ObjectId hash, HgProxyHash proxyHash)
-        : hash(hash), proxyHash(proxyHash) {}
+        : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
 
     ObjectId hash;
     HgProxyHash proxyHash;
@@ -47,7 +47,7 @@ class HgImportRequest {
   struct TreeImport {
     using Response = std::unique_ptr<Tree>;
     TreeImport(ObjectId hash, HgProxyHash proxyHash)
-        : hash(hash), proxyHash(proxyHash) {}
+        : hash{std::move(hash)}, proxyHash{std::move(proxyHash)} {}
 
     ObjectId hash;
     HgProxyHash proxyHash;
@@ -60,8 +60,8 @@ class HgImportRequest {
    * Allocate a blob request.
    */
   static std::shared_ptr<HgImportRequest> makeBlobImportRequest(
-      ObjectId hash,
-      HgProxyHash proxyHash,
+      const ObjectId& hash,
+      const HgProxyHash& proxyHash,
       ImportPriority priority,
       ObjectFetchContext::Cause cause);
 
@@ -69,8 +69,8 @@ class HgImportRequest {
    * Allocate a tree request.
    */
   static std::shared_ptr<HgImportRequest> makeTreeImportRequest(
-      ObjectId hash,
-      HgProxyHash proxyHash,
+      const ObjectId& hash,
+      const HgProxyHash& proxyHash,
       ImportPriority priority,
       ObjectFetchContext::Cause cause);
 

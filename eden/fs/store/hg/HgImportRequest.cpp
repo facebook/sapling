@@ -40,19 +40,19 @@ std::shared_ptr<HgImportRequest> HgImportRequest::makeRequest(
 }
 
 std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobImportRequest(
-    ObjectId hash,
-    HgProxyHash proxyHash,
+    const ObjectId& hash,
+    const HgProxyHash& proxyHash,
     ImportPriority priority,
     ObjectFetchContext::Cause cause) {
-  return makeRequest<BlobImport>(priority, cause, hash, std::move(proxyHash));
+  return makeRequest<BlobImport>(priority, cause, hash, proxyHash);
 }
 
 std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
-    ObjectId hash,
-    HgProxyHash proxyHash,
+    const ObjectId& hash,
+    const HgProxyHash& proxyHash,
     ImportPriority priority,
     ObjectFetchContext::Cause cause) {
-  return makeRequest<TreeImport>(priority, cause, hash, std::move(proxyHash));
+  return makeRequest<TreeImport>(priority, cause, hash, proxyHash);
 }
 
 } // namespace facebook::eden
