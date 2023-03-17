@@ -9,8 +9,8 @@ graphql-parser = { git = "https://github.com/vmagro/graphql-parser", rev = "c778
 hyperx = { git = "https://github.com/chantra/hyperx", rev = "69f17cf858573db42c2baaf0bfead54521de32f9" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 mysql_async = { git = "https://github.com/mzr/mysql_async", rev = "76b6fa05d7bb3408402033e6f94042a756ab55ab" }
-perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "f15d5fa9c82a59d6134ca706b047a6baa2c24e58" }
-perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "f15d5fa9c82a59d6134ca706b047a6baa2c24e58" }
+perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
+perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 prost = { version = "0.11.6", git = "https://github.com/krallin/prost.git", rev = "90b7e204c66f6baed0b1426ce456fb70d16b1cdb" }
 prost-build = { version = "0.11.6", git = "https://github.com/krallin/prost.git", rev = "90b7e204c66f6baed0b1426ce456fb70d16b1cdb" }
 prost-derive = { version = "0.11.6", git = "https://github.com/krallin/prost.git", rev = "90b7e204c66f6baed0b1426ce456fb70d16b1cdb" }
