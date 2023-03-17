@@ -79,14 +79,6 @@ export default class ServerToClientAPI {
     | {type: 'repo'; repo: Repository; cwd: string}
     | {type: 'error'; error: RepositoryError} = {type: 'loading'};
 
-  // React Dev mode means we subscribe+unsubscribe+resubscribe in the client,
-  // causing multiple subscriptions on the server. To avoid that,
-  // and for general robustness against duplicated work, we prevent
-  // re-subscribing after the first subscription occurs.
-  private hasSubscribedToSmartlogCommits = false;
-  private hasSubscribedToUncommittedChanges = false;
-  private hasSubscribedToMergeConflicts = false;
-
   private pageId = randomId();
 
   constructor(
@@ -300,10 +292,6 @@ export default class ServerToClientAPI {
     const {logger} = repo;
     switch (data.type) {
       case 'subscribeUncommittedChanges': {
-        if (this.hasSubscribedToUncommittedChanges) {
-          break;
-        }
-        this.hasSubscribedToUncommittedChanges = true;
         const {subscriptionID} = data;
         const postUncommittedChanges = (result: FetchedUncommittedChanges) => {
           const message: UncommittedChangesEvent = {
@@ -332,10 +320,6 @@ export default class ServerToClientAPI {
         return;
       }
       case 'subscribeSmartlogCommits': {
-        if (this.hasSubscribedToSmartlogCommits) {
-          break;
-        }
-        this.hasSubscribedToSmartlogCommits = true;
         const {subscriptionID} = data;
         const postSmartlogCommits = (result: FetchedCommits) => {
           const message: SmartlogCommitsEvent = {
@@ -363,10 +347,6 @@ export default class ServerToClientAPI {
         return;
       }
       case 'subscribeMergeConflicts': {
-        if (this.hasSubscribedToMergeConflicts) {
-          break;
-        }
-        this.hasSubscribedToMergeConflicts = true;
         const {subscriptionID} = data;
         const postMergeConflicts = (conflicts: MergeConflicts | undefined) => {
           const message: MergeConflictsEvent = {
