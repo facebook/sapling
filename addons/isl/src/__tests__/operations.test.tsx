@@ -60,11 +60,16 @@ describe('operations', () => {
       .mockImplementationOnce(() => '4');
   });
 
+  const mockNextOperationId = (id: string) =>
+    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => id);
+
   afterEach(() => {
     jest.useRealTimers();
+    jest.spyOn(utils, 'randomId').mockRestore();
   });
 
   it('shows running operation', () => {
+    mockNextOperationId('1');
     clickGoto('c');
 
     expect(
@@ -73,6 +78,7 @@ describe('operations', () => {
   });
 
   it('shows stdout from running command', () => {
+    mockNextOperationId('1');
     clickGoto('c');
 
     act(() => {
@@ -106,6 +112,7 @@ describe('operations', () => {
   });
 
   it('shows stderr from running command', () => {
+    mockNextOperationId('1');
     clickGoto('c');
 
     act(() => {
@@ -139,6 +146,7 @@ describe('operations', () => {
   });
 
   it('shows abort on long-running commands', () => {
+    mockNextOperationId('1');
     clickGoto('c');
     expect(abortButton()).toBeNull();
 
@@ -149,6 +157,7 @@ describe('operations', () => {
   });
 
   it('shows successful exit status', () => {
+    mockNextOperationId('1');
     clickGoto('c');
 
     act(() => {
@@ -175,6 +184,7 @@ describe('operations', () => {
   });
 
   it('shows unsuccessful exit status', () => {
+    mockNextOperationId('1');
     clickGoto('c');
 
     act(() => {
@@ -201,6 +211,7 @@ describe('operations', () => {
   });
 
   it('reacts to abort', () => {
+    mockNextOperationId('1');
     clickGoto('c');
     act(() => {
       jest.advanceTimersByTime(600000);
@@ -228,6 +239,7 @@ describe('operations', () => {
 
   describe('queued commands', () => {
     it('optimistically shows queued commands', () => {
+      mockNextOperationId('1');
       clickGoto('c');
 
       act(() => {
@@ -239,7 +251,9 @@ describe('operations', () => {
         });
       });
 
+      mockNextOperationId('2');
       clickGoto('a');
+      mockNextOperationId('3');
       clickGoto('b');
 
       expect(
@@ -251,6 +265,7 @@ describe('operations', () => {
     });
 
     it('dequeues when the server starts the next command', () => {
+      mockNextOperationId('1');
       clickGoto('c');
 
       act(() => {
@@ -262,6 +277,7 @@ describe('operations', () => {
         });
       });
 
+      mockNextOperationId('2');
       clickGoto('a');
       expect(
         within(screen.getByTestId('queued-commands')).getByText('sl goto --rev a'),
@@ -280,7 +296,8 @@ describe('operations', () => {
     });
 
     it('takes queued command info from server', () => {
-      clickGoto('c'); // id 1
+      mockNextOperationId('1');
+      clickGoto('c');
 
       act(() => {
         simulateMessageFromServer({
@@ -291,8 +308,10 @@ describe('operations', () => {
         });
       });
 
-      clickGoto('a'); // id 2
-      clickGoto('b'); // id 3
+      mockNextOperationId('2');
+      clickGoto('a');
+      mockNextOperationId('3');
+      clickGoto('b');
 
       act(() => {
         simulateMessageFromServer({
@@ -319,6 +338,7 @@ describe('operations', () => {
     });
 
     it('error running command cancels queued commands', () => {
+      mockNextOperationId('1');
       clickGoto('c');
 
       act(() => {
@@ -330,7 +350,9 @@ describe('operations', () => {
         });
       });
 
+      mockNextOperationId('2');
       clickGoto('a');
+      mockNextOperationId('3');
       clickGoto('b');
 
       expect(screen.queryByTestId('queued-commands')).toBeInTheDocument();

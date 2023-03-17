@@ -130,21 +130,15 @@ describe('Image upload inside TextArea ', () => {
   });
 
   describe('Image upload UI', () => {
-    let randomIdSpy: jest.SpyInstance;
-    beforeEach(() => {
-      randomIdSpy = jest.spyOn(utils, 'randomId');
-    });
-    afterEach(() => {
-      randomIdSpy.mockClear();
-    });
-
     async function startFileUpload(id: string) {
+      const randomIdSpy = jest.spyOn(utils, 'randomId');
       randomIdSpy.mockImplementationOnce(() => id);
       const uploadButton = screen.getByTestId('attach-file-input');
       act(() => void userEvent.upload(uploadButton, [mockFile]));
       await waitFor(() =>
         expectMessageSentToServer(expect.objectContaining({type: 'uploadFile', id})),
       );
+      randomIdSpy.mockRestore();
     }
 
     async function simulateUploadSucceeded(id: string) {
