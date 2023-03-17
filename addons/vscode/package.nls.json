@@ -5,6 +5,7 @@
   "sapling.open-diff-head-command": "Open Diff View For Current File (Head Changes)",
   "sapling.open-diff-stack-command": "Open Diff View For Current File (Stack Changes)",
   "sapling.revert-file-command": "Revert uncommitted change to this file",
+  "settings.isl.showInSidebar.description": "If true, Interactive Smartlog will appear in the sidebar as a view. If false, Interactive Smartlog will appear as a normal panel like an editor. Restart to take full effect.",
   "settings.commandPath.description": "Controls which executable to use for running Sapling commands. Default: use `sl` on your PATH. Restart required to take effect.",
   "isl.confirmModalOK": "OK",
   "isl.title": "Interactive Smartlog",

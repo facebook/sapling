@@ -33,3 +33,11 @@ export type NonNullReactElement = React.ReactElement | React.ReactFragment;
 export function islPlatformName(): string {
   return window.islPlatform?.platformName ?? 'browser';
 }
+
+export function getWindowWidthInPixels(): number {
+  if (process.env.NODE_ENV === 'test') {
+    return 1000;
+  }
+  // Use client width and not screen width to handle embedding as an iframe.
+  return document.body.clientWidth;
+}

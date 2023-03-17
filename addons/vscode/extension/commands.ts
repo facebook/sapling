@@ -57,6 +57,7 @@ export const vscodeCommands = {
 /** Type definitions for built-in or third-party VS Code commands we want to execute programatically. */
 type ExternalVSCodeCommands = {
   'vscode.diff': (left: vscode.Uri, right: vscode.Uri, title: string) => Thenable<unknown>;
+  'sapling.isl.focus': () => Thenable<void>;
 };
 
 /**

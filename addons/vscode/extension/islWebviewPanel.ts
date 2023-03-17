@@ -8,6 +8,7 @@
 import type {Logger} from 'isl-server/src/logger';
 
 import * as packageJson from '../package.json';
+import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {locale, t} from './i18n';
 import {VSCodePlatform} from './vscodePlatform';
@@ -15,29 +16,29 @@ import {onClientConnection} from 'isl-server/src';
 import {unwrap} from 'shared/utils';
 import * as vscode from 'vscode';
 
-let islPanel: vscode.WebviewPanel | undefined = undefined;
+let islPanelOrView: vscode.WebviewPanel | vscode.WebviewView | undefined = undefined;
 
 const viewType = 'sapling.isl';
 
-export function createOrFocusISLWebview(
+function createOrFocusISLWebview(
   context: vscode.ExtensionContext,
   logger: Logger,
-): vscode.WebviewPanel {
-  // Try to re-use existing ISL panel
-  if (islPanel) {
-    islPanel.reveal();
-    return islPanel;
+): vscode.WebviewPanel | vscode.WebviewView {
+  // Try to re-use existing ISL panel/view
+  if (islPanelOrView) {
+    isPanel(islPanelOrView) ? islPanelOrView.reveal() : islPanelOrView.show();
+    return islPanelOrView;
   }
-  // Otherwise, create a new panel
+  // Otherwise, create a new panel/view
 
   const column = vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
 
-  islPanel = populateAndSetISLWebview(
+  islPanelOrView = populateAndSetISLWebview(
     context,
     vscode.window.createWebviewPanel(viewType, t('isl.title'), column, getWebviewOptions(context)),
     logger,
   );
-  return unwrap(islPanel);
+  return unwrap(islPanelOrView);
 }
 
 function getWebviewOptions(
@@ -51,12 +52,22 @@ function getWebviewOptions(
   };
 }
 
+function shouldUseWebviewView(): boolean {
+  return vscode.workspace.getConfiguration('sapling.isl').get<boolean>('showInSidebar') ?? false;
+}
+
 export function registerISLCommands(
   context: vscode.ExtensionContext,
   logger: Logger,
 ): vscode.Disposable {
+  const webviewViewProvider = new ISLWebviewViewProvider(context, logger);
   return vscode.Disposable.from(
     vscode.commands.registerCommand('sapling.open-isl', () => {
+      if (shouldUseWebviewView()) {
+        // just open the sidebar view
+        executeVSCodeCommand('sapling.isl.focus');
+        return;
+      }
       try {
         createOrFocusISLWebview(context, logger);
       } catch (err: unknown) {
@@ -64,6 +75,15 @@ export function registerISLCommands(
       }
     }),
     registerDeserializer(context, logger),
+    vscode.window.registerWebviewViewProvider(viewType, webviewViewProvider),
+    vscode.workspace.onDidChangeConfiguration(e => {
+      // if we start using ISL as a view, dispose the panel
+      if (e.affectsConfiguration('sapling.isl.showInSidebar')) {
+        if (islPanelOrView && isPanel(islPanelOrView) && shouldUseWebviewView()) {
+          islPanelOrView.dispose();
+        }
+      }
+    }),
   );
 }
 
@@ -71,6 +91,12 @@ function registerDeserializer(context: vscode.ExtensionContext, logger: Logger) 
   // Make sure we register a serializer in activation event
   return vscode.window.registerWebviewPanelSerializer(viewType, {
     deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, _state: unknown) {
+      if (shouldUseWebviewView()) {
+        // if we try to deserialize a panel while we're trying to use view, destroy the panel and open the sidebar instead
+        webviewPanel.dispose();
+        executeVSCodeCommand('sapling.isl.focus');
+        return Promise.resolve();
+      }
       // Reset the webview options so we use latest uri for `localResourceRoots`.
       webviewPanel.webview.options = getWebviewOptions(context);
       populateAndSetISLWebview(context, webviewPanel, logger);
@@ -79,27 +105,53 @@ function registerDeserializer(context: vscode.ExtensionContext, logger: Logger) 
   });
 }
 
-function populateAndSetISLWebview(
+/**
+ * Provides the ISL webview contents as a VS Code Webview View, aka a webview that lives in the sidebar/bottom
+ * rather than an editor pane. We always register this provider, even if the user doesn't have the config enabled
+ * that shows this view.
+ */
+class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
+  constructor(private extensionContext: vscode.ExtensionContext, private logger: Logger) {}
+
+  resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
+    webviewView.webview.options = getWebviewOptions(this.extensionContext);
+    populateAndSetISLWebview(this.extensionContext, webviewView, this.logger);
+  }
+}
+
+function isPanel(
+  panelOrView: vscode.WebviewPanel | vscode.WebviewView,
+): panelOrView is vscode.WebviewPanel {
+  // panels have a .reveal property, views have .show
+  return (panelOrView as vscode.WebviewPanel).reveal !== undefined;
+}
+
+function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.WebviewView>(
   context: vscode.ExtensionContext,
-  panel: vscode.WebviewPanel,
+  panelOrView: W,
   logger: Logger,
-): vscode.WebviewPanel {
-  logger.info('Populating ISL webview panel');
-  islPanel = panel;
-  panel.webview.html = htmlForISLWebview(context, panel.webview);
-  panel.iconPath = vscode.Uri.joinPath(
-    context.extensionUri,
-    'resources',
-    'Sapling_favicon-light-green-transparent.svg',
+): W {
+  logger.info(`Populating ISL webview ${isPanel(panelOrView) ? 'panel' : 'view'}`);
+  if (isPanel(panelOrView)) {
+    islPanelOrView = panelOrView;
+    panelOrView.iconPath = vscode.Uri.joinPath(
+      context.extensionUri,
+      'resources',
+      'Sapling_favicon-light-green-transparent.svg',
+    );
+  }
+  panelOrView.webview.html = htmlForISLWebview(
+    context,
+    panelOrView.webview,
+    isPanel(panelOrView) ? 'panel' : 'view',
   );
 
-  logger.log('populate isl webview');
   const disposeConnection = onClientConnection({
     postMessage(message: string) {
-      return panel.webview.postMessage(message) as Promise<boolean>;
+      return panelOrView.webview.postMessage(message) as Promise<boolean>;
     },
     onDidReceiveMessage(handler) {
-      return panel.webview.onDidReceiveMessage(m => {
+      return panelOrView.webview.onDidReceiveMessage(m => {
         const isBinary = m instanceof ArrayBuffer;
         handler(m, isBinary);
       });
@@ -111,16 +163,24 @@ function populateAndSetISLWebview(
     version: packageJson.version,
   });
 
-  panel.onDidDispose(() => {
-    logger.info('Disposing ISL panel');
-    islPanel = undefined;
+  panelOrView.onDidDispose(() => {
+    if (isPanel(panelOrView)) {
+      logger.info('Disposing ISL panel');
+      islPanelOrView = undefined;
+    } else {
+      logger.info('Disposing ISL view');
+    }
     disposeConnection();
   });
 
-  return islPanel;
+  return panelOrView;
 }
 
-function htmlForISLWebview(context: vscode.ExtensionContext, webview: vscode.Webview) {
+function htmlForISLWebview(
+  context: vscode.ExtensionContext,
+  webview: vscode.Webview,
+  kind: 'panel' | 'view',
+) {
   // Only allow accessing resources relative to webview dir,
   // and make paths relative to here.
   const baseUri = webview.asWebviewUri(
@@ -135,6 +195,8 @@ function htmlForISLWebview(context: vscode.ExtensionContext, webview: vscode.Web
 
   const loadingText = t('isl.loading-text');
   const titleText = t('isl.title');
+
+  const extraRootClass = `webview-${kind}`;
 
   const CSP = [
     "default-src 'none'",
@@ -163,7 +225,7 @@ function htmlForISLWebview(context: vscode.ExtensionContext, webview: vscode.Web
 		<script defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
 	</head>
 	<body>
-		<div id="root">${loadingText}</div>
+		<div id="root" class="${extraRootClass}">${loadingText}</div>
 	</body>
 	</html>`;
 }

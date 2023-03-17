@@ -14,7 +14,8 @@
   "activationEvents": [
     "onStartupFinished",
     "onCommand:sapling.open-isl",
-    "onWebviewPanel:sapling.isl"
+    "onWebviewPanel:sapling.isl",
+    "onView:sapling.isl"
   ],
   "extensionKind": [
     "workspace"
@@ -41,8 +42,32 @@
           "type": "string",
           "default": "",
           "description": "%settings.commandPath.description%"
+        },
+        "sapling.isl.showInSidebar": {
+          "type": "boolean",
+          "default": false,
+          "description": "%settings.isl.showInSidebar.description%"
         }
       }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sapling",
+          "icon": "resources/Sapling_viewContainer.svg",
+          "title": "%sapling.command-category%"
+        }
+      ]
+    },
+    "views": {
+      "sapling": [
+        {
+          "type": "webview",
+          "id": "sapling.isl",
+          "name": "%isl.title%",
+          "when": "config.sapling.isl.showInSidebar"
+        }
+      ]
     },
     "commands": [
       {
@@ -72,9 +97,19 @@
         "command": "sapling.open-file-diff-stack",
         "title": "%sapling.open-diff-stack-command%",
         "category": "%sapling.command-category%"
+      },
+      {
+        "command": "sapling.isl.focus",
+        "title": "Focus Sapling ISL Sidebar"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "sapling.isl.focus",
+          "when": "config.sapling.isl.showInSidebar"
+        }
+      ],
       "scm/resourceState/context": [
         {
           "command": "sapling.open-file-diff-uncommitted",

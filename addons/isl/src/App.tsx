@@ -23,6 +23,7 @@ import platform from './platform';
 import {repositoryInfo} from './serverAPIState';
 import {ThemeRoot} from './theme';
 import {ModalContainer} from './useModal';
+import {getWindowWidthInPixels} from './utils';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import React from 'react';
 import {atom, RecoilRoot, useRecoilValue, useSetRecoilState} from 'recoil';
@@ -58,7 +59,11 @@ export default function App() {
 export const islDrawerState = atom<AllDrawersState>({
   key: 'islDrawerState',
   default: {
-    right: {size: 500, collapsed: false},
+    right: {
+      size: 500,
+      // Collapse by default on small screens.
+      collapsed: getWindowWidthInPixels() <= 500,
+    },
     left: {size: 200, collapsed: true},
     top: {size: 200, collapsed: true},
     bottom: {size: 200, collapsed: true},
