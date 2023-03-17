@@ -39,6 +39,8 @@ constexpr auto kTimeout = std::chrono::seconds{1};
 constexpr size_t kStartingInodeWidth = 5;
 static const auto kTreeEmoji = reinterpret_cast<const char*>(u8"\U0001F332");
 static const auto kBlobEmoji = reinterpret_cast<const char*>(u8"\U0001F954");
+static const auto kBlobMetaEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F4DB");
 static const auto kRequestStartEmoji =
     reinterpret_cast<const char*>(u8"\u2193");
 static const auto kRequestCompleteEmoji =
@@ -81,6 +83,7 @@ static const std::unordered_map<InodeEventProgress, const char*>
 static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
     {HgResourceType::BLOB, kBlobEmoji},
     {HgResourceType::TREE, kTreeEmoji},
+    {HgResourceType::BLOBMETA, kBlobMetaEmoji},
 };
 
 static const std::unordered_map<HgImportPriority, const char*>

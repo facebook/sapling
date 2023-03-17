@@ -96,12 +96,22 @@ class HgDatapackStore {
     return liveBatchedTreeWatches_;
   }
 
+  /**
+   * Get the metrics tracking the number of live batched aux data.
+   */
+  RequestMetricsScope::LockedRequestWatchList& getLiveBatchedBlobMetaWatches()
+      const {
+    return liveBatchedBlobMetaWatches_;
+  }
+
  private:
   sapling::SaplingNativeBackingStore store_;
   std::shared_ptr<ReloadableConfig> config_;
 
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveBatchedBlobMetaWatches_;
 };
 
 } // namespace facebook::eden

@@ -89,13 +89,23 @@ class HgBackingStore {
   /**
    * Objects that can be imported from Hg
    */
-  enum HgImportObject { BLOB, TREE, BATCHED_BLOB, BATCHED_TREE, PREFETCH };
+  enum HgImportObject {
+    BLOB,
+    TREE,
+    BLOBMETA,
+    BATCHED_BLOB,
+    BATCHED_TREE,
+    BATCHED_BLOBMETA,
+    PREFETCH
+  };
 
-  constexpr static std::array<HgImportObject, 5> hgImportObjects{
+  constexpr static std::array<HgImportObject, 7> hgImportObjects{
       HgImportObject::BLOB,
       HgImportObject::TREE,
+      HgImportObject::BLOBMETA,
       HgImportObject::BATCHED_BLOB,
       HgImportObject::BATCHED_TREE,
+      HgImportObject::BATCHED_BLOBMETA,
       HgImportObject::PREFETCH};
 
   static folly::StringPiece stringOfHgImportObject(HgImportObject object);
@@ -172,6 +182,8 @@ class HgBackingStore {
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList liveImportTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveImportBlobMetaWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       liveImportPrefetchWatches_;
 };

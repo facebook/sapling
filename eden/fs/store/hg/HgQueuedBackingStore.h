@@ -44,6 +44,7 @@ struct HgImportTraceEvent : TraceEventBase {
   enum ResourceType : uint8_t {
     BLOB,
     TREE,
+    BLOBMETA,
   };
 
   static HgImportTraceEvent queue(
@@ -333,6 +334,8 @@ class HgQueuedBackingStore final : public BackingStore {
 
   // Track metrics for queued imports
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      pendingImportBlobMetaWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;

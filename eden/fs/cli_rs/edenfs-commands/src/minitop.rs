@@ -83,7 +83,7 @@ fn parse_refresh_rate(arg: &str) -> Duration {
 
 const PENDING_COUNTER_REGEX: &str = r"store\.hg\.pending_import\..*";
 const LIVE_COUNTER_REGEX: &str = r"store\.hg\.live_import\..*";
-const IMPORT_OBJECT_TYPES: &[&str] = &["blob", "tree"];
+const IMPORT_OBJECT_TYPES: &[&str] = &["blob", "tree", "blobmeta"];
 const STATS_NOT_AVAILABLE: i64 = 0;
 
 const UNKNOWN_COMMAND: &str = "<unknown>";

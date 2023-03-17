@@ -160,8 +160,10 @@ class RequestStage(Enum):
 class ImportObject(Enum):
     BLOB = "blob"
     TREE = "tree"
+    BLOBMETA = "blobmeta"
     BATCHED_BLOB = "batched_blob"
     BATCHED_TREE = "batched_tree"
+    BATCHED_BLOBMETA = "batched_blobmeta"
     PREFETCH = "prefetch"
 
 
@@ -678,7 +680,7 @@ class Top:
         window.write_part_of_line(header, len(header))
 
         whole_mid_section_size = width - len(header)
-        mid_section_size = whole_mid_section_size // 5
+        mid_section_size = whole_mid_section_size // len(ImportObject)
 
         separator = ""
         for import_type in ImportObject:

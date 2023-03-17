@@ -650,6 +650,9 @@ HgQueuedBackingStore::getPendingImportWatches(
     case HgBackingStore::HgImportObject::TREE:
     case HgBackingStore::HgImportObject::BATCHED_TREE:
       return pendingImportTreeWatches_;
+    case HgBackingStore::HgImportObject::BLOBMETA:
+    case HgBackingStore::HgImportObject::BATCHED_BLOBMETA:
+      return pendingImportBlobMetaWatches_;
     case HgBackingStore::HgImportObject::PREFETCH:
       return pendingImportPrefetchWatches_;
   }
