@@ -640,8 +640,10 @@ class EdenFS(object):
             client.setOption("logging", f"{category}={level}")
 
     def client_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
-        client_link = mount_path / ".eden" / "client"
-        return pathlib.Path(os.readlink(str(client_link)))
+        config_path = self.eden_dir / "config.json"
+        with open(config_path, "r") as openedconfig:
+            config = json.load(openedconfig)
+        return pathlib.Path(self.eden_dir / "clients" / config[str(mount_path)])
 
     def overlay_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
         return self.client_dir_for_mount(mount_path) / "local"

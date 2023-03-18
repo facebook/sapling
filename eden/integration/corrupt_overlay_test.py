@@ -13,6 +13,8 @@ from typing import List
 import eden.integration.lib.overlay as overlay_mod
 from eden.integration.lib import testcase
 
+from facebook.eden.ttypes import MountState
+
 
 @testcase.eden_nfs_repo_test
 class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
@@ -100,3 +102,43 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
         self.eden.start()
         self.assertEqual({str(self.mount): "NOT_RUNNING"}, self.eden.list_cmd_simple())
+
+
+@testcase.eden_repo_test
+class CorruptSqliteOverlayTest(testcase.EdenRepoTest):
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.write_file("dir/a", "a\n")
+        self.repo.write_file("dir/b", "b\n")
+
+        self.repo.commit("Initial commit.")
+
+    def test_integrity_corrupt_sqlite(self) -> None:
+        """Slightly corrupt the sqlite database so opening it doesn't catch the
+        corruption.
+        """
+        self.read_dir("dir")
+        self.eden.shutdown()
+
+        treestoredb = self.eden.overlay_dir_for_mount(self.mount_path) / "treestore.db"
+        size = os.stat(treestoredb).st_size
+        os.truncate(
+            self.eden.overlay_dir_for_mount(self.mount_path) / "treestore.db", size - 5
+        )
+
+        self.eden.start()
+        self.assertEqual(self.eden.get_mount_state(self.mount_path), MountState.RUNNING)
+
+    def test_full_corrupt_sqlite(self) -> None:
+        """Fully corrupt the database, opening it is sufficient to detect the corruption."""
+        self.read_dir("dir")
+        self.eden.shutdown()
+
+        treestoredb = self.eden.overlay_dir_for_mount(self.mount_path) / "treestore.db"
+        size = os.stat(treestoredb).st_size
+        os.truncate(
+            self.eden.overlay_dir_for_mount(self.mount_path) / "treestore.db", size // 2
+        )
+
+        self.eden.start()
+        self.assertEqual(self.eden.get_mount_state(self.mount_path), MountState.RUNNING)

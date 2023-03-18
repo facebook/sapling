@@ -35,7 +35,7 @@ if sys.platform == "win32":
         "clone_test.CloneFakeEdenFSTestManaged": True,
         "clone_test.CloneTestHg": True,
         "config_test.ConfigTest": True,
-        "corrupt_overlay_test.CorruptOverlayTestDefault": True,
+        "corrupt_overlay_test.CorruptOverlayTest": True,  # Corrupts the file overlay that isn't available on Windows
         "debug_getpath_test.DebugGetPathTestHg": True,
         "doteden_test.DotEdenTestHg": [
             "test_mkdir_fails",  # ProjectedFS doesn't allow refusing directory creation
@@ -307,6 +307,7 @@ elif sys.platform.startswith("darwin"):
 if sys.platform != "win32":
     TEST_DISABLED.update(
         {
+            "corrupt_overlay_test.CorruptSqliteOverlayTest": True,
             "invalidate_test.InvalidateTest": True,
             "windows_fsck_test.WindowsFsckTest": True,
             "windows_fsck_test.WindowsRebuildOverlayTest": True,

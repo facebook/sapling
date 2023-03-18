@@ -15,6 +15,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/fscatalog/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinStackTrace.h"
 
@@ -48,7 +49,8 @@ int main(int argc, char** argv) {
   auto overlayPath = canonicalPath(argv[1]);
   auto mountPath = canonicalPath(FLAGS_mount_path);
 
-  SqliteInodeCatalog inodeCatalog(overlayPath);
+  SqliteInodeCatalog inodeCatalog(
+      overlayPath, std::make_shared<NullStructuredLogger>());
   inodeCatalog.initOverlay(true);
   XLOG(INFO) << "start scanning";
   OverlayChecker::LookupCallback lookup = [](auto, auto) {

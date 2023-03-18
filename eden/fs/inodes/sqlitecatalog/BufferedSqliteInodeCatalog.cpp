@@ -19,11 +19,14 @@
 
 namespace facebook::eden {
 
+class StructuredLogger;
+
 BufferedSqliteInodeCatalog::BufferedSqliteInodeCatalog(
     AbsolutePathPiece path,
+    std::shared_ptr<StructuredLogger> logger,
     const EdenConfig& config,
     SqliteTreeStore::SynchronousMode mode)
-    : SqliteInodeCatalog(path, mode),
+    : SqliteInodeCatalog(path, std::move(logger), mode),
       bufferSize_{config.overlayBufferSize.getValue()} {
   workerThread_ = std::thread{[this] {
     folly::setThreadName("OverlayBuffer");

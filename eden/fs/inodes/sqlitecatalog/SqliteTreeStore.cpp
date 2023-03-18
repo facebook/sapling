@@ -8,11 +8,13 @@
 #include "eden/fs/inodes/sqlitecatalog/SqliteTreeStore.h"
 
 #include <folly/Range.h>
+#include <folly/stop_watch.h>
 #include <array>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/sqlite/PersistentSqliteStatement.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
@@ -119,12 +121,73 @@ struct SqliteTreeStore::StatementCache {
   std::array<PersistentSqliteStatement, kBatchInsertSize> batchInsert;
 };
 
+namespace {
+std::unique_ptr<SqliteDatabase> removeAndRecreateDb(AbsolutePathPiece path) {
+  int rc = ::unlink(path.copy().c_str());
+  if (rc != 0 && errno != ENOENT) {
+    throw_<std::runtime_error>(
+        "unable to remove sqlite database ", path, ", errno: ", errno);
+  }
+  return std::make_unique<SqliteDatabase>(path);
+}
+
+std::unique_ptr<SqliteDatabase> openAndVerifyDb(
+    AbsolutePathPiece path,
+    std::shared_ptr<StructuredLogger> logger) {
+  try {
+    auto db = std::make_unique<SqliteDatabase>(path);
+
+    std::vector<std::string> errors;
+    errors.reserve(0);
+
+    folly::stop_watch<> integrityCheckRuntime;
+    {
+      auto dbLock = db->lock();
+      auto stmt = SqliteStatement(dbLock, "PRAGMA integrity_check");
+      while (stmt.step()) {
+        errors.push_back(stmt.columnBlob(0).str());
+      }
+    }
+    auto runtimeInSeconds =
+        std::chrono::duration<double>{integrityCheckRuntime.elapsed()}.count();
+
+    if (errors.empty() || (errors.size() == 1 && errors.front() == "ok")) {
+      logger->logEvent(SqliteIntegrityCheck{runtimeInSeconds, 0});
+      return db;
+    } else {
+      logger->logEvent(SqliteIntegrityCheck{
+          runtimeInSeconds, folly::to_signed(errors.size())});
+      if (folly::kIsWindows) {
+        XLOG(WARN) << "SqliteDatabase is corrupted";
+        for (auto& error : errors) {
+          XLOG(WARN) << "Sqlite error: " << error;
+        }
+        db.reset();
+        return removeAndRecreateDb(path);
+      } else {
+        throw_<std::runtime_error>("SqliteDatabase is corrupted");
+      }
+    }
+
+  } catch (const std::exception& ex) {
+    if (folly::kIsWindows) {
+      XLOG(WARN) << "SqliteDatabase (" << path
+                 << ") failed to open: " << ex.what();
+      return removeAndRecreateDb(path);
+    }
+    throw;
+  }
+}
+} // namespace
+
 SqliteTreeStore::SqliteTreeStore(
     AbsolutePathPiece path,
+    std::shared_ptr<StructuredLogger> logger,
     SqliteTreeStore::SynchronousMode synchronous_mode) {
   ensureDirectoryExists(path);
 
-  db_ = std::make_unique<SqliteDatabase>(path + kTreeStorePath);
+  AbsolutePath sqliteDbPath = path + kTreeStorePath;
+  db_ = openAndVerifyDb(sqliteDbPath, std::move(logger));
 
   // Enable WAL for faster writes to the database. See also:
   // https://www.sqlite.org/wal.html

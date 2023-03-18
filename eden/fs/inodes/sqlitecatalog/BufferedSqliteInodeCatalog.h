@@ -23,11 +23,13 @@ namespace facebook::eden {
 
 struct InodeNumber;
 class EdenConfig;
+class StructuredLogger;
 
 class BufferedSqliteInodeCatalog : public SqliteInodeCatalog {
  public:
   explicit BufferedSqliteInodeCatalog(
       AbsolutePathPiece path,
+      std::shared_ptr<StructuredLogger> logger,
       const EdenConfig& config,
       SqliteTreeStore::SynchronousMode mode =
           SqliteTreeStore::SynchronousMode::Normal);

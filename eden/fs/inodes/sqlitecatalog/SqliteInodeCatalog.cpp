@@ -15,10 +15,13 @@
 
 namespace facebook::eden {
 
+class StructuredLogger;
+
 SqliteInodeCatalog::SqliteInodeCatalog(
     AbsolutePathPiece path,
+    std::shared_ptr<StructuredLogger> logger,
     SqliteTreeStore::SynchronousMode mode)
-    : store_{path, mode} {}
+    : store_{path, std::move(logger), mode} {}
 
 std::optional<InodeNumber> SqliteInodeCatalog::initOverlay(
     bool createIfNonExisting) {

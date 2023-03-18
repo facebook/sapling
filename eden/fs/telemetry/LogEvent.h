@@ -344,4 +344,16 @@ struct WorkingCopyGc {
   }
 };
 
+struct SqliteIntegrityCheck {
+  static constexpr const char* type = "sqlite_integrity_check";
+
+  double duration = 0.0;
+  int64_t numErrors = 0;
+
+  void populate(DynamicEvent& event) const {
+    event.addDouble("duration", duration);
+    event.addInt("num_errors", numErrors);
+  }
+};
+
 } // namespace facebook::eden

@@ -43,9 +43,10 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
     Overlay::InodeCatalogType inodeCatalogType,
     const EdenConfig& config,
-    IFileContentStore* fileContentStore) {
+    IFileContentStore* fileContentStore,
+    const std::shared_ptr<StructuredLogger>& logger) {
   if (inodeCatalogType == Overlay::InodeCatalogType::Tree) {
-    return std::make_unique<SqliteInodeCatalog>(localDir);
+    return std::make_unique<SqliteInodeCatalog>(localDir, logger);
   } else if (inodeCatalogType == Overlay::InodeCatalogType::TreeInMemory) {
     XLOG(WARN) << "In-memory overlay requested. This will cause data loss.";
     return std::make_unique<SqliteInodeCatalog>(
@@ -53,10 +54,11 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
   } else if (
       inodeCatalogType == Overlay::InodeCatalogType::TreeSynchronousOff) {
     return std::make_unique<SqliteInodeCatalog>(
-        localDir, SqliteTreeStore::SynchronousMode::Off);
+        localDir, logger, SqliteTreeStore::SynchronousMode::Off);
   } else if (inodeCatalogType == Overlay::InodeCatalogType::TreeBuffered) {
     XLOG(DBG4) << "Buffered tree overlay being used";
-    return std::make_unique<BufferedSqliteInodeCatalog>(localDir, config);
+    return std::make_unique<BufferedSqliteInodeCatalog>(
+        localDir, logger, config);
   } else if (
       inodeCatalogType == Overlay::InodeCatalogType::TreeInMemoryBuffered) {
     XLOG(WARN)
@@ -69,7 +71,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     XLOG(DBG2)
         << "Buffered tree overlay being used with synchronous-mode = off";
     return std::make_unique<BufferedSqliteInodeCatalog>(
-        localDir, config, SqliteTreeStore::SynchronousMode::Off);
+        localDir, logger, config, SqliteTreeStore::SynchronousMode::Off);
   }
 #ifdef _WIN32
   (void)fileContentStore;
@@ -77,7 +79,7 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   }
-  return std::make_unique<SqliteInodeCatalog>(localDir);
+  return std::make_unique<SqliteInodeCatalog>(localDir, logger);
 #else
   return std::make_unique<FsInodeCatalog>(
       static_cast<FileContentStore*>(fileContentStore));
@@ -143,7 +145,8 @@ Overlay::Overlay(
           localDir,
           inodeCatalogType,
           config,
-          fileContentStore_ ? fileContentStore_.get() : nullptr)},
+          fileContentStore_ ? fileContentStore_.get() : nullptr,
+          logger)},
       inodeCatalogType_{inodeCatalogType},
       supportsSemanticOperations_{inodeCatalog_->supportsSemanticOperations()},
       localDir_{localDir},
