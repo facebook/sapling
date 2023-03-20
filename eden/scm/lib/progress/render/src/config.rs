@@ -81,7 +81,11 @@ impl RenderingConfig {
     }
 
     pub(crate) fn max_topic_len(&self) -> usize {
-        if self.term_width < 80 { 12 } else { 16 }
+        match self.term_width {
+            w if w >= 100 => 20,
+            w if w >= 80 => 16,
+            _ => 12,
+        }
     }
 
     fn width_str(&self, text: &str) -> usize {
