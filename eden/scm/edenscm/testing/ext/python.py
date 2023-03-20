@@ -42,6 +42,7 @@ def python(
         try:
             exec(code, {"__name__": "__main__"})
         except SystemExit as e:
+            # pyre-fixme[7]: Expected `int` but got `Union[None, int, str]`.
             return e.code
         except Exception:
             tb = traceback.format_exc(limit=-3)

@@ -71,6 +71,10 @@ def testsetup(t: TestTmp):
             try:
                 fmain(args, stdout=stdout, stdin=stdin)
             except SystemExit as e:
+                # pyre-fixme[6]: For 1st argument expected `Union[array[typing.Any],
+                #  SupportsTrunc, bytearray, bytes, _CData, memoryview, mmap,
+                #  PickleBuffer, str, SupportsInt, SupportsIndex]` but got `Union[None,
+                #  int, str]`.
                 return int(e.code)
             else:
                 return 0

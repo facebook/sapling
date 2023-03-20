@@ -36,7 +36,9 @@ def main(latest: bool = False) -> None:
 
     filtered_mapping: Dict[FilteredIndex, RawIndex] = {}
 
+    # pyre-fixme[45]: Cannot instantiate abstract class `FilteredIndex`.
     selected_index: FilteredIndex = FilteredIndex(0)
+    # pyre-fixme[45]: Cannot instantiate abstract class `FilteredIndex`.
     next_index: FilteredIndex = FilteredIndex(0)
     if not latest:
         print("Which invocation would you like to report?")
@@ -45,6 +47,7 @@ def main(latest: bool = False) -> None:
             if next_index > 10:
                 break
 
+            # pyre-fixme[45]: Cannot instantiate abstract class `RawIndex`.
             raw_index = RawIndex(i)
             log_dir = os.path.join(log_base, fn)
 
@@ -69,6 +72,7 @@ def main(latest: bool = False) -> None:
                 at_status = ""
 
             cur_index = next_index
+            # pyre-fixme[45]: Cannot instantiate abstract class `FilteredIndex`.
             next_index = FilteredIndex(next_index + 1)
 
             filtered_mapping[cur_index] = raw_index
@@ -94,6 +98,7 @@ def main(latest: bool = False) -> None:
                 )
             )
         print()
+        # pyre-fixme[45]: Cannot instantiate abstract class `FilteredIndex`.
         selected_index = FilteredIndex(
             int(input("(input individual number, for example 1 or 2)\n"))
         )

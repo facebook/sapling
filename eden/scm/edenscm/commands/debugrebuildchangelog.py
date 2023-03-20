@@ -182,6 +182,8 @@ def _readshelved(repo):
 def _backupcommits(repo, commits: Sized, ts) -> str:
     bakname = "commits-%s-%s.bak" % (len(commits), ts)
     with open(repo.svfs.join(bakname), "wb") as f:
+        # pyre-fixme[6]: For 1st argument expected `marshal._Marshallable` but got
+        #  `Sized`.
         f.write(marshal.dumps(commits))
     repo.ui.write(_("backed up %s commits to %s\n") % (len(commits), bakname))
     return bakname

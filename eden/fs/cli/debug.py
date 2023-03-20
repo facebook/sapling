@@ -1771,6 +1771,7 @@ class DebugThriftCmd(Subcmd):
             if not eval_strings and thrift_type == TType.STRING:
                 parsed_arg = arg
             else:
+                # pyre-fixme[6]: For 5th argument expected `bool` but got `int`.
                 code = compile(arg, "<command_line>", "eval", 0, 1)
                 parsed_arg = eval(code, code_globals.copy())
             parsed_args[arg_name] = parsed_arg

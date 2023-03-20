@@ -1473,6 +1473,8 @@ def debugextensions(ui, **opts) -> None:
             "extensions", name
         )
 
+    # pyre-fixme[23]: Unable to unpack `SupportsGetItem[typing.Any, typing.Any]`
+    #  into 2 values.
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         isinternal = extensions.ismoduleinternal(extmod)
         extsource = extmod.__file__
@@ -4053,7 +4055,6 @@ def debugruntest(ui, *paths, **opts) -> int:
     """
     import textwrap
 
-    # pyre-fixme[21]: Could not find name `util` in `multiprocessing` (stubbed).
     from multiprocessing import util as mputil
     from unittest import SkipTest
 
@@ -4175,7 +4176,6 @@ def debugruntest(ui, *paths, **opts) -> int:
         return args
 
     with extensions.wrappedfunction(
-        # pyre-fixme[16]: Module `multiprocessing` has no attribute `util`.
         mputil,
         "_args_from_interpreter_flags",
         _args

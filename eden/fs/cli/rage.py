@@ -509,6 +509,7 @@ def print_system_load(out: IO[bytes]) -> None:
             output_lines = output.decode("utf-8").split(os.linesep)
             output_lines = output_lines[len(output_lines) // 2 :]
 
+        # pyre-fixme[61]: `output_lines` is undefined, or not always defined.
         out.write(os.linesep.join(output_lines).encode("utf-8"))
     except Exception as e:
         out.write(f"Error printing system load: {e}\n".encode())
