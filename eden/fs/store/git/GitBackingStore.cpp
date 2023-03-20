@@ -23,6 +23,12 @@
 #include "eden/fs/utils/Throw.h"
 #include "folly/String.h"
 
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#include <sanitizer/lsan_interface.h>
+#endif
+#endif
+
 using folly::ByteRange;
 using folly::IOBuf;
 using folly::makeSemiFuture;
@@ -59,8 +65,18 @@ GitBackingStore::GitBackingStore(AbsolutePathPiece repository) {
   // called once for each call to git_libgit2_init().)
   git_libgit2_init();
 
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_disable();
+#endif
+#endif
   auto error =
       git_repository_open(&repo_, std::string{repository.value()}.c_str());
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_enable();
+#endif
+#endif
   gitCheckError(error, "error opening git repository", repository);
 }
 
@@ -100,7 +116,17 @@ ImmediateFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
   // Look up the commit info
   git_oid commitOID = root2Oid(rootId);
   git_commit* commit = nullptr;
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_disable();
+#endif
+#endif
   auto error = git_commit_lookup(&commit, repo_, &commitOID);
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_enable();
+#endif
+#endif
   gitCheckError(
       error,
       "unable to find git commit ",
