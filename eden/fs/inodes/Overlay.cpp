@@ -270,13 +270,13 @@ void Overlay::initOverlay(
                << " was not shut down cleanly.  Performing fsck scan.";
 
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
-    // Overlay implementation. `static_cast` is a temporary workaround.
+    // Overlay implementation.
     //
     // Note: lookupCallback is a reference but is stored on OverlayChecker.
     // Therefore OverlayChecker must not exist longer than this initOverlay
     // call.
     OverlayChecker checker(
-        static_cast<FsInodeCatalog*>(inodeCatalog_.get()),
+        inodeCatalog_.get(),
         static_cast<FileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback);

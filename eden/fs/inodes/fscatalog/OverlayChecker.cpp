@@ -58,18 +58,18 @@ struct OverlayChecker::InodeInfo {
 };
 
 struct OverlayChecker::Impl {
-  FsInodeCatalog* const fs;
+  InodeCatalog* const inodeCatalog;
   FileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
   LookupCallback& lookupCallback;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
-      FsInodeCatalog* fs,
+      InodeCatalog* inodeCatalog,
       FileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       LookupCallback& lookupCallback)
-      : fs{fs},
+      : inodeCatalog{inodeCatalog},
         fcs{fcs},
         loadedNextInodeNumber{nextInodeNumber},
         lookupCallback{lookupCallback} {}
@@ -112,8 +112,8 @@ class OverlayChecker::RepairState {
   OverlayChecker* checker() {
     return checker_;
   }
-  FsInodeCatalog* fs() {
-    return checker_->impl_->fs;
+  InodeCatalog* inodeCatalog() {
+    return checker_->impl_->inodeCatalog;
   }
   FileContentStore* fcs() {
     return checker_->impl_->fcs;
@@ -164,7 +164,7 @@ class OverlayChecker::RepairState {
     // control state.  If the files can be recovered from source control, users
     // can always recover it themselves afterwards with `hg revert`
     if (S_ISDIR(mode)) {
-      fs()->saveOverlayDir(number, overlay::OverlayDir{});
+      inodeCatalog()->saveOverlayDir(number, overlay::OverlayDir{});
     } else if (S_ISLNK(mode)) {
       // symbolic links generally can't be empty in normal circumstances,
       // so put some dummy data in the link.
@@ -186,7 +186,7 @@ class OverlayChecker::RepairState {
               [](TreeEntry& treeEntry) { return treeEntry.getHash(); }),
           treeOrTreeEntry.value());
 
-      auto parentDirOpt = fs()->loadOverlayDir(parent);
+      auto parentDirOpt = inodeCatalog()->loadOverlayDir(parent);
       if (parentDirOpt.has_value()) {
         auto parentDir = parentDirOpt.value();
         auto entries = parentDir.entries();
@@ -199,7 +199,7 @@ class OverlayChecker::RepairState {
             entry.hash_ref() = hash.asString();
             entry.inodeNumber_ref() = 0;
 
-            fs()->saveOverlayDir(parent, std::move(parentDir));
+            inodeCatalog()->saveOverlayDir(parent, std::move(parentDir));
             return true;
           }
         }
@@ -678,7 +678,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 
   void tryRemoveDirInode(RepairState& repair, InodeNumber number) const {
     try {
-      repair.fs()->removeOverlayDir(number);
+      repair.inodeCatalog()->removeOverlayDir(number);
     } catch (const std::system_error& ex) {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
@@ -758,11 +758,15 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
 };
 
 OverlayChecker::OverlayChecker(
-    FsInodeCatalog* fs,
+    InodeCatalog* inodeCatalog,
     FileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
     LookupCallback& lookupCallback)
-    : impl_{std::make_unique<Impl>(fs, fcs, nextInodeNumber, lookupCallback)} {}
+    : impl_{std::make_unique<Impl>(
+          inodeCatalog,
+          fcs,
+          nextInodeNumber,
+          lookupCallback)} {}
 
 OverlayChecker::~OverlayChecker() {}
 
