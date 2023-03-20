@@ -47,8 +47,6 @@ pub enum SessionClass {
     BackgroundUnlessTooSlow,
     /// This session is used by the warm bookmarks cache.
     WarmBookmarksCache,
-    /// This session requires to check all multiplexed blobstores for is_present check.
-    ComprehensiveLookup,
 }
 
 struct SessionContainerInner {
