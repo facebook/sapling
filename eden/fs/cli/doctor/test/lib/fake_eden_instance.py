@@ -136,7 +136,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             active_prefetch_profiles=[],
             predictive_prefetch_profiles_active=False,
             predictive_prefetch_num_dirs=0,
-            enable_tree_overlay=True,
+            enable_sqlite_overlay=True,
             use_write_back_cache=False,
             re_use_case="buck2-default",
         )

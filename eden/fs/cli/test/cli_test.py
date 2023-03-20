@@ -87,7 +87,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -111,7 +111,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -135,7 +135,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -159,7 +159,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -183,7 +183,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -308,7 +308,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -332,7 +332,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -356,7 +356,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -472,7 +472,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )
@@ -496,7 +496,7 @@ class ListTest(unittest.TestCase):
                 active_prefetch_profiles=[],
                 predictive_prefetch_profiles_active=False,
                 predictive_prefetch_num_dirs=0,
-                enable_tree_overlay=False,
+                enable_sqlite_overlay=False,
                 use_write_back_cache=False,
                 re_use_case="buck2-default",
             )

@@ -1023,8 +1023,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * The synchronous mode used when using tree overlay. Currently it only
-   * supports "off" or "normal". Setting this to off may cause data loss.
+   * The synchronous mode used when using a SQLite backed overlay. Currently it
+   * only supports "off" or "normal". Setting this to off may cause data loss.
    */
   ConfigSetting<std::string> overlaySynchronousMode{
       "overlay:synchronous-mode",
@@ -1032,8 +1032,8 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * This option controls how often we run SQLite WAL checkpoint in tree
-   * overlay. This option is ignored in other overlay types.
+   * This option controls how often we run SQLite WAL checkpoint in a SQLite
+   * backed overlay. This option is ignored in other overlay types.
    */
   ConfigSetting<std::chrono::nanoseconds> overlayMaintenanceInterval{
       "overlay:maintenance-interval",
@@ -1042,7 +1042,7 @@ class EdenConfig : private ConfigSettingManager {
 
   /**
    * Determines if EdenFS should enable the option to buffer overlay writes.
-   * This only works with tree overlays.
+   * This only works with SQLite backed overlays.
    */
   ConfigSetting<bool> overlayBuffered{"overlay:buffered", false, this};
 

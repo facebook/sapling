@@ -182,7 +182,7 @@ class CheckoutConfig(typing.NamedTuple):
     active_prefetch_profiles: List[str]
     predictive_prefetch_profiles_active: bool
     predictive_prefetch_num_dirs: int
-    enable_tree_overlay: bool
+    enable_sqlite_overlay: bool
     use_write_back_cache: bool
     re_use_case: str
 
@@ -1231,7 +1231,7 @@ class EdenCheckout:
                 "protocol": checkout_config.mount_protocol,
                 "case-sensitive": checkout_config.case_sensitive,
                 "require-utf8-path": checkout_config.require_utf8_path,
-                "enable-tree-overlay": checkout_config.enable_tree_overlay,
+                "enable-sqlite-overlay": checkout_config.enable_sqlite_overlay,
                 "use-write-back-cache": checkout_config.use_write_back_cache,
             },
             "redirections": redirections,
@@ -1371,10 +1371,10 @@ class EdenCheckout:
             if predictive_num_dirs is None:
                 predictive_num_dirs = 0
 
-        enable_tree_overlay = repository.get("enable-tree-overlay")
+        enable_sqlite_overlay = repository.get("enable-sqlite-overlay")
         # Older mount that doesn't have tree overlay setting should remain disabled.
-        if not isinstance(enable_tree_overlay, bool):
-            enable_tree_overlay = False
+        if not isinstance(enable_sqlite_overlay, bool):
+            enable_sqlite_overlay = False
 
         use_write_back_cache = repository.get("use-write-back-cache")
         if not isinstance(use_write_back_cache, bool):
@@ -1400,7 +1400,7 @@ class EdenCheckout:
             active_prefetch_profiles=prefetch_profiles,
             predictive_prefetch_profiles_active=predictive_prefetch_active,
             predictive_prefetch_num_dirs=predictive_num_dirs,
-            enable_tree_overlay=enable_tree_overlay,
+            enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=use_write_back_cache,
             re_use_case=re_use_case,
         )
