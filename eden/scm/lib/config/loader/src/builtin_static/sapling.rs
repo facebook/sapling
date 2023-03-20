@@ -505,7 +505,7 @@ changeset={if(desc, desc, emptymsg)}\n
 defaulttitle=<Replace this line with a title. Use 1 line only, 67 chars or less>
 emptymsg={if(title, title, defaulttitle)}\n
  ## Summary\n{summary}\n
- ## Test Plan:\n{testplan}\n
+ ## Test Plan\n{testplan}\n
 filechanges={ifgt(parents|count, 1, filechangesmerge,
  ifgt(files|count, filechangethreshold, filechangesplain, filechangesdetailed))}
 filechangesmerge=
