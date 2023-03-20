@@ -283,8 +283,9 @@ impl MononokeApp {
         ShutdownFut: Future<Output = ()>,
     {
         let (exit_tx, exit_rx) = oneshot::channel();
-        let server = move |_app| async move {
+        let server = move |app| async move {
             exit_rx.await?;
+            drop(app);
             Ok(())
         };
 
