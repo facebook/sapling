@@ -534,6 +534,28 @@ where
     .await
 }
 
+#[inline]
+pub async fn open_repo_by_id_unredacted<'a, R: 'a>(
+    _: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+    repo_id: RepositoryId,
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    let repo_factory = get_repo_factory(matches)?;
+    open_repo_internal_with_repo_id(
+        logger,
+        RepoIdentifier::Id(repo_id),
+        matches,
+        false,
+        Some(Redaction::Disabled), // make sure it's unredacted
+        repo_factory,
+    )
+    .await
+}
+
 pub fn get_shutdown_grace_period<'a>(matches: &MononokeMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-grace-period")

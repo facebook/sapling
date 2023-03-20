@@ -1102,7 +1102,8 @@ async fn run<'a>(
             let backup_repo_id =
                 args::resolve_repo_by_id(config_store, matches, backup_repo_id)?.id;
             let backup_repo: Repo =
-                args::open_repo_by_id(ctx.fb, ctx.logger(), matches, backup_repo_id).await?;
+                args::open_repo_by_id_unredacted(ctx.fb, ctx.logger(), matches, backup_repo_id)
+                    .await?;
 
             scuba_sample.add("repo", backup_repo.repoid.id());
             scuba_sample.add("reponame", backup_repo.repo_name.clone());
@@ -1116,7 +1117,8 @@ async fn run<'a>(
                 ARG_DARKSTORM_BACKUP_REPO_NAME,
             )?;
             let backup_repo: Repo =
-                args::open_repo_by_id(ctx.fb, ctx.logger(), matches, backup_repo_id).await?;
+                args::open_repo_by_id_unredacted(ctx.fb, ctx.logger(), matches, backup_repo_id)
+                    .await?;
 
             scuba_sample.add("repo", backup_repo.repoid.id());
             scuba_sample.add("reponame", backup_repo.repo_name.clone());
@@ -1135,7 +1137,8 @@ async fn run<'a>(
         cloned!(hg_repo_path);
 
         let (repo, preparer): (Repo, BoxFuture<Result<Arc<BundlePreparer>, Error>>) = {
-            let repo: Repo = args::open_repo_by_id(ctx.fb, ctx.logger(), matches, repo_id).await?;
+            let repo: Repo =
+                args::open_repo_by_id_unredacted(ctx.fb, ctx.logger(), matches, repo_id).await?;
             let filenode_verifier = match verify_lfs_blob_presence {
                 Some(uri) => {
                     let uri = uri.parse::<Uri>()?;
