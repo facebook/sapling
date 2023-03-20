@@ -15,6 +15,9 @@ use std::path::PathBuf;
 use util::errors::IOContext;
 use util::errors::IOResult;
 
+use crate::errors::RequirementsOpenError;
+use crate::errors::UnsupportedRequirements;
+
 /// `Requirements` contains a set of strings, tracks features/capabilities that
 /// are *required* for clients to interface with the repository.
 ///
@@ -32,12 +35,26 @@ impl Requirements {
     /// Load requirements from the given path.
     ///
     /// If the given path does not exist, it is treated as an empty file.
-    pub fn open(path: &Path) -> IOResult<Self> {
-        let requirements = match fs::read_to_string(path) {
+    pub fn open(path: &Path, supported: &HashSet<String>) -> Result<Self, RequirementsOpenError> {
+        let requirements: HashSet<String> = match fs::read_to_string(path) {
             Ok(s) => s.split_whitespace().map(|s| s.to_string()).collect(),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Default::default(),
-            Err(e) => return Err(e).path_context("error opening file", path),
+            Err(e) => {
+                return Err(RequirementsOpenError::IOError(
+                    Err::<Self, std::io::Error>(e)
+                        .path_context("error opening file", path)
+                        .unwrap_err(),
+                ));
+            }
         };
+        let mut unsupported = requirements.difference(supported).peekable();
+        if unsupported.peek().is_some() {
+            let mut unsupported_vec: Vec<_> = unsupported.cloned().collect();
+            unsupported_vec.sort();
+            return Err(RequirementsOpenError::UnsupportedRequirements(
+                UnsupportedRequirements(unsupported_vec.join(", ")),
+            ));
+        }
         let path = path.to_path_buf();
         let dirty = false;
         Ok(Self {
@@ -93,7 +110,8 @@ mod tests {
     fn test_requires_basic() {
         let tmp = tempdir().unwrap();
         let path = tmp.path().join("requires");
-        let mut reqs = Requirements::open(&path).unwrap();
+        let allowed = HashSet::<String>::from(["a".to_owned(), "b".to_owned(), "c".to_owned()]);
+        let mut reqs = Requirements::open(&path, &allowed).unwrap();
 
         assert!(!reqs.contains("a"));
         assert!(!reqs.contains("b"));
@@ -103,7 +121,7 @@ mod tests {
         assert!(!reqs.contains("b"));
 
         // add() buffers changes.
-        let reqs2 = Requirements::open(&path).unwrap();
+        let reqs2 = Requirements::open(&path, &allowed).unwrap();
         assert!(!reqs2.contains("a"));
 
         // add() again is not an error.
@@ -112,7 +130,7 @@ mod tests {
 
         // flush() writes changes.
         reqs.flush().unwrap();
-        let reqs2 = Requirements::open(&path).unwrap();
+        let reqs2 = Requirements::open(&path, &allowed).unwrap();
         assert!(reqs2.contains("a"));
         assert!(reqs2.contains("b"));
         assert!(!reqs2.contains("c"));
@@ -120,5 +138,26 @@ mod tests {
         assert!(reqs.contains("a"));
         assert!(reqs.contains("b"));
         assert!(!reqs.contains("c"));
+    }
+
+    #[test]
+    fn test_unallowed_requirements() {
+        let tmp = tempdir().unwrap();
+        let path = tmp.path().join("requires");
+        let allowed = HashSet::<String>::from(["a".to_owned()]);
+        let mut reqs = Requirements::open(&path, &allowed).unwrap();
+        reqs.add("foo");
+        reqs.add("bar");
+        reqs.flush().unwrap();
+        let err = Requirements::open(&path, &allowed).err().unwrap();
+        assert!(matches!(
+            err,
+            RequirementsOpenError::UnsupportedRequirements(_)
+        ));
+        assert_eq!(
+            err.to_string(),
+            r#"repository requires unknown features: bar, foo
+(see https://mercurial-scm.org/wiki/MissingRequirement for more information)"#
+        );
     }
 }

@@ -8,6 +8,7 @@
 use std::path::PathBuf;
 
 use thiserror::Error;
+use util::errors::IOError;
 
 #[derive(Debug, Error)]
 #[error("repository {0} not found!")]
@@ -25,6 +26,21 @@ pub struct RemotenamesMetalogKeyError;
 #[error("cannot initialize working copy: {0:?}")]
 pub struct InvalidWorkingCopy(#[from] anyhow::Error);
 
+#[derive(Debug, Error)]
+#[error(
+    "repository requires unknown features: {0}\n(see https://mercurial-scm.org/wiki/MissingRequirement for more information)"
+)]
+pub struct UnsupportedRequirements(pub String);
+
+#[derive(Debug, Error)]
+pub enum RequirementsOpenError {
+    #[error(transparent)]
+    IOError(#[from] IOError),
+
+    #[error(transparent)]
+    UnsupportedRequirements(#[from] UnsupportedRequirements),
+}
+
 #[derive(Error, Debug)]
 pub enum InitError {
     #[error("repository `{0}` already exists")]
@@ -38,4 +54,7 @@ pub enum InitError {
 
     #[error("config loading error: `{0}`")]
     ConfigLoadingError(anyhow::Error),
+
+    #[error(transparent)]
+    UnsupportedRequirements(#[from] UnsupportedRequirements),
 }

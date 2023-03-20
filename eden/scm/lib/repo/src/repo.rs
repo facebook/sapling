@@ -25,6 +25,7 @@ use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use hgcommits::DagCommits;
 use metalog::MetaLog;
+use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use repolock::RepoLocker;
@@ -50,6 +51,8 @@ use workingcopy::filesystem::FileSystemType;
 use workingcopy::workingcopy::WorkingCopy;
 
 use crate::commits::open_dag_commits;
+use crate::constants::SUPPORTED_DEFAULT_REQUIREMENTS;
+use crate::constants::SUPPORTED_STORE_REQUIREMENTS;
 use crate::errors;
 use crate::init;
 use crate::requirements::Requirements;
@@ -160,8 +163,14 @@ impl Repo {
                     .map(|v| v.to_string())
             });
 
-        let requirements = Requirements::open(&dot_hg_path.join("requires"))?;
-        let store_requirements = Requirements::open(&store_path.join("requires"))?;
+        let requirements = Requirements::open(
+            &dot_hg_path.join("requires"),
+            Lazy::force(&SUPPORTED_DEFAULT_REQUIREMENTS),
+        )?;
+        let store_requirements = Requirements::open(
+            &store_path.join("requires"),
+            Lazy::force(&SUPPORTED_STORE_REQUIREMENTS),
+        )?;
 
         let locker = Arc::new(RepoLocker::new(&config, store_path.clone())?);
 
@@ -195,8 +204,14 @@ impl Repo {
     }
 
     pub fn reload_requires(&mut self) -> Result<()> {
-        self.requirements = Requirements::open(&self.dot_hg_path.join("requires"))?;
-        self.store_requirements = Requirements::open(&self.store_path.join("requires"))?;
+        self.requirements = Requirements::open(
+            &self.dot_hg_path.join("requires"),
+            Lazy::force(&SUPPORTED_DEFAULT_REQUIREMENTS),
+        )?;
+        self.store_requirements = Requirements::open(
+            &self.store_path.join("requires"),
+            Lazy::force(&SUPPORTED_STORE_REQUIREMENTS),
+        )?;
         Ok(())
     }
 
