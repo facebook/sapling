@@ -7,10 +7,11 @@
 
 import type {CommitTreeWithPreviews} from './getCommitTree';
 import type {Hash} from './types';
+import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
-import {Center, LargeSpinner} from './ComponentUtils';
+import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
@@ -27,6 +28,7 @@ import {
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
+import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
 import {notEmpty} from 'shared/utils';
 
@@ -207,16 +209,25 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   const reviewProvider = useRecoilValue(codeReviewProvider);
   const diffMap = useRecoilValue(allDiffSummaries);
   const runOperation = useRunOperation();
+
+  // buttons at the bottom of the stack
   const actions = [];
+  // additional actions hidden behind [...] menu.
+  // Non-empty only when actions is non-empty.
+  const moreActions: Array<ContextMenuItem> = [];
+
   const reviewActions =
     diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
   const resubmittableStack = reviewActions?.resubmittableStack;
+  const submittableStack = reviewActions?.submittableStack;
   const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
-  if (
-    reviewProvider != null &&
-    resubmittableStack != null &&
-    resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
-  ) {
+
+  const contextMenu = useContextMenu(() => moreActions);
+  if (reviewProvider == null) {
+    return null;
+  }
+  // any existing diffs -> show resubmit stack,
+  if (resubmittableStack != null && resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT) {
     actions.push(
       <VSCodeButton
         appearance="icon"
@@ -227,9 +238,56 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
         <T>Resubmit stack</T>
       </VSCodeButton>,
     );
+    //     any non-submitted diffs -> "submit all commits this stack" in hidden group
+    if (
+      submittableStack != null &&
+      submittableStack.length > 0 &&
+      submittableStack.length > resubmittableStack.length
+    ) {
+      moreActions.push({
+        label: (
+          <FlexRow>
+            <Icon icon="cloud-upload" slot="start" />
+            <T>Submit entire stack</T>
+          </FlexRow>
+        ),
+        onClick: () => {
+          runOperation(
+            reviewProvider.submitOperation([...resubmittableStack, ...submittableStack]),
+          );
+        },
+      });
+    }
+    //     NO non-submitted diffs -> nothing in hidden group
+  } else if (
+    submittableStack != null &&
+    submittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
+  ) {
+    // NO existing diffs -> show submit stack ()
+    actions.push(
+      <VSCodeButton
+        appearance="icon"
+        onClick={() => {
+          runOperation(reviewProvider.submitOperation(submittableStack));
+        }}>
+        <Icon icon="cloud-upload" slot="start" />
+        <T>Submit stack</T>
+      </VSCodeButton>,
+    );
   }
   if (actions.length === 0) {
     return null;
   }
-  return <div className="commit-tree-stack-actions">{actions}</div>;
+  const moreActionsButton =
+    moreActions.length === 0 ? null : (
+      <VSCodeButton appearance="icon" onClick={contextMenu}>
+        <Icon icon="ellipsis" />
+      </VSCodeButton>
+    );
+  return (
+    <div className="commit-tree-stack-actions">
+      {actions}
+      {moreActionsButton}
+    </div>
+  );
 }
