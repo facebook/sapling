@@ -600,7 +600,7 @@ def check_mount_overlay_type(
     tracker: ProblemTracker, checkout_info: CheckoutInfo
 ) -> None:
     config = checkout_info.get_checkout().get_config()
-    if not config.enable_tree_overlay:
+    if not config.enable_sqlite_overlay:
         tracker.add_problem(CheckoutLegacyOverlayType(checkout_info))
 
 

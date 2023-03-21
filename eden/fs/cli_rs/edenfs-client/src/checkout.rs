@@ -91,8 +91,8 @@ struct Repository {
     #[serde(rename = "require-utf8-path", default = "default_require_utf8_path")]
     require_utf8_path: bool,
 
-    #[serde(rename = "enable-tree-overlay", default)]
-    enable_tree_overlay: bool,
+    #[serde(rename = "enable-sqlite-overlay", default)]
+    enable_sqlite_overlay: bool,
 
     #[serde(rename = "use-write-back-cache", default)]
     use_write_back_cache: bool,

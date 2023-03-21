@@ -118,7 +118,7 @@ class displayer(object):
 
 
 @command("debugmetalogroots", [] + cmdutil.templateopts)
-def debugmetalogroots(ui, repo, **opts):
+def debugmetalogroots(ui, repo, **opts) -> None:
     """list roots stored in metalog"""
     metalog = repo.metalog()
     roots = metalog.roots()
@@ -152,7 +152,7 @@ def debugmetalogroots(ui, repo, **opts):
 
 
 @command("debugexportmetalog", [], _("debugexportmetalog PATH"))
-def debugexportmetalog(ui, repo, path):
+def debugexportmetalog(ui, repo, path) -> None:
     """export metalog to a repo for easier investigation"""
     ml = repo.metalog()
     ml.exportgit(path)
