@@ -37,7 +37,7 @@ export function useContextMenu<T>(
 }
 
 type ContextMenuData = {x: number; y: number; items: Array<ContextMenuItem>};
-type ContextMenuItem =
+export type ContextMenuItem =
   | {type?: undefined; label: string | React.ReactNode; onClick?: () => void}
   | {type: 'divider'};
 

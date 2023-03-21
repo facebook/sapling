@@ -22,6 +22,14 @@
 .commit-tree-root {
   margin-left: calc(3.5 * var(--pad));
 }
+.commit-tree-stack-actions {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+  margin-top: var(--pad);
+}
+
 .commit-group:before {
   /* branch vertical line */
   content: ' ';
@@ -85,6 +93,11 @@
   height: 14px;
   width: 14px;
   box-sizing: border-box;
+  transition: box-shadow 0.3s;
+}
+
+.commit.highlighted .commit-avatar {
+  box-shadow: 0px 0px 4px 2px var(--focus-border);
 }
 
 .head-commit .commit-avatar {

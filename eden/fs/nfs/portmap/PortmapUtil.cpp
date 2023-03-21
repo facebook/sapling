@@ -8,15 +8,17 @@
 #include <folly/SocketAddress.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 
 using namespace facebook::eden;
 
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG9");
-
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG9");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   PortmapClient client;
 

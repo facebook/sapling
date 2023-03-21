@@ -3,19 +3,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB MODEL_SRCS "*.cpp")
+file(GLOB DIGEST_SRCS "*.cpp")
 add_library(
-  eden_model STATIC
-    ${MODEL_SRCS}
-)
-target_link_libraries(
-  eden_model
-  PUBLIC
-    eden_digest
-    eden_utils
-    Folly::folly
-    edencommon::edencommon_utils
+  eden_digest STATIC
+    ${DIGEST_SRCS}
 )
 
-add_subdirectory(git)
+target_link_libraries(
+  eden_digest
+  PUBLIC
+    BLAKE3::blake3
+    Folly::folly
+)
+
 add_subdirectory(test)

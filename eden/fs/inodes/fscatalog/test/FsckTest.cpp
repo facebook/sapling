@@ -52,8 +52,8 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
     return fcs_;
   }
 
-  FsInodeCatalog& fs() {
-    return fs_;
+  InodeCatalog* inodeCatalog() {
+    return inodeCatalog_.get();
   }
 
   InodeNumber getNextInodeNumber() {
@@ -67,7 +67,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   }
 
   void closeCleanly() {
-    fs_.close(getNextInodeNumber());
+    inodeCatalog_->close(getNextInodeNumber());
   }
 
   void corruptInodeHeader(InodeNumber number, StringPiece headerData) {
@@ -82,7 +82,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   folly::test::TemporaryDirectory tmpDir_;
   AbsolutePath tmpDirPath_;
   FileContentStore fcs_;
-  FsInodeCatalog fs_;
+  std::unique_ptr<InodeCatalog> inodeCatalog_;
   uint64_t nextInodeNumber_{0};
 };
 
@@ -153,7 +153,8 @@ class TestDir {
   }
 
   void save() {
-    overlay_->fs().saveOverlayDir(number_, overlay::OverlayDir{contents_});
+    overlay_->inodeCatalog()->saveOverlayDir(
+        number_, overlay::OverlayDir{contents_});
   }
 
  private:
@@ -196,10 +197,11 @@ TestOverlay::TestOverlay()
       // so make sure we put the overlay at least 1 directory deep inside our
       // temporary directory
       fcs_(tmpDirPath_ + "overlay"_pc),
-      fs_(&fcs_) {}
+      inodeCatalog_(std::make_unique<FsInodeCatalog>(&fcs_)) {}
 
 TestDir TestOverlay::init() {
-  auto nextInodeNumber = fs_.initOverlay(/*createIfNonExisting=*/true);
+  auto nextInodeNumber =
+      inodeCatalog_->initOverlay(/*createIfNonExisting=*/true);
   XCHECK(nextInodeNumber.has_value());
   XCHECK_GT(nextInodeNumber.value(), kRootNodeId);
   nextInodeNumber_ = nextInodeNumber.value().get();
@@ -326,12 +328,12 @@ std::string readLostNFoundFile(
 } // namespace
 
 TEST(Fsck, testNoErrors) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
-  overlay->closeCleanly();
+  testOverlay->closeCleanly();
 
-  FileContentStore fcs(overlay->overlayPath());
+  FileContentStore fcs(testOverlay->overlayPath());
   FsInodeCatalog fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
@@ -361,13 +363,13 @@ TEST(Fsck, testNoErrors) {
 }
 
 TEST(Fsck, testMissingNextInodeNumber) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   // Close the overlay without saving the next inode number
-  overlay->fs().close(std::nullopt);
+  testOverlay->inodeCatalog()->close(std::nullopt);
 
-  FileContentStore fcs(overlay->overlayPath());
+  FileContentStore fcs(testOverlay->overlayPath());
   FsInodeCatalog fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
@@ -388,15 +390,15 @@ TEST(Fsck, testMissingNextInodeNumber) {
 }
 
 TEST(Fsck, testBadNextInodeNumber) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
-  auto actualNextInodeNumber = overlay->getNextInodeNumber();
+  auto actualNextInodeNumber = testOverlay->getNextInodeNumber();
   // Use a bad next inode number when we close
   ASSERT_LE(2, actualNextInodeNumber.get());
-  overlay->fs().close(InodeNumber(2));
+  testOverlay->inodeCatalog()->close(InodeNumber(2));
 
-  FileContentStore fcs(overlay->overlayPath());
+  FileContentStore fcs(testOverlay->overlayPath());
   FsInodeCatalog fs(&fcs);
   auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
@@ -416,19 +418,20 @@ TEST(Fsck, testBadNextInodeNumber) {
 }
 
 TEST(Fsck, testBadFileData) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
   // Replace the data file for a file inode with a bogus header
   std::string badHeader(FileContentStore::kHeaderLength, 0x55);
-  overlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
+  testOverlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
 
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -450,30 +453,31 @@ TEST(Fsck, testBadFileData) {
   EXPECT_EQ(badHeader + "just some test data\n", inodeContents);
 
   // Make sure the overlay now has a valid empty file at the same inode number.
-  auto replacementFile = overlay->fcs().openFile(
+  auto replacementFile = testOverlay->fcs().openFile(
       layout.src_foo_testTxt.number(), FileContentStore::kHeaderIdentifierFile);
   std::array<std::byte, 128> buf;
   auto bytesRead =
       folly::readFull(replacementFile.fd(), buf.data(), buf.size());
   EXPECT_EQ(0, bytesRead);
 
-  overlay->fs().close(checker.getNextInodeNumber());
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
 TEST(Fsck, testTruncatedDirData) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
   // Truncate one of the directory inode files to 0 bytes
-  auto srcDataFile = overlay->fcs().openFileNoVerify(layout.src.number());
+  auto srcDataFile = testOverlay->fcs().openFileNoVerify(layout.src.number());
   folly::checkUnixError(ftruncate(srcDataFile.fd(), 0), "truncate failed");
 
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -512,50 +516,59 @@ TEST(Fsck, testTruncatedDirData) {
       "zzz", readLostNFoundFile(result, layout.src_foo.number(), "x/y/z.txt"));
 
   // Make sure the overlay now has a valid empty directory where src/ was
-  auto newDirContents = overlay->fs().loadOverlayDir(layout.src.number());
+  auto newDirContents =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src.number());
   ASSERT_TRUE(newDirContents.has_value());
   EXPECT_EQ(0, newDirContents->entries_ref()->size());
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_readmeTxt.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_todoTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_testTxt.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_barTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x_y.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   EXPECT_FALSE(
-      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
+      testOverlay->fcs().hasOverlayFile(layout.src_readmeTxt.number()));
+  EXPECT_FALSE(testOverlay->fcs().hasOverlayFile(layout.src_todoTxt.number()));
   EXPECT_FALSE(
-      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
+      testOverlay->inodeCatalog()->hasOverlayDir(layout.src_foo.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_testTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_barTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->inodeCatalog()->hasOverlayDir(layout.src_foo_x.number()));
+  EXPECT_FALSE(
+      testOverlay->inodeCatalog()->hasOverlayDir(layout.src_foo_x_y.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
-  overlay->fs().close(checker.getNextInodeNumber());
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
 TEST(Fsck, testMissingDirData) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
 
   // Remove the overlay file for the "src/" directory
-  overlay->fs().removeOverlayDir(layout.src.number());
+  testOverlay->inodeCatalog()->removeOverlayDir(layout.src.number());
   // To help fully exercise the code that copies orphan subtrees to lost+found,
   // also corrupt the file for "src/foo/test.txt", which will need to be copied
   // out as part of the orphaned src/ children subdirectories.  This makes sure
   // the orphan repair logic also handles corrupt files in the orphan subtree.
   std::string badHeader(FileContentStore::kHeaderLength, 0x55);
-  overlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
+  testOverlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
   // And remove the "src/foo/x" subdirectory that is also part of the orphaned
   // subtree.
-  overlay->fs().removeOverlayDir(layout.src_foo_x.number());
+  testOverlay->inodeCatalog()->removeOverlayDir(layout.src_foo_x.number());
 
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -602,31 +615,39 @@ TEST(Fsck, testMissingDirData) {
       readLostNFoundFile(result, layout.src_foo_x_y.number(), "sub/xxx.txt"));
 
   // Make sure the overlay now has a valid empty directory where src/ was
-  auto newDirContents = overlay->fs().loadOverlayDir(layout.src.number());
+  auto newDirContents =
+      testOverlay->inodeCatalog()->loadOverlayDir(layout.src.number());
   ASSERT_TRUE(newDirContents.has_value());
   EXPECT_EQ(0, newDirContents->entries_ref()->size());
 
   // No inodes from the orphaned subtree should be present in the
   // overlay any more.
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_readmeTxt.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_todoTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_testTxt.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_barTxt.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x.number()));
-  EXPECT_FALSE(overlay->fs().hasOverlayDir(layout.src_foo_x_y.number()));
-  EXPECT_FALSE(overlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
   EXPECT_FALSE(
-      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
+      testOverlay->fcs().hasOverlayFile(layout.src_readmeTxt.number()));
+  EXPECT_FALSE(testOverlay->fcs().hasOverlayFile(layout.src_todoTxt.number()));
   EXPECT_FALSE(
-      overlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
+      testOverlay->inodeCatalog()->hasOverlayDir(layout.src_foo.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_testTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_barTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->inodeCatalog()->hasOverlayDir(layout.src_foo_x.number()));
+  EXPECT_FALSE(
+      testOverlay->inodeCatalog()->hasOverlayDir(layout.src_foo_x_y.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_zTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_abcTxt.number()));
+  EXPECT_FALSE(
+      testOverlay->fcs().hasOverlayFile(layout.src_foo_x_y_defTxt.number()));
 
-  overlay->fs().close(checker.getNextInodeNumber());
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 
 TEST(Fsck, testHardLink) {
-  auto overlay = make_shared<TestOverlay>();
-  auto root = overlay->init();
+  auto testOverlay = make_shared<TestOverlay>();
+  auto root = testOverlay->init();
   SimpleOverlayLayout layout(root);
   // Add an entry to src/foo/x/y/z.txt in src/foo
   layout.src_foo.linkFile(layout.src_foo_x_y_zTxt.number(), "also_z.txt");
@@ -636,7 +657,8 @@ TEST(Fsck, testHardLink) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&overlay->fs(), &overlay->fcs(), std::nullopt, lookup);
+  OverlayChecker checker(
+      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -646,5 +668,5 @@ TEST(Fsck, testHardLink) {
           ":\n",
           "- src/foo/also_z.txt\n",
           "- src/foo/x/y/z.txt")));
-  overlay->fs().close(checker.getNextInodeNumber());
+  testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }

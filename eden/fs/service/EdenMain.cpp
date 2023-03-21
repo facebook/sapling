@@ -17,6 +17,7 @@
 #include <folly/experimental/FunctionScheduler.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <folly/portability/Unistd.h>
@@ -53,11 +54,6 @@ DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 
 THRIFT_FLAG_DECLARE_bool(server_header_reject_framed);
-
-// Set the default log level for all eden logs to DBG2
-// Also change the "default" log handler (which logs to stderr) to log
-// messages asynchronously rather than blocking in the logging thread.
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 using folly::StringPiece;
 using std::string;
@@ -289,6 +285,9 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         "eden as root.\n");
     return kExitCodeUsage;
   }
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   main.didFollyInit();
 
