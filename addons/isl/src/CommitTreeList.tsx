@@ -13,7 +13,7 @@ import {Commit} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
-import {pageVisibility} from './codeReview/CodeReviewInfo';
+import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
@@ -28,6 +28,7 @@ import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {useRecoilState, useRecoilValue} from 'recoil';
 import {Icon} from 'shared/Icon';
+import {notEmpty} from 'shared/utils';
 
 import './CommitTreeList.css';
 
@@ -50,16 +51,14 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
-      {trees.length === 0 ? null : (
-        <div className="commit-tree-root commit-group">
-          <MainLineEllipsis />
-          {trees.map(tree => createSubtree(tree))}
-          <MainLineEllipsis>
-            <FetchingAdditionalCommitsButton />
-            <FetchingAdditionalCommitsIndicator />
-          </MainLineEllipsis>
-        </div>
-      )}
+      <div className="commit-tree-root commit-group">
+        <MainLineEllipsis />
+        {trees.map(tree => createSubtree(tree, /* depth */ 0))}
+        <MainLineEllipsis>
+          <FetchingAdditionalCommitsButton />
+          <FetchingAdditionalCommitsIndicator />
+        </MainLineEllipsis>
+      </div>
     </>
   );
 }
@@ -87,12 +86,12 @@ function CommitFetchError({error}: {error: Error}) {
   return <ErrorNotice title={t('Failed to fetch commits')} error={error} />;
 }
 
-function createSubtree(tree: CommitTreeWithPreviews): Array<React.ReactElement> {
+function createSubtree(tree: CommitTreeWithPreviews, depth: number): Array<React.ReactElement> {
   const {info, children, previewType} = tree;
   const isPublic = info.phase === 'public';
 
   const renderedChildren = (children ?? [])
-    .map(tree => createSubtree(tree))
+    .map(tree => createSubtree(tree, depth + 1))
     .map((components, i) => {
       if (!isPublic && i === 0) {
         // first child can be rendered without branching, so single-child lineages render in the same branch
@@ -115,7 +114,8 @@ function createSubtree(tree: CommitTreeWithPreviews): Array<React.ReactElement> 
       previewType={previewType}
       hasChildren={renderedChildren.length > 0}
     />,
-  ];
+    depth === 1 ? <StackActions tree={tree} /> : null,
+  ].filter(notEmpty);
 }
 
 function Branch({
@@ -201,4 +201,35 @@ function FetchingAdditionalCommitsButton() {
       </VSCodeButton>
     </Tooltip>
   );
+}
+
+function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElement | null {
+  const reviewProvider = useRecoilValue(codeReviewProvider);
+  const diffMap = useRecoilValue(allDiffSummaries);
+  const runOperation = useRunOperation();
+  const actions = [];
+  const reviewActions =
+    diffMap.value == null ? {} : reviewProvider?.getSupportedStackActions(tree, diffMap.value);
+  const resubmittableStack = reviewActions?.resubmittableStack;
+  const MIN_STACK_SIZE_TO_SUGGEST_SUBMIT = 2; // don't show "submit stack" on single commits... they're not really "stacks".
+  if (
+    reviewProvider != null &&
+    resubmittableStack != null &&
+    resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT
+  ) {
+    actions.push(
+      <VSCodeButton
+        appearance="icon"
+        onClick={() => {
+          runOperation(reviewProvider.submitOperation(resubmittableStack));
+        }}>
+        <Icon icon="cloud-upload" slot="start" />
+        <T>Resubmit stack</T>
+      </VSCodeButton>,
+    );
+  }
+  if (actions.length === 0) {
+    return null;
+  }
+  return <div className="commit-tree-stack-actions">{actions}</div>;
 }

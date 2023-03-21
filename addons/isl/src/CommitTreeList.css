@@ -22,6 +22,14 @@
 .commit-tree-root {
   margin-left: calc(3.5 * var(--pad));
 }
+.commit-tree-stack-actions {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  align-items: center;
+  margin-top: var(--pad);
+}
+
 .commit-group:before {
   /* branch vertical line */
   content: ' ';
