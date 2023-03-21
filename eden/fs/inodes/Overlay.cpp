@@ -354,6 +354,7 @@ InodeNumber Overlay::allocateInodeNumber() {
 }
 
 DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
+  DurationScope statScope{stats_, &OverlayStats::loadOverlayDir};
   DirContents result(caseSensitive_);
   IORequest req{this};
   auto dirData = inodeCatalog_->loadOverlayDir(inodeNumber);
