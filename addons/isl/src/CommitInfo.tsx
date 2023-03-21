@@ -485,7 +485,7 @@ function ActionsBar({
                 );
                 return;
               }
-              runOperation(unwrap(provider).submitOperation());
+              runOperation(unwrap(provider).submitOperation([commit]));
             }}>
             {anythingToCommit ? (
               isCommitMode ? (
