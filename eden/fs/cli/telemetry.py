@@ -159,6 +159,7 @@ class TelemetryLogger(abc.ABC):
 
     def new_sample(self, event_type: str, **kwargs: TelemetryTypes) -> TelemetrySample:
         sample = self._create_sample()
+        sample.add_string("logged_by", "cli_py")
         sample.add_string("type", event_type)
         sample.add_int("session_id", self.session_id)
         sample.add_string("user", self.user)

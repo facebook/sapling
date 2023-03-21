@@ -86,11 +86,19 @@ TEST_F(ScubaStructuredLoggerTest, json_contains_types_at_top_level_and_values) {
           "os",
           "osver",
           "edenver",
-          "system_architecture"));
+          "system_architecture",
+          "logged_by"));
 #else
   EXPECT_THAT(
       keysOf(normals),
       UnorderedElementsAre(
-          "str", "user", "host", "type", "os", "osver", "edenver"));
+          "str",
+          "user",
+          "host",
+          "type",
+          "os",
+          "osver",
+          "edenver",
+          "logged_by"));
 #endif
 }

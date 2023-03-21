@@ -43,6 +43,7 @@ DynamicEvent StructuredLogger::populateDefaultFields(const char* type) {
 #if defined(__APPLE__)
   event.addString("system_architecture", sessionInfo_.systemArchitecture);
 #endif
+  event.addString("logged_by", "edenfs");
   return event;
 }
 
