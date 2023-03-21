@@ -22,7 +22,7 @@ regex = "1.6.0"
 scopeguard = "1.0.0"
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 smallvec = { version = "1.6.1", default-features = false }
-tempfile = "3.3"
+tempfile = "3.4"
 terminfo = "0.7"
 termwiz = { version = "0.18", features = ["widgets"] }
 thiserror = "1.0.36"

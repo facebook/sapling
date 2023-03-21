@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommitTreeWithPreviews} from '../getCommitTree';
 import type {Operation} from '../operations/Operation';
-import type {DiffId, DiffSummary} from '../types';
+import type {CommitInfo, DiffId, DiffSummary} from '../types';
 import type {ReactNode} from 'react';
 
 /**
@@ -18,7 +19,15 @@ export interface UICodeReviewProvider {
   DiffBadgeContent(props: {diff?: DiffSummary; children?: ReactNode}): JSX.Element | null;
   formatDiffNumber(diffId: DiffId): string;
 
-  submitOperation(): Operation;
+  submitOperation(commits: Array<CommitInfo>): Operation;
 
   RepoInfo(): JSX.Element | null;
+
+  getSupportedStackActions(
+    tree: CommitTreeWithPreviews,
+    diffSummaries: Map<string, DiffSummary>,
+  ): {
+    resubmittableStack?: Array<CommitInfo>;
+    submittableStack?: Array<CommitInfo>;
+  };
 }

@@ -36,5 +36,5 @@ workingcopy = { version = "0.1.0", path = "../workingcopy" }
 async-trait = "0.1.58"
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
-tempfile = "3.3"
+tempfile = "3.4"
 walkdir = "2.3"

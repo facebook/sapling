@@ -39,11 +39,14 @@ export const codeReviewProvider = selector<UICodeReviewProvider | null>({
   },
 });
 
-export const diffSummary = selectorFamily<Result<DiffSummary | undefined>, DiffId>({
+export const diffSummary = selectorFamily<Result<DiffSummary | undefined>, DiffId | undefined>({
   key: 'diffSummary',
   get:
     diffId =>
     ({get}) => {
+      if (diffId == null) {
+        return {value: undefined};
+      }
       const all = get(allDiffSummaries);
       if (all == null) {
         return {value: undefined};

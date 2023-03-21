@@ -21,7 +21,6 @@ scip = { git = "https://github.com/sourcegraph/scip.git", rev = "f90a867eb194bf6
 solana-program = { git = "https://github.com/omertxyz/solana.git", rev = "03a3b241622b6248bb245c29baef538a88f04c0b" }
 solana-zk-token-sdk = { git = "https://github.com/omertxyz/solana.git", rev = "03a3b241622b6248bb245c29baef538a88f04c0b" }
 tar = { package = "tar", git = "https://github.com/jrwats/tar-rs.git", rev = "21eeccdc08d9b87f6ad610f9b20a5839aabe5974" }
-tempfile = { git = "https://github.com/Stebalien/tempfile.git", rev = "66aa57f7d3a38234fcd393077366b61d36171e42" }
 terminfo = { git = "https://github.com/rust-terminfo/terminfo", rev = "9b4e1c6aae79644c9da7a2e312e3c10ee4759930" }
 toml = { git = "https://github.com/fbsource/toml", rev = "0ee7001fb64f7c5094a00d3a360e402201f498fe" }
 tonic = { version = "0.8.3", git = "https://github.com/krallin/tonic.git", rev = "c67fc25b636b48b90c83dfc8dd1f89c00b84846d" }

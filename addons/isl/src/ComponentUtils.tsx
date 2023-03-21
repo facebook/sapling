@@ -20,3 +20,7 @@ export function LargeSpinner() {
 export function Center({children}: {children: React.ReactNode}) {
   return <div className="center-container">{children}</div>;
 }
+
+export function FlexRow({children}: {children: React.ReactNode}) {
+  return <div className="flex-row">{children}</div>;
+}

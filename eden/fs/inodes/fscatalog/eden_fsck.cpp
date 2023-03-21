@@ -11,13 +11,12 @@
 #include <folly/Exception.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/fscatalog/OverlayChecker.h"
-
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 DEFINE_bool(
     dry_run,
@@ -33,6 +32,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "usage: eden_store_util COMMAND\n");
     return EX_USAGE;
   }
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   std::optional<FileContentStore> fileContentStore;
   std::optional<FsInodeCatalog> fsInodeCatalog;
