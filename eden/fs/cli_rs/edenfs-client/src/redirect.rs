@@ -1327,9 +1327,10 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
 
     if !candidate.starts_with(&checkout_path) {
         return Err(EdenFsError::Other(anyhow!(
-            "The redirection  path `{}` doesn't resolve \
+            "The redirection path `{}` (canonical path: `{}`) doesn't resolve \
             to a path inside the repo `{}`",
             repo_rel_path.display(),
+            candidate.display(),
             checkout_path.display()
         )));
     }
