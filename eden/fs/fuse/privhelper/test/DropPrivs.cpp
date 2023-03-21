@@ -12,13 +12,12 @@
 
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
-
-FOLLY_INIT_LOGGING_CONFIG("eden=INFO");
 
 /*
  * This is a samll helper program for manually testing the
@@ -30,6 +29,9 @@ FOLLY_INIT_LOGGING_CONFIG("eden=INFO");
  */
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig("eden=INFO");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   auto info = UserInfo::lookup();
   printf("Username: %s\n", info.getUsername().c_str());
