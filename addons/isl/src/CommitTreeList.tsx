@@ -117,7 +117,7 @@ function createSubtree(tree: CommitTreeWithPreviews, depth: number): Array<React
       previewType={previewType}
       hasChildren={renderedChildren.length > 0}
     />,
-    depth === 1 ? <StackActions tree={tree} /> : null,
+    depth === 1 ? <StackActions key="stack-actions" tree={tree} /> : null,
   ].filter(notEmpty);
 }
 
@@ -230,7 +230,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   // any existing diffs -> show resubmit stack,
   if (resubmittableStack != null && resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT) {
     actions.push(
-      <HighlightCommitsWhileHovering toHighlight={resubmittableStack}>
+      <HighlightCommitsWhileHovering key="resubmit-stack" toHighlight={resubmittableStack}>
         <VSCodeButton
           appearance="icon"
           onClick={() => {
@@ -249,7 +249,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     ) {
       moreActions.push({
         label: (
-          <HighlightCommitsWhileHovering toHighlight={submittableStack}>
+          <HighlightCommitsWhileHovering key="submit-entire-stack" toHighlight={submittableStack}>
             <FlexRow>
               <Icon icon="cloud-upload" slot="start" />
               <T>Submit entire stack</T>
@@ -270,7 +270,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   ) {
     // NO existing diffs -> show submit stack ()
     actions.push(
-      <HighlightCommitsWhileHovering toHighlight={submittableStack}>
+      <HighlightCommitsWhileHovering key="submit-stack" toHighlight={submittableStack}>
         <VSCodeButton
           appearance="icon"
           onClick={() => {
@@ -287,7 +287,7 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   }
   const moreActionsButton =
     moreActions.length === 0 ? null : (
-      <VSCodeButton appearance="icon" onClick={contextMenu}>
+      <VSCodeButton key="more-actions" appearance="icon" onClick={contextMenu}>
         <Icon icon="ellipsis" />
       </VSCodeButton>
     );
