@@ -6,3 +6,4 @@ make
 zlib1g-dev
 python3-distutils
 pkg-config
+python3-dev
