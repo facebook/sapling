@@ -384,8 +384,10 @@ def clean(ui, repo, *args, **kwargs) -> None:
     args, opts = parseoptions(ui, cmdoptions, args)
 
     cmd = Command("clean")
+    if opts.get("d") or len(args) > 0:
+        cmd["--dirs"] = None
     if opts.get("x"):
-        cmd["--all"] = None
+        cmd["--ignored"] = None
     cmd.extend(args)
 
     ui.status((str(cmd)), "\n")
