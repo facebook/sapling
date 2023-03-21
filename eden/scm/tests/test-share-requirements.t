@@ -38,44 +38,44 @@
 # running log should fail because of the new store format feature
 
   $ hg -R repo1 log -T '{node}\n'
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo2 log -T '{node}\n'
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo3 log -T '{node}\n'
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
 # commands that lock the local working copy also fail correctly
 
   $ hg -R repo1 co 0
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo2 co 0
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo3 co 0
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
 # commands that only lock the store also fail correctly
 
   $ hg -R repo1 unbundle testbundle.hg
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo2 unbundle testbundle.hg
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg -R repo3 unbundle testbundle.hg
-  abort: repository requires features unknown to this Mercurial: test-futurestorefeature!
+  abort: repository requires unknown features: test-futurestorefeature
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]

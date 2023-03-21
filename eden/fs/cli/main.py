@@ -740,9 +740,9 @@ class CloneCmd(Subcmd):
         # This option only works on Windows for now
         parser.add_argument(
             "--overlay-type",
-            choices=("sqlite", "tree"),
+            choices=("sqlite"),
             default=None,
-            help="(Windows only) specify overlay type",
+            help="Specify overlay type",
         )
 
         parser.add_argument(
@@ -954,14 +954,14 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             print_stderr("error: {}", ex)
             return 1
 
-    def _get_enable_tree_overlay(
+    def _get_enable_sqlite_overlay(
         self, instance: EdenInstance, overlay_type: Optional[str]
     ) -> bool:
         if overlay_type is None:
-            # Tree overlay does not support non-Windows platform yet
+            # The sqlite backed overlay is default only on Windows
             return sys.platform == "win32"
 
-        return overlay_type == "tree"
+        return overlay_type == "sqlite"
 
     def _get_repo_info(
         self,
@@ -993,7 +993,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
 
         mount_protocol = get_protocol(nfs)
 
-        enable_tree_overlay = self._get_enable_tree_overlay(instance, overlay_type)
+        enable_sqlite_overlay = self._get_enable_sqlite_overlay(instance, overlay_type)
 
         # This is a valid repository path.
         # Prepare a CheckoutConfig object for it.
@@ -1009,7 +1009,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
             active_prefetch_profiles=[],
             predictive_prefetch_profiles_active=False,
             predictive_prefetch_num_dirs=0,
-            enable_tree_overlay=enable_tree_overlay,
+            enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=False,
             re_use_case=re_use_case or "buck2-default",
         )

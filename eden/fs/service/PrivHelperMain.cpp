@@ -9,15 +9,13 @@
 #include <folly/FileUtil.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/fuse/privhelper/PrivHelperFlags.h"
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
-
-FOLLY_INIT_LOGGING_CONFIG(
-    "WARN:default, eden=DBG2; default:stream=stderr,async=false");
 
 DEFINE_int32(
     privhelper_uid,
@@ -31,6 +29,10 @@ DEFINE_int32(
 
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig(
+      "WARN:default, eden=DBG2; default:stream=stderr,async=false");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   PrivHelperServer server;
   try {

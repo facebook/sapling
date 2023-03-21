@@ -15,6 +15,7 @@
 #include <folly/container/Enumerate.h>
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 
@@ -33,8 +34,6 @@ using folly::make_array;
 using folly::StringPiece;
 using std::make_unique;
 using std::optional;
-
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 DEFINE_string(keySpace, "", "operate on just a single key space");
 
@@ -232,6 +231,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "usage: eden_store_util COMMAND\n");
     return EX_SOFTWARE;
   }
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   std::unique_ptr<Command> command;
   try {

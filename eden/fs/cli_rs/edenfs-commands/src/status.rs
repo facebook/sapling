@@ -155,7 +155,7 @@ impl StatusCmd {
             }
             Ok(EdenFsRunningStatus::Starting) => {
                 println!(
-                    "EdenFS is still starting (hint: run `eden status --wait` to watch it's progress)",
+                    "EdenFS is still starting (hint: run `eden status --wait` to watch its progress)",
                 );
                 1
             }

@@ -68,6 +68,9 @@ find_package(edencommon CONFIG REQUIRED)
 find_package(cpptoml CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
 
+find_package(BLAKE3 REQUIRED CONFIG)
+include_directories(${BLAKE3_INCLUDE_DIR})
+
 # This is rather gross.  Eden doesn't directly depend upon Snappy but does so
 # indirectly from both folly and rocksdb.
 # Rocksdb has some custom logic to find snappy but unfortunately exports a synthesized

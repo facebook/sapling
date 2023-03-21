@@ -290,30 +290,30 @@ Overlay::InodeCatalogType EdenMount::getInodeCatalogType(
     return inodeCatalogType.value();
   }
 
-  if (checkoutConfig_->getEnableTreeOverlay()) {
+  if (checkoutConfig_->getEnableSqliteOverlay()) {
     if (!folly::kIsWindows) {
       throw std::runtime_error(
-          "Tree overlay type is only supported on Windows");
+          "Sqlite overlay type is only supported on Windows");
     }
 
     if (getEdenConfig()->unsafeInMemoryOverlay.getValue()) {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::InodeCatalogType::TreeInMemoryBuffered;
+        return Overlay::InodeCatalogType::SqliteInMemoryBuffered;
       } else {
-        return Overlay::InodeCatalogType::TreeInMemory;
+        return Overlay::InodeCatalogType::SqliteInMemory;
       }
     }
     if (getEdenConfig()->overlaySynchronousMode.getValue() == "off") {
       if (getEdenConfig()->overlayBuffered.getValue()) {
-        return Overlay::InodeCatalogType::TreeSynchronousOffBuffered;
+        return Overlay::InodeCatalogType::SqliteSynchronousOffBuffered;
       } else {
-        return Overlay::InodeCatalogType::TreeSynchronousOff;
+        return Overlay::InodeCatalogType::SqliteSynchronousOff;
       }
     }
     if (getEdenConfig()->overlayBuffered.getValue()) {
-      return Overlay::InodeCatalogType::TreeBuffered;
+      return Overlay::InodeCatalogType::SqliteBuffered;
     }
-    return Overlay::InodeCatalogType::Tree;
+    return Overlay::InodeCatalogType::Sqlite;
   } else {
     return Overlay::InodeCatalogType::Legacy;
   }

@@ -23,7 +23,7 @@ class File;
 
 namespace facebook::eden {
 
-class FsInodeCatalog;
+class InodeCatalog;
 class FileContentStore;
 
 /**
@@ -60,13 +60,13 @@ class OverlayChecker {
   /**
    * Create a new OverlayChecker.
    *
-   * The OverlayChecker stores a raw pointer to the FsInodeCatalog and
+   * The OverlayChecker stores a raw pointer to the InodeCatalog and
    * FileContentStore for the duration of the check operation.  The caller is
-   * responsible for ensuring that the FsInodeCatalog and FileContentStore
-   * objects exist for at least as long as the OverlayChecker object.
+   * responsible for ensuring that the InodeCatalog and FileContentStore objects
+   * exist for at least as long as the OverlayChecker object.
    */
   OverlayChecker(
-      FsInodeCatalog* fs,
+      InodeCatalog* inodeCatalog,
       FileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       LookupCallback& lookupCallback);

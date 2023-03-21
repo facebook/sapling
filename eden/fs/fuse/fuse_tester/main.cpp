@@ -11,6 +11,7 @@
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <signal.h>
@@ -33,8 +34,6 @@ using folly::exceptionStr;
 using std::string;
 
 DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
-
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2,eden.fs.fuse=DBG7");
 
 namespace {
 class TestDispatcher : public FuseDispatcher {
@@ -108,6 +107,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "error with mount path: %s\n", exceptionStr(ex).c_str());
     return EX_DATAERR;
   }
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2;eden.fs.fuse=DBG7");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   // For simplicity, start a separate EventBaseThread to drive the privhelper
   // I/O.  We only really need this for the initial fuseMount() call.  We could

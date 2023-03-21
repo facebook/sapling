@@ -26,5 +26,5 @@ tracing = "0.1.35"
 zstore = { version = "0.1.0", path = "../zstore" }
 
 [dev-dependencies]
-tempfile = "3.3"
+tempfile = "3.4"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }

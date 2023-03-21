@@ -68,6 +68,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     }
     return new PrSubmitOperation();
   }
+
+  getSupportedStackActions() {
+    return {};
+  }
 }
 
 type BadgeState = PullRequestState | 'ERROR';

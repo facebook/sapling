@@ -157,7 +157,17 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
 
   git_oid treeOID = hash2Oid(id);
   git_tree* gitTree = nullptr;
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_disable();
+#endif
+#endif
   auto error = git_tree_lookup(&gitTree, repo_, &treeOID);
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_enable();
+#endif
+#endif
   gitCheckError(
       error, "unable to find git tree ", id, " in repository ", getPath());
   SCOPE_EXIT {
@@ -209,7 +219,17 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const ObjectId& id) {
 
   auto blobOID = hash2Oid(id);
   git_blob* blob = nullptr;
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_disable();
+#endif
+#endif
   int error = git_blob_lookup(&blob, repo_, &blobOID);
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  __lsan_enable();
+#endif
+#endif
   gitCheckError(
       error, "unable to find git blob ", id, " in repository ", getPath());
 

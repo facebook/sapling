@@ -133,8 +133,8 @@ class CheckoutConfig {
   }
 
   /** Whether this repository is using tree overlay */
-  bool getEnableTreeOverlay() const {
-    return enableTreeOverlay_;
+  bool getEnableSqliteOverlay() const {
+    return enableSqliteOverlay_;
   }
 
   /** Whether use FUSE write back cache feature */
@@ -162,8 +162,8 @@ class CheckoutConfig {
   CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};
   bool requireUtf8Path_{true};
 
-  // Tree Overlay is default on Windows
-  bool enableTreeOverlay_{folly::kIsWindows};
+  // Sqlite Overlay is default on Windows
+  bool enableSqliteOverlay_{folly::kIsWindows};
 
   bool useWriteBackCache_{false};
 

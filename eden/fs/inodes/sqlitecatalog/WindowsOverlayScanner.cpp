@@ -9,6 +9,7 @@
 
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
@@ -18,8 +19,6 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinStackTrace.h"
-
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 DEFINE_string(
     mount_path,
@@ -39,6 +38,10 @@ int main(int, char**) {
 
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2; default:async=true");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
+
   installWindowsExceptionFilter();
   if (argc != 2) {
     fprintf(stderr, "error: missing parameters\n");

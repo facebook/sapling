@@ -35,7 +35,7 @@ constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
 constexpr folly::StringPiece kMountProtocol{"protocol"};
 constexpr folly::StringPiece kRequireUtf8Path{"require-utf8-path"};
-constexpr folly::StringPiece kEnableTreeOverlay{"enable-tree-overlay"};
+constexpr folly::StringPiece kEnableSqliteOverlay{"enable-sqlite-overlay"};
 constexpr folly::StringPiece kUseWriteBackCache{"use-write-back-cache"};
 constexpr folly::StringPiece kReCas{"recas"};
 constexpr folly::StringPiece kReUseCase{"use-case"};
@@ -317,9 +317,11 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto requireUtf8Path = repository->get_as<bool>(kRequireUtf8Path.str());
   config->requireUtf8Path_ = requireUtf8Path ? *requireUtf8Path : true;
 
-  auto enableTreeOverlay = repository->get_as<bool>(kEnableTreeOverlay.str());
-  // Treeoverlay is default on Windows
-  config->enableTreeOverlay_ = enableTreeOverlay.value_or(folly::kIsWindows);
+  auto enableSqliteOverlay =
+      repository->get_as<bool>(kEnableSqliteOverlay.str());
+  // SqliteOverlay is default on Windows
+  config->enableSqliteOverlay_ =
+      enableSqliteOverlay.value_or(folly::kIsWindows);
 
   auto useWriteBackCache = repository->get_as<bool>(kUseWriteBackCache.str());
   config->useWriteBackCache_ = useWriteBackCache.value_or(false);

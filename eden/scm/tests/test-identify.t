@@ -147,7 +147,7 @@ Make sure we do not obscure unknown requires file entries (issue2649)
 
   $ echo fake >> .hg/requires
   $ hg id
-  abort: repository requires features unknown to this Mercurial: fake!
+  abort: repository requires unknown features: fake
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 

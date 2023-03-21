@@ -74,12 +74,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
  public:
   enum class InodeCatalogType : uint8_t {
     Legacy = 0,
-    Tree = 1,
-    TreeInMemory = 2,
-    TreeSynchronousOff = 3,
-    TreeBuffered = 4,
-    TreeInMemoryBuffered = 5,
-    TreeSynchronousOffBuffered = 6,
+    Sqlite = 1,
+    SqliteInMemory = 2,
+    SqliteSynchronousOff = 3,
+    SqliteBuffered = 4,
+    SqliteInMemoryBuffered = 5,
+    SqliteSynchronousOffBuffered = 6,
   };
 
   /**
@@ -415,7 +415,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 };
 
 constexpr Overlay::InodeCatalogType kDefaultInodeCatalogType = folly::kIsWindows
-    ? Overlay::InodeCatalogType::Tree
+    ? Overlay::InodeCatalogType::Sqlite
     : Overlay::InodeCatalogType::Legacy;
 
 /**

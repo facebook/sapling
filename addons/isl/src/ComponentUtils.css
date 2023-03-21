@@ -12,3 +12,10 @@
   align-items: center;
   justify-content: center;
 }
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pad);
+}
