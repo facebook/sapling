@@ -13,6 +13,7 @@ import serverAPI from './ClientToServerAPI';
 import {Commit} from './Commit';
 import {Center, FlexRow, LargeSpinner} from './ComponentUtils';
 import {ErrorNotice} from './ErrorNotice';
+import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {Tooltip, DOCUMENTATION_DELAY} from './Tooltip';
 import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
@@ -229,14 +230,16 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   // any existing diffs -> show resubmit stack,
   if (resubmittableStack != null && resubmittableStack.length >= MIN_STACK_SIZE_TO_SUGGEST_SUBMIT) {
     actions.push(
-      <VSCodeButton
-        appearance="icon"
-        onClick={() => {
-          runOperation(reviewProvider.submitOperation(resubmittableStack));
-        }}>
-        <Icon icon="cloud-upload" slot="start" />
-        <T>Resubmit stack</T>
-      </VSCodeButton>,
+      <HighlightCommitsWhileHovering toHighlight={resubmittableStack}>
+        <VSCodeButton
+          appearance="icon"
+          onClick={() => {
+            runOperation(reviewProvider.submitOperation(resubmittableStack));
+          }}>
+          <Icon icon="cloud-upload" slot="start" />
+          <T>Resubmit stack</T>
+        </VSCodeButton>
+      </HighlightCommitsWhileHovering>,
     );
     //     any non-submitted diffs -> "submit all commits this stack" in hidden group
     if (
@@ -246,10 +249,12 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
     ) {
       moreActions.push({
         label: (
-          <FlexRow>
-            <Icon icon="cloud-upload" slot="start" />
-            <T>Submit entire stack</T>
-          </FlexRow>
+          <HighlightCommitsWhileHovering toHighlight={submittableStack}>
+            <FlexRow>
+              <Icon icon="cloud-upload" slot="start" />
+              <T>Submit entire stack</T>
+            </FlexRow>
+          </HighlightCommitsWhileHovering>
         ),
         onClick: () => {
           runOperation(
@@ -265,14 +270,16 @@ function StackActions({tree}: {tree: CommitTreeWithPreviews}): React.ReactElemen
   ) {
     // NO existing diffs -> show submit stack ()
     actions.push(
-      <VSCodeButton
-        appearance="icon"
-        onClick={() => {
-          runOperation(reviewProvider.submitOperation(submittableStack));
-        }}>
-        <Icon icon="cloud-upload" slot="start" />
-        <T>Submit stack</T>
-      </VSCodeButton>,
+      <HighlightCommitsWhileHovering toHighlight={submittableStack}>
+        <VSCodeButton
+          appearance="icon"
+          onClick={() => {
+            runOperation(reviewProvider.submitOperation(submittableStack));
+          }}>
+          <Icon icon="cloud-upload" slot="start" />
+          <T>Submit stack</T>
+        </VSCodeButton>
+      </HighlightCommitsWhileHovering>,
     );
   }
   if (actions.length === 0) {

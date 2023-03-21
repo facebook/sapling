@@ -10,6 +10,7 @@ import type {CommitInfo, SuccessorInfo} from './types';
 import {islDrawerState} from './App';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoState';
 import {BranchIndicator} from './CommitTreeList';
+import {highlightedCommits} from './HighlightedCommits';
 import {Tooltip} from './Tooltip';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -91,6 +92,7 @@ export const Commit = memo(
 
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
+    const isHighlighted = useRecoilValue(highlightedCommits).has(commit.hash);
 
     const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
@@ -129,7 +131,8 @@ export const Commit = memo(
         className={
           'commit' +
           (commit.isHead ? ' head-commit' : '') +
-          (commit.successorInfo != null ? ' obsolete' : '')
+          (commit.successorInfo != null ? ' obsolete' : '') +
+          (isHighlighted ? ' highlighted' : '')
         }
         data-testid={`commit-${commit.hash}`}>
         {commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION ? (
