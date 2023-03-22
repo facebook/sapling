@@ -30,11 +30,13 @@ use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
+const LIVENESS_INTERVAL: u64 = 300;
 type Swappable<T> = Arc<ArcSwap<T>>;
 
 define_stats! {
     prefix = "mononoke.config_refresh";
     refresh_failure_count: timeseries(Average, Sum, Count),
+    liveness_count: timeseries(Average, Sum, Count),
 }
 
 /// Configuration provider and update notifier for all of Mononoke services
@@ -45,6 +47,7 @@ pub struct MononokeConfigs {
     storage_configs: Swappable<StorageConfigs>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     maybe_config_updater: Option<JoinHandle<()>>,
+    maybe_liveness_updater: Option<JoinHandle<()>>,
     maybe_config_handle: Option<ConfigHandle<RawRepoConfigs>>,
 }
 
@@ -68,6 +71,10 @@ impl MononokeConfigs {
             .as_ref()
             .map(|config_handle| config_handle.watcher())
             .transpose()?;
+        // If we are dynamically updating the config, we need to have a liveness updater process in place.
+        let maybe_liveness_updater = maybe_config_watcher
+            .as_ref()
+            .map(|_| runtime_handle.spawn(liveness_updater()));
         // If the configuration is backed by a static source, the config update watcher
         // and the config updater handle will be None.
         let maybe_config_updater = maybe_config_watcher.map(|config_watcher| {
@@ -86,6 +93,7 @@ impl MononokeConfigs {
             update_receivers,
             maybe_config_updater,
             maybe_config_handle,
+            maybe_liveness_updater,
         })
     }
 
@@ -136,6 +144,17 @@ impl Drop for MononokeConfigs {
         if let Some(updater_handle) = self.maybe_config_updater.as_ref() {
             updater_handle.abort();
         }
+        // If the liveness updater process exists, abort it.
+        if let Some(liveness_updater) = self.maybe_liveness_updater.as_ref() {
+            liveness_updater.abort();
+        }
+    }
+}
+
+async fn liveness_updater() {
+    loop {
+        STATS::liveness_count.add_value(1);
+        tokio::time::sleep(tokio::time::Duration::from_secs(LIVENESS_INTERVAL)).await;
     }
 }
 
