@@ -12,13 +12,37 @@ import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {onClientConnection} from '../../isl-server/src/index';
 import App from '../src/App';
 import mockedClientMessagebus from '../src/MessageBus';
+import * as internalLogger from '../src/logger';
 import {render} from '@testing-library/react';
 import fs from 'fs';
 import {__TEST__} from 'isl-server/src/Repository';
 import os from 'os';
 import path from 'path';
+import React from 'react';
 
-/* eslint-disable no-console */
+const mockLogger = internalLogger.logger;
+const {log} = mockLogger;
+jest.mock('../src/logger', () => {
+  const log =
+    process.argv.includes('--verbose') || process.argv.includes('-V')
+      ? (...args: Parameters<typeof console.log>) => {
+          // eslint-disable-next-line no-console
+          console.log(...args);
+        }
+      : (() => {
+          // eslint-disable-next-line no-console
+          console.log('Re-run with `--verbose` to see client/server communication and server logs');
+          return () => undefined;
+        })();
+  return {
+    logger: {
+      log,
+      info: log,
+      warn: log,
+      error: log,
+    },
+  };
+});
 
 // fake client message bus that connects to server in the same process
 jest.mock('../src/MessageBus', () => {
@@ -31,7 +55,7 @@ jest.mock('../src/MessageBus', () => {
     disposables: Array<() => void> = [];
     onMessage(handler: (event: MessageEvent<string>) => void | Promise<void>): Disposable {
       const cb = (message: string) => {
-        console.log('<--', message);
+        log('<--', message);
         handler({data: message} as MessageEvent<string>);
       };
 
@@ -44,7 +68,7 @@ jest.mock('../src/MessageBus', () => {
     }
 
     postMessage(message: string | ArrayBuffer) {
-      console.log('-->', message);
+      log('-->', message);
       this.clientToServer.emit('data', message as string);
     }
 
@@ -93,10 +117,10 @@ export async function initRepo(): Promise<{
   writeFileInRepo: (path: RepoRelativePath, content: string) => Promise<void>;
 }> {
   const repoDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'isl-integration-test-repo-'));
-  console.log('temp repo: ', repoDir);
+  log('temp repo: ', repoDir);
 
   function sl(args: Array<string>) {
-    return __TEST__.runCommand('sl', args, console, repoDir, {
+    return __TEST__.runCommand('sl', args, mockLogger, repoDir, {
       env: {
         FB_SCM_DIAGS_NO_SCUBA: '1',
       } as Record<string, string> as NodeJS.ProcessEnv,
@@ -132,6 +156,7 @@ export async function initRepo(): Promise<{
     cwd: repoDir,
     version: 'integration-test',
     command: 'sl',
+    logger: mockLogger,
 
     postMessage(message: string): Promise<boolean> {
       serverToClient.emit('data', message);
