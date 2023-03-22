@@ -178,4 +178,67 @@ describe('selection', () => {
     expect(CommitInfoTestUtils.withinCommitInfo().queryByText('Uncommit')).not.toBeInTheDocument();
     expect(CommitInfoTestUtils.withinCommitInfo().queryByText('Go to')).not.toBeInTheDocument();
   });
+
+  describe('shift click selection', () => {
+    const click = (name: string, opts?: {shiftKey?: boolean; metaKey?: boolean}) => {
+      act(
+        () =>
+          void fireEvent.click(CommitTreeListTestUtils.withinCommitTree().getByText(name), opts),
+      );
+    };
+    it('selects ranges of commits when shift-clicking', () => {
+      click('Commit B');
+      click('Commit D', {shiftKey: true});
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().getByText('3 Commits Selected'),
+      ).toBeInTheDocument();
+    });
+
+    it('skips public commits, works across stacks and branches', () => {
+      click('Commit D');
+      click('Commit Y', {shiftKey: true});
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit E')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit X')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit Y')).toBeInTheDocument();
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().getByText('4 Commits Selected'), // skipped '2', the public base of 'Commit X'
+      ).toBeInTheDocument();
+    });
+
+    it('adds to selection', () => {
+      click('Commit A', {metaKey: true});
+      click('Commit C', {metaKey: true});
+      click('Commit E', {shiftKey: true});
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit A')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit E')).toBeInTheDocument();
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().getByText('4 Commits Selected'),
+      ).toBeInTheDocument();
+    });
+
+    it('deselecting clears last selected', () => {
+      click('Commit A'); // select
+      click('Commit A'); // deselect
+      click('Commit C', {metaKey: true});
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
+      // just one commit, C, selected
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().queryByText(/\d Commits Selected/),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shift clicking when nothing selected acts like normal clicking', () => {
+      click('Commit C', {metaKey: true});
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
+      expect(
+        CommitInfoTestUtils.withinCommitInfo().queryByText(/\d Commits Selected/),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

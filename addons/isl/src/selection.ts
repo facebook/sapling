@@ -23,6 +23,11 @@ export const selectedCommits = atom<Set<string>>({
   default: new Set(),
 });
 
+const previouslySelectedCommit = atom<undefined | string>({
+  key: 'previouslySelectedCommit',
+  default: undefined,
+});
+
 /**
  * Clicking on commits will select them in the UI.
  * Selected commits can be acted on in bulk, and appear in the commit info sidebar for editing / details.
@@ -66,6 +71,26 @@ export function useCommitSelection(hash: string): {
           return;
         }
         set(selectedCommits, last => {
+          if (e.shiftKey) {
+            const previouslySelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+            const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
+            if (linearHistory != null && previouslySelected != null) {
+              const prevIdx = linearHistory.findIndex(val => val.hash === previouslySelected);
+              const nextIdx = linearHistory.findIndex(val => val.hash === hash);
+
+              const [fromIdx, toIdx] = prevIdx > nextIdx ? [nextIdx, prevIdx] : [prevIdx, nextIdx];
+              const slice = linearHistory.slice(fromIdx, toIdx + 1);
+
+              return new Set([
+                ...last,
+                ...slice.filter(commit => commit.phase !== 'public').map(commit => commit.hash),
+              ]);
+            } else {
+              // Holding shift, but we don't have a previous selected commit.
+              // Fall through to treat it like a normal click.
+            }
+          }
+
           const selected = new Set(last);
           if (selected.has(hash)) {
             // multiple selected, then click an existing selected:
@@ -81,6 +106,7 @@ export function useCommitSelection(hash: string): {
             } else {
               // unselect
               selected.delete(hash);
+              set(previouslySelectedCommit, undefined);
             }
           } else {
             if (!e.metaKey) {
@@ -91,8 +117,42 @@ export function useCommitSelection(hash: string): {
           }
           return selected;
         });
+        set(previouslySelectedCommit, hash);
       },
     [hash],
   );
   return {isSelected: selected.has(hash), onClickToSelect};
 }
+
+/**
+ * Convert commit tree to linear history, where commits are neighbors in the array
+ * if they are visually next to each other when rendered as a tree
+ * c            c
+ * b            b
+ * | e    ->    e
+ * | d          d
+ * |/           a
+ * a
+ * in bottom to top order: [a,d,e,b,c]
+ */
+export const linearizedCommitHistory = selector({
+  key: 'linearizedCommitHistory',
+  get: ({get}) => {
+    const {trees} = get(treeWithPreviews);
+
+    const toProcess = [...trees];
+    const accum = [];
+
+    while (toProcess.length > 0) {
+      const next = toProcess.pop();
+      if (!next) {
+        break;
+      }
+
+      accum.push(next.info);
+      toProcess.push(...next.children);
+    }
+
+    return accum;
+  },
+});
