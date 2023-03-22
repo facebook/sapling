@@ -36,7 +36,7 @@ def readremotebookmarks(ui, repo, other):
         return {}
 
 
-def saveremotebookmarks(repo, newbookmarks, remote):
+def saveremotebookmarks(repo, newbookmarks, remote) -> None:
     remotenamesext = extensions.find("remotenames")
     remotepath = remotenamesext.activepath(repo.ui, remote)
     bookmarks = {}
@@ -57,7 +57,7 @@ def saveremotebookmarks(repo, newbookmarks, remote):
     remotenamesext.saveremotenames(repo, {remotepath: bookmarks})
 
 
-def savelocalbookmarks(repo, bookmarks):
+def savelocalbookmarks(repo, bookmarks) -> None:
     if not bookmarks:
         return
     with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
@@ -68,7 +68,7 @@ def savelocalbookmarks(repo, bookmarks):
         repo._bookmarks.applychanges(repo, tr, changes)
 
 
-def deleteremotebookmarks(ui, repo, path, names):
+def deleteremotebookmarks(ui, repo, path, names) -> None:
     """Prune remote names by removing the bookmarks we don't want anymore,
     then writing the result back to disk
     """
@@ -106,7 +106,7 @@ def deleteremotebookmarks(ui, repo, path, names):
     remotenamesext.saveremotenames(repo, {path: bookmarks})
 
 
-def encodebookmarks(bookmarks):
+def encodebookmarks(bookmarks) -> bytes:
     encoded = {}
     for bookmark, node in pycompat.iteritems(bookmarks):
         encoded[bookmark] = node
