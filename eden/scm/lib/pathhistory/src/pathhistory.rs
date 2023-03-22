@@ -44,6 +44,9 @@ pub struct PathHistory {
     /// Commit graph algorithms. Derived from `set`.
     id_dag: Arc<dyn IdDagAlgorithm + Send + Sync>,
 
+    /// IdSet derived from `set`.
+    id_set: IdSet,
+
     /// Resolve commit ids to hashes in batch. Derived from `set`.
     id_map: Arc<dyn IdConvert + Send + Sync>,
 
@@ -141,6 +144,7 @@ impl PathHistory {
         let mut path_history = Self {
             id_dag,
             id_map,
+            id_set,
             root_tree_reader,
             tree_store,
             roots,
@@ -199,6 +203,7 @@ impl PathHistory {
         let mut action = Action::Undecided;
         let mut different_parents: Vec<Id> = Vec::new();
         let mut same_parents: Vec<Id> = Vec::new();
+        let mut outside_same_parents: Vec<Id> = Vec::new();
         let span = IdSpan::new(seg.low, seg.high);
 
         if self.skipped.contains(span) {
@@ -207,7 +212,13 @@ impl PathHistory {
             let head_content_id = self.commit_id_to_content_id(seg.high);
             for &id in &seg.parents {
                 if self.commit_id_to_content_id(id) == head_content_id {
-                    same_parents.push(id)
+                    if !self.id_set.contains(id) {
+                        // Parent is outside the requested set. Do not use its content
+                        // to skip segments.
+                        outside_same_parents.push(id);
+                    } else {
+                        same_parents.push(id)
+                    }
                 } else {
                     different_parents.push(id)
                 }
@@ -247,10 +258,10 @@ impl PathHistory {
             // Single commit. Need to make final decision now.
             if action.is_undecided() && seg.low == seg.high {
                 let changed = if seg.parents.is_empty() {
-                    // Root. Check if it contains any of the "paths".
+                    // A global root (roots(dag.all())). Check if it contains any of the "paths".
                     !head_content_id.is_empty()
                 } else {
-                    // Not a root. Check all parents are different.
+                    // Not a global root. Check all parents are different.
                     different_parents.len() == seg.parents.len()
                 };
                 if changed {
@@ -268,7 +279,8 @@ impl PathHistory {
             Action::OutputRoots => self.output_roots(seg),
             Action::OutputHigh => self.push_output(seg.high),
             Action::Undecided => {
-                self.split_segment(seg, IdSet::from_spans(different_parents))
+                let interesting_parents = different_parents.into_iter().chain(outside_same_parents);
+                self.split_segment(seg, IdSet::from_spans(interesting_parents))
                     .await?
             }
         }
@@ -457,7 +469,7 @@ impl PathHistory {
         Ok(states)
     }
 
-    /// Resolve trees recursiely. Turn them into `ContentId` for easier comparison.
+    /// Resolve trees recursively. Turn them into `ContentId` for easier comparison.
     async fn resolve_root_tree_to_content_id(
         &mut self,
         root_tree_ids: Vec<HgId>,

@@ -557,9 +557,8 @@ async fn test_log_subset_misleading_parents() {
 
     // In this case, we expect PathHistory to not skip the 80 to 95 range by detecting "a" is the
     // same in 79 (parent of 80) and 95.
-    // FIXME: That is not the case.
     let mut h = t.paths_history((100, 80..=95), &["a"]).await;
-    assert_eq!(h.next_n(9).await, &[] as &[u64]);
+    assert_eq!(h.next_n(9).await, &[90, 80]);
 }
 
 #[tokio::test]
