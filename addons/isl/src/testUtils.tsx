@@ -292,6 +292,12 @@ export function suppressReactErrorBoundaryErrorMessages() {
   });
 }
 
+export const CommitTreeListTestUtils = {
+  withinCommitTree() {
+    return within(screen.getByTestId('commit-tree-root'));
+  },
+};
+
 export const CommitInfoTestUtils = {
   withinCommitInfo() {
     return within(screen.getByTestId('commit-info-view'));

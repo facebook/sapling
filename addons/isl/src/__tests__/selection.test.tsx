@@ -15,6 +15,7 @@ import {
   TEST_COMMIT_HISTORY,
   CommitInfoTestUtils,
   COMMIT,
+  CommitTreeListTestUtils,
 } from '../testUtils';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
@@ -153,5 +154,28 @@ describe('selection', () => {
     expect(
       CommitInfoTestUtils.withinCommitInfo().queryByText('Submit Selected Commits'),
     ).not.toBeInTheDocument();
+  });
+
+  it("multi selection commit previews doesn't include uncommitted changes", () => {
+    act(
+      () =>
+        void fireEvent.click(CommitTreeListTestUtils.withinCommitTree().getByText('Commit E'), {
+          metaKey: true,
+        }),
+    );
+    act(
+      () =>
+        void fireEvent.click(CommitTreeListTestUtils.withinCommitTree().getByText('Commit D'), {
+          metaKey: true,
+        }),
+    );
+    expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit E')).toBeInTheDocument();
+    expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+
+    expect(
+      CommitInfoTestUtils.withinCommitInfo().queryByText('You are here'),
+    ).not.toBeInTheDocument();
+    expect(CommitInfoTestUtils.withinCommitInfo().queryByText('Uncommit')).not.toBeInTheDocument();
+    expect(CommitInfoTestUtils.withinCommitInfo().queryByText('Go to')).not.toBeInTheDocument();
   });
 });

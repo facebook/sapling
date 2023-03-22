@@ -54,7 +54,7 @@ export function CommitTreeList() {
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}
-      <div className="commit-tree-root commit-group">
+      <div className="commit-tree-root commit-group" data-testid="commit-tree-root">
         <MainLineEllipsis />
         {trees.map(tree => createSubtree(tree, /* depth */ 0))}
         <MainLineEllipsis>

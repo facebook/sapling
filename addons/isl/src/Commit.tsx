@@ -72,6 +72,7 @@ function previewPreventsActions(preview?: CommitPreview): boolean {
     case CommitPreview.REBASE_ROOT:
     case CommitPreview.HIDDEN_ROOT:
     case CommitPreview.HIDDEN_DESCENDANT:
+    case CommitPreview.NON_ACTIONABLE_COMMIT:
       return true;
   }
   return false;
@@ -96,6 +97,8 @@ export const Commit = memo(
 
     const {isSelected, onClickToSelect} = useCommitSelection(commit.hash);
     const actionsPrevented = previewPreventsActions(previewType);
+
+    const isNonActionable = previewType === CommitPreview.NON_ACTIONABLE_COMMIT;
 
     function onDoubleClickToShowDrawer(e: React.MouseEvent<HTMLDivElement>) {
       // Select the commit if it was deselected.
@@ -135,7 +138,8 @@ export const Commit = memo(
           (isHighlighted ? ' highlighted' : '')
         }
         data-testid={`commit-${commit.hash}`}>
-        {commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION ? (
+        {!isNonActionable &&
+        (commit.isHead || previewType === CommitPreview.GOTO_PREVIOUS_LOCATION) ? (
           <HeadCommitInfo commit={commit} previewType={previewType} hasChildren={hasChildren} />
         ) : null}
         <div className="commit-rows">

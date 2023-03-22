@@ -37,6 +37,9 @@ export enum CommitPreview {
   GOTO_PREVIOUS_LOCATION = 'goto-previous-location',
   HIDDEN_ROOT = 'hidden-root',
   HIDDEN_DESCENDANT = 'hidden-descendant',
+  // Commit being rendered in some other context than the commit tree,
+  // such as the commit info sidebar
+  NON_ACTIONABLE_COMMIT = 'non-actionable-commit',
 }
 
 /**

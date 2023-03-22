@@ -39,7 +39,7 @@ import {GhStackSubmitOperation} from './operations/GhStackSubmitOperation';
 import {PrSubmitOperation} from './operations/PrSubmitOperation';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
-import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
+import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
 import {selectedCommitInfos, selectedCommits} from './selection';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
@@ -105,7 +105,12 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
       <VSCodeDivider />
       <div className="commit-list">
         {selectedCommits.map(commit => (
-          <Commit key={commit.hash} commit={commit} hasChildren={false} />
+          <Commit
+            key={commit.hash}
+            commit={commit}
+            hasChildren={false}
+            previewType={CommitPreview.NON_ACTIONABLE_COMMIT}
+          />
         ))}
       </div>
       <div className="commit-info-actions-bar">
