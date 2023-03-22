@@ -419,11 +419,12 @@ function MergeConflictButtons({
 }
 
 const revertableStatues = new Set(['M', 'R', '!']);
+const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
 function FileActions({file}: {file: ChangedFile}) {
   const runOperation = useRunOperation();
   const actions: Array<React.ReactNode> = [];
 
-  if (platform.openDiff != null) {
+  if (platform.openDiff != null && !conflictStatuses.has(file.status)) {
     actions.push(
       <Tooltip title={t('Open diff view')} key="revert" delayMs={1000}>
         <VSCodeButton
