@@ -15,6 +15,10 @@ const config: Config.InitialOptions = {
   // thus jest thinks we have leaked handles. Force exits quiets this warning.
   forceExit: true,
 
+  // Even though the repos are separate, somehow running multiple integration tests in parallel
+  // causes failures. For now, just limit to one test at a time.
+  maxWorkers: 1,
+
   // use typescript in tests
   preset: 'ts-jest',
   testEnvironment: 'jsdom',

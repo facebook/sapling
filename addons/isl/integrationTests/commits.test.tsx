@@ -10,21 +10,22 @@ import {act, screen, waitFor, within} from '@testing-library/react';
 
 describe('commits integration test', () => {
   it('shows commits', async () => {
-    const {sl, cleanup, writeFileInRepo} = await initRepo();
+    const {cleanup, drawdag} = await initRepo();
+    await act(() =>
+      drawdag(`
+        C D
+        |/
+        B
+        |
+        A
+      `),
+    );
 
-    await act(async () => {
-      await writeFileInRepo('file.txt', 'hello, world!');
-    });
-
-    // changed file should appear as uncommitted change
-    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('file.txt'));
-
-    await act(async () => {
-      await sl(['commit', '-m', 'Commit A']);
-    });
-
-    // new commit should show up in the commit tree
-    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('Commit A'));
+    // commits should show up in the commit tree
+    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('A'));
+    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('B'));
+    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('C'));
+    await waitFor(() => within(screen.getByTestId('commit-tree-root')).getByText('D'));
 
     await cleanup();
   });

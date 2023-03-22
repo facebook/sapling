@@ -7,6 +7,7 @@
 
 import type {MessageBusStatus} from '../src/MessageBus';
 import type {Disposable, RepoRelativePath} from '../src/types';
+import type {ExecaChildProcess, Options as ExecaOptions} from 'execa';
 import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 import {onClientConnection} from '../../isl-server/src/index';
@@ -30,8 +31,6 @@ jest.mock('../src/logger', () => {
           console.log(...args);
         }
       : (() => {
-          // eslint-disable-next-line no-console
-          console.log('Re-run with `--verbose` to see client/server communication and server logs');
           return () => undefined;
         })();
   return {
@@ -112,16 +111,19 @@ type MockedClientMessageBus = {
  */
 export async function initRepo(): Promise<{
   repoDir: string;
-  sl: (args: Array<string>) => Promise<unknown>;
+  sl: (args: Array<string>) => ExecaChildProcess;
   cleanup: () => Promise<void>;
   writeFileInRepo: (path: RepoRelativePath, content: string) => Promise<void>;
+  drawdag: (dag: string) => Promise<void>;
 }> {
   const repoDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'isl-integration-test-repo-'));
   log('temp repo: ', repoDir);
 
-  function sl(args: Array<string>) {
+  function sl(args: Array<string>, options?: ExecaOptions) {
     return __TEST__.runCommand('sl', args, mockLogger, repoDir, {
+      ...options,
       env: {
+        ...(options?.env ?? {}),
         FB_SCM_DIAGS_NO_SCUBA: '1',
       } as Record<string, string> as NodeJS.ProcessEnv,
       extendEnv: true,
@@ -130,6 +132,24 @@ export async function initRepo(): Promise<{
 
   async function writeFileInRepo(filePath: RepoRelativePath, content: string): Promise<void> {
     await fs.promises.writeFile(path.join(repoDir, filePath), content, 'utf8');
+  }
+
+  /**
+   * create test commit history from a diagram.
+   * See https://sapling-scm.com/docs/internals/drawdag
+   */
+  async function drawdag(dag: string): Promise<void> {
+    // by default, drawdag sets date to 0,
+    // but this would hide all commits in the ISL,
+    // so we set "now" to our javascript date so all new commits are fetched,
+    // then make our commits relative to that
+    const pythonLabel = 'python:';
+    const input = `${dag}
+${dag.includes(pythonLabel) ? '' : pythonLabel}
+now('${new Date().toISOString()}')  # set the "now" time
+commit(date='now')
+    `;
+    await sl(['debugdrawdag'], {input});
   }
 
   // set up empty repo
@@ -189,8 +209,17 @@ export async function initRepo(): Promise<{
       disposeServer();
       disposeClientConnection();
       // rm -rf the temp dir with the repo in it
-      await fs.promises.rm(repoDir, {recursive: true, force: true});
+      await retry(() => fs.promises.rm(repoDir, {recursive: true, force: true}));
     },
     writeFileInRepo,
+    drawdag,
   };
+}
+
+async function retry<T>(cb: () => Promise<T>): Promise<T> {
+  try {
+    return await cb();
+  } catch {
+    return cb();
+  }
 }
