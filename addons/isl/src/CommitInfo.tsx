@@ -344,6 +344,7 @@ function ActionsBar({
 
   const provider = useRecoilValue(codeReviewProvider);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
+  const diffSummaries = useRecoilValue(allDiffSummaries);
 
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
@@ -405,6 +406,9 @@ function ActionsBar({
     repoInfo?.type === 'success' ? repoInfo.codeReviewSystem.type : 'unknown';
   const canSubmitWithCodeReviewProvider =
     codeReviewProviderName !== 'none' && codeReviewProviderName !== 'unknown';
+  const submittable =
+    diffSummaries.value && provider?.getSubmittableDiffs([commit], diffSummaries.value);
+  const canSubmitIndividualDiffs = submittable && submittable.length > 0;
 
   const ongoingImageUploads = useRecoilValue(numPendingImageUploads);
   const areImageUploadsOngoing = ongoingImageUploads > 0;
@@ -455,7 +459,7 @@ function ActionsBar({
           </VSCodeButton>
         </Tooltip>
       )}
-      {commit.isHead ? (
+      {commit.isHead || canSubmitIndividualDiffs ? (
         <Tooltip
           title={
             areImageUploadsOngoing
@@ -534,7 +538,7 @@ function ActionsBar({
               }
               runOperation(unwrap(provider).submitOperation([commit]));
             }}>
-            {anythingToCommit ? (
+            {commit.isHead && anythingToCommit ? (
               isCommitMode ? (
                 <T>Commit and Submit</T>
               ) : (
