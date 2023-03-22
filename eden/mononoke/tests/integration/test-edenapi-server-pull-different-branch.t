@@ -73,6 +73,7 @@ Move master and branch1 to different branches:
   o  D f585351a92f85104bff7c284233c338b10eb1df7
   │
   ~
+  $ flush_mononoke_bookmarks
 
 Client changes main branch to branch1, then do a pull.
 Because the server does not have segments on branch1, fastpath cannot be used:
