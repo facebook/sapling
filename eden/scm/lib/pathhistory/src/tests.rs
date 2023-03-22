@@ -121,9 +121,13 @@ impl TestHistory {
     }
 
     /// Obtain the `PathHistory` struct.
-    pub async fn paths_history(&self, max_commit_int: u64, paths: &[&str]) -> PathHistory {
+    pub async fn paths_history(
+        &self,
+        params: impl Into<BuildSetParam>,
+        paths: &[&str],
+    ) -> PathHistory {
         // Build commit graph and the "set".
-        let set = self.build_set(max_commit_int).await;
+        let set = self.build_set(params.into()).await;
 
         // Convert path types.
         let paths: Vec<RepoPathBuf> = paths
@@ -152,7 +156,8 @@ impl TestHistory {
         }
     }
 
-    pub async fn build_set(&self, max_commit_int: u64) -> NameSet {
+    async fn build_set(&self, build_set_params: BuildSetParam) -> NameSet {
+        let BuildSetParam(max_commit_int, selected_commit_ints) = build_set_params;
         // Build commit graph and the "set".
         let mut dag = MemDag::new();
         let parents_override = {
@@ -183,17 +188,42 @@ impl TestHistory {
             let heads = vec![head.clone()];
             dag.add_heads(&parents, &heads.into()).await.unwrap();
         }
-        let set = dag.all().await.unwrap();
-        set
+
+        match selected_commit_ints {
+            None => dag.all().await.unwrap(),
+            Some(ints) => {
+                let set = NameSet::from_static_names(ints.into_iter().map(vertex_from_int));
+                dag.sort(&set).await.unwrap()
+            }
+        }
     }
 
     // Obtain the `RenameTracer` struct.
-    pub async fn rename_tracer(&self, max_commit_int: u64, path: &str) -> RenameTracer {
-        let set = self.build_set(max_commit_int).await;
+    pub async fn rename_tracer(
+        &self,
+        params: impl Into<BuildSetParam>,
+        path: &str,
+    ) -> RenameTracer {
+        let set = self.build_set(params.into()).await;
         let path = RepoPath::from_str(path).unwrap().to_owned();
         RenameTracer::new(set, path, Arc::new(self.clone()), Arc::new(self.clone()))
             .await
             .unwrap()
+    }
+}
+
+/// Used by `build_set`. Specifies the graph size and the subset passed to PathHistory.
+pub struct BuildSetParam(u64, Option<Vec<u64>>);
+
+impl From<u64> for BuildSetParam {
+    fn from(value: u64) -> Self {
+        Self(value, None)
+    }
+}
+
+impl<I: Iterator<Item = u64>> From<(u64, I)> for BuildSetParam {
+    fn from(value: (u64, I)) -> Self {
+        Self(value.0, Some(value.1.collect()))
     }
 }
 
@@ -503,6 +533,33 @@ async fn test_log_muti_heads_in_testing_range() {
     // Log should contain the "escape" commit (48).
     let mut h = t.paths_history(128, &["a"]).await;
     assert_eq!(h.next_n(9).await, [120, 48, 32, 0]);
+}
+
+#[tokio::test]
+async fn test_log_subset_misleading_parents() {
+    // a: 0..80 (0), 80..90 (1), 90..100 (0)
+    let t = TestHistory::from_history(&[
+        (79, "a", 0, R),
+        (80, "a", 1, R),
+        (90, "a", 0, R),
+        (100, "a", 0, R),
+    ]);
+
+    // When listing all changes, PathHistory will miss the change, because "a" is consistently
+    // missing even if pathhistory bisects once - it still decide to skip the 50-100 range.
+    let mut h = t.paths_history((100, 0..=100), &["a"]).await;
+    assert_eq!(h.next_n(9).await, &[] as &[u64]);
+
+    // When we pass a subset that is not "ancestors(something)" to PathHistory, it can detect
+    // changes in the given range.
+    let mut h = t.paths_history((100, 85..=95), &["a"]).await;
+    assert_eq!(h.next_n(9).await, &[90]);
+
+    // In this case, we expect PathHistory to not skip the 80 to 95 range by detecting "a" is the
+    // same in 79 (parent of 80) and 95.
+    // FIXME: That is not the case.
+    let mut h = t.paths_history((100, 80..=95), &["a"]).await;
+    assert_eq!(h.next_n(9).await, &[] as &[u64]);
 }
 
 #[tokio::test]
