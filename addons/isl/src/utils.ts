@@ -17,7 +17,7 @@ export function firstOfIterable<T>(it: IterableIterator<T>): T | undefined {
   return it.next().value;
 }
 
-export function assert(shouldBeTrue: boolean, error: string): void {
+export function assert(shouldBeTrue: boolean, error: string): asserts shouldBeTrue {
   if (!shouldBeTrue) {
     throw new Error(error);
   }

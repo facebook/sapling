@@ -29,6 +29,7 @@ SOFTWARE.
 
 */
 
+import {assert} from './utils';
 // Read D43857949 about the choice of the diff library.
 import diffSequences from 'diff-sequences';
 
@@ -518,13 +519,6 @@ function stringsToInts(linesArray: string[][]): number[][] {
       }
     }),
   );
-}
-
-/** If the assertion fails, throw an `Error` with the given `message`. */
-function assert(condition: boolean, message: string) {
-  if (!condition) {
-    throw new Error(message);
-  }
 }
 
 export {LineLog};
