@@ -37,6 +37,9 @@ export const DOCUMENTATION_DELAY = 750;
  * Tooltip content may either be a (i18n-ized) string `title`, or a `Component` to render.
  *   `title`s will automatically wrap text,
  *   but `Component`s are expected to handle their own sizing.
+ * `Component`-rendered content allows pointer events inside the tooltip,
+ *   but string `title`s do not allow pointer events, and dismiss if the mouse exits
+ *   the original tooltip creator.
  *
  * Tooltips will hide themselves when you scroll or resize.
  * This applies even to manual tooltips with shouldShow=true.

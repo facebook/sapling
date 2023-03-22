@@ -53,6 +53,7 @@
 .tooltip.simple-text-tooltip {
   max-width: 250px;
   white-space: pre-wrap;
+  pointer-events: unset;
 }
 
 .tooltip-arrow-bottom {
