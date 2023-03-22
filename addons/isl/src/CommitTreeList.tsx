@@ -19,6 +19,7 @@ import {allDiffSummaries, codeReviewProvider, pageVisibility} from './codeReview
 import {T, t} from './i18n';
 import {CreateEmptyInitialCommitOperation} from './operations/CreateEmptyInitialCommitOperation';
 import {treeWithPreviews, useMarkOperationsCompleted} from './previews';
+import {useArrowKeysToChangeSelection} from './selection';
 import {
   commitFetchError,
   commitsShownRange,
@@ -44,6 +45,8 @@ export function CommitTreeList() {
   useRecoilState(pageVisibility);
 
   useMarkOperationsCompleted();
+
+  useArrowKeysToChangeSelection();
 
   const {trees} = useRecoilValue(treeWithPreviews);
   const fetchError = useRecoilValue(commitFetchError);

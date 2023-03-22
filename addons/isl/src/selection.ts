@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ISLCommandName} from './ISLShortcuts';
 import type {CommitInfo} from './types';
 import type React from 'react';
 
+import {useCommand} from './ISLShortcuts';
 import {treeWithPreviews} from './previews';
 import {latestCommitTreeMap} from './serverAPIState';
 import {atom, selector, useRecoilCallback, useRecoilValue} from 'recoil';
@@ -156,3 +158,62 @@ export const linearizedCommitHistory = selector({
     return accum;
   },
 });
+
+export function useArrowKeysToChangeSelection() {
+  const cb = useRecoilCallback(({snapshot, set}) => (which: ISLCommandName) => {
+    const lastSelected = snapshot.getLoadable(previouslySelectedCommit).valueMaybe();
+    const linearHistory = snapshot.getLoadable(linearizedCommitHistory).valueMaybe();
+    if (lastSelected == null || linearHistory == null) {
+      return;
+    }
+
+    const linearNonPublicHistory = linearHistory.filter(commit => commit.phase !== 'public');
+
+    let currentIndex = linearNonPublicHistory.findIndex(commit => commit.hash === lastSelected);
+    if (currentIndex === -1) {
+      return;
+    }
+
+    let extendSelection = false;
+
+    switch (which) {
+      case 'SelectUpwards': {
+        if (currentIndex < linearNonPublicHistory.length - 1) {
+          currentIndex++;
+        }
+        break;
+      }
+      case 'SelectDownwards': {
+        if (currentIndex > 0) {
+          currentIndex--;
+        }
+        break;
+      }
+      case 'ContinueSelectionUpwards': {
+        if (currentIndex < linearNonPublicHistory.length - 1) {
+          currentIndex++;
+        }
+        extendSelection = true;
+        break;
+      }
+      case 'ContinueSelectionDownwards': {
+        if (currentIndex > 0) {
+          currentIndex--;
+        }
+        extendSelection = true;
+        break;
+      }
+    }
+
+    const newSelected = linearNonPublicHistory[currentIndex];
+    set(selectedCommits, last =>
+      extendSelection ? new Set([...last, newSelected.hash]) : new Set([newSelected.hash]),
+    );
+    set(previouslySelectedCommit, newSelected.hash);
+  });
+
+  useCommand('SelectUpwards', () => cb('SelectUpwards'));
+  useCommand('SelectDownwards', () => cb('SelectDownwards'));
+  useCommand('ContinueSelectionUpwards', () => cb('ContinueSelectionUpwards'));
+  useCommand('ContinueSelectionDownwards', () => cb('ContinueSelectionDownwards'));
+}

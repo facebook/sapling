@@ -39,6 +39,10 @@ export enum KeyCode {
   R = 82,
   Period = 190,
   SingleQuote = 222,
+  LeftArrow = 37,
+  UpArrow = 38,
+  RightArrow = 39,
+  DownArrow = 40,
 }
 
 type CommandDefinition = [Modifiers, KeyCode];

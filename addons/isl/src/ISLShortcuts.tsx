@@ -13,4 +13,10 @@ export const [ISLCommandContext, useCommand, dispatchCommand] = makeCommandDispa
   OpenUncommittedChangesComparisonView: [Modifier.CMD, KeyCode.SingleQuote],
   OpenHeadChangesComparisonView: [Modifier.CMD | Modifier.SHIFT, KeyCode.SingleQuote],
   Escape: [Modifier.NONE, KeyCode.Escape],
+  SelectUpwards: [Modifier.NONE, KeyCode.UpArrow],
+  SelectDownwards: [Modifier.NONE, KeyCode.DownArrow],
+  ContinueSelectionUpwards: [Modifier.SHIFT, KeyCode.UpArrow],
+  ContinueSelectionDownwards: [Modifier.SHIFT, KeyCode.DownArrow],
 });
+
+export type ISLCommandName = Parameters<typeof useCommand>[0];

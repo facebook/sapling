@@ -18,6 +18,7 @@ import {
   CommitTreeListTestUtils,
 } from '../testUtils';
 import {fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {act} from 'react-dom/test-utils';
 
 jest.mock('../MessageBus');
@@ -36,6 +37,39 @@ describe('selection', () => {
       simulateCommits({value: TEST_COMMIT_HISTORY});
     });
   });
+
+  const click = (name: string, opts?: {shiftKey?: boolean; metaKey?: boolean}) => {
+    act(
+      () => void fireEvent.click(CommitTreeListTestUtils.withinCommitTree().getByText(name), opts),
+    );
+  };
+
+  const expectOnlyOneCommitSelected = () =>
+    expect(
+      CommitInfoTestUtils.withinCommitInfo().queryByText(/\d Commits Selected/),
+    ).not.toBeInTheDocument();
+
+  const expectNCommitsSelected = (n: number) =>
+    expect(
+      CommitInfoTestUtils.withinCommitInfo().queryByText(`${n} Commits Selected`),
+    ).toBeInTheDocument();
+
+  const upArrow = (shift?: boolean) => {
+    act(() =>
+      userEvent.type(
+        screen.getByTestId('commit-tree-root'),
+        (shift ? '{shift}' : '') + '{arrowup}',
+      ),
+    );
+  };
+  const downArrow = (shift?: boolean) => {
+    act(() =>
+      userEvent.type(
+        screen.getByTestId('commit-tree-root'),
+        (shift ? '{shift}' : '') + '{arrowdown}',
+      ),
+    );
+  };
 
   it('allows selecting via click', () => {
     act(() => void fireEvent.click(screen.getByText('Commit A')));
@@ -180,12 +214,6 @@ describe('selection', () => {
   });
 
   describe('shift click selection', () => {
-    const click = (name: string, opts?: {shiftKey?: boolean; metaKey?: boolean}) => {
-      act(
-        () =>
-          void fireEvent.click(CommitTreeListTestUtils.withinCommitTree().getByText(name), opts),
-      );
-    };
     it('selects ranges of commits when shift-clicking', () => {
       click('Commit B');
       click('Commit D', {shiftKey: true});
@@ -239,6 +267,74 @@ describe('selection', () => {
       expect(
         CommitInfoTestUtils.withinCommitInfo().queryByText(/\d Commits Selected/),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('up/down arrows to select', () => {
+    it('noop if nothing selected', () => {
+      upArrow();
+      downArrow();
+      upArrow(true);
+      downArrow(true);
+      expectOnlyOneCommitSelected();
+    });
+
+    it('up arrow modifies selection', () => {
+      click('Commit C');
+      upArrow();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expectOnlyOneCommitSelected();
+    });
+
+    it('down arrow modifies selection', () => {
+      click('Commit C');
+      downArrow();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
+      expectOnlyOneCommitSelected();
+    });
+
+    it('multiple arrow keys keep modifying selection', () => {
+      click('Commit A');
+      upArrow();
+      upArrow();
+      upArrow();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expectOnlyOneCommitSelected();
+    });
+
+    it('selection skips public commits', () => {
+      click('Commit A');
+      upArrow(); // B
+      upArrow(); // C
+      upArrow(); // D
+      upArrow(); // E
+      upArrow(); // skip public base, go to X
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit X')).toBeInTheDocument();
+      expectOnlyOneCommitSelected();
+    });
+
+    it('goes from last selection if multiple are selected', () => {
+      click('Commit A');
+      click('Commit C', {metaKey: true});
+      upArrow();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expectOnlyOneCommitSelected();
+    });
+
+    it('holding shift extends upwards', () => {
+      click('Commit C');
+      upArrow(/* shift */ true);
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit D')).toBeInTheDocument();
+      expectNCommitsSelected(2);
+    });
+
+    it('holding shift extends downwards', () => {
+      click('Commit C');
+      downArrow(/* shift */ true);
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit C')).toBeInTheDocument();
+      expect(CommitInfoTestUtils.withinCommitInfo().getByText('Commit B')).toBeInTheDocument();
+      expectNCommitsSelected(2);
     });
   });
 });
