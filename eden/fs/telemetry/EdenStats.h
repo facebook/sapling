@@ -345,7 +345,7 @@ struct OverlayStats : StatsGroup<OverlayStats> {
   Duration removeOverlayFile{"overlay.remove_overlay_file_us"};
   Duration removeOverlayDir{"overlay.remove_overlay_dir_us"};
   Duration hasOverlayDir{"overlay.has_overlay_dir_us"};
-  Duration hasOverlayFile{"overlay.has_overlay_dir_us"};
+  Duration hasOverlayFile{"overlay.has_overlay_file_us"};
   Duration addChild{"overlay.add_child_us"};
   Duration removeChild{"overlay.remove_child_us"};
   Duration removeChildren{"overlay.remove_children_us"};
