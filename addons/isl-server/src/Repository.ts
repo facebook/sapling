@@ -612,8 +612,9 @@ export class Repository {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
       const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
       const revset = !visibleCommitDayRange
-        ? 'smartlog() + .'
-        : `smartlog() and date(-${visibleCommitDayRange}) + .`;
+        ? 'smartlog()'
+        : // filter default smartlog query by date range
+          `smartlog(((interestingbookmarks() + heads(draft())) & date(-${visibleCommitDayRange})) + .)`;
       const proc = await this.runCommand(['log', '--template', FETCH_TEMPLATE, '--rev', revset]);
       const commits = parseCommitInfoOutput(this.logger, proc.stdout.trim());
       if (commits.length === 0) {
