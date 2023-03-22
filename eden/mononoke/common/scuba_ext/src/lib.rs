@@ -220,11 +220,38 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("poll_count", stats.poll_count)
             .add("poll_time_us", stats.poll_time.as_micros_unchecked())
+            .add(
+                "max_poll_time_us",
+                stats.max_poll_time.as_micros_unchecked(),
+            )
             .add("count", stats.count)
             .add(
                 "completion_time_us",
                 stats.completion_time.as_micros_unchecked(),
             );
+
+        self
+    }
+
+    pub fn add_prefixed_stream_stats(&mut self, stats: &StreamStats) -> &mut Self {
+        self.inner
+            .add("stream_poll_count", stats.poll_count)
+            .add("stream_poll_time_us", stats.poll_time.as_micros_unchecked())
+            .add(
+                "stream_max_poll_time_us",
+                stats.max_poll_time.as_micros_unchecked(),
+            )
+            .add("stream_count", stats.count)
+            .add(
+                "stream_completion_time_us",
+                stats.completion_time.as_micros_unchecked(),
+            );
+        if let Some(first_item_time) = stats.first_item_time.as_ref() {
+            self.inner.add(
+                "stream_first_item_time_us",
+                first_item_time.as_micros_unchecked(),
+            );
+        }
 
         self
     }

@@ -11,6 +11,7 @@ use bytes::Bytes;
 use futures::channel::oneshot;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
+use futures_stats::TimedStreamExt;
 use gotham::handler::HandlerError;
 use gotham::helpers::http::response::create_response;
 use gotham::state::State;
@@ -28,6 +29,7 @@ use super::error_meta::ErrorMetaProvider;
 use super::response_meta::HeadersMeta;
 use super::response_meta::PendingResponseMeta;
 use super::signal_stream::SignalStream;
+use super::stream_stats::PendingStreamStats;
 use crate::content_encoding::ContentEncoding;
 use crate::error::ErrorFormatter;
 use crate::error::HttpError;
@@ -81,6 +83,7 @@ impl EmptyBody {
 
 impl TryIntoResponse for EmptyBody {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
+        state.put(PendingStreamStats::none());
         state.put(PendingResponseMeta::immediate(0));
 
         Response::builder()
@@ -112,6 +115,7 @@ where
 
         let size = bytes.len().try_into()?;
         state.put(PendingResponseMeta::immediate(size));
+        state.put(PendingStreamStats::none());
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
@@ -175,11 +179,18 @@ where
             },
         };
 
-        let (sender, receiver) = oneshot::channel();
-        state.put(PendingResponseMeta::deferred(headers_meta, receiver));
+        let (meta_tx, meta_rx) = oneshot::channel();
+        state.put(PendingResponseMeta::deferred(headers_meta, meta_rx));
 
         // Set up a SignalStream to send the PostSendMeta.
-        let stream = SignalStream::new(stream, sender);
+        let stream = SignalStream::new(stream, meta_tx);
+
+        let (stats_tx, stats_rx) = oneshot::channel();
+        state.put(PendingStreamStats::deferred(stats_rx));
+
+        let stream = stream.timed(move |stats| async move {
+            let _ = stats_tx.send(stats);
+        });
 
         // Turn the stream into a TryStream, as expected by hyper::Body.
         let stream = stream.map(<Result<_, Error>>::Ok);

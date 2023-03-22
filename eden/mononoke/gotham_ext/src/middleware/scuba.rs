@@ -292,6 +292,10 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
             scuba.add(HttpScubaKey::ResponseBytesSent, meta.body().bytes_sent);
         }
 
+        if let Some(stats) = info.stream_stats.as_ref() {
+            scuba.add_prefixed_stream_stats(stats);
+        }
+
         handler.populate_scuba(info, &mut scuba);
 
         scuba.log();

@@ -15,6 +15,7 @@ use cached_config::ConfigHandle;
 use futures::future;
 use futures::prelude::*;
 use futures::Future;
+use futures_stats::StreamStats;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
@@ -28,6 +29,7 @@ use super::MetadataState;
 use super::Middleware;
 use super::RequestStartTime;
 use crate::response::PendingResponseMeta;
+use crate::response::PendingStreamStats;
 use crate::response::ResponseMeta;
 
 type Callback = Box<dyn FnOnce(&PostResponseInfo) + Send + 'static>;
@@ -37,6 +39,7 @@ pub struct PostResponseInfo {
     pub duration: Option<Duration>,
     pub client_hostname: Option<String>,
     pub meta: Option<ResponseMeta>,
+    pub stream_stats: Option<StreamStats>,
 }
 
 impl PostResponseInfo {
@@ -101,9 +104,10 @@ impl<C: PostResponseConfig> Middleware for PostResponseMiddleware<C> {
         let start_time = RequestStartTime::try_borrow_from(state).map(|t| t.0);
         let hostname_future = MetadataState::try_borrow_from(state).map(resolve_hostname);
         let meta = PendingResponseMeta::try_take_from(state);
+        let stream_stats = PendingStreamStats::try_take_from(state);
 
         if let Some(callbacks) = state.try_take::<PostResponseCallbacks>() {
-            task::spawn(callbacks.run(config, start_time, meta, hostname_future));
+            task::spawn(callbacks.run(config, start_time, meta, stream_stats, hostname_future));
         }
     }
 }
@@ -139,6 +143,7 @@ impl PostResponseCallbacks {
         config: C,
         start_time: Option<Instant>,
         meta: Option<PendingResponseMeta>,
+        stream_stats: Option<PendingStreamStats>,
         hostname_future: Option<H>,
     ) where
         C: PostResponseConfig,
@@ -148,6 +153,11 @@ impl PostResponseCallbacks {
 
         let meta = match meta {
             Some(meta) => Some(meta.finish().await),
+            None => None,
+        };
+
+        let stream_stats = match stream_stats {
+            Some(stream_stats) => stream_stats.finish().await,
             None => None,
         };
 
@@ -164,6 +174,7 @@ impl PostResponseCallbacks {
             duration,
             client_hostname,
             meta,
+            stream_stats,
         };
 
         for callback in callbacks {

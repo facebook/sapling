@@ -12,6 +12,7 @@ mod response_meta;
 mod signal_stream;
 mod stream;
 mod stream_ext;
+mod stream_stats;
 
 pub use content_meta::ContentMetaProvider;
 pub use error_meta::ErrorMeta;
@@ -30,3 +31,4 @@ pub use stream::encode_stream;
 pub use stream::CompressedResponseStream;
 pub use stream::ResponseStream;
 pub use stream_ext::ResponseTryStreamExt;
+pub use stream_stats::PendingStreamStats;
