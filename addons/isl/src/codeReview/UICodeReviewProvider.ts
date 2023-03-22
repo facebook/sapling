@@ -19,7 +19,15 @@ export interface UICodeReviewProvider {
   DiffBadgeContent(props: {diff?: DiffSummary; children?: ReactNode}): JSX.Element | null;
   formatDiffNumber(diffId: DiffId): string;
 
-  submitOperation(commits: Array<CommitInfo>): Operation;
+  submitOperation(
+    commits: Array<CommitInfo>,
+    options?: {
+      /** Whether to submit this diff as a draft. Note: some review providers only allow submitting new Diffs as drafts */
+      draft?: boolean;
+      /** If this diff is being resubmitted, this message will be added as a comment to explain what has changed */
+      updateMessage?: string;
+    },
+  ): Operation;
 
   RepoInfo(): JSX.Element | null;
 

@@ -62,11 +62,11 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     );
   };
 
-  submitOperation(): Operation {
+  submitOperation(_commits: [], options: {draft?: boolean; updateMessage?: string}): Operation {
     if (this.preferredSubmitCommand === 'ghstack') {
-      return new GhStackSubmitOperation();
+      return new GhStackSubmitOperation(options);
     }
-    return new PrSubmitOperation();
+    return new PrSubmitOperation(options);
   }
 
   getSupportedStackActions() {
