@@ -28,6 +28,7 @@
     "start": "node ./start.js",
     "build": "node ./build.js",
     "test": "react-scripts test",
+    "integration": "jest --config=./integrationTests/integration.jest.config.ts",
     "eject": "react-scripts eject",
     "eslint": "eslint ./src --ext .ts --ext .tsx"
   },

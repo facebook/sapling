@@ -715,6 +715,10 @@ function runCommand(
   return execa(command, args, options);
 }
 
+export const __TEST__ = {
+  runCommand,
+};
+
 /**
  * Root of the repository where the .sl folder lives.
  * Throws only if `command` is invalid, so this check can double as validation of the `sl` command */
@@ -815,7 +819,7 @@ function getExecParams(
   if (EXCLUDE_FROM_BLACKBOX_COMMANDS.has(commandName)) {
     args.push('--config', 'extensions.blackbox=!');
   }
-  const options = {
+  const options: execa.Options = {
     ...options_,
     env: {
       LANG: 'en_US.utf-8', // make sure to use unicode if user hasn't set LANG themselves
@@ -825,7 +829,7 @@ function getExecParams(
       // override any custom aliases a user has defined.
       SL_AUTOMATION: 'true',
       EDITOR: undefined,
-    },
+    } as unknown as NodeJS.ProcessEnv,
     cwd,
   };
 
