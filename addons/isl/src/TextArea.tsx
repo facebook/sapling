@@ -141,6 +141,7 @@ export function CommitInfoField({
             : (event: ClipboardEvent) => {
                 if (event.clipboardData != null && event.clipboardData.files.length > 0) {
                   uploadFiles([...event.clipboardData.files]);
+                  event.preventDefault();
                 }
               }
         }
