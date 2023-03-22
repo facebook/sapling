@@ -31,6 +31,7 @@ import {CommitInfoField} from './TextArea';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
 import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {t, T} from './i18n';
 import {AmendMessageOperation} from './operations/AmendMessageOperation';
 import {AmendOperation} from './operations/AmendOperation';
@@ -345,6 +346,7 @@ function ActionsBar({
   const provider = useRecoilValue(codeReviewProvider);
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const diffSummaries = useRecoilValue(allDiffSummaries);
+  const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
 
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
@@ -415,141 +417,150 @@ function ActionsBar({
 
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
-      {isAnythingBeingEdited && !isCommitMode ? (
-        <VSCodeButton appearance="secondary" onClick={() => clearEditedCommitMessage()}>
-          <T>Cancel</T>
-        </VSCodeButton>
-      ) : null}
-
-      {commit.isHead ? (
-        <Tooltip
-          title={
-            areImageUploadsOngoing
-              ? t('Image uploads are still pending')
-              : isCommitMode
-              ? deselected.size === 0
-                ? t('No changes to commit')
-                : t('No selected changes to commit')
-              : deselected.size === 0
-              ? t('No changes to amend')
-              : t('No selected changes to amend')
-          }
-          trigger={areImageUploadsOngoing || !anythingToCommit ? 'hover' : 'disabled'}>
-          <VSCodeButton
-            appearance="secondary"
-            disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
-            onClick={doAmendOrCommit}>
-            {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
+      <div className="commit-info-actions-bar-left">
+        <SubmitAsDraftCheckbox commitsToBeSubmit={[commit]} />
+      </div>
+      <div className="commit-info-actions-bar-right">
+        {isAnythingBeingEdited && !isCommitMode ? (
+          <VSCodeButton appearance="secondary" onClick={() => clearEditedCommitMessage()}>
+            <T>Cancel</T>
           </VSCodeButton>
-        </Tooltip>
-      ) : (
-        <Tooltip
-          title={t('Image uploads are still pending')}
-          trigger={areImageUploadsOngoing ? 'hover' : 'disabled'}>
-          <VSCodeButton
-            appearance="secondary"
-            disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
-            onClick={() => {
-              runOperation(
-                new AmendMessageOperation(commit.hash, assertNonOptimistic(editedMessage)),
-              );
-              clearEditedCommitMessage(/* skip confirmation */ true);
-            }}>
-            <T>Amend Message</T>
-          </VSCodeButton>
-        </Tooltip>
-      )}
-      {commit.isHead || canSubmitIndividualDiffs ? (
-        <Tooltip
-          title={
-            areImageUploadsOngoing
-              ? t('Image uploads are still pending')
-              : canSubmitWithCodeReviewProvider
-              ? t('Submit for code review with $provider', {
-                  replace: {$provider: codeReviewProviderName},
-                })
-              : t('Submitting for code review is currently only supported for GitHub-backed repos')
-          }
-          placement="top">
-          <VSCodeButton
-            disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
-            onClick={async () => {
-              if (anythingToCommit) {
-                doAmendOrCommit();
-              }
+        ) : null}
 
-              if (
-                repoInfo?.type === 'success' &&
-                repoInfo.codeReviewSystem.type === 'github' &&
-                repoInfo.preferredSubmitCommand == null
-              ) {
-                const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;
-                const cancel = buttons[0];
-                const answer = await showOptionModal({
-                  type: 'confirm',
-                  icon: 'warning',
-                  title: t('Preferred Code Review command not yet configured'),
-                  message: (
-                    <div className="commit-info-confirm-modal-paragraphs">
-                      <div>
-                        <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
-                          You can configure Sapling to use either $pr or $ghstack to submit for code
-                          review on GitHub.
-                        </T>
+        {commit.isHead ? (
+          <Tooltip
+            title={
+              areImageUploadsOngoing
+                ? t('Image uploads are still pending')
+                : isCommitMode
+                ? deselected.size === 0
+                  ? t('No changes to commit')
+                  : t('No selected changes to commit')
+                : deselected.size === 0
+                ? t('No changes to amend')
+                : t('No selected changes to amend')
+            }
+            trigger={areImageUploadsOngoing || !anythingToCommit ? 'hover' : 'disabled'}>
+            <VSCodeButton
+              appearance="secondary"
+              disabled={!anythingToCommit || editedMessage == null || areImageUploadsOngoing}
+              onClick={doAmendOrCommit}>
+              {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
+            </VSCodeButton>
+          </Tooltip>
+        ) : (
+          <Tooltip
+            title={t('Image uploads are still pending')}
+            trigger={areImageUploadsOngoing ? 'hover' : 'disabled'}>
+            <VSCodeButton
+              appearance="secondary"
+              disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
+              onClick={() => {
+                runOperation(
+                  new AmendMessageOperation(commit.hash, assertNonOptimistic(editedMessage)),
+                );
+                clearEditedCommitMessage(/* skip confirmation */ true);
+              }}>
+              <T>Amend Message</T>
+            </VSCodeButton>
+          </Tooltip>
+        )}
+        {commit.isHead || canSubmitIndividualDiffs ? (
+          <Tooltip
+            title={
+              areImageUploadsOngoing
+                ? t('Image uploads are still pending')
+                : canSubmitWithCodeReviewProvider
+                ? t('Submit for code review with $provider', {
+                    replace: {$provider: codeReviewProviderName},
+                  })
+                : t(
+                    'Submitting for code review is currently only supported for GitHub-backed repos',
+                  )
+            }
+            placement="top">
+            <VSCodeButton
+              disabled={!canSubmitWithCodeReviewProvider || areImageUploadsOngoing}
+              onClick={async () => {
+                if (anythingToCommit) {
+                  doAmendOrCommit();
+                }
+
+                if (
+                  repoInfo?.type === 'success' &&
+                  repoInfo.codeReviewSystem.type === 'github' &&
+                  repoInfo.preferredSubmitCommand == null
+                ) {
+                  const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;
+                  const cancel = buttons[0];
+                  const answer = await showOptionModal({
+                    type: 'confirm',
+                    icon: 'warning',
+                    title: t('Preferred Code Review command not yet configured'),
+                    message: (
+                      <div className="commit-info-confirm-modal-paragraphs">
+                        <div>
+                          <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
+                            You can configure Sapling to use either $pr or $ghstack to submit for
+                            code review on GitHub.
+                          </T>
+                        </div>
+                        <div>
+                          <T
+                            replace={{
+                              $config: <code>github.preferred_submit_command</code>,
+                            }}>
+                            Each submit command has tradeoffs, due to how GitHub creates Pull
+                            Requests. This can be controlled by the $config config.
+                          </T>
+                        </div>
+                        <div>
+                          <T>To continue, select a command to use to submit.</T>
+                        </div>
+                        <VSCodeLink
+                          href="https://sapling-scm.com/docs/git/intro#pull-requests"
+                          target="_blank">
+                          <T>Learn More</T>
+                        </VSCodeLink>
                       </div>
-                      <div>
-                        <T
-                          replace={{
-                            $config: <code>github.preferred_submit_command</code>,
-                          }}>
-                          Each submit command has tradeoffs, due to how GitHub creates Pull
-                          Requests. This can be controlled by the $config config.
-                        </T>
-                      </div>
-                      <div>
-                        <T>To continue, select a command to use to submit.</T>
-                      </div>
-                      <VSCodeLink
-                        href="https://sapling-scm.com/docs/git/intro#pull-requests"
-                        target="_blank">
-                        <T>Learn More</T>
-                      </VSCodeLink>
-                    </div>
-                  ),
-                  buttons,
-                });
-                if (answer === cancel || answer == null) {
+                    ),
+                    buttons,
+                  });
+                  if (answer === cancel || answer == null) {
+                    return;
+                  }
+                  runOperation(
+                    new SetConfigOperation('local', 'github.preferred_submit_command', answer),
+                  );
+                  setRepoInfo(info => ({
+                    ...unwrap(info),
+                    preferredSubmitCommand: answer,
+                  }));
+                  // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
+                  // So this one time, we need to manually run the new submit command.
+                  // Future submit calls can delegate to provider.submitOperation();
+                  runOperation(
+                    answer === 'ghstack' ? new GhStackSubmitOperation() : new PrSubmitOperation(),
+                  );
                   return;
                 }
                 runOperation(
-                  new SetConfigOperation('local', 'github.preferred_submit_command', answer),
+                  unwrap(provider).submitOperation([commit], {draft: shouldSubmitAsDraft}),
                 );
-                setRepoInfo(info => ({
-                  ...unwrap(info),
-                  preferredSubmitCommand: answer,
-                }));
-                // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
-                // So this one time, we need to manually run the new submit command.
-                // Future submit calls can delegate to provider.submitOperation();
-                runOperation(
-                  answer === 'ghstack' ? new GhStackSubmitOperation() : new PrSubmitOperation(),
-                );
-                return;
-              }
-              runOperation(unwrap(provider).submitOperation([commit]));
-            }}>
-            {commit.isHead && anythingToCommit ? (
-              isCommitMode ? (
-                <T>Commit and Submit</T>
+              }}>
+              {commit.isHead && anythingToCommit ? (
+                isCommitMode ? (
+                  <T>Commit and Submit</T>
+                ) : (
+                  <T>Amend and Submit</T>
+                )
               ) : (
-                <T>Amend and Submit</T>
-              )
-            ) : (
-              <T>Submit</T>
-            )}
-          </VSCodeButton>
-        </Tooltip>
-      ) : null}
+                <T>Submit</T>
+              )}
+            </VSCodeButton>
+          </Tooltip>
+        ) : null}
+      </div>
     </div>
   );
 }

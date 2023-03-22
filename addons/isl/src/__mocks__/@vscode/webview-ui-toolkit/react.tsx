@@ -31,9 +31,17 @@ export const VSCodeDivider = (p: React.PropsWithChildren<typeof VSCodeDividerTyp
   <div {...p} />
 );
 
-export const VSCodeCheckbox = (p: React.PropsWithChildren<typeof VSCodeCheckboxType>) => (
-  <input type="checkbox" {...p} onChange={() => undefined} />
-);
+export const VSCodeCheckbox = (
+  p: {onChange?: () => void} & React.PropsWithChildren<typeof VSCodeCheckboxType>,
+) => {
+  const {onChange, children, ...rest} = p;
+  return (
+    <div>
+      <input type="checkbox" {...rest} onChange={onChange ?? (() => undefined)} />
+      <label>{children}</label>
+    </div>
+  );
+};
 export const VSCodeTextField = forwardRef<HTMLInputElement>(
   (p: {children?: React.ReactNode; onChange?: () => void}, ref) => {
     const {children, onChange, ...rest} = p;

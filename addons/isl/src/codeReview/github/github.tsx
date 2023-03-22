@@ -76,6 +76,8 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   getSubmittableDiffs() {
     return [];
   }
+
+  supportSubmittingAsDraft = 'newDiffsOnly' as const;
 }
 
 type BadgeState = PullRequestState | 'ERROR';

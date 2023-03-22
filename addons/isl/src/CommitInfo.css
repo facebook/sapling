@@ -86,9 +86,22 @@
   display: flex;
   flex-direction: row;
   gap: var(--pad);
+  flex-wrap: wrap;
   border-top: 1px solid var(--panel-view-border);
   padding: var(--pad);
-  justify-content: flex-end;
+  justify-content: space-between;
+}
+.commit-info-actions-bar-left {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  justify-content: flex-start;
+}
+.commit-info-actions-bar-right {
+  display: flex;
+  flex-direction: row;
+  gap: var(--pad);
+  margin-left: auto;
 }
 
 .commit-info-view-toolbar-top {

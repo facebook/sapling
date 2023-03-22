@@ -31,6 +31,12 @@ export interface UICodeReviewProvider {
 
   RepoInfo(): JSX.Element | null;
 
+  /**
+   * Defines when this review provider can submit diffs as drafts,
+   * submitting for the first time or also when resubmitting.
+   */
+  supportSubmittingAsDraft: 'always' | 'newDiffsOnly';
+
   getSupportedStackActions(
     tree: CommitTreeWithPreviews,
     diffSummaries: Map<string, DiffSummary>,
