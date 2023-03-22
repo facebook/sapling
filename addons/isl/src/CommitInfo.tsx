@@ -545,7 +545,12 @@ function ActionsBar({
                   return;
                 }
                 runOperation(
-                  unwrap(provider).submitOperation([commit], {draft: shouldSubmitAsDraft}),
+                  unwrap(provider).submitOperation(
+                    commit.isHead ? [] : [commit], // [] means to submit the head commit
+                    {
+                      draft: shouldSubmitAsDraft,
+                    },
+                  ),
                 );
               }}>
               {commit.isHead && anythingToCommit ? (

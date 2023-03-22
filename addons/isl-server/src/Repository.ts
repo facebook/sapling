@@ -218,13 +218,7 @@ export class Repository {
         if (operation.runner === CommandRunner.Sapling) {
           return this.runOperation(operation, handleCommandProgress, cwd, signal);
         } else if (operation.runner === CommandRunner.CodeReviewProvider) {
-          if (operation.args.some(arg => typeof arg === 'object')) {
-            return Promise.reject(
-              Error('CodeReviewProvider runner does not support non-string CommandArgs'),
-            );
-          }
-          const normalizedArgs = operation.args as Array<string>;
-
+          const normalizedArgs = this.normalizeOperationArgs(cwd, operation.args);
           if (this.codeReviewProvider?.runExternalCommand == null) {
             return Promise.reject(
               Error('CodeReviewProvider does not support running external commands'),
@@ -471,6 +465,21 @@ export class Repository {
     this.operationQueue.abortRunningOperation(operationId);
   }
 
+  private normalizeOperationArgs(cwd: string, args: Array<CommandArg>): Array<string> {
+    const repoRoot = unwrap(this.info.repoRoot);
+    return args.map(arg => {
+      if (typeof arg === 'object') {
+        switch (arg.type) {
+          case 'repo-relative-file':
+            return path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)));
+          case 'succeedable-revset':
+            return `max(successors(${arg.revset}))`;
+        }
+      }
+      return arg;
+    });
+  }
+
   /**
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
@@ -483,20 +492,7 @@ export class Repository {
     cwd: string,
     signal: AbortSignal,
   ): Promise<void> {
-    const repoRoot = unwrap(this.info.repoRoot);
-
-    const cwdRelativeArgs = operation.args.map(arg => {
-      if (typeof arg === 'object') {
-        switch (arg.type) {
-          case 'repo-relative-file':
-            return path.normalize(path.relative(cwd, path.join(repoRoot, arg.path)));
-          case 'succeedable-revset':
-            return `max(successors(${arg.revset}))`;
-        }
-      }
-      return arg;
-    });
-
+    const cwdRelativeArgs = this.normalizeOperationArgs(cwd, operation.args);
     const {command, args, options} = getExecParams(this.info.command, cwdRelativeArgs, cwd);
 
     this.logger.log('run operation: ', command, cwdRelativeArgs.join(' '));
