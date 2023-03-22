@@ -14,7 +14,7 @@ import type {
 import type {CommitInfo} from './types';
 import type {Dispatch, ReactNode, SetStateAction} from 'react';
 
-import {YouAreHere} from './Commit';
+import {Commit, YouAreHere} from './Commit';
 import {
   assertNonOptimistic,
   commitFieldsBeingEdited,
@@ -40,7 +40,7 @@ import {SetConfigOperation} from './operations/SetConfigOperation';
 import platform from './platform';
 import {treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate} from './relativeDate';
-import {selectedCommits} from './selection';
+import {selectedCommitInfos, selectedCommits} from './selection';
 import {repositoryInfo, useRunOperation} from './serverAPIState';
 import {useModal} from './useModal';
 import {assert, firstOfIterable} from './utils';
@@ -61,13 +61,13 @@ import {unwrap} from 'shared/utils';
 import './CommitInfo.css';
 
 export function CommitInfoSidebar() {
-  const selected = useRecoilValue(selectedCommits);
-  const {treeMap, headCommit} = useRecoilValue(treeWithPreviews);
+  const selected = useRecoilValue(selectedCommitInfos);
+
+  const {headCommit} = useRecoilValue(treeWithPreviews);
 
   // show selected commit, if there's exactly 1
-  const selectedCommit =
-    selected.size === 1 ? treeMap.get(unwrap(firstOfIterable(selected.values()))) : undefined;
-  const commit = selectedCommit?.info ?? headCommit;
+  const selectedCommit = selected.length === 1 ? selected[0] : undefined;
+  const commit = selectedCommit ?? headCommit;
 
   if (commit == null) {
     return (
@@ -78,8 +78,40 @@ export function CommitInfoSidebar() {
       </div>
     );
   } else {
+    if (selected.length > 1) {
+      return <MultiCommitInfo selectedCommits={selected} />;
+    }
+
+    // only one commit selected
     return <CommitInfoDetails commit={commit} />;
   }
+}
+
+export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
+  const provider = useRecoilValue(codeReviewProvider);
+  const runOperation = useRunOperation();
+  return (
+    <div className="commit-info-view-multi-commit" data-testid="commit-info-view">
+      <strong className="commit-list-header">
+        <Icon icon="layers" size="M" />
+        <T replace={{$num: selectedCommits.length}}>$num Commits Selected</T>
+      </strong>
+      <VSCodeDivider />
+      <div className="commit-list">
+        {selectedCommits.map(commit => (
+          <Commit key={commit.hash} commit={commit} hasChildren={false} />
+        ))}
+      </div>
+      <div className="commit-info-actions-bar">
+        <VSCodeButton
+          onClick={() => {
+            runOperation(unwrap(provider).submitOperation(selectedCommits));
+          }}>
+          <T replace={{$num: selectedCommits.length}}>Submit $num Selected Commits</T>
+        </VSCodeButton>
+      </div>
+    </div>
+  );
 }
 
 export function CommitInfoDetails({commit}: {commit: CommitInfo}) {

@@ -20,6 +20,37 @@
   padding-bottom: var(--toolbar-fade-height);
 }
 
+.commit-info-view-multi-commit {
+  display: flex;
+  flex-direction: column;
+}
+.commit-info-view-multi-commit .commit .selected-commit-background {
+  background-color: unset;
+}
+
+.commit-info-view-multi-commit .commit-list {
+  display: flex;
+  flex-direction: column;
+  margin-left: calc(4 * var(--pad));
+  gap: var(--halfpad);
+  flex-grow: 1;
+}
+
+.commit-info-view-multi-commit .commit-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  margin: var(--pad);
+}
+
+.commit-info-view-multi-commit .commit-list-header {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  margin: var(--pad);
+}
+
 .commit-info-view vscode-text-area,
 .commit-info-view vscode-text-field {
   width: 100%;
