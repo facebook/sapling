@@ -25,6 +25,7 @@ import type {
 
 import {Internal} from './Internal';
 import {absolutePathForFileInRepo} from './Repository';
+import {findPublicAncestor} from './utils';
 import fs from 'fs';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {revsetArgsForComparison, revsetForComparison} from 'shared/Comparison';
@@ -152,6 +153,20 @@ export default class ServerToClientAPI {
         }),
       );
     }
+
+    this.repoDisposables.push(
+      repo.subscribeToHeadCommit(head => {
+        const allCommits = repo.getSmartlogCommits();
+        const ancestor = findPublicAncestor(allCommits?.commits.value, head);
+        this.tracker.track('HeadCommitChanged', {
+          extras: {
+            hash: head.hash,
+            public: ancestor?.hash,
+            bookmarks: ancestor?.remoteBookmarks,
+          },
+        });
+      }),
+    );
 
     this.processQueuedMessages();
   }

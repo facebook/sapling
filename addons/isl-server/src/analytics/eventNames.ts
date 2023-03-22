@@ -13,6 +13,7 @@ export type TrackEventName =
   | 'StarRating'
   | 'TopLevelErrorShown'
   | 'UIEmptyState'
+  | 'HeadCommitChanged'
   | 'AbortMergeOperation'
   | 'PullOperation'
   | 'AbortMergeOperation'

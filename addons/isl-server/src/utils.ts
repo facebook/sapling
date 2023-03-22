@@ -6,6 +6,7 @@
  */
 
 import type {ExecaChildProcess} from 'execa';
+import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
 
 import os from 'os';
 
@@ -92,4 +93,32 @@ export function handleAbortSignalOnProcess(child: ExecaChildProcess, signal: Abo
       child.kill('SIGTERM', {forceKillAfterTimeout: 5000});
     }
   });
+}
+
+/**
+ * Given a list of commits and a starting commit,
+ * traverse up the chain of `parents` until we find a public commit
+ */
+export function findPublicAncestor(
+  allCommits: SmartlogCommits | undefined,
+  from: CommitInfo,
+): CommitInfo | undefined {
+  let publicCommit: CommitInfo | undefined;
+  if (allCommits != null) {
+    const map = new Map(allCommits.map(commit => [commit.hash, commit]));
+
+    let current: CommitInfo | undefined = from;
+    while (current != null) {
+      if (current.phase === 'public') {
+        publicCommit = current;
+        break;
+      }
+      if (current.parents[0] == null) {
+        break;
+      }
+      current = map.get(current.parents[0]);
+    }
+  }
+
+  return publicCommit;
 }
