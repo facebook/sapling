@@ -30,4 +30,13 @@ export interface UICodeReviewProvider {
     resubmittableStack?: Array<CommitInfo>;
     submittableStack?: Array<CommitInfo>;
   };
+
+  /**
+   * Given a set of a DiffSummaries, return which ones are ad-hoc submittable by this provider,
+   * meaning you don't need to change the working copy to submit them.
+   */
+  getSubmittableDiffs(
+    commits: Array<CommitInfo>,
+    allDiffSummaries: Map<string, DiffSummary>,
+  ): Array<CommitInfo>;
 }

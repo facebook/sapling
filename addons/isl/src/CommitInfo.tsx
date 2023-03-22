@@ -24,12 +24,13 @@ import {
 } from './CommitInfoState';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {Center} from './ComponentUtils';
+import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {numPendingImageUploads} from './ImageUpload';
 import {Subtle} from './Subtle';
 import {CommitInfoField} from './TextArea';
 import {Tooltip} from './Tooltip';
 import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
-import {codeReviewProvider} from './codeReview/CodeReviewInfo';
+import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {AmendMessageOperation} from './operations/AmendMessageOperation';
 import {AmendOperation} from './operations/AmendOperation';
@@ -89,7 +90,12 @@ export function CommitInfoSidebar() {
 
 export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<CommitInfo>}) {
   const provider = useRecoilValue(codeReviewProvider);
+  const diffSummaries = useRecoilValue(allDiffSummaries);
   const runOperation = useRunOperation();
+  const submittable =
+    (diffSummaries.value != null
+      ? provider?.getSubmittableDiffs(selectedCommits, diffSummaries.value)
+      : undefined) ?? [];
   return (
     <div className="commit-info-view-multi-commit" data-testid="commit-info-view">
       <strong className="commit-list-header">
@@ -103,12 +109,16 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         ))}
       </div>
       <div className="commit-info-actions-bar">
-        <VSCodeButton
-          onClick={() => {
-            runOperation(unwrap(provider).submitOperation(selectedCommits));
-          }}>
-          <T replace={{$num: selectedCommits.length}}>Submit $num Selected Commits</T>
-        </VSCodeButton>
+        {submittable.length === 0 ? null : (
+          <HighlightCommitsWhileHovering toHighlight={submittable}>
+            <VSCodeButton
+              onClick={() => {
+                runOperation(unwrap(provider).submitOperation(selectedCommits));
+              }}>
+              <T>Submit Selected Commits</T>
+            </VSCodeButton>
+          </HighlightCommitsWhileHovering>
+        )}
       </div>
     </div>
   );

@@ -72,6 +72,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   getSupportedStackActions() {
     return {};
   }
+
+  getSubmittableDiffs() {
+    return [];
+  }
 }
 
 type BadgeState = PullRequestState | 'ERROR';

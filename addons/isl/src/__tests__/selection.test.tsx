@@ -146,4 +146,12 @@ describe('selection', () => {
       CommitInfoTestUtils.withinCommitInfo().queryByText(/\d Commits Selected/),
     ).not.toBeInTheDocument();
   });
+
+  it('does not show the submit button for multi selections in GitHub repos', () => {
+    act(() => void fireEvent.click(screen.getByText('Commit A'), {metaKey: true}));
+    act(() => void fireEvent.click(screen.getByText('Commit B'), {metaKey: true}));
+    expect(
+      CommitInfoTestUtils.withinCommitInfo().queryByText('Submit Selected Commits'),
+    ).not.toBeInTheDocument();
+  });
 });
