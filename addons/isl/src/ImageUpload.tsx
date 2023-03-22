@@ -210,14 +210,25 @@ export function FilePicker({uploadFiles}: {uploadFiles: (files: Array<File>) => 
   );
 }
 
-export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
+export function useUploadFilesCallback(
+  ref: MutableRefObject<unknown>,
+  onInput: (event: {target: HTMLInputElement}) => unknown,
+) {
   return useRecoilCallback(({snapshot, set}) => async (files: Array<File>) => {
+    // capture snapshot of next before doing async work
+    // we need to account for all files in this batch
     let {next} = snapshot.getLoadable(imageUploadState).valueOrThrow();
 
     const textArea = getInnerTextareaForVSCodeTextArea(ref.current as HTMLElement);
     if (textArea != null) {
-      // capture snapshot of next before doing async work
-      // we need to account for all files in this batch
+      // manipulating the text area directly does not emit change events,
+      // we need to simulate those ourselves so that controlled text areas
+      // update their underlying store
+      const emitChangeEvent = () => {
+        onInput({
+          target: textArea as unknown as HTMLInputElement,
+        });
+      };
 
       await Promise.all(
         files.map(async file => {
@@ -228,6 +239,7 @@ export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
           // insert pending text
           const placeholder = placeholderForImageUpload(state.id);
           insertAtCursor(textArea, placeholder);
+          emitChangeEvent();
 
           // start the file upload
           try {
@@ -237,6 +249,7 @@ export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
               states: {...v.states, [id]: {status: 'complete' as const, id}},
             }));
             replaceInTextArea(textArea, placeholder, uploadedFileText);
+            emitChangeEvent();
           } catch (error) {
             set(imageUploadState, v => ({
               next,
@@ -246,6 +259,7 @@ export function useUploadFilesCallback(ref: MutableRefObject<unknown>) {
               },
             }));
             replaceInTextArea(textArea, placeholder, ''); // delete placeholder
+            emitChangeEvent();
           }
         }),
       );

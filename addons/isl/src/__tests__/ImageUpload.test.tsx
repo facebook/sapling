@@ -397,5 +397,29 @@ describe('Image upload inside TextArea ', () => {
         ).not.toBeDisabled();
       });
     });
+
+    it('emits uploads to underlying store', async () => {
+      CommitInfoTestUtils.clickCommitMode();
+      act(() => {
+        simulateUncommittedChangedFiles({value: [{path: 'foo.txt', status: 'M'}]});
+      });
+      act(() => {
+        userEvent.type(CommitInfoTestUtils.getTitleEditor(), 'hi');
+        userEvent.type(CommitInfoTestUtils.getDescriptionEditor(), 'hey\n');
+      });
+      await startFileUpload('1111');
+      await simulateUploadSucceeded('1111');
+      expect(descriptionTextContent()).toContain('https://image.example.com/1111');
+
+      act(() => {
+        fireEvent.click(CommitInfoTestUtils.withinCommitActionBar().getByText('Commit'));
+      });
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({
+          args: expect.arrayContaining(['commit', 'hi\nhey\nhttps://image.example.com/1111']),
+        }),
+      });
+    });
   });
 });

@@ -19,7 +19,7 @@ import {
 import {Internal} from './Internal';
 import {assert} from './utils';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
-import {forwardRef, useRef, useEffect, type FormEvent} from 'react';
+import {forwardRef, useRef, useEffect} from 'react';
 
 /**
  * VSCodeTextArea elements use custom components, which renders in a shadow DOM.
@@ -117,7 +117,14 @@ export function CommitInfoField({
       // image upload is always enabled in tests
       process.env.NODE_ENV === 'test');
 
-  const uploadFiles = useUploadFilesCallback(ref);
+  const onInput = (event: {target: HTMLInputElement}) => {
+    setEditedCommitMessage({
+      ...assertNonOptimistic(editedMessage),
+      [which]: (event.target as HTMLInputElement)?.value,
+    });
+  };
+
+  const uploadFiles = useUploadFilesCallback(ref, onInput);
 
   const rendered = (
     <div className="commit-info-field">
@@ -139,12 +146,7 @@ export function CommitInfoField({
         }
         value={editedMessage[which]}
         data-testid={`commit-info-${which}-field`}
-        onInput={(event: FormEvent) => {
-          setEditedCommitMessage({
-            ...assertNonOptimistic(editedMessage),
-            [which]: (event.target as HTMLInputElement)?.value,
-          });
-        }}
+        onInput={onInput}
       />
     </div>
   );
