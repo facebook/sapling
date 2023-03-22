@@ -420,6 +420,23 @@ export default class ServerToClientAPI {
         repo.abortRunningOpeation(operationId);
         break;
       }
+      case 'getConfig': {
+        repo
+          .getConfig(data.name)
+          .catch(() => undefined)
+          .then(value => {
+            logger.info('got config', data.name, value);
+            this.postMessage({type: 'gotConfig', name: data.name, value});
+          });
+        break;
+      }
+      case 'setConfig': {
+        logger.info('set config', data.name, data.value);
+        repo.setConfig('user', data.name, data.value).catch(err => {
+          logger.error('error setting config', data.name, data.value, err);
+        });
+        break;
+      }
       case 'deleteFile': {
         const {filePath} = data;
         const absolutePath = absolutePathForFileInRepo(filePath, repo);

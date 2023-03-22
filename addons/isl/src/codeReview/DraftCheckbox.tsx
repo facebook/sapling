@@ -9,13 +9,15 @@ import type {CommitInfo} from '../types';
 
 import {Tooltip} from '../Tooltip';
 import {t, T} from '../i18n';
+import {persistAtomToConfigEffect} from '../persistAtomToConfigEffect';
 import {codeReviewProvider} from './CodeReviewInfo';
 import {VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
 import {atom, useRecoilState, useRecoilValue} from 'recoil';
 
 export const submitAsDraft = atom<boolean>({
   key: 'submitAsDraft',
-  default: false, // TODO: load from storage
+  default: false,
+  effects: [persistAtomToConfigEffect('isl.submitAsDraft')],
 });
 
 export function SubmitAsDraftCheckbox({commitsToBeSubmit}: {commitsToBeSubmit: Array<CommitInfo>}) {

@@ -321,10 +321,14 @@ export type ClientToServerMessageWithPayload = {
 
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
+export type ConfigName = 'isl.submitAsDraft';
+
 export type ClientToServerMessage =
   | {
       type: 'refresh';
     }
+  | {type: 'getConfig'; name: ConfigName}
+  | {type: 'setConfig'; name: ConfigName; value: string}
   | {type: 'track'; data: TrackDataWithEventName}
   | {type: 'fileBugReport'; data: FileABugFields; uiState?: Json}
   | {type: 'runOperation'; operation: RunnableOperation}
@@ -373,6 +377,7 @@ export type ServerToClientMessage =
   | BeganFetchingSmartlogCommitsEvent
   | BeganFetchingUncommittedChangesEvent
   | FileABugProgressMessage
+  | {type: 'gotConfig'; name: ConfigName; value: string | undefined}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'applicationInfo'; platformName: string; version: string}
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}

@@ -690,6 +690,16 @@ export class Repository {
   public getConfig(configName: string): Promise<string | undefined> {
     return getConfig(this.info.command, this.logger, this.info.repoRoot, configName);
   }
+  public setConfig(level: ConfigLevel, configName: string, configValue: string): Promise<void> {
+    return setConfig(
+      this.info.command,
+      this.logger,
+      this.info.repoRoot,
+      level,
+      configName,
+      configValue,
+    );
+  }
 }
 
 function runCommand(
@@ -755,6 +765,17 @@ async function getConfig(
     // `config` exits with status 1 if config is not set. This is not an error.
     return undefined;
   }
+}
+type ConfigLevel = 'user' | 'system' | 'local';
+async function setConfig(
+  command: string,
+  logger: Logger,
+  cwd: string,
+  level: ConfigLevel,
+  configName: string,
+  configValue: string,
+): Promise<void> {
+  await runCommand(command, ['config', `--${level}`, configName, configValue], logger, cwd);
 }
 
 function getExecParams(
