@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::io::stderr;
 use std::path::Path;
 #[cfg(windows)]
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::Stdio;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -19,10 +21,16 @@ use edenfs_commands::is_command_enabled;
 use edenfs_telemetry::cli_usage::CliUsageSample;
 #[cfg(fbcode_build)]
 use edenfs_telemetry::send;
+use edenfs_utils::communicate;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use fbinit::FacebookInit;
 use tracing_subscriber::filter::EnvFilter;
+
+#[cfg(not(fbcode_build))]
+// For non-fbcode builds, CliUsageSample is not defined. Let's give it a dummy
+// value so we can pass CliUsageSample through wrapper_main() and fallback().
+struct CliUsageSample;
 
 #[cfg(windows)]
 const PYTHON_CANDIDATES: &[&str] = &[
@@ -107,7 +115,7 @@ fn python_fallback() -> Result<Command> {
     Err(anyhow!("unable to locate fallback binary"))
 }
 
-fn fallback() -> Result<i32> {
+fn fallback(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFS_LOG").is_ok() {
         setup_logging();
     }
@@ -121,14 +129,51 @@ fn fallback() -> Result<i32> {
     // import modules. So, let's strip the PYTHONHOME and PYTHONPATH variables.
     cmd.env_remove("PYTHONHOME");
     cmd.env_remove("PYTHONPATH");
+    cmd.env("PYTHONUNBUFFERED", "1");
 
     tracing::debug!("Falling back to {:?}", cmd);
 
     // Create a subprocess to run Python edenfsctl
-    let status = cmd
-        .status()
+    let mut child = cmd
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::piped())
+        .spawn()
         .with_context(|| format!("failed to execute: {:?}", cmd))?;
-    Ok(status.code().unwrap_or(1))
+
+    let child_err =
+        std::mem::take(&mut child.stderr).context("cannot attach to Python fallback stderr")?;
+
+    // Read from child.stderr, copy the stream to a Vec<u8> for later use, and
+    // then write the stream to self.stderr.
+    //
+    // WARNING: This isn't 100% correct since it's possible that we'll race
+    // with stdout and output will appear out-of-order to the user. The impact
+    // and occurrence of this is negligible, and this is only a temporary
+    // solution until we migrate all commands to Rust, so we'll leave it as is.
+    let child_err =
+        communicate(child_err, stderr()).context("failed to communicate with child stderr")?;
+
+    // Determine whether the Python command we ran failed.
+    let ecode = child
+        .wait()
+        .context("failed to wait on Python fallback process")?;
+
+    if !ecode.success() {
+        #[cfg(fbcode_build)]
+        {
+            let stderr = String::from_utf8(child_err).unwrap_or(String::from(
+                "Failed to translate stderr of Python fallback",
+            ));
+
+            // Returning an error here would lead to duplicate output in stderr.
+            // We could fix this by introducing a WrapperError type and return a
+            // PythonError that doesn't get propogated to main(), but that's quite
+            // intrusive. Instead, let's log the error ourselves and return an
+            // error code to wrapper_main()
+            telemetry_sample.set_exception(&anyhow!("{}", stderr));
+        }
+    }
+    Ok(ecode.code().unwrap_or(1))
 }
 
 /// Setup tracing logging. If we are in development mode, we use the fancier logger, otherwise a
@@ -157,12 +202,12 @@ fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
 
 /// This function takes care of the fallback logic, hijack supported subcommand
 /// to Rust implementation and forward the rest to Python.
-fn wrapper_main() -> Result<i32> {
+fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
     if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
         let cmd = edenfs_commands::MainCommand::parse();
         rust_main(cmd)
     } else if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
-        fallback()
+        fallback(telemetry_sample)
     } else {
         match edenfs_commands::MainCommand::try_parse() {
             // The command is defined in Rust, but check whether it's "enabled"
@@ -171,7 +216,7 @@ fn wrapper_main() -> Result<i32> {
                 if cmd.is_enabled() {
                     rust_main(cmd)
                 } else {
-                    fallback()
+                    fallback(telemetry_sample)
                 }
             }
             // If the command is defined in Rust, then --help will cause
@@ -188,7 +233,7 @@ fn wrapper_main() -> Result<i32> {
                 {
                     e.exit()
                 } else {
-                    fallback()
+                    fallback(telemetry_sample)
                 }
             }
         }
@@ -216,12 +261,14 @@ where
 
 #[fbinit::main]
 fn main(_fb: FacebookInit) -> Result<()> {
+    #[cfg(not(fbcode_build))]
+    let mut sample = CliUsageSample {};
     // NOTE: if you are considering passing `FacebookInit` down, you may want to check
     // [`fbinit::expect_init`].
     #[cfg(fbcode_build)]
     let mut sample = CliUsageSample::build(_fb);
 
-    let code = match wrapper_main() {
+    let code = match wrapper_main(&mut sample) {
         Ok(code) => Ok(code),
         Err(e) => {
             #[cfg(fbcode_build)]

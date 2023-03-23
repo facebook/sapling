@@ -10,6 +10,10 @@
 use std::env::var;
 use std::ffi::OsString;
 use std::fs::read_to_string;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Read;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -280,4 +284,23 @@ pub fn remove_symlink(path: &Path) -> Result<()> {
 /// on other platforms, we don't know how to handle removing symlinks. Panic instead of guessing
 pub fn remove_symlink(path: &Path) -> Result<()> {
     panic!("failed to remove symlink, unsupported platform");
+}
+
+// This function reads from a stream, copies the stream content into a
+// Vec<u8>, and immediately writes the stream to 'output'.
+pub fn communicate(stream: impl Read, mut output: impl Write) -> std::io::Result<Vec<u8>> {
+    let mut out_buf: Vec<u8> = vec![];
+    let mut reader = BufReader::new(stream);
+    loop {
+        let mut buf = String::new();
+        let num_read = reader.read_line(&mut buf)?;
+        if num_read == 0 {
+            break;
+        }
+
+        output.write_all(&buf.clone().into_bytes())?;
+        output.flush().ok();
+        out_buf.extend(buf.bytes());
+    }
+    Ok(out_buf)
 }
