@@ -56,6 +56,7 @@ define_perf_counters! {
         BlobGetsMaxLatency,
         BlobGetsNotFoundMaxLatency,
         BlobGetsDeduplicated,
+        BlobGetsDeduplicatedLarge,
         BlobGetsTotalSize,
         BlobPresenceChecks,
         BlobPresenceChecksMaxLatency,
@@ -160,6 +161,7 @@ impl PerfCounterType {
             | BlobGetsAccessWait
             | BlobGetsShardAccessWait
             | BlobGetsDeduplicated
+            | BlobGetsDeduplicatedLarge
             | BlobGetsTotalSize
             | BlobPresenceChecks
             | BlobPuts

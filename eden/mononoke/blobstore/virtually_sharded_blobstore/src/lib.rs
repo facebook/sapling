@@ -8,11 +8,15 @@
 mod ratelimit;
 mod shard;
 
+use std::collections::HashMap;
 use std::fmt;
+use std::future::Future;
 use std::hash::Hasher;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -31,9 +35,13 @@ use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
+use futures::future::WeakShared;
+use futures::FutureExt;
 use mononoke_types::BlobstoreBytes;
 use shard::SemaphoreAcquisition;
 use shard::Shards;
+use shared_error::anyhow::IntoSharedError;
+use shared_error::anyhow::SharedError;
 use stats::prelude::*;
 use tunables::tunables;
 use twox_hash::XxHash;
@@ -46,6 +54,7 @@ define_stats! {
     gets: timeseries(Sum),
     gets_deduped: timeseries(Sum),
     gets_not_storable: timeseries(Sum),
+    gets_not_storable_deduped: timeseries(Sum),
     puts: timeseries(Sum),
     puts_deduped: timeseries(Sum),
 }
@@ -321,11 +330,15 @@ impl Cache {
     }
 }
 
+type SharedReadFuture =
+    WeakShared<Pin<Box<dyn Future<Output = Result<Option<BlobstoreGetData>, SharedError>> + Send>>>;
+
 struct Inner<T> {
     blobstore: T,
     write_shards: Shards,
     read_shards: Shards,
     cache: Cache,
+    large_inflight_reads: Mutex<HashMap<String, SharedReadFuture>>,
 }
 
 impl<T> Inner<T> {
@@ -335,8 +348,63 @@ impl<T> Inner<T> {
             write_shards: Shards::new(shards, PerfCounterType::BlobPutsShardAccessWait),
             read_shards: Shards::new(shards, PerfCounterType::BlobGetsShardAccessWait),
             cache,
+            large_inflight_reads: Default::default(),
         }
     }
+}
+
+async fn shared_read<T: Blobstore + 'static>(
+    inner: &Arc<Inner<T>>,
+    ctx: &CoreContext,
+    key: String,
+    ticket: Ticket<'_>,
+) -> Result<Option<BlobstoreGetData>> {
+    let inflight_read = {
+        let mut large_inflight_reads = inner.large_inflight_reads.lock().unwrap();
+        if let Some(inflight_read) = large_inflight_reads.get(&key).and_then(WeakShared::upgrade) {
+            // A read is already in flight.  Share it.
+            STATS::gets_not_storable_deduped.add_value(1);
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::BlobGetsDeduplicatedLarge);
+            ticket.cancel();
+            inflight_read
+        } else {
+            // There is no read for this key in flight.  Create one.
+            let inflight_read = {
+                cloned!(ctx, inner, key);
+                let ticket = ticket.into_owned();
+                async move {
+                    // Wait for our ticket.
+                    let result = ticket.finish().await;
+                    // If we were successful at getting the ticket, get data from the blobstore.
+                    let result = match result {
+                        Ok(_ticket) => inner.blobstore.get(&ctx, &key).await,
+                        Err(e) => Err(e),
+                    };
+                    // Remove ourself from the in flight reads.  We do this
+                    // regardless of whether the above steps were successful
+                    // or not.
+                    let mut large_inflight_reads = inner.large_inflight_reads.lock().unwrap();
+                    large_inflight_reads.remove(&key);
+
+                    result.shared_error()
+                }
+                .boxed()
+                .shared()
+            };
+            if let Some(inflight_read) = inflight_read.downgrade() {
+                large_inflight_reads.insert(key, inflight_read);
+            } else {
+                // This shouldn't happen, as we just constructed the shared
+                // future and haven't polled it yet.  But if it does, ensure
+                // there is no entry for this key so the next read starts from
+                // scratch.
+                large_inflight_reads.remove(&key);
+            }
+            inflight_read
+        }
+    };
+    Ok(inflight_read.await?)
 }
 
 fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
@@ -379,7 +447,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
             }
             Some(CacheData::NotStorable) => {
                 // We know for sure this data isn't cacheable. Don't try to acquire a permit
-                // for it, and proceed without the semaphore.
+                // for it.  We will attempt to share reads with other readers of this data.
                 false
             }
             None => true,
@@ -411,18 +479,34 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
                         return Ok(Some(v));
                     }
                     SemaphoreAcquisition::Cancelled(CacheData::NotStorable, ticket) => {
-                        // The data cannot be cached. We'll have to go to the blobstore. Wait
-                        // for our ticket first.
+                        // The data cannot be cached. We'll have to go to the blobstore.
                         STATS::gets_not_storable.add_value(1);
-                        ticket.finish().await?;
-                        None
+                        if !tunables()
+                            .disable_large_blob_read_deduplication()
+                            .unwrap_or_default()
+                        {
+                            // Attempt to share with other readers of this blob.
+                            return shared_read(&inner, &ctx, key, ticket).await;
+                        } else {
+                            ticket.finish().await?;
+                            None
+                        }
                     }
                     SemaphoreAcquisition::Acquired(permit) => Some(permit),
                 }
             } else {
-                // We'll go to the blobstore, so wait for our ticket.
-                ticket.finish().await?;
-                None
+                // We already know the data can't be cached, so we'll have to go to the
+                // blobstore.
+                if !tunables()
+                    .disable_large_blob_read_deduplication()
+                    .unwrap_or_default()
+                {
+                    // Attempt to share with other reads of this blob.
+                    return shared_read(&inner, &ctx, key, ticket).await;
+                } else {
+                    ticket.finish().await?;
+                    None
+                }
             };
 
             // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
@@ -839,7 +923,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_do_not_serialize_not_storable(fb: FacebookInit) -> Result<()> {
+        async fn test_dedupe_reads_not_storable(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
             let blobstore = make_blobstore(
@@ -876,7 +960,7 @@ mod test {
                     let count = sender.receiver_count();
 
                     if count > 1 {
-                        return Err(anyhow!("Too many receivers: {}", count));
+                        return Err(anyhow!("Too many first receivers: {}", count));
                     }
 
                     if count > 0 {
@@ -889,11 +973,16 @@ mod test {
                 }
 
                 // Wait for the next requests to arrive. At this point, we know this is not cacheable,
-                // and they should all arrive concurrently.
+                // but they should join together and share the response.
                 loop {
                     tokio::task::yield_now().await;
+                    let count = sender.receiver_count();
 
-                    if sender.receiver_count() >= 9 {
+                    if count > 1 {
+                        return Err(anyhow!("Too many second receivers: {}", count));
+                    }
+
+                    if count > 0 {
                         sender
                             .send(val.clone())
                             .map_err(|_| anyhow!("Second send failed"))?;
@@ -901,10 +990,12 @@ mod test {
                     }
                 }
 
-                // Now, spawn a bunch more tasks, and check that they all reach the receiver together.
-                // Those tasks are a bit different from the ones we had already spawned, since they'll
+                // Now, spawn a bunch more tasks.  Once again they'll share the request so there
+                // should only be a single receiver.
+                //
+                // These tasks are a bit different from the ones we had already spawned, since they'll
                 // check the cache *before* acquiring the semaphore, and won't ever try to acquire it
-                // (whereas the other ones would have acquired it, and been released by the firs task
+                // (whereas the other ones would have acquired it, and been released by the first task
                 // afterwards).
                 let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
                     cloned!(blobstore, ctx);
@@ -914,8 +1005,13 @@ mod test {
                 // Finally, wait for those requests to arrive.
                 loop {
                     tokio::task::yield_now().await;
+                    let count = sender.receiver_count();
 
-                    if sender.receiver_count() >= 10 {
+                    if count > 1 {
+                        return Err(anyhow!("Too many third receivers: {}", count));
+                    }
+
+                    if count > 0 {
                         sender
                             .send(val.clone())
                             .map_err(|_| anyhow!("Third send failed"))?;

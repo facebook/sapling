@@ -375,6 +375,9 @@ pub struct MononokeTunables {
 
     // Disable the fix to use isolation level read committed
     disable_wal_read_committed: TunableBool,
+
+    // Disable sharing of large reads
+    disable_large_blob_read_deduplication: TunableBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
