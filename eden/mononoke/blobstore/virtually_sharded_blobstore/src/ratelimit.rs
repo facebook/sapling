@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+
 use anyhow::Error;
 use async_limiter::AsyncLimiter;
 use context::CoreContext;
@@ -55,10 +57,10 @@ pub enum Ticket<'a> {
     NoTicket,
     /// A ticket was requested, but may not have been awaited yet.
     Pending {
-        ctx: &'a CoreContext,
+        ctx: Cow<'a, CoreContext>,
         reason: AccessReason,
         access: Fuse<BoxFuture<'static, Result<(), Error>>>,
-        limiter: &'a AsyncLimiter,
+        limiter: Cow<'a, AsyncLimiter>,
         /// We keep track of whether this was awaited so that in tests we can warn if we're failing
         /// to await things we should be awaiting. This isn't used outside of tests (and shouldn't:
         /// if the runtime is shutting down, our futures can be dropped with those unused tickets),
@@ -66,7 +68,7 @@ pub enum Ticket<'a> {
         awaited: CheckAwaited,
     },
     /// A ticket was requested and awaited.
-    Acquired(&'a AsyncLimiter),
+    Acquired(Cow<'a, AsyncLimiter>),
 }
 
 impl<'a> Ticket<'a> {
@@ -84,10 +86,10 @@ impl<'a> Ticket<'a> {
         };
 
         Self::Pending {
-            ctx,
+            ctx: Cow::Borrowed(ctx),
             reason,
             access: limiter.access().boxed().fuse(),
-            limiter,
+            limiter: Cow::Borrowed(limiter),
             awaited: CheckAwaited::default(),
         }
     }
@@ -160,5 +162,27 @@ impl<'a> Ticket<'a> {
                 l.cancel();
             }
         };
+    }
+
+    /// Convert this ticket to an owned variant so that it can be moved into a
+    /// shared future.
+    pub fn into_owned(self) -> Ticket<'static> {
+        match self {
+            Self::NoTicket => Ticket::NoTicket,
+            Self::Pending {
+                ctx,
+                reason,
+                access,
+                limiter,
+                awaited,
+            } => Ticket::Pending {
+                ctx: Cow::Owned(ctx.into_owned()),
+                reason,
+                access,
+                limiter: Cow::Owned(limiter.into_owned()),
+                awaited,
+            },
+            Self::Acquired(l) => Ticket::Acquired(Cow::Owned(l.into_owned())),
+        }
     }
 }
