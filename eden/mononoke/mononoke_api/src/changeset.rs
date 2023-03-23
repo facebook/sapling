@@ -685,13 +685,7 @@ impl ChangesetContext {
             let mut scuba = self.ctx().scuba().clone();
             scuba.add_future_stats(&stats);
             match result {
-                Ok(is_ancestor) => {
-                    scuba.log_with_msg(
-                        "New commit graph is_ancestor succeeded",
-                        is_ancestor.to_string(),
-                    );
-                    return Ok(is_ancestor);
-                }
+                Ok(is_ancestor) => return Ok(is_ancestor),
                 Err(err) => {
                     let mut scuba = self.ctx().scuba().clone();
                     scuba.log_with_msg("New commit graph is_ancestor failed", err.to_string());
