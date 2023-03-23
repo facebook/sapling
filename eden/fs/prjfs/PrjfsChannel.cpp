@@ -1304,6 +1304,9 @@ folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
 // Eden from leaking into FS. This would come in soon.
 
 folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
+  DurationScope statScope{
+      getInner()->getStats(), &PrjfsStats::removeCachedFile};
+
   if (path.empty()) {
     return folly::Try<folly::Unit>{folly::unit};
   }
@@ -1345,6 +1348,9 @@ folly::Try<folly::Unit> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
 
 folly::Try<folly::Unit> PrjfsChannel::addDirectoryPlaceholder(
     RelativePathPiece path) {
+  DurationScope statScope{
+      getInner()->getStats(), &PrjfsStats::addDirectoryPlaceholder};
+
   if (path.empty()) {
     return folly::Try<folly::Unit>{folly::unit};
   }

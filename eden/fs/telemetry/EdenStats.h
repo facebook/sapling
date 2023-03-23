@@ -270,6 +270,9 @@ struct PrjfsStats : StatsGroup<PrjfsStats> {
   Duration lookup{"prjfs.lookup_us"};
   Duration access{"prjfs.access_us"};
   Duration read{"prjfs.read_us"};
+
+  Duration removeCachedFile{"prjfs.remove_cached_file_us"};
+  Duration addDirectoryPlaceholder{"prjfs.add_directory_placeholder_us"};
 };
 
 /**
