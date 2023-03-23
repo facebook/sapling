@@ -383,7 +383,7 @@ facebook::eden::InodePtr inodeFromUserPath(
         logger,                                               \
         folly::LogLevel::level,                               \
         loc,                                                  \
-        server_->getSharedStats(),                            \
+        server_->getStats(),                                  \
         stat,                                                 \
         getAndRegisterClientPid(),                            \
         [&] {                                                 \
@@ -2985,7 +2985,7 @@ EdenServiceHandler::semifuture_debugGetBlob(
         store->getLocalStore().get(),
         id,
         "debugGetScmBlob",
-        server_->getServerState()->getStats());
+        *server_->getServerState()->getStats());
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
         castToHgQueuedBackingStore(backingStore, edenMount->getPath());
@@ -3134,7 +3134,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         store->getLocalStore().get(),
         id,
         "debugGetScmBlob",
-        server_->getServerState()->getStats());
+        *server_->getServerState()->getStats());
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
         castToHgQueuedBackingStore(backingStore, edenMount->getPath());

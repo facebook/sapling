@@ -79,8 +79,8 @@ class ServerState {
    * Get the EdenStats object that tracks process-wide (rather than per-mount)
    * statistics.
    */
-  EdenStats& getStats() {
-    return *edenStats_;
+  const std::shared_ptr<EdenStats>& getStats() const {
+    return edenStats_;
   }
 
   const std::shared_ptr<ReloadableConfig>& getReloadableConfig() const {

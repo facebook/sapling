@@ -55,7 +55,8 @@ fuse_attr_out FuseDispatcher::Attr::asFuseAttr() const {
 
 FuseDispatcher::~FuseDispatcher() {}
 
-FuseDispatcher::FuseDispatcher(EdenStats* stats) : stats_(stats) {}
+FuseDispatcher::FuseDispatcher(std::shared_ptr<EdenStats> stats)
+    : stats_(std::move(stats)) {}
 
 void FuseDispatcher::initConnection(const fuse_init_out& out) {
   connInfo_ = out;
@@ -305,7 +306,7 @@ const fuse_init_out& FuseDispatcher::getConnInfo() const {
   return connInfo_;
 }
 
-EdenStats* FuseDispatcher::getStats() const {
+const std::shared_ptr<EdenStats>& FuseDispatcher::getStats() const {
   return stats_;
 }
 

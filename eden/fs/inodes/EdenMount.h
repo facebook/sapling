@@ -770,7 +770,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Today this is the global stats instance, but in the future it will be
    * a mount point specific instance.
    */
-  EdenStats* getStats() const;
+  const std::shared_ptr<EdenStats>& getStats() const;
 
   const folly::Logger& getStraceLogger() const {
     return straceLogger_;

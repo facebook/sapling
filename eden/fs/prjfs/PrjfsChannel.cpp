@@ -408,7 +408,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &PrjfsStats::openDir;
-    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    context->startRequest(getStats(), stat, requestWatch);
 
     FB_LOGF(
         getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid.toString());
@@ -486,7 +486,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &PrjfsStats::readDir;
-    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    context->startRequest(getStats(), stat, requestWatch);
 
     // TODO(xavierd): there is a potential quadratic cost to the following code
     // in the case where the buffer can only hold a single entry. The linear
@@ -562,7 +562,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &PrjfsStats::lookup;
-    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    context->startRequest(getStats(), stat, requestWatch);
 
     FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
     return dispatcher_
@@ -621,7 +621,7 @@ HRESULT PrjfsChannelInner::queryFileName(
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &PrjfsStats::access;
-    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    context->startRequest(getStats(), stat, requestWatch);
     FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
     return dispatcher_
         ->access(std::move(path), context->getObjectFetchContext())
@@ -739,7 +739,7 @@ HRESULT PrjfsChannelInner::getFileData(
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
         auto stat = &PrjfsStats::read;
-        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+        context->startRequest(getStats(), stat, requestWatch);
 
         FB_LOGF(
             getStraceLogger(),
@@ -1133,7 +1133,7 @@ HRESULT PrjfsChannelInner::notification(
 
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    context->startRequest(getStats(), stat, requestWatch);
 
     FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
     auto fut = (this->*handler)(

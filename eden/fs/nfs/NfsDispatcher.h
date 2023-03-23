@@ -37,12 +37,12 @@ class Clock;
 
 class NfsDispatcher {
  public:
-  explicit NfsDispatcher(EdenStats* stats, const Clock& clock)
-      : stats_(stats), clock_(clock) {}
+  explicit NfsDispatcher(std::shared_ptr<EdenStats> stats, const Clock& clock)
+      : stats_(std::move(stats)), clock_(clock) {}
 
   virtual ~NfsDispatcher() {}
 
-  EdenStats* getStats() const {
+  const std::shared_ptr<EdenStats>& getStats() const {
     return stats_;
   }
 
@@ -375,7 +375,7 @@ class NfsDispatcher {
       const ObjectFetchContextPtr& context) = 0;
 
  private:
-  EdenStats* stats_{nullptr};
+  std::shared_ptr<EdenStats> stats_{nullptr};
   const Clock& clock_;
 };
 

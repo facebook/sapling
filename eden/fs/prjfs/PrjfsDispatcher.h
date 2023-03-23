@@ -35,9 +35,9 @@ struct LookupResult {
 class PrjfsDispatcher {
  public:
   virtual ~PrjfsDispatcher();
-  explicit PrjfsDispatcher(EdenStats* stats);
+  explicit PrjfsDispatcher(std::shared_ptr<EdenStats> stats);
 
-  EdenStats* getStats() const;
+  const std::shared_ptr<EdenStats>& getStats() const;
 
   /**
    * Open a directory
@@ -170,6 +170,6 @@ class PrjfsDispatcher {
   virtual ImmediateFuture<folly::Unit> waitForPendingNotifications() = 0;
 
  private:
-  EdenStats* stats_{nullptr};
+  std::shared_ptr<EdenStats> stats_{nullptr};
 };
 } // namespace facebook::eden

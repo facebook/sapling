@@ -1239,8 +1239,8 @@ const AbsolutePath& EdenMount::getPath() const {
   return checkoutConfig_->getMountPath();
 }
 
-EdenStats* EdenMount::getStats() const {
-  return &serverState_->getStats();
+const std::shared_ptr<EdenStats>& EdenMount::getStats() const {
+  return serverState_->getStats();
 }
 
 TreeInodePtr EdenMount::getRootInode() const {

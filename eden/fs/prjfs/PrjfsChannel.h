@@ -352,6 +352,10 @@ class PrjfsChannelInner {
     return traceDetailedArguments_;
   }
 
+  const std::shared_ptr<EdenStats>& getStats() const {
+    return dispatcher_->getStats();
+  }
+
  private:
   const folly::Logger& getStraceLogger() const {
     return *straceLogger_;

@@ -56,13 +56,13 @@ RequestContext::~RequestContext() noexcept {
 }
 
 void RequestContext::startRequest(
-    EdenStats* stats,
+    std::shared_ptr<EdenStats> stats,
     DurationFn stat,
     std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
         requestWatches) {
   startTime_ = steady_clock::now();
   XDCHECK(!latencyStat_);
-  stats_ = stats;
+  stats_ = std::move(stats);
   latencyStat_ = std::move(stat);
   requestWatchList_ = requestWatches;
   if (requestWatchList_) {

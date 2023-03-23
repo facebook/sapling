@@ -1523,12 +1523,12 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       getLocalStore(),
       backingStore,
       treeCache_,
-      getSharedStats(),
+      getStats(),
       serverState_->getProcessNameCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig()->getEdenConfig(),
       initialConfig->getCaseSensitive());
-  auto journal = std::make_unique<Journal>(getSharedStats());
+  auto journal = std::make_unique<Journal>(getStats());
 
   // Create the EdenMount object and insert the mount into the mountPoints_ map.
   auto edenMount = EdenMount::create(
@@ -1537,7 +1537,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       blobCache_,
       serverState_,
       std::move(journal),
-      getSharedStats());
+      getStats());
   addToMountPoints(edenMount);
 
   registerStats(edenMount);
@@ -1873,7 +1873,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   const auto store = backingStoreFactory_->createBackingStore(
       type,
       BackingStoreFactory::CreateParams{
-          name, serverState_.get(), localStore_, getSharedStats(), config});
+          name, serverState_.get(), localStore_, getStats(), config});
   lockedStores->emplace(key, store);
   return store;
 }
@@ -2166,7 +2166,7 @@ void EdenServer::shutdownSubscribers() {
 }
 
 void EdenServer::flushStatsNow() {
-  serverState_->getStats().flush();
+  serverState_->getStats()->flush();
 }
 
 void EdenServer::reportMemoryStats() {

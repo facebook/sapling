@@ -381,12 +381,8 @@ class EdenServer : private TakeoverHandler {
     return version_;
   }
 
-  std::shared_ptr<EdenStats> getSharedStats() {
-    return std::shared_ptr<EdenStats>(serverState_, getStats());
-  }
-
-  EdenStats* getStats() {
-    return &serverState_->getStats();
+  const std::shared_ptr<EdenStats>& getStats() const {
+    return serverState_->getStats();
   }
 
   /**

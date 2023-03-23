@@ -12,9 +12,10 @@
 namespace facebook::eden {
 PrjfsDispatcher::~PrjfsDispatcher() {}
 
-PrjfsDispatcher::PrjfsDispatcher(EdenStats* stats) : stats_(stats) {}
+PrjfsDispatcher::PrjfsDispatcher(std::shared_ptr<EdenStats> stats)
+    : stats_{std::move(stats)} {}
 
-EdenStats* PrjfsDispatcher::getStats() const {
+const std::shared_ptr<EdenStats>& PrjfsDispatcher::getStats() const {
   return stats_;
 }
 } // namespace facebook::eden

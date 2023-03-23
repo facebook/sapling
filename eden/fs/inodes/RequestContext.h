@@ -101,12 +101,12 @@ class RequestContext {
 
   template <typename T>
   void startRequest(
-      EdenStats* stats,
+      std::shared_ptr<EdenStats> stats,
       StatsGroupBase::Duration T::*stat,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
           requestWatches) {
     return startRequest(
-        stats,
+        std::move(stats),
         [stat](EdenStats& stats) -> StatsGroupBase::Duration& {
           return stats.getStatsForCurrentThread<T>().*stat;
         },
@@ -132,7 +132,7 @@ class RequestContext {
   using DurationFn = std::function<StatsGroupBase::Duration&(EdenStats&)>;
 
   void startRequest(
-      EdenStats* stats,
+      std::shared_ptr<EdenStats> stats,
       DurationFn stat,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
           requestWatches);
@@ -141,7 +141,7 @@ class RequestContext {
 
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  EdenStats* stats_ = nullptr;
+  std::shared_ptr<EdenStats> stats_ = nullptr;
   DurationFn latencyStat_;
 
   RequestMetricsScope requestMetricsScope_;

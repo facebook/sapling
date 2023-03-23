@@ -38,8 +38,8 @@ DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
 namespace {
 class TestDispatcher : public FuseDispatcher {
  public:
-  TestDispatcher(EdenStats* stats, const UserInfo& identity)
-      : FuseDispatcher(stats), identity_(identity) {}
+  TestDispatcher(std::shared_ptr<EdenStats> stats, const UserInfo& identity)
+      : FuseDispatcher(std::move(stats)), identity_(identity) {}
 
   ImmediateFuture<Attr> getattr(
       InodeNumber ino,
@@ -122,8 +122,9 @@ int main(int argc, char** argv) {
       privHelper->fuseMount(mountPath.value(), /* readOnly= */ false)
           .get(100ms);
 
-  EdenStats stats;
-  auto dispatcher = std::make_unique<TestDispatcher>(&stats, identity);
+  std::shared_ptr<EdenStats> stats;
+  auto dispatcher =
+      std::make_unique<TestDispatcher>(std::move(stats), identity);
 
   folly::Logger straceLogger{"eden.strace"};
 

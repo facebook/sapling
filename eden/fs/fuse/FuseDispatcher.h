@@ -35,13 +35,13 @@ class EdenStats;
 
 class FuseDispatcher {
   fuse_init_out connInfo_{};
-  EdenStats* stats_{nullptr};
+  std::shared_ptr<EdenStats> stats_{nullptr};
 
  public:
   virtual ~FuseDispatcher();
 
-  explicit FuseDispatcher(EdenStats* stats);
-  EdenStats* getStats() const;
+  explicit FuseDispatcher(std::shared_ptr<EdenStats> stats);
+  const std::shared_ptr<EdenStats>& getStats() const;
 
   const fuse_init_out& getConnInfo() const;
 
