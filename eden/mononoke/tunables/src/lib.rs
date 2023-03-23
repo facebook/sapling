@@ -285,6 +285,9 @@ pub struct MononokeTunables {
     // EdenAPI requests that take long than this get logged unsampled
     edenapi_unsampled_duration_threshold_ms: TunableI64,
 
+    // EdenAPI requests that take long than this get logged unsampled for replay
+    edenapi_replay_unsampled_duration_threshold_ms: TunableI64,
+
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate mutable renames cache
     mutable_renames_sitever: TunableI64,

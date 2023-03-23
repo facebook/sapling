@@ -17,6 +17,7 @@ use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::Middleware;
+use gotham_ext::middleware::PostResponseCallbacks;
 use gotham_ext::state_ext::StateExt;
 use http::HeaderMap;
 use hyper::Body;
@@ -127,11 +128,13 @@ impl RequestDumper {
 
     // If the request is not too big, log encoded, so it can be replayed.
     pub fn add_body(&mut self, body: &Bytes) {
+        if !self.should_log() {
+            return;
+        }
         if body.len() > MAX_BODY_LEN {
             self.log_action = LogAction::BodyTooBig;
             return;
         }
-
         self.logger.add("body", b64encode(&body[..]));
     }
 
@@ -171,26 +174,6 @@ impl RequestDumperMiddleware {
 impl Middleware for RequestDumperMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let logger = &RequestContext::borrow_from(state).logger;
-        let sample_ratio: u64 = match tunables()
-            .edenapi_req_dumper_sample_ratio()
-            .unwrap_or_default()
-            .try_into()
-        {
-            Ok(n) => n,
-            Err(e) => {
-                warn!(
-                    logger,
-                    "Couldn't read edenapi_req_dumper_sample_ratio tunable: {}", e
-                );
-                return None;
-            }
-        };
-
-        if sample_ratio == 0 || (rand::random::<u64>() % sample_ratio) != 0 {
-            trace!(logger, "Won't record this request");
-            return None;
-        }
-
         let headers = match HeaderMap::try_borrow_from(state).context("No headers in State") {
             Ok(headers) => headers,
             Err(e) => {
@@ -198,22 +181,17 @@ impl Middleware for RequestDumperMiddleware {
                 return None;
             }
         };
-
         let mut log_deserialized = false;
-
         if let Some(len) = get_content_len(headers) {
             if len > MAX_BODY_LEN {
                 trace!(logger, "Body too big ({}), not recording", len);
                 return None;
             }
-
             if len <= MAX_BODY_LEN_DEBUG {
                 log_deserialized = true;
             }
         }
-
         let mut rd = RequestDumper::new(self.fb);
-
         if let Err(e) = rd.add_http_req_prefix(state, headers) {
             warn!(
                 logger,
@@ -221,19 +199,42 @@ impl Middleware for RequestDumperMiddleware {
             );
             return None;
         }
-
         rd.set_log_deserialized(log_deserialized);
-
         state.put(rd);
-
         None
     }
 
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
-        if let Some(rd) = RequestDumper::try_borrow_mut_from(state) {
-            if let Err(e) = rd.log() {
-                let rctx = RequestContext::borrow_from(state);
-                warn!(rctx.logger, "Couldn't dump request: {}", e);
+        if let Some(mut request_dumper) = state.try_take::<RequestDumper>() {
+            let rctx = RequestContext::borrow_from(state).clone();
+            let logger = rctx.logger;
+            if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
+                callbacks.add(move |info| {
+                    let dur_ms = if let Some(duration) = info.duration {
+                        duration.as_millis() as i64
+                    } else {
+                        0
+                    };
+                    let threshold = tunables::tunables()
+                        .edenapi_replay_unsampled_duration_threshold_ms()
+                        .unwrap_or_default();
+                    let slow_request: bool = (threshold > 0) && (dur_ms > threshold);
+                    let sample_ratio: u64 = tunables()
+                        .edenapi_req_dumper_sample_ratio()
+                        .unwrap_or_default()
+                        .try_into()
+                        .unwrap_or_default();
+                    // Do not sample slow requests if tunables say
+                    if !slow_request
+                        && (sample_ratio == 0 || (rand::random::<u64>() % sample_ratio) != 0)
+                    {
+                        trace!(logger, "Won't record this request");
+                        return;
+                    }
+                    if let Err(e) = request_dumper.log() {
+                        warn!(logger, "Couldn't dump request: {}", e);
+                    }
+                });
             }
         }
     }
