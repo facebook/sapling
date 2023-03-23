@@ -696,6 +696,7 @@ ImmediateFuture<folly::Unit> fileNotification(
         // aggressive and just log.
         XLOG(DFATAL) << "While handling notification on: " << path << ": "
                      << ew;
+        return folly::unit;
       });
   return folly::unit;
 }
