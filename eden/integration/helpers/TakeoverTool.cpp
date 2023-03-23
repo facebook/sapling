@@ -9,8 +9,9 @@
 
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
+#include <folly/portability/GFlags.h>
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/FsChannelTypes.h"
@@ -28,8 +29,6 @@ DEFINE_bool(
     true,
     "This is used by integration tests to avoid sending a ping");
 
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
-
 using namespace facebook::eden::path_literals;
 
 /*
@@ -42,6 +41,9 @@ using namespace facebook::eden::path_literals;
  */
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");

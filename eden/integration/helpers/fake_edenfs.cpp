@@ -8,6 +8,7 @@
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 #include <signal.h>
@@ -77,8 +78,6 @@ DEFINE_string(
     "The path to the privhelper binary (only works if not running setuid)");
 
 using namespace facebook::eden;
-
-FOLLY_INIT_LOGGING_CONFIG(".=INFO,eden=DBG2");
 
 namespace {
 
@@ -315,6 +314,9 @@ int main(int argc, char** argv) {
       std::vector<std::string>{&argv[0], &argv[argc]};
 
   auto init = folly::Init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig(".=INFO,eden=DBG2");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
 
   // Reference FLAGS_edenfsctlPath so that it is linked into fake_edenfs
   // when compiling in opt mode.  Without this reference the linker will

@@ -7,6 +7,7 @@
 
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
+#include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
 
@@ -19,7 +20,6 @@
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(blobID, "", "The blob ID");
 
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 constexpr folly::StringPiece kRocksDBPath{"storage/rocks-db"};
 
 using namespace facebook::eden;
@@ -32,6 +32,10 @@ using folly::IOBuf;
  */
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
+
+  auto loggingConfig = folly::parseLogConfig("eden=DBG2");
+  folly::LoggerDB::get().updateConfig(loggingConfig);
+
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
     return 1;
