@@ -490,9 +490,13 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Buffer size for read and writes requests. Default to 1 MiB.
+   * Buffer size for read and writes requests. Default to 16 KiB.
+   *
+   * 16KiB was determined to offer the best tradeoff of random write speed to
+   * streaming writes on macOS, use the benchmarks/random_writes.cpp before
+   * changing this default value.
    */
-  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 1024 * 1024, this};
+  ConfigSetting<uint32_t> nfsIoSize{"nfs:iosize", 16 * 1024, this};
 
   /**
    * Whether EdenFS NFS sockets should bind themself to unix sockets instead of
