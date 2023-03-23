@@ -208,7 +208,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> migrateToNFSVentura{
       "core:migrate_existing_to_nfs",
-      false,
+      true,
       this};
 
   /**
@@ -218,7 +218,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> migrateToNFSAllMacOS{
       "core:migrate_existing_to_nfs_all_macos",
-      false,
+      true,
       this};
 
   // [config]
@@ -618,7 +618,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> prjfsFsckDetectRenames{
       "prjfs:fsck-detect-renames",
-      false,
+      true,
       this};
 
   // [hg]
@@ -828,7 +828,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> allowResumeCheckout{
       "experimental:allow-resume-checkout",
-      false,
+      true,
       this};
 
   /**
@@ -863,7 +863,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enableGc{
       "experimental:enable-garbage-collection",
-      false,
+      true,
       this};
 
   /**
@@ -1082,7 +1082,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Should FSCK be run on multiple threads, or serialized.
    */
-  ConfigSetting<bool> multiThreadedFsck{"fsck:multi-threaded", false, this};
+  ConfigSetting<bool> multiThreadedFsck{"fsck:multi-threaded", true, this};
 
   // [glob]
 
