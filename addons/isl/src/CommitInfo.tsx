@@ -540,7 +540,13 @@ function ActionsBar({
                   // So this one time, we need to manually run the new submit command.
                   // Future submit calls can delegate to provider.submitOperation();
                   runOperation(
-                    answer === 'ghstack' ? new GhStackSubmitOperation() : new PrSubmitOperation(),
+                    answer === 'ghstack'
+                      ? new GhStackSubmitOperation({
+                          draft: shouldSubmitAsDraft,
+                        })
+                      : new PrSubmitOperation({
+                          draft: shouldSubmitAsDraft,
+                        }),
                   );
                   return;
                 }
