@@ -52,10 +52,7 @@ pub struct Shards {
 
 impl Shards {
     pub fn new(shard_count: NonZeroUsize, perf_counter_type: PerfCounterType) -> Self {
-        let semaphores = (0..shard_count.get())
-            .into_iter()
-            .map(|_| Semaphore::new(1))
-            .collect();
+        let semaphores = (0..shard_count.get()).map(|_| Semaphore::new(1)).collect();
 
         Self {
             semaphores,

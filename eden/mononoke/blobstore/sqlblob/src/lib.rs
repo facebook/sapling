@@ -243,10 +243,7 @@ impl Sqlblob {
 
         let config_handle = get_gc_config_handle(config_store)?;
 
-        let futs: FuturesOrdered<_> = (0..shard_count)
-            .into_iter()
-            .map(connection_factory)
-            .collect();
+        let futs: FuturesOrdered<_> = (0..shard_count).map(connection_factory).collect();
 
         let shard_connections = futs.try_collect::<Vec<_>>().await?;
         let mut write_connections = Vec::with_capacity(shard_count);

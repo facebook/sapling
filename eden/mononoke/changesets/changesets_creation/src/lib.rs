@@ -84,7 +84,7 @@ pub async fn save_changesets(
             let bcs_id = bcs.get_changeset_id();
             let completion_record = ChangesetInsert {
                 cs_id: bcs_id,
-                parents: bcs.parents().into_iter().collect(),
+                parents: bcs.parents().collect(),
             };
             bonsai_complete_futs.push(complete_changesets.add(ctx, completion_record));
         }

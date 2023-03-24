@@ -872,7 +872,6 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             let tree = path.tree().await?.unwrap();
             tree.list()
                 .await?
-                .into_iter()
                 .map(|(name, _entry)| name)
                 .collect::<Vec<_>>()
         },
@@ -889,7 +888,6 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             let tree = path.tree().await?.unwrap();
             tree.list()
                 .await?
-                .into_iter()
                 .map(|(name, _entry)| name)
                 .collect::<Vec<_>>()
         },
@@ -907,7 +905,6 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             {
                 tree.list()
                     .await?
-                    .into_iter()
                     .map(|(name, _entry)| name)
                     .collect::<Vec<_>>()
             },
@@ -920,7 +917,6 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
         match tree
             .list()
             .await?
-            .into_iter()
             .collect::<HashMap<_, _>>()
             .get("subsubdir2")
             .expect("entry should exist for subsubdir2")
@@ -935,7 +931,6 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             let tree = path.tree().await?.unwrap();
             tree.list()
                 .await?
-                .into_iter()
                 .map(|(name, entry)| match entry {
                     TreeEntry::File(file) => {
                         Some((name, file.size(), file.content_sha1().to_string()))
@@ -956,7 +951,6 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
             let tree = repo.tree(subsubdir2_id).await?.expect("tree exists");
             tree.list()
                 .await?
-                .into_iter()
                 .map(|(name, _entry)| name)
                 .collect::<Vec<_>>()
         },

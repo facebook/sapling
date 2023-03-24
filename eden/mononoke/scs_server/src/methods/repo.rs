@@ -758,7 +758,6 @@ impl SourceControlServiceImpl {
         )
         .await?;
         let cs_ids = std::iter::zip(params.commits, changesets)
-            .into_iter()
             .map(|(commit, cs)| {
                 cs.map(|cs| cs.id())
                     .ok_or_else(|| errors::commit_not_found(commit.to_string()))

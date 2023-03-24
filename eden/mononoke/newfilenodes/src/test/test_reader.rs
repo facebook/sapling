@@ -980,7 +980,6 @@ fn create_unsharded() -> Result<Vec1<Connection>, Error> {
 
 fn create_sharded() -> Result<Vec1<Connection>, Error> {
     Ok((0..16)
-        .into_iter()
         .map(|_| build_shard())
         .collect::<Result<Vec<_>, Error>>()?
         .try_into()?)

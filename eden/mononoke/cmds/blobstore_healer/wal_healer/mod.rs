@@ -182,7 +182,6 @@ impl WalHealer {
         let unique_blobstore_keys = queue_entries
             .iter()
             .unique_by(|entry| entry.blobstore_key.clone())
-            .into_iter()
             .count();
 
         let healing_futures: Vec<(_, u64)> = queue_entries

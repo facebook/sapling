@@ -64,7 +64,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let filenode_ids: Vec<_> = matches
         .values_of("filenodes")
         .unwrap()
-        .into_iter()
         .map(|f| {
             HgNodeHash::from_str(f)
                 .map(HgFileNodeId::new)

@@ -286,20 +286,11 @@ mod test {
 
             let bcs = split[0].load(&ctx, repo.repo_blobstore()).await?;
             let parents: Vec<ChangesetId> = vec![];
-            assert_eq!(
-                parents,
-                bcs.parents().into_iter().collect::<Vec<ChangesetId>>()
-            );
+            assert_eq!(parents, bcs.parents().collect::<Vec<ChangesetId>>());
             let bcs = split[1].load(&ctx, repo.repo_blobstore()).await?;
-            assert_eq!(
-                vec![split[0]],
-                bcs.parents().into_iter().collect::<Vec<_>>()
-            );
+            assert_eq!(vec![split[0]], bcs.parents().collect::<Vec<_>>());
             let bcs = split[2].load(&ctx, repo.repo_blobstore()).await?;
-            assert_eq!(
-                vec![split[1]],
-                bcs.parents().into_iter().collect::<Vec<_>>()
-            );
+            assert_eq!(vec![split[1]], bcs.parents().collect::<Vec<_>>());
         }
 
         // Now split by file size

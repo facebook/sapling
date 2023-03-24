@@ -34,12 +34,10 @@ pub struct Shards {
 impl Shards {
     pub fn new(filenodes_concurrency: usize, history_concurrency: usize) -> Self {
         let filenodes = (0..filenodes_concurrency)
-            .into_iter()
             .map(|_| Semaphore::new(1))
             .collect();
 
         let history = (0..history_concurrency)
-            .into_iter()
             .map(|_| Semaphore::new(1))
             .collect();
 

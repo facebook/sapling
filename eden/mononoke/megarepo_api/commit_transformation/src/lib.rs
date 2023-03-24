@@ -132,7 +132,6 @@ pub fn create_directory_source_to_target_multi_mover(
                 let override_prefix_src = MPath::new(override_prefix_src.clone())?;
                 if override_prefix_src.is_prefix_of(mpath_element_iter(path)) {
                     let suffix: Vec<_> = mpath_element_iter(path)
-                        .into_iter()
                         .skip(override_prefix_src.num_components())
                         .collect();
 

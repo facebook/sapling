@@ -333,7 +333,7 @@ impl CreateChangeset {
                 // update changeset mapping
                 let completion_record = ChangesetInsert {
                     cs_id: bonsai_cs.get_changeset_id(),
-                    parents: bonsai_cs.parents().into_iter().collect(),
+                    parents: bonsai_cs.parents().collect(),
                 };
                 complete_changesets
                     .add(&ctx, completion_record)
