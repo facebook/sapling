@@ -269,9 +269,10 @@ pub enum ShardedService {
 }
 
 /// Indicates types of commit hashes used in a repo context.
-#[derive(Eq, Clone, Debug, PartialEq)]
+#[derive(Eq, Clone, Debug, Default, PartialEq)]
 pub enum CommitIdentityScheme {
     /// Hashes are Mercurial hashes.
+    #[default]
     HG,
     /// Hashes are Git hashes.
     GIT,
@@ -279,12 +280,6 @@ pub enum CommitIdentityScheme {
     BONSAI,
     /// Hashes are of unknown scheme.
     UNKNOWN,
-}
-
-impl Default for CommitIdentityScheme {
-    fn default() -> Self {
-        Self::HG
-    }
 }
 
 /// Backup repo configuration
@@ -377,33 +372,23 @@ pub struct DerivedDataTypesConfig {
 }
 
 /// What type of unode derived data to generate
-#[derive(Eq, Clone, Copy, Debug, PartialEq)]
+#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
 pub enum UnodeVersion {
     /// Unodes v1
+    #[default]
     V1,
     /// Unodes v2
     V2,
 }
 
-impl Default for UnodeVersion {
-    fn default() -> Self {
-        UnodeVersion::V1
-    }
-}
-
 /// What type of blame derived data to generate
-#[derive(Eq, Clone, Copy, Debug, PartialEq)]
+#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
 pub enum BlameVersion {
     /// Blame v1
+    #[default]
     V1,
     /// Blame v2
     V2,
-}
-
-impl Default for BlameVersion {
-    fn default() -> Self {
-        BlameVersion::V1
-    }
 }
 
 impl RepoConfig {
@@ -413,34 +398,24 @@ impl RepoConfig {
     }
 }
 
-#[derive(Eq, Copy, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Eq, Copy, Clone, Debug, Default, PartialEq, Deserialize)]
 /// Should the redaction verification be enabled?
 pub enum Redaction {
     /// Redacted files cannot be accessed
+    #[default]
     Enabled,
     /// All the files can be fetched
     Disabled,
 }
 
-impl Default for Redaction {
-    fn default() -> Self {
-        Redaction::Enabled
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 /// Is the repo read-only?
 pub enum RepoReadOnly {
     /// This repo is read-only and should not accept pushes or other writes
     ReadOnly(String),
     /// This repo should accept writes.
+    #[default]
     ReadWrite,
-}
-
-impl Default for RepoReadOnly {
-    fn default() -> Self {
-        RepoReadOnly::ReadWrite
-    }
 }
 
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
@@ -828,18 +803,13 @@ pub enum MultiplexedStoreType {
 }
 
 /// What format should data be in either Raw or a compressed form with compression options like level
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Deserialize, Hash)]
 pub enum PackFormat {
     /// Uncompressed data is written by put
+    #[default]
     Raw,
     /// Data will be compressed and written in compressed form if its smaller than Raw
     ZstdIndividual(i32),
-}
-
-impl Default for PackFormat {
-    fn default() -> Self {
-        PackFormat::Raw
-    }
 }
 
 /// Configuration for packblob
@@ -850,9 +820,10 @@ pub struct PackConfig {
 }
 
 /// Configuration for a blobstore
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Hash)]
 pub enum BlobConfig {
     /// Administratively disabled blobstore
+    #[default]
     Disabled,
     /// Blob repository with path pointing to on-disk files with data. Blobs are stored in
     /// separate files.
@@ -976,12 +947,6 @@ impl BlobConfig {
     }
 }
 
-impl Default for BlobConfig {
-    fn default() -> Self {
-        BlobConfig::Disabled
-    }
-}
-
 /// Configuration for a local SQLite database
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct LocalDatabaseConfig {
@@ -1094,20 +1059,15 @@ impl MetadataDatabaseConfig {
 
 /// Enum configuration representing the possible modes
 /// of deletion for expired bubbles.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Hash)]
 pub enum BubbleDeletionMode {
     /// No marking or deletion
+    #[default]
     Disabled,
     /// Mark bubbles as expired but don't delete them
     MarkOnly,
     /// Mark bubbles as expired and delete them
     MarkAndDelete,
-}
-
-impl Default for BubbleDeletionMode {
-    fn default() -> Self {
-        BubbleDeletionMode::Disabled // By default, disallow bubble deletion
-    }
 }
 
 /// Configuration for the ephemeral blobstore, which stores

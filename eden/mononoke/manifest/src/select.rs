@@ -27,6 +27,7 @@ impl From<Option<MPath>> for PathOrPrefix {
     }
 }
 
+#[derive(Default)]
 pub(crate) enum Select {
     /// Single entry selected
     Single,
@@ -35,6 +36,7 @@ pub(crate) enum Select {
     Recursive,
 
     /// Not selected
+    #[default]
     Skip,
 }
 
@@ -51,12 +53,6 @@ impl Select {
             Select::Recursive => true,
             _ => false,
         }
-    }
-}
-
-impl Default for Select {
-    fn default() -> Select {
-        Select::Skip
     }
 }
 

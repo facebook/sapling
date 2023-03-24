@@ -188,17 +188,12 @@ pub enum CreateChangeFile {
 }
 
 // Enum for recording whether a path is not changed, changed or deleted.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
 enum CreateChangeType {
+    #[default]
     None,
     Change,
     Deletion,
-}
-
-impl Default for CreateChangeType {
-    fn default() -> Self {
-        CreateChangeType::None
-    }
 }
 
 impl CreateChangeType {
