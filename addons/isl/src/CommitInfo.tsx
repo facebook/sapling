@@ -418,7 +418,7 @@ function ActionsBar({
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       <div className="commit-info-actions-bar-left">
-        <SubmitAsDraftCheckbox commitsToBeSubmit={[commit]} />
+        <SubmitAsDraftCheckbox commitsToBeSubmit={isCommitMode ? [] : [commit]} />
       </div>
       <div className="commit-info-actions-bar-right">
         {isAnythingBeingEdited && !isCommitMode ? (

@@ -26,6 +26,9 @@ export function SubmitAsDraftCheckbox({commitsToBeSubmit}: {commitsToBeSubmit: A
   if (
     provider == null ||
     (provider?.supportSubmittingAsDraft === 'newDiffsOnly' &&
+      // empty array => commit to submit is not yet created (this counts as a new Diff)
+      commitsToBeSubmit.length > 0 &&
+      // some commits don't have a diff ID => those are "new" Diffs
       commitsToBeSubmit.some(commit => commit.diffId != null))
   ) {
     // hide draft button for diffs being resubmitted, if the provider doesn't support drafts on resubmission
