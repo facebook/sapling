@@ -25,6 +25,7 @@ use crate::middleware::RequestContext;
 
 pub mod cbor;
 pub mod convert;
+pub mod monitor;
 
 pub use cbor::cbor_mime;
 pub use cbor::cbor_stream_filtered_errors;

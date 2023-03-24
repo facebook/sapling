@@ -95,6 +95,7 @@ pub struct MononokeTunables {
     edenapi_req_dumper_sample_ratio: TunableI64,
     command_monitor_interval: TunableI64,
     command_monitor_remote_logging: TunableI64,
+    edenapi_request_monitor_interval: TunableI64,
     // Log all getfiles/gettreepack requests for paths that start with prefix
     // in a particular repo
     undesired_path_repo_name_to_log: TunableString,

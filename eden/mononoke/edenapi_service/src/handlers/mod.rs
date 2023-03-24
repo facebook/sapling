@@ -7,10 +7,13 @@
 
 use std::fmt;
 use std::pin::Pin;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
 use edenapi_types::ToWire;
+use futures::channel::oneshot;
 use futures::stream::TryStreamExt;
 use futures::FutureExt;
 use futures::Stream;
@@ -31,7 +34,9 @@ use gotham_derive::StateData;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::ErrorFormatter;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::scuba::HttpScubaKey;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
+use gotham_ext::middleware::MetadataState;
 use gotham_ext::response::build_response;
 use gotham_ext::response::encode_stream;
 use gotham_ext::response::ResponseTryStreamExt;
@@ -43,12 +48,16 @@ use hyper::Response;
 use mime::Mime;
 use serde::Deserialize;
 use serde::Serialize;
+use time_ext::DurationExt;
+use tunables::tunables;
 
 use crate::context::ServerContext;
 use crate::middleware::request_dumper::RequestDumper;
 use crate::middleware::RequestContext;
+use crate::scuba::EdenApiScubaKey;
 use crate::utils::cbor_mime;
 use crate::utils::get_repo;
+use crate::utils::monitor::Monitor;
 use crate::utils::parse_wire_request;
 use crate::utils::to_cbor_bytes;
 
@@ -259,7 +268,10 @@ where
         };
 
         match Handler::handler(repo, path, query_string, request).await {
-            Ok(responses) => Ok(encode_response_stream(responses, content_encoding)),
+            Ok(responses) => Ok(encode_response_stream(
+                monitor_request(&state, responses),
+                content_encoding,
+            )),
             Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),
         }
     }
@@ -268,6 +280,68 @@ where
     ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
 
     build_response(res, state, &JsonErrorFomatter)
+}
+
+pub fn monitor_request<S, T>(state: &State, stream: S) -> impl Stream<Item = T> + Send + 'static
+where
+    S: Stream<Item = T> + Send + 'static,
+{
+    let start = Instant::now();
+    let ctx = RequestContext::borrow_from(state).ctx.clone();
+    let (sender, receiver) = oneshot::channel::<()>();
+
+    // EdenApi doesn't fill these in until the end of the request, so we need
+    // to add them now.   A future improvement is to put these on the scuba
+    // sample builder earlier on so we can clone it.
+    let mut base_scuba = ctx.scuba().clone();
+    base_scuba.add(
+        HttpScubaKey::RequestId,
+        state.short_request_id().to_string(),
+    );
+
+    if let Some(info) = state.try_borrow::<HandlerInfo>() {
+        base_scuba.add_opt(EdenApiScubaKey::Repo, info.repo.clone());
+        base_scuba.add_opt(EdenApiScubaKey::Method, info.method.map(|m| m.to_string()));
+    }
+
+    if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
+        let metadata = metadata_state.metadata();
+        if let Some(ref address) = metadata.client_ip() {
+            base_scuba.add(HttpScubaKey::ClientIp, address.to_string());
+        }
+
+        let identities = metadata.identities();
+        let identities: Vec<_> = identities.iter().map(|i| i.to_string()).collect();
+        base_scuba.add(HttpScubaKey::ClientIdentities, identities);
+    }
+
+    let reporting_loop = async move {
+        loop {
+            let interval = match tunables()
+                .edenapi_request_monitor_interval()
+                .unwrap_or_default()
+                .try_into()
+            {
+                Ok(interval) if interval > 0 => interval,
+                _ => break,
+            };
+
+            tokio::time::sleep(Duration::from_secs(interval)).await;
+            let mut scuba = base_scuba.clone();
+            ctx.perf_counters().insert_perf_counters(&mut scuba);
+            scuba.log_with_msg(
+                "Long running EdenAPI request",
+                format!("{}", start.elapsed().as_micros_unchecked()),
+            );
+        }
+    };
+
+    tokio::task::spawn(async move {
+        futures::pin_mut!(reporting_loop);
+        let _ = futures::future::select(reporting_loop, receiver).await;
+    });
+
+    Monitor::new(stream, sender)
 }
 
 /// Encode a stream of EdenAPI responses into its final on-wire representation.

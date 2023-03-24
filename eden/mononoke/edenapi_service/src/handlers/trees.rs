@@ -93,7 +93,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
     Ok(custom_cbor_stream(
-        fetch_all_trees(repo, request),
+        super::monitor_request(state, fetch_all_trees(repo, request)),
         |tree_entry| tree_entry.as_ref().err(),
     ))
 }

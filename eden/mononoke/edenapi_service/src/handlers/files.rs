@@ -306,7 +306,10 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
         .await
         .map(|v| v.to_wire());
 
-    Ok(cbor_stream_filtered_errors(stream::iter(vec![token])))
+    Ok(cbor_stream_filtered_errors(super::monitor_request(
+        state,
+        stream::iter(vec![token]),
+    )))
 }
 
 /// Store the content of a single HgFilenode

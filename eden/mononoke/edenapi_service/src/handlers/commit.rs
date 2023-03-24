@@ -218,7 +218,9 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         })
         .buffer_unordered(3)
         .flatten();
-    let cbor_response = custom_cbor_stream(response, |t| t.result.as_ref().err());
+    let cbor_response = custom_cbor_stream(super::monitor_request(state, response), |t| {
+        t.result.as_ref().err()
+    });
     Ok(cbor_response)
 }
 
@@ -242,7 +244,9 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map(move |hg_id| commit_revlog_data(hg_repo_ctx.clone(), hg_id));
     let response =
         stream::iter(revlog_commits).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
-    Ok(cbor_stream_filtered_errors(response))
+    Ok(cbor_stream_filtered_errors(super::monitor_request(
+        state, response,
+    )))
 }
 
 async fn commit_revlog_data(
