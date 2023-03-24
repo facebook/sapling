@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import ssl
 
-from edenscm import json, util
+from edenscm import httpclient, json, util
 
 
 urlreq = util.urlreq
@@ -22,19 +22,27 @@ class PhabricatorClientError(Exception):
 
 
 class PhabricatorGraphQLClientRequests(object):
-    def __init__(self):
+    def __init__(self, unix_socket_proxy=None):
         self._connection = None
+        self._unix_socket_proxy = unix_socket_proxy
 
     def __verify_connection(self, request_url, timeout, ca_bundle):
         urlparts = urlreq.urlparse(request_url)
+
         if self._connection is None:
-            if urlparts.scheme == "http":
-                self._connection = util.httplib.HTTPConnection(
+            if self._unix_socket_proxy:
+                self._connection = httpclient.HTTPConnection(
+                    urlparts.hostname,
+                    unix_socket_path=self._unix_socket_proxy,
+                    timeout=timeout,
+                )
+            elif urlparts.scheme == "http":
+                self._connection = httpclient.HTTPConnection(
                     urlparts.netloc, timeout=timeout
                 )
             elif urlparts.scheme == "https":
                 context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                self._connection = util.httplib.HTTPSConnection(
+                self._connection = httpclient.HTTPSConnection(
                     urlparts.netloc,
                     timeout=timeout,
                     cert_file=ca_bundle,

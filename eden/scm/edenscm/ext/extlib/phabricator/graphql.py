@@ -68,8 +68,15 @@ class Client(object):
                     "GraphQL unavailable because of missing configuration"
                 )
 
+            # phabricator.use-unix-socket is escape hatch in case something breaks.
+            unix_socket_path = repo.ui.configbool(
+                "phabricator", "use-unix-socket", default=True
+            ) and repo.ui.config("auth_proxy", "unix_socket_path")
+
             self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
-                phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(),
+                phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(
+                    unix_socket_proxy=unix_socket_path
+                ),
                 self._oauth,
                 self._cats,
                 self._host,
