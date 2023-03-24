@@ -42,7 +42,13 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>, config: &mut ConfigSet) -> Result<u
         let canary = ctx.opts.canary;
 
         let temp_dir = std::env::temp_dir();
-        let generated = calculate_dynamicconfig(temp_dir, reponame, canary, username)?;
+        let generated = calculate_dynamicconfig(
+            temp_dir,
+            reponame,
+            canary,
+            username,
+            config.get_opt("auth_proxy", "unix_socket_path")?,
+        )?;
 
         if ctx.opts.args.is_empty() {
             ctx.core.io.write(generated.to_string())?;

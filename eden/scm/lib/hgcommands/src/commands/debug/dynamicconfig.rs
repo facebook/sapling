@@ -10,6 +10,8 @@ use clidispatch::ReqCtx;
 use configloader::hg::generate_dynamicconfig;
 #[cfg(feature = "fb")]
 use configmodel::Config;
+#[cfg(feature = "fb")]
+use configmodel::ConfigExt;
 
 use super::define_flags;
 use super::Repo;
@@ -36,6 +38,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: &mut Repo) -> Result<u8> {
             repo.repo_name(),
             ctx.opts.canary,
             username,
+            repo.config().get_opt("auth_proxy", "unix_socket_path")?,
         )?;
     }
     #[cfg(not(feature = "fb"))]

@@ -75,6 +75,7 @@ pub trait ConfigSetHgExt {
         repo_path: Option<&Path>,
         opts: Options,
         identity: &Identity,
+        proxy_sock_path: Option<String>,
     ) -> Result<Vec<Error>>;
 
     /// Load user config files (and environment variables).  If config environment variable is
@@ -298,16 +299,42 @@ impl ConfigSetHgExt for ConfigSet {
             opts = opts.readonly_items(readonly_items);
         }
 
-        let static_system = crate::builtin_static::builtin_system(opts.clone(), &ident);
-        self.secondary(Arc::new(static_system));
+        // The config priority from low to high is:
+        //
+        //   builtin
+        //   dynamic
+        //   system
+        //   user
+        //   repo
+        //
+        // We load things out of order a bit since the dynamic config can depend
+        // on system config (namely, auth_proxy.unix_socket_path).
 
-        errors.append(
-            &mut self
-                .load_dynamic(repo_path.as_deref(), opts.clone(), &ident)
-                .map_err(|e| Errors(vec![Error::Other(e)]))?,
-        );
+        // Clone rather than Self::new() so we include any --config overrides
+        // already inside self.
+        let mut dynamic = self.clone();
+
         errors.append(&mut self.load_system(opts.clone(), &ident));
         errors.append(&mut self.load_user(opts.clone(), &ident));
+
+        // This is the out-of-orderness. We load the dynamic config on a
+        // detached ConfigSet then combine it into our "secondary" config
+        // sources to maintian the correct priority.
+        errors.append(
+            &mut dynamic
+                .load_dynamic(
+                    repo_path.as_deref(),
+                    opts.clone(),
+                    &ident,
+                    self.get_opt("auth_proxy", "unix_socket_path")
+                        .unwrap_or_default(),
+                )
+                .map_err(|e| Errors(vec![Error::Other(e)]))?,
+        );
+
+        let mut low_prio_configs = crate::builtin_static::builtin_system(opts.clone(), &ident);
+        low_prio_configs.push(Arc::new(dynamic));
+        self.secondary(Arc::new(low_prio_configs));
 
         if let Some(repo_path) = repo_path.as_deref() {
             errors.append(&mut self.load_repo(repo_path, opts, &ident));
@@ -354,6 +381,7 @@ impl ConfigSetHgExt for ConfigSet {
         repo_path: Option<&Path>,
         opts: Options,
         identity: &Identity,
+        proxy_sock_path: Option<String>,
     ) -> Result<Vec<Error>> {
         use std::process::Command;
         use std::time::Duration;
@@ -406,7 +434,8 @@ impl ConfigSetHgExt for ConfigSet {
             };
 
             // Regen inline
-            let res = generate_dynamicconfig(repo_path, repo_name, None, user_name);
+            let res =
+                generate_dynamicconfig(repo_path, repo_name, None, user_name, proxy_sock_path);
             if let Err(e) = res {
                 let is_perm_error = e
                     .chain()
@@ -500,6 +529,7 @@ impl ConfigSetHgExt for ConfigSet {
         _repo_path: Option<&Path>,
         _opts: Options,
         _identity: &Identity,
+        _proxy_sock_path: Option<String>,
     ) -> Result<Vec<Error>> {
         Ok(Vec::new())
     }
@@ -812,9 +842,10 @@ pub fn calculate_dynamicconfig(
     repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
     user_name: String,
+    proxy_sock_path: Option<String>,
 ) -> Result<ConfigSet> {
     use crate::fb::dynamicconfig::Generator;
-    Generator::new(repo_name, config_dir, user_name)?.execute(canary)
+    Generator::new(repo_name, config_dir, user_name, proxy_sock_path)?.execute(canary)
 }
 
 #[cfg(feature = "fb")]
@@ -823,6 +854,7 @@ pub fn generate_dynamicconfig(
     repo_name: Option<impl AsRef<str>>,
     canary: Option<String>,
     user_name: String,
+    proxy_sock_path: Option<String>,
 ) -> Result<()> {
     use std::io::Write;
 
@@ -867,7 +899,13 @@ pub fn generate_dynamicconfig(
     let hgrc_path = config_dir.join("hgrc.dynamic");
     let global_config_dir = get_config_dir(None)?;
 
-    let config = calculate_dynamicconfig(global_config_dir, repo_name, canary, user_name)?;
+    let config = calculate_dynamicconfig(
+        global_config_dir,
+        repo_name,
+        canary,
+        user_name,
+        proxy_sock_path,
+    )?;
     let config_str = format!("{}{}", header, config.to_string());
 
     // If the file exists and will be unchanged, just update the mtime.
@@ -1207,6 +1245,11 @@ mod tests {
 
     #[test]
     fn test_py_core_items() {
+        let mut env = lock_env();
+
+        // Skip real dynamic config.
+        env.set("TESTTMP", Some("1"));
+
         let mut cfg = ConfigSet::new();
         cfg.load::<String, String>(None, None).unwrap();
         assert_eq!(cfg.get("treestate", "repackfactor").unwrap(), "3");
