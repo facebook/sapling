@@ -389,6 +389,8 @@ impl ConfigSetHgExt for ConfigSet {
 
         use util::run_background;
 
+        use crate::fb::dynamicconfig::vpnless_config_path;
+
         let mut errors = Vec::new();
 
         // Compute path
@@ -406,9 +408,14 @@ impl ConfigSetHgExt for ConfigSet {
 
         let this_version = ::version::VERSION;
 
+        let vpnless_changed = match (dynamic_path.metadata(), vpnless_config_path().metadata()) {
+            (Ok(d), Ok(v)) => v.modified()? > d.modified()?,
+            _ => false,
+        };
+
         // Synchronously generate the new config if it's out of date with our version
-        if version != Some(this_version) {
-            tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, "regenerating dynamic config (version mismatch)");
+        if version != Some(this_version) || vpnless_changed {
+            tracing::info!(?dynamic_path, file_version=?version, my_version=%this_version, vpnless_changed, "regenerating dynamic config (version mismatch)");
             let (repo_name, user_name) = {
                 let mut temp_config = ConfigSet::new();
                 if !temp_config.load_user(opts.clone(), identity).is_empty() {
