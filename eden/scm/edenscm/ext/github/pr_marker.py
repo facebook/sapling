@@ -22,7 +22,7 @@ from ghstack.github_cli_endpoint import GitHubCLIEndpoint
 Node = bytes
 
 
-def cleanup_landed_pr(repo, dry_run=False):
+def cleanup_landed_pr(repo, dry_run: bool = False) -> None:
     """cleanup landed GitHub PRs
 
     If the repo is not a valid GitHub repo, just return.
@@ -94,7 +94,7 @@ def _get_landed_commits(
     return to_hide, mutation_entries
 
 
-def _hide_commits(repo, to_hide, mutation_entries, dry_run):
+def _hide_commits(repo, to_hide, mutation_entries, dry_run) -> None:
     if dry_run or not to_hide:
         return
     with repo.lock(), repo.transaction("pr_marker"):
