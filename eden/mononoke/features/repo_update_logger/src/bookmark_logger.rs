@@ -21,6 +21,8 @@ use mononoke_bookmark_rust_logger::MononokeBookmarkLogger;
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
 use serde_derive::Serialize;
+#[cfg(fbcode_build)]
+use whence_logged::WhenceScribeLogged;
 
 #[derive(Serialize)]
 pub enum BookmarkOperation {
@@ -110,6 +112,13 @@ impl PlainBookmarkInfo {
 impl Loggable for PlainBookmarkInfo {
     #[cfg(fbcode_build)]
     async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
+        // Without override, WhenceScribeLogged is set to default which will cause
+        // data being logged to "/sandbox" category if service is run from devserver.
+        // But currently we use Logger only if we're in prod (as config implies), so
+        // we should log to prod too, even from devserver.
+        // For example, we can land a commit to prod from devserver, and logging for
+        // this commit should go to prod, not to sandbox.
+        MononokeBookmarkLogger::override_whence_scribe_logged(ctx.fb, WhenceScribeLogged::PROD);
         let mut logger = MononokeBookmarkLogger::new(ctx.fb);
         logger
             .set_repo_name(self.repo_name.clone())

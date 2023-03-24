@@ -32,6 +32,8 @@ use permission_checker::MononokeIdentitySet;
 use regex::Regex;
 use repo_identity::RepoIdentityRef;
 use serde_derive::Serialize;
+#[cfg(fbcode_build)]
+use whence_logged::WhenceScribeLogged;
 
 pub struct CommitInfo {
     changeset_id: ChangesetId,
@@ -186,6 +188,13 @@ impl PlainCommitInfo {
 impl Loggable for PlainCommitInfo {
     #[cfg(fbcode_build)]
     async fn log_to_logger(&self, ctx: &CoreContext) -> Result<()> {
+        // Without override, WhenceScribeLogged is set to default which will cause
+        // data being logged to "/sandbox" category if service is run from devserver.
+        // But currently we use Logger only if we're in prod (as config implies), so
+        // we should log to prod too, even from devserver.
+        // For example, we can land a commit to prod from devserver, and logging for
+        // this commit should go to prod, not to sandbox.
+        MononokeNewCommitLogger::override_whence_scribe_logged(ctx.fb, WhenceScribeLogged::PROD);
         let mut logger = MononokeNewCommitLogger::new(ctx.fb);
         logger
             .set_repo_name(self.repo_name.clone())
