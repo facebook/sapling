@@ -35,6 +35,7 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
 use manifest::Entry;
+use manifest::Manifest;
 use mercurial_types::FileType;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -45,6 +46,7 @@ use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use rate_limiting::Metric;
 use serde::Deserialize;
+use tunables::tunables;
 use types::Key;
 use types::RepoPathBuf;
 
@@ -141,15 +143,15 @@ async fn fetch_tree(
     let mut entry = TreeEntry::new(key.clone(), data, parents);
 
     if fetch_metadata {
-        let children: Vec<Result<TreeChildEntry, EdenApiServerError>> =
-            fetch_child_metadata_entries(&repo, &ctx)
-                .await?
+        if let Some(entries) = fetch_child_metadata_entries(&repo, &ctx).await? {
+            let children: Vec<Result<TreeChildEntry, EdenApiServerError>> = entries
                 .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
                 .map(|r| r.map_err(|e| EdenApiServerError::with_key(key.clone(), e)))
                 .collect()
                 .await;
 
-        entry.with_children(Some(children));
+            entry.with_children(Some(children));
+        }
     }
 
     Ok(entry)
@@ -158,27 +160,37 @@ async fn fetch_tree(
 async fn fetch_child_metadata_entries<'a>(
     repo: &'a HgRepoContext,
     ctx: &'a HgTreeContext,
-) -> Result<impl Stream<Item = impl Future<Output = Result<TreeChildEntry, Error>> + 'a> + 'a, Error>
-{
-    let entries = ctx.entries()?.collect::<Vec<_>>();
+) -> Result<
+    Option<impl Stream<Item = impl Future<Output = Result<TreeChildEntry, Error>> + 'a> + 'a>,
+    Error,
+> {
+    let manifest = ctx.clone().into_blob_manifest()?;
+    if let Some(limit) = tunables().edenapi_large_tree_metadata_limit() {
+        if manifest.content().files.len() > limit as usize {
+            return Ok(None);
+        }
+    }
+    let entries = manifest.list().collect::<Vec<_>>();
 
-    Ok(stream::iter(entries)
-        // .entries iterator is not `Send`
-        .map({
-            move |(name, entry)| async move {
-                let name = RepoPathBuf::from_string(name.to_string())?;
-                Ok(match entry {
-                    Entry::Leaf((file_type, child_id)) => {
-                        let child_key = Key::new(name, child_id.into_nodehash().into());
-                        fetch_child_file_metadata(repo, file_type, child_key.clone()).await?
-                    }
-                    Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(Key::new(
-                        name,
-                        child_id.into_nodehash().into(),
-                    )),
-                })
-            }
-        }))
+    Ok(Some(
+        stream::iter(entries)
+            // .entries iterator is not `Send`
+            .map({
+                move |(name, entry)| async move {
+                    let name = RepoPathBuf::from_string(name.to_string())?;
+                    Ok(match entry {
+                        Entry::Leaf((file_type, child_id)) => {
+                            let child_key = Key::new(name, child_id.into_nodehash().into());
+                            fetch_child_file_metadata(repo, file_type, child_key.clone()).await?
+                        }
+                        Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(Key::new(
+                            name,
+                            child_id.into_nodehash().into(),
+                        )),
+                    })
+                }
+            }),
+    ))
 }
 
 async fn fetch_child_file_metadata(

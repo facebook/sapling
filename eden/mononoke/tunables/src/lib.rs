@@ -91,6 +91,7 @@ pub struct MononokeTunables {
     max_scuba_msg_length: TunableI64,
     wishlist_read_qps: TunableI64,
     wishlist_write_qps: TunableI64,
+    edenapi_large_tree_metadata_limit: TunableI64,
     edenapi_req_dumper_sample_ratio: TunableI64,
     command_monitor_interval: TunableI64,
     command_monitor_remote_logging: TunableI64,
