@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.11
+
+- Allow submitting PRs as drafts and showing whether a PRs is a draft
+- Option to put ISL in the vscode sidebar instead of in the editor area
+- Allow selecting multiple commits with cmd/shift click
+- Use arrow keys to change selected commit
+- Don't show diff button next to merge conflicts
+- Improve behavior when there are no commits in the repo
+- Click on line numbers in the comparison view to open the file
+- Fix optimistic state sometimes getting stuck when queueing commands
+- Fix tooltips persisting and getting in the way
+- Fix ISL not loading when all commits in the repo are older than 2 weeks
+
 ## 0.1.10
 
 - Added revert button to VS Code SCM Sidebar files
