@@ -20,6 +20,9 @@
 .github-diff-status-ERROR {
   background-color: var(--github-closed-bg);
 }
+.github-diff-status-DRAFT {
+  background-color: var(--github-neutral-bg);
+}
 
 .github-diff-status {
   font-weight: bold;

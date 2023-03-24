@@ -9,13 +9,17 @@ import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
   CheckSuiteConnection,
-  PullRequestState,
   YourPullRequestsQueryData,
   YourPullRequestsQueryVariables,
 } from './generated/graphql';
 import type {CodeReviewSystem, DiffSignalSummary, DiffId, Disposable, Result} from 'isl/src/types';
 
-import {CheckStatusState, CheckConclusionState, YourPullRequestsQuery} from './generated/graphql';
+import {
+  PullRequestState,
+  CheckStatusState,
+  CheckConclusionState,
+  YourPullRequestsQuery,
+} from './generated/graphql';
 import queryGraphQL from './queryGraphQL';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {debounce} from 'shared/debounce';
@@ -23,7 +27,7 @@ import {debounce} from 'shared/debounce';
 export type GitHubDiffSummary = {
   type: 'github';
   title: string;
-  state: PullRequestState;
+  state: PullRequestState | 'DRAFT';
   number: DiffId;
   url: string;
   commentCount: number;
@@ -77,7 +81,12 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
             map.set(id, {
               type: 'github',
               title: summary.title,
-              state: summary.state,
+              // For some reason, `isDraft` is a separate boolean and not a state,
+              // but we generally treat it as its own state in the UI.
+              state:
+                summary.isDraft && summary.state === PullRequestState.Open
+                  ? 'DRAFT'
+                  : summary.state,
               number: id,
               url: summary.url,
               commentCount: summary.comments.totalCount,

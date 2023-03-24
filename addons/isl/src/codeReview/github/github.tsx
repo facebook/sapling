@@ -39,7 +39,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     }
     return (
       <div
-        className={`github-diff-status${diff?.state ? ' github-diff-status-' + diff.state : ''}`}>
+        className={'github-diff-status' + (diff?.state ? ` github-diff-status-${diff.state}` : '')}>
         <Tooltip title={t('Click to open Pull Request in GitHub')} delayMs={500}>
           {diff && <Icon icon={iconForPRState(diff.state)} />}
           {diff?.state && <PRStateLabel state={diff.state} />}
@@ -80,12 +80,14 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   supportSubmittingAsDraft = 'newDiffsOnly' as const;
 }
 
-type BadgeState = PullRequestState | 'ERROR';
+type BadgeState = PullRequestState | 'ERROR' | 'DRAFT';
 
 function iconForPRState(state?: BadgeState) {
   switch (state) {
     case 'ERROR':
       return 'error';
+    case 'DRAFT':
+      return 'git-pull-request';
     case PullRequestState.Open:
       return 'git-pull-request';
     case PullRequestState.Merged:
@@ -105,6 +107,8 @@ function PRStateLabel({state}: {state: BadgeState}) {
       return <T>Merged</T>;
     case PullRequestState.Closed:
       return <T>Closed</T>;
+    case 'DRAFT':
+      return <T>Draft</T>;
     case 'ERROR':
       return <T>Error</T>;
     default:
