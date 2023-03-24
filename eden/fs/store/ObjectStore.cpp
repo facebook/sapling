@@ -13,12 +13,15 @@
 
 #include <stdexcept>
 
+#include "eden/common/utils/ProcessNameCache.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/Throw.h"

@@ -13,24 +13,26 @@
 #include <unordered_map>
 
 #include <folly/logging/xlog.h>
-#include "eden/common/utils/ProcessNameCache.h"
-#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/TreeCache.h"
-#include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/utils/CaseSensitivity.h"
 
 namespace facebook::eden {
 
 class BackingStore;
 class Blob;
+class EdenConfig;
+class EdenStats;
 class LocalStore;
+class ProcessNameCache;
+class StructuredLogger;
 class Tree;
+class TreeCache;
 enum class ObjectComparison : uint8_t;
 
 struct PidFetchCounts {
