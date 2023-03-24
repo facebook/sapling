@@ -218,6 +218,13 @@
       "response_bytes_sent": 2048,
       "response_content_length": 2048,
       "seq": 3,
+      "stream_completed": *, (glob)
+      "stream_completion_time_us": *, (glob)
+      "stream_count": *, (glob)
+      "stream_first_item_time_us": *, (glob)
+      "stream_max_poll_time_us": *, (glob)
+      "stream_poll_count": *, (glob)
+      "stream_poll_time_us": *, (glob)
       "time": * (glob)
     },
     "normal": {

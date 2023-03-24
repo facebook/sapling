@@ -224,11 +224,14 @@ impl MononokeScubaSampleBuilder {
                 "max_poll_time_us",
                 stats.max_poll_time.as_micros_unchecked(),
             )
-            .add("count", stats.count)
-            .add(
+            .add_opt(
                 "completion_time_us",
-                stats.completion_time.as_micros_unchecked(),
-            );
+                stats
+                    .completion_time
+                    .as_ref()
+                    .map(Duration::as_micros_unchecked),
+            )
+            .add("count", stats.count);
 
         self
     }
@@ -242,16 +245,21 @@ impl MononokeScubaSampleBuilder {
                 stats.max_poll_time.as_micros_unchecked(),
             )
             .add("stream_count", stats.count)
-            .add(
+            .add("stream_completed", stats.completed as u32)
+            .add_opt(
                 "stream_completion_time_us",
-                stats.completion_time.as_micros_unchecked(),
-            );
-        if let Some(first_item_time) = stats.first_item_time.as_ref() {
-            self.inner.add(
+                stats
+                    .completion_time
+                    .as_ref()
+                    .map(Duration::as_micros_unchecked),
+            )
+            .add_opt(
                 "stream_first_item_time_us",
-                first_item_time.as_micros_unchecked(),
+                stats
+                    .first_item_time
+                    .as_ref()
+                    .map(Duration::as_micros_unchecked),
             );
-        }
 
         self
     }

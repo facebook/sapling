@@ -188,7 +188,7 @@ where
         let (stats_tx, stats_rx) = oneshot::channel();
         state.put(PendingStreamStats::deferred(stats_rx));
 
-        let stream = stream.timed(move |stats| async move {
+        let stream = stream.timed(move |stats| {
             let _ = stats_tx.send(stats);
         });
 

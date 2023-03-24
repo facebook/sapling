@@ -959,33 +959,35 @@ impl RepoClient {
                     .timed({
                         cloned!(ctx);
                         move |stats| {
-                            STATS::getpack_ms
-                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            let encoded_params = {
-                                let getpack_params = getpack_params.lock().unwrap();
-                                let mut encoded_params: Vec<(String, Vec<String>)> = vec![];
-                                for (path, filenodes) in getpack_params.iter() {
-                                    let mut encoded_filenodes = vec![];
-                                    for filenode in filenodes {
-                                        encoded_filenodes.push(format!("{}", filenode));
-                                    }
-                                    encoded_params.push((
-                                        String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                        encoded_filenodes,
-                                    ));
+                            if stats.completed {
+                                if let Some(completion_time) = stats.completion_time {
+                                    STATS::getpack_ms
+                                        .add_value(completion_time.as_millis_unchecked() as i64);
                                 }
-                                encoded_params
-                            };
+                                let encoded_params = {
+                                    let getpack_params = getpack_params.lock().unwrap();
+                                    let mut encoded_params: Vec<(String, Vec<String>)> = vec![];
+                                    for (path, filenodes) in getpack_params.iter() {
+                                        let mut encoded_filenodes = vec![];
+                                        for filenode in filenodes {
+                                            encoded_filenodes.push(format!("{}", filenode));
+                                        }
+                                        encoded_params.push((
+                                            String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                            encoded_filenodes,
+                                        ));
+                                    }
+                                    encoded_params
+                                };
 
-                            ctx.perf_counters().add_to_counter(
-                                PerfCounterType::GetpackNumFiles,
-                                encoded_params.len() as i64,
-                            );
+                                ctx.perf_counters().add_to_counter(
+                                    PerfCounterType::GetpackNumFiles,
+                                    encoded_params.len() as i64,
+                                );
 
-                            log_getpack_params_verbose(&ctx, &encoded_params);
-                            command_logger.finalize_command(&stats);
-
-                            future::ready(())
+                                log_getpack_params_verbose(&ctx, &encoded_params);
+                                command_logger.finalize_command(&stats);
+                            }
                         }
                     })
                     .boxed()
@@ -1571,10 +1573,13 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .timed({
                     move |stats| {
-                        STATS::getbundle_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                        command_logger.finalize_command(&stats);
-                        future::ready(())
+                        if stats.completed {
+                            if let Some(completion_time) = stats.completion_time {
+                                STATS::getbundle_ms
+                                    .add_value(completion_time.as_millis_unchecked() as i64);
+                            }
+                            command_logger.finalize_command(&stats);
+                        }
                     }
                 })
                 .boxed()
@@ -1938,13 +1943,17 @@ impl HgCommands for RepoClient {
                     })
                     .timed({
                         move |stats| {
-                            if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
-                                command_logger.add_trimmed_scuba_extra("command_args", &args);
+                            if stats.completed {
+                                if let Some(completion_time) = stats.completion_time {
+                                    if completion_time > *SLOW_REQUEST_THRESHOLD {
+                                        command_logger
+                                            .add_trimmed_scuba_extra("command_args", &args);
+                                    }
+                                    STATS::gettreepack_ms
+                                        .add_value(completion_time.as_millis_unchecked() as i64);
+                                }
+                                command_logger.finalize_command(&stats);
                             }
-                            STATS::gettreepack_ms
-                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                            command_logger.finalize_command(&stats);
-                            future::ready(())
                         }
                     })
                     .boxed()
@@ -2077,8 +2086,9 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .map_ok(bytes_ext::copy_from_new)
                 .timed(|stats| {
-                    command_logger.finalize_command(&stats);
-                    future::ready(())
+                    if stats.completed {
+                        command_logger.finalize_command(&stats);
+                    }
                 })
                 .boxed()
                 .compat()
@@ -2173,13 +2183,16 @@ impl HgCommands for RepoClient {
                 .yield_periodically()
                 .flatten_err()
                 .timed(move |stats| {
-                    if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
-                        command_logger.add_trimmed_scuba_extra("command_args", &args);
+                    if stats.completed {
+                        if let Some(completion_time) = stats.completion_time {
+                            if completion_time > *SLOW_REQUEST_THRESHOLD {
+                                command_logger.add_trimmed_scuba_extra("command_args", &args);
+                            }
+                            STATS::getcommitdata_ms
+                                .add_value(completion_time.as_millis_unchecked() as i64);
+                        }
+                        command_logger.finalize_command(&stats);
                     }
-                    STATS::getcommitdata_ms
-                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    command_logger.finalize_command(&stats);
-                    future::ready(())
                 })
                 .boxed()
                 .compat();
