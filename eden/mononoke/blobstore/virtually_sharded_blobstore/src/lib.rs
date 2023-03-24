@@ -372,21 +372,24 @@ async fn shared_read<T: Blobstore + 'static>(
             // There is no read for this key in flight.  Create one.
             let inflight_read = {
                 cloned!(ctx, inner, key);
+                // Construct a scopeguard that will ensure we remove the
+                // shared future from the inflight reads collection regardless
+                // of whether it succeeds, fails, or is cancelled.
+                let guard = scopeguard::guard((inner.clone(), key.clone()), |(inner, key)| {
+                    let mut large_inflight_reads = inner.large_inflight_reads.lock().unwrap();
+                    large_inflight_reads.remove(&key);
+                });
                 let ticket = ticket.into_owned();
                 async move {
                     // Wait for our ticket.
-                    let result = ticket.finish().await;
+                    ticket.finish().await.shared_error()?;
                     // If we were successful at getting the ticket, get data from the blobstore.
-                    let result = match result {
-                        Ok(_ticket) => inner.blobstore.get(&ctx, &key).await,
-                        Err(e) => Err(e),
-                    };
-                    // Remove ourself from the in flight reads.  We do this
-                    // regardless of whether the above steps were successful
-                    // or not.
-                    let mut large_inflight_reads = inner.large_inflight_reads.lock().unwrap();
-                    large_inflight_reads.remove(&key);
-
+                    let result = inner.blobstore.get(&ctx, &key).await;
+                    // Ensure the guard is moved into the future, and drop it
+                    // now to remove ourself from the in flight reads.  This
+                    // will happen regardless of whether the above steps were
+                    // successful or not, or even if the future is cancelled.
+                    drop(guard);
                     result.shared_error()
                 }
                 .boxed()
