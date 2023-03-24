@@ -52,13 +52,15 @@ class PhabricatorGraphQLClientRequests(object):
                 raise PhabricatorClientError("Unknown host scheme: %s", urlparts.scheme)
         return urlparts
 
-    def sendpost(self, request_url, data, timeout, ca_bundle):
+    def sendpost(self, request_url, data, timeout, ca_bundle, headers=None):
         urlparts = self.__verify_connection(request_url, timeout, ca_bundle)
         query = util.urlreq.urlencode(data)
+
         headers = {
             "Connection": "Keep-Alive",
             "Content-Type": "application/x-www-form-urlencoded",
+            **(headers or {}),
         }
-        self._connection.request("POST", (urlparts.path), query, headers)
-        response = json.load(self._connection.getresponse())
-        return response
+
+        self._connection.request("POST", urlparts.path, query, headers)
+        return json.load(self._connection.getresponse())

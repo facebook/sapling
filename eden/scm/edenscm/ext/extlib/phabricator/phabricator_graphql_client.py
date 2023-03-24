@@ -5,26 +5,45 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import base64
+
+from edenscm import json
+
 from . import arcconfig
 
 
 class PhabricatorGraphQLClient(object):
-    def __init__(
-        self, urllib, ph_oauth, ph_cats, host, app_id, app_token, ca_bundle=None
-    ):
+    def __init__(self, urllib, x2p_app_id, ph_oauth, ph_cats, host, ca_bundle=None):
         self.urllib = urllib
         self.phabricator_oauth = ph_oauth
         self.phabricator_cats = ph_cats
         self.graphql_url = host + "/graphql"
-        self.app_id = app_id
-        self.app_token = app_token
         self.ca_bundle = ca_bundle
+        self.x2p_app_id = x2p_app_id
 
     def query(self, timeout, request, params=None):
         """
         Make a graphql2 (OSS) request to phabricator data
         """
-        if self.phabricator_oauth is not None:
+
+        headers = {}
+        if self.x2p_app_id is not None:
+            headers = {
+                "x-x2pagentd-inject-cat": base64.b64encode(
+                    json.dumps(
+                        {
+                            "isIntern": True,
+                            "appId": int(self.x2p_app_id),
+                            "tokenTimeoutSeconds": 60,
+                        }
+                    ).encode()
+                )
+            }
+            data = {
+                "doc": request,
+                "variables": params,
+            }
+        elif self.phabricator_oauth is not None:
             data = {
                 "access_token": self.phabricator_oauth,
                 "doc": request,
@@ -47,5 +66,9 @@ class PhabricatorGraphQLClient(object):
             )
 
         return self.urllib.sendpost(
-            self.graphql_url, data=data, timeout=timeout, ca_bundle=self.ca_bundle
+            self.graphql_url,
+            data=data,
+            timeout=timeout,
+            ca_bundle=self.ca_bundle,
+            headers=headers,
         )

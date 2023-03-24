@@ -61,9 +61,8 @@ class Client(object):
         )
         if not self._mock:
             app_id = repo.ui.config("phabricator", "graphql_app_id")
-            app_token = repo.ui.config("phabricator", "graphql_app_token")
             self._host = repo.ui.config("phabricator", "graphql_host")
-            if app_id is None or app_token is None or self._host is None:
+            if app_id is None or self._host is None:
                 raise GraphQLConfigError(
                     "GraphQL unavailable because of missing configuration"
                 )
@@ -75,13 +74,12 @@ class Client(object):
 
             self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
                 phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(
-                    unix_socket_proxy=unix_socket_path
+                    unix_socket_proxy=unix_socket_path,
                 ),
+                app_id if unix_socket_path else None,
                 self._oauth,
                 self._cats,
                 self._host,
-                app_id,
-                app_token,
             )
 
     def _applyarcconfig(self, config, defaultarcrchost):
