@@ -17,6 +17,7 @@
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/notifications/Notifier.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 #include "eden/fs/utils/UserInfo.h"
 
 namespace facebook::eden {
@@ -33,6 +34,8 @@ class TopLevelIgnores;
 class UnboundedQueueExecutor;
 class NfsServer;
 
+using EdenStatsPtr = RefPtr<EdenStats>;
+
 /**
  * ServerState contains state shared across multiple mounts.
  *
@@ -43,7 +46,7 @@ class ServerState {
  public:
   ServerState(
       UserInfo userInfo,
-      std::shared_ptr<EdenStats> edenStats,
+      EdenStatsPtr edenStats,
       std::shared_ptr<PrivHelper> privHelper,
       std::shared_ptr<UnboundedQueueExecutor> threadPool,
       std::shared_ptr<Clock> clock,
@@ -79,7 +82,7 @@ class ServerState {
    * Get the EdenStats object that tracks process-wide (rather than per-mount)
    * statistics.
    */
-  const std::shared_ptr<EdenStats>& getStats() const {
+  const EdenStatsPtr& getStats() const {
     return edenStats_;
   }
 
@@ -187,7 +190,7 @@ class ServerState {
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
-  std::shared_ptr<EdenStats> edenStats_;
+  EdenStatsPtr edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueExecutor> threadPool_;
   std::shared_ptr<Clock> clock_;

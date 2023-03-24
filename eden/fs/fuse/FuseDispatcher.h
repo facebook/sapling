@@ -15,6 +15,7 @@
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 #ifndef _WIN32
 #include <sys/statvfs.h>
@@ -33,15 +34,17 @@ namespace facebook::eden {
 class FuseDirList;
 class EdenStats;
 
+using EdenStatsPtr = RefPtr<EdenStats>;
+
 class FuseDispatcher {
   fuse_init_out connInfo_{};
-  std::shared_ptr<EdenStats> stats_{nullptr};
+  EdenStatsPtr stats_;
 
  public:
   virtual ~FuseDispatcher();
 
-  explicit FuseDispatcher(std::shared_ptr<EdenStats> stats);
-  const std::shared_ptr<EdenStats>& getStats() const;
+  explicit FuseDispatcher(EdenStatsPtr stats);
+  const EdenStatsPtr& getStats() const;
 
   const fuse_init_out& getConnInfo() const;
 

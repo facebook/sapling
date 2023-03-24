@@ -63,7 +63,7 @@ class Journal {
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
 
-  explicit Journal(std::shared_ptr<EdenStats> edenStats);
+  explicit Journal(EdenStatsPtr edenStats);
 
   Journal(const Journal&) = delete;
   Journal& operator=(const Journal&) = delete;
@@ -287,6 +287,6 @@ class Journal {
 
   folly::Synchronized<SubscriberState> subscriberState_;
 
-  std::shared_ptr<EdenStats> edenStats_;
+  EdenStatsPtr edenStats_;
 };
 } // namespace facebook::eden

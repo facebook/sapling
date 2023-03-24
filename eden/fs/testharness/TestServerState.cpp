@@ -32,7 +32,7 @@ std::shared_ptr<ServerState> createTestServerState() {
 
   return std::make_shared<ServerState>(
       UserInfo::lookup(),
-      std::make_shared<EdenStats>(),
+      makeRefPtr<EdenStats>(),
       std::make_shared<FakePrivHelper>(),
       std::make_shared<UnboundedQueueExecutor>(executor),
       std::make_shared<FakeClock>(),

@@ -15,6 +15,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/DirList.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/StatTimes.h"
 
 using namespace folly;
@@ -55,8 +56,7 @@ fuse_attr_out FuseDispatcher::Attr::asFuseAttr() const {
 
 FuseDispatcher::~FuseDispatcher() {}
 
-FuseDispatcher::FuseDispatcher(std::shared_ptr<EdenStats> stats)
-    : stats_(std::move(stats)) {}
+FuseDispatcher::FuseDispatcher(EdenStatsPtr stats) : stats_(std::move(stats)) {}
 
 void FuseDispatcher::initConnection(const fuse_init_out& out) {
   connInfo_ = out;
@@ -306,7 +306,7 @@ const fuse_init_out& FuseDispatcher::getConnInfo() const {
   return connInfo_;
 }
 
-const std::shared_ptr<EdenStats>& FuseDispatcher::getStats() const {
+const EdenStatsPtr& FuseDispatcher::getStats() const {
   return stats_;
 }
 

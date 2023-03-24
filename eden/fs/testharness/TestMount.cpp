@@ -168,7 +168,7 @@ TestMount::TestMount(bool enableActivityBuffer, CaseSensitivity caseSensitivity)
 
   serverState_ = make_shared<ServerState>(
       UserInfo::lookup(),
-      make_shared<EdenStats>(),
+      makeRefPtr<EdenStats>(),
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
@@ -304,19 +304,19 @@ void TestMount::createMount(Overlay::InodeCatalogType inodeCatalogType) {
       localStore_,
       backingStore_,
       treeCache_,
-      stats_,
+      stats_.copy(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
       config_->getCaseSensitive());
-  auto journal = std::make_unique<Journal>(stats_);
+  auto journal = std::make_unique<Journal>(stats_.copy());
   edenMount_ = EdenMount::create(
       std::move(config_),
       std::move(objectStore),
       blobCache_,
       serverState_,
       std::move(journal),
-      stats_,
+      stats_.copy(),
       inodeCatalogType);
 #ifndef _WIN32
   dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
@@ -379,7 +379,7 @@ void TestMount::initTestDirectory(CaseSensitivity caseSensitivity) {
   localStore_ = make_shared<MemoryLocalStore>();
   backingStore_ = make_shared<FakeBackingStore>();
 
-  stats_ = make_shared<EdenStats>();
+  stats_ = makeRefPtr<EdenStats>();
 }
 
 #ifndef _WIN32
@@ -432,13 +432,13 @@ void TestMount::remount() {
       localStore_,
       backingStore_,
       treeCache_,
-      stats_,
+      stats_.copy(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
       config->getCaseSensitive());
 
-  auto journal = std::make_unique<Journal>(stats_);
+  auto journal = std::make_unique<Journal>(stats_.copy());
 
   // Reset the edenMount_ pointer.  This will destroy the old EdenMount
   // assuming that no-one else still has any references to it.
@@ -459,7 +459,7 @@ void TestMount::remount() {
       blobCache_,
       serverState_,
       std::move(journal),
-      stats_);
+      stats_.copy());
   initializeEdenMount();
 }
 
@@ -472,13 +472,13 @@ void TestMount::remountGracefully() {
       localStore_,
       backingStore_,
       treeCache_,
-      stats_,
+      stats_.copy(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       edenConfig_,
       config->getCaseSensitive());
 
-  auto journal = std::make_unique<Journal>(stats_);
+  auto journal = std::make_unique<Journal>(stats_.copy());
 
   rootInode_.reset();
 
@@ -507,7 +507,7 @@ void TestMount::remountGracefully() {
       blobCache_,
       serverState_,
       std::move(journal),
-      stats_);
+      stats_.copy());
   edenMount_->initialize([](auto) {}, takeoverData)
       .getVia(serverExecutor_.get());
   rootInode_ = edenMount_->getRootInodeUnchecked();

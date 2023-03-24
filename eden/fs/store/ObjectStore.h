@@ -21,6 +21,7 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/CaseSensitivity.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
@@ -34,6 +35,8 @@ class StructuredLogger;
 class Tree;
 class TreeCache;
 enum class ObjectComparison : uint8_t;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 struct PidFetchCounts {
   folly::Synchronized<std::unordered_map<pid_t, uint64_t>> map_;
@@ -78,7 +81,7 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
@@ -285,7 +288,7 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<TreeCache> treeCache,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       std::shared_ptr<ProcessNameCache> processNameCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
       std::shared_ptr<const EdenConfig> edenConfig,
@@ -340,7 +343,7 @@ class ObjectStore : public IObjectStore,
    */
   std::shared_ptr<BackingStore> backingStore_;
 
-  std::shared_ptr<EdenStats> const stats_;
+  EdenStatsPtr const stats_;
 
   /* number of fetches for each process collected
    * from the beginning of the eden daemon progress */

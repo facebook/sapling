@@ -1907,7 +1907,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   auto context = std::make_unique<NfsRequestContext>(
       xid, handlerEntry.name, processAccessLog_);
   context->startRequest(
-      dispatcher_->getStats(), handlerEntry.stat, nullRequestWatch);
+      dispatcher_->getStats().copy(), handlerEntry.stat, nullRequestWatch);
 
   // The data that contextRef reference to is alive for the duration of the
   // handler function and is deleted when context unique_ptr goes out of the

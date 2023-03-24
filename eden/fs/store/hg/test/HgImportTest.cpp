@@ -31,7 +31,7 @@ TEST(HgImporter, ensure_HgImporter_is_linked_even_in_tsan) {
     AbsolutePath testPath = canonicalPath(testDir.path().string());
     HgRepo repo{testPath + "repo"_pc};
     repo.hgInit(testPath + "cache"_pc);
-    HgImporter importer(repo.path(), std::make_shared<EdenStats>());
+    HgImporter importer(repo.path(), makeRefPtr<EdenStats>());
   }
 }
 
@@ -48,7 +48,7 @@ class HgImportTest : public ::testing::Test {
   TemporaryDirectory testDir_{"eden_hg_import_test"};
   AbsolutePath testPath_ = canonicalPath(testDir_.path().string());
   HgRepo repo_{testPath_ + "repo"_pc};
-  std::shared_ptr<EdenStats> stats_ = std::make_shared<EdenStats>();
+  EdenStatsPtr stats_ = makeRefPtr<EdenStats>();
 };
 
 } // namespace
@@ -70,7 +70,7 @@ TEST_F(HgImportTest, importTest) {
   auto commit1 = repo_.commit("Initial commit");
 
   // Import the root tree
-  HgImporter importer(repo_.path(), stats_);
+  HgImporter importer(repo_.path(), stats_.copy());
 
   auto output = repo_.hg("manifest", "--debug");
   auto fileHash = output.substr(0, 40);
@@ -97,7 +97,7 @@ TEST_F(HgImportTest, importerHelperExitsCleanly) {
     GTEST_SKIP();
   }
 
-  HgImporter importer(repo_.path(), stats_);
+  HgImporter importer(repo_.path(), stats_.copy());
   auto status = importer.debugStopHelperProcess();
   EXPECT_EQ(status.str(), "exited with status 0");
 }

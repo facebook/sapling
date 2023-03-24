@@ -99,10 +99,10 @@ struct RefPtrBase {
  */
 template <typename T>
 class RefPtr : private RefPtrBase {
-  static_assert(std::is_base_of_v<RefCounted, T>);
-
  public:
   RefPtr() noexcept = default;
+
+  /* implicit */ RefPtr(std::nullptr_t) {}
 
   ~RefPtr() noexcept {
     decRef();
@@ -147,6 +147,7 @@ class RefPtr : private RefPtrBase {
    * The reference count must be one.
    */
   static RefPtr takeOwnership(T* ptr) {
+    static_assert(std::is_base_of_v<RefCounted, T>);
     RefCounted* base = ptr;
     assert(
         base->isUnique() &&
@@ -161,6 +162,7 @@ class RefPtr : private RefPtrBase {
    * Intended for singletons that are guaranteed to outlive the pointer.
    */
   static RefPtr singleton(T& singleton) {
+    static_assert(std::is_base_of_v<RefCounted, T>);
     return RefPtr{
         reinterpret_cast<uintptr_t>(static_cast<RefCounted*>(&singleton))};
   }

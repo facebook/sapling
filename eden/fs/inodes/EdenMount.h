@@ -291,7 +291,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       std::optional<Overlay::InodeCatalogType> inodeCatalogType = std::nullopt);
 
   /**
@@ -770,7 +770,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Today this is the global stats instance, but in the future it will be
    * a mount point specific instance.
    */
-  const std::shared_ptr<EdenStats>& getStats() const;
+  const EdenStatsPtr& getStats() const;
 
   const folly::Logger& getStraceLogger() const {
     return straceLogger_;
@@ -1114,7 +1114,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       std::optional<Overlay::InodeCatalogType> inodeCatalogType = std::nullopt);
 
   // Forbidden copy constructor and assignment operator

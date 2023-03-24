@@ -96,7 +96,7 @@ struct BlobAccessTest : ::testing::Test {
         localStore,
         backingStore,
         treeCache,
-        std::make_shared<EdenStats>(),
+        makeRefPtr<EdenStats>(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig,

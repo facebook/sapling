@@ -225,7 +225,7 @@ class ThriftRequestScope {
       const folly::Logger& logger,
       folly::LogLevel level,
       SourceLocation sourceLocation,
-      std::shared_ptr<EdenStats> edenStats,
+      EdenStatsPtr edenStats,
       ThriftStats::DurationPtr statPtr,
       std::optional<pid_t> pid,
       JoinFn&& join)
@@ -306,7 +306,7 @@ class ThriftRequestScope {
   std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus_;
   uint64_t requestId_;
   SourceLocation sourceLocation_;
-  std::shared_ptr<EdenStats> edenStats_;
+  EdenStatsPtr edenStats_;
   ThriftStats::DurationPtr statPtr_;
   folly::LogLevel level_;
   folly::Logger itcLogger_;
@@ -384,7 +384,7 @@ facebook::eden::InodePtr inodeFromUserPath(
         logger,                                               \
         folly::LogLevel::level,                               \
         loc,                                                  \
-        server_->getStats(),                                  \
+        server_->getStats().copy(),                           \
         stat,                                                 \
         getAndRegisterClientPid(),                            \
         [&] {                                                 \

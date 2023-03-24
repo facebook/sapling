@@ -21,6 +21,7 @@
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
@@ -32,6 +33,8 @@ class UnboundedQueueExecutor;
 class ReloadableConfig;
 class HgProxyHash;
 class StructuredLogger;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 /**
  * An implementation class for HgQueuedBackingStore that loads data out of a
@@ -47,7 +50,7 @@ class HgBackingStore {
       std::shared_ptr<LocalStore> localStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::shared_ptr<EdenStats> edenStats,
+      EdenStatsPtr edenStats,
       std::shared_ptr<StructuredLogger> logger);
 
   /**
@@ -60,7 +63,7 @@ class HgBackingStore {
       HgImporter* importer,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
-      std::shared_ptr<EdenStats>);
+      EdenStatsPtr);
 
   ~HgBackingStore();
 
@@ -163,7 +166,7 @@ class HgBackingStore {
       LocalStore::WriteBatch* writeBatch);
 
   std::shared_ptr<LocalStore> localStore_;
-  std::shared_ptr<EdenStats> stats_;
+  EdenStatsPtr stats_;
   // A set of threads owning HgImporter instances
   std::unique_ptr<folly::Executor> importThreadPool_;
   std::shared_ptr<ReloadableConfig> config_;

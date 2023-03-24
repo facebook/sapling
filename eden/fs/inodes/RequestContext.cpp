@@ -56,7 +56,7 @@ RequestContext::~RequestContext() noexcept {
 }
 
 void RequestContext::startRequest(
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     DurationFn stat,
     std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
         requestWatches) {

@@ -26,8 +26,8 @@ struct IdentityCodec : RootIdCodec {
 };
 
 struct JournalTest : ::testing::Test {
-  std::shared_ptr<EdenStats> edenStats{std::make_shared<EdenStats>()};
-  Journal journal{edenStats};
+  EdenStatsPtr edenStats{makeRefPtr<EdenStats>()};
+  Journal journal{edenStats.copy()};
   IdentityCodec codec;
 };
 

@@ -62,6 +62,14 @@ namespace facebook::eden {
 
 namespace {
 
+EdenStatsPtr getGlobalEdenStats() {
+  // A running EdenFS daemon only needs a single EdenStats instance. Avoid
+  // atomic reference counts with RefPtr::singleton. We could use
+  // folly::Singleton but that makes unit testing harder.
+  static EdenStats* gEdenStats = new EdenStats;
+  return EdenStatsPtr::singleton(*gEdenStats);
+}
+
 SessionInfo makeSessionInfo(
     const UserInfo& userInfo,
     std::string hostname,
@@ -138,12 +146,12 @@ void EdenMain::registerStandardBackingStores() {
         params.localStore,
         params.serverState->getThreadPool().get(),
         reloadableConfig,
-        params.sharedStats,
+        params.sharedStats.copy(),
         params.serverState->getStructuredLogger());
     return std::make_shared<LocalStoreCachedBackingStore>(
         std::make_shared<HgQueuedBackingStore>(
             params.localStore,
-            params.sharedStats,
+            params.sharedStats.copy(),
             std::move(store),
             reloadableConfig,
             params.serverState->getStructuredLogger(),
@@ -151,7 +159,7 @@ void EdenMain::registerStandardBackingStores() {
                 params.serverState->getStructuredLogger(),
                 params.serverState->getProcessNameCache())),
         params.localStore,
-        params.sharedStats);
+        params.sharedStats.copy());
   });
 
   registerBackingStore(
@@ -162,7 +170,7 @@ void EdenMain::registerStandardBackingStores() {
         return std::make_shared<LocalStoreCachedBackingStore>(
             std::make_shared<GitBackingStore>(repoPath),
             params.localStore,
-            params.sharedStats);
+            params.sharedStats.copy());
 #else // EDEN_HAVE_GIT
         (void)params;
         throw std::domain_error(
@@ -350,7 +358,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
-        std::make_shared<EdenStats>(),
+        getGlobalEdenStats(),
         std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig),

@@ -104,7 +104,7 @@ std::shared_ptr<Overlay> Overlay::create(
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
     std::shared_ptr<StructuredLogger> logger,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     const EdenConfig& config) {
   // This allows us to access the private constructor.
   struct MakeSharedEnabler : public Overlay {
@@ -113,7 +113,7 @@ std::shared_ptr<Overlay> Overlay::create(
         CaseSensitivity caseSensitive,
         InodeCatalogType inodeCatalogType,
         std::shared_ptr<StructuredLogger> logger,
-        std::shared_ptr<EdenStats> stats,
+        EdenStatsPtr stats,
         const EdenConfig& config)
         : Overlay(
               localDir,
@@ -137,7 +137,7 @@ Overlay::Overlay(
     CaseSensitivity caseSensitive,
     InodeCatalogType inodeCatalogType,
     std::shared_ptr<StructuredLogger> logger,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     const EdenConfig& config)
     : fileContentStore_{makeFileContentStore(localDir)},
       inodeCatalog_{makeInodeCatalog(

@@ -67,7 +67,7 @@ class FuseChannelTest : public ::testing::Test {
  protected:
   unique_ptr<FuseChannel, FuseChannelDeleter> createChannel(
       size_t numThreads = 2) {
-    auto testDispatcher = std::make_unique<TestDispatcher>(stats_);
+    auto testDispatcher = std::make_unique<TestDispatcher>(stats_.copy());
     dispatcher_ = testDispatcher.get();
     return unique_ptr<FuseChannel, FuseChannelDeleter>(new FuseChannel(
         fuse_.start(),
@@ -113,7 +113,7 @@ class FuseChannelTest : public ::testing::Test {
   }
 
   FakeFuse fuse_;
-  std::shared_ptr<EdenStats> stats_;
+  EdenStatsPtr stats_ = makeRefPtr<EdenStats>();
   TestDispatcher* dispatcher_;
   AbsolutePath mountPath_{canonicalPath("/fake/mount/path")};
 };

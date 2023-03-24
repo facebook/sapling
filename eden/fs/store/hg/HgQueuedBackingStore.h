@@ -113,7 +113,7 @@ class HgQueuedBackingStore final : public BackingStore {
  public:
   HgQueuedBackingStore(
       std::shared_ptr<LocalStore> localStore,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       std::unique_ptr<HgBackingStore> backingStore,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> structuredLogger,
@@ -314,7 +314,7 @@ class HgQueuedBackingStore final : public BackingStore {
   folly::Synchronized<std::unordered_set<std::string>> fetchedFilePaths_;
 
   std::shared_ptr<LocalStore> localStore_;
-  std::shared_ptr<EdenStats> stats_;
+  EdenStatsPtr stats_;
 
   /**
    * Reference to the eden config, may be a null pointer in unit tests.

@@ -24,6 +24,7 @@
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
@@ -43,6 +44,8 @@ class IFileContentStore;
 class DirEntry;
 class EdenConfig;
 class EdenStats;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 #ifndef _WIN32
 struct InodeMetadata;
@@ -93,7 +96,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
       std::shared_ptr<StructuredLogger> logger,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       const EdenConfig& config);
 
   ~Overlay();
@@ -300,7 +303,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
       CaseSensitivity caseSensitive,
       InodeCatalogType inodeCatalogType,
       std::shared_ptr<StructuredLogger> logger,
-      std::shared_ptr<EdenStats> stats,
+      EdenStatsPtr stats,
       const EdenConfig& config);
 
   /**
@@ -409,7 +412,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   CaseSensitivity caseSensitive_;
 
   std::shared_ptr<StructuredLogger> structuredLogger_;
-  std::shared_ptr<EdenStats> stats_;
+  EdenStatsPtr stats_;
 
   friend class IORequest;
 };

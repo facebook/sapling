@@ -95,14 +95,12 @@ ObjectId hashFromRootId(const RootId& root) {
  */
 class HgImporterThreadFactory : public folly::InitThreadFactory {
  public:
-  HgImporterThreadFactory(
-      AbsolutePathPiece repository,
-      std::shared_ptr<EdenStats> stats)
+  HgImporterThreadFactory(AbsolutePathPiece repository, EdenStatsPtr stats)
       : folly::InitThreadFactory(
             std::make_shared<folly::NamedThreadFactory>("HgImporter"),
             [repository = AbsolutePath{repository}, stats = std::move(stats)] {
               threadLocalImporter.reset(
-                  new HgImporterManager(repository, stats));
+                  new HgImporterManager(repository, stats.copy()));
             },
             [] {
               if (folly::kIsWindows) {
@@ -154,10 +152,10 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<LocalStore> localStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     std::shared_ptr<StructuredLogger> logger)
     : localStore_(std::move(localStore)),
-      stats_(stats),
+      stats_(stats.copy()),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
           /* Eden performance will degrade when, for example, a status operation
@@ -174,12 +172,12 @@ HgBackingStore::HgBackingStore(
            */
           make_unique<folly::UnboundedBlockingQueue<
               folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<HgImporterThreadFactory>(repository, stats))),
+          std::make_shared<HgImporterThreadFactory>(repository, stats.copy()))),
       config_(config),
       serverThreadPool_(serverThreadPool),
       datapackStore_(repository, computeOptions(), config),
       logger_(logger) {
-  HgImporter importer(repository, stats);
+  HgImporter importer(repository, stats.copy());
   const auto& options = importer.getOptions();
   repoName_ = options.repoName;
 }
@@ -194,7 +192,7 @@ HgBackingStore::HgBackingStore(
     HgImporter* importer,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
-    std::shared_ptr<EdenStats> stats)
+    EdenStatsPtr stats)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
@@ -309,7 +307,6 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                  [this,
                   path,
                   manifestNode,
-                  stats = stats_,
                   &liveImportTreeWatches = liveImportTreeWatches_] {
                    Importer& importer = getThreadLocalImporter();
                    folly::stop_watch<std::chrono::milliseconds> watch;
@@ -548,7 +545,6 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
   return folly::via(
       importThreadPool_.get(),
       [this,
-       stats = stats_,
        hgInfo = std::move(hgInfo),
        &liveImportBlobWatches = liveImportBlobWatches_] {
         Importer& importer = getThreadLocalImporter();

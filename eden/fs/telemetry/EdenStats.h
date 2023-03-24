@@ -14,6 +14,7 @@
 #include <folly/stop_watch.h>
 
 #include "eden/fs/eden-config.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
@@ -77,7 +78,7 @@ class StatsGroupBase {
   };
 };
 
-class EdenStats {
+class EdenStats : public RefCounted {
  public:
   /**
    * Records a specified elapsed duration. Updates thread-local storage, and
@@ -122,6 +123,8 @@ class EdenStats {
   ThreadLocal<TelemetryStats> telemetryStats_;
   ThreadLocal<OverlayStats> overlayStats_;
 };
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 template <>
 inline FuseStats& EdenStats::getStatsForCurrentThread<FuseStats>() {
@@ -366,9 +369,7 @@ class DurationScope {
   DurationScope() = delete;
 
   template <typename T>
-  DurationScope(
-      std::shared_ptr<EdenStats> edenStats,
-      StatsGroupBase::Duration T::*duration)
+  DurationScope(EdenStatsPtr&& edenStats, StatsGroupBase::Duration T::*duration)
       : edenStats_{std::move(edenStats)},
         // This use of std::function won't allocate on libstdc++,
         // libc++, or Microsoft STL. All three have a couple pointers
@@ -378,6 +379,12 @@ class DurationScope {
         }} {
     assert(edenStats_);
   }
+
+  template <typename T>
+  DurationScope(
+      const EdenStatsPtr& edenStats,
+      StatsGroupBase::Duration T::*duration)
+      : DurationScope{edenStats.copy(), duration} {}
 
   ~DurationScope() noexcept;
 
@@ -390,7 +397,7 @@ class DurationScope {
  private:
   using StopWatch = folly::stop_watch<>;
   StopWatch stopWatch_;
-  std::shared_ptr<EdenStats> edenStats_;
+  EdenStatsPtr edenStats_;
   std::function<void(EdenStats& stats, StopWatch::duration)> updateScope_;
 };
 

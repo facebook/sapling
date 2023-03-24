@@ -18,6 +18,7 @@
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
+#include "eden/fs/utils/RefPtr.h"
 
 #ifdef _WIN32
 #include <ProjectedFSLib.h> // @manual
@@ -28,10 +29,13 @@ namespace facebook::eden {
 #ifdef _WIN32
 
 class EdenMount;
+class EdenStats;
 class Notifier;
 class ReloadableConfig;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 namespace detail {
 struct PrjfsLiveRequest;
@@ -352,7 +356,7 @@ class PrjfsChannelInner {
     return traceDetailedArguments_;
   }
 
-  const std::shared_ptr<EdenStats>& getStats() const {
+  const EdenStatsPtr& getStats() const {
     return dispatcher_->getStats();
   }
 

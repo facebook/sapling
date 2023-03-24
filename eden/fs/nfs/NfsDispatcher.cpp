@@ -6,3 +6,17 @@
  */
 
 #include "eden/fs/nfs/NfsDispatcher.h"
+#include "eden/fs/telemetry/EdenStats.h"
+
+namespace facebook::eden {
+
+#ifndef _WIN32
+
+NfsDispatcher::NfsDispatcher(EdenStatsPtr stats, const Clock& clock)
+    : stats_{std::move(stats)}, clock_{clock} {}
+
+NfsDispatcher::~NfsDispatcher() = default;
+
+#endif
+
+} // namespace facebook::eden

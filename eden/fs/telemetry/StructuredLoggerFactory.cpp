@@ -19,7 +19,7 @@ namespace facebook::eden {
 std::shared_ptr<StructuredLogger> makeDefaultStructuredLogger(
     const EdenConfig& config,
     SessionInfo sessionInfo,
-    std::shared_ptr<EdenStats> edenStats) {
+    EdenStatsPtr edenStats) {
   const auto& binary = config.scribeLogger.getValue();
   const auto& category = config.scribeCategory.getValue();
 

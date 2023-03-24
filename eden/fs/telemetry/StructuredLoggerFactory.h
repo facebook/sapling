@@ -9,12 +9,16 @@
 
 #include <memory>
 
+#include "eden/fs/utils/RefPtr.h"
+
 namespace facebook::eden {
 
 class EdenConfig;
 class StructuredLogger;
 class EdenStats;
 struct SessionInfo;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 /**
  * Returns a StructuredLogger appropriate for this platform and Eden
@@ -23,6 +27,6 @@ struct SessionInfo;
 std::shared_ptr<StructuredLogger> makeDefaultStructuredLogger(
     const EdenConfig&,
     SessionInfo sessionInfo,
-    std::shared_ptr<EdenStats> edenStats);
+    EdenStatsPtr edenStats);
 
 } // namespace facebook::eden

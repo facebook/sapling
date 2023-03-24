@@ -15,6 +15,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RefPtr.h"
 
 #include <sys/stat.h>
 
@@ -35,14 +36,15 @@ namespace facebook::eden {
 class EdenStats;
 class Clock;
 
+using EdenStatsPtr = RefPtr<EdenStats>;
+
 class NfsDispatcher {
  public:
-  explicit NfsDispatcher(std::shared_ptr<EdenStats> stats, const Clock& clock)
-      : stats_(std::move(stats)), clock_(clock) {}
+  explicit NfsDispatcher(EdenStatsPtr stats, const Clock& clock);
 
-  virtual ~NfsDispatcher() {}
+  virtual ~NfsDispatcher();
 
-  const std::shared_ptr<EdenStats>& getStats() const {
+  const EdenStatsPtr& getStats() const {
     return stats_;
   }
 
@@ -375,7 +377,7 @@ class NfsDispatcher {
       const ObjectFetchContextPtr& context) = 0;
 
  private:
-  std::shared_ptr<EdenStats> stats_{nullptr};
+  EdenStatsPtr stats_;
   const Clock& clock_;
 };
 

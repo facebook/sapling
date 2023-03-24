@@ -44,15 +44,15 @@ struct ObjectStoreTest : ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     treeCache = TreeCache::create(edenConfig);
     localStore = std::make_shared<MemoryLocalStore>();
-    stats = std::make_shared<EdenStats>();
+    stats = makeRefPtr<EdenStats>();
     fakeBackingStore = std::make_shared<FakeBackingStore>();
     backingStore = std::make_shared<LocalStoreCachedBackingStore>(
-        fakeBackingStore, localStore, stats);
+        fakeBackingStore, localStore, stats.copy());
     objectStore = ObjectStore::create(
         localStore,
         backingStore,
         treeCache,
-        stats,
+        stats.copy(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         EdenConfig::createTestEdenConfig(),
@@ -82,7 +82,7 @@ struct ObjectStoreTest : ::testing::Test {
   std::shared_ptr<FakeBackingStore> fakeBackingStore;
   std::shared_ptr<BackingStore> backingStore;
   std::shared_ptr<TreeCache> treeCache;
-  std::shared_ptr<EdenStats> stats;
+  EdenStatsPtr stats;
   std::shared_ptr<ObjectStore> objectStore;
 
   ObjectId readyBlobId;
@@ -173,7 +173,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
       localStore,
       backingStore,
       treeCache,
-      stats,
+      stats.copy(),
       std::make_shared<ProcessNameCache>(),
       std::make_shared<NullStructuredLogger>(),
       EdenConfig::createTestEdenConfig(),

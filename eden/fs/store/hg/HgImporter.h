@@ -115,7 +115,7 @@ class HgImporter : public Importer {
    */
   HgImporter(
       AbsolutePathPiece repoPath,
-      std::shared_ptr<EdenStats>,
+      EdenStatsPtr,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   virtual ~HgImporter();
@@ -256,7 +256,7 @@ class HgImporter : public Importer {
       folly::StringPiece context);
 
   SpawnedProcess helper_;
-  std::shared_ptr<EdenStats> const stats_;
+  EdenStatsPtr const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
 
@@ -292,7 +292,7 @@ class HgImporterManager : public Importer {
  public:
   HgImporterManager(
       AbsolutePathPiece repoPath,
-      std::shared_ptr<EdenStats>,
+      EdenStatsPtr,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
   Hash20 resolveManifestNode(folly::StringPiece revName) override;
@@ -314,7 +314,7 @@ class HgImporterManager : public Importer {
   std::unique_ptr<HgImporter> importer_;
 
   const AbsolutePath repoPath_;
-  std::shared_ptr<EdenStats> const stats_;
+  EdenStatsPtr const stats_;
   const std::optional<AbsolutePath> importHelperScript_;
 };
 

@@ -16,12 +16,13 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/nfs/NfsUtils.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/String.h"
 
 namespace facebook::eden {
 
 NfsDispatcherImpl::NfsDispatcherImpl(EdenMount* mount)
-    : NfsDispatcher(mount->getStats(), mount->getClock()),
+    : NfsDispatcher(mount->getStats().copy(), mount->getClock()),
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 

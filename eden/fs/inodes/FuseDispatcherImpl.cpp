@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/SystemError.h"
 
@@ -54,7 +55,7 @@ FuseDispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
 } // namespace
 
 FuseDispatcherImpl::FuseDispatcherImpl(EdenMount* mount)
-    : FuseDispatcher(mount->getStats()),
+    : FuseDispatcher(mount->getStats().copy()),
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 

@@ -1775,7 +1775,7 @@ void FuseChannel::processSession() {
               ->catchErrors(
                   folly::makeFutureWith([&] {
                     request->startRequest(
-                        dispatcher_->getStats(),
+                        dispatcher_->getStats().copy(),
                         handlerEntry->stat,
                         *(liveRequestWatches_.get()));
                     return (this->*handlerEntry->handler)(

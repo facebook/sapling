@@ -21,6 +21,7 @@ class EdenStats;
 template <class T>
 class ImmediateFuture;
 
+using EdenStatsPtr = RefPtr<EdenStats>;
 using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 
 struct LookupResult {
@@ -35,9 +36,9 @@ struct LookupResult {
 class PrjfsDispatcher {
  public:
   virtual ~PrjfsDispatcher();
-  explicit PrjfsDispatcher(std::shared_ptr<EdenStats> stats);
+  explicit PrjfsDispatcher(EdenStatsPtr stats);
 
-  const std::shared_ptr<EdenStats>& getStats() const;
+  const EdenStatsPtr& getStats() const;
 
   /**
    * Open a directory
@@ -170,6 +171,6 @@ class PrjfsDispatcher {
   virtual ImmediateFuture<folly::Unit> waitForPendingNotifications() = 0;
 
  private:
-  std::shared_ptr<EdenStats> stats_{nullptr};
+  EdenStatsPtr stats_;
 };
 } // namespace facebook::eden

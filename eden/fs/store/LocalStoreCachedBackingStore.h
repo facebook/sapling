@@ -8,12 +8,15 @@
 #pragma once
 
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/utils/RefPtr.h"
 
 namespace facebook::eden {
 
 class BackingStore;
 class LocalStore;
 class EdenStats;
+
+using EdenStatsPtr = RefPtr<EdenStats>;
 
 /**
  * Implementation of a BackingStore that caches the returned data from another
@@ -31,7 +34,7 @@ class LocalStoreCachedBackingStore : public BackingStore {
   LocalStoreCachedBackingStore(
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<LocalStore> localStore,
-      std::shared_ptr<EdenStats> stats);
+      EdenStatsPtr stats);
   ~LocalStoreCachedBackingStore() override;
 
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
@@ -95,7 +98,7 @@ class LocalStoreCachedBackingStore : public BackingStore {
  private:
   std::shared_ptr<BackingStore> backingStore_;
   std::shared_ptr<LocalStore> localStore_;
-  std::shared_ptr<EdenStats> stats_;
+  EdenStatsPtr stats_;
 };
 
 } // namespace facebook::eden

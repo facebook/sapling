@@ -349,7 +349,7 @@ static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
     UserInfo userInfo,
-    std::shared_ptr<EdenStats> edenStats,
+    EdenStatsPtr edenStats,
     SessionInfo sessionInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
@@ -375,7 +375,7 @@ EdenServer::EdenServer(
       structuredLogger_{makeDefaultStructuredLogger(
           *edenConfig,
           std::move(sessionInfo),
-          edenStats)},
+          edenStats.copy())},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
@@ -1523,12 +1523,12 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       getLocalStore(),
       backingStore,
       treeCache_,
-      getStats(),
+      getStats().copy(),
       serverState_->getProcessNameCache(),
       serverState_->getStructuredLogger(),
       serverState_->getReloadableConfig()->getEdenConfig(),
       initialConfig->getCaseSensitive());
-  auto journal = std::make_unique<Journal>(getStats());
+  auto journal = std::make_unique<Journal>(getStats().copy());
 
   // Create the EdenMount object and insert the mount into the mountPoints_ map.
   auto edenMount = EdenMount::create(
@@ -1537,7 +1537,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       blobCache_,
       serverState_,
       std::move(journal),
-      getStats());
+      getStats().copy());
   addToMountPoints(edenMount);
 
   registerStats(edenMount);

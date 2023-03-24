@@ -418,7 +418,7 @@ class TestMount {
 #endif
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
-  std::shared_ptr<EdenStats> stats_;
+  EdenStatsPtr stats_;
   std::shared_ptr<BlobCache> blobCache_;
   std::shared_ptr<TreeCache> treeCache_;
   std::shared_ptr<TestConfigSource> testConfigSource_;

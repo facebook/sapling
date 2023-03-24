@@ -142,7 +142,7 @@ void benchmarkOverlayDirSerialization(AbsolutePathPiece overlayPath) {
       kPathMapDefaultCaseSensitive,
       kDefaultInodeCatalogType,
       std::make_shared<NullStructuredLogger>(),
-      std::make_shared<EdenStats>(),
+      makeRefPtr<EdenStats>(),
       *EdenConfig::createTestEdenConfig());
   printf("Initalizing Overlay...\n");
 

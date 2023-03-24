@@ -96,7 +96,7 @@ class BackingStoreFactory {
     folly::StringPiece name;
     ServerState* serverState;
     const std::shared_ptr<LocalStore>& localStore;
-    const std::shared_ptr<EdenStats>& sharedStats;
+    const EdenStatsPtr& sharedStats;
     const CheckoutConfig& config;
   };
 
@@ -141,7 +141,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(
       std::vector<std::string> originalCommandLine,
       UserInfo userInfo,
-      std::shared_ptr<EdenStats>,
+      EdenStatsPtr,
       SessionInfo sessionInfo,
       std::unique_ptr<PrivHelper> privHelper,
       std::shared_ptr<const EdenConfig> edenConfig,
@@ -381,7 +381,7 @@ class EdenServer : private TakeoverHandler {
     return version_;
   }
 
-  const std::shared_ptr<EdenStats>& getStats() const {
+  const EdenStatsPtr& getStats() const {
     return serverState_->getStats();
   }
 

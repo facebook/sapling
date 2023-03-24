@@ -35,7 +35,7 @@ constexpr std::chrono::seconds kSystemIgnoreMinPollSeconds{5};
 
 ServerState::ServerState(
     UserInfo userInfo,
-    std::shared_ptr<EdenStats> edenStats,
+    EdenStatsPtr edenStats,
     std::shared_ptr<PrivHelper> privHelper,
     std::shared_ptr<UnboundedQueueExecutor> threadPool,
     std::shared_ptr<Clock> clock,

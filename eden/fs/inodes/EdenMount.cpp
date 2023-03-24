@@ -224,7 +224,7 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     std::optional<Overlay::InodeCatalogType> inodeCatalogType) {
   return std::shared_ptr<EdenMount>{
       new EdenMount{
@@ -244,7 +244,7 @@ EdenMount::EdenMount(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     std::optional<Overlay::InodeCatalogType> inodeCatalogType)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
@@ -1239,7 +1239,7 @@ const AbsolutePath& EdenMount::getPath() const {
   return checkoutConfig_->getMountPath();
 }
 
-const std::shared_ptr<EdenStats>& EdenMount::getStats() const {
+const EdenStatsPtr& EdenMount::getStats() const {
   return serverState_->getStats();
 }
 

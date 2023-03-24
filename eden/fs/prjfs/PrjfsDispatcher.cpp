@@ -8,14 +8,15 @@
 #ifdef _WIN32
 
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook::eden {
 PrjfsDispatcher::~PrjfsDispatcher() {}
 
-PrjfsDispatcher::PrjfsDispatcher(std::shared_ptr<EdenStats> stats)
+PrjfsDispatcher::PrjfsDispatcher(EdenStatsPtr stats)
     : stats_{std::move(stats)} {}
 
-const std::shared_ptr<EdenStats>& PrjfsDispatcher::getStats() const {
+const EdenStatsPtr& PrjfsDispatcher::getStats() const {
   return stats_;
 }
 } // namespace facebook::eden

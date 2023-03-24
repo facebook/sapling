@@ -73,7 +73,7 @@ HgImportTraceEvent::HgImportTraceEvent(
 
 HgQueuedBackingStore::HgQueuedBackingStore(
     std::shared_ptr<LocalStore> localStore,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     std::unique_ptr<HgBackingStore> backingStore,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<StructuredLogger> structuredLogger,
@@ -173,8 +173,9 @@ void HgQueuedBackingStore::processBlobImportRequests(
           request->getRequest<HgImportRequest::BlobImport>()->proxyHash);
       futures.emplace_back(
           std::move(fetchSemiFuture)
-              .defer([request = std::move(request), watch, stats = stats_](
-                         auto&& result) mutable {
+              .defer([request = std::move(request),
+                      watch,
+                      stats = stats_.copy()](auto&& result) mutable {
                 XLOG(DBG4)
                     << "Imported blob from HgImporter for "
                     << request->getRequest<HgImportRequest::BlobImport>()->hash;
@@ -226,8 +227,9 @@ void HgQueuedBackingStore::processTreeImportRequests(
       auto treeSemiFuture = backingStore_->getTree(request);
       futures.emplace_back(
           std::move(treeSemiFuture)
-              .defer([request = std::move(request), watch, stats = stats_](
-                         auto&& result) mutable {
+              .defer([request = std::move(request),
+                      watch,
+                      stats = stats_.copy()](auto&& result) mutable {
                 XLOG(DBG4)
                     << "Imported tree from HgImporter for "
                     << request->getRequest<HgImportRequest::TreeImport>()->hash;

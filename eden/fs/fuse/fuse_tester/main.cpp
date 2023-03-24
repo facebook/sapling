@@ -38,7 +38,7 @@ DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
 namespace {
 class TestDispatcher : public FuseDispatcher {
  public:
-  TestDispatcher(std::shared_ptr<EdenStats> stats, const UserInfo& identity)
+  TestDispatcher(EdenStatsPtr stats, const UserInfo& identity)
       : FuseDispatcher(std::move(stats)), identity_(identity) {}
 
   ImmediateFuture<Attr> getattr(
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
       privHelper->fuseMount(mountPath.value(), /* readOnly= */ false)
           .get(100ms);
 
-  std::shared_ptr<EdenStats> stats;
+  EdenStatsPtr stats;
   auto dispatcher =
       std::make_unique<TestDispatcher>(std::move(stats), identity);
 

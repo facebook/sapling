@@ -73,7 +73,7 @@ class HgImporterEofError : public HgImporterError {
 
 HgImporter::HgImporter(
     AbsolutePathPiece repoPath,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     std::optional<AbsolutePath> importHelperScript)
     : stats_{std::move(stats)} {
   std::vector<string> cmd;
@@ -590,7 +590,7 @@ const ImporterOptions& HgImporter::getOptions() const {
 
 HgImporterManager::HgImporterManager(
     AbsolutePathPiece repoPath,
-    std::shared_ptr<EdenStats> stats,
+    EdenStatsPtr stats,
     std::optional<AbsolutePath> importHelperScript)
     : repoPath_{repoPath},
       stats_{std::move(stats)},
@@ -651,7 +651,8 @@ std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
 
 HgImporter* HgImporterManager::getImporter() {
   if (!importer_) {
-    importer_ = make_unique<HgImporter>(repoPath_, stats_, importHelperScript_);
+    importer_ =
+        make_unique<HgImporter>(repoPath_, stats_.copy(), importHelperScript_);
   }
   return importer_.get();
 }

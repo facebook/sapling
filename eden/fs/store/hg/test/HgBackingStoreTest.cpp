@@ -67,7 +67,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
         localStore,
         backingStore,
         treeCache,
-        stats,
+        stats.copy(),
         std::make_shared<ProcessNameCache>(),
         std::make_shared<NullStructuredLogger>(),
         rawEdenConfig,
@@ -76,8 +76,8 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
 
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>()};
-  std::shared_ptr<EdenStats> stats{std::make_shared<EdenStats>()};
-  HgImporter importer{repo.path(), stats};
+  EdenStatsPtr stats{makeRefPtr<EdenStats>()};
+  HgImporter importer{repo.path(), stats.copy()};
   std::shared_ptr<EdenConfig> rawEdenConfig{EdenConfig::createTestEdenConfig()};
   std::shared_ptr<ReloadableConfig> edenConfig{
       std::make_shared<ReloadableConfig>(
@@ -86,13 +86,13 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
   std::shared_ptr<HgQueuedBackingStore> backingStore{
       std::make_shared<HgQueuedBackingStore>(
           localStore,
-          stats,
+          stats.copy(),
           std::make_unique<HgBackingStore>(
               repo.path(),
               &importer,
               edenConfig,
               localStore,
-              stats),
+              stats.copy()),
           edenConfig,
           std::make_shared<NullStructuredLogger>(),
           nullptr)};

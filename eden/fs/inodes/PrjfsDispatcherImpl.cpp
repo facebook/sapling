@@ -63,7 +63,7 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 } // namespace
 
 PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
-    : PrjfsDispatcher(mount->getStats()),
+    : PrjfsDispatcher(mount->getStats().copy()),
       mount_{mount},
       executor_{1, "PrjfsDispatcher"},
       notificationExecutor_{

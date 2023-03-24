@@ -17,7 +17,7 @@ namespace facebook::eden {
 LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
     std::shared_ptr<BackingStore> backingStore,
     std::shared_ptr<LocalStore> localStore,
-    std::shared_ptr<EdenStats> stats)
+    EdenStatsPtr stats)
     : backingStore_{std::move(backingStore)},
       localStore_{std::move(localStore)},
       stats_{std::move(stats)} {}
@@ -114,7 +114,7 @@ LocalStoreCachedBackingStore::getBlob(
                   context = context.copy(),
                   localStore = localStore_,
                   backingStore = backingStore_,
-                  stats = stats_](std::unique_ptr<Blob> blob) mutable {
+                  stats = stats_.copy()](std::unique_ptr<Blob> blob) mutable {
         if (blob) {
           stats->increment(&ObjectStoreStats::getBlobFromLocalStore);
           return folly::makeSemiFuture(GetBlobResult{
