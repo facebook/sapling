@@ -23,6 +23,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -684,7 +685,7 @@ ImmediateFuture<folly::Unit> fileNotification(
         mount.getStats()->addDuration(
             &PrjfsStats::queuedFileNotification, watch.elapsed());
       })
-      .thenError([path](const folly::exception_wrapper& ew) {
+      .thenError([path, &mount](const folly::exception_wrapper& ew) {
         if (ew.get_exception<QuietFault>()) {
           XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
           return folly::unit;
@@ -695,6 +696,9 @@ ImmediateFuture<folly::Unit> fileNotification(
         // test, these should be treated as fatal errors, so we don't let
         // errors silently pass tests. In release builds, let's be less
         // aggressive and just log.
+        mount.getServerState()->getStructuredLogger()->logEvent(
+            PrjFSFileNotificationFailure{
+                folly::exceptionStr(ew).toStdString(), path.asString()});
         XLOG(DFATAL) << "While handling notification on: " << path << ": "
                      << ew;
         return folly::unit;

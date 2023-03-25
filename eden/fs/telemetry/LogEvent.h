@@ -330,6 +330,18 @@ struct EMenuStartupFailure {
   }
 };
 
+struct PrjFSFileNotificationFailure {
+  static constexpr const char* type = "prjfs_file_notification_failure";
+
+  std::string reason;
+  std::string path;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("reason", reason);
+    event.addString("path", path);
+  }
+};
+
 struct WorkingCopyGc {
   static constexpr const char* type = "working_copy_gc";
 
