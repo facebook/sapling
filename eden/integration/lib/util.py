@@ -5,7 +5,14 @@
 # GNU General Public License version 2.
 
 import os
+import sys
 from typing import Callable, List, Optional
+
+if sys.platform == "win32":
+    import ctypes
+    from ctypes.wintypes import DWORD as _DWORD, HANDLE as _HANDLE, LPCWSTR as _LPCWSTR
+
+    from eden.fs.cli.proc_utils_win import Handle
 
 
 def gen_tree(
@@ -38,3 +45,35 @@ def gen_tree(
             gen_tree(subdir, fanouts[1:], leaf_function, internal_function)
         else:
             leaf_function(subdir)
+
+
+if sys.platform == "win32":
+
+    def open_locked(path: str, directory: bool = False) -> Handle:
+        win32 = ctypes.windll.kernel32
+        win32.CreateFileW.argtypes = [
+            _LPCWSTR,
+            _DWORD,
+            _DWORD,
+            ctypes.c_void_p,
+            _DWORD,
+            _DWORD,
+            ctypes.c_void_p,
+        ]
+        win32.CreateFileW.restype = _HANDLE
+
+        GENERIC_READ = 0x80000000
+        OPEN_EXISTING = 3
+        FILE_ATTRIBUTE_NORMAL = 0x80
+        FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
+        INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+        flags = FILE_ATTRIBUTE_NORMAL
+        if directory:
+            flags |= FILE_FLAG_BACKUP_SEMANTICS
+        fhandle = win32.CreateFileW(
+            path, GENERIC_READ, 0, None, OPEN_EXISTING, flags, None
+        )
+        if fhandle == INVALID_HANDLE_VALUE:
+            raise ctypes.WinError(ctypes.get_last_error())
+        return Handle(fhandle)
