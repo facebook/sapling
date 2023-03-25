@@ -34,6 +34,9 @@ define_flags! {
 
         /// Input file containing keys to fetch (hgid,path separated by newlines)
         path: String,
+
+        /// Only check for the entity locally, don't make a remote request
+        local: bool,
     }
 }
 
@@ -59,18 +62,24 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &mut Repo) -> Result<u8> {
     let config = repo.config();
 
     match mode {
-        FetchType::File => fetch_files(&ctx.core.io, config, keys)?,
-        FetchType::Tree => fetch_trees(&ctx.core.io, config, keys)?,
+        FetchType::File => fetch_files(&ctx.core.io, config, keys, ctx.opts.local)?,
+        FetchType::Tree => fetch_trees(&ctx.core.io, config, keys, ctx.opts.local)?,
     }
 
     Ok(0)
 }
 
-fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
+fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>, local: bool) -> Result<()> {
     let file_builder = FileStoreBuilder::new(&config);
     let store = file_builder.build()?;
 
     let mut stdout = io.output();
+
+    let fetch_mode = if local {
+        FetchMode::LocalOnly
+    } else {
+        FetchMode::AllowRemote
+    };
 
     let fetch_result = store.fetch(
         keys.into_iter(),
@@ -78,7 +87,7 @@ fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
             content: true,
             aux_data: true,
         },
-        FetchMode::AllowRemote,
+        fetch_mode,
     );
 
     let (found, missing, _errors) = fetch_result.consume();
@@ -92,14 +101,20 @@ fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
     Ok(())
 }
 
-fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
+fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>, local: bool) -> Result<()> {
     let mut tree_builder = TreeStoreBuilder::new(config);
     tree_builder = tree_builder.suffix("manifests");
     let store = tree_builder.build()?;
 
     let mut stdout = io.output();
 
-    let fetch_result = store.fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+    let fetch_mode = if local {
+        FetchMode::LocalOnly
+    } else {
+        FetchMode::AllowRemote
+    };
+
+    let fetch_result = store.fetch_batch(keys.into_iter(), fetch_mode);
 
     let (found, missing, _errors) = fetch_result.consume();
     for complete in found.into_iter() {

@@ -1292,9 +1292,10 @@ py_class!(pub class filescmstore |py| {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
+    def test_fetch(&self, path: PyPathBuf, local: bool) -> PyResult<PyNone> {
+        let fetch_mode = if local {  FetchMode::LocalOnly } else { FetchMode::AllowRemote };
         let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: true, aux_data: true }, FetchMode::AllowRemote );
+        let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: true, aux_data: true }, fetch_mode);
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
@@ -1554,9 +1555,10 @@ py_class!(pub class treescmstore |py| {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def test_fetch(&self, path: PyPathBuf) -> PyResult<PyNone> {
+    def test_fetch(&self, path: PyPathBuf, local: bool) -> PyResult<PyNone> {
+        let fetch_mode = if local {  FetchMode::LocalOnly } else { FetchMode::AllowRemote };
         let keys: Vec<_> = block_on_stream(block_on(file_to_async_key_stream(path.to_path_buf())).map_pyerr(py)?).collect();
-        let fetch_result = self.store(py).fetch_batch(keys.into_iter(), FetchMode::AllowRemote);
+        let fetch_result = self.store(py).fetch_batch(keys.into_iter(), fetch_mode);
 
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();

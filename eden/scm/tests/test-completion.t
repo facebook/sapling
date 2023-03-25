@@ -514,7 +514,7 @@ Show all commands + options
   debugrunlog: ended, template
   debugrunshell: cmd
   debugruntest: fix, jobs, ext, direct
-  debugscmstore: mode, path, python
+  debugscmstore: mode, path, python, local
   debugscmstorereplay: path
   debugsegmentclone: 
   debugsegmentgraph: level, group
