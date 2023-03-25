@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import threading
-import unittest
 from multiprocessing import Process
 from textwrap import dedent
 from typing import Dict, List, Optional, Set
