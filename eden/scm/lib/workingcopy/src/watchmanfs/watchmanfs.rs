@@ -491,6 +491,12 @@ pub struct WatchmanPendingChanges {
 impl WatchmanPendingChanges {
     #[tracing::instrument(skip_all)]
     pub fn update_treestate(&mut self, ts: &mut TreeState) -> Result<bool> {
+        let bar = ProgressBar::register_new(
+            "recording files",
+            (self.needs_clear.len() + self.needs_mark.len()) as u64,
+            "entries",
+        );
+
         let mut wrote = false;
         for path in self.needs_clear.iter() {
             match clear_needs_check(ts, path) {
@@ -503,10 +509,13 @@ impl WatchmanPendingChanges {
                     self.pending_changes.push(Err(e))
                 }
             }
+
+            bar.increase_position(1);
         }
 
         for path in self.needs_mark.iter() {
             wrote |= mark_needs_check(ts, path)?;
+            bar.increase_position(1);
         }
 
         Ok(wrote)
