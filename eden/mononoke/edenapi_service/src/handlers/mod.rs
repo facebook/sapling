@@ -34,6 +34,7 @@ use gotham_derive::StateData;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::ErrorFormatter;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::load::RequestLoad;
 use gotham_ext::middleware::scuba::HttpScubaKey;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::middleware::MetadataState;
@@ -231,11 +232,33 @@ define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 define_handler!(pull_lazy, pull::pull_lazy);
 
+static HIGH_LOAD_SIGNAL: &str = "I_AM_OVERLOADED";
+static ALIVE: &str = "I_AM_ALIVE";
+static EXITING: &str = "EXITING";
+
+// Used for monitoring VIP health
+fn proxygen_health_handler(state: State) -> (State, &'static str) {
+    if ServerContext::borrow_from(&state).will_exit() {
+        (state, EXITING)
+    } else {
+        if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
+            let threshold = tunables::tunables()
+                .edenapi_high_load_threshold()
+                .unwrap_or_default();
+            if threshold > 0 && request_load.0 > threshold {
+                return (state, HIGH_LOAD_SIGNAL);
+            }
+        }
+        (state, ALIVE)
+    }
+}
+
+// Used for monitoring TW tasks
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
-        (state, "EXITING")
+        (state, EXITING)
     } else {
-        (state, "I_AM_ALIVE")
+        (state, ALIVE)
     }
 }
 
@@ -392,6 +415,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
     gotham_build_router(chain, pipelines, |route| {
         route.get("/health_check").to(health_handler);
         route.get("/repos").to(repos_handler);
+        route
+            .get("/proxygen/health_check")
+            .to(proxygen_health_handler);
         Handlers::setup::<commit::EphemeralPrepareHandler>(route);
         Handlers::setup::<commit::UploadHgChangesetsHandler>(route);
         Handlers::setup::<commit::UploadBonsaiChangesetHandler>(route);
