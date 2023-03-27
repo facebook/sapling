@@ -240,7 +240,7 @@ impl HttpClientBuilder {
         http_config.verbose_stats |= debug;
         http_config.max_concurrent_requests = max_requests;
 
-        Ok(HttpClientBuilder {
+        let builder = HttpClientBuilder {
             repo_name,
             server_url: Some(server_url),
             headers,
@@ -259,7 +259,10 @@ impl HttpClientBuilder {
             min_transfer_speed,
             max_retry_per_request,
             http_config,
-        })
+        };
+
+        tracing::debug!(?builder);
+        Ok(builder)
     }
 
     /// Set the repo name.
