@@ -1,8 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
   $ eagerepo
-FIXME(status):
-  $ setconfig status.use-rust=false
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 
@@ -66,7 +64,8 @@ test what happens if we want to trick hg
 
 it should show a.c, dir/a.o and dir/b.o deleted
 
-  $ hg status
+FIXME(status):
+  $ hg status --config status.use-rust=false
   a.c: invalid file type (no-fsmonitor !)
   M dir/b.o
   ! a.c
@@ -177,7 +176,8 @@ directory moved and symlinked
   adding foo/a
   $ mv foo bar
   $ ln -s bar foo
-  $ hg status
+FIXME(status):
+  $ hg status --config status.use-rust=false
   ! foo/a
   ? bar/a
   ? foo

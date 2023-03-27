@@ -223,7 +223,13 @@ pub fn file_changed_given_metadata(
             vfs.supports_symlinks() && is_symlink(&metadata) != state.is_symlink();
 
         if size_different || exec_different || symlink_different {
-            tracing::trace!(?path, "changed (size or exec or symlink differ)");
+            tracing::trace!(
+                ?path,
+                size_different,
+                exec_different,
+                symlink_different,
+                "changed"
+            );
             return Ok(FileChangeResult::changed(path.to_owned()));
         }
     }

@@ -113,7 +113,10 @@ pub struct FileStateV2 {
 
 impl FileStateV2 {
     pub fn is_executable(&self) -> bool {
-        self.mode & 0o100 == 0o100
+        // Symlinks show as executable, but don't be fooled. "executable" and
+        // "symlink" are mutually exclusive in the manifest, so it is just
+        // confusing if we have dirstate entries that claim to be both.
+        !self.is_symlink() && self.mode & 0o100 == 0o100
     }
 
     pub fn is_symlink(&self) -> bool {

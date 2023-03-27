@@ -492,15 +492,22 @@ fn metadata_eq(m1: &Metadata, m2: &Metadata) -> Result<bool> {
         && m1.file_type() == m2.file_type())
 }
 
-pub fn is_executable(metadata: &Metadata) -> bool {
-    #[cfg(unix)]
-    return metadata.permissions().mode() & 0o111 != 0;
+#[cfg(windows)]
+pub fn is_executable(_metadata: &Metadata) -> bool {
+    panic!("is_executable is not supported on Windows");
+}
 
-    #[cfg(target_os = "windows")]
-    {
-        let _ = metadata;
-        panic!("is_executable is not supported on Windows");
+#[cfg(unix)]
+pub fn is_executable(metadata: &Metadata) -> bool {
+    // Symlinks show as executable, but don't be fooled. "executable"
+    // and "symlink" are mutually exclusive in the manifest, so it is
+    // just confusing if we have filesystem metadata entries that
+    // claim to be both.
+    if is_symlink(metadata) {
+        return false;
     }
+
+    metadata.permissions().mode() & 0o111 != 0
 }
 
 pub fn is_symlink(metadata: &Metadata) -> bool {
