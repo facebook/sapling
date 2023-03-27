@@ -287,8 +287,8 @@ pub struct MononokeTunables {
     // EdenAPI requests that take long than this get logged unsampled
     edenapi_unsampled_duration_threshold_ms: TunableI64,
 
-    // EdenAPI requests that take long than this get logged unsampled for replay
-    edenapi_replay_unsampled_duration_threshold_ms: TunableI64,
+    // EdenAPI requests that take long than this get logged unsampled by request dumper
+    edenapi_req_dumper_unsampled_duration_threshold_ms: TunableI64,
 
     // EdenAPI high load threshold (max number of concurrent requests to pass health check)
     edenapi_high_load_threshold: TunableI64,

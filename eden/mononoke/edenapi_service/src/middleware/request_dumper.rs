@@ -216,7 +216,7 @@ impl Middleware for RequestDumperMiddleware {
                         0
                     };
                     let threshold = tunables::tunables()
-                        .edenapi_replay_unsampled_duration_threshold_ms()
+                        .edenapi_req_dumper_unsampled_duration_threshold_ms()
                         .unwrap_or_default();
                     let slow_request: bool = (threshold > 0) && (dur_ms > threshold);
                     let sample_ratio: u64 = tunables()
