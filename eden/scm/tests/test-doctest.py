@@ -81,6 +81,7 @@ testmod("edenscm.ext.commitcloud.sync")
 testmod("edenscm.ext.remotenames")
 
 if sys.platform in {"linux", "win32"}:
+    testmod("edenscm.testing.ext.python")
     testmod("edenscm.testing.sh")
     testmod("edenscm.testing.t.diff")
     testmod("edenscm.testing.t.runtime")
