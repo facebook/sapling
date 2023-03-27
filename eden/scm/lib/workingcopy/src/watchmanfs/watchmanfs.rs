@@ -400,11 +400,8 @@ pub fn detect_changes(
         .iter()
         .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)));
 
-    let bar = ProgressBar::register_new(
-        "comparing files",
-        combined_needs_check.clone().count() as u64,
-        "",
-    );
+    // This is to set "total" for progress bar.
+    file_change_detector.total_work_hint(combined_needs_check.clone().count() as u64);
 
     for needs_check in combined_needs_check {
         let state = ts.normalized_get(needs_check)?;
@@ -440,8 +437,6 @@ pub fn detect_changes(
             }
             Err(e) => pending_changes.push(Err(e)),
         }
-
-        bar.increase_position(1);
     }
 
     if wm_fresh_instance {

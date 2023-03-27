@@ -14,6 +14,7 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Receiver;
+use crossbeam::channel::SendError;
 use crossbeam::channel::Sender;
 use futures::StreamExt;
 use manifest::FileType;
@@ -21,6 +22,7 @@ use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
 use pathmatcher::ExactMatcher;
+use progress_model::ProgressBar;
 use storemodel::minibytes::Bytes;
 use storemodel::ReadFileContents;
 use treestate::filestate::FileStateV2;
@@ -111,6 +113,7 @@ impl ResolvedFileChangeResult {
 
 pub trait FileChangeDetectorTrait: IntoIterator<Item = Result<ResolvedFileChangeResult>> {
     fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath);
+    fn total_work_hint(&self, _hint: u64) {}
 }
 
 pub struct FileChangeDetector {
@@ -477,12 +480,35 @@ pub struct ParallelDetector {
     vfs: VFS,
     manifest: Arc<RwLock<TreeManifest>>,
     store: ArcReadFileContents,
-    result_send: Sender<Result<ResolvedFileChangeResult>>,
+    result_send: ProgressSender<Result<ResolvedFileChangeResult>>,
     result_recv: Receiver<Result<ResolvedFileChangeResult>>,
     check_contents_recv: Receiver<(RepoPathBuf, Metadata)>,
     // Store as an option so we can explicitly drop to disconnect the check_contents channel.
     check_metadata_send: Option<Sender<(RepoPathBuf, Option<FileStateV2>)>>,
     worker_count: usize,
+
+    progress: Arc<ProgressBar>,
+}
+
+struct ProgressSender<T> {
+    send: Sender<T>,
+    bar: Arc<ProgressBar>,
+}
+
+impl<T> ProgressSender<T> {
+    pub fn send(&self, msg: T) -> Result<(), SendError<T>> {
+        self.bar.increase_position(1);
+        self.send.send(msg)
+    }
+}
+
+impl<T> Clone for ProgressSender<T> {
+    fn clone(&self) -> Self {
+        Self {
+            send: self.send.clone(),
+            bar: self.bar.clone(),
+        }
+    }
 }
 
 // Regarding error handling, all errors should be propagated to the user via the
@@ -511,6 +537,13 @@ impl ParallelDetector {
         // Channel for the detector to relay results back to the caller.
         let (result_send, result_recv) =
             crossbeam::channel::unbounded::<Result<ResolvedFileChangeResult>>();
+
+        let bar = ProgressBar::register_new("comparing", 0, "files");
+
+        let result_send = ProgressSender {
+            send: result_send,
+            bar: bar.clone(),
+        };
 
         // Spin up workers to handle file metadata checks. The user submits
         // these via submit(). These threads will naturally exit once
@@ -545,6 +578,7 @@ impl ParallelDetector {
             result_recv,
             check_contents_recv,
             worker_count,
+            progress: bar,
         }
     }
 
@@ -629,7 +663,7 @@ impl ParallelDetector {
         path: RepoPathBuf,
         last_write: HgModifiedTime,
         state: Option<FileStateV2>,
-        result_send: &Sender<Result<ResolvedFileChangeResult>>,
+        result_send: &ProgressSender<Result<ResolvedFileChangeResult>>,
         lookup_send: &Sender<(RepoPathBuf, Metadata)>,
     ) -> Result<()> {
         let metadata = match vfs.metadata(&path) {
@@ -669,6 +703,10 @@ impl FileChangeDetectorTrait for ParallelDetector {
             .unwrap()
             .send((path.to_owned(), state))
             .unwrap();
+    }
+
+    fn total_work_hint(&self, hint: u64) {
+        self.progress.set_total(hint);
     }
 }
 
