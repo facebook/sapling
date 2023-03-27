@@ -24,9 +24,9 @@ use types::RepoPathBuf;
 use vfs::VFS;
 
 use crate::filechangedetector::FileChangeDetector;
-use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::FileChangeResult;
 use crate::filechangedetector::ResolvedFileChangeResult;
+use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
 use crate::walker::WalkEntry;
@@ -218,17 +218,10 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                     }
                 }
 
-                let ts_state = match ts.normalized_get(path) {
-                    Err(err) => return Some(Err(err)),
-                    Ok(state) => state,
-                };
-
-                self.file_change_detector
-                    .as_mut()
-                    .unwrap()
-                    .submit(ts_state, path);
-
-                None
+                // This path is EXIST_P1 but not on disk - emit deleted event.
+                Some(Ok(PendingChangeResult::File(ChangeType::Deleted(
+                    path.to_owned(),
+                ))))
             })
             .collect()
     }

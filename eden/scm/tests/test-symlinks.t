@@ -171,12 +171,27 @@ directory moved and symlinked
 
   $ mkdir foo
   $ touch foo/a
+
+This avoids same-second race condition that leaves files as NEED_CHECK.
+  $ sleep 1
+
   $ hg ci -Ama
   adding foo/a
+
+Make sure files are _not_ NEED_CHECK and have metadata. This is the tricky
+case for "status" to detect the new symlink.
+  $ hg debugtree list
+  a/b/c/demo: 01207* 23 + EXIST_P1 EXIST_NEXT  (glob)
+  foo/a: 0100644 0 + EXIST_P1 EXIST_NEXT 
+
+#if fsmonitor
+FIXME(status):
+  $ setconfig status.use-rust=false
+#endif
+
   $ mv foo bar
   $ ln -s bar foo
-FIXME(status):
-  $ hg status --config status.use-rust=false
+  $ hg status
   ! foo/a
   ? bar/a
   ? foo
