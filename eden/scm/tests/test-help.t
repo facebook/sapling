@@ -1008,6 +1008,8 @@ Test list of internal help commands
    debughttp     check whether the EdenAPI server is reachable
    debugignore   display the combined ignore pattern and information about
                  ignored files
+   debugimportstack
+                 import a stack of commits
    debugindex    dump the contents of an index file
    debugindexdot
                  dump an index DAG as a graphviz dot file

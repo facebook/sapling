@@ -143,6 +143,7 @@ Show debug commands if there are no other candidates
   debughistorypack
   debughttp
   debugignore
+  debugimportstack
   debugindex
   debugindexdot
   debugindexedlogdatastore
@@ -470,6 +471,7 @@ Show all commands + options
   debughistorypack: long
   debughttp: 
   debugignore: 
+  debugimportstack: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir
   debugindexedlogdatastore: long, node, node-delta

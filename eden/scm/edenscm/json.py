@@ -17,6 +17,7 @@ import sys
 
 from edenscm import encoding, pycompat, util
 
+JSONDecodeError = _sysjson.JSONDecodeError
 
 try:
     long
