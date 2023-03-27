@@ -126,6 +126,10 @@ void* chg_callocx(size_t count, size_t size) {
   return result;
 }
 
+// On Mac, sigemptyset and friends can't return -1. Disable warnings.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+
 /*
  * Execute a shell command in mostly the same manner as system(), with the
  * give environment variables, after chdir to the given cwd. Returns a status
@@ -196,3 +200,5 @@ done:
     return -WTERMSIG(status);
   return 127;
 }
+
+#pragma GCC diagnostic pop

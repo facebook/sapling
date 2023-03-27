@@ -37,6 +37,10 @@ static void forwardsignaltogroup(int sig) {
   debugmsg("forward signal %d to %d", sig, killpid);
 }
 
+// On Mac, sigemptyset and friends can't return -1. Disable warnings.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+
 static void handlestopsignal(int sig) {
   sigset_t unblockset, oldset;
   struct sigaction sa, oldsa;
@@ -168,6 +172,8 @@ void restoresignalhandler(void) {
 error:
   abortmsgerrno("failed to restore signal handlers");
 }
+
+#pragma GCC diagnostic pop
 
 /* This implementation is based on ext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
