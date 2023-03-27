@@ -40,7 +40,6 @@ Setup client
   o  X: public  remote/bookmark1 remote/bookmark1.1
 
 #if jq
-  # fixme
   $ hg debugcrdump -r . | jq '.commits[].branch'
-  ""
+  "bookmark1"
 #endif

@@ -162,20 +162,28 @@ def crdump(ui, repo, *revs, **opts):
                     pass
 
                 if extensions.isenabled(ui, "remotenames"):
-                    downstreams = repo.revs("%n:: & remotebookmark()", pbctx.node())
-                    downstreambookmarks = set()
+                    downstreams = repo.revs(
+                        "sort(%n:: & remotebookmark())", pbctx.node()
+                    )
+                    downstreambookmarks = []
                     for r in downstreams:
-                        downstreambookmarks.update(
+                        downstreambookmarks.extend(
                             repo.names["hoistednames"].names(repo, repo[r].node())
                         )
 
-                    # If there's a single downstream remotebookmark, or master is a
-                    # downstream remotebookmark, report it as the current branch.
+                    # Caveat: In Sapling it's impossible to know for certain which
+                    # remote bookmark a local commit was made against. The best we
+                    # can do is a heuristic.  The heuristicis as follows:
+                    #   1. If 'master' is in downstreambookmarks, then use it.
+                    #   2. Otherwise report the first bookmark as the current branch.
+                    #      For draft commit, this should be (best guess) the remote
+                    #      bookmark on which the draft commit was based if user didn't
+                    #      run `pull` from remote server.
                     if downstreambookmarks:
                         if "master" in downstreambookmarks:
                             rdata["branch"] = "master"
-                        elif len(downstreambookmarks) == 1:
-                            rdata["branch"] = list(downstreambookmarks)[0]
+                        else:
+                            rdata["branch"] = downstreambookmarks[0]
 
             rdata["patch_file"] = dumppatch(ui, repo, ctx, outdir, contextlines)
             if not opts["nobinary"]:
