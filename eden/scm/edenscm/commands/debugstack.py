@@ -7,9 +7,9 @@ from __future__ import absolute_import
 
 import base64, collections, functools
 
-from .. import context, hg, json, mutation, scmutil
+from .. import context, hg, json, mutation, scmutil, smartset
 from ..i18n import _
-from ..node import bin, hex
+from ..node import bin, hex, wdirhex, wdirrev
 from .cmdtable import command
 
 
@@ -19,7 +19,10 @@ def debugexportstack(ui, repo, **opts):
 
     On success, print a list of commit information encoded in JSON, like::
 
-        [{"node": "1f0eaeff1a01e2594efedceefac9987cda047204",
+        [{
+          // Hex commit hash.
+          // "ffffffffffffffffffffffffffffffffffffffff" means the working copy.
+          "node": "1f0eaeff1a01e2594efedceefac9987cda047204",
           "author": "Foo Bar <foo@bar.com>",
           "date": [unix_timestamp, timezone_offset],
           "text": "commit message",
@@ -138,13 +141,29 @@ def debugexportstack(ui, repo, **opts):
     result = []
     public_nodes = repo.dageval(lambda: public())
 
-    for node in repo.dageval(
-        lambda: sort(tonodes(revs) | list(relevant_map))
-    ).iterrev():
+    # Handle virtual commit wdir().
+    # Ideally we insert a "wdir()" when loading the Rust dag, and ensure that
+    # "wdir()" never gets flushed. For now the Rust dag does not have "wdir()"
+    # and we have to special case it.
+    non_virtual_revs = revs
+    has_wdir_rev = wdirrev in non_virtual_revs
+    if has_wdir_rev:
+        non_virtual_revs -= smartset.baseset([wdirrev], repo=repo)
+
+    nodes = list(
+        repo.dageval(
+            lambda: sort(tonodes(non_virtual_revs) | list(relevant_map))
+        ).iterrev()
+    )
+
+    if has_wdir_rev:
+        nodes.append(None)
+
+    for node in nodes:
         ctx = repo[node]
         requested = node in requested_map
         commit_obj = {
-            "node": hex(node),
+            "node": node and hex(node) or wdirhex,
             "author": ctx.user(),
             "date": ctx.date(),
             "immutable": node in public_nodes,

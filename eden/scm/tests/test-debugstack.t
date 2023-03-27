@@ -93,6 +93,30 @@ Test that various code paths in debugexportstack are exercised:
     {"error": "too much data"}
     [1]
 
+    # Export the working copy.
+    $ hg go -q $D
+    $ echo 3 > D
+    $ echo X > X
+    $ rm C
+    $ hg addremove -q C X
+    $ hg mv B B1
+    $ hg debugexportstack -r 'wdir()' | pprint
+    [{'author': 'test',
+      'date': [0.0, 0],
+      'immutable': False,
+      'node': 'f5086e168b2741946a5118463a8be38273822529',
+      'relevantFiles': {'B': {'data': '3', 'flags': 'x'}, 'B1': None, 'C': {'dataBase85': "b'`)v'"}, 'D': {'copyFrom': 'A', 'data': '2'}, 'X': None},
+      'requested': False,
+      'text': 'D'},
+     {'author': 'test',
+      'date': [0, 0],
+      'files': {'B': None, 'B1': {'copyFrom': 'B', 'data': '3', 'flags': 'x'}, 'C': None, 'D': {'data': '3\n'}, 'X': {'data': 'X\n'}},
+      'immutable': False,
+      'node': 'ffffffffffffffffffffffffffffffffffffffff',
+      'parents': ['f5086e168b2741946a5118463a8be38273822529'],
+      'requested': True,
+      'text': ''}]
+
 Import stack:
 
   with assertCovered(
