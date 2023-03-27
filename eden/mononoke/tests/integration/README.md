@@ -39,6 +39,12 @@ e.g.
 ./incremental_integration_setup.sh server
 ```
 
+Note, you can add @mode/opt, then it will build in opt mode
+
+```sh
+./incremental_integration_setup.sh server @mode/opt
+```
+
 Then, run the tests by executing the pre-built incremental setup. Notice this
 is done per rule, in this case `server`:
 
