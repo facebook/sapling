@@ -361,13 +361,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .subcommand(memory_subcommand)
         .subcommand(xdb_subcommand);
 
-    let matches = app.get_matches(fb)?;
+    let (matches, runtime) = app.get_matches(fb)?;
 
     let logger = matches.logger();
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-    let runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
 
     let blob = runtime.block_on(get_blob(fb, &matches, config_store))?;
 

@@ -48,6 +48,7 @@ use slog::Logger;
 use stats::prelude::*;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
+use tokio::runtime::Runtime;
 
 define_stats! {
     prefix = "mononoke.bookmark_validator";
@@ -67,6 +68,7 @@ type Repo = cross_repo_sync::ConcreteRepo;
 pub struct BookmarkValidateProcess {
     matches: Arc<MononokeMatches<'static>>,
     fb: FacebookInit,
+    _runtime: Runtime,
 }
 
 impl BookmarkValidateProcess {
@@ -77,8 +79,13 @@ impl BookmarkValidateProcess {
             .with_dynamic_repos()
             .with_fb303_args()
             .build();
-        let matches = Arc::new(app.get_matches(fb)?);
-        Ok(Self { matches, fb })
+        let (matches, _runtime) = app.get_matches(fb)?;
+        let matches = Arc::new(matches);
+        Ok(Self {
+            matches,
+            fb,
+            _runtime,
+        })
     }
 }
 

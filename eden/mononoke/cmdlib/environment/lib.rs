@@ -23,7 +23,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use strum_macros::EnumString;
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct LocalCacheConfig {
@@ -64,7 +64,7 @@ pub struct MononokeEnvironment {
     pub config_store: ConfigStore,
     pub caching: Caching,
     pub observability_context: ObservabilityContext,
-    pub runtime: Runtime,
+    pub runtime: Handle,
     pub mysql_options: MysqlOptions,
     pub blobstore_options: BlobstoreOptions,
     pub readonly_storage: ReadOnlyStorage,

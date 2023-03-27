@@ -289,7 +289,7 @@ fn override_blobconfig(blob_config: &mut BlobConfig, inner_blobstore_id: u64) ->
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeAppBuilder::new(
+    let (matches, runtime) = args::MononokeAppBuilder::new(
         "Tool to copy a list of blobs from one blobstore to another",
     )
     .with_advanced_args_hidden()
@@ -367,5 +367,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     )
     .get_matches(fb)?;
 
-    matches.runtime().block_on(run(fb, &matches))
+    runtime.block_on(run(fb, &matches))
 }

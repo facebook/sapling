@@ -15,7 +15,7 @@ use itertools::Itertools;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = args::MononokeAppBuilder::new("Lint Mononoke config files")
+    let (matches, _runtime) = args::MononokeAppBuilder::new("Lint Mononoke config files")
         .with_advanced_args_hidden()
         .build()
         .about("Check Mononoke server configs for syntax and sanity.")

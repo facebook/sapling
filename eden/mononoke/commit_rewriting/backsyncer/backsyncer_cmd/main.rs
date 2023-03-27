@@ -64,6 +64,7 @@ use slog::info;
 use stats::prelude::*;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
+use tokio::runtime::Runtime;
 use wireproto_handler::TargetRepoDbs;
 
 const ARG_MODE_BACKSYNC_FOREVER: &str = "backsync-forever";
@@ -93,6 +94,7 @@ const APP_NAME: &str = "backsyncer cmd-line tool";
 pub struct BacksyncProcess {
     matches: Arc<MononokeMatches<'static>>,
     fb: FacebookInit,
+    _runtime: Runtime,
 }
 
 impl BacksyncProcess {
@@ -127,8 +129,13 @@ impl BacksyncProcess {
             .subcommand(backsync_all_subcommand)
             .subcommand(backsync_forever_subcommand)
             .subcommand(sync_loop);
-        let matches = Arc::new(app.get_matches(fb)?);
-        Ok(Self { matches, fb })
+        let (matches, _runtime) = app.get_matches(fb)?;
+        let matches = Arc::new(matches);
+        Ok(Self {
+            matches,
+            fb,
+            _runtime,
+        })
     }
 }
 

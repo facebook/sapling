@@ -162,7 +162,7 @@ impl<'a> MononokeMatches<'a> {
         matches: ArgMatches<'a>,
         app_data: MononokeAppData,
         arg_types: HashSet<ArgType>,
-    ) -> Result<Self, Error> {
+    ) -> Result<(Self, Runtime), Error> {
         let log_level = get_log_level(&matches);
 
         let log_filter_fn: Option<fn(&Record) -> bool> = app_data.slog_filter_fn;
@@ -216,31 +216,34 @@ impl<'a> MononokeMatches<'a> {
 
         maybe_enable_mcrouter(fb, &matches, &arg_types);
 
-        Ok(MononokeMatches {
-            matches: MaybeOwned::from(matches),
-            environment: Arc::new(MononokeEnvironment {
-                fb,
-                logger,
-                scuba_sample_builder,
-                warm_bookmarks_cache_scuba_sample_builder,
-                config_store,
-                caching,
-                observability_context,
-                runtime,
-                mysql_options,
-                blobstore_options,
-                readonly_storage,
-                acl_provider,
-                rendezvous_options,
-                megarepo_configs_options,
-                remote_derivation_options,
-                disabled_hooks: HashMap::new(),
-                skiplist_enabled: true,
-                warm_bookmarks_cache_derived_data: None,
-                filter_repos: None,
-            }),
-            app_data,
-        })
+        Ok((
+            MononokeMatches {
+                matches: MaybeOwned::from(matches),
+                environment: Arc::new(MononokeEnvironment {
+                    fb,
+                    logger,
+                    scuba_sample_builder,
+                    warm_bookmarks_cache_scuba_sample_builder,
+                    config_store,
+                    caching,
+                    observability_context,
+                    runtime: runtime.handle().clone(),
+                    mysql_options,
+                    blobstore_options,
+                    readonly_storage,
+                    acl_provider,
+                    rendezvous_options,
+                    megarepo_configs_options,
+                    remote_derivation_options,
+                    disabled_hooks: HashMap::new(),
+                    skiplist_enabled: true,
+                    warm_bookmarks_cache_derived_data: None,
+                    filter_repos: None,
+                }),
+                app_data,
+            },
+            runtime,
+        ))
     }
 
     pub fn app_data(&self) -> &MononokeAppData {
@@ -260,7 +263,7 @@ impl<'a> MononokeMatches<'a> {
     }
 
     pub fn runtime(&self) -> &Handle {
-        self.environment.runtime.handle()
+        &self.environment.runtime
     }
 
     pub fn logger(&self) -> &Logger {

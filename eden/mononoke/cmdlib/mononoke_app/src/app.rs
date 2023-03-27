@@ -62,6 +62,7 @@ use stats::prelude::*;
 #[cfg(not(test))]
 use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
+use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
 
 use crate::args::AsRepoArg;
@@ -86,6 +87,7 @@ pub struct MononokeApp {
     pub fb: FacebookInit,
     config_mode: ConfigMode,
     args: ArgMatches,
+    runtime: Option<Runtime>,
     env: Arc<MononokeEnvironment>,
     extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     configs: Arc<MononokeConfigs>,
@@ -103,6 +105,7 @@ impl MononokeApp {
         fb: FacebookInit,
         config_mode: ConfigMode,
         args: ArgMatches,
+        runtime: Runtime,
         env: MononokeEnvironment,
         extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     ) -> Result<Self> {
@@ -112,7 +115,7 @@ impl MononokeApp {
         let configs = Arc::new(MononokeConfigs::new(
             config_path,
             config_store,
-            env.runtime.handle().clone(),
+            runtime.handle().clone(),
             env.logger.clone(),
         )?);
 
@@ -122,6 +125,7 @@ impl MononokeApp {
             fb,
             config_mode,
             args,
+            runtime: Some(runtime),
             env,
             extension_args,
             configs,
@@ -172,21 +176,23 @@ impl MononokeApp {
     ///
     /// If you are looking for a replacement for `cmdlib::helpers::block_execute`, prefer
     /// `run_with_monitoring_and_logging`.
-    pub fn run_basic<F, Fut>(self, main: F) -> Result<()>
+    pub fn run_basic<F, Fut>(mut self, main: F) -> Result<()>
     where
         F: Fn(MononokeApp) -> Fut,
         Fut: Future<Output = Result<()>> + Send + 'static,
     {
-        let env = self.env.clone();
-        env.runtime
-            .block_on(async move { tokio::spawn(main(self)).await? })
+        let runtime = self
+            .runtime
+            .take()
+            .ok_or_else(|| anyhow!("MononokeApp already started"))?;
+        runtime.block_on(async move { tokio::spawn(main(self)).await? })
     }
 
     /// Execute a future on this app's runtime.
     ///
     /// This future will run with monitoring enabled, and errors will be logged to glog.
     pub fn run_with_monitoring_and_logging<F, Fut, Service>(
-        self,
+        mut self,
         main: F,
         app_name: &str,
         service: Service,
@@ -199,9 +205,12 @@ impl MononokeApp {
         self.start_monitoring(app_name, service)?;
         self.start_stats_aggregation()?;
 
-        let env = self.env.clone();
         let logger = self.logger().clone();
-        let result = env.runtime.block_on(main(self));
+        let runtime = self
+            .runtime
+            .take()
+            .ok_or_else(|| anyhow!("MononokeApp already started"))?;
+        let result = runtime.block_on(main(self));
 
         if let Err(e) = result {
             // Log error in glog format
@@ -231,7 +240,7 @@ impl MononokeApp {
     /// exits. If `shutdown_timeout` is exceeded, the server future is canceled
     /// and an error is returned.
     pub fn run_until_terminated<ServerFn, ServerFut, QuiesceFn, ShutdownFut>(
-        self,
+        mut self,
         server: ServerFn,
         quiesce: QuiesceFn,
         shutdown_grace_period: Duration,
@@ -245,15 +254,12 @@ impl MononokeApp {
         ShutdownFut: Future<Output = ()>,
     {
         let logger = self.logger().clone();
-        // We must ensure the runtime (in the environment) outlives the
-        // execution of the server future on the runtime.  If we drop the
-        // runtime from within a future that is executing on the runtime, then
-        // the runtime will panic. Keep a copy of the environment in this
-        // function to ensure the runtime is kept alive.
-        // TODO(mbthomas): decouple runtime from environment so this isn't necessary
-        let env = self.env.clone();
+        let runtime = self
+            .runtime
+            .take()
+            .ok_or_else(|| anyhow!("MononokeApp already started"))?;
         let server = async move { server(self).await };
-        env.runtime.block_on(run_until_terminated(
+        runtime.block_on(run_until_terminated(
             server,
             &logger,
             quiesce,
@@ -318,7 +324,7 @@ impl MononokeApp {
 
     /// Returns a handle to this app's runtime.
     pub fn runtime(&self) -> &Handle {
-        self.env.runtime.handle()
+        &self.env.runtime
     }
 
     /// The config store for this app.

@@ -24,6 +24,7 @@ use repo_factory::ReadOnlyStorage;
 use slog::Record;
 use sql_ext::facebook::SharedConnectionPool;
 use strum::VariantNames;
+use tokio::runtime::Runtime;
 
 use super::cache::add_cachelib_args;
 use super::cache::CachelibSettings;
@@ -280,7 +281,7 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
         }
     }
 
-    pub fn get_matches(self, fb: FacebookInit) -> Result<MononokeMatches<'a>, Error> {
+    pub fn get_matches(self, fb: FacebookInit) -> Result<(MononokeMatches<'a>, Runtime), Error> {
         MononokeMatches::new(fb, self.clap.get_matches(), self.app_data, self.arg_types)
     }
 
@@ -288,7 +289,7 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
         self,
         fb: FacebookInit,
         itr: I,
-    ) -> Result<MononokeMatches<'a>, Error>
+    ) -> Result<(MononokeMatches<'a>, Runtime), Error>
     where
         I: IntoIterator<Item = T>,
         T: Into<OsString> + Clone,

@@ -1311,7 +1311,7 @@ async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = setup_app();
-    let matches = app.get_matches(fb)?;
+    let (matches, _runtime) = app.get_matches(fb)?;
     let logger = matches.logger();
     let config_store = matches.config_store();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

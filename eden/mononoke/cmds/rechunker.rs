@@ -30,7 +30,7 @@ const DEFAULT_NUM_JOBS: usize = 10;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeAppBuilder::new(NAME)
+    let (matches, _runtime) = args::MononokeAppBuilder::new(NAME)
         .with_advanced_args_hidden()
         .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()

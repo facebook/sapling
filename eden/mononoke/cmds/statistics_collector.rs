@@ -554,7 +554,7 @@ async fn run_statistics<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = setup_app().get_matches(fb)?;
+    let (matches, _runtime) = setup_app().get_matches(fb)?;
 
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

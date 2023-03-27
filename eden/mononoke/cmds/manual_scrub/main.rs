@@ -155,9 +155,8 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
                 .help("Run quietly with minimal progress logging"),
         );
 
-    let matches = app.get_matches(fb)?;
+    let (matches, runtime) = app.get_matches(fb)?;
     let logger = matches.logger();
-    let runtime = matches.runtime();
     let config_store = matches.config_store();
 
     let scheduled_max = args::get_usize_opt(&matches, ARG_SCHEDULED_MAX).unwrap_or(100);

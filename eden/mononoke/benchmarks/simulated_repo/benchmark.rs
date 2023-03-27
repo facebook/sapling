@@ -29,7 +29,6 @@ use repo_derived_data::RepoDerivedDataArc;
 use simulated_repo::new_benchmark_repo;
 use simulated_repo::DelaySettings;
 use simulated_repo::GenManifest;
-use tokio::runtime::Runtime;
 
 const ARG_SEED: &str = "seed";
 const ARG_TYPE: &str = "type";
@@ -115,13 +114,8 @@ fn parse_norm_distribution(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = args::MononokeAppBuilder::new("mononoke benchmark")
-        .without_arg_types(vec![
-            ArgType::Config,
-            ArgType::Repo,
-            ArgType::Tunables,
-            ArgType::Runtime, // we construct our own runtime, so these args would do nothing
-        ])
+    let (matches, runtime) = args::MononokeAppBuilder::new("mononoke benchmark")
+        .without_arg_types(vec![ArgType::Config, ArgType::Repo, ArgType::Tunables])
         .with_advanced_args_hidden()
         .build()
         .arg(
@@ -217,10 +211,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         .parse()
         .expect("stack size must be a positive integer");
 
-    let runtime = Runtime::new()?;
     let derived_data_type = matches
         .value_of(ARG_TYPE)
         .ok_or_else(|| anyhow!("{} not set", ARG_TYPE))?;
+
     runtime.block_on(run(
         ctx,
         repo,

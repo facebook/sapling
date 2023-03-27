@@ -76,7 +76,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .default_value("900")
                 .help("Period of warmup runs in secods"),
         );
-    let matches = app.get_matches(fb)?;
+    let (matches, _runtime) = app.get_matches(fb)?;
 
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

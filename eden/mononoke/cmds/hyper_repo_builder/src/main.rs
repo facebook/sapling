@@ -221,7 +221,7 @@ fn parse_bookmarks(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeAppBuilder::new("Hyper repo builder")
+    let (matches , runtime)= args::MononokeAppBuilder::new("Hyper repo builder")
         .with_advanced_args_hidden()
         .build()
         .about(
@@ -283,6 +283,5 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         )
         .get_matches(fb)?;
 
-    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(run(fb, &matches))
 }

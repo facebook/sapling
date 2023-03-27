@@ -87,7 +87,7 @@ pub fn upload<P: AsRef<Path>>(
 }
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = setup_app().get_matches(fb)?;
+    let (matches, _runtime) = setup_app().get_matches(fb)?;
 
     let logger = matches.logger();
     let config_store = matches.config_store();

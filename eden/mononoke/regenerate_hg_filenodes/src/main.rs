@@ -101,7 +101,7 @@ async fn regenerate_all_manifests(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeAppBuilder::new(
+    let (matches, runtime) = args::MononokeAppBuilder::new(
         "Tool to regenerate filenodes").with_advanced_args_hidden().build()
         .args_from_usage(
             r#"
@@ -117,10 +117,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     }
 
     let logger = matches.logger();
-    let rt = matches.runtime();
 
     let repo_fut = args::not_shardmanager_compatible::open_repo(fb, logger, &matches);
-    let repo = rt.block_on(repo_fut).unwrap();
+    let repo = runtime.block_on(repo_fut).unwrap();
 
     let ctx = CoreContext::test_mock(fb);
 
@@ -129,7 +128,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let chunk_size = args::get_usize(&matches, "chunk-size", 100);
     let file = BufReader::new(&inputfile);
-    rt.block_on(
+    runtime.block_on(
         regenerate_all_manifests(
             ctx,
             repo,

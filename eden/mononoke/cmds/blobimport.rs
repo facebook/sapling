@@ -538,7 +538,7 @@ async fn maybe_update_highest_imported_generation_number(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
+    let (matches, _runtime) = setup_app().get_matches(fb)?;
 
     let logger = matches.logger();
     let scuba = matches.scuba_sample_builder();

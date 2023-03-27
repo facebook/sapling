@@ -98,6 +98,7 @@ use slog::error;
 use slog::info;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use tempfile::NamedTempFile;
+use tokio::runtime::Runtime;
 
 use crate::bundle_generator::FilterExistingChangesets;
 
@@ -155,6 +156,7 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 pub struct HgSyncProcess {
     matches: Arc<MononokeMatches<'static>>,
     fb: FacebookInit,
+    _runtime: Runtime,
 }
 
 #[facet::container]
@@ -408,8 +410,13 @@ impl HgSyncProcess {
             );
         let app = app.subcommand(sync_once).subcommand(sync_loop);
 
-        let matches = Arc::new(app.get_matches(fb)?);
-        Ok(Self { matches, fb })
+        let (matches, _runtime) = app.get_matches(fb)?;
+        let matches = Arc::new(matches);
+        Ok(Self {
+            matches,
+            fb,
+            _runtime,
+        })
     }
 }
 

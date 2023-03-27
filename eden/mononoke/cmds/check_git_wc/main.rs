@@ -114,7 +114,7 @@ async fn run_check_git_wc(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
+    let (matches, _runtime) = setup_app().get_matches(fb)?;
 
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

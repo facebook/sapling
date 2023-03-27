@@ -58,7 +58,6 @@ use cached_config::ConfigStore;
 use changesets::ChangesetsArc;
 use clap_old::ArgMatches;
 use cmdlib::args;
-use cmdlib::args::MononokeClapApp;
 use cmdlib::args::MononokeMatches;
 use cmdlib::helpers;
 use cmdlib::monitoring;
@@ -540,16 +539,6 @@ async fn run<'a>(
     }
 }
 
-fn context_and_matches<'a>(
-    fb: FacebookInit,
-    app: MononokeClapApp<'a, '_>,
-) -> Result<(CoreContext, MononokeMatches<'a>), Error> {
-    let matches = app.get_matches(fb)?;
-    let logger = matches.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    Ok((ctx, matches))
-}
-
 struct BackpressureParams {
     backsync_repos: Vec<CrossRepo>,
     wait_for_target_repo_hg_sync: bool,
@@ -593,7 +582,10 @@ impl BackpressureParams {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let (ctx, matches) = context_and_matches(fb, create_app())?;
+    let app = create_app();
+    let (matches, _runtime) = app.get_matches(fb)?;
+    let logger = matches.logger();
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let res = helpers::block_execute(
         run(fb, ctx.clone(), &matches),

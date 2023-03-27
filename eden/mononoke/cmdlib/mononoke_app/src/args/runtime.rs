@@ -13,6 +13,6 @@ use clap::Args;
 #[derive(Args, Debug)]
 pub struct RuntimeArgs {
     /// Number of threads to use in the Tokio runtime
-    #[clap(long)]
+    #[clap(long, help_heading = "RUNTIME OPTIONS")]
     pub runtime_threads: Option<usize>,
 }

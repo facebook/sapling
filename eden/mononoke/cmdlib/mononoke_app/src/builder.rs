@@ -86,9 +86,6 @@ pub struct EnvironmentArgs {
     #[clap(flatten, next_help_heading = "CONFIG OPTIONS")]
     config_args: ConfigArgs,
 
-    #[clap(flatten, next_help_heading = "RUNTIME OPTIONS")]
-    runtime_args: RuntimeArgs,
-
     #[clap(flatten, next_help_heading = "LOGGING OPTIONS")]
     logging_args: LoggingArgs,
 
@@ -214,6 +211,7 @@ impl MononokeAppBuilder {
         let about = app.get_about();
         let long_about = app.get_long_about();
 
+        app = RuntimeArgs::augment_args_for_update(app);
         app = EnvironmentArgs::augment_args_for_update(app);
         for (_type_id, ext) in self.extensions.iter() {
             app = ext.augment_args(app);
@@ -242,9 +240,13 @@ impl MononokeAppBuilder {
             .map(|(type_id, ext)| Ok((*type_id, ext.parse_args(&args)?)))
             .collect::<Result<Vec<_>>>()?;
 
+        let runtime_args = RuntimeArgs::from_arg_matches(&args)?;
+        let runtime = create_runtime(&runtime_args)?;
+
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
         let config_mode = env_args.config_args.mode();
         let mut env = self.build_environment(
+            &runtime,
             env_args,
             extension_args.iter().map(|(_type_id, ext)| ext.as_ref()),
         )?;
@@ -257,6 +259,7 @@ impl MononokeAppBuilder {
             self.fb,
             config_mode,
             args,
+            runtime,
             env,
             extension_args.into_iter().collect(),
         )
@@ -264,13 +267,13 @@ impl MononokeAppBuilder {
 
     fn build_environment<'a>(
         &self,
+        runtime: &Runtime,
         env_args: EnvironmentArgs,
         extension_args: impl IntoIterator<Item = &'a dyn BoxedAppExtensionArgs> + Clone,
     ) -> Result<MononokeEnvironment> {
         let EnvironmentArgs {
             blobstore_args,
             config_args,
-            runtime_args,
             logging_args,
             scuba_logging_args,
             cachelib_args,
@@ -327,8 +330,6 @@ impl MononokeAppBuilder {
 
         let caching = init_cachelib(self.fb, &self.cachelib_settings, &cachelib_args);
 
-        let runtime = create_runtime(&runtime_args)?;
-
         let mysql_options =
             create_mysql_options(&mysql_args, create_mysql_pool_config(&mysql_args));
 
@@ -369,7 +370,7 @@ impl MononokeAppBuilder {
             config_store,
             caching,
             observability_context,
-            runtime,
+            runtime: runtime.handle().clone(),
             mysql_options,
             blobstore_options,
             readonly_storage,

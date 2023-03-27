@@ -72,7 +72,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
                 .multiple(true)
                 .help("limit to benchmarks whose name contains this string. Repetition tightens the filter"),
         );
-    let matches = app.get_matches(fb)?;
+    let (matches, runtime) = app.get_matches(fb)?;
 
     let mut criterion = Criterion::default()
         .measurement_time(Duration::from_secs(60))
@@ -94,7 +94,6 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
 
     let caching = matches.caching();
     let logger = matches.logger();
-    let runtime = matches.runtime();
 
     let config_store = matches.config_store();
 
@@ -154,6 +153,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
     // as the warmup will fill it, and the key is randomised
     let mut run_benchmark = {
         let criterion = &mut criterion;
+        let runtime = runtime.handle();
         move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &Handle)| -> Result<(), Error> {
             let blobstore = runtime.block_on(blobstore())?;
             bench(criterion, ctx.clone(), blobstore, runtime);

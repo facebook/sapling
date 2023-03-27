@@ -76,7 +76,7 @@ async fn get_changesets<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches(fb)?;
+    let (matches, _runtime) = setup_app().get_matches(fb)?;
     let logger = matches.logger();
     let config_store = matches.config_store();
     let (repo_name, config) =

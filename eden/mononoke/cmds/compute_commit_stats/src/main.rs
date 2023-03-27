@@ -153,29 +153,29 @@ async fn find_commit_stat(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeAppBuilder::new("Binary that can compute stats about commits")
-        .with_advanced_args_hidden()
-        .build()
-        .about("A tool to collect different stat about commits")
-        .arg(
-            Arg::with_name(ARG_IN_FILE)
-                .long(ARG_IN_FILE)
-                .takes_value(true)
-                .help("Filename with commit hashes or bookmarks"),
-        )
-        .arg(
-            Arg::with_name(ARG_ALL_COMMITS)
-                .long(ARG_ALL_COMMITS)
-                .takes_value(false)
-                .help("Examine all public commits in this repo"),
-        )
-        .group(
-            ArgGroup::with_name("source")
-                .args(&[ARG_IN_FILE, ARG_ALL_COMMITS])
-                .required(true),
-        )
-        .get_matches(fb)?;
+    let (matches, runtime) =
+        args::MononokeAppBuilder::new("Binary that can compute stats about commits")
+            .with_advanced_args_hidden()
+            .build()
+            .about("A tool to collect different stat about commits")
+            .arg(
+                Arg::with_name(ARG_IN_FILE)
+                    .long(ARG_IN_FILE)
+                    .takes_value(true)
+                    .help("Filename with commit hashes or bookmarks"),
+            )
+            .arg(
+                Arg::with_name(ARG_ALL_COMMITS)
+                    .long(ARG_ALL_COMMITS)
+                    .takes_value(false)
+                    .help("Examine all public commits in this repo"),
+            )
+            .group(
+                ArgGroup::with_name("source")
+                    .args(&[ARG_IN_FILE, ARG_ALL_COMMITS])
+                    .required(true),
+            )
+            .get_matches(fb)?;
 
-    let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(run(fb, &matches))
 }

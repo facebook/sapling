@@ -88,7 +88,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> ExitCode {
-    let matches = setup_app()
+    let (matches, runtime) = setup_app()
         .get_matches(fb)
         .expect("Failed to start Mononoke");
 
@@ -97,7 +97,6 @@ fn main(fb: FacebookInit) -> ExitCode {
 
     let debug = matches.is_present("debug");
 
-    let runtime = matches.runtime();
     let res = runtime.block_on(async {
         match matches.subcommand() {
             (blobstore_fetch::BLOBSTORE_FETCH, Some(sub_m)) => {

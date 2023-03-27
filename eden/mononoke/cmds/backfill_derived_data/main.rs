@@ -91,6 +91,7 @@ use slog::info;
 use slog::Logger;
 use stats::prelude::*;
 use time_ext::DurationExt;
+use tokio::runtime::Runtime;
 use topo_sort::sort_topological;
 use tunables::tunables;
 use wait_for_replication::WaitForReplication;
@@ -188,6 +189,7 @@ const TAILER_WAIT_CONFIG: &str = "derived_data_tailer";
 pub struct DerivedDataProcess {
     matches: Arc<MononokeMatches<'static>>,
     fb: FacebookInit,
+    _runtime: Runtime,
 }
 
 impl DerivedDataProcess {
@@ -493,8 +495,13 @@ impl DerivedDataProcess {
                         .help("Print result in json format"),
                 ),
             );
-        let matches = Arc::new(app.get_matches(fb)?);
-        Ok(Self { matches, fb })
+        let (matches, _runtime) = app.get_matches(fb)?;
+        let matches = Arc::new(matches);
+        Ok(Self {
+            matches,
+            fb,
+            _runtime,
+        })
     }
 }
 
