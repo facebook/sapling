@@ -543,6 +543,9 @@ impl DerivedDataManager {
                             return Ok(data);
                         }
                         // not yet derived, so request derivation
+                        self.derived_data_scuba::<Derivable>(&None)
+                            .add("changeset", csid.to_string())
+                            .log_with_msg("Requesting remote derivation", None);
                         client.derive_remotely(&request).await
                     }
                     DerivationState::InProgress => client.poll(&request).await,
@@ -557,6 +560,9 @@ impl DerivedDataManager {
                         }
                         // Derivation succeeded, return
                         (RequestStatus::SUCCESS, Some(data)) => {
+                            self.derived_data_scuba::<Derivable>(&None)
+                                .add("changeset", csid.to_string())
+                                .log_with_msg("Remote derivation finished", None);
                             return Ok(Derivable::from_thrift(data)?);
                         }
                         // Either data was already derived or wasn't requested
