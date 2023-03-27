@@ -27,6 +27,7 @@ use pathmatcher::NeverMatcher;
 use progress_model::ProgressBar;
 use repolock::RepoLocker;
 use serde::Deserialize;
+use serde::Serialize;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
 use types::path::ParseError;
@@ -73,6 +74,24 @@ query_result_type! {
     }
 }
 
+#[derive(Deserialize, Debug)]
+struct DebugRootStatusResponse {
+    pub root_status: Option<RootStatus>,
+}
+
+#[derive(Deserialize, Debug)]
+struct RootStatus {
+    pub recrawl_info: Option<RecrawlInfo>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RecrawlInfo {
+    pub stats: Option<u64>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct DebugRootStatusRequest(pub &'static str, pub PathBuf);
+
 impl WatchmanFileSystem {
     pub fn new(
         vfs: VFS,
@@ -91,12 +110,14 @@ impl WatchmanFileSystem {
     }
 
     #[tracing::instrument(skip_all, err)]
-    async fn query_result(&self, config: WatchmanConfig) -> Result<QueryResult<StatusQuery>> {
+    async fn query_files(&self, config: WatchmanConfig) -> Result<QueryResult<StatusQuery>> {
         let start = std::time::Instant::now();
 
-        let _bar = ProgressBar::register_new("querying watchman", 0, "");
-
+        // This starts watchman if it isn't already started.
         let client = Connector::new().connect().await?;
+
+        // This blocks until the recrawl (if required) is done. Progress is
+        // shown by the crawl_progress task.
         let resolved = client
             .resolve_root(CanonicalPath::canonicalize(self.vfs.root())?)
             .await?;
@@ -106,6 +127,9 @@ impl WatchmanFileSystem {
             path: PathBuf::from(ident.dot_dir()),
             depth: None,
         })]);
+
+        // The crawl is done - display a generic "we're querying" spinner.
+        let _bar = ProgressBar::register_new("querying watchman", 0, "");
 
         let result = client
             .query::<StatusQuery>(
@@ -122,6 +146,49 @@ impl WatchmanFileSystem {
         tracing::trace!(target: "measuredtimes", watchmanquery_time=start.elapsed().as_millis());
 
         Ok(result)
+    }
+}
+
+async fn crawl_progress(root: PathBuf, approx_file_count: u64) -> Result<()> {
+    let client = {
+        let _bar = ProgressBar::register_new("connecting watchman", 0, "");
+
+        // If watchman just started (and we issued "watch-project" from
+        // query_files), this connect gets stuck indefinitely. Work around by
+        // timing out and retrying until we get through.
+        loop {
+            match tokio::time::timeout(Duration::from_secs(1), Connector::new().connect()).await {
+                Ok(client) => break client?,
+                Err(_) => {}
+            };
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    };
+
+    let mut bar = None;
+
+    let req = DebugRootStatusRequest(
+        "debug-root-status",
+        CanonicalPath::canonicalize(root)?.into_path_buf(),
+    );
+
+    loop {
+        let response: DebugRootStatusResponse = client.generic_request(req.clone()).await?;
+
+        if let Some(RootStatus {
+            recrawl_info: Some(RecrawlInfo { stats: Some(stats) }),
+        }) = response.root_status
+        {
+            bar.get_or_insert_with(|| {
+                ProgressBar::register_new("crawling", approx_file_count, "files (approx)")
+            })
+            .set_position(stats);
+        } else if bar.is_some() {
+            return Ok(());
+        }
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
 
@@ -158,11 +225,18 @@ impl PendingChanges for WatchmanFileSystem {
             ts.update_metadata(&[("track-ignored".to_string(), Some(md_value))])?;
         }
 
-        let result = async_runtime::block_on(self.query_result(WatchmanConfig {
+        let progress_handle = async_runtime::spawn(crawl_progress(
+            self.vfs.root().to_path_buf(),
+            ts.len() as u64,
+        ));
+
+        let result = async_runtime::block_on(self.query_files(WatchmanConfig {
             clock: prev_clock.clone(),
             sync_timeout:
                 config.get_or::<Duration>("fsmonitor", "timeout", || Duration::from_secs(10))?,
         }))?;
+
+        progress_handle.abort();
 
         tracing::debug!(
             target: "watchman_info",
