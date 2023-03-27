@@ -44,12 +44,12 @@ def debugexportstack(ui, repo, **opts):
               "data": "utf-8 file content",
 
               // Present if the file content is not utf-8.
-              "data_base85": "base85 encoded data",
+              "dataBase85": "base85 encoded data",
 
               // Present if the file is copied from "path/from".
               // The content of "path/from" will be included in "relevant_map"
               // of the parent commits.
-              "copy_from": "path/from",
+              "copyFrom": "path/from",
 
               // "l": symlink; "x": executable.
               "flags": "",
@@ -61,8 +61,8 @@ def debugexportstack(ui, repo, **opts):
           // "files" render as the "after" state, "relevant_map" (in parent
           // commits) render as the "before" state. If the file is already
           // included in "files" of the parent commit, then it will be skipped
-          // in "relevant_files"
-          "relevant_files": {
+          // in "relevantFiles"
+          "relevantFiles": {
             "foo/bar.txt": null | { ... }
             ...
           },
@@ -153,7 +153,7 @@ def debugexportstack(ui, repo, **opts):
         }
         relevant_files = relevant_map.get(node)
         if relevant_files:
-            commit_obj["relevant_files"] = relevant_files
+            commit_obj["relevantFiles"] = relevant_files
         if requested:
             commit_obj["parents"] = [p.hex() for p in ctx.parents()]
             commit_obj["files"] = requested_map[node]
@@ -192,9 +192,9 @@ def _file_obj(ctx, path, set_copy_from=None, limiter=None):
         try:
             file_obj["data"] = bdata.decode("utf-8")
         except UnicodeDecodeError:
-            file_obj["data_base85"] = base64.b85encode(bdata)
+            file_obj["dataBase85"] = base64.b85encode(bdata)
         if copy_from_path:
-            file_obj["copy_from"] = copy_from_path
+            file_obj["copyFrom"] = copy_from_path
         flags = fctx.flags()
         if flags:
             file_obj["flags"] = flags
@@ -255,10 +255,10 @@ def debugimportstack(ui, repo, **opts):
              "data": "utf-8 file content",
 
              // The file content is encoded in base85.
-             "data_base85": "base85 encoded data",
+             "dataBase85": "base85 encoded data",
 
              // Present if the file is copied from the parent commit.
-             "copy_from": "path/from",
+             "copyFrom": "path/from",
 
              // "l": symlink; "x": executable.
              "flags": "",
@@ -270,7 +270,7 @@ def debugimportstack(ui, repo, **opts):
     The format of "commit_info" is similar to the output of
     ``debugexportstack``, with some differences:
 
-    - No ``relevant_files``.
+    - No ``relevantFiles``.
     - No ``node``. Use ``mark`` instead. ``parents`` can refer to marks.
     - Has ``predecessors``.
 
@@ -481,8 +481,8 @@ def _filectxfn(repo, mctx, path, files_dict):
         if "data" in file_info:
             data = file_info["data"].encode("utf-8")
         else:
-            data = base64.b85decode(file_info["data_base85"])
-        copied = file_info.get("copy_from")
+            data = base64.b85decode(file_info["dataBase85"])
+        copied = file_info.get("copyFrom")
         flags = file_info.get("flags", "")
         return context.memfilectx(
             repo,
