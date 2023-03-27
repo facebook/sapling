@@ -11,6 +11,7 @@ use std::fmt::Display;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
+use std::ops::DerefMut;
 
 use ref_cast::RefCast;
 
@@ -65,6 +66,12 @@ macro_rules! generic_newtype_with_obvious_impls {
 
             fn deref(&self) -> &Self::Target {
                 &self.0
+            }
+        }
+
+        impl<T> DerefMut for $name<T> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
             }
         }
 
