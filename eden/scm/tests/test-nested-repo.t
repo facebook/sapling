@@ -9,9 +9,6 @@
 
   $ eagerepo
 
-FIXME(status):
-  $ setconfig workingcopy.ruststatus=false status.use-rust=false
-
   $ hg init a
   $ cd a
   $ hg init b

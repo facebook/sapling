@@ -404,6 +404,12 @@ where
                                         .enqueue_result(Ok(WalkEntry::Directory(dir.clone())))?;
                                 }
                                 let abs_dir_path = shared_data.root.join(dir.as_str());
+
+                                // Skip nested repos.
+                                if !dir.is_empty() && abs_dir_path.join(&dot_dir).exists() {
+                                    return Ok(());
+                                }
+
                                 for entry in fs::read_dir(abs_dir_path)
                                     .map_err(|e| WalkError::IOError(dir.clone(), e))?
                                 {
