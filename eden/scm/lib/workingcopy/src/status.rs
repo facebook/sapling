@@ -26,6 +26,7 @@ use types::RepoPathBuf;
 
 use crate::filesystem::ChangeType;
 use crate::util::walk_treestate;
+use crate::walker::WalkError;
 
 struct FakeTreeResolver {
     pub manifest: Arc<RwLock<TreeManifest>>,
@@ -50,7 +51,8 @@ pub fn compute_status(
     let mut removed = vec![];
     let mut deleted = vec![];
     let mut unknown = vec![];
-    let mut invalid = vec![];
+    let mut invalid_path = vec![];
+    let mut invalid_type = vec![];
 
     // Step 1: get the tree state for each pending change in the working copy.
     // We may have a TreeState that only holds files that are being added/removed
@@ -64,12 +66,26 @@ pub fn compute_status(
             Ok(ChangeType::Changed(path)) => (path, false),
             Ok(ChangeType::Deleted(path)) => (path, true),
             Err(e) => {
-                match e.downcast::<types::path::ParseError>() {
-                    Ok(parse_err) => invalid.push(parse_err.into_path_bytes()),
-                    Err(e) => return Err(e),
-                }
+                let e = match e.downcast::<types::path::ParseError>() {
+                    Ok(parse_err) => {
+                        invalid_path.push(parse_err.into_path_bytes());
+                        continue;
+                    }
+                    Err(e) => e,
+                };
 
-                continue;
+                let e = match e.downcast::<WalkError>() {
+                    Ok(walk_err) => {
+                        if let WalkError::InvalidFileType(path) = walk_err {
+                            invalid_type.push(path);
+                            continue;
+                        }
+                        walk_err.into()
+                    }
+                    Err(e) => e,
+                };
+
+                return Err(e);
             }
         };
 
@@ -237,7 +253,8 @@ pub fn compute_status(
         .removed(removed)
         .deleted(deleted)
         .unknown(unknown)
-        .invalid(invalid))
+        .invalid_path(invalid_path)
+        .invalid_type(invalid_type))
 }
 
 #[cfg(test)]

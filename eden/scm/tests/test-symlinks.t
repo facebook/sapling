@@ -64,8 +64,7 @@ test what happens if we want to trick hg
 
 it should show a.c, dir/a.o and dir/b.o deleted
 
-FIXME(status):
-  $ hg status --config status.use-rust=false
+  $ hg status
   a.c: invalid file type (no-fsmonitor !)
   M dir/b.o
   ! a.c

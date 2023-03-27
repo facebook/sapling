@@ -18,7 +18,10 @@ pub struct Status {
     all: HashMap<RepoPathBuf, FileStatus>,
 
     // Non-utf8 or otherwise invalid paths. Up to the caller how to handle these, if at all.
-    invalid: Vec<Vec<u8>>,
+    invalid_path: Vec<Vec<u8>>,
+
+    // Invalid/unsupported file types.
+    invalid_type: Vec<RepoPathBuf>,
 }
 
 pub struct StatusBuilder(Status);
@@ -67,8 +70,13 @@ impl StatusBuilder {
         self
     }
 
-    pub fn invalid(mut self, invalid: Vec<Vec<u8>>) -> Self {
-        self.0.invalid = invalid;
+    pub fn invalid_path(mut self, invalid: Vec<Vec<u8>>) -> Self {
+        self.0.invalid_path = invalid;
+        self
+    }
+
+    pub fn invalid_type(mut self, invalid: Vec<RepoPathBuf>) -> Self {
+        self.0.invalid_type = invalid;
         self
     }
 
@@ -120,8 +128,12 @@ impl Status {
         self.filter_status(FileStatus::Clean)
     }
 
-    pub fn invalid(&self) -> &[Vec<u8>] {
-        &self.invalid
+    pub fn invalid_path(&self) -> &[Vec<u8>] {
+        &self.invalid_path
+    }
+
+    pub fn invalid_type(&self) -> &[RepoPathBuf] {
+        &self.invalid_type
     }
 
     pub fn status(&self, file: &RepoPath) -> Option<FileStatus> {
