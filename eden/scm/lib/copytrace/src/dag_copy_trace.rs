@@ -26,15 +26,8 @@ use types::RepoPathBuf;
 use crate::error::CopyTraceError;
 use crate::CopyTrace;
 
-#[allow(dead_code)]
 pub struct DagCopyTrace {
     /* Input */
-    /// src commit
-    src: dag::Vertex,
-
-    /// dst commit
-    dst: dag::Vertex,
-
     /// Resolve commit ids to trees in batch.
     root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
 
@@ -44,21 +37,25 @@ pub struct DagCopyTrace {
     // Read content and rename metadata of a file
     file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
 
-    /* Derived from input */
     /// Commit graph algorithms
     dag: Arc<dyn DagAlgorithm + Send + Sync>,
 }
 
 impl DagCopyTrace {
     #[allow(dead_code)]
-    #[allow(unused_variables)]
     fn new(
-        src: dag::Vertex,
-        dst: dag::Vertex,
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_store: Arc<dyn TreeStore + Send + Sync>,
+        file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
     ) -> Result<Self> {
-        todo!()
+        let dag_copy_trace = Self {
+            root_tree_reader,
+            tree_store,
+            file_reader,
+            dag,
+        };
+        Ok(dag_copy_trace)
     }
 
     fn read_renamed_metadata(&self, keys: Vec<Key>) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
