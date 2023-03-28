@@ -55,6 +55,7 @@ pylz4 = { path = "modules/pylz4" }
 pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }
 pymutationstore = { path = "modules/pymutationstore" }
+pynodeipc = { path = "modules/pynodeipc" }
 pynodemap = { path = "modules/pynodemap" }
 pypathhistory = { path = "modules/pypathhistory" }
 pypathmatcher = { path = "modules/pypathmatcher" }
