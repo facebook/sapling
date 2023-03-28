@@ -14,7 +14,6 @@ use pathmatcher::NeverMatcher;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use types::RepoPath;
 use types::RepoPathBuf;
 
 use super::watchmanfs::detect_changes;
@@ -22,6 +21,7 @@ use crate::filechangedetector::FileChangeDetectorTrait;
 use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
+use crate::metadata;
 
 const NEED_CHECK: StateFlags = StateFlags::NEED_CHECK;
 const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
@@ -36,20 +36,20 @@ struct TestFileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for TestFileChangeDetector {
-    fn submit(&mut self, _state: Option<FileStateV2>, path: &RepoPath) {
-        if self.changed_files.contains(&path.to_owned()) {
+    fn submit(&mut self, file: metadata::File) {
+        if self.changed_files.contains(&file.path) {
             self.results
                 .push(Ok(ResolvedFileChangeResult::Yes(ChangeType::Changed(
-                    path.to_owned(),
+                    file.path,
                 ))));
-        } else if self.deleted_files.contains(&path.to_owned()) {
+        } else if self.deleted_files.contains(&file.path) {
             self.results
                 .push(Ok(ResolvedFileChangeResult::Yes(ChangeType::Deleted(
-                    path.to_owned(),
+                    file.path,
                 ))));
         } else {
             self.results
-                .push(Ok(ResolvedFileChangeResult::No(path.to_owned())));
+                .push(Ok(ResolvedFileChangeResult::No(file.path)));
         }
     }
 }
@@ -142,7 +142,14 @@ fn check(mut tc: TestCase) -> Result<()> {
         Arc::new(NeverMatcher::new()),
         stub_detector,
         &mut ts,
-        wm_changes,
+        wm_changes
+            .into_iter()
+            .map(|p| metadata::File {
+                path: p,
+                fs_meta: None,
+                ts_state: None,
+            })
+            .collect(),
         tc.wm_fresh_instance,
         true,
     )?;

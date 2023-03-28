@@ -250,7 +250,7 @@ impl TreeState {
         )
     }
 
-    fn normalize_path_and_get<'a>(
+    pub fn normalize_path_and_get<'a>(
         &mut self,
         path: &'a [u8],
     ) -> Result<(Cow<'a, [u8]>, Option<FileStateV2>)> {

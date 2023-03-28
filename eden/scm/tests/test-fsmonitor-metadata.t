@@ -10,8 +10,6 @@
   $ hg status
   $ echo banana > foo
   $ LOG=vfs=trace hg status
-  TRACE vfs::vfs: fetching metadata path=* (glob)
-  TRACE vfs::vfs: fetching metadata path=* (glob)
   M foo
 
   $ hg dbsh << 'EOS'
@@ -21,6 +19,4 @@
   > EOS
 
   $ LOG=vfs=trace hg status
-  TRACE vfs::vfs: fetching metadata path=* (glob)
-  TRACE vfs::vfs: fetching metadata path=* (glob)
   M foo

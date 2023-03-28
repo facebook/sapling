@@ -46,6 +46,8 @@ use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges;
+use crate::metadata;
+use crate::metadata::Metadata;
 use crate::util::walk_treestate;
 use crate::watchmanfs::treestate::get_clock;
 use crate::watchmanfs::treestate::list_needs_check;
@@ -70,6 +72,9 @@ struct WatchmanConfig {
 query_result_type! {
     pub struct StatusQuery {
         name: BytesNameField,
+        mode: ModeAndPermissionsField,
+        size: SizeField,
+        mtime: MTimeField,
         exists: ExistsField,
     }
 }
@@ -264,19 +269,37 @@ impl PendingChanges for WatchmanFileSystem {
         let manifests = WorkingCopy::current_manifests(ts, &self.tree_resolver)?;
 
         let mut wm_errors: Vec<ParseError> = Vec::new();
-        let wm_needs_check: Vec<RepoPathBuf> = result
+        let use_watchman_metadata =
+            config.get_or::<bool>("workingcopy", "use-watchman-metadata", || true)?;
+        let wm_needs_check: Vec<metadata::File> = result
             .files
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|query| {
-                match RepoPathBuf::from_utf8(query.name.into_inner().into_bytes()) {
-                    Ok(path) => Some(path),
+            .filter_map(
+                |file| match RepoPathBuf::from_utf8(file.name.into_inner().into_bytes()) {
+                    Ok(path) => {
+                        tracing::trace!(?path, ?file.mode, ?file.size, ?file.mtime, "watchman file");
+
+                        Some(metadata::File {
+                            path,
+                            fs_meta: if use_watchman_metadata && *file.exists {
+                                Some(Metadata::from_stat(
+                                    *file.mode as u32,
+                                    *file.size,
+                                    *file.mtime,
+                                ))
+                            } else {
+                                None
+                            },
+                            ts_state: None,
+                        })
+                    },
                     Err(err) => {
                         wm_errors.push(err);
                         None
                     }
-                }
-            })
+                },
+            )
             .collect();
 
         if track_ignored {
@@ -376,7 +399,7 @@ pub(crate) fn detect_changes(
     ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
     ts: &mut TreeState,
-    wm_need_check: Vec<RepoPathBuf>,
+    wm_need_check: Vec<metadata::File>,
     wm_fresh_instance: bool,
     fs_case_sensitive: bool,
 ) -> Result<WatchmanPendingChanges> {
@@ -396,15 +419,35 @@ pub(crate) fn detect_changes(
         treestate_needs_check = ts_need_check.len(),
     );
 
-    let combined_needs_check = ts_need_check
-        .iter()
-        .chain(wm_need_check.iter().filter(|p| !ts_need_check.contains(*p)));
+    let total_needs_check = ts_need_check.len()
+        + wm_need_check
+            .iter()
+            .filter(|p| !ts_need_check.contains(&p.path))
+            .count();
 
     // This is to set "total" for progress bar.
-    file_change_detector.total_work_hint(combined_needs_check.clone().count() as u64);
+    file_change_detector.total_work_hint(total_needs_check as u64);
 
-    for needs_check in combined_needs_check {
-        let state = ts.normalized_get(needs_check)?;
+    let wm_seen: HashSet<RepoPathBuf> = wm_need_check.iter().map(|f| f.path.clone()).collect();
+
+    for ts_needs_check in ts_need_check.iter() {
+        // Prefer to kick off file check using watchman data since that already
+        // includes disk metadata.
+        if wm_seen.contains(ts_needs_check) {
+            continue;
+        }
+
+        // We don't need the ignore check since ts_need_check was filtered by
+        // the full matcher, which incorporates the ignore matcher.
+        file_change_detector.submit(metadata::File {
+            path: ts_needs_check.clone(),
+            ts_state: ts.normalized_get(ts_needs_check)?,
+            fs_meta: None,
+        })
+    }
+
+    for mut wm_needs_check in wm_need_check {
+        let state = ts.normalized_get(&wm_needs_check.path)?;
 
         let is_tracked = match &state {
             Some(state) => state
@@ -414,11 +457,13 @@ pub(crate) fn detect_changes(
         };
         // Skip ignored files to reduce work. We short circuit with an
         // "untracked" check to minimize use of the GitignoreMatcher.
-        if !is_tracked && ignore_matcher.matches_file(needs_check)? {
+        if !is_tracked && ignore_matcher.matches_file(&wm_needs_check.path)? {
             continue;
         }
 
-        file_change_detector.submit(state, needs_check);
+        wm_needs_check.ts_state = state;
+
+        file_change_detector.submit(wm_needs_check);
     }
 
     for result in file_change_detector {
@@ -442,7 +487,7 @@ pub(crate) fn detect_changes(
     if wm_fresh_instance {
         let was_deleted_matcher = Arc::new(DifferenceMatcher::new(
             AlwaysMatcher::new(),
-            ExactMatcher::new(wm_need_check.iter(), fs_case_sensitive),
+            ExactMatcher::new(wm_seen.iter(), fs_case_sensitive),
         ));
 
         // On fresh instance, watchman returns all files present on

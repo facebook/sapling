@@ -14,7 +14,15 @@ use anyhow::Result;
 use bitflags::bitflags;
 use manifest::FileType;
 use treestate::filestate::FileStateV2;
+use types::RepoPathBuf;
 use vfs::VFS;
+
+#[derive(Debug)]
+pub(crate) struct File {
+    pub path: RepoPathBuf,
+    pub fs_meta: Option<Metadata>,
+    pub ts_state: Option<FileStateV2>,
+}
 
 bitflags! {
     pub(crate) struct MetadataFlags: u8 {

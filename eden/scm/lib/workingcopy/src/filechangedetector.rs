@@ -22,14 +22,13 @@ use pathmatcher::ExactMatcher;
 use progress_model::ProgressBar;
 use storemodel::minibytes::Bytes;
 use storemodel::ReadFileContents;
-use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;
 use types::Key;
-use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::VFS;
 
 use crate::filesystem::ChangeType;
+use crate::metadata;
 use crate::metadata::HgModifiedTime;
 use crate::metadata::Metadata;
 
@@ -37,8 +36,8 @@ pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> +
 
 pub(crate) enum FileChangeResult {
     Yes(ChangeType),
-    No,
-    Maybe(Metadata),
+    No(RepoPathBuf),
+    Maybe((RepoPathBuf, Metadata)),
 }
 
 impl FileChangeResult {
@@ -66,7 +65,7 @@ impl ResolvedFileChangeResult {
 pub(crate) trait FileChangeDetectorTrait:
     IntoIterator<Item = Result<ResolvedFileChangeResult>>
 {
-    fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath);
+    fn submit(&mut self, file: metadata::File);
     fn total_work_hint(&self, _hint: u64) {}
 }
 
@@ -103,17 +102,17 @@ const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
 
 pub(crate) fn file_changed_given_metadata(
     vfs: &VFS,
-    path: &RepoPath,
+    file: metadata::File,
     last_write: HgModifiedTime,
-    metadata: Option<Metadata>,
-    state: Option<FileStateV2>,
 ) -> Result<FileChangeResult> {
+    let path = file.path;
+
     // First handle when metadata is None (i.e. file doesn't exist).
-    let (fs_meta, state) = match (metadata, state) {
+    let (fs_meta, state) = match (file.fs_meta, file.ts_state) {
         // File was untracked during crawl but no longer exists.
         (None, None) => {
             tracing::trace!(?path, "neither on disk nor in treestate");
-            return Ok(FileChangeResult::No);
+            return Ok(FileChangeResult::No(path));
         }
 
         // File was not found but exists in P1: mark as deleted.
@@ -127,7 +126,7 @@ pub(crate) fn file_changed_given_metadata(
         // checking for example.
         (None, Some(_)) => {
             tracing::trace!(?path, "neither on disk nor in P1");
-            return Ok(FileChangeResult::No);
+            return Ok(FileChangeResult::No(path));
         }
 
         (Some(m), s) => (m, s),
@@ -144,18 +143,18 @@ pub(crate) fn file_changed_given_metadata(
         // time) then we consider it now deleted.
         (true, false) => {
             tracing::trace!(?path, "changed (in_parent, !trackable)");
-            return Ok(FileChangeResult::deleted(path.to_owned()));
+            return Ok(FileChangeResult::deleted(path));
         }
         // File not in parent and not trackable - skip it. We can get here if
         // the file was valid during the crawl but no longer is.
         (false, false) => {
             tracing::trace!(?path, "no (!in_parent, !trackable)");
-            return Ok(FileChangeResult::No);
+            return Ok(FileChangeResult::No(path));
         }
         // File exists but is not in the treestate (untracked)
         (false, true) => {
             tracing::trace!(?path, "changed (!in_parent, trackable)");
-            return Ok(FileChangeResult::changed(path.to_owned()));
+            return Ok(FileChangeResult::changed(path));
         }
         (true, true) => state.unwrap(),
     };
@@ -189,13 +188,13 @@ pub(crate) fn file_changed_given_metadata(
         }
     } else {
         tracing::trace!(?path, "maybe (no size)");
-        return Ok(FileChangeResult::Maybe(fs_meta));
+        return Ok(FileChangeResult::Maybe((path, fs_meta)));
     }
 
     // If it's marked NEED_CHECK, we always need to do a lookup, regardless of the mtime.
     if flags.intersects(NEED_CHECK) {
         tracing::trace!(?path, "maybe (NEED_CHECK)");
-        return Ok(FileChangeResult::Maybe(fs_meta));
+        return Ok(FileChangeResult::Maybe((path, fs_meta)));
     }
 
     // If the mtime has changed or matches the last normal() write time, we need to compare the
@@ -206,18 +205,18 @@ pub(crate) fn file_changed_given_metadata(
     let ts_mtime = match ts_meta.mtime() {
         None => {
             tracing::trace!(?path, "maybe (no mtime)");
-            return Ok(FileChangeResult::Maybe(fs_meta));
+            return Ok(FileChangeResult::Maybe((path, fs_meta)));
         }
         Some(ts) => ts,
     };
 
     if Some(ts_mtime) != fs_meta.mtime() || ts_mtime == last_write {
         tracing::trace!(?path, "maybe (mtime doesn't match)");
-        return Ok(FileChangeResult::Maybe(fs_meta));
+        return Ok(FileChangeResult::Maybe((path, fs_meta)));
     }
 
     tracing::trace!(?path, "no (fallthrough)");
-    Ok(FileChangeResult::No)
+    Ok(FileChangeResult::No(path))
 }
 
 fn compare_repo_bytes_to_disk(
@@ -256,13 +255,11 @@ fn compare_repo_bytes_to_disk(
 impl FileChangeDetector {
     pub(crate) fn has_changed_with_fresh_metadata(
         &mut self,
-        state: Option<FileStateV2>,
-        path: &RepoPath,
-        metadata: Option<Metadata>,
+        file: metadata::File,
     ) -> Result<FileChangeResult> {
-        let res = file_changed_given_metadata(&self.vfs, path, self.last_write, metadata, state);
+        let res = file_changed_given_metadata(&self.vfs, file, self.last_write);
 
-        if let Ok(FileChangeResult::Maybe(ref meta)) = res {
+        if let Ok(FileChangeResult::Maybe((ref path, ref meta))) = res {
             self.lookups.insert(path.to_owned(), meta.clone());
         }
 
@@ -271,28 +268,30 @@ impl FileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for FileChangeDetector {
-    fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath) {
-        let metadata = match self.vfs.metadata(path) {
-            Ok(metadata) => Some(metadata.into()),
-            Err(e) => match e.downcast_ref::<std::io::Error>() {
-                Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-                _ => {
-                    self.results.push(Err(e));
-                    return;
-                }
-            },
-        };
+    fn submit(&mut self, mut file: metadata::File) {
+        if file.fs_meta.is_none() {
+            file.fs_meta = match self.vfs.metadata(&file.path) {
+                Ok(metadata) => Some(metadata.into()),
+                Err(e) => match e.downcast_ref::<std::io::Error>() {
+                    Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                    _ => {
+                        self.results.push(Err(e));
+                        return;
+                    }
+                },
+            };
+        }
 
-        match self.has_changed_with_fresh_metadata(state, path, metadata) {
+        match self.has_changed_with_fresh_metadata(file) {
             Ok(res) => match res {
                 FileChangeResult::Yes(change) => {
                     self.results.push(Ok(ResolvedFileChangeResult::Yes(change)))
                 }
-                FileChangeResult::No => self
-                    .results
-                    .push(Ok(ResolvedFileChangeResult::No(path.to_owned()))),
-                FileChangeResult::Maybe(meta) => {
-                    self.lookups.insert(path.to_owned(), meta);
+                FileChangeResult::No(path) => {
+                    self.results.push(Ok(ResolvedFileChangeResult::No(path)))
+                }
+                FileChangeResult::Maybe((path, meta)) => {
+                    self.lookups.insert(path, meta);
                 }
             },
             Err(err) => self.results.push(Err(err)),
@@ -422,7 +421,7 @@ pub struct ParallelDetector {
     result_recv: Receiver<Result<ResolvedFileChangeResult>>,
     check_contents_recv: Receiver<(RepoPathBuf, Metadata)>,
     // Store as an option so we can explicitly drop to disconnect the check_contents channel.
-    check_metadata_send: Option<Sender<(RepoPathBuf, Option<FileStateV2>)>>,
+    check_metadata_send: Option<Sender<metadata::File>>,
     worker_count: usize,
 
     progress: Arc<ProgressBar>,
@@ -466,7 +465,7 @@ impl ParallelDetector {
         // treestate state. If the metadata check isn't conclusive, the path will be
         // forwarded for a full content check.
         let (check_metadata_send, check_metadata_recv) =
-            crossbeam::channel::unbounded::<(RepoPathBuf, Option<FileStateV2>)>();
+            crossbeam::channel::unbounded::<metadata::File>();
 
         // Channel to submit request to compare file's on-disk contents to repo's contents.
         let (check_contents_send, check_contents_recv) =
@@ -492,12 +491,11 @@ impl ParallelDetector {
             let check_contents_send = check_contents_send.clone();
             let result_send = result_send.clone();
             std::thread::spawn(move || -> Result<()> {
-                for (path, state) in check_metadata_recv {
+                for file in check_metadata_recv {
                     Self::perform_metadata_check(
                         &vfs,
-                        path,
+                        file,
                         last_write,
-                        state,
                         &result_send,
                         &check_contents_send,
                     )?;
@@ -598,32 +596,33 @@ impl ParallelDetector {
     // submit a work unit for a full content check.
     fn perform_metadata_check(
         vfs: &VFS,
-        path: RepoPathBuf,
+        mut file: metadata::File,
         last_write: HgModifiedTime,
-        state: Option<FileStateV2>,
         result_send: &ProgressSender<Result<ResolvedFileChangeResult>>,
         lookup_send: &Sender<(RepoPathBuf, Metadata)>,
     ) -> Result<()> {
-        let metadata = match vfs.metadata(&path) {
-            Ok(metadata) => Some(metadata.into()),
-            Err(e) => match e.downcast_ref::<std::io::Error>() {
-                Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-                _ => {
-                    result_send.send(Err(e))?;
-                    return Ok(());
-                }
-            },
-        };
+        if file.fs_meta.is_none() {
+            file.fs_meta = match vfs.metadata(&file.path) {
+                Ok(metadata) => Some(metadata.into()),
+                Err(e) => match e.downcast_ref::<std::io::Error>() {
+                    Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                    _ => {
+                        result_send.send(Err(e))?;
+                        return Ok(());
+                    }
+                },
+            };
+        }
 
-        match file_changed_given_metadata(vfs, &path, last_write, metadata, state) {
+        match file_changed_given_metadata(vfs, file, last_write) {
             Ok(res) => match res {
                 FileChangeResult::Yes(change) => {
                     result_send.send(Ok(ResolvedFileChangeResult::Yes(change)))?;
                 }
-                FileChangeResult::No => {
+                FileChangeResult::No(path) => {
                     result_send.send(Ok(ResolvedFileChangeResult::No(path)))?;
                 }
-                FileChangeResult::Maybe(meta) => {
+                FileChangeResult::Maybe((path, meta)) => {
                     lookup_send.send((path, meta))?;
                 }
             },
@@ -635,11 +634,11 @@ impl ParallelDetector {
 }
 
 impl FileChangeDetectorTrait for ParallelDetector {
-    fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath) {
+    fn submit(&mut self, file: metadata::File) {
         self.check_metadata_send
             .as_ref()
             .unwrap()
-            .send((path.to_owned(), state))
+            .send(file)
             .unwrap();
     }
 

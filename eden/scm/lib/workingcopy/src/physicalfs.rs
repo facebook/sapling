@@ -19,7 +19,6 @@ use storemodel::ReadFileContents;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
-use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::VFS;
 
@@ -29,6 +28,7 @@ use crate::filechangedetector::ResolvedFileChangeResult;
 use crate::filesystem::ChangeType;
 use crate::filesystem::PendingChangeResult;
 use crate::filesystem::PendingChanges as PendingChangesTrait;
+use crate::metadata;
 use crate::walker::WalkEntry;
 use crate::walker::Walker;
 use crate::workingcopy::WorkingCopy;
@@ -142,23 +142,25 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
     fn next_walk(&mut self) -> Result<Option<PendingChangeResult>> {
         loop {
             match self.walker.next() {
-                Some(Ok(WalkEntry::File(file, metadata))) => {
+                Some(Ok(WalkEntry::File(mut path, metadata))) => {
                     let mut ts = self.treestate.lock();
 
                     // On case insensitive systems, normalize the path so duplicate paths with
                     // different case can be detected in the seen set.
-                    let file = ts.normalize_path(file.as_ref())?;
-                    let path = RepoPath::from_utf8(file.as_ref())?;
-                    self.seen.insert(path.to_owned());
+                    let (normalized, ts_state) = ts.normalize_path_and_get(path.as_ref())?;
+                    if normalized != path.as_byte_slice() {
+                        path = RepoPathBuf::from_utf8(normalized.into_owned())?;
+                    }
+                    self.seen.insert(path.clone());
                     let changed = self
                         .file_change_detector
                         .as_mut()
                         .unwrap()
-                        .has_changed_with_fresh_metadata(
-                            ts.normalized_get(path)?,
+                        .has_changed_with_fresh_metadata(metadata::File {
                             path,
-                            Some(metadata.into()),
-                        )?;
+                            ts_state,
+                            fs_meta: Some(metadata.into()),
+                        })?;
 
                     if let FileChangeResult::Yes(change_type) = changed {
                         return Ok(Some(PendingChangeResult::File(change_type)));
@@ -196,20 +198,23 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
 
         tracked
             .into_iter()
-            .filter_map(|path| {
-                let cow_path = match ts.normalize_path(path.as_ref()) {
+            .filter_map(|mut path| {
+                let normalized = match ts.normalize_path(path.as_ref()) {
                     Ok(path) => path,
                     Err(e) => return Some(Err(e)),
                 };
-                let path: &RepoPath = match RepoPath::from_utf8(cow_path.as_ref()) {
-                    Ok(path) => path,
-                    Err(e) => return Some(Err(e.into())),
-                };
+                if normalized != path.as_byte_slice() {
+                    path = match RepoPathBuf::from_utf8(normalized.into_owned()) {
+                        Ok(path) => path,
+                        Err(e) => return Some(Err(e.into())),
+                    };
+                }
+
                 // Skip this path if we've seen it or it doesn't match the matcher.
-                if self.seen.contains(path) {
+                if self.seen.contains(&path) {
                     return None;
                 } else {
-                    match self.matcher.matches_file(path) {
+                    match self.matcher.matches_file(&path) {
                         Err(e) => {
                             return Some(Err(e));
                         }
