@@ -16,6 +16,7 @@ minibytes = { version = "0.1.0", path = "../minibytes" }
 once_cell = "1.12"
 thiserror = "1.0.36"
 tokio = { version = "1.25.0", features = ["full", "test-util", "tracing"] }
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }
 

@@ -90,6 +90,8 @@ impl VFS {
     }
 
     pub fn metadata(&self, path: &RepoPath) -> Result<Metadata> {
+        tracing::trace!(?path, "fetching metadata");
+
         self.join(path).symlink_metadata().map_err(|e| {
             // If `path` contains a directory that doesn't actually exist on disk, it surfaces as a
             // NotADirectory error. This error type is unstable and can't actually be matched on.
