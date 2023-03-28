@@ -85,11 +85,8 @@ def graphqlgetdiff(repo, diffid):
                 "commits": {},
             }
     timeout = repo.ui.configint("ssl", "timeout", 10)
-    ca_certs = repo.ui.configpath("web", "cacerts")
     try:
-        client = graphql.Client(
-            repodir=pycompat.getcwd(), ca_bundle=ca_certs, repo=repo
-        )
+        client = graphql.Client(repodir=pycompat.getcwd(), repo=repo)
         return client.getdifflatestversion(timeout, diffid)
     except Exception as e:
         raise error.Abort(

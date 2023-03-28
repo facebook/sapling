@@ -34,12 +34,10 @@ class GraphQLConfigError(Exception):
 
 
 class Client(object):
-    def __init__(self, repodir=None, ca_bundle=None, repo=None):
+    def __init__(self, repodir=None, repo=None):
         if repo is not None:
             if repodir is None:
                 repodir = repo.root
-            if ca_bundle is None:
-                ca_bundle = repo.ui.configpath("web", "cacerts")
         if not repodir:
             repodir = pycompat.getcwd()
         self._mock = "HG_ARC_CONDUIT_MOCK" in encoding.environ
@@ -55,7 +53,6 @@ class Client(object):
         self._oauth = None
         self._catslocation = None
         self._cats = None
-        self.ca_bundle = ca_bundle or True
         self._applyarcconfig(
             arcconfig.loadforpath(repodir), repo.ui.config("phabricator", "arcrc_host")
         )

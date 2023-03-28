@@ -13,12 +13,11 @@ from . import arcconfig
 
 
 class PhabricatorGraphQLClient(object):
-    def __init__(self, urllib, x2p_app_id, ph_oauth, ph_cats, host, ca_bundle=None):
+    def __init__(self, urllib, x2p_app_id, ph_oauth, ph_cats, host):
         self.urllib = urllib
         self.phabricator_oauth = ph_oauth
         self.phabricator_cats = ph_cats
         self.graphql_url = host + "/graphql"
-        self.ca_bundle = ca_bundle
         self.x2p_app_id = x2p_app_id
 
     def query(self, timeout, request, params=None):
@@ -69,6 +68,5 @@ class PhabricatorGraphQLClient(object):
             self.graphql_url,
             data=data,
             timeout=timeout,
-            ca_bundle=self.ca_bundle,
             headers=headers,
         )

@@ -5,8 +5,6 @@
 
 from __future__ import absolute_import
 
-import ssl
-
 from edenscm import httpclient, json, util
 
 
@@ -26,7 +24,7 @@ class PhabricatorGraphQLClientRequests(object):
         self._connection = None
         self._unix_socket_proxy = unix_socket_proxy
 
-    def __verify_connection(self, request_url, timeout, ca_bundle):
+    def __verify_connection(self, request_url, timeout):
         urlparts = urlreq.urlparse(request_url)
 
         if self._connection is None:
@@ -41,19 +39,17 @@ class PhabricatorGraphQLClientRequests(object):
                     urlparts.netloc, timeout=timeout
                 )
             elif urlparts.scheme == "https":
-                context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                self._connection = httpclient.HTTPSConnection(
+                self._connection = httpclient.HTTPConnection(
                     urlparts.netloc,
                     timeout=timeout,
-                    cert_file=ca_bundle,
-                    context=context,
+                    use_ssl=True,
                 )
             else:
                 raise PhabricatorClientError("Unknown host scheme: %s", urlparts.scheme)
         return urlparts
 
-    def sendpost(self, request_url, data, timeout, ca_bundle, headers=None):
-        urlparts = self.__verify_connection(request_url, timeout, ca_bundle)
+    def sendpost(self, request_url, data, timeout, headers=None):
+        urlparts = self.__verify_connection(request_url, timeout)
         query = util.urlreq.urlencode(data)
 
         headers = {

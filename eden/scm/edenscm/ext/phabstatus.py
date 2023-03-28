@@ -83,12 +83,9 @@ def getdiffstatus(repo, *diffid):
         return []
     timeout = repo.ui.configint("ssl", "timeout", 10)
     signalstatus = repo.ui.configbool("ssl", "signal_status", True)
-    ca_certs = repo.ui.configpath("web", "cacerts")
 
     try:
-        client = graphql.Client(
-            repodir=pycompat.getcwd(), ca_bundle=ca_certs, repo=repo
-        )
+        client = graphql.Client(repodir=pycompat.getcwd(), repo=repo)
         statuses = client.getrevisioninfo(timeout, signalstatus, diffid)
     except arcconfig.ArcConfigError as ex:
         msg = _(
