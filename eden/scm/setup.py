@@ -1669,6 +1669,12 @@ if not iswindows:
                 "depends": [versionhashpath],
                 "include_dirs": ["contrib/chg"] + include_dirs,
                 "extra_args": filter(None, cflags + chgcflags + [STDC99, WALL, PIC]),
+                # chg uses libc::unistd/getgroups() to check that chg and the
+                # sl cli have the same permissions (see D43676809).
+                # However, on macOS, getgroups() is limited to NGROUPS_MAX (16) groups by default.
+                # We can work around this by defining _DARWIN_UNLIMITED_GETGROUPS
+                # see https://opensource.apple.com/source/xnu/xnu-3247.1.106/bsd/man/man2/getgroups.2.auto.html
+                "macros": [("_DARWIN_UNLIMITED_GETGROUPS", "1")],
             },
         )
     )
