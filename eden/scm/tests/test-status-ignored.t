@@ -6,6 +6,8 @@
   $ configure modernclient
   $ newclientrepo
   $ echo foo > .gitignore
+Avoid dirstate race condition where added files end up as NEED_CHECK.
+  $ sleep 1
   $ hg commit -Aqm ignore
   $ mkdir foo
   $ touch foo/a foo/b foo/c
@@ -20,5 +22,5 @@ We want the ignore files to be present in our treestate.
   foo/c: 00 -1 -1 NEED_CHECK 
 
 We shouldn't need to check any files from treestate.
-  $ LOG=workingcopy::watchmanfs::state=debug hg status 2>&1 | grep treestate_needs_check
-  DEBUG * watchman_needs_check=1 treestate_needs_check=0 (glob)
+  $ LOG=workingcopy::watchmanfs=debug hg status 2>&1 | grep treestate_needs_check
+  * treestate_needs_check=0 (glob)
