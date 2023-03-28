@@ -384,10 +384,15 @@ def clean(ui, repo, *args, **kwargs) -> None:
     args, opts = parseoptions(ui, cmdoptions, args)
 
     cmd = Command("clean")
+    if opts.get("d") or args:
+        # For Sapling, `--dirs` only delete empty directories, we need to set both
+        # `--dirs` and `--files` option.
+        cmd["--files"] = None
+        cmd["--dirs"] = None
     if opts.get("x"):
-        cmd["--all"] = None
-    cmd.extend(args)
+        cmd["--ignored"] = None
 
+    cmd.extend(args)
     ui.status((str(cmd)), "\n")
 
 

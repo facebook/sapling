@@ -272,3 +272,26 @@ githelp for git blame (tweakdefaults enabled)
   $ hg --config extensions.tweakdefaults= githelp -- git blame
   hg annotate -pudl
 
+githelp for git clean (with path)
+  $ hg githelp -- git clean -f .
+  hg clean --dirs --files .
+
+githelp for git clean (with -d and no path)
+  $ hg githelp -- git clean -fd
+  hg clean --dirs --files
+
+githelp for git clean (with -d and path)
+  $ hg githelp -- git clean -fd .
+  hg clean --dirs --files .
+
+githelp for git clean (with -dx)
+  $ hg githelp -- git clean -fdx
+  hg clean --dirs --files --ignored
+
+githelp for git clean (with -x and path)
+  $ hg githelp -- git clean -fx .
+  hg clean --dirs --files --ignored .
+
+githelp for git clean (with -x)
+  $ hg githelp -- git clean -fx
+  hg clean --ignored
