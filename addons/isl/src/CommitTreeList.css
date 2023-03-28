@@ -15,9 +15,13 @@
 }
 .commit-group {
   margin-bottom: 30px;
+  margin-bottom: 20px;
   margin-left: 20px;
   margin-top: 10px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--halfpad) / 2);
 }
 .commit-tree-root {
   margin-left: calc(3.5 * var(--pad));
@@ -28,6 +32,7 @@
   gap: var(--pad);
   align-items: center;
   margin-top: var(--pad);
+  margin-top: var(--halfpad);
 }
 
 .commit-group:before {
@@ -111,9 +116,8 @@
 .commit-rows {
   display: flex;
   flex-direction: column;
-  gap: var(--halfpad);
-
-  padding: var(--halfpad);
+  gap: calc(var(--halfpad) / 2);
+  padding: calc(var(--halfpad) / 2);
   padding-left: 0;
   margin-left: var(--halfpad);
   position: relative;

@@ -36,6 +36,7 @@ import React, {memo} from 'react';
 import {useRecoilCallback, useRecoilValue, useSetRecoilState} from 'recoil';
 import {useContextMenu} from 'shared/ContextMenu';
 import {Icon} from 'shared/Icon';
+import {notEmpty} from 'shared/utils';
 
 function isDraggablePreview(previewType?: CommitPreview): boolean {
   switch (previewType) {
@@ -247,7 +248,7 @@ function DivIfChildren({
   children,
   ...props
 }: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>) {
-  if (!children || (Array.isArray(children) && children.length === 0)) {
+  if (!children || (Array.isArray(children) && children.filter(notEmpty).length === 0)) {
     return null;
   }
   return <div {...props}>{children}</div>;
