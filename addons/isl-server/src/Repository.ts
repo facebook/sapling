@@ -793,24 +793,9 @@ function getExecParams(
   args: Array<string>;
   options: execa.Options;
 } {
-  let args = [
-    ...args_,
-    '--noninteractive',
-    // Prevent user-specified merge tools from attempting to
-    // open interactive editors.
-    '--config',
-    `ui.merge=:merge3`,
-  ];
+  let args = [...args_, '--noninteractive'];
   // expandHomeDir is not supported on windows
   if (process.platform !== 'win32') {
-    args.push(
-      // Never show progress bar in stdout since we use the progressfile
-      '--config',
-      'progress.renderer=none',
-      // Prevent scary error message on amend in the middle of a stack
-      '--config',
-      'fbamend.education=',
-    );
     // commit/amend have unconventional ways of escaping slashes from messages.
     // We have to 'unescape' to make it work correctly.
     args = args.map(arg => arg.replace(/\\\\/g, '\\'));
@@ -828,6 +813,10 @@ function getExecParams(
       SL_ENCODING: 'UTF-8',
       // override any custom aliases a user has defined.
       SL_AUTOMATION: 'true',
+      // Prevent user-specified merge tools from attempting to
+      // open interactive editors.
+      HGMERGE: ':merge3',
+      SL_MERGE: ':merge3',
       EDITOR: undefined,
     } as unknown as NodeJS.ProcessEnv,
     cwd,
