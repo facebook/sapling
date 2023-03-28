@@ -102,6 +102,50 @@ impl DagCopyTrace {
 
         Ok((old_manifest, new_manifest))
     }
+
+    async fn trace_rename_commit(
+        &self,
+        src: dag::Vertex,
+        dst: dag::Vertex,
+        path: RepoPathBuf,
+    ) -> Result<Option<dag::Vertex>> {
+        let set = self.dag.range(src.into(), dst.into()).await?;
+        let mut rename_tracer = RenameTracer::new(
+            set,
+            path,
+            self.root_tree_reader.clone(),
+            self.tree_store.clone(),
+        )
+        .await?;
+        let rename_commit = rename_tracer.next().await?;
+        Ok(rename_commit)
+    }
+
+    async fn find_renames_in_direction(
+        &self,
+        commit: dag::Vertex,
+        direction: SearchDirection,
+    ) -> Result<(HashMap<RepoPathBuf, RepoPathBuf>, dag::Vertex)> {
+        let parents = self.dag.parent_names(commit.clone()).await?;
+        if parents.is_empty() {
+            return Err(CopyTraceError::NoParents(commit).into());
+        }
+        // For simplicity, we only check p1.
+        let p1 = &parents[0];
+        let (old_manifest, new_manifest) = self.vertex_to_tree_manifest(p1, &commit).await?;
+        let renames = self.find_renames(&old_manifest, &new_manifest)?;
+        let (renames, next_commit) = match direction {
+            SearchDirection::Backward => (renames, p1.clone()),
+            SearchDirection::Forward => {
+                let renames = renames
+                    .into_iter()
+                    .map(|(k, v)| (v, k))
+                    .collect::<HashMap<_, _>>();
+                (renames, commit)
+            }
+        };
+        Ok((renames, next_commit))
+    }
 }
 
 #[async_trait]
@@ -120,54 +164,32 @@ impl CopyTrace for DagCopyTrace {
         &self,
         src: dag::Vertex,
         dst: dag::Vertex,
-        dst_path: types::RepoPathBuf,
-    ) -> Result<Option<types::RepoPathBuf>> {
+        dst_path: RepoPathBuf,
+    ) -> Result<Option<RepoPathBuf>> {
         tracing::trace!(?src, ?dst, ?dst_path, "trace_rename_backward");
-
-        let mut dst = dst;
-        let mut dst_path = dst_path;
+        let (mut curr, target, mut curr_path) = (dst, src, dst_path);
 
         loop {
-            tracing::trace!(?dst, ?dst_path, " inside loop");
+            tracing::trace!(?curr, ?curr_path, " loop starts");
+            let rename_commit = match self
+                .trace_rename_commit(target.clone(), curr.clone(), curr_path.clone())
+                .await?
+            {
+                Some(rename_commit) => rename_commit,
+                None => return Ok(None), // cur_path does not exist
+            };
 
-            // setup RenameTracer
-            let set = self.dag.range(src.clone().into(), dst.into()).await?;
-            let mut rename_tracer = RenameTracer::new(
-                set,
-                dst_path.clone(),
-                self.root_tree_reader.clone(),
-                self.tree_store.clone(),
-            )
-            .await?;
-
-            // find rename commit
-            let rename_commit = rename_tracer.next().await?;
-
-            if let Some(rename_commit) = rename_commit {
-                if rename_commit == src {
-                    return Ok(Some(dst_path));
-                }
-
-                // find renames by comparing rename_commit and its parent commit
-                let parents = self.dag.parent_names(rename_commit.clone()).await?;
-                if parents.is_empty() {
-                    return Err(CopyTraceError::NoParents(rename_commit).into());
-                }
-                // For simplicity, we only check p1.
-                let p1 = &parents[0];
-                let (old_manifest, new_manifest) =
-                    self.vertex_to_tree_manifest(p1, &rename_commit).await?;
-                let renames = self.find_renames(&old_manifest, &new_manifest)?;
-
-                if let Some(prev_path) = renames.get(&dst_path) {
-                    dst = p1.clone();
-                    dst_path = prev_path.clone();
-                } else {
-                    // dst_path was new added path
-                    return Ok(None);
-                }
+            if rename_commit == target {
+                return Ok(Some(curr_path));
+            }
+            let (renames, next_commit) = self
+                .find_renames_in_direction(rename_commit, SearchDirection::Backward)
+                .await?;
+            if let Some(next_path) = renames.get(&curr_path) {
+                curr = next_commit;
+                curr_path = next_path.clone();
             } else {
-                // dst_path does not exist
+                // no rename info for curr_path
                 return Ok(None);
             }
         }
@@ -210,4 +232,19 @@ impl CopyTrace for DagCopyTrace {
 
         self.read_renamed_metadata(new_files)
     }
+}
+
+/// SearchDirection when searching renames.
+///
+/// Assuming we have a commit graph like below:
+///
+///  a..z # draw dag syntax
+///
+/// Forward means searching from a to z.
+/// Backward means searching from z to a.
+#[derive(Debug)]
+enum SearchDirection {
+    #[allow(dead_code)]
+    Forward,
+    Backward,
 }
