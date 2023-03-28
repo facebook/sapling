@@ -42,7 +42,7 @@ command = registrar.command(cmdtable)
 @command(
     "debugfillinfinitepushmetadata", [("", "node", [], "node to fill metadata for")]
 )
-def debugfillinfinitepushmetadata(ui, repo, **opts):
+def debugfillinfinitepushmetadata(ui, repo, **opts) -> None:
     """Special command that fills infinitepush metadata for a node"""
 
     nodes = opts["node"]
@@ -139,7 +139,7 @@ def _resolvetargetnode(repo, rev):
     ],
     _("-r REV -B BOOKMARK"),
 )
-def debugcreatescratchbookmark(ui, repo, *args, **opts):
+def debugcreatescratchbookmark(ui, repo, *args, **opts) -> None:
     """create scratch bookmark on the specified revision"""
     if not common.isserver(ui):
         raise error.Abort(
@@ -166,7 +166,7 @@ def debugcreatescratchbookmark(ui, repo, *args, **opts):
     ],
     _("-r REV -B BOOKMARK"),
 )
-def debugmovescratchbookmark(ui, repo, *args, **opts):
+def debugmovescratchbookmark(ui, repo, *args, **opts) -> None:
     """move existing scratch bookmark to the specified revision"""
     if not common.isserver(ui):
         raise error.Abort(
