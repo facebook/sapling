@@ -43,7 +43,7 @@ pub struct DagCopyTrace {
 
 impl DagCopyTrace {
     #[allow(dead_code)]
-    fn new(
+    pub fn new(
         root_tree_reader: Arc<dyn ReadRootTreeIds + Send + Sync>,
         tree_store: Arc<dyn TreeStore + Send + Sync>,
         file_reader: Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>,

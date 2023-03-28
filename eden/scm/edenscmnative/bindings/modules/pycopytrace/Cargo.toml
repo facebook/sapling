@@ -4,8 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0"
+async-runtime = { path = "../../../../lib/async-runtime" }
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 cpython = { version = "0.7", default-features = false }
 copytrace = { path = "../../../../lib/copytrace" }
+dag = { path = "../../../../lib/dag" }
+storemodel = { path = "../../../../lib/storemodel" }
 types = { path = "../../../../lib/types" }
 parking_lot = "0.11.2"
+pymanifest = { path = "../pymanifest" }
