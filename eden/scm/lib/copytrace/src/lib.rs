@@ -7,6 +7,7 @@
 
 mod copy_trace;
 mod dag_copy_trace;
+mod error;
 mod git_copy_trace;
 
 pub use crate::copy_trace::CopyTrace;

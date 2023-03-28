@@ -7,10 +7,14 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.65"
+async-trait = "0.1.58"
 dag = { version = "0.1.0", path = "../dag" }
 git2 = "0.14"
 manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
+pathhistory = { version = "0.1.0", path = "../pathhistory" }
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
+thiserror = "1.0.36"
+tracing = "0.1.35"
 types = { version = "0.1.0", path = "../types" }

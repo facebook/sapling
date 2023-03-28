@@ -9,17 +9,21 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
+use async_trait::async_trait;
 use dag::DagAlgorithm;
 use manifest::DiffType;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
+use pathhistory::RenameTracer;
 use pathmatcher::AlwaysMatcher;
 use storemodel::ReadFileContents;
 use storemodel::ReadRootTreeIds;
+use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
 
+use crate::error::CopyTraceError;
 use crate::CopyTrace;
 
 #[allow(dead_code)]
@@ -67,8 +71,40 @@ impl DagCopyTrace {
             .collect();
         Ok(map)
     }
+
+    async fn vertex_to_tree_manifest(
+        &self,
+        old_commit: &dag::Vertex,
+        new_commit: &dag::Vertex,
+    ) -> Result<(TreeManifest, TreeManifest)> {
+        let commit_hgids = vec![
+            HgId::from_slice(old_commit.as_ref())?,
+            HgId::from_slice(new_commit.as_ref())?,
+        ];
+        let commit_to_tree_ids: HashMap<HgId, HgId> = self
+            .root_tree_reader
+            .read_root_tree_ids(commit_hgids.clone())
+            .await?
+            .into_iter()
+            .collect();
+
+        let tree_ids = commit_hgids
+            .iter()
+            .map(|i| {
+                commit_to_tree_ids
+                    .get(i)
+                    .ok_or(CopyTraceError::RootTreeIdNotFound(commit_hgids[0]))
+            })
+            .collect::<Result<Vec<&HgId>, _>>()?;
+
+        let old_manifest = TreeManifest::durable(self.tree_store.clone(), *tree_ids[0]);
+        let new_manifest = TreeManifest::durable(self.tree_store.clone(), *tree_ids[1]);
+
+        Ok((old_manifest, new_manifest))
+    }
 }
 
+#[async_trait]
 impl CopyTrace for DagCopyTrace {
     #[allow(unused_variables)]
     fn trace_rename(
@@ -80,14 +116,61 @@ impl CopyTrace for DagCopyTrace {
         todo!()
     }
 
-    #[allow(unused_variables)]
-    fn trace_rename_backward(
+    async fn trace_rename_backward(
         &self,
         src: dag::Vertex,
         dst: dag::Vertex,
         dst_path: types::RepoPathBuf,
-    ) -> Option<types::RepoPathBuf> {
-        todo!()
+    ) -> Result<Option<types::RepoPathBuf>> {
+        tracing::trace!(?src, ?dst, ?dst_path, "trace_rename_backward");
+
+        let mut dst = dst;
+        let mut dst_path = dst_path;
+
+        loop {
+            tracing::trace!(?dst, ?dst_path, " inside loop");
+
+            // setup RenameTracer
+            let set = self.dag.range(src.clone().into(), dst.into()).await?;
+            let mut rename_tracer = RenameTracer::new(
+                set,
+                dst_path.clone(),
+                self.root_tree_reader.clone(),
+                self.tree_store.clone(),
+            )
+            .await?;
+
+            // find rename commit
+            let rename_commit = rename_tracer.next().await?;
+
+            if let Some(rename_commit) = rename_commit {
+                if rename_commit == src {
+                    return Ok(Some(dst_path));
+                }
+
+                // find renames by comparing rename_commit and its parent commit
+                let parents = self.dag.parent_names(rename_commit.clone()).await?;
+                if parents.is_empty() {
+                    return Err(CopyTraceError::NoParents(rename_commit).into());
+                }
+                // For simplicity, we only check p1.
+                let p1 = &parents[0];
+                let (old_manifest, new_manifest) =
+                    self.vertex_to_tree_manifest(p1, &rename_commit).await?;
+                let renames = self.find_renames(&old_manifest, &new_manifest)?;
+
+                if let Some(prev_path) = renames.get(&dst_path) {
+                    dst = p1.clone();
+                    dst_path = prev_path.clone();
+                } else {
+                    // dst_path was new added path
+                    return Ok(None);
+                }
+            } else {
+                // dst_path does not exist
+                return Ok(None);
+            }
+        }
     }
 
     #[allow(unused_variables)]
