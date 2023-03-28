@@ -19,7 +19,12 @@ pub trait CopyTrace {
     /// Trace the corresponding path of `src_path` in `dst` vertex across renames.
     /// Depending on the relationship of `src` and `dst`, it will search backward,
     /// forward or both.
-    fn trace_rename(&self, src: Vertex, dst: Vertex, src_path: RepoPathBuf) -> Option<RepoPathBuf>;
+    async fn trace_rename(
+        &self,
+        src: Vertex,
+        dst: Vertex,
+        src_path: RepoPathBuf,
+    ) -> Result<Option<RepoPathBuf>>;
 
     /// Trace the corresponding path of `dst_path` in `src` commit across renames.
     /// It will search backward, i.e. from `dst` to `src` vertex.

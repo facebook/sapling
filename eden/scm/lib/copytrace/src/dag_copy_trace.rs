@@ -150,14 +150,41 @@ impl DagCopyTrace {
 
 #[async_trait]
 impl CopyTrace for DagCopyTrace {
-    #[allow(unused_variables)]
-    fn trace_rename(
+    async fn trace_rename(
         &self,
         src: dag::Vertex,
         dst: dag::Vertex,
-        src_path: types::RepoPathBuf,
-    ) -> Option<types::RepoPathBuf> {
-        todo!()
+        src_path: RepoPathBuf,
+    ) -> Result<Option<RepoPathBuf>> {
+        tracing::debug!(?src, ?dst, ?src_path, "trace_reanme");
+        if self.dag.is_ancestor(src.clone(), dst.clone()).await? {
+            return self
+                .trace_rename_forward(src.clone(), dst.clone(), src_path)
+                .await;
+        } else if self.dag.is_ancestor(dst.clone(), src.clone()).await? {
+            return self
+                .trace_rename_backward(dst.clone(), src.clone(), src_path)
+                .await;
+        } else {
+            let set = dag::Set::from_static_names(vec![src.clone(), dst.clone()]);
+            let base = match self.dag.gca_one(set).await? {
+                Some(base) => base,
+                None => {
+                    tracing::trace!("no common ancestor");
+                    return Ok(None);
+                }
+            };
+            tracing::trace!(?base);
+            let base_path = self
+                .trace_rename_backward(base.clone(), src, src_path)
+                .await?;
+            tracing::trace!(?base_path);
+            if let Some(base_path) = base_path {
+                return self.trace_rename_forward(base, dst, base_path).await;
+            } else {
+                return Ok(None);
+            }
+        }
     }
 
     async fn trace_rename_backward(
