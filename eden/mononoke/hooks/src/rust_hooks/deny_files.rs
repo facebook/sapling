@@ -107,60 +107,72 @@ impl FileHook for DenyFiles {
         if push_authored_by.service() {
             return Ok(HookExecution::Accepted);
         }
-        if change.is_none() {
-            // It is acceptable to delete any file
-            return Ok(HookExecution::Accepted);
-        }
 
         deny_unacceptable_patterns(
             &self.all_push_sources_deny_patterns,
             &self.native_push_only_deny_patterns,
             path,
             cross_repo_push_source,
+            change,
         )
     }
 }
 
+fn rejection<'a, 'b>(path: &'a String, pattern: &'b LuaPattern) -> HookExecution {
+    HookExecution::Rejected(HookRejectionInfo::new_long(
+        "Denied filename matched name pattern",
+        format!(
+            "Denied filename '{}' matched name pattern '{}'. Rename or remove this file and try again.",
+            path, pattern
+        ),
+    ))
+}
+
 /// Easily-testable business logic of the `DenyFiles` hook
-fn deny_unacceptable_patterns<'a, 'b>(
+fn deny_unacceptable_patterns<'a, 'b, 'c>(
     all_patterns: &'a [LuaPattern],
     native_patterns: &'a [LuaPattern],
     path: &'b MPath,
     cross_repo_push_source: CrossRepoPushSource,
+    change: Option<&'c BasicFileChange>,
 ) -> Result<HookExecution> {
-    let patterns: Vec<&LuaPattern> = {
-        let mut patterns: Vec<&LuaPattern> = all_patterns.iter().collect();
-
-        if CrossRepoPushSource::NativeToThisRepo == cross_repo_push_source {
-            patterns.extend(native_patterns.iter());
-        }
-
-        patterns
-    };
-
     let path = path.to_string();
-    for pattern in patterns {
-        if pattern.is_match(&path) {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                "Denied filename matched name pattern",
-                format!(
-                    "Denied filename '{}' matched name pattern '{}'. Rename or remove this file and try again.",
-                    path, pattern
-                ),
-            )));
+    if CrossRepoPushSource::NativeToThisRepo == cross_repo_push_source {
+        for pattern in native_patterns {
+            if pattern.is_match(&path) {
+                return Ok(rejection(&path, pattern));
+            }
         }
     }
+    if change.is_none() {
+        // It is acceptable to delete any file
+        return Ok(HookExecution::Accepted);
+    }
+
+    for pattern in all_patterns {
+        if pattern.is_match(&path) {
+            return Ok(rejection(&path, pattern));
+        }
+    }
+
     Ok(HookExecution::Accepted)
 }
 
 #[cfg(test)]
 mod test {
+    use mononoke_types::FileType;
+    use mononoke_types_mocks::contentid::TWOS_CTID;
+
     use super::*;
 
     fn setup_patterns() -> (Vec<LuaPattern>, Vec<LuaPattern>) {
         let all: Vec<LuaPattern> = vec!["all".try_into().unwrap()];
         let native: Vec<LuaPattern> = vec!["native".try_into().unwrap()];
         (all, native)
+    }
+
+    fn basic_change() -> BasicFileChange {
+        BasicFileChange::new(TWOS_CTID, FileType::Regular, 10)
     }
 
     fn mpath(s: &str) -> MPath {
@@ -171,13 +183,24 @@ mod test {
     fn test_denied_in_any_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("all/1");
-        let r =
-            deny_unacceptable_patterns(&all, &native, &mp, CrossRepoPushSource::NativeToThisRepo)
-                .unwrap();
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::NativeToThisRepo,
+            Some(&basic_change()),
+        )
+        .unwrap();
         assert!(matches!(r, HookExecution::Rejected(_)));
 
-        let r = deny_unacceptable_patterns(&all, &native, &mp, CrossRepoPushSource::PushRedirected)
-            .unwrap();
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::PushRedirected,
+            Some(&basic_change()),
+        )
+        .unwrap();
         assert!(matches!(r, HookExecution::Rejected(_)));
     }
 
@@ -185,13 +208,49 @@ mod test {
     fn test_denied_only_in_native_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("native/1");
-        let r =
-            deny_unacceptable_patterns(&all, &native, &mp, CrossRepoPushSource::NativeToThisRepo)
-                .unwrap();
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::NativeToThisRepo,
+            Some(&basic_change()),
+        )
+        .unwrap();
         assert!(matches!(r, HookExecution::Rejected(_)));
 
-        let r = deny_unacceptable_patterns(&all, &native, &mp, CrossRepoPushSource::PushRedirected)
-            .unwrap();
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::PushRedirected,
+            Some(&basic_change()),
+        )
+        .unwrap();
+        assert!(matches!(r, HookExecution::Accepted));
+    }
+
+    #[test]
+    fn test_remove_denied_only_in_native_push() {
+        let (all, native) = setup_patterns();
+        let mp = mpath("native/1");
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::NativeToThisRepo,
+            None,
+        )
+        .unwrap();
+        assert!(matches!(r, HookExecution::Rejected(_)));
+
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::PushRedirected,
+            Some(&basic_change()),
+        )
+        .unwrap();
         assert!(matches!(r, HookExecution::Accepted));
     }
 
@@ -199,13 +258,24 @@ mod test {
     fn test_allowed_in_any_push() {
         let (all, native) = setup_patterns();
         let mp = mpath("ababagalamaga");
-        let r =
-            deny_unacceptable_patterns(&all, &native, &mp, CrossRepoPushSource::NativeToThisRepo)
-                .unwrap();
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::NativeToThisRepo,
+            Some(&basic_change()),
+        )
+        .unwrap();
         assert!(matches!(r, HookExecution::Accepted));
 
-        let r = deny_unacceptable_patterns(&all, &native, &mp, CrossRepoPushSource::PushRedirected)
-            .unwrap();
+        let r = deny_unacceptable_patterns(
+            &all,
+            &native,
+            &mp,
+            CrossRepoPushSource::PushRedirected,
+            Some(&basic_change()),
+        )
+        .unwrap();
         assert!(matches!(r, HookExecution::Accepted));
     }
 }

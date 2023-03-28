@@ -132,6 +132,14 @@ impl TrackedFileChange {
 }
 
 impl BasicFileChange {
+    pub fn new(content_id: ContentId, file_type: FileType, size: u64) -> Self {
+        Self {
+            content_id,
+            file_type,
+            size,
+        }
+    }
+
     pub fn content_id(&self) -> ContentId {
         self.content_id
     }
