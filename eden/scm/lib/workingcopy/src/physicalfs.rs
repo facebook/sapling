@@ -157,7 +157,7 @@ impl<M: Matcher + Clone + Send + Sync + 'static> PendingChanges<M> {
                         .has_changed_with_fresh_metadata(
                             ts.normalized_get(path)?,
                             path,
-                            Some(metadata),
+                            Some(metadata.into()),
                         )?;
 
                     if let FileChangeResult::Yes(change_type) = changed {

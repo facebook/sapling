@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::fs::Metadata;
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -16,7 +15,6 @@ use crossbeam::channel::Receiver;
 use crossbeam::channel::SendError;
 use crossbeam::channel::Sender;
 use futures::StreamExt;
-use manifest::FileType;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use parking_lot::RwLock;
@@ -29,17 +27,15 @@ use treestate::filestate::StateFlags;
 use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
-use vfs::is_executable;
-use vfs::is_symlink;
 use vfs::VFS;
 
 use crate::filesystem::ChangeType;
 use crate::metadata::HgModifiedTime;
-use crate::walker::WalkError;
+use crate::metadata::Metadata;
 
 pub type ArcReadFileContents = Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync>;
 
-pub enum FileChangeResult {
+pub(crate) enum FileChangeResult {
     Yes(ChangeType),
     No,
     Maybe(Metadata),
@@ -67,7 +63,9 @@ impl ResolvedFileChangeResult {
     }
 }
 
-pub trait FileChangeDetectorTrait: IntoIterator<Item = Result<ResolvedFileChangeResult>> {
+pub(crate) trait FileChangeDetectorTrait:
+    IntoIterator<Item = Result<ResolvedFileChangeResult>>
+{
     fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath);
     fn total_work_hint(&self, _hint: u64) {}
 }
@@ -103,7 +101,7 @@ impl FileChangeDetector {
 const NEED_CHECK: StateFlags = StateFlags::NEED_CHECK;
 const EXIST_P1: StateFlags = StateFlags::EXIST_P1;
 
-pub fn file_changed_given_metadata(
+pub(crate) fn file_changed_given_metadata(
     vfs: &VFS,
     path: &RepoPath,
     last_write: HgModifiedTime,
@@ -111,7 +109,7 @@ pub fn file_changed_given_metadata(
     state: Option<FileStateV2>,
 ) -> Result<FileChangeResult> {
     // First handle when metadata is None (i.e. file doesn't exist).
-    let (metadata, state) = match (metadata, state) {
+    let (fs_meta, state) = match (metadata, state) {
         // File was untracked during crawl but no longer exists.
         (None, None) => {
             tracing::trace!(?path, "neither on disk nor in treestate");
@@ -138,7 +136,7 @@ pub fn file_changed_given_metadata(
     // Don't check EXIST_P2. If file is only in P2 we want to report "changed"
     // even if its contents happen to match an untracked file on disk.
     let in_parent = matches!(&state, Some(s) if s.state.intersects(EXIST_P1));
-    let is_trackable_file = metadata.is_file() || metadata.is_symlink();
+    let is_trackable_file = fs_meta.is_file(vfs) || fs_meta.is_symlink(vfs);
 
     let state = match (in_parent, is_trackable_file) {
         // If the file is not valid (e.g. a directory or a weird file like
@@ -164,6 +162,8 @@ pub fn file_changed_given_metadata(
 
     let flags = state.state;
 
+    let ts_meta: Metadata = state.into();
+
     // If working copy file size or flags are different from what is in treestate, it has changed.
     // Note: state.size is i32 since Mercurial uses negative numbers to indicate special files.
     // A -1 indicates the file is either in a merge state or a lookup state.
@@ -173,31 +173,29 @@ pub fn file_changed_given_metadata(
     // Regardless, if the size is negative, we'll do a lookup comparison since we can't
     // determine if the file has changed relative to p1. This logic is a mess and we should get
     // rid of all these negative numbers.
-    let valid_size = state.size >= 0;
-    if valid_size {
-        let size_different = metadata.len() != state.size.try_into().unwrap_or(std::u64::MAX);
-        let exec_different =
-            vfs.supports_executables() && is_executable(&metadata) != state.is_executable();
-        let symlink_different =
-            vfs.supports_symlinks() && is_symlink(&metadata) != state.is_symlink();
-
+    if let Some(ts_size) = ts_meta.len() {
+        let size_different = fs_meta.len() != Some(ts_size);
+        let exec_different = fs_meta.is_executable(vfs) != ts_meta.is_executable(vfs);
+        let symlink_different = fs_meta.is_symlink(vfs) != ts_meta.is_symlink(vfs);
         if size_different || exec_different || symlink_different {
             tracing::trace!(
                 ?path,
                 size_different,
                 exec_different,
                 symlink_different,
-                "changed"
+                "changed (metadata mismatch)"
             );
             return Ok(FileChangeResult::changed(path.to_owned()));
         }
+    } else {
+        tracing::trace!(?path, "maybe (no size)");
+        return Ok(FileChangeResult::Maybe(fs_meta));
     }
 
     // If it's marked NEED_CHECK, we always need to do a lookup, regardless of the mtime.
-    let needs_check = flags.intersects(NEED_CHECK) || !valid_size;
-    if needs_check {
+    if flags.intersects(NEED_CHECK) {
         tracing::trace!(?path, "maybe (NEED_CHECK)");
-        return Ok(FileChangeResult::Maybe(metadata));
+        return Ok(FileChangeResult::Maybe(fs_meta));
     }
 
     // If the mtime has changed or matches the last normal() write time, we need to compare the
@@ -205,18 +203,17 @@ pub fn file_changed_given_metadata(
     // the file is in a lookup state. Since a -1 will always cause the equality comparison
     // below to fail and force a lookup, the -1 is handled correctly without special casing. In
     // theory all -1 files should be marked NEED_CHECK above (I think).
-    if state.mtime < 0 {
-        tracing::trace!(?path, "maybe (mtime < 0)");
-        return Ok(FileChangeResult::Maybe(metadata));
-    }
+    let ts_mtime = match ts_meta.mtime() {
+        None => {
+            tracing::trace!(?path, "maybe (no mtime)");
+            return Ok(FileChangeResult::Maybe(fs_meta));
+        }
+        Some(ts) => ts,
+    };
 
-    let state_mtime: Result<HgModifiedTime> = state.mtime.try_into();
-    let state_mtime = state_mtime.map_err(|e| WalkError::InvalidMTime(path.to_owned(), e))?;
-    let mtime: HgModifiedTime = metadata.modified()?.into();
-
-    if mtime != state_mtime || mtime == last_write {
+    if Some(ts_mtime) != fs_meta.mtime() || ts_mtime == last_write {
         tracing::trace!(?path, "maybe (mtime doesn't match)");
-        return Ok(FileChangeResult::Maybe(metadata));
+        return Ok(FileChangeResult::Maybe(fs_meta));
     }
 
     tracing::trace!(?path, "no (fallthrough)");
@@ -257,7 +254,7 @@ fn compare_repo_bytes_to_disk(
 }
 
 impl FileChangeDetector {
-    pub fn has_changed_with_fresh_metadata(
+    pub(crate) fn has_changed_with_fresh_metadata(
         &mut self,
         state: Option<FileStateV2>,
         path: &RepoPath,
@@ -276,7 +273,7 @@ impl FileChangeDetector {
 impl FileChangeDetectorTrait for FileChangeDetector {
     fn submit(&mut self, state: Option<FileStateV2>, path: &RepoPath) {
         let metadata = match self.vfs.metadata(path) {
-            Ok(metadata) => Some(metadata),
+            Ok(metadata) => Some(metadata.into()),
             Err(e) => match e.downcast_ref::<std::io::Error>() {
                 Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
                 _ => {
@@ -303,24 +300,9 @@ impl FileChangeDetectorTrait for FileChangeDetector {
     }
 }
 
-fn manifest_flags_mismatch(vfs: &VFS, mf_type: FileType, fs_meta: &Metadata) -> bool {
-    if vfs.supports_symlinks() {
-        let is_symlink = is_symlink(fs_meta);
-        if is_symlink != (mf_type == FileType::Symlink) {
-            return true;
-        }
-
-        // Ignore executable check since symlinks always appear executable.
-        if is_symlink {
-            return false;
-        }
-    }
-
-    if vfs.supports_executables() && is_executable(fs_meta) != (mf_type == FileType::Executable) {
-        return true;
-    }
-
-    false
+fn manifest_flags_mismatch(vfs: &VFS, mf_meta: Metadata, fs_meta: &Metadata) -> bool {
+    mf_meta.is_symlink(vfs) != fs_meta.is_symlink(vfs)
+        || mf_meta.is_executable(vfs) != fs_meta.is_executable(vfs)
 }
 
 // Allows case insensitive tracking of RepoPathBuf->V. We need this because we
@@ -377,7 +359,7 @@ impl IntoIterator for FileChangeDetector {
                     Ok(file) => {
                         if manifest_flags_mismatch(
                             &self.vfs,
-                            file.meta.file_type,
+                            file.meta.file_type.into(),
                             self.lookups.get(&file.path).unwrap(),
                         ) {
                             tracing::trace!(path=?file.path, "changed (mf flags mismatch disk)");
@@ -568,7 +550,7 @@ impl ParallelDetector {
                 Ok(file) => {
                     if manifest_flags_mismatch(
                         &self.vfs,
-                        file.meta.file_type,
+                        file.meta.file_type.into(),
                         lookups.get(&file.path).unwrap(),
                     ) {
                         tracing::trace!(path=?file.path, "changed (mf flags mismatch disk)");
@@ -623,7 +605,7 @@ impl ParallelDetector {
         lookup_send: &Sender<(RepoPathBuf, Metadata)>,
     ) -> Result<()> {
         let metadata = match vfs.metadata(&path) {
-            Ok(metadata) => Some(metadata),
+            Ok(metadata) => Some(metadata.into()),
             Err(e) => match e.downcast_ref::<std::io::Error>() {
                 Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
                 _ => {

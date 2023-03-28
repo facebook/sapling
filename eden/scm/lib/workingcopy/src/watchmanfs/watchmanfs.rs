@@ -371,7 +371,7 @@ fn warn_about_fresh_instance(io: &IO, old_pid: Option<u32>, new_pid: Option<u32>
 // figure out all the files that may have changed and check them for
 // changes. Also track paths we need to mark or unmark as NEED_CHECK
 // in the treestate.
-pub fn detect_changes(
+pub(crate) fn detect_changes(
     matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     ignore_matcher: Arc<dyn Matcher + Send + Sync + 'static>,
     mut file_change_detector: impl FileChangeDetectorTrait + 'static,
