@@ -20,7 +20,8 @@ use vfs::VFS;
 #[derive(Debug)]
 pub(crate) struct File {
     pub path: RepoPathBuf,
-    pub fs_meta: Option<Metadata>,
+    // Outer Option is whether fs_meta is populated. Inner Option is whether file exists.
+    pub fs_meta: Option<Option<Metadata>>,
     pub ts_state: Option<FileStateV2>,
 }
 

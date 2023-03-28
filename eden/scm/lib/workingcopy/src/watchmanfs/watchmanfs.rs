@@ -278,22 +278,40 @@ impl PendingChanges for WatchmanFileSystem {
             .filter_map(
                 |file| match RepoPathBuf::from_utf8(file.name.into_inner().into_bytes()) {
                     Ok(path) => {
-                        tracing::trace!(?path, ?file.mode, ?file.size, ?file.mtime, "watchman file");
+                        tracing::trace!(
+                            ?path,
+                            mode = *file.mode,
+                            size = *file.size,
+                            mtime = *file.mtime,
+                            exists = *file.exists,
+                            "watchman file"
+                        );
+
+                        let fs_meta = if *file.exists {
+                            if use_watchman_metadata {
+                                Some(Some(Metadata::from_stat(
+                                    file.mode.into_inner() as u32,
+                                    file.size.into_inner(),
+                                    file.mtime.into_inner(),
+                                )))
+                            } else {
+                                None
+                            }
+                        } else {
+                            // If watchman says the file doesn't exist, indicate
+                            // that via the metadata being None. This is
+                            // important when a file moves behind a symlink;
+                            // Watchman will report it as deleted, but a naive
+                            // lstat() call would show the file to still exist.
+                            Some(None)
+                        };
 
                         Some(metadata::File {
                             path,
-                            fs_meta: if use_watchman_metadata && *file.exists {
-                                Some(Metadata::from_stat(
-                                    *file.mode as u32,
-                                    *file.size,
-                                    *file.mtime,
-                                ))
-                            } else {
-                                None
-                            },
+                            fs_meta,
                             ts_state: None,
                         })
-                    },
+                    }
                     Err(err) => {
                         wm_errors.push(err);
                         None

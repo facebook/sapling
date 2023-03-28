@@ -107,8 +107,19 @@ pub(crate) fn file_changed_given_metadata(
 ) -> Result<FileChangeResult> {
     let path = file.path;
 
+    let fs_meta = match file.fs_meta {
+        Some(fs_meta) => fs_meta,
+        None => match vfs.metadata(&path) {
+            Ok(metadata) => Some(metadata.into()),
+            Err(e) => match e.downcast_ref::<std::io::Error>() {
+                Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                _ => return Err(e),
+            },
+        },
+    };
+
     // First handle when metadata is None (i.e. file doesn't exist).
-    let (fs_meta, state) = match (file.fs_meta, file.ts_state) {
+    let (fs_meta, state) = match (fs_meta, file.ts_state) {
         // File was untracked during crawl but no longer exists.
         (None, None) => {
             tracing::trace!(?path, "neither on disk nor in treestate");
@@ -268,20 +279,7 @@ impl FileChangeDetector {
 }
 
 impl FileChangeDetectorTrait for FileChangeDetector {
-    fn submit(&mut self, mut file: metadata::File) {
-        if file.fs_meta.is_none() {
-            file.fs_meta = match self.vfs.metadata(&file.path) {
-                Ok(metadata) => Some(metadata.into()),
-                Err(e) => match e.downcast_ref::<std::io::Error>() {
-                    Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-                    _ => {
-                        self.results.push(Err(e));
-                        return;
-                    }
-                },
-            };
-        }
-
+    fn submit(&mut self, file: metadata::File) {
         match self.has_changed_with_fresh_metadata(file) {
             Ok(res) => match res {
                 FileChangeResult::Yes(change) => {
@@ -596,24 +594,11 @@ impl ParallelDetector {
     // submit a work unit for a full content check.
     fn perform_metadata_check(
         vfs: &VFS,
-        mut file: metadata::File,
+        file: metadata::File,
         last_write: HgModifiedTime,
         result_send: &ProgressSender<Result<ResolvedFileChangeResult>>,
         lookup_send: &Sender<(RepoPathBuf, Metadata)>,
     ) -> Result<()> {
-        if file.fs_meta.is_none() {
-            file.fs_meta = match vfs.metadata(&file.path) {
-                Ok(metadata) => Some(metadata.into()),
-                Err(e) => match e.downcast_ref::<std::io::Error>() {
-                    Some(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-                    _ => {
-                        result_send.send(Err(e))?;
-                        return Ok(());
-                    }
-                },
-            };
-        }
-
         match file_changed_given_metadata(vfs, file, last_write) {
             Ok(res) => match res {
                 FileChangeResult::Yes(change) => {
