@@ -876,7 +876,17 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
             if tostrip:
                 repair.delayedstrip(repo.ui, repo, tostrip, operation)
 
-        return moves
+    # Notify ISL that commits are moved.
+    ipc = bindings.nodeipc.IPC
+    if ipc:
+        ipc.send(
+            {
+                "type": "commitRewrite",
+                "nodeMap": {hex(old): hex(new) for old, new in moves.items()},
+            }
+        )
+
+    return moves
 
 
 def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
