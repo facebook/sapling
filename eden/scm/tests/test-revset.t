@@ -1311,7 +1311,8 @@
     (string '\x08issue\\d+'))
   * set:
   <filteredset
-    <fullreposet+ [0..=9]>,
+    <fullreposet+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
     <grep '\x08issue\\d+'>>
   $ try 'grep(r"\bissue\d+")'
   (func
@@ -1319,7 +1320,8 @@
     (string '\\bissue\\d+'))
   * set:
   <filteredset
-    <fullreposet+ [0..=9]>,
+    <fullreposet+
+      <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
     <grep '\\bissue\\d+'>>
   6
   $ try 'grep(r"\")'

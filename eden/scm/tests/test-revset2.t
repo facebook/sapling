@@ -1005,7 +1005,8 @@ test nesting and variable passing
   * set:
   <baseset
     <max
-      <fullreposet+ [0..=9]>,
+      <fullreposet+
+        <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
       <nameset+
         <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+2:5]>>>>
   5
@@ -1133,7 +1134,8 @@ test unknown reference:
   <addset
     <baseset [9]>,
     <filteredset
-      <fullreposet+ [0..=9]>,
+      <fullreposet+
+        <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
       <desc '$1'>>>
   9
 
@@ -1322,7 +1324,8 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <max
-        <fullreposet+ [0..=9]>,
+        <fullreposet+
+          <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
         <baseset [1, 2]>>>,
     <not
       <baseset [2]>>>
@@ -1340,7 +1343,8 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <min
-        <fullreposet+ [0..=9]>,
+        <fullreposet+
+          <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:6a4f54cc779b5949146617ba046459baab4a496f+0:9]>>,
         <baseset [1, 2]>>>,
     <not
       <baseset [1]>>>

@@ -1616,7 +1616,7 @@ def spanset(repo, start=0, end=maxrev):
     return s
 
 
-class fullreposet(idset):
+class fullreposet(nameset):
     """a set containing all revisions in the repo
 
     This class exists to host special optimization and magic to handle virtual
@@ -1624,7 +1624,8 @@ class fullreposet(idset):
     """
 
     def __new__(cls, repo):
-        s = idset.range(repo, 0, maxrev, True)
+        cl = repo.changelog
+        s = nameset(cl, cl.dag.all(), reverse=True, repo=repo)
         s.__class__ = cls
         return s
 
