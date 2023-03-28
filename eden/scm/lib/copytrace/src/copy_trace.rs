@@ -32,12 +32,12 @@ pub trait CopyTrace {
 
     /// Trace the corresponding path of `src_path` in `dst` commit across renames.
     /// It will search forward, i.e. from `src` to `dst` vertex.
-    fn trace_rename_forward(
+    async fn trace_rename_forward(
         &self,
         src: Vertex,
         dst: Vertex,
         src_path: RepoPathBuf,
-    ) -> Option<RepoPathBuf>;
+    ) -> Result<Option<RepoPathBuf>>;
 
     /// Find rename file paris in the specified `commit`.
     ///

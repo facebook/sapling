@@ -195,14 +195,38 @@ impl CopyTrace for DagCopyTrace {
         }
     }
 
-    #[allow(unused_variables)]
-    fn trace_rename_forward(
+    async fn trace_rename_forward(
         &self,
         src: dag::Vertex,
         dst: dag::Vertex,
-        src_path: types::RepoPathBuf,
-    ) -> Option<types::RepoPathBuf> {
-        todo!()
+        src_path: RepoPathBuf,
+    ) -> Result<Option<RepoPathBuf>> {
+        tracing::trace!(?src, ?dst, ?src_path, "trace_rename_forward");
+        let (mut curr, target, mut curr_path) = (src, dst, src_path);
+
+        loop {
+            tracing::trace!(?curr, ?curr_path, " loop starts");
+            let rename_commit = match self
+                .trace_rename_commit(curr.clone(), target.clone(), curr_path.clone())
+                .await?
+            {
+                Some(rename_commit) => rename_commit,
+                None => return Ok(None), // cur_path does not exist
+            };
+            if rename_commit == curr {
+                return Ok(Some(curr_path));
+            }
+            let (renames, next_commit) = self
+                .find_renames_in_direction(rename_commit, SearchDirection::Forward)
+                .await?;
+            if let Some(next_path) = renames.get(&curr_path) {
+                curr = next_commit;
+                curr_path = next_path.clone();
+            } else {
+                // no rename info for curr_path
+                return Ok(None);
+            }
+        }
     }
 
     fn find_renames(
@@ -244,7 +268,6 @@ impl CopyTrace for DagCopyTrace {
 /// Backward means searching from z to a.
 #[derive(Debug)]
 enum SearchDirection {
-    #[allow(dead_code)]
     Forward,
     Backward,
 }
