@@ -208,4 +208,8 @@ impl dagalgo {
     pub fn from_arc_dag(py: Python, dag: Arc<dyn DagAlgorithm + Send + Sync>) -> PyResult<Self> {
         Self::create_instance(py, dag)
     }
+
+    pub fn to_dag_algorithm(&self, py: Python) -> Arc<dyn DagAlgorithm + Send + Sync> {
+        self.dag(py).clone()
+    }
 }
