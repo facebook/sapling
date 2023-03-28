@@ -71,6 +71,13 @@ impl Prefetch {
             }
         }
     }
+
+    pub fn target(self) -> Option<(PrefetchEdge, Generation)> {
+        match self {
+            Prefetch::None => None,
+            Prefetch::Hint(edge, gen) | Prefetch::Include(edge, gen) => Some((edge, gen)),
+        }
+    }
 }
 
 /// Commit Graph Storage.

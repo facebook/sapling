@@ -380,6 +380,8 @@ pub struct MononokeTunables {
 
     // Disable all prefetching in the commit graph
     disable_commit_graph_prefetch: TunableBool,
+    // Max number of steps to make when prefetching
+    commit_graph_prefetch_step_limit: TunableI64,
 
     // Disable the fix to use isolation level read committed
     disable_wal_read_committed: TunableBool,
