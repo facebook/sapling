@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::format_err;
 use anyhow::Result;
-use async_runtime::block_on;
 use async_trait::async_trait;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -54,16 +53,16 @@ where
             .boxed()
     }
 
-    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>> {
-        let items = block_on(
-            stream_data_from_remote_data_store(self.0.clone(), keys)
-                .map(|result| match result {
-                    Ok((_data, key, copy_from)) => Ok((key, copy_from)),
-                    Err(err) => Err(err),
-                })
-                .collect::<Vec<_>>(),
-        );
-        items.into_iter().collect()
+    async fn read_rename_metadata(
+        &self,
+        keys: Vec<Key>,
+    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+        stream_data_from_remote_data_store(self.0.clone(), keys)
+            .map(|result| match result {
+                Ok((_data, key, copy_from)) => Ok((key, copy_from)),
+                Err(err) => Err(err),
+            })
+            .boxed()
     }
 }
 
@@ -80,16 +79,16 @@ impl ReadFileContents for ArcFileStore {
             .boxed()
     }
 
-    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>> {
-        let items = block_on(
-            stream_data_from_scmstore(self.0.clone(), keys)
-                .map(|result| match result {
-                    Ok((_data, key, copy_from)) => Ok((key, copy_from)),
-                    Err(err) => Err(err),
-                })
-                .collect::<Vec<_>>(),
-        );
-        items.into_iter().collect()
+    async fn read_rename_metadata(
+        &self,
+        keys: Vec<Key>,
+    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+        stream_data_from_scmstore(self.0.clone(), keys)
+            .map(|result| match result {
+                Ok((_data, key, copy_from)) => Ok((key, copy_from)),
+                Err(err) => Err(err),
+            })
+            .boxed()
     }
 }
 

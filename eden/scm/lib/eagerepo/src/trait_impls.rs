@@ -45,17 +45,19 @@ impl ReadFileContents for EagerRepoStore {
         futures::stream::iter(iter).boxed()
     }
 
-    fn read_rename_metadata(&self, keys: Vec<Key>) -> Result<Vec<(Key, Option<Key>)>, Self::Error> {
-        keys.into_iter()
-            .map(|k| {
-                let id = k.hgid;
-                let copy_from = match self.get_content(id)? {
-                    Some(data) => strip_metadata(&data)?.1,
-                    None => anyhow::bail!("no such file: {:?}", &k),
-                };
-                Ok((k, copy_from))
-            })
-            .collect()
+    async fn read_rename_metadata(
+        &self,
+        keys: Vec<Key>,
+    ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+        let iter = keys.into_iter().map(|k| {
+            let id = k.hgid;
+            let copy_from = match self.get_content(id)? {
+                Some(data) => strip_metadata(&data)?.1,
+                None => anyhow::bail!("no such file: {:?}", &k),
+            };
+            Ok((k, copy_from))
+        });
+        futures::stream::iter(iter).boxed()
     }
 }
 

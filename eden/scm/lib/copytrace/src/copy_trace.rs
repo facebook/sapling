@@ -49,7 +49,7 @@ pub trait CopyTrace {
     /// TODO: move this method into a separate trait. Practically the graph log and
     /// the find_renames can use different impls independently and form different
     /// combinations.
-    fn find_renames(
+    async fn find_renames(
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,

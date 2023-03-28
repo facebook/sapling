@@ -102,7 +102,7 @@ py_class!(pub class dagcopytrace |py| {
     ) -> PyResult<HashMap<String, String>> {
         let old_tree = old_tree.get_underlying(py);
         let new_tree = new_tree.get_underlying(py);
-        let map = self.inner(py).find_renames(&old_tree.read(), &new_tree.read()).map_pyerr(py)?;
+        let map = block_on(self.inner(py).find_renames(&old_tree.read(), &new_tree.read())).map_pyerr(py)?;
         let map = map
             .into_iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))

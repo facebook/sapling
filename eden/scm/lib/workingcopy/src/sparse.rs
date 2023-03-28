@@ -537,11 +537,11 @@ inc
             .boxed()
         }
 
-        fn read_rename_metadata(
+        async fn read_rename_metadata(
             &self,
             _keys: Vec<Key>,
-        ) -> Result<Vec<(Key, Option<Key>)>, Self::Error> {
-            Ok(vec![])
+        ) -> BoxStream<Result<(Key, Option<Key>), Self::Error>> {
+            stream::empty().boxed()
         }
     }
 }

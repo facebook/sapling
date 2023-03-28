@@ -17,6 +17,7 @@ use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use pathhistory::RenameTracer;
 use pathmatcher::AlwaysMatcher;
+use storemodel::futures::StreamExt;
 use storemodel::ReadFileContents;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
@@ -58,14 +59,21 @@ impl DagCopyTrace {
         Ok(dag_copy_trace)
     }
 
-    fn read_renamed_metadata(&self, keys: Vec<Key>) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
+    async fn read_renamed_metadata(
+        &self,
+        keys: Vec<Key>,
+    ) -> Result<HashMap<RepoPathBuf, RepoPathBuf>> {
         // TODO: add metrics for the size of the result
-        let renames = self.file_reader.read_rename_metadata(keys)?;
-        let map: HashMap<_, _> = renames
-            .into_iter()
-            .filter(|(_, v)| v.is_some())
-            .map(|(key, rename_from_key)| (key.path, rename_from_key.unwrap().path))
-            .collect();
+        let mut renames = self.file_reader.read_rename_metadata(keys).await;
+
+        let mut map: HashMap<RepoPathBuf, RepoPathBuf> = HashMap::new();
+        while let Some(rename) = renames.next().await {
+            let (key, rename_from_key) = rename?;
+            if let Some(rename_from_key) = rename_from_key {
+                map.insert(key.path, rename_from_key.path);
+            }
+        }
+
         Ok(map)
     }
 
@@ -130,7 +138,7 @@ impl DagCopyTrace {
         // For simplicity, we only check p1.
         let p1 = &parents[0];
         let (old_manifest, new_manifest) = self.vertex_to_tree_manifest(p1, &commit).await?;
-        let renames = self.find_renames(&old_manifest, &new_manifest)?;
+        let renames = self.find_renames(&old_manifest, &new_manifest).await?;
         let (renames, next_commit) = match direction {
             SearchDirection::Backward => (renames, p1.clone()),
             SearchDirection::Forward => {
@@ -253,7 +261,7 @@ impl CopyTrace for DagCopyTrace {
         }
     }
 
-    fn find_renames(
+    async fn find_renames(
         &self,
         old_tree: &TreeManifest,
         new_tree: &TreeManifest,
@@ -262,23 +270,29 @@ impl CopyTrace for DagCopyTrace {
         // * [x] parse file header and get mv info
         // * support content similarity for sl repo
         // * support content similarity for git repo
-        let matcher = AlwaysMatcher::new();
-        let diff = Diff::new(old_tree, new_tree, &matcher)?;
         let mut new_files = Vec::new();
-        for entry in diff {
-            let entry = entry?;
 
-            if let DiffType::RightOnly(file_metadata) = entry.diff_type {
-                let path = entry.path;
-                let key = Key {
-                    path,
-                    hgid: file_metadata.hgid,
-                };
-                new_files.push(key);
+        {
+            // this block is for dropping matcher and diff at the end of the block,
+            // otherwise the compiler compilains variable might be used across 'await'
+
+            let matcher = AlwaysMatcher::new();
+            let diff = Diff::new(old_tree, new_tree, &matcher)?;
+            for entry in diff {
+                let entry = entry?;
+
+                if let DiffType::RightOnly(file_metadata) = entry.diff_type {
+                    let path = entry.path;
+                    let key = Key {
+                        path,
+                        hgid: file_metadata.hgid,
+                    };
+                    new_files.push(key);
+                }
             }
         }
 
-        self.read_renamed_metadata(new_files)
+        self.read_renamed_metadata(new_files).await
     }
 }
 
