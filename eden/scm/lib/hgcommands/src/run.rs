@@ -65,6 +65,13 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     if args.get(1).map(|s| s.as_ref()) == Some("start-pfc-server") {
         return HgPython::new(&args).run_hg(args, io, &ConfigSet::new());
     }
+
+    // Initialize NodeIpc:
+    // - Before spawning threads, since unsetenv (3) is MT-unsafe.
+    // - After pfc-server, since we don't pfc-server to consume the IPC.
+    // - Before debugpython, since it might be useful for Python logic.
+    setup_nodeipc();
+
     // Skip initialization for debugpython. Make it closer to vanilla Python.
     if args.get(1).map(|s| s.as_str()) == Some("debugpython") {
         // naive command-line parsing: strip "--".
@@ -816,4 +823,9 @@ fn setup_ctrlc() {
         // "exit" tries to call "Drop"s but we don't rely on "Drop" for data integrity.
         std::process::exit(128 | libc::SIGINT);
     });
+}
+
+fn setup_nodeipc() {
+    // Trigger `Lazy` initialization.
+    let _ = &*nodeipc::IPC;
 }
