@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/rpc/Server.h"
 
 #include <tuple>
@@ -705,5 +703,3 @@ folly::SocketAddress RpcServer::getAddr() const {
 }
 
 } // namespace facebook::eden
-
-#endif

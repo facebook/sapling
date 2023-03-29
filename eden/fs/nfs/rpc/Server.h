@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include <vector>
 
 #include <folly/SocketAddress.h>
@@ -436,5 +434,3 @@ class RpcServer : public std::enable_shared_from_this<RpcServer> {
 };
 
 } // namespace facebook::eden
-
-#endif
