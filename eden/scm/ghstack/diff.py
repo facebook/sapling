@@ -45,7 +45,6 @@ class PullRequestResolved:
             return PullRequestResolved(
                 owner=m.group("owner"),
                 repo=m.group("repo"),
-                # pyre-fixme[45]: Cannot instantiate abstract class `GitHubNumber`.
                 number=GitHubNumber(int(m.group("number"))),
             )
         m = RE_GH_METADATA.search(s)
@@ -53,7 +52,6 @@ class PullRequestResolved:
             return PullRequestResolved(
                 owner=m.group("owner"),
                 repo=m.group("repo"),
-                # pyre-fixme[45]: Cannot instantiate abstract class `GitHubNumber`.
                 number=GitHubNumber(int(m.group("number"))),
             )
         return None
