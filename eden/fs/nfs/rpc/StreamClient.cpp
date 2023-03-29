@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/rpc/StreamClient.h"
 
 #include <folly/Exception.h>
@@ -153,5 +151,3 @@ StreamClient::receiveChunk() {
 }
 
 } // namespace facebook::eden
-
-#endif
