@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
 #include "eden/fs/nfs/Nfsd3.h"
 
 #include <memory>
@@ -13,6 +12,7 @@
 #include <folly/Utility.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
+#include <folly/portability/Stdlib.h>
 
 #include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsUtils.h"
@@ -29,7 +29,7 @@
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/Throw.h"
 
-#ifndef __APPLE__
+#ifdef __linux__
 #include <sys/sysmacros.h>
 #endif
 
@@ -233,10 +233,13 @@ nfsstat3 exceptionToNfsError(const folly::exception_wrapper& ex) {
         return nfsstat3::NFS3ERR_NAMETOOLONG;
       case ENOTEMPTY:
         return nfsstat3::NFS3ERR_NOTEMPTY;
+// TODO: Are these needed on Windows, probably ESTALE is.
+#ifndef _WIN32
       case EDQUOT:
         return nfsstat3::NFS3ERR_DQUOT;
       case ESTALE:
         return nfsstat3::NFS3ERR_STALE;
+#endif
       case ETIMEDOUT:
       case EAGAIN:
       case ENOMEM:
@@ -916,7 +919,12 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::mknod(
   dev_t rdev;
   if (auto devicedata = std::get_if<devicedata3>(&args.what.v)) {
     mode |= setMode3ToMode(devicedata->dev_attributes.mode);
+#ifndef _WIN32
     rdev = makedev(devicedata->spec.specdata1, devicedata->spec.specdata2);
+#else
+    // TODO: fully implement mknod
+    rdev = 0;
+#endif
   } else if (auto sattr = std::get_if<sattr3>(&args.what.v)) {
     mode |= setMode3ToMode(sattr->mode);
     rdev = 0;
@@ -1278,6 +1286,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
   serializeReply(ser, accept_stat::SUCCESS, context.getXid());
   auto args = XdrTrait<FSSTAT3args>::deserialize(deser);
 
+#ifndef _WIN32
   return dispatcher_->statfs(args.fsroot.ino, context.getObjectFetchContext())
       .thenTry([this, ser = std::move(ser), ino = args.fsroot.ino, &context](
                    folly::Try<struct statfs> statFsTry) mutable {
@@ -1310,6 +1319,17 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
               return folly::unit;
             });
       });
+#else
+  // TODO: implement on windows
+  return dispatcher_->getattr(args.fsroot.ino, context.getObjectFetchContext())
+      .thenTry([ser = std::move(ser)](
+                   const folly::Try<struct stat>& statTry) mutable {
+        FSSTAT3res res{
+            {{nfsstat3::NFS3ERR_NOTSUPP,
+              FSSTAT3resfail{statToPostOpAttr(statTry)}}}};
+        XdrTrait<FSSTAT3res>::serialize(ser, res);
+      });
+#endif
 }
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsinfo(
@@ -1333,7 +1353,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsinfo(
             /*wtmult=*/1,
             /*dtpref=*/iosize_,
             /*maxfilesize=*/std::numeric_limits<uint64_t>::max(),
-            nfstime3{0, 1},
+            // TODO: support nanosecond granularity on Windows
+            /*time_delta*/ folly::kIsWindows ? nfstime3{1, 0} : nfstime3{0, 1},
             /*properties*/ FSF3_SYMLINK | FSF3_HOMOGENEOUS | FSF3_CANSETTIME,
         }}}};
 
@@ -2113,5 +2134,3 @@ ProcessAccessLog::AccessType nfsProcAccessType(uint32_t procNumber) {
 }
 
 } // namespace facebook::eden
-
-#endif
