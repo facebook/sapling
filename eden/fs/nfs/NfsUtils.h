@@ -7,12 +7,11 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include <folly/Try.h>
 #include <folly/Utility.h>
-#include <sys/stat.h>
+#include <folly/portability/SysStat.h>
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/Throw.h"
 
 namespace facebook::eden {
@@ -46,15 +45,31 @@ inline mode_t ftype3ToMode(ftype3 type) {
     case ftype3::NF3DIR:
       return S_IFDIR;
     case ftype3::NF3BLK:
+#ifdef _WIN32
+      return _S_IFBLK;
+#else
       return S_IFBLK;
+#endif
     case ftype3::NF3CHR:
       return S_IFCHR;
     case ftype3::NF3LNK:
+#ifdef _WIN32
+      return _S_IFLNK;
+#else
       return S_IFLNK;
+#endif
     case ftype3::NF3SOCK:
+#ifdef _WIN32
+      return _S_IFSOCK;
+#else
       return S_IFSOCK;
+#endif
     case ftype3::NF3FIFO:
+#ifdef _WIN32
+      return _S_IFIFO;
+#else
       return S_IFIFO;
+#endif
   }
   throw_<std::domain_error>("unexpected ftype3 ", folly::to_underlying(type));
 }
@@ -80,8 +95,10 @@ inline uint32_t modeToNfsMode(mode_t mode) {
   nfsMode |= mode & S_IWOTH ? kWriteOtherBit : 0;
   nfsMode |= mode & S_IXOTH ? kExecOtherBit : 0;
 
+#ifndef _WIN32
   nfsMode |= mode & S_ISUID ? kSUIDBit : 0;
   nfsMode |= mode & S_ISGID ? kGIDBit : 0;
+#endif
 
   return nfsMode;
 }
@@ -109,11 +126,21 @@ inline fattr3 statToFattr3(const struct stat& stat) {
   return fattr3{
       /*type*/ modeToFtype3(stat.st_mode),
       /*mode*/ modeToNfsMode(stat.st_mode),
+#ifndef WIN32
       /*nlink*/ folly::to_narrow(stat.st_nlink),
       /*uid*/ stat.st_uid,
       /*gid*/ stat.st_gid,
+#else
+      /*nlink*/ uint32_t(stat.st_nlink),
+      /*uid*/ uint32_t(stat.st_uid),
+      /*gid*/ uint32_t(stat.st_gid),
+#endif
       /*size*/ folly::to_unsigned(stat.st_size),
+#ifndef WIN32
       /*used*/ folly::to_unsigned(stat.st_blocks) * 512u,
+#else
+      /*used*/ 0,
+#endif
       /*rdev*/ specdata3{0, 0}, // TODO(xavierd)
       /*fsid*/ folly::to_unsigned(stat.st_dev),
       /*fileid*/ stat.st_ino,
@@ -121,10 +148,14 @@ inline fattr3 statToFattr3(const struct stat& stat) {
       /*atime*/ timespecToNfsTime(stat.st_atim),
       /*mtime*/ timespecToNfsTime(stat.st_mtim),
       /*ctime*/ timespecToNfsTime(stat.st_ctim),
-#else
+#elif defined(__APPLE__)
       /*atime*/ timespecToNfsTime(stat.st_atimespec),
       /*mtime*/ timespecToNfsTime(stat.st_mtimespec),
       /*ctime*/ timespecToNfsTime(stat.st_ctimespec),
+#else
+      /*atime*/ timespecToNfsTime(timespec{stat.st_atime, 0}),
+      /*mtime*/ timespecToNfsTime(timespec{stat.st_mtime, 0}),
+      /*ctime*/ timespecToNfsTime(timespec{stat.st_ctime, 0}),
 #endif
   };
 }
@@ -135,9 +166,12 @@ inline pre_op_attr statToPreOpAttr(const struct stat& stat) {
 #ifdef __linux__
       /*mtime*/ timespecToNfsTime(stat.st_mtim),
       /*ctime*/ timespecToNfsTime(stat.st_ctim),
-#else
+#elif defined(__APPLE__)
       /*mtime*/ timespecToNfsTime(stat.st_mtimespec),
       /*ctime*/ timespecToNfsTime(stat.st_ctimespec),
+#else
+      /*mtime*/ timespecToNfsTime(timespec{stat.st_mtime, 0}),
+      /*ctime*/ timespecToNfsTime(timespec{stat.st_ctime, 0}),
 #endif
   }};
 }
@@ -193,4 +227,3 @@ uint32_t getEffectiveAccessRights(
     uint32_t desiredAccess);
 
 } // namespace facebook::eden
-#endif

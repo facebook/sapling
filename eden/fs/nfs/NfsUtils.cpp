@@ -7,8 +7,6 @@
 
 #include "eden/fs/nfs/NfsUtils.h"
 
-#ifndef _WIN32
-
 #include <utility>
 
 namespace facebook::eden {
@@ -51,4 +49,3 @@ uint32_t getEffectiveAccessRights(
 }
 
 } // namespace facebook::eden
-#endif

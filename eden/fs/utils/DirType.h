@@ -52,6 +52,9 @@ static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
 #define _S_IFSOCK 0xC000
 #define DT_SOCK (_S_IFSOCK >> 12)
 
+#define _S_IFBLK 0x3000
+#define DT_BLK (_S_IFBLK >> 12)
+
 #define IFTODT(mode) (((mode)&_S_IFMT) >> 12)
 #define DTTOIF(type) (((type) << 12) & _S_IFMT)
 
@@ -61,6 +64,18 @@ static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
 
 #ifndef S_ISREG
 #define S_ISREG(mode) (((mode) & (_S_IFREG)) == (_S_IFREG) ? 1 : 0)
+#endif
+
+#ifndef S_ISBLK
+#define S_ISBLK(mode) (((mode) & (_S_IFBLK)) == (_S_IFBLK) ? 1 : 0)
+#endif
+
+#ifndef S_ISCHR
+#define S_ISCHR(mode) (((mode) & (_S_IFCHR)) == (_S_IFCHR) ? 1 : 0)
+#endif
+
+#ifndef S_ISFIFO
+#define S_ISFIFO(mode) (((mode) & (_S_IFIFO)) == (_S_IFIFO) ? 1 : 0)
 #endif
 
 #define S_ISSOCK(mode) (((mode) & (_S_IFSOCK)) == (_S_IFSOCK) ? 1 : 0)
