@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/NfsdRpc.h"
 
 #include <fmt/format.h>
@@ -156,5 +154,3 @@ RpcParsingError constructInodeParsingError(
 }
 
 } // namespace facebook::eden
-
-#endif

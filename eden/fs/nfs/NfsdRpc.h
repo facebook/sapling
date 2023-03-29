@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 
@@ -926,5 +924,3 @@ struct PATHCONF3res
     : public detail::Nfsstat3Variant<PATHCONF3resok, PATHCONF3resfail> {};
 
 } // namespace facebook::eden
-
-#endif
