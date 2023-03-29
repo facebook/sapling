@@ -190,7 +190,10 @@ fn libc_fd_to_raw_filedescriptor(fd: LibcFd) -> anyhow::Result<RawFileDescriptor
     {
         let handle = unsafe { libc::get_osfhandle(fd) };
         // -1: INVALID_HANDLE; -2: Not associated.
-        anyhow::ensure!(handle != -1 && handle != -2, "libc fd {fd} is invalid ({handle})");
+        anyhow::ensure!(
+            handle != -1 && handle != -2,
+            "libc fd {fd} is invalid ({handle})"
+        );
         return Ok(handle as _);
     }
 
