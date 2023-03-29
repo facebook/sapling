@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 // https://datatracker.ietf.org/doc/rfc5531/?include_text=1
 
 #include <vector>
@@ -202,5 +200,3 @@ class RpcParsingError : public std::exception {
 };
 
 } // namespace facebook::eden
-
-#endif
