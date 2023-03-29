@@ -46,8 +46,88 @@ import {atom, useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
+import {notEmpty} from 'shared/utils';
 
 import './UncommittedChanges.css';
+
+type UIChangedFile = {
+  path: RepoRelativePath;
+  // disambiguated path, or rename with arrow
+  label: string;
+  status: ChangedFileType;
+  visualStatus: VisualChangedFileType;
+  copiedFrom?: RepoRelativePath;
+  renamedFrom?: RepoRelativePath;
+  tooltip: string;
+};
+
+function processCopiesAndRenames(files: Array<ChangedFile>): Array<UIChangedFile> {
+  const disambiguousPaths = minimalDisambiguousPaths(files.map(file => file.path));
+  const copySources = new Set(files.map(file => file.copy).filter(notEmpty));
+  const removedFiles = new Set(files.filter(file => file.status === 'R').map(file => file.path));
+
+  return (
+    files
+      // Hide files that were renamed
+      .filter(file => !(file.status === 'R' && copySources.has(file.path)))
+      .map((file, i) => {
+        const minimalName = disambiguousPaths[i];
+        let fileLabel = minimalName;
+        let tooltip = file.path;
+        let copiedFrom;
+        let renamedFrom;
+        let visualStatus: VisualChangedFileType = file.status;
+        if (file.copy != null) {
+          // Disambiguate between original file and the newly copy's name,
+          // instead of disambiguating among all file names.
+          const [originalName, copiedName] = minimalDisambiguousPaths([file.copy, file.path]);
+          fileLabel = `${originalName} → ${copiedName}`;
+          if (removedFiles.has(file.copy)) {
+            renamedFrom = file.copy;
+            tooltip = t('$newPath\n\nThis file was renamed from $originalPath', {
+              replace: {$newPath: file.path, $originalPath: file.copy},
+            });
+            visualStatus = 'Renamed';
+          } else {
+            copiedFrom = file.copy;
+            tooltip = t('$newPath\n\nThis file was copied from $originalPath', {
+              replace: {$newPath: file.path, $originalPath: file.copy},
+            });
+            visualStatus = 'Copied';
+          }
+        }
+
+        return {
+          path: file.path,
+          label: fileLabel,
+          status: file.status,
+          visualStatus,
+          copiedFrom,
+          renamedFrom,
+          tooltip,
+        };
+      })
+      .sort((a, b) =>
+        a.visualStatus === b.visualStatus
+          ? a.path.localeCompare(b.path)
+          : sortKeyForStatus[a.visualStatus] - sortKeyForStatus[b.visualStatus],
+      )
+  );
+}
+
+type VisualChangedFileType = ChangedFileType | 'Renamed' | 'Copied';
+
+const sortKeyForStatus: Record<VisualChangedFileType, number> = {
+  M: 0,
+  Renamed: 1,
+  A: 2,
+  Copied: 3,
+  R: 4,
+  '!': 5,
+  '?': 6,
+  U: 7,
+  Resolved: 8,
+};
 
 export function ChangedFiles({
   files,
@@ -58,12 +138,14 @@ export function ChangedFiles({
   deselectedFiles?: Set<string>;
   setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
 }>) {
-  const disambiguousPaths = minimalDisambiguousPaths(files.map(file => file.path));
+  const processedFiles = processCopiesAndRenames(files);
   return (
     <div className="changed-files">
-      {files.map((file, i) => {
-        const [statusName, icon] = nameAndIconForFileStatus[file.status];
-        const minimalName = disambiguousPaths[i];
+      {processedFiles.map(file => {
+        // Renamed files are files which have a copy field, where that path was also removed.
+        // Visually show renamed files as if they were modified, even though sl treats them as added.
+        const [statusName, icon] = nameAndIconForFileStatus[file.visualStatus];
+
         return (
           <div
             className={`changed-file file-${statusName}`}
@@ -85,11 +167,17 @@ export function ChangedFiles({
                   if (checked) {
                     if (newDeselected.has(file.path)) {
                       newDeselected.delete(file.path);
+                      if (file.renamedFrom != null) {
+                        newDeselected.delete(file.renamedFrom); // checkbox applies to original part of renamed files too
+                      }
                       setDeselectedFiles?.(newDeselected);
                     }
                   } else {
                     if (!newDeselected.has(file.path)) {
                       newDeselected.add(file.path);
+                      if (file.renamedFrom != null) {
+                        newDeselected.add(file.renamedFrom); // checkbox applies to original part of renamed files too
+                      }
                       setDeselectedFiles?.(newDeselected);
                     }
                   }
@@ -100,10 +188,11 @@ export function ChangedFiles({
               className="changed-file-path"
               onClick={() => {
                 platform.openFile(file.path);
-              }}
-              title={file.path}>
+              }}>
               <Icon icon={icon} />
-              <span className="changed-file-path-text">{minimalName}</span>
+              <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
+                <span className="changed-file-path-text">{file.label}</span>
+              </Tooltip>
             </span>
             {showFileActions ? <FileActions file={file} /> : null}
           </div>
@@ -232,6 +321,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
             <VSCodeButton
               appearance="icon"
               key="deselect-all"
+              data-testid="deselect-all-button"
               disabled={noFilesSelected}
               onClick={() => {
                 setDeselectedFiles(new Set(uncommittedChanges.map(file => file.path)));
@@ -296,6 +386,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
               <VSCodeButton
                 appearance="icon"
                 disabled={noFilesSelected}
+                data-testid="quick-commit-button"
                 onClick={() => {
                   const title =
                     (commitTitleRef.current as HTMLInputElement | null)?.value ||
@@ -420,7 +511,7 @@ function MergeConflictButtons({
 
 const revertableStatues = new Set(['M', 'R', '!']);
 const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
-function FileActions({file}: {file: ChangedFile}) {
+function FileActions({file}: {file: UIChangedFile}) {
   const runOperation = useRunOperation();
   const actions: Array<React.ReactNode> = [];
 
@@ -611,7 +702,7 @@ function useDeselectedFiles(
 /**
  * Map for changed files statuses into classNames (for color & styles) and icon names.
  */
-const nameAndIconForFileStatus: Record<ChangedFileType, [string, string]> = {
+const nameAndIconForFileStatus: Record<VisualChangedFileType, [string, string]> = {
   A: ['added', 'diff-added'],
   M: ['modified', 'diff-modified'],
   R: ['removed', 'diff-removed'],
@@ -619,4 +710,6 @@ const nameAndIconForFileStatus: Record<ChangedFileType, [string, string]> = {
   '!': ['ignored', 'warning'],
   U: ['unresolved', 'diff-ignored'],
   Resolved: ['resolved', 'pass'],
+  Renamed: ['modified', 'diff-renamed'],
+  Copied: ['added', 'diff-added'],
 };

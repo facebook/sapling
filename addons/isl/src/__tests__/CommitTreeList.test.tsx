@@ -210,7 +210,7 @@ describe('CommitTreeList', () => {
           );
           expect(ignoredFileCheckboxes).toHaveLength(2); // file_untracked.js and file_missing.js
           act(() => {
-            fireEvent.click(ignoredFileCheckboxes[1]);
+            fireEvent.click(ignoredFileCheckboxes[0]);
           });
 
           const addremove = screen.getByTestId('addremove-button');

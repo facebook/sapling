@@ -543,7 +543,7 @@ export class Repository {
     try {
       this.uncommittedChangesBeginFetchingEmitter.emit('start');
       // Note `status -tjson` run with PLAIN are repo-relative
-      const proc = await this.runCommand(['status', '-Tjson']);
+      const proc = await this.runCommand(['status', '-Tjson', '--copies']);
       const files = (JSON.parse(proc.stdout) as UncommittedChanges).map(change => ({
         ...change,
         path: removeLeadingPathSep(change.path),
