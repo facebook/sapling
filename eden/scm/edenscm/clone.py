@@ -12,7 +12,7 @@ from .i18n import _
 from .node import hex
 
 
-def revlogclone(source, repo):
+def revlogclone(source, repo) -> None:
     """clone from source into an empty remotefilelog repo using revlog changelog"""
 
     with repo.wlock(), repo.lock(), repo.transaction("clone"), repo.ui.configoverride(
@@ -68,7 +68,7 @@ def revlogclone(source, repo):
         )
 
 
-def emergencyclone(source, repo):
+def emergencyclone(source, repo) -> None:
     """clone only 1 single commit for emergency commit+push use-cases
 
     The commit graph will be incomplete and there is no way to complete the
@@ -126,7 +126,7 @@ def emergencyclone(source, repo):
             repo.invalidatechangelog()
 
 
-def segmentsclone(source, repo):
+def segmentsclone(source, repo) -> None:
     """clone using segmented changelog's CloneData
 
     This produces a repo with lazy commit hashes.
