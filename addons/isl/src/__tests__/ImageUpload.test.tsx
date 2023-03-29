@@ -8,9 +8,9 @@
 import type {CodeReviewSystem} from '../types';
 
 import App from '../App';
+import {CommitInfoTestUtils} from '../testQueries';
 import {
   COMMIT,
-  CommitInfoTestUtils,
   expectMessageNOTSentToServer,
   expectMessageSentToServer,
   fireMouseEvent,

@@ -7,6 +7,7 @@
 
 import App from '../App';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
+import {CommitTreeListTestUtils} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -17,7 +18,6 @@ import {
   simulateRepoConnected,
   dragAndDropCommits,
   COMMIT,
-  CommitTreeListTestUtils,
 } from '../testUtils';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';

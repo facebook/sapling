@@ -7,15 +7,14 @@
 
 import App from '../App';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
+import {CommitTreeListTestUtils, CommitInfoTestUtils} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
   simulateCommits,
   simulateRepoConnected,
   TEST_COMMIT_HISTORY,
-  CommitInfoTestUtils,
   COMMIT,
-  CommitTreeListTestUtils,
 } from '../testUtils';
 import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

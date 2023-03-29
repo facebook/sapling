@@ -9,6 +9,7 @@ import type {Hash} from '../types';
 
 import App from '../App';
 import platform from '../platform';
+import {CommitInfoTestUtils} from '../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -17,7 +18,6 @@ import {
   closeCommitInfoSidebar,
   simulateUncommittedChangedFiles,
   simulateMessageFromServer,
-  CommitInfoTestUtils,
 } from '../testUtils';
 import {CommandRunner, SucceedableRevset} from '../types';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';

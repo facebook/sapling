@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {MergeConflictTestUtils} from '../src/testUtils';
+import {MergeConflictTestUtils} from '../src/testQueries';
 import {initRepo} from './setup';
 import {act, screen, waitFor, within} from '@testing-library/react';
 
