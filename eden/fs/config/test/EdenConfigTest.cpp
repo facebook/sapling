@@ -42,7 +42,6 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultSystemIgnoreFilePath_;
   AbsolutePath defaultEdenDirPath_;
   RelativePath clientCertificatePath_{"home/bob/client.pem"};
-  std::optional<AbsolutePath> defaultClientCertificatePath_;
   bool defaultUseMononoke_ = false;
 
   // Map of test names to system, user path
@@ -145,7 +144,6 @@ TEST_F(EdenConfigTest, defaultTest) {
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(edenConfig->getClientCertificate(), defaultClientCertificatePath_);
   EXPECT_EQ(edenConfig->useMononoke.getValue(), defaultUseMononoke_);
 }
 
@@ -252,7 +250,6 @@ TEST_F(EdenConfigTest, cloneTest) {
   EXPECT_EQ(
       configCopy->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(configCopy->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(configCopy->getClientCertificate(), defaultClientCertificatePath_);
   EXPECT_EQ(configCopy->useMononoke.getValue(), defaultUseMononoke_);
 }
 
@@ -398,7 +395,6 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
   EXPECT_EQ(
       edenConfig->systemIgnoreFile.getValue(), defaultSystemIgnoreFilePath_);
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
-  EXPECT_EQ(edenConfig->getClientCertificate(), defaultClientCertificatePath_);
   EXPECT_EQ(edenConfig->useMononoke.getValue(), defaultUseMononoke_);
 }
 
