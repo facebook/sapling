@@ -349,20 +349,10 @@ function createTextMateGrammarManifest(
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Grammar, TextMateGrammar} from '../../textmate-lib/types';
+import type {Grammar, LanguageConfiguration, TextMateGrammar} from '../../textmate-lib/types';
 
 const grammars: {[scopeName: string]: Grammar} = {
   ${grammars.map(createGrammarsEntry).join('')}
-};
-
-export type LanguageConfiguration = {
-  id: string;
-  extensions?: string[];
-  filenames?: string[];
-  filenamePatterns?: string[];
-  firstLine?: string;
-  aliases?: string[];
-  mimetypes?: string[];
 };
 
 async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {

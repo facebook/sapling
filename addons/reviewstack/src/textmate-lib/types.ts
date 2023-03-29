@@ -20,3 +20,13 @@ export type Grammar = {
   embeddedLanguages?: {[scopeName: string]: string};
   getGrammar: () => Promise<TextMateGrammar>;
 };
+
+export type LanguageConfiguration = {
+  id: string;
+  extensions?: string[];
+  filenames?: string[];
+  filenamePatterns?: string[];
+  firstLine?: string;
+  aliases?: string[];
+  mimetypes?: string[];
+};

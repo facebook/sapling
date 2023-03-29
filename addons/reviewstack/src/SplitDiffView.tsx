@@ -26,6 +26,7 @@ import {
 } from './createTokenizedIntralineDiff';
 import {diffAndTokenize, lineRange} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
+import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
 import {
   gitHubPullRequestLineToPositionForFile,
   gitHubPullRequestSelectedVersionIndex,
@@ -35,7 +36,7 @@ import {
   gitHubThreadsForDiffFile,
   nullAtom,
 } from './recoil';
-import {findScopeNameForPath} from './textmate/findScopeNameForPath';
+import FilepathClassifier from './textmate-lib/FilepathClassifier';
 import {primerColorMode} from './themeState';
 import {groupBy} from './utils';
 import {UnfoldIcon} from '@primer/octicons-react';
@@ -58,6 +59,15 @@ export type Props = {
   isPullRequest: boolean;
 };
 
+let _classifier: FilepathClassifier | null = null;
+
+function getFilepathClassifier(): FilepathClassifier {
+  if (_classifier == null) {
+    _classifier = new FilepathClassifier(grammars, languages);
+  }
+  return _classifier;
+}
+
 /*
  * The Recoil values that are monitored by <SplitDiffView> are unlikely to
  * change over the lifetime of the component whereas `gitHubThreadsForDiffFile`
@@ -71,7 +81,7 @@ export default function SplitDiffView({
   after,
   isPullRequest,
 }: Props): React.ReactElement {
-  const scopeName = findScopeNameForPath(path);
+  const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   const colorMode = useRecoilValue(primerColorMode);
   const loadable = useRecoilValueLoadable(
     waitForAll([

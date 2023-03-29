@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Grammar, TextMateGrammar} from '../../textmate-lib/types';
+import type {Grammar, LanguageConfiguration, TextMateGrammar} from '../../textmate-lib/types';
 
 const grammars: {[scopeName: string]: Grammar} = {
   'documentation.injection.js.jsx': {
@@ -689,16 +689,6 @@ const grammars: {[scopeName: string]: Grammar} = {
       return fetchGrammar('text_xml_xsl_TextMateGrammar', 'json');
     },
   },
-};
-
-export type LanguageConfiguration = {
-  id: string;
-  extensions?: string[];
-  filenames?: string[];
-  filenamePatterns?: string[];
-  firstLine?: string;
-  aliases?: string[];
-  mimetypes?: string[];
 };
 
 async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {

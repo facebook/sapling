@@ -81,18 +81,6 @@ export function countCommentsForThreads(threads: GitHubPullRequestReviewThread[]
   return threads.reduce((acc, thread) => acc + (thread.comments.length ?? 0), 0);
 }
 
-/**
- * Split a path into [dirname, basename].
- */
-export function splitPath(path: string): [string, string] {
-  const index = path.lastIndexOf('/');
-  if (index !== -1) {
-    return [path.slice(0, index), path.slice(index + 1)];
-  } else {
-    return ['', path];
-  }
-}
-
 export function getPathForChange(change: CommitChange): string {
   switch (change.type) {
     case 'add':

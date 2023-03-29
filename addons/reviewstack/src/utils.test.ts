@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {groupBy, splitPath} from './utils';
+import {groupBy} from './utils';
 
 describe('groupBy', () => {
   test('returns Map of values keyed by result of given function', () => {
@@ -40,16 +40,5 @@ describe('groupBy', () => {
     const expected = new Map([['foo', [{type: 'foo', value: 0}]]]);
 
     expect(groupBy(values, value => value.type)).toEqual(expected);
-  });
-});
-
-describe('splitPath', () => {
-  test('splits path into dirname and basename', () => {
-    expect(splitPath('')).toEqual(['', '']);
-    expect(splitPath('foo')).toEqual(['', 'foo']);
-    expect(splitPath('/foo')).toEqual(['', 'foo']);
-    expect(splitPath('/foo/bar')).toEqual(['/foo', 'bar']);
-    expect(splitPath('foo/bar')).toEqual(['foo', 'bar']);
-    expect(splitPath('foo/bar/baz')).toEqual(['foo/bar', 'baz']);
   });
 });

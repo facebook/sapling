@@ -5,10 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {findScopeNameForPath} from './findScopeNameForPath';
+import {grammars, languages} from '../generated/textmate/TextMateGrammarManifest';
+import FilepathClassifier from './FilepathClassifier';
 
 describe('findScopeNameForPath', () => {
   test('map paths to scope names', () => {
+    const classifier = new FilepathClassifier(grammars, languages);
+    const findScopeNameForPath = (path: string) => classifier.findScopeNameForPath(path);
     expect(findScopeNameForPath('foo/BUCK')).toBe(null);
     expect(findScopeNameForPath('foo/Bar.php')).toBe('source.hack');
     expect(findScopeNameForPath('foo/Bar.java')).toBe('source.java');
