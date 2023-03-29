@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {IGrammar, IRawTheme, Registry} from 'vscode-textmate';
+import type {Grammar} from '../textmate-lib/types';
+import type {IRawTheme} from 'vscode-textmate';
 
-import createTextMateRegistry from './createTextMateRegistry';
+import GrammarStore from '../textmate-lib/GrammarStore';
+import createTextMateRegistry from '../textmate-lib/createTextMateRegistry';
 import {loadWASM} from 'vscode-oniguruma';
 
 /**
@@ -16,22 +18,13 @@ import {loadWASM} from 'vscode-oniguruma';
  */
 const URL_TO_ONIG_WASM = '/generated/textmate/onig.wasm';
 
-export default class GrammarStore {
-  private constructor(private registry: Registry) {}
-
-  static async createGrammarStore(theme: IRawTheme): Promise<GrammarStore> {
-    await ensureOnigurumaIsLoaded();
-    const registry = createTextMateRegistry(theme);
-    return new GrammarStore(registry);
-  }
-
-  loadGrammar(initialScopeName: string): Promise<IGrammar | null> {
-    return this.registry.loadGrammar(initialScopeName);
-  }
-
-  getColorMap(): string[] {
-    return this.registry.getColorMap();
-  }
+export default async function createGrammarStore(
+  theme: IRawTheme,
+  grammars: {[scopeName: string]: Grammar},
+): Promise<GrammarStore> {
+  await ensureOnigurumaIsLoaded();
+  const registry = createTextMateRegistry(theme, grammars);
+  return new GrammarStore(registry);
 }
 
 let onigurumaLoadingJob: Promise<void> | null = null;

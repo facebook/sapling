@@ -340,22 +340,16 @@ function createTextMateGrammarManifest(
     }),
   );
 
+  // This would be cleaner if textmate-lib were published to npm.
   return `
-export type TextMateGrammar = {
-  type: 'json' | 'plist',
-  /**
-   * Grammar data as a string because parseRawGrammar() in vscode-textmate
-   * takes the contents as a string, even if the type is json.
-   */
-  grammar: string,
-};
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
-type Grammar = {
-  language?: string,
-  injections: Array<string>,
-  embeddedLanguages?: {[scopeName: string]: string},
-  getGrammar: () => Promise<TextMateGrammar>,
-};
+import type {Grammar, TextMateGrammar} from '../../textmate-lib/types';
 
 const grammars: {[scopeName: string]: Grammar} = {
   ${grammars.map(createGrammarsEntry).join('')}

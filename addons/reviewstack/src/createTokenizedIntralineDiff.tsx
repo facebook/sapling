@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {HighlightedToken} from './textmate/tokenizeFileContents';
+import type {HighlightedToken} from './textmate-lib/tokenizeFileContents';
 
-import {CSS_CLASS_PREFIX} from './textmate/textmateStyles';
+import {CSS_CLASS_PREFIX} from './textmate-lib/textmateStyles';
 import {diffWordsWithSpace} from 'diff';
 
 /** Type of Chunk: Added, Removed, Unmodified. */

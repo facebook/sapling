@@ -5,13 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Grammar} from './types';
 import type {IRawGrammar, IRawTheme} from 'vscode-textmate';
 
-import {grammars} from '../generated/textmate/TextMateGrammarManifest';
 import {createOnigScanner, createOnigString} from 'vscode-oniguruma';
 import {Registry, parseRawGrammar} from 'vscode-textmate';
 
-export default function createTextMateRegistry(theme: IRawTheme): Registry {
+/**
+ * Caller is responsible for ensuring `loadWASM()` from `vscode-oniguruma` has
+ * been called (and resolved successfully) before calling this function.
+ */
+export default function createTextMateRegistry(
+  theme: IRawTheme,
+  grammars: {[scopeName: string]: Grammar},
+): Registry {
   return new Registry({
     theme,
     onigLib: Promise.resolve({

@@ -9,20 +9,22 @@ import type {BroadcastMessage} from './broadcast';
 import type GitHubClient from './github/GitHubClient';
 import type {Blob, GitObjectID} from './github/types';
 import type {LineToPosition} from './lineToPosition';
-import type {HighlightedToken} from './textmate/tokenizeFileContents';
+import type GrammarStore from './textmate-lib/GrammarStore';
+import type {HighlightedToken} from './textmate-lib/tokenizeFileContents';
 import type {SupportedPrimerColorMode} from './themeState';
 import type {ParsedDiff} from 'diff';
 
 import {AVAILABILITY_METHOD, createDiffServiceBroadcastChannel} from './broadcast';
 import {NUM_LINES_OF_CONTEXT} from './constants';
+import {grammars} from './generated/textmate/TextMateGrammarManifest';
 import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import RejectingGitHubClient from './github/RejectingGitHubClient';
 import {subscribeToLogout} from './github/logoutBroadcastChannel';
 import lineToPosition from './lineToPosition';
-import GrammarStore from './textmate/GrammarStore';
+import tokenizeFileContents from './textmate-lib/tokenizeFileContents';
 import VSCodeDarkPlusTheme from './textmate/VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './textmate/VSCodeLightPlusTheme';
-import tokenizeFileContents from './textmate/tokenizeFileContents';
+import createGrammarStore from './textmate/createGrammarStore';
 import {structuredPatch} from 'diff';
 import lazyInit from 'shared/lazyInit';
 
@@ -298,7 +300,7 @@ function getGrammarStore(colorMode: SupportedPrimerColorMode): Promise<GrammarSt
   }
 
   const theme = colorMode === 'day' ? VSCodeLightPlusTheme : VSCodeDarkPlusTheme;
-  const store = GrammarStore.createGrammarStore(theme);
+  const store = createGrammarStore(theme, grammars);
   colorModeToGrammarStore.set(colorMode, store);
   return store;
 }
