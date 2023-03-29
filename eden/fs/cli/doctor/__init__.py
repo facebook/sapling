@@ -297,10 +297,6 @@ class EdenDoctorChecker:
                 self.tracker,
                 list(checkouts.values()),
                 checked_backing_repos,
-                check_fuse=any(
-                    checkout.get_checkout().get_config().mount_protocol == "fuse"
-                    for checkout in checkouts.values()
-                ),
                 vscode_extensions_checker=self.vscode_extensions_checker,
                 eden_instance=self.instance,
             )
