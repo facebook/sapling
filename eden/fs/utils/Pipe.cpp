@@ -21,6 +21,7 @@ namespace facebook::eden {
 
 Pipe::Pipe(bool nonBlocking) {
 #ifdef _WIN32
+  (void)nonBlocking;
   HANDLE readPipe;
   HANDLE writePipe;
   auto sec = SECURITY_ATTRIBUTES{};
@@ -73,19 +74,19 @@ SocketPair::SocketPair(bool nonBlocking) {
   // The win32 libevent implementation will attempt to use unix domain sockets
   // if available, but will fall back to using loopback TCP sockets.
   auto r = evutil_socketpair(AF_UNIX, SOCK_STREAM, 0, pair);
-#else
+#else // !_WIN32
   auto r = ::socketpair(
       AF_UNIX,
 #ifdef SOCK_NONBLOCK
       SOCK_NONBLOCK |
-#endif
+#endif // SOCK_NONBLOCK
 #ifdef SOCK_CLOEXEC
           SOCK_CLOEXEC |
-#endif
+#endif // SOCK_CLOEXEC
           SOCK_STREAM,
       0,
       pair);
-#endif
+#endif // !_WIN32
   folly::checkUnixError(r, "socketpair failed");
 
   read = FileDescriptor(pair[0], FileDescriptor::FDType::Socket);

@@ -16,6 +16,20 @@
 namespace facebook::eden {
 
 namespace {
+
+/**
+ * We do a number of comparisons in the below logic to ensure we don't
+ * {under, over}flow. To avoid UB, ensure these types are signed numbers.
+ */
+using tv_sec_t = decltype(timespec::tv_sec);
+using tv_nsec_t = decltype(timespec::tv_nsec);
+static_assert(
+    std::is_signed<tv_sec_t>::value,
+    "expect tv_sec to be signed type");
+static_assert(
+    std::is_signed<tv_nsec_t>::value,
+    "expect tv_nsec to be signed type");
+
 /**
  * Like ext4, our earliest representable date is 2^31 seconds before the unix
  * epoch, which works out to December 13th, 1901.
@@ -33,8 +47,8 @@ constexpr int64_t kEpochOffsetSeconds = 0x80000000ll;
  * ... kLargestRepresentableNsec)
  * '0xffffffffffffffff'
  */
-constexpr int64_t kLargestRepresentableSec = 16299260425ll;
-constexpr uint32_t kLargestRepresentableNsec = 709551615u;
+constexpr tv_sec_t kLargestRepresentableSec = 16299260425;
+constexpr tv_nsec_t kLargestRepresentableNsec = 709551615;
 
 struct ClampPolicy {
   static constexpr bool is_noexcept = true;
