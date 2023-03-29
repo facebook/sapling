@@ -6,6 +6,7 @@
 
 import os
 import signal
+import subprocess
 import sys
 import threading
 from multiprocessing import Process
@@ -91,7 +92,11 @@ class TakeoverTestBase(testcase.EdenRepoTest):
         deleted_dir = os.path.join(self.mount, "deleted-dir")
         os.mkdir(deleted_dir)
         deleted_dir_fd = os.open(deleted_dir, 0)
-        os.rmdir(deleted_dir)
+
+        # The NFS client will cache the removal in the process it's run in.
+        # So we need to delete from another process, so we can access the
+        # deleted file descriptor later.
+        subprocess.run(["rm", str(deleted_dir)])
 
         with open(hello, "r") as f, open(deleted, "r") as d, open(
             deleted_local, "r"
@@ -399,16 +404,10 @@ class TakeoverTest(TakeoverTestBase):
 
             # Run a graceful restart
             # This won't succeed until we unblock the shutdown.
-            p = Process(target=self.eden.graceful_restart)
-            p.start()
+            old_process = self.eden.graceful_restart(should_wait=False)
 
             # Wait for the state to be shutting down
             def state_shutting_down() -> Optional[bool]:
-                if not p.is_alive():
-                    raise Exception(
-                        "eden restart --graceful command finished while "
-                        "graceful restart was still blocked"
-                    )
                 if client.getDaemonInfo().status is fb303_status.STOPPING:
                     return True
                 return None
@@ -432,7 +431,13 @@ class TakeoverTest(TakeoverTestBase):
                 UnblockFaultArg(keyClass="takeover", keyValueRegex="server_shutdown")
             )
 
-            p.join()
+            self.eden.wait_for_is_healthy()
+
+            return_code = old_process.wait()
+            if return_code != 0:
+                raise Exception(
+                    "eden exited unsuccessfully with status {}".format(return_code)
+                )
 
     def test_takeover_during_mount(self) -> None:
         self.eden.unmount(self.mount_path)
@@ -443,8 +448,13 @@ class TakeoverTest(TakeoverTestBase):
             )
 
         try:
-            mountProcess = Process(target=self.eden.mount, args=(self.mount_path,))
-            mountProcess.start()
+            mount_command, env = self.eden.get_edenfsctl_cmd_env(
+                "mount", "--", str(self.mount_path)
+            )
+            mountProcess = subprocess.Popen(
+                mount_command,
+                env=env,
+            )
 
             def mount_initializing() -> Optional[bool]:
                 with self.eden.get_thrift_client_legacy() as client:
@@ -466,7 +476,7 @@ class TakeoverTest(TakeoverTestBase):
                 client.unblockFault(
                     UnblockFaultArg(keyClass="mount", keyValueRegex=".*")
                 )
-            mountProcess.join()
+            mountProcess.wait()
 
 
 @testcase.eden_repo_test(run_on_nfs=False)

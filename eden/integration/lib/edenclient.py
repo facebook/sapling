@@ -251,9 +251,15 @@ class EdenFS(object):
         timeout: float = EDENFS_START_TIMEOUT,
         takeover_from: Optional[int] = None,
         extra_args: Optional[List[str]] = None,
+        should_wait_for_daemon_healthy: bool = True,
     ) -> None:
         """
         Run "eden daemon" to start the eden daemon.
+
+        Most everyone should use should_wait_for_daemon_healthy=True. The only
+        reason not to use True is to avoid blocking on a restart. For example,
+        You might want to avoid blocking on restart if you are injecting a
+        blocking fault into restart/start.
         """
         use_gdb = False
         if os.environ.get("EDEN_GDB"):
@@ -269,13 +275,14 @@ class EdenFS(object):
 
         process = self._process
         assert process is not None
-        util.wait_for_daemon_healthy(
-            proc=process,
-            config_dir=self._eden_dir,
-            get_client=self.get_thrift_client_legacy,
-            timeout=timeout,
-            exclude_pid=takeover_from,
-        )
+        if should_wait_for_daemon_healthy:
+            util.wait_for_daemon_healthy(
+                proc=process,
+                config_dir=self._eden_dir,
+                get_client=self.get_thrift_client_legacy,
+                timeout=timeout,
+                exclude_pid=takeover_from,
+            )
 
     def get_extra_daemon_args(self) -> List[str]:
         extra_daemon_args: List[str] = [
@@ -443,7 +450,21 @@ class EdenFS(object):
         with self.get_thrift_client_legacy() as client:
             return client.getDaemonInfo().pid
 
-    def graceful_restart(self, timeout: float = EDENFS_START_TIMEOUT) -> None:
+    def graceful_restart(
+        self,
+        timeout: float = EDENFS_START_TIMEOUT,
+        should_wait: bool = True,
+    ) -> subprocess.Popen:
+        """
+        Roughly equivalent to `eden restart --graceful` to restart the daemon
+        with takeover.
+
+        Most everyone should use should_wait_for_daemon_healthy=True. The only
+        reason not to use True is to avoid blocking on a restart. For example,
+        You might want to avoid blocking on restart if you are injecting a
+        blocking fault into restart.
+        """
+
         old_process = self._process
         assert old_process is not None
 
@@ -455,7 +476,11 @@ class EdenFS(object):
 
         self._process = None
         try:
-            self.start(timeout=timeout, takeover_from=old_pid)
+            self.start(
+                timeout=timeout,
+                takeover_from=old_pid,
+                should_wait_for_daemon_healthy=should_wait,
+            )
         except Exception:
             # TODO: There might be classes of errors where the old_process is
             # gone and we do need to track the new process here.
@@ -463,11 +488,13 @@ class EdenFS(object):
             raise
 
         # Check the return code from the old edenfs process
-        return_code = old_process.wait()
-        if return_code != 0:
-            raise Exception(
-                "eden exited unsuccessfully with status {}".format(return_code)
-            )
+        if should_wait:
+            return_code = old_process.wait()
+            if return_code != 0:
+                raise Exception(
+                    "eden exited unsuccessfully with status {}".format(return_code)
+                )
+        return old_process
 
     def run_takeover_tool(self, cmd: List[str]) -> None:
         old_process = self._process

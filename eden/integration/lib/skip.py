@@ -279,8 +279,27 @@ elif sys.platform.startswith("darwin"):
         "test_summary_counters_available",
     ]
 
-    # Various errors (See NFS specific skips for more takeover failures)
-    TEST_DISABLED["takeover_test.TakeoverTestHg"] = True
+    TEST_DISABLED["takeover_test.TakeoverTestHg"] = [
+        # The non pinging version of takeover does not support NFS. Non pinging
+        # was version 3 and NFS support was version 5.
+        "test_takeover_doesnt_send_ping",
+        # I think this one should be fixable. It seems like the nfsd3 is
+        # triggering channel shutdown when it's restarted. I think this is a
+        # legit bug, though it seems specific to macOS.
+        "test_takeover_failure",
+        # Using a fd before and after takeover seems to hang sometimes. I can
+        # not manually repro this, but we should probably investigate this bcz
+        # hangs like this are a really painful experience.
+        # investigation hint: I don't think I see IO stuck in eden when this
+        # happens, it might be in the kernel. My M1 seems to crash a lot when
+        # I run these tests (though the crashes don't seem to mention NFS), so
+        # something is weird here.
+        "test_takeover_with_io",
+        "test_takeover",
+        "test_readdir_after_graceful_restart",
+        "test_contents_are_the_same_if_handle_is_held_open",
+    ]
+    # same fd issue as above.
     TEST_DISABLED["takeover_test.TakeoverTestNoNFSServer"] = [
         "test_takeover",
     ]
