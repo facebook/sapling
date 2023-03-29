@@ -235,26 +235,6 @@ elif sys.platform.startswith("darwin"):
         "test_git_and_hg",
     ]
 
-    # EOF error?
-    TEST_DISABLED["restart_test.RestartTestAdHoc"] = [
-        "test_eden_restart_fails_if_edenfs_crashes_on_start",
-        # timeout
-        "test_restart_starts_edenfs_if_not_running",
-        # timeout
-        "test_restart_while_starting",
-    ]
-    TEST_DISABLED["restart_test.RestartTestManaged"] = [
-        "test_eden_restart_fails_if_edenfs_crashes_on_start",
-        # timeout
-        "test_restart_starts_edenfs_if_not_running",
-    ]
-
-    # timeout
-    TEST_DISABLED["restart_test.RestartTest"] = [
-        "test_graceful_restart_unresponsive_thrift",
-        "test_restart",
-    ]
-
     # Broken on NFS since NFS will just hang with the message "nfs server
     # edenfs:: not responding". There was an attempt to fix this with commit
     # 1f5512cf74ca, but it seems like something in test teardown is causing

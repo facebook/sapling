@@ -283,8 +283,9 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
     def test_eden_restart_fails_if_edenfs_crashes_on_start(self) -> None:
         self._start_fake_edenfs()
+        false_binary = "/usr/bin/false" if sys.platform == "darwin" else "/bin/false"
         restart_process = self._spawn_restart(
-            "--force", "--daemon-binary", "/bin/false"
+            "--force", "--daemon-binary", false_binary
         )
         restart_process.expect_exact("Failed to start edenfs")
         self.assert_process_fails(restart_process, 1)
