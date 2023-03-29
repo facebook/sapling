@@ -170,40 +170,6 @@ elif sys.platform.startswith("darwin"):
         "test_change_casing_with_untracked",
     ]
 
-    # The remaining tests are failing due to Mercurial issue in asciitransform
-    TEST_DISABLED["hg.add_test.AddTestTreeOnly"] = [
-        "test_debugdirstate",
-        "test_add",
-        "test_add_file_that_would_normally_be_ignored",
-        "test_add_ignored_directory_has_no_effect",
-    ]
-    TEST_DISABLED["hg.files_test.FilesTestTreeOnly"] = [
-        "test_files_with_changes",
-    ]
-    TEST_DISABLED["hg.merge_test.MergeTestTreeOnly"] = [
-        "test_resolve_merge",
-    ]
-    TEST_DISABLED["hg.move_test.MoveTestTreeOnly"] = [
-        "test_replace_after_move_file_then_revert_it"
-    ]
-    TEST_DISABLED["hg.rebase_test.RebaseTestTreeOnly"] = [
-        "test_rebase_stack_with_conflicts",
-    ]
-    TEST_DISABLED["hg.revert_test.RevertTestTreeOnly"] = [
-        "test_revert_during_merge_resolution_succeeds"
-    ]
-    TEST_DISABLED["hg.status_test.StatusTestTreeOnly"] = [
-        "test_status_thrift_apis",
-        "test_status",
-    ]
-    TEST_DISABLED["hg.update_test.UpdateTestTreeOnly"] = [
-        "test_update_clean_removes_added_and_removed_statuses",
-    ]
-    TEST_DISABLED["hg.split_test.SplitTestTreeOnly"] = True
-
-    # hg tests with misc failures
-    TEST_DISABLED["hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly"] = True
-
     # Assertion error and invalid argument
     TEST_DISABLED["snapshot.test_snapshots.InfraTestsDefault"] = [
         "test_snapshot",
