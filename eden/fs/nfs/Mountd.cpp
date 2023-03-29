@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/Mountd.h"
 
 #include <memory>
@@ -251,5 +249,3 @@ folly::SemiFuture<folly::File> Mountd::takeoverStop() {
 }
 
 } // namespace facebook::eden
-
-#endif
