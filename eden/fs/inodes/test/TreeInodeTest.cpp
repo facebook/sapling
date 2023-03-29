@@ -767,7 +767,12 @@ TEST(TreeInode, readdir_does_not_prefetch) {
 
 TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
   FakeTreeBuilder builder;
-  builder.setFile("foo/bar.txt", "bar");
+  auto barObjectId = ObjectId::sha1("bar");
+  builder.setFile(
+      "foo/bar.txt"_relpath,
+      "bar",
+      /*executable=*/false,
+      /*objectId=*/barObjectId);
   builder.setFile("foo/baz.txt", "baz");
   TestMount mount{builder};
   mount.updateEdenConfig({
@@ -783,7 +788,8 @@ TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
   mount.drainServerExecutor();
 
   auto metadata = mount.getBackingStore()->getMetadataLookups();
-  EXPECT_EQ(0, metadata.size());
+  EXPECT_EQ(1, metadata.size());
+  EXPECT_EQ(metadata.front().getBytes(), barObjectId.getBytes());
 }
 
 TEST(TreeInode, readdir_followed_by_stat_on_child_prefetches_parents_children) {

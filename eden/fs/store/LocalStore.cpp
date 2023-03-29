@@ -119,12 +119,12 @@ ImmediateFuture<std::unique_ptr<Blob>> LocalStore::getBlob(
       });
 }
 
-ImmediateFuture<optional<BlobMetadata>> LocalStore::getBlobMetadata(
+ImmediateFuture<std::unique_ptr<BlobMetadata>> LocalStore::getBlobMetadata(
     const ObjectId& id) const {
   return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
-      .thenValue([id](StoreResult&& data) -> optional<BlobMetadata> {
+      .thenValue([id](StoreResult&& data) -> std::unique_ptr<BlobMetadata> {
         if (!data.isValid()) {
-          return std::nullopt;
+          return nullptr;
         } else {
           return SerializedBlobMetadata::parse(id, data);
         }

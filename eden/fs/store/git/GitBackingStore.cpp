@@ -247,6 +247,14 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const ObjectId& id) {
   return make_unique<Blob>(id, std::move(buf));
 }
 
+folly::SemiFuture<BackingStore::GetBlobMetaResult>
+GitBackingStore::getBlobMetadata(
+    const ObjectId&,
+    const ObjectFetchContextPtr&) {
+  return BackingStore::GetBlobMetaResult{
+      nullptr, ObjectFetchContext::Origin::NotFetched};
+}
+
 git_oid GitBackingStore::root2Oid(const RootId& rootId) {
   auto& value = rootId.value();
   CHECK_EQ(40, value.size());

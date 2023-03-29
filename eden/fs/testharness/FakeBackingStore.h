@@ -65,8 +65,7 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 

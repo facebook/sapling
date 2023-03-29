@@ -30,7 +30,18 @@ folly::ByteRange SerializedBlobMetadata::slice() const {
   return folly::ByteRange{data_};
 }
 
-BlobMetadata SerializedBlobMetadata::parse(
+namespace {
+std::unique_ptr<BlobMetadata> unslice(folly::ByteRange bytes) {
+  uint64_t blobSizeBE;
+  memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
+  bytes.advance(sizeof(uint64_t));
+  auto contentsHash = Hash20{bytes};
+  return std::make_unique<BlobMetadata>(
+      contentsHash, folly::Endian::big(blobSizeBE));
+}
+} // namespace
+
+std::unique_ptr<BlobMetadata> SerializedBlobMetadata::parse(
     ObjectId blobID,
     const StoreResult& result) {
   auto bytes = result.bytes();
@@ -42,14 +53,6 @@ BlobMetadata SerializedBlobMetadata::parse(
   }
 
   return unslice(bytes);
-}
-
-BlobMetadata SerializedBlobMetadata::unslice(folly::ByteRange bytes) {
-  uint64_t blobSizeBE;
-  memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
-  bytes.advance(sizeof(uint64_t));
-  auto contentsHash = Hash20{bytes};
-  return BlobMetadata{contentsHash, folly::Endian::big(blobSizeBE)};
 }
 
 void SerializedBlobMetadata::serialize(

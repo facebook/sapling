@@ -42,12 +42,9 @@ class EmptyBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& /*id*/,
-      const ObjectFetchContextPtr& /*context*/) override {
-    return nullptr;
-  }
+      const ObjectFetchContextPtr& /*context*/) override;
 
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {

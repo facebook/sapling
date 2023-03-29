@@ -426,28 +426,6 @@ folly::SemiFuture<BackingStore::GetTreeResult> HgQueuedBackingStore::getTree(
       .deferEnsure([scope = std::move(scope)] {});
 }
 
-std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
-    const ObjectId& id,
-    const ObjectFetchContextPtr& /*context*/) {
-  DurationScope scope{stats_, &HgBackingStoreStats::getBlobMetadata};
-
-  HgProxyHash proxyHash;
-  try {
-    proxyHash = HgProxyHash::load(
-        localStore_.get(), id, "getLocalBlobMetadata", *stats_);
-  } catch (const std::exception&) {
-    logMissingProxyHash();
-    throw;
-  }
-
-  auto metadata =
-      backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash);
-  if (!metadata) {
-    stats_->increment(&HgBackingStoreStats::auxMetadataMiss);
-  }
-  return metadata;
-}
-
 folly::SemiFuture<BackingStore::GetTreeResult>
 HgQueuedBackingStore::getTreeImpl(
     const ObjectId& id,
@@ -587,7 +565,6 @@ HgQueuedBackingStore::getBlobMetadata(
 
   if (auto metadata =
           backingStore_->getDatapackStore().getLocalBlobMetadata(proxyHash)) {
-    stats_->increment(&ObjectStoreStats::getLocalBlobMetadataFromBackingStore);
     return folly::makeSemiFuture(GetBlobMetaResult{
         std::move(metadata), ObjectFetchContext::Origin::FromDiskCache});
   }
@@ -601,6 +578,11 @@ HgQueuedBackingStore::getBlobMetadataImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
+  if (!config_->getEdenConfig()->fetchHgAuxMetadata.getValue()) {
+    return BackingStore::GetBlobMetaResult{
+        nullptr, ObjectFetchContext::Origin::NotFetched};
+  }
+
   auto getBlobMetaFuture = folly::makeFutureWith([&] {
     XLOG(DBG4) << "make blob meta import request for " << proxyHash.path()
                << ", hash is:" << id;
@@ -637,7 +619,6 @@ HgQueuedBackingStore::getBlobMetadataImpl(
       .thenTry([this, id](folly::Try<std::unique_ptr<BlobMetadata>>&& result) {
         this->queue_.markImportAsFinished<BlobMetadata>(id, result);
         auto blobMeta = std::move(result).value();
-        stats_->increment(&ObjectStoreStats::getBlobMetadataFromBackingStore);
         return GetBlobMetaResult{
             std::move(blobMeta), ObjectFetchContext::Origin::FromNetworkFetch};
       });

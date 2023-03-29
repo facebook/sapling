@@ -29,7 +29,9 @@ using EdenStatsPtr = RefPtr<EdenStats>;
  * builtin, or when reading from this cache is significantly slower than
  * reading from the LocalStore.
  */
-class LocalStoreCachedBackingStore : public BackingStore {
+class LocalStoreCachedBackingStore
+    : public BackingStore,
+      public std::enable_shared_from_this<LocalStoreCachedBackingStore> {
  public:
   LocalStoreCachedBackingStore(
       std::shared_ptr<BackingStore> backingStore,
@@ -54,8 +56,7 @@ class LocalStoreCachedBackingStore : public BackingStore {
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 

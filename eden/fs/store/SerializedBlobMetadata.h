@@ -21,13 +21,14 @@ class SerializedBlobMetadata {
   SerializedBlobMetadata(const Hash20& contentsHash, uint64_t blobSize);
   folly::ByteRange slice() const;
 
-  static BlobMetadata parse(ObjectId blobID, const StoreResult& result);
+  static std::unique_ptr<BlobMetadata> parse(
+      ObjectId blobID,
+      const StoreResult& result);
 
   static constexpr size_t SIZE = sizeof(uint64_t) + Hash20::RAW_SIZE;
 
  private:
   void serialize(const Hash20& contentsHash, uint64_t blobSize);
-  static BlobMetadata unslice(folly::ByteRange bytes);
 
   /**
    * The serialized data is stored as stored as:

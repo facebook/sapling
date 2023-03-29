@@ -73,7 +73,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
 
   {
     auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
-    ASSERT_FALSE(retrievedMetadata.has_value());
+    ASSERT_EQ(retrievedMetadata, nullptr);
   }
 }
 
@@ -85,19 +85,19 @@ TEST_P(LocalStoreTest, testReadAndWriteMetadata) {
   store_->putBlobMetadata(id, metadata);
 
   auto retrievedMetadata = store_->getBlobMetadata(id).get(10s);
-  ASSERT_TRUE(retrievedMetadata.has_value());
+  ASSERT_NE(retrievedMetadata, nullptr);
 
-  EXPECT_EQ(sha1, retrievedMetadata.value().sha1);
-  EXPECT_EQ(size, retrievedMetadata.value().size);
+  EXPECT_EQ(sha1, retrievedMetadata->sha1);
+  EXPECT_EQ(size, retrievedMetadata->size);
 }
 
 TEST_P(LocalStoreTest, testReadNonexistent) {
   using namespace std::chrono_literals;
 
   ObjectId hash = ObjectId::fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  EXPECT_TRUE(nullptr == store_->getBlob(hash).get(10s));
+  EXPECT_EQ(store_->getBlob(hash).get(10s), nullptr);
   auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
-  EXPECT_FALSE(retrievedMetadata.has_value());
+  EXPECT_EQ(retrievedMetadata, nullptr);
 }
 
 TEST_P(LocalStoreTest, testReadsAndWriteTree) {

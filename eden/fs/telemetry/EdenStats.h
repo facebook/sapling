@@ -296,6 +296,8 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
       "object_store.get_blob_metadata.backing_store"};
   Counter getLocalBlobMetadataFromBackingStore{
       "object_store.get_blob_metadata.backing_store_cache"};
+  Counter getBlobMetadataFromBlob{"object_store.get_blob_metadata.blob"};
+  Counter getBlobMetadataFailed{"object_store.get_blob_metadata_failed"};
 };
 
 /**
@@ -316,7 +318,6 @@ struct HgBackingStoreStats : StatsGroup<HgBackingStoreStats> {
   Duration getBlobMetadata{"store.hg.get_blob_metadata_us"};
   Duration fetchBlobMetadata{"store.hg.get_blob_metadata_us"};
   Counter loadProxyHash{"store.hg.load_proxy_hash"};
-  Counter auxMetadataMiss{"store.hg.aux_metadata_miss"};
 };
 
 /**

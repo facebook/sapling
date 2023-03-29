@@ -127,8 +127,10 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /**
      * The retrieved blob metadata.
      *
-     * Setting this to a nullptr will make the ObjectStore fallback to fetching
-     * the blob and computing the blob metadata from it.
+     * When the BackingStore is wrapped in a LocalStoreCachedBackingStore,
+     * setting this to a nullptr will make the LocalStoreCachedBackingStore
+     * fallback to fetching the blob, computing the blob metadata from it and
+     * store it in the LocalStore.
      */
     std::unique_ptr<BlobMetadata> blobMeta;
     /** The fetch origin of the blob metadata. */
@@ -136,10 +138,11 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   };
 
   /**
-   * Fetch blob metadata if available in a local cache. Returns nullptr if not
-   * locally available.
+   * Fetch the blob metadata from the backing store.
+   *
+   * Return the blob metadata and where it was found.
    */
-  virtual std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+  virtual folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 

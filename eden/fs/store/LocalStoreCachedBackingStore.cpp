@@ -98,11 +98,61 @@ LocalStoreCachedBackingStore::getTree(
       .semi();
 }
 
-std::unique_ptr<BlobMetadata>
-LocalStoreCachedBackingStore::getLocalBlobMetadata(
+folly::SemiFuture<BackingStore::GetBlobMetaResult>
+LocalStoreCachedBackingStore::getBlobMetadata(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
-  return backingStore_->getLocalBlobMetadata(id, context);
+  return localStore_->getBlobMetadata(id)
+      .thenValue([self = shared_from_this(), id = id, context = context.copy()](
+                     std::unique_ptr<BlobMetadata> metadata) mutable {
+        if (metadata) {
+          self->stats_->increment(
+              &ObjectStoreStats::getBlobMetadataFromLocalStore);
+          return folly::makeSemiFuture(GetBlobMetaResult{
+              std::move(metadata), ObjectFetchContext::FromDiskCache});
+        }
+
+        return self->backingStore_->getBlobMetadata(id, context)
+            .deferValue(
+                [self, id, context = context.copy()](GetBlobMetaResult result)
+                    -> folly::SemiFuture<GetBlobMetaResult> {
+                  if (result.blobMeta) {
+                    if (result.origin ==
+                        ObjectFetchContext::Origin::FromDiskCache) {
+                      self->stats_->increment(
+                          &ObjectStoreStats::
+                              getLocalBlobMetadataFromBackingStore);
+                    } else {
+                      self->stats_->increment(
+                          &ObjectStoreStats::getBlobMetadataFromBackingStore);
+                    }
+
+                    return result;
+                  }
+
+                  return self->getBlob(id, context)
+                      .deferValue([self](GetBlobResult result) {
+                        if (result.blob) {
+                          self->stats_->increment(
+                              &ObjectStoreStats::getBlobMetadataFromBlob);
+                        }
+
+                        return GetBlobMetaResult{
+                            std::make_unique<BlobMetadata>(
+                                Hash20::sha1(result.blob->getContents()),
+                                result.blob->getSize()),
+                            result.origin};
+                      });
+                })
+            .deferValue(
+                [localStore = self->localStore_, id](GetBlobMetaResult result) {
+                  if (result.blobMeta) {
+                    localStore->putBlobMetadata(id, *result.blobMeta);
+                  }
+                  return result;
+                });
+      })
+      .semi();
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult>

@@ -60,12 +60,9 @@ class GitBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<BackingStore::GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
-      const ObjectId& /*id*/,
-      const ObjectFetchContextPtr& /*context*/) override {
-    return nullptr;
-  }
+  folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadata(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) override;
 
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {

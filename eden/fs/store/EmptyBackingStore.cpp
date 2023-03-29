@@ -60,4 +60,11 @@ SemiFuture<BackingStore::GetBlobResult> EmptyBackingStore::getBlob(
       std::domain_error("empty backing store"));
 }
 
+SemiFuture<BackingStore::GetBlobMetaResult> EmptyBackingStore::getBlobMetadata(
+    const ObjectId& /* id */,
+    const ObjectFetchContextPtr& /* context */) {
+  return makeSemiFuture<GetBlobMetaResult>(
+      std::domain_error("empty backing store"));
+}
+
 } // namespace facebook::eden

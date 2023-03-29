@@ -149,7 +149,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * Returns std::nullopt if this key is not present in the store, or throws an
    * exception on error.
    */
-  ImmediateFuture<std::optional<BlobMetadata>> getBlobMetadata(
+  ImmediateFuture<std::unique_ptr<BlobMetadata>> getBlobMetadata(
       const ObjectId& id) const;
 
   /**

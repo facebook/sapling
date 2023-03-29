@@ -173,7 +173,7 @@ class HgQueuedBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
   folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
       const ObjectId& id,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
@@ -242,10 +242,6 @@ class HgQueuedBackingStore final : public BackingStore {
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
-
-  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
-      const ObjectId& id,
-      const ObjectFetchContextPtr& context) override;
 
   /**
    * Fetch the blob metadata from Mercurial.

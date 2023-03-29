@@ -637,6 +637,13 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useAuxMetadata{"hg:use-aux-metadata", true, this};
 
   /**
+   * Controls whether EdenFS will attempt to fetch aux metadata or always
+   * fallback to fetching blobs when the metadata is not present in local
+   * caches.
+   */
+  ConfigSetting<bool> fetchHgAuxMetadata{"hg:fetch-aux-metadata", true, this};
+
+  /**
    * Which object ID format should the HgBackingStore use?
    */
   ConfigSetting<HgObjectIdFormat> hgObjectIdFormat{

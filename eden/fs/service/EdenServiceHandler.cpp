@@ -3077,7 +3077,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
-    metadata = localStore->getBlobMetadata(id).get();
+    metadata = *localStore->getBlobMetadata(id).get();
   } else {
     auto& fetchContext = helper->getFetchContext();
     auto sha1 = store->getBlobSha1(id, fetchContext).get();
