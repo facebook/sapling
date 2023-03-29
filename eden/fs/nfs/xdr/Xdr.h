@@ -7,12 +7,97 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include <folly/Preprocessor.h>
 #include <folly/io/Cursor.h>
 #include <optional>
 #include <variant>
+
+// This PP stuff is mostly copy paste from FOLLY_PP_FOR_EACH, but works with
+// msvc. msvc originally went a different direction with variadic arguments to
+// macros than the standard. so the folly ones don't work. Or at least I can't
+// get them to work. The tweaks I made are based on ideas in this tread which
+// also explains msvc's behavior:
+// https://stackoverflow.com/questions/9183993/msvc-variadic-macro-expansion
+//
+// There is a msvc option we could be using to make msvc behave like everyone
+// else (/Zc:preprocessor) and we could go back to the folly macros, but this
+// breaks some of the windows headers we use. So we are blocked there.
+
+#define EDEN_PP_DETAIL_NARGS_1( \
+    dummy,                      \
+    _15,                        \
+    _14,                        \
+    _13,                        \
+    _12,                        \
+    _11,                        \
+    _10,                        \
+    _9,                         \
+    _8,                         \
+    _7,                         \
+    _6,                         \
+    _5,                         \
+    _4,                         \
+    _3,                         \
+    _2,                         \
+    _1,                         \
+    _0,                         \
+    ...)                        \
+  _0
+#define EDEN_PP_DETAIL_NARGS(...) \
+  EDEN_PP_DETAIL_NARGS_1(         \
+      dummy,                      \
+      ##__VA_ARGS__,              \
+      15,                         \
+      14,                         \
+      13,                         \
+      12,                         \
+      11,                         \
+      10,                         \
+      9,                          \
+      8,                          \
+      7,                          \
+      6,                          \
+      5,                          \
+      4,                          \
+      3,                          \
+      2,                          \
+      1,                          \
+      0)
+
+#define EDEN_PP_DETAIL_FOR_EACH_REC_0(fn, ...)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_1(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_0(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_2(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_1(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_3(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_2(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_4(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_3(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_5(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_4(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_6(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_5(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_7(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_6(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_8(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_7(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_9(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_8(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_10(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_9(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_11(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_10(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_12(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_11(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_13(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_12(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_14(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_13(fn, __VA_ARGS__)
+#define EDEN_PP_DETAIL_FOR_EACH_REC_15(fn, a, ...) \
+  fn(a) EDEN_PP_DETAIL_FOR_EACH_REC_14(fn, __VA_ARGS__)
+
+#define EDEN_PP_DETAIL_FOR_EACH_2(n) EDEN_PP_DETAIL_FOR_EACH_REC_##n
+#define EDEN_PP_DETAIL_FOR_EACH_1(n) EDEN_PP_DETAIL_FOR_EACH_2(n)
 
 // https://tools.ietf.org/html/rfc4506
 
@@ -39,28 +124,36 @@
 // This macro declares the XDR serializer and deserializer functions
 // for a given type.
 // See EDEN_XDR_SERDE_IMPL above for an example.
-#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                      \
-  bool operator==(const STRUCT& a, const STRUCT& b);          \
-  template <>                                                 \
-  struct XdrTrait<STRUCT> {                                   \
-    static void serialize(                                    \
-        folly::io::QueueAppender& appender,                   \
-        const STRUCT& a) {                                    \
-      FOLLY_PP_FOR_EACH(EDEN_XDR_SER, __VA_ARGS__)            \
-    }                                                         \
-    static STRUCT deserialize(folly::io::Cursor& cursor) {    \
-      STRUCT ret;                                             \
-      FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)             \
-      return ret;                                             \
-    }                                                         \
-    static size_t serializedSize(const STRUCT& a) {           \
-      return FOLLY_PP_FOR_EACH(EDEN_XDR_SIZE, __VA_ARGS__) 0; \
-    }                                                         \
+#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                                \
+  bool operator==(const STRUCT& a, const STRUCT& b);                    \
+  template <>                                                           \
+  struct XdrTrait<STRUCT> {                                             \
+    static void serialize(                                              \
+        folly::io::QueueAppender& appender,                             \
+        const STRUCT& a) {                                              \
+      FB_VA_GLUE(                                                       \
+          EDEN_PP_DETAIL_FOR_EACH_1(EDEN_PP_DETAIL_NARGS(__VA_ARGS__)), \
+          (EDEN_XDR_SER, __VA_ARGS__))                                  \
+    }                                                                   \
+    static STRUCT deserialize(folly::io::Cursor& cursor) {              \
+      STRUCT ret;                                                       \
+      FB_VA_GLUE(                                                       \
+          EDEN_PP_DETAIL_FOR_EACH_1(EDEN_PP_DETAIL_NARGS(__VA_ARGS__)), \
+          (EDEN_XDR_DE, __VA_ARGS__))                                   \
+      return ret;                                                       \
+    }                                                                   \
+    static size_t serializedSize(const STRUCT& a) {                     \
+      return FB_VA_GLUE(                                                \
+          EDEN_PP_DETAIL_FOR_EACH_1(EDEN_PP_DETAIL_NARGS(__VA_ARGS__)), \
+          (EDEN_XDR_SIZE, __VA_ARGS__)) 0;                              \
+    }                                                                   \
   }
 
-#define EDEN_XDR_SERDE_IMPL(STRUCT, ...)                  \
-  bool operator==(const STRUCT& a, const STRUCT& b) {     \
-    return FOLLY_PP_FOR_EACH(EDEN_XDR_EQ, __VA_ARGS__) 1; \
+#define EDEN_XDR_SERDE_IMPL(STRUCT, ...)                              \
+  bool operator==(const STRUCT& a, const STRUCT& b) {                 \
+    return FB_VA_GLUE(                                                \
+        EDEN_PP_DETAIL_FOR_EACH_1(EDEN_PP_DETAIL_NARGS(__VA_ARGS__)), \
+        (EDEN_XDR_EQ, __VA_ARGS__)) 1;                                \
   }
 
 // Implementation details for the macros above:
@@ -626,5 +719,3 @@ struct XdrTrait<std::optional<T>> {
 };
 
 } // namespace facebook::eden
-
-#endif

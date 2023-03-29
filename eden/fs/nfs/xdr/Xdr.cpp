@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/xdr/Xdr.h"
 
 namespace facebook::eden {
@@ -51,5 +49,3 @@ void serialize_iobuf(
 } // namespace detail
 
 } // namespace facebook::eden
-
-#endif
