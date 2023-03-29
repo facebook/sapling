@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include <sys/stat.h>
 #include <optional>
 #include "eden/fs/inodes/InodeTimestamps.h"
+#include "folly/portability/SysStat.h"
 
 struct stat;
 

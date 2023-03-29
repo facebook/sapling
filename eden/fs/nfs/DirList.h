@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 
@@ -67,5 +65,3 @@ class NfsDirList {
 };
 
 } // namespace facebook::eden
-
-#endif

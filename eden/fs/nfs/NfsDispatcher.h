@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/DirList.h"
@@ -22,7 +20,7 @@
 #ifdef __APPLE__
 #include <sys/mount.h>
 #include <sys/param.h>
-#else
+#elif __linux__
 #include <sys/vfs.h>
 #endif
 
@@ -382,5 +380,3 @@ class NfsDispatcher {
 };
 
 } // namespace facebook::eden
-
-#endif
