@@ -4296,3 +4296,31 @@ def debugrevlogclone(ui, repo, source) -> None:
     clone.revlogclone(source, repo)
     changelog_format = ui.config("clone", "nonsegmented-changelog", "doublewrite")
     changelog2.migrateto(repo, changelog_format)
+
+
+@command(
+    "debugcopytrace",
+    [
+        ("s", "source", "", _("source commit to rebase"), _("REV")),
+        ("d", "dest", "", _("dest commit to rebase onto"), _("REV")),
+    ],
+    _("[-s REV] [-d REV] [FILE]..."),
+)
+def debugcopytrace(ui, repo, *files, **opts) -> None:
+    """trace the copy of the given files from source to dest commit"""
+    csrc = scmutil.revsingle(repo, opts.get("source"))
+    cdest = scmutil.revsingle(repo, opts.get("dest"))
+
+    dag_copy_trace = bindings.copytrace.dagcopytrace(
+        repo.changelog.inner,
+        repo.manifestlog.datastore,
+        repo.fileslog.filescmstore,
+        repo.changelog.dag,
+    )
+
+    res = {
+        src_path: dag_copy_trace.trace_rename(csrc.node(), cdest.node(), src_path)
+        for src_path in files
+    }
+    ui.write(json.dumps(res))
+    ui.write("\n")

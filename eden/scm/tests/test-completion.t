@@ -108,6 +108,7 @@ Show debug commands if there are no other candidates
   debugcompactmetalog
   debugcomplete
   debugconfig
+  debugcopytrace
   debugcreatestreamclonebundle
   debugdag
   debugdata
@@ -436,6 +437,7 @@ Show all commands + options
   debugcommands: 
   debugcompactmetalog: 
   debugcomplete: options
+  debugcopytrace: source, dest
   debugcreatestreamclonebundle: 
   debugdag: bookmarks, branches, dots, spaces
   debugdata: changelog, manifest, dir

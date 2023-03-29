@@ -945,6 +945,8 @@ Test list of internal help commands
                  compact the metalog by dropping history
    debugcomplete
                  returns the completion list associated with the given command
+   debugcopytrace
+                 trace the copy of the given files from source to dest commit
    debugcreatestreamclonebundle
                  create a stream clone bundle file
    debugdag      format the changelog or an index DAG as a concise textual
