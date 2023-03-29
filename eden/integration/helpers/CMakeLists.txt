@@ -32,7 +32,7 @@ if(WIN32)
 
   add_executable(check_windows_rename CheckWindowsRename.cpp)
   target_link_libraries(
-    read_reparse_buffer
+    check_windows_rename
       eden_utils
       edencommon::edencommon_utils
       fmt::fmt

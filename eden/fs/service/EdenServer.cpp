@@ -2227,7 +2227,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
   if (!lease) {
     XLOG(DBG6) << "Not running GC for: " << mount->getPath()
                << ", another GC is already in progress";
-    return 0;
+    return (uint64_t)0;
   }
 
   auto mountPath = mount->getPath();
