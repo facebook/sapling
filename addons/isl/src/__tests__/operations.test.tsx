@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from '../types';
-
 import App from '../App';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {
@@ -19,6 +17,7 @@ import {
   simulateRepoConnected,
   dragAndDropCommits,
   COMMIT,
+  CommitTreeListTestUtils,
 } from '../testUtils';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
@@ -26,12 +25,7 @@ import * as utils from 'shared/utils';
 
 jest.mock('../MessageBus');
 
-const clickGoto = (commit: Hash) => {
-  const myCommit = screen.queryByTestId(`commit-${commit}`);
-  const gotoButton = myCommit?.querySelector('.goto-button button');
-  expect(gotoButton).toBeDefined();
-  fireEvent.click(gotoButton as Element);
-};
+const {clickGoto} = CommitTreeListTestUtils;
 
 const abortButton = () => screen.queryByTestId('abort-button');
 

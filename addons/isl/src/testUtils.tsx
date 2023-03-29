@@ -21,7 +21,7 @@ import type {Writable} from 'shared/typeUtils';
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
 import {mostRecentSubscriptionIds} from './serverAPIState';
-import {screen, act, within, fireEvent} from '@testing-library/react';
+import {screen, act, within, fireEvent, waitFor} from '@testing-library/react';
 import {unwrap} from 'shared/utils';
 
 const testMessageBus = messageBus as TestingEventBus;
@@ -296,6 +296,13 @@ export const CommitTreeListTestUtils = {
   withinCommitTree() {
     return within(screen.getByTestId('commit-tree-root'));
   },
+
+  clickGoto(commit: Hash) {
+    const myCommit = screen.queryByTestId(`commit-${commit}`);
+    const gotoButton = myCommit?.querySelector('.goto-button button');
+    expect(gotoButton).toBeDefined();
+    fireEvent.click(gotoButton as Element);
+  },
 };
 
 export const CommitInfoTestUtils = {
@@ -427,4 +434,29 @@ export const CommitInfoTestUtils = {
     ) as HTMLTextAreaElement;
     expect(descriptionEditor).not.toBeInTheDocument();
   },
+};
+
+export const MergeConflictTestUtils = {
+  waitForContinueButtonNotDisabled: () =>
+    waitFor(() =>
+      expect(
+        within(screen.getByTestId('commit-tree-root')).getByTestId(
+          'conflict-continue-button',
+        ) as HTMLButtonElement,
+      ).not.toBeDisabled(),
+    ),
+  clickContinueConflicts: () =>
+    act(() => {
+      fireEvent.click(
+        within(screen.getByTestId('commit-tree-root')).getByTestId('conflict-continue-button'),
+      );
+    }),
+  expectInMergeConflicts: () =>
+    expect(
+      within(screen.getByTestId('commit-tree-root')).getByText('Unresolved Merge Conflicts'),
+    ).toBeInTheDocument(),
+  expectNotInMergeConflicts: () =>
+    expect(
+      within(screen.getByTestId('commit-tree-root')).queryByText('Unresolved Merge Conflicts'),
+    ).not.toBeInTheDocument(),
 };

@@ -29,6 +29,7 @@ const config: Config.InitialOptions = {
       diagnostics: false,
     },
   },
+  setupFilesAfterEnv: ['<rootDir>/integrationTests/setupTests.ts'],
 
   moduleNameMapper: {
     '\\.css$': '<rootDir>/integrationTests/__mocks__/styleMock.ts',
