@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include <folly/net/NetworkSocket.h>
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/nfs/rpc/StreamClient.h"
@@ -47,5 +45,3 @@ class PortmapClient {
 };
 
 } // namespace facebook::eden
-
-#endif
