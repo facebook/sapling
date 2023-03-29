@@ -135,7 +135,9 @@ HgImporter::HgImporter(
       {"--config",
        "extensions.fsmonitor=!",
        "--config",
-       "extensions.hgevents=!"});
+       "extensions.hgevents=!",
+       "--config",
+       "edenapi.max-retry-per-request=0"});
 
   // HACK(T33686765): Work around LSAN reports for hg_importer_helper.
   opts.environment().set("LSAN_OPTIONS", "detect_leaks=0");
