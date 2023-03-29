@@ -218,29 +218,35 @@ def rewriteblocks(
         ...
         ...   $ echo 1
         ...   1
-        ... #if foo
+        ... #if tar
         ...   $ echo 2
         ...   2
-        ... #else
+        ... #if foo
         ...   $ echo 3
         ...   3
         ... #endif
+        ... #else
         ...   $ echo 4
         ...   4
-        ... end''', hasfeature=lambda f: f in ['git', 'fsmonitor']))
+        ... #endif
+        ...   $ echo 5
+        ...   5
+        ... end''', hasfeature=lambda f: f in ['git', 'fsmonitor', 'tar']))
           raise __import__("unittest").SkipTest('missing feature: no-windows')
         <BLANKLINE>
           checkoutput(sheval('echo 1\n'), '1\n', src='$ echo 1\n', srcloc=3, outloc=4, endloc=5, indent=2, filename='')
         <BLANKLINE>
+        #if tar
+        <BLANKLINE>
+          checkoutput(sheval('echo 2\n'), '2\n', src='$ echo 2\n', srcloc=6, outloc=7, endloc=8, indent=2, filename='')
+        <BLANKLINE>
         #if foo
-        <BLANKLINE>
-        #else
-        <BLANKLINE>
-          checkoutput(sheval('echo 3\n'), '3\n', src='$ echo 3\n', srcloc=9, outloc=10, endloc=11, indent=2, filename='')
         <BLANKLINE>
         #endif
         <BLANKLINE>
-          checkoutput(sheval('echo 4\n'), '4\n', src='$ echo 4\n', srcloc=12, outloc=13, endloc=14, indent=2, filename='')
+        #endif
+        <BLANKLINE>
+          checkoutput(sheval('echo 5\n'), '5\n', src='$ echo 5\n', srcloc=16, outloc=17, endloc=18, indent=2, filename='')
         <BLANKLINE>
         end
 
@@ -266,10 +272,10 @@ def rewriteblocks(
     # - None: no "#if"
     # - True: lines should be taken until #else or #endif
     # - False: lines should be ignored until #else or #endif
-    condition = None
+    conditionstack = []
 
     def appendline(line):
-        nonlocal condition
+        condition = conditionstack[-1] if conditionstack else None
         if condition is not False:
             newlines.append(line)
 
@@ -321,14 +327,18 @@ def rewriteblocks(
                 condition = True
             else:
                 condition = False
+            conditionstack.append(condition)
         elif info.line == "#else\n":
             maybeseparate("if")
-            if condition is not None:
-                condition = not condition
+            if conditionstack:
+                conditionstack[-1] = not conditionstack[-1]
             appendline(info.line)
         elif info.line == "#endif\n":
             maybeseparate("if")
-            condition = None
+            try:
+                conditionstack.pop()
+            except IndexError as e:
+                raise e
             appendline(info.line)
         else:
             if info.line != "\n":
