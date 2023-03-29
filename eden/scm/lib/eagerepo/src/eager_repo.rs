@@ -16,6 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use configloader::config::ConfigSet;
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -211,7 +212,7 @@ impl PathInfo {
 
 impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
-    pub fn open(dir: &Path) -> Result<Self> {
+    pub fn open(dir: &Path, _config: Option<&ConfigSet>) -> Result<Self> {
         let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::default);
         // Attempt to match directory layout of a real client repo.
         let hg_dir = dir.join(ident.dot_dir());
@@ -508,18 +509,18 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let mut repo = EagerRepo::open(dir, None).unwrap();
         let text = &b"blob-text-foo-bar"[..];
         let id = repo.add_sha1_blob(text).unwrap();
         assert_eq!(repo.get_sha1_blob(id).unwrap().as_deref(), Some(text));
 
         // Pending changes are invisible until flush.
-        let repo2 = EagerRepo::open(dir).unwrap();
+        let repo2 = EagerRepo::open(dir, None).unwrap();
         assert!(repo2.get_sha1_blob(id).unwrap().is_none());
 
         repo.flush().await.unwrap();
 
-        let repo2 = EagerRepo::open(dir).unwrap();
+        let repo2 = EagerRepo::open(dir, None).unwrap();
         assert_eq!(repo2.get_sha1_blob(id).unwrap().as_deref(), Some(text));
     }
 
@@ -528,13 +529,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let mut repo = EagerRepo::open(dir, None).unwrap();
         let commit1 = repo.add_commit(&[], b"A").await.unwrap();
         let commit2 = repo.add_commit(&[], b"B").await.unwrap();
         let _commit3 = repo.add_commit(&[commit1, commit2], b"C").await.unwrap();
         repo.flush().await.unwrap();
 
-        let repo2 = EagerRepo::open(dir).unwrap();
+        let repo2 = EagerRepo::open(dir, None).unwrap();
         let rendered = dag::render::render_namedag(repo2.dag(), |v| {
             let id = Id20::from_slice(v.as_ref()).unwrap();
             let blob = repo2.get_sha1_blob(id).unwrap().unwrap();
@@ -557,7 +558,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let mut repo = EagerRepo::open(dir, None).unwrap();
         let commit1 = repo.add_commit(&[], b"A").await.unwrap();
         let commit2 = repo.add_commit(&[], b"B").await.unwrap();
         repo.set_bookmark("c1", Some(commit1)).unwrap();
@@ -565,7 +566,7 @@ mod tests {
         repo.set_bookmark("main", Some(commit2)).unwrap();
         repo.flush().await.unwrap();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let mut repo = EagerRepo::open(dir, None).unwrap();
         assert_eq!(
             format!("{:#?}", repo.get_bookmarks_map().unwrap()),
             r#"{
@@ -590,7 +591,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir, None).unwrap();
         drop(repo);
 
         let ident = identity::sniff_dir(dir)
@@ -602,7 +603,7 @@ mod tests {
         )
         .unwrap();
 
-        let err = EagerRepo::open(dir).map(|_| ()).unwrap_err();
+        let err = EagerRepo::open(dir, None).map(|_| ()).unwrap_err();
         match err {
             crate::Error::RequirementsMismatch(_, unsupported, missing) => {
                 assert_eq!(unsupported, ["remotefilelog"]);
@@ -617,7 +618,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let mut repo = EagerRepo::open(dir, None).unwrap();
         let missing_id = missing_id();
 
         // Root tree missing.
@@ -670,7 +671,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let mut repo = EagerRepo::open(dir, None).unwrap();
         let missing_id = missing_id();
 
         let err = repo.set_bookmark("a", Some(missing_id)).unwrap_err();
