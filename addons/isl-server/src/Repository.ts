@@ -337,40 +337,17 @@ export class Repository {
       this.mergeConflictsEmitter.emit('change', this.mergeConflicts);
       return;
     }
-    const previousConflicts = this.mergeConflicts;
 
-    const [data] = output;
-    if (data.command == null) {
-      this.logger.info(`repo IS NOT in merge conflicts`);
-      this.mergeConflicts = undefined;
-      this.mergeConflictsEmitter.emit('change', this.mergeConflicts);
-    } else {
-      const newConflicts = data.conflicts;
-      const conflicts: MergeConflicts = {
-        state: 'loaded',
-        command: data.command,
-        toContinue: data.command_details.to_continue,
-        toAbort: data.command_details.to_abort,
-        files: [],
-        fetchStartTimestamp,
-        fetchCompletedTimestamp: Date.now(),
-      };
-      if (previousConflicts?.files != null && previousConflicts.files.length > 0) {
-        // we saw conflicts before, some of which might now be resolved. Preserve previous ordering.
-        const newConflictSet = new Set(data.conflicts.map(conflict => conflict.path));
-        conflicts.files = previousConflicts.files.map(conflict =>
-          newConflictSet.has(conflict.path)
-            ? {path: conflict.path, status: 'U'}
-            : // 'R' is overloaded to mean "removed" for `sl status` but 'Resolved' for `sl resolve --list`
-              // let's re-write this to make the UI layer simpler.
-              {path: conflict.path, status: 'Resolved'},
-        );
-      } else {
-        conflicts.files = newConflicts.map(conflict => ({path: conflict.path, status: 'U'}));
-      }
-      this.mergeConflicts = conflicts;
-    }
+    this.mergeConflicts = computeNewConflicts(this.mergeConflicts, output, fetchStartTimestamp);
     this.logger.info(`repo ${this.mergeConflicts ? 'IS' : 'IS NOT'} in merge conflicts`);
+    if (this.mergeConflicts) {
+      const maxConflictsToLog = 20;
+      const remainingConflicts = (this.mergeConflicts.files ?? [])
+        .filter(conflict => conflict.status === 'U')
+        .map(conflict => conflict.path)
+        .slice(0, maxConflictsToLog);
+      this.logger.info('remaining files with conflicts: ', remainingConflicts);
+    }
     this.mergeConflictsEmitter.emit('change', this.mergeConflicts);
   });
 
@@ -965,4 +942,49 @@ export function repoRelativePathForAbsolutePath(
 
 function isProcessError(s: unknown): s is {stderr: string} {
   return s != null && typeof s === 'object' && 'stderr' in s;
+}
+
+function computeNewConflicts(
+  previousConflicts: MergeConflicts,
+  commandOutput: ResolveCommandConflictOutput,
+  fetchStartTimestamp: number,
+): MergeConflicts | undefined {
+  const newConflictData = commandOutput?.[0];
+  if (newConflictData?.command == null) {
+    return undefined;
+  }
+
+  const conflicts: MergeConflicts = {
+    state: 'loaded',
+    command: newConflictData.command,
+    toContinue: newConflictData.command_details.to_continue,
+    toAbort: newConflictData.command_details.to_abort,
+    files: [],
+    fetchStartTimestamp,
+    fetchCompletedTimestamp: Date.now(),
+  };
+
+  const previousFiles = previousConflicts?.files ?? [];
+
+  const newConflictSet = new Set(newConflictData.conflicts.map(conflict => conflict.path));
+  const previousFilesSet = new Set(previousFiles.map(file => file.path));
+  const newlyAddedConflicts = new Set(
+    [...newConflictSet].filter(file => !previousFilesSet.has(file)),
+  );
+  // we may have seen conflicts before, some of which might now be resolved.
+  // Preserve previous ordering by first pulling from previous files
+  conflicts.files = previousFiles.map(conflict =>
+    newConflictSet.has(conflict.path)
+      ? {path: conflict.path, status: 'U'}
+      : // 'R' is overloaded to mean "removed" for `sl status` but 'Resolved' for `sl resolve --list`
+        // let's re-write this to make the UI layer simpler.
+        {path: conflict.path, status: 'Resolved'},
+  );
+  if (newlyAddedConflicts.size > 0) {
+    conflicts.files.push(
+      ...[...newlyAddedConflicts].map(conflict => ({path: conflict, status: 'U' as const})),
+    );
+  }
+
+  return conflicts;
 }
