@@ -327,7 +327,11 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                         metadata.metadata.get_metadata().contentsSha1,
                     )
                 elif metadata.origin == DataFetchOrigin.REMOTE_BACKING_STORE:
-                    metadata.metadata.get_error()
+                    self.assertEqual(4, metadata.metadata.get_metadata().size)
+                    self.assertEqual(
+                        b"\x007\xc9\xb5h<\x0e\x8d\x8c\xa6qM\xb2\xf1Q\x9b#.\x10\xe2",
+                        metadata.metadata.get_metadata().contentsSha1,
+                    )
                 elif metadata.origin == DataFetchOrigin.ANYWHERE:
                     self.assertEqual(4, metadata.metadata.get_metadata().size)
                     self.assertEqual(

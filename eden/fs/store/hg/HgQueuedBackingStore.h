@@ -243,18 +243,24 @@ class HgQueuedBackingStore final : public BackingStore {
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
+ public:
   /**
    * Fetch the blob metadata from Mercurial.
    *
    * For latency sensitive context, the caller is responsible for checking if
    * the blob metadata is present locally, as this function will always push
    * the request at the end of the queue.
+   *
+   * This is marked as public but don't be fooled, this is not intended to be
+   * used by anybody but HgQueuedBackingStore and debugGetBlobMetadata Thrift
+   * handler.
    */
   folly::SemiFuture<GetBlobMetaResult> getBlobMetadataImpl(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
+ private:
   /**
    * Fetch a tree from Mercurial.
    *
