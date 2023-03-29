@@ -17,6 +17,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use configloader::config::ConfigSet;
+use configmodel::ConfigExt;
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -212,7 +213,7 @@ impl PathInfo {
 
 impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
-    pub fn open(dir: &Path, _config: Option<&ConfigSet>) -> Result<Self> {
+    pub fn open(dir: &Path, config: Option<&ConfigSet>) -> Result<Self> {
         let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::default);
         // Attempt to match directory layout of a real client repo.
         let hg_dir = dir.join(ident.dot_dir());
@@ -221,7 +222,19 @@ impl EagerRepo {
         let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
         // Write "requires" files.
-        write_requires(&hg_dir, &["store", "treestate"])?;
+        let windows_symlinks = config.map_or(false, |config| {
+            config
+                .get_or_default("experimental", "windows-symlinks")
+                .unwrap_or_default()
+        });
+        write_requires(
+            &hg_dir,
+            if windows_symlinks {
+                &["store", "treestate", "windowssymlinks"]
+            } else {
+                &["store", "treestate"]
+            },
+        )?;
         write_requires(
             &store_dir,
             &[
@@ -678,6 +691,26 @@ mod tests {
         assert_eq!(
             err.to_string(),
             "when moving bookmark \"a\" to 35e7525ce3a48913275d7061dd9a867ffef1e34d, the commit does not exist"
+        );
+    }
+
+    #[test]
+    fn test_open_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+        let mut config = ConfigSet::new();
+        let options = configloader::config::Options::new();
+
+        config.set("experimental", "windows-symlinks", Some("true"), &options);
+
+        EagerRepo::open(dir, Some(&config)).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(dir.join(identity::default().dot_dir()).join("requires")).unwrap(),
+            r#"store
+treestate
+windowssymlinks
+"#
         );
     }
 
