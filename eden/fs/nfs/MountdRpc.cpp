@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/MountdRpc.h"
 
 namespace facebook::eden {
@@ -14,5 +12,3 @@ namespace facebook::eden {
 EDEN_XDR_SERDE_IMPL(mountres3_ok, fhandle3, auth_flavors);
 
 }
-
-#endif

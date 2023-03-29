@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 
@@ -57,5 +55,3 @@ struct mountres3_ok {
 EDEN_XDR_SERDE_DECL(mountres3_ok, fhandle3, auth_flavors);
 
 } // namespace facebook::eden
-
-#endif
