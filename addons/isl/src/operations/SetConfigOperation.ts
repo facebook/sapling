@@ -16,7 +16,7 @@ export class SetConfigOperation extends Operation {
     super('SetConfigOperation');
   }
 
-  static opName = 'Add';
+  static opName = 'SetConfig';
 
   getArgs() {
     return ['config', `--${this.scope}`, this.configName, this.value];
