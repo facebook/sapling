@@ -143,14 +143,8 @@ describe('CommitInfoView', () => {
       });
 
       it('shows file actions on uncommitted changes in commit info view', () => {
-        expect(withinCommitInfo().queryAllByTestId('file-actions')).toHaveLength(2);
-      });
-
-      it('does not show file actions on committed changes in commit info view', () => {
-        clickToSelectCommit('a'); // non-head commit doesn't have uncommitted changes
-
-        // now commit info view shows selected commit
-        expect(withinCommitInfo().queryByTestId('file-actions')).not.toBeInTheDocument();
+        // (1) uncommitted changes in commit list, (2) uncommitted changes in commit info, (3) committed changes in commit info
+        expect(withinCommitInfo().queryAllByTestId('file-actions')).toHaveLength(3);
       });
 
       it("doesn't show uncommitted changes on non-head commits ", () => {

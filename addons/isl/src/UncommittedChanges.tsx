@@ -7,6 +7,7 @@
 
 import type {ChangedFile, ChangedFileType, MergeConflicts, RepoRelativePath} from './types';
 import type {SetterOrUpdater} from 'recoil';
+import type {Comparison} from 'shared/Comparison';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {islDrawerState} from './App';
@@ -133,8 +134,8 @@ export function ChangedFiles({
   files,
   deselectedFiles,
   setDeselectedFiles,
-  showFileActions,
-}: {files: Array<ChangedFile>; showFileActions: boolean} & EnsureAssignedTogether<{
+  comparison,
+}: {files: Array<ChangedFile>; comparison: Comparison} & EnsureAssignedTogether<{
   deselectedFiles?: Set<string>;
   setDeselectedFiles?: (newDeselected: Set<string>) => unknown;
 }>) {
@@ -149,6 +150,7 @@ export function ChangedFiles({
         return (
           <div
             className={`changed-file file-${statusName}`}
+            data-testid={`changed-file-${file.path}`}
             key={file.path}
             tabIndex={0}
             onKeyPress={e => {
@@ -194,7 +196,7 @@ export function ChangedFiles({
                 <span className="changed-file-path-text">{file.label}</span>
               </Tooltip>
             </span>
-            {showFileActions ? <FileActions file={file} /> : null}
+            <FileActions file={file} comparison={comparison} />
           </div>
         );
       })}
@@ -370,13 +372,20 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
         )}
       </div>
       {conflicts != null ? (
-        <ChangedFiles files={conflicts.files ?? []} showFileActions={true} />
+        <ChangedFiles
+          files={conflicts.files ?? []}
+          comparison={{
+            type: ComparisonType.UncommittedChanges,
+          }}
+        />
       ) : (
         <ChangedFiles
           files={uncommittedChanges}
           deselectedFiles={deselectedFiles}
           setDeselectedFiles={setDeselectedFiles}
-          showFileActions={true}
+          comparison={{
+            type: ComparisonType.UncommittedChanges,
+          }}
         />
       )}
       {conflicts != null || place !== 'main' ? null : (
@@ -511,7 +520,7 @@ function MergeConflictButtons({
 
 const revertableStatues = new Set(['M', 'R', '!']);
 const conflictStatuses = new Set<ChangedFileType>(['U', 'Resolved']);
-function FileActions({file}: {file: UIChangedFile}) {
+function FileActions({comparison, file}: {comparison: Comparison; file: UIChangedFile}) {
   const runOperation = useRunOperation();
   const actions: Array<React.ReactNode> = [];
 
@@ -523,11 +532,7 @@ function FileActions({file}: {file: UIChangedFile}) {
           appearance="icon"
           data-testid="file-revert-button"
           onClick={() => {
-            platform.openDiff?.(
-              file.path,
-              // TODO: also show diff button on other commits
-              {type: ComparisonType.UncommittedChanges},
-            );
+            platform.openDiff?.(file.path, comparison);
           }}>
           <Icon icon="git-pull-request-go-to-changes" />
         </VSCodeButton>
@@ -544,13 +549,22 @@ function FileActions({file}: {file: UIChangedFile}) {
           appearance="icon"
           data-testid="file-revert-button"
           onClick={() => {
+            const compareToHash =
+              comparison.type === ComparisonType.Committed ? comparison.hash : undefined;
             platform
-              .confirm(t('Are you sure you want to revert $file?', {replace: {$file: file.path}}))
+              .confirm(
+                compareToHash == null
+                  ? t('Are you sure you want to revert $file?', {replace: {$file: file.path}})
+                  : t(
+                      'Are you sure you want to revert $file back to how it was at commit $commit? Uncommitted changes to this file will be lost.',
+                      {replace: {$file: file.path, $commit: compareToHash ?? ''}},
+                    ),
+              )
               .then(ok => {
                 if (!ok) {
                   return;
                 }
-                runOperation(new RevertOperation([file.path]));
+                runOperation(new RevertOperation([file.path], compareToHash));
               });
           }}>
           <Icon icon="discard" />
@@ -559,107 +573,109 @@ function FileActions({file}: {file: UIChangedFile}) {
     );
   }
 
-  if (file.status === 'A') {
-    actions.push(
-      <Tooltip
-        title={t('Stop tracking this file, without removing from the filesystem')}
-        key="forget"
-        delayMs={1000}>
-        <VSCodeButton
-          className="file-show-on-hover"
-          key={file.path}
-          appearance="icon"
-          onClick={() => {
-            runOperation(new ForgetOperation(file.path));
-          }}>
-          <Icon icon="circle-slash" />
-        </VSCodeButton>
-      </Tooltip>,
-    );
-  } else if (file.status === '?') {
-    actions.push(
-      <Tooltip title={t('Start tracking this file')} key="add" delayMs={1000}>
-        <VSCodeButton
-          className="file-show-on-hover"
-          key={file.path}
-          appearance="icon"
-          onClick={() => runOperation(new AddOperation(file.path))}>
-          <Icon icon="add" />
-        </VSCodeButton>
-      </Tooltip>,
-      <Tooltip title={t('Remove this file from the filesystem')} key="remove" delayMs={1000}>
-        <VSCodeButton
-          className="file-show-on-hover"
-          key={file.path}
-          appearance="icon"
-          onClick={async () => {
-            const ok = await platform.confirm(
-              t('Are you sure you want to delete $file?', {replace: {$file: file.path}}),
-            );
-            if (!ok) {
-              return;
-            }
-            // There's no `sl` command that will delete an untracked file, we need to do it manually.
-            serverAPI.postMessage({
-              type: 'deleteFile',
-              filePath: file.path,
-            });
-          }}>
-          <Icon icon="trash" />
-        </VSCodeButton>
-      </Tooltip>,
-    );
-  } else if (file.status === 'Resolved') {
-    actions.push(
-      <Tooltip title={t('Mark as unresolved')} key="unresolve-mark">
-        <VSCodeButton
-          key={file.path}
-          appearance="icon"
-          onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.unmark))}>
-          <Icon icon="circle-slash" />
-        </VSCodeButton>
-      </Tooltip>,
-    );
-  } else if (file.status === 'U') {
-    actions.push(
-      <Tooltip title={t('Mark as resolved')} key="resolve-mark">
-        <VSCodeButton
-          className="file-show-on-hover"
-          data-testid="file-action-resolve"
-          key={file.path}
-          appearance="icon"
-          onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.mark))}>
-          <Icon icon="check" />
-        </VSCodeButton>
-      </Tooltip>,
-      <Tooltip title={t('Take local version')} key="resolve-local">
-        <VSCodeButton
-          className="file-show-on-hover"
-          key={file.path}
-          appearance="icon"
-          onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.local))}>
-          <Icon icon="fold-up" />
-        </VSCodeButton>
-      </Tooltip>,
-      <Tooltip title={t('Take incoming version')} key="resolve-other">
-        <VSCodeButton
-          className="file-show-on-hover"
-          key={file.path}
-          appearance="icon"
-          onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.other))}>
-          <Icon icon="fold-down" />
-        </VSCodeButton>
-      </Tooltip>,
-      <Tooltip title={t('Combine both incoming and local')} key="resolve-both">
-        <VSCodeButton
-          className="file-show-on-hover"
-          key={file.path}
-          appearance="icon"
-          onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.both))}>
-          <Icon icon="fold" />
-        </VSCodeButton>
-      </Tooltip>,
-    );
+  if (comparison.type === ComparisonType.UncommittedChanges) {
+    if (file.status === 'A') {
+      actions.push(
+        <Tooltip
+          title={t('Stop tracking this file, without removing from the filesystem')}
+          key="forget"
+          delayMs={1000}>
+          <VSCodeButton
+            className="file-show-on-hover"
+            key={file.path}
+            appearance="icon"
+            onClick={() => {
+              runOperation(new ForgetOperation(file.path));
+            }}>
+            <Icon icon="circle-slash" />
+          </VSCodeButton>
+        </Tooltip>,
+      );
+    } else if (file.status === '?') {
+      actions.push(
+        <Tooltip title={t('Start tracking this file')} key="add" delayMs={1000}>
+          <VSCodeButton
+            className="file-show-on-hover"
+            key={file.path}
+            appearance="icon"
+            onClick={() => runOperation(new AddOperation(file.path))}>
+            <Icon icon="add" />
+          </VSCodeButton>
+        </Tooltip>,
+        <Tooltip title={t('Remove this file from the filesystem')} key="remove" delayMs={1000}>
+          <VSCodeButton
+            className="file-show-on-hover"
+            key={file.path}
+            appearance="icon"
+            onClick={async () => {
+              const ok = await platform.confirm(
+                t('Are you sure you want to delete $file?', {replace: {$file: file.path}}),
+              );
+              if (!ok) {
+                return;
+              }
+              // There's no `sl` command that will delete an untracked file, we need to do it manually.
+              serverAPI.postMessage({
+                type: 'deleteFile',
+                filePath: file.path,
+              });
+            }}>
+            <Icon icon="trash" />
+          </VSCodeButton>
+        </Tooltip>,
+      );
+    } else if (file.status === 'Resolved') {
+      actions.push(
+        <Tooltip title={t('Mark as unresolved')} key="unresolve-mark">
+          <VSCodeButton
+            key={file.path}
+            appearance="icon"
+            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.unmark))}>
+            <Icon icon="circle-slash" />
+          </VSCodeButton>
+        </Tooltip>,
+      );
+    } else if (file.status === 'U') {
+      actions.push(
+        <Tooltip title={t('Mark as resolved')} key="resolve-mark">
+          <VSCodeButton
+            className="file-show-on-hover"
+            data-testid="file-action-resolve"
+            key={file.path}
+            appearance="icon"
+            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.mark))}>
+            <Icon icon="check" />
+          </VSCodeButton>
+        </Tooltip>,
+        <Tooltip title={t('Take local version')} key="resolve-local">
+          <VSCodeButton
+            className="file-show-on-hover"
+            key={file.path}
+            appearance="icon"
+            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.local))}>
+            <Icon icon="fold-up" />
+          </VSCodeButton>
+        </Tooltip>,
+        <Tooltip title={t('Take incoming version')} key="resolve-other">
+          <VSCodeButton
+            className="file-show-on-hover"
+            key={file.path}
+            appearance="icon"
+            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.other))}>
+            <Icon icon="fold-down" />
+          </VSCodeButton>
+        </Tooltip>,
+        <Tooltip title={t('Combine both incoming and local')} key="resolve-both">
+          <VSCodeButton
+            className="file-show-on-hover"
+            key={file.path}
+            appearance="icon"
+            onClick={() => runOperation(new ResolveOperation(file.path, ResolveTool.both))}>
+            <Icon icon="fold" />
+          </VSCodeButton>
+        </Tooltip>,
+      );
+    }
   }
   return (
     <div className="file-actions" data-testid="file-actions">
