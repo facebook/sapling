@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash} from './types';
+import type {Hash} from '../types';
 
-import {commitMessageTemplate, latestCommitTreeMap} from './serverAPIState';
+import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
 import {atomFamily, selectorFamily, atom} from 'recoil';
 
 export type EditedMessage = {title: string; description: string};

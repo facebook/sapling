@@ -12,7 +12,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {islDrawerState} from './App';
 import serverAPI from './ClientToServerAPI';
-import {commitFieldsBeingEdited, commitMode} from './CommitInfoState';
+import {commitFieldsBeingEdited, commitMode} from './CommitInfoView/CommitInfoState';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
 import {DOCUMENTATION_DELAY, Tooltip} from './Tooltip';

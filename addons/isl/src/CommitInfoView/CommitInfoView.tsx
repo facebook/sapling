@@ -5,16 +5,43 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CommitInfo} from '../types';
 import type {
   CommitInfoMode,
   EditedMessage,
   EditedMessageUnlessOptimistic,
   FieldsBeingEdited,
 } from './CommitInfoState';
-import type {CommitInfo} from './types';
 import type {Dispatch, ReactNode, SetStateAction} from 'react';
 
-import {Commit, YouAreHere} from './Commit';
+import {Commit, YouAreHere} from '../Commit';
+import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
+import {Center} from '../ComponentUtils';
+import {HighlightCommitsWhileHovering} from '../HighlightedCommits';
+import {numPendingImageUploads} from '../ImageUpload';
+import {Subtle} from '../Subtle';
+import {Tooltip} from '../Tooltip';
+import {
+  ChangedFiles,
+  deselectedUncommittedChanges,
+  UncommittedChanges,
+} from '../UncommittedChanges';
+import {allDiffSummaries, codeReviewProvider} from '../codeReview/CodeReviewInfo';
+import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
+import {t, T} from '../i18n';
+import {AmendMessageOperation} from '../operations/AmendMessageOperation';
+import {AmendOperation} from '../operations/AmendOperation';
+import {CommitOperation} from '../operations/CommitOperation';
+import {GhStackSubmitOperation} from '../operations/GhStackSubmitOperation';
+import {PrSubmitOperation} from '../operations/PrSubmitOperation';
+import {SetConfigOperation} from '../operations/SetConfigOperation';
+import platform from '../platform';
+import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from '../previews';
+import {RelativeDate} from '../relativeDate';
+import {selectedCommitInfos, selectedCommits} from '../selection';
+import {repositoryInfo, useRunOperation} from '../serverAPIState';
+import {useModal} from '../useModal';
+import {assert, firstOfIterable} from '../utils';
 import {
   assertNonOptimistic,
   commitFieldsBeingEdited,
@@ -22,30 +49,7 @@ import {
   editedCommitMessages,
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
-import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
-import {Center} from './ComponentUtils';
-import {HighlightCommitsWhileHovering} from './HighlightedCommits';
-import {numPendingImageUploads} from './ImageUpload';
-import {Subtle} from './Subtle';
 import {CommitInfoField} from './TextArea';
-import {Tooltip} from './Tooltip';
-import {ChangedFiles, deselectedUncommittedChanges, UncommittedChanges} from './UncommittedChanges';
-import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
-import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
-import {t, T} from './i18n';
-import {AmendMessageOperation} from './operations/AmendMessageOperation';
-import {AmendOperation} from './operations/AmendOperation';
-import {CommitOperation} from './operations/CommitOperation';
-import {GhStackSubmitOperation} from './operations/GhStackSubmitOperation';
-import {PrSubmitOperation} from './operations/PrSubmitOperation';
-import {SetConfigOperation} from './operations/SetConfigOperation';
-import platform from './platform';
-import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from './previews';
-import {RelativeDate} from './relativeDate';
-import {selectedCommitInfos, selectedCommits} from './selection';
-import {repositoryInfo, useRunOperation} from './serverAPIState';
-import {useModal} from './useModal';
-import {assert, firstOfIterable} from './utils';
 import {
   VSCodeBadge,
   VSCodeButton,
@@ -60,7 +64,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
 import {unwrap} from 'shared/utils';
 
-import './CommitInfo.css';
+import './CommitInfoView.css';
 
 export function CommitInfoSidebar() {
   const selected = useRecoilValue(selectedCommitInfos);

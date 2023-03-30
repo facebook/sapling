@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EditedMessage} from '../CommitInfoState';
+import type {EditedMessage} from '../CommitInfoView/CommitInfoState';
 import type {CommitTree} from '../getCommitTree';
 import type {
   ApplyPreviewsFuncType,

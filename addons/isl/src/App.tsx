@@ -9,7 +9,7 @@ import type {RepositoryError} from './types';
 import type {AllDrawersState} from 'shared/Drawers';
 
 import {CommandHistoryAndProgress} from './CommandHistoryAndProgress';
-import {CommitInfoSidebar} from './CommitInfo';
+import {CommitInfoSidebar} from './CommitInfoView/CommitInfoView';
 import {CommitTreeList} from './CommitTreeList';
 import {ComparisonViewModal} from './ComparisonView/ComparisonViewModal';
 import {EmptyState} from './EmptyState';

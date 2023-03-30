@@ -9,15 +9,15 @@ import type {EditedMessage, EditedMessageUnlessOptimistic} from './CommitInfoSta
 import type {ForwardedRef, MutableRefObject, ReactNode} from 'react';
 import type {SetterOrUpdater} from 'recoil';
 
-import {assertNonOptimistic} from './CommitInfoState';
 import {
   useUploadFilesCallback,
   ImageDropZone,
   FilePicker,
   PendingImageUploads,
-} from './ImageUpload';
-import {Internal} from './Internal';
-import {assert} from './utils';
+} from '../ImageUpload';
+import {Internal} from '../Internal';
+import {assert} from '../utils';
+import {assertNonOptimistic} from './CommitInfoState';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect} from 'react';
 

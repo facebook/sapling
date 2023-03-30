@@ -6,8 +6,8 @@
  */
 
 import clientToServerAPI from './ClientToServerAPI';
+import {getInnerTextareaForVSCodeTextArea} from './CommitInfoView/TextArea';
 import {InlineErrorBadge} from './ErrorNotice';
-import {getInnerTextareaForVSCodeTextArea} from './TextArea';
 import {Tooltip} from './Tooltip';
 import {T, t} from './i18n';
 import {VSCodeButton} from '@vscode/webview-ui-toolkit/react';
