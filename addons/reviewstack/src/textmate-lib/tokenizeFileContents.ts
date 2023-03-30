@@ -15,6 +15,13 @@ import {INITIAL} from 'vscode-textmate';
 const FOREGROUND_MASK = 8372224;
 const FOREGROUND_OFFSET = 14;
 
+/**
+ * Specify a timeout when tokenizing a line to prevent a long line from locking
+ * up the main thread. Note this is used in VS Code:
+ * https://github.com/microsoft/vscode/blob/504c5a768a001b2099dd2b44e9dc39e10ccdfb56/src/vs/workbench/services/textMate/common/TMTokenization.ts#L39
+ */
+const DEFAULT_TOKENIZE_TIMEOUT_MS = 500;
+
 export type HighlightedToken = {
   /** Start index within a line, inclusive. */
   start: number;
@@ -33,8 +40,9 @@ export default function tokenizeFileContents(
   }: {
     grammar: IGrammar;
   },
+  timeLimit: number = DEFAULT_TOKENIZE_TIMEOUT_MS,
 ): Array<Array<HighlightedToken>> {
-  let ruleStack = INITIAL;
+  let state = INITIAL;
   // As fileContents could be quite large, we are assuming that, even though
   // split() generates a potentially large array, because it is one native
   // call, it is likely to be more efficient than us doing our own bookkeeping
@@ -43,8 +51,10 @@ export default function tokenizeFileContents(
   return fileContents.split('\n').map((line: string) => {
     // Line-processing logic taken from:
     // https://github.com/microsoft/vscode-textmate/blob/cc8ae321cfb47940470bd82c87a8ac61366fbd80/src/tests/themedTokenizer.ts#L20-L41
-    const result = grammar.tokenizeLine2(line, ruleStack);
+    const result = grammar.tokenizeLine2(line, state, timeLimit);
 
+    // Note that even if `result.stoppedEarly` is true, we still use the list of
+    // tokens that were returned to tokenize as much of the line as possible.
     // eslint-disable-next-line no-bitwise
     const tokensLength = result.tokens.length >> 1;
     const singleLine = [];
@@ -72,7 +82,11 @@ export default function tokenizeFileContents(
         color: foregroundIdx,
       });
     }
-    ruleStack = result.ruleStack;
+
+    // If we get result.stoppedEarly, continue tokenizing using the state used
+    // to tokenize this line as a "best guess" of what state tokenizing this
+    // line would have left us in had it completed.
+    state = result.stoppedEarly ? state : result.ruleStack;
     return singleLine;
   });
 }
