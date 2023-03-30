@@ -29,6 +29,8 @@ SOFTWARE.
 
 */
 
+import type {Rev} from '../linelog';
+
 import {LineLog} from '../linelog';
 import {describe, it, expect} from '@jest/globals';
 
@@ -49,6 +51,19 @@ describe('LineLog', () => {
     expect(log.getLineRev(2)).toBe(1);
     expect(log.getLineRev(3)).toBeNull(); // out of range
     expect(log.lines[0].deleted).toBe(false);
+  });
+
+  it('supports modifying rev 0', () => {
+    const log = new LineLog();
+    log.recordText('c\n', 0);
+    expect(log.maxRev).toBe(0);
+    expect(log.content).toBe('c\n');
+    expect(log.getLineRev(0)).toBe(0);
+    log.recordText('c\nd', 1);
+    expect(log.getLineRev(1)).toBe(1);
+    log.checkOut(0);
+    expect(log.content).toBe('c\n');
+    expect(log.getLineRev(0)).toBe(0);
   });
 
   it('supports multiple edits', () => {
@@ -164,25 +179,25 @@ describe('LineLog', () => {
       'x\ny\nz\n',
     ];
     let log = logFromTextList(textList, {trackDeps: true});
-    expect(log.revDepMap).toEqual(
-      new Map([
-        [1, new Set([])],
-        [2, new Set([1])],
-        [3, new Set([1])],
-        // deletes "c" added by rev 2
-        [4, new Set([1, 2])],
-        // deletes "z" added by rev 3
-        [5, new Set([1, 3])],
-        // appends after "d" added by rev 2
-        [6, new Set([2])],
-        // deletes "f" added by rev 6
-        [7, new Set([6])],
-        // inserts "1" between "d" (rev 2) and "e" (rev 6)
-        [8, new Set([2, 6])],
-        // replaces all: "a" (rev 1), "d" (rev 2), "1" (rev 8), "e" (rev 6)
-        [9, new Set([1, 2, 8, 6])],
-      ]),
-    );
+    const flatten = (depMap: Map<Rev, Set<Rev>>) =>
+      [...depMap.entries()].map(([rev, set]) => [rev, [...set].sort()]);
+    expect(flatten(log.revDepMap)).toStrictEqual([
+      [1, [0]],
+      [2, [0, 1]],
+      [3, [1]],
+      // deletes "c" added by rev 2
+      [4, [1, 2]],
+      // deletes "z" added by rev 3
+      [5, [1, 3]],
+      // appends after "d" added by rev 2
+      [6, [0, 2]],
+      // deletes "f" added by rev 6
+      [7, [0, 6]],
+      // inserts "1" between "d" (rev 2) and "e" (rev 6)
+      [8, [2, 6]],
+      // replaces all: "a" (rev 1), "d" (rev 2), "1" (rev 8), "e" (rev 6)
+      [9, [0, 1, 2, 6, 8]],
+    ]);
 
     // Disable trackDeps
     log = logFromTextList(textList, {trackDeps: false});

@@ -209,7 +209,7 @@ class LineLog {
       // Also check surrounding lines. This is a bit conservative.
       for (let ai = Math.max(a1 - 1, 0); ai < Math.min(a2 + 1, this.lines.length); ai += 1) {
         const depRev = this.lines[ai].rev;
-        if (depRev > 0 && depRev < rev) {
+        if (depRev >= 0 && depRev < rev) {
           depRevs.add(depRev);
         }
       }
@@ -326,7 +326,7 @@ class LineLog {
       revs: new Set<Rev>(),
       data: info.data,
     }));
-    for (let rev = 1; rev <= this.maxRev; rev += 1) {
+    for (let rev = 0; rev <= this.maxRev; rev += 1) {
       this.checkOut(rev);
       // Pc is used as the "unique" line identifier to detect what
       // subset of "all lines" exist in the current "rev".
@@ -393,7 +393,7 @@ class LineLog {
    */
   public recordText(text: string, rev: Rev | null = null): Rev {
     // rev to edit from, and rev to match 'text'.
-    const [aRev, bRev] = rev ? [rev, rev] : [this.maxRev, this.maxRev + 1];
+    const [aRev, bRev] = rev != null ? [rev, rev] : [this.maxRev, this.maxRev + 1];
     const b = text;
 
     const bLines = splitLines(b);
