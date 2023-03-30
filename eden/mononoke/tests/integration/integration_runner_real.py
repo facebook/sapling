@@ -26,40 +26,6 @@ Env = Dict[str, str]
 
 SUITE = "run-tests"
 
-# At this time, all tests support the network void script (except when
-# ephemeral MySQL is used)
-ALLOW_NETWORK_ACCESS_BY_NAME: Set[str] = {
-    # Purposely not disabling network as this tests reverse dns lookups
-    "test-metadata-fb-host.t",
-    "test-metadata.t",
-    # Purposely not disabling network as this needs to make TLS connections.
-    "test-cat-auth.t",
-    "test-hook-verify-integrity.t",
-    "test-bypass-readonly-acl.t",
-    # Components linked with SM library invoke some network calls to loopback
-    # address for configerator and ODS even without being part of actual execution.
-    # Skip the below tests until RCA is completed for SM integration so
-    # that integration tests do not time-out due to failed network call retries.
-    # TODO(rajshar): Investigate root cause for network calls from SM Client.
-    # Post: https://fb.workplace.com/groups/sm.users/permalink/2490367831097595/
-    "test-mirror-hg-commits-basic.t",
-    "test-backfill-derived-data.t",
-    "test-mononoke-hg-sync-job.t",
-    # Tests implicilitly relying on crypto cat library which needs network access to
-    # read its configs.
-}
-
-# Used for allowing access to many tests at once
-ALLOW_NETWORK_ACCESS_BY_PREFIX: Set[str] = {
-    "test-scs",
-    "test-land-service",
-    "test-snapshot",
-    "test-remote-gitimport",
-    "test-new-walker",
-    "test-derived-data-service",
-    "test-cross-repo-and-scs-removing-cross-repo-setup.t",
-}
-
 
 def is_libfb_present() -> bool:
     try:
@@ -111,19 +77,7 @@ class TestFlags(NamedTuple):
             r["interactive"] = True
 
         if self.disable_all_network_access:
-            incompatible_tests = set(tests) & set(ALLOW_NETWORK_ACCESS_BY_NAME)
-            for test in tests:
-                for prefix in ALLOW_NETWORK_ACCESS_BY_PREFIX:
-                    if test.startswith(prefix):
-                        incompatible_tests.add(test)
-            if incompatible_tests:
-                logging.warning(
-                    "Not enabling network void because incompatible "
-                    "tests are to be run: %s",
-                    " ".join(incompatible_tests),
-                )
-            else:
-                r["disable_all_network_access"] = True
+            r["disable_all_network_access"] = True
 
         return r
 
