@@ -483,29 +483,19 @@ HRESULT PrjfsChannelInner::getEnumerationData(
   auto fut = makeImmediateFutureWith([this,
                                       context,
                                       enumerator = std::move(enumerator),
-                                      buffer = dirEntryBufferHandle] {
+                                      buffer = dirEntryBufferHandle]() mutable {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &PrjfsStats::readDir;
     context->startRequest(getStats().copy(), stat, requestWatch);
 
-    // TODO(xavierd): there is a potential quadratic cost to the following code
-    // in the case where the buffer can only hold a single entry. The linear
-    // getPendingDirEntries would thus be called for as many entries, causing
-    // the quadratic complexity. In practice, ProjectedFS doesn't do this and
-    // thus we can afford a bit of redundant work.
-    auto pendingDirEntries = enumerator->getPendingDirEntries();
-    return collectAll(std::move(pendingDirEntries))
-        .thenValue([enumerator = std::move(enumerator),
-                    buffer,
-                    context = std::move(context)](
-                       std::vector<folly::Try<PrjfsDirEntry::Ready>> entries) {
+    return enumerator->prepareEnumeration().thenValue(
+        [buffer, context = std::move(context)](
+            std::shared_ptr<Enumeration> enumeration) {
           bool added = false;
-          for (auto& try_ : entries) {
-            if (try_.hasException()) {
-              return folly::Try<folly::Unit>{try_.exception()};
-            }
-            auto& entry = try_.value();
+          for (auto optEntry = enumeration->getCurrent(); optEntry.has_value();
+               optEntry = enumeration->getNext()) {
+            auto& entry = optEntry.value();
 
             auto fileInfo = PRJ_FILE_BASIC_INFO();
             fileInfo.IsDirectory = entry.isDir;
@@ -535,7 +525,6 @@ HRESULT PrjfsChannelInner::getEnumerationData(
               }
             }
             added = true;
-            enumerator->advanceEnumeration();
           }
 
           context->sendEnumerationSuccess(buffer);

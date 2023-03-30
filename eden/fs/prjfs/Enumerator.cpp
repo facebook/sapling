@@ -41,8 +41,11 @@ bool PrjfsDirEntry::operator<(const PrjfsDirEntry& other) const {
   return PrjFileNameCompare(name_.c_str(), other.name_.c_str()) < 0;
 }
 
+Enumeration::Enumeration(std::vector<PrjfsDirEntry::Ready> dirEntries)
+    : dirEntries_(std::move(dirEntries)), iter_{dirEntries_.begin()} {}
+
 Enumerator::Enumerator(std::vector<PrjfsDirEntry> entryList)
-    : metadataList_(std::move(entryList)), iter_{metadataList_.begin()} {
+    : metadataList_(std::move(entryList)) {
   std::sort(
       metadataList_.begin(),
       metadataList_.end(),
@@ -51,30 +54,23 @@ Enumerator::Enumerator(std::vector<PrjfsDirEntry> entryList)
       });
 }
 
-void Enumerator::advanceEnumeration() {
-  XDCHECK_NE(iter_, metadataList_.end());
-
-  while (iter_ != metadataList_.end() &&
-         !iter_->matchPattern(searchExpression_)) {
-    ++iter_;
+ImmediateFuture<std::shared_ptr<Enumeration>> Enumerator::prepareEnumeration() {
+  if (enumeration_) {
+    return ImmediateFuture<std::shared_ptr<Enumeration>>(enumeration_);
   }
 
-  if (iter_ == metadataList_.end()) {
-    return;
-  }
-
-  ++iter_;
-}
-
-std::vector<ImmediateFuture<PrjfsDirEntry::Ready>>
-Enumerator::getPendingDirEntries() {
-  std::vector<ImmediateFuture<PrjfsDirEntry::Ready>> ret;
-  for (auto it = iter_; it != metadataList_.end(); it++) {
-    if (it->matchPattern(searchExpression_)) {
-      ret.push_back(it->getFuture());
+  std::vector<ImmediateFuture<PrjfsDirEntry::Ready>> pendingDirEntries;
+  pendingDirEntries.reserve(metadataList_.size());
+  for (auto& entry : metadataList_) {
+    if (entry.matchPattern(searchExpression_)) {
+      pendingDirEntries.push_back(entry.getFuture());
     }
   }
-  return ret;
+  return collectAllSafe(std::move(pendingDirEntries))
+      .thenValue([this](std::vector<PrjfsDirEntry::Ready> dirEntries) {
+        enumeration_ = std::make_shared<Enumeration>(dirEntries);
+        return enumeration_;
+      });
 }
 
 } // namespace facebook::eden

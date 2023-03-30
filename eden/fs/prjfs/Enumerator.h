@@ -69,6 +69,45 @@ class PrjfsDirEntry {
   bool isDir_;
 };
 
+/**
+ * A single enumeration over directory entries.
+ */
+class Enumeration {
+ public:
+  Enumeration(const Enumeration&) = delete;
+  Enumeration& operator=(const Enumeration&) = delete;
+
+  explicit Enumeration(std::vector<PrjfsDirEntry::Ready> dirEntries);
+  Enumeration(Enumeration&& other) = default;
+
+  /**
+   * Gets the current directory entry, or nullopt if we've reached the end of
+   * enumeration.
+   */
+  inline std::optional<PrjfsDirEntry::Ready> getCurrent() {
+    if (iter_ == dirEntries_.end()) {
+      return std::nullopt;
+    }
+    return *iter_;
+  }
+
+  /**
+   * Advances the enumeration and gets the next directory entry, or nullopt if
+   * we've then reached the end of enumeration.
+   */
+  inline std::optional<PrjfsDirEntry::Ready> getNext() {
+    if (iter_ == dirEntries_.end()) {
+      XLOG(FATAL) << "Attempted to iterate past end of ProjFS Enumerator";
+    }
+    ++iter_;
+    return getCurrent();
+  }
+
+ private:
+  std::vector<PrjfsDirEntry::Ready> dirEntries_;
+  std::vector<PrjfsDirEntry::Ready>::iterator iter_;
+};
+
 class Enumerator {
  public:
   Enumerator(const Enumerator&) = delete;
@@ -81,10 +120,20 @@ class Enumerator {
 
   std::vector<ImmediateFuture<PrjfsDirEntry::Ready>> getPendingDirEntries();
 
-  void advanceEnumeration();
+  /**
+   * Prepares an Enumeration using the current search expression.
+   *
+   * Not reentrant: We rely on PrjFS's behavior of only requesting batches of
+   * directory entries sequentially.
+   */
+  ImmediateFuture<std::shared_ptr<Enumeration>> prepareEnumeration();
 
+  /**
+   * Restarts enumeration. After calling this function, the caller should call
+   * prepareEnumeration to get a new Enumeration instance.
+   */
   void restartEnumeration() {
-    iter_ = metadataList_.begin();
+    enumeration_.reset();
   }
 
   bool isSearchExpressionEmpty() const {
@@ -98,10 +147,6 @@ class Enumerator {
  private:
   std::wstring searchExpression_;
   std::vector<PrjfsDirEntry> metadataList_;
-
-  /**
-   * Iterator on the first directory entry that didn't get send to ProjectedFS.
-   */
-  std::vector<PrjfsDirEntry>::iterator iter_;
+  std::shared_ptr<Enumeration> enumeration_;
 };
 } // namespace facebook::eden
