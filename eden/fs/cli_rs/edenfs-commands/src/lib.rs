@@ -6,7 +6,6 @@
  */
 
 use std::env;
-use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -132,6 +131,23 @@ impl TopLevelSubcommand {
             Redirect(cmd) => cmd,
         }
     }
+
+    fn name(&self) -> &'static str {
+        match self {
+            TopLevelSubcommand::Status(_) => "status",
+            TopLevelSubcommand::Pid(_) => "pid",
+            TopLevelSubcommand::Uptime(_) => "uptime",
+            //TopLevelSubcommand::Gc(_) => "gc",
+            TopLevelSubcommand::Config(_) => "config",
+            TopLevelSubcommand::Debug(_) => "debug",
+            //TopLevelSubcommand::Top(_) => "top",
+            TopLevelSubcommand::Minitop(_) => "minitop",
+            TopLevelSubcommand::Du(_) => "du",
+            TopLevelSubcommand::List(_) => "list",
+            TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
+            TopLevelSubcommand::Redirect(_) => "redirect",
+        }
+    }
 }
 
 #[async_trait]
@@ -142,29 +158,6 @@ impl Subcommand for TopLevelSubcommand {
 
     fn get_mount_path_override(&self) -> Option<PathBuf> {
         self.subcommand().get_mount_path_override()
-    }
-}
-
-impl fmt::Display for TopLevelSubcommand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                TopLevelSubcommand::Status(_) => "status",
-                TopLevelSubcommand::Pid(_) => "pid",
-                TopLevelSubcommand::Uptime(_) => "uptime",
-                //TopLevelSubcommand::Gc(_) => "gc",
-                TopLevelSubcommand::Config(_) => "config",
-                TopLevelSubcommand::Debug(_) => "debug",
-                //TopLevelSubcommand::Top(_) => "top",
-                TopLevelSubcommand::Minitop(_) => "minitop",
-                TopLevelSubcommand::Du(_) => "du",
-                TopLevelSubcommand::List(_) => "list",
-                TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
-                TopLevelSubcommand::Redirect(_) => "redirect",
-            }
-        )
     }
 }
 
@@ -217,8 +210,7 @@ impl MainCommand {
 
     /// For experimental commands, we should check whether Chef enabled the command for our shard. If not, fall back to python cli
     pub fn is_enabled(&self) -> bool {
-        let name = self.subcommand.to_string();
-        is_command_enabled(&name, &self.etc_eden_dir)
+        is_command_enabled(self.subcommand.name(), &self.etc_eden_dir)
     }
 
     pub fn run(self) -> Result<ExitCode> {
