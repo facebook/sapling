@@ -176,13 +176,14 @@ def rpminfo(ui) -> str:
     return "".join(result)
 
 
-def infinitepushbackuplogs(ui, repo):
+def infinitepushbackuplogs(ui, repo) -> str:
     """Contents of recent infinitepush log files."""
     logdir = ui.config("infinitepushbackup", "logdir")
     if not logdir:
         return "infinitepushbackup.logdir not set"
     try:
         # the user name from the machine
+        # pyre-fixme[16]: Module `util` has no attribute `getuser`.
         username = util.getuser()
     except Exception:
         username = "unknown"
@@ -200,7 +201,7 @@ def infinitepushbackuplogs(ui, repo):
     return _tail(userlogdir, logfiles, 100)
 
 
-def scmdaemonlog(ui, repo):
+def scmdaemonlog(ui, repo) -> str:
     logpath = ui.config("commitcloud", "scm_daemon_log_path")
 
     if not logpath:
