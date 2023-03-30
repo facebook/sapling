@@ -155,7 +155,7 @@ class LineLog {
   readonly revDepMap: Map<Rev, Set<Rev>> = new Map<Rev, Set<Rev>>();
 
   /** If `true`, update `revDepMap` on change. */
-  private trackDeps = false;
+  trackDeps = false;
 
   /** Maximum rev tracked. */
   maxRev: Rev = 0;
@@ -194,7 +194,7 @@ class LineLog {
    * editings make practical sense. The callsite might want to do some
    * extra checks to ensure the edit is meaningful.
    */
-  private editChunk(a1: LineIdx, a2: LineIdx, rev: Rev, lines: string[]) {
+  editChunk(a1: LineIdx, a2: LineIdx, rev: Rev, lines: string[]) {
     assert(a1 <= a2, 'illegal chunk (a1 < a2)');
     assert(a2 <= this.lines.length, 'out of bound a2 (forgot checkOut?)');
 
@@ -522,3 +522,4 @@ function stringsToInts(linesArray: string[][]): number[][] {
 }
 
 export {LineLog};
+export type {FlattenLine, Rev, LineIdx, LineInfo};
