@@ -9,6 +9,7 @@ import type {DiffId, DiffSummary} from '../types';
 import type {UICodeReviewProvider} from './UICodeReviewProvider';
 import type {ReactNode} from 'react';
 
+import {CircleEllipsisIcon} from '../CircleEllipsisIcon';
 import {ExternalLink} from '../ExternalLink';
 import {Tooltip} from '../Tooltip';
 import {T, t} from '../i18n';
@@ -144,7 +145,7 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
   let tooltip;
   switch (diff.signalSummary) {
     case 'running':
-      icon = 'ellipsis';
+      icon = <CircleEllipsisIcon />;
       tooltip = t('Test Signals are still running for this Diff.');
       break;
     case 'pass':
@@ -170,9 +171,7 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
   }
   return (
     <div className={`diff-signal-summary diff-signal-${diff.signalSummary}`}>
-      <Tooltip title={tooltip}>
-        <Icon icon={icon} />
-      </Tooltip>
+      <Tooltip title={tooltip}>{typeof icon === 'string' ? <Icon icon={icon} /> : icon}</Tooltip>
     </div>
   );
 }
