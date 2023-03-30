@@ -347,20 +347,15 @@ function createTextMateGrammarManifest(
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @${'generated'}
  */
 
-import type {Grammar, LanguageConfiguration, TextMateGrammar} from '../../textmate-lib/types';
+import type {Grammar, LanguageConfiguration} from '../../textmate-lib/types';
 
 const grammars: {[scopeName: string]: Grammar} = {
   ${grammars.map(createGrammarsEntry).join('')}
 };
-
-async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {
-  const uri = \`/generated/textmate/\${moduleName}.\${type}\`;
-  const response = await fetch(uri);
-  const grammar = await response.text();
-  return {type, grammar};
-}
 
 const languages: {[language: string]: LanguageConfiguration} = ${JSON.stringify(
     filteredLanguages,
@@ -379,9 +374,8 @@ ${JSON.stringify(scopeName)}: {
   language: ${language == null ? undefined : JSON.stringify(language)},
   injections: ${JSON.stringify(injections)},
   embeddedLanguages: ${JSON.stringify(embeddedLanguages)},
-  getGrammar(): Promise<TextMateGrammar> {
-    return fetchGrammar(${JSON.stringify(jsModule)}, ${JSON.stringify(type)});
-  },
+  fileName: ${JSON.stringify(jsModule)},
+  fileFormat: ${JSON.stringify(type)},
 },
 `;
 }

@@ -18,7 +18,8 @@ export type Grammar = {
   language?: string;
   injections: Array<string>;
   embeddedLanguages?: {[scopeName: string]: string};
-  getGrammar: () => Promise<TextMateGrammar>;
+  fileName: string;
+  fileFormat: 'json' | 'plist';
 };
 
 export type LanguageConfiguration = {

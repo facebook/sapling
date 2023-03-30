@@ -10,6 +10,7 @@ import type {IRawTheme} from 'vscode-textmate';
 
 import GrammarStore from '../textmate-lib/GrammarStore';
 import createTextMateRegistry from '../textmate-lib/createTextMateRegistry';
+import fetchGrammar from './fetchGrammar';
 import {loadWASM} from 'vscode-oniguruma';
 
 /**
@@ -23,7 +24,7 @@ export default async function createGrammarStore(
   grammars: {[scopeName: string]: Grammar},
 ): Promise<GrammarStore> {
   await ensureOnigurumaIsLoaded();
-  const registry = createTextMateRegistry(theme, grammars);
+  const registry = createTextMateRegistry(theme, grammars, fetchGrammar);
   return new GrammarStore(registry);
 }
 

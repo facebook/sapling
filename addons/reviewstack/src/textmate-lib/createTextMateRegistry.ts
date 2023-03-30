@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Grammar} from './types';
+import type {Grammar, TextMateGrammar} from './types';
 import type {IRawGrammar, IRawTheme} from 'vscode-textmate';
 
 import {createOnigScanner, createOnigString} from 'vscode-oniguruma';
@@ -18,6 +18,7 @@ import {Registry, parseRawGrammar} from 'vscode-textmate';
 export default function createTextMateRegistry(
   theme: IRawTheme,
   grammars: {[scopeName: string]: Grammar},
+  fetchGrammar: (fileName: string, fileFormat: 'json' | 'plist') => Promise<TextMateGrammar>,
 ): Registry {
   return new Registry({
     theme,
@@ -29,7 +30,7 @@ export default function createTextMateRegistry(
     async loadGrammar(scopeName: string): Promise<IRawGrammar | undefined | null> {
       const config = grammars[scopeName];
       if (config != null) {
-        const {type, grammar} = await config.getGrammar();
+        const {type, grammar} = await fetchGrammar(config.fileName, config.fileFormat);
         // If this is a JSON grammar, filePath must be specified with a `.json`
         // file extension or else parseRawGrammar() will assume it is a PLIST
         // grammar.

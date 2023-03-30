@@ -3,298 +3,264 @@
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
+ *
+ * @generated
  */
 
-import type {Grammar, LanguageConfiguration, TextMateGrammar} from '../../textmate-lib/types';
+import type {Grammar, LanguageConfiguration} from '../../textmate-lib/types';
 
 const grammars: {[scopeName: string]: Grammar} = {
   'documentation.injection.js.jsx': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('documentation_injection_js_jsx_TextMateGrammar', 'json');
-    },
+    fileName: 'documentation_injection_js_jsx_TextMateGrammar',
+    fileFormat: 'json',
   },
   'documentation.injection.ts': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('documentation_injection_ts_TextMateGrammar', 'json');
-    },
+    fileName: 'documentation_injection_ts_TextMateGrammar',
+    fileFormat: 'json',
   },
   'markdown.cabal.codeblock': {
     language: undefined,
     injections: [],
     embeddedLanguages: {'meta.embedded.block.cabal': 'cabal'},
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('markdown_cabal_codeblock_TextMateGrammar', 'json');
-    },
+    fileName: 'markdown_cabal_codeblock_TextMateGrammar',
+    fileFormat: 'json',
   },
   'markdown.hack.codeblock': {
     language: undefined,
     injections: [],
     embeddedLanguages: {'meta.embedded.block.hack': 'hack'},
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('markdown_hack_codeblock_TextMateGrammar', 'json');
-    },
+    fileName: 'markdown_hack_codeblock_TextMateGrammar',
+    fileFormat: 'json',
   },
   'markdown.haskell.codeblock': {
     language: undefined,
     injections: [],
     embeddedLanguages: {'meta.embedded.block.haskell': 'haskell'},
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('markdown_haskell_codeblock_TextMateGrammar', 'json');
-    },
+    fileName: 'markdown_haskell_codeblock_TextMateGrammar',
+    fileFormat: 'json',
   },
   'markdown.kotlin.codeblock': {
     language: undefined,
     injections: [],
     embeddedLanguages: {'meta.embedded.block.kotlin': 'kotlin'},
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('markdown_kotlin_codeblock_TextMateGrammar', 'json');
-    },
+    fileName: 'markdown_kotlin_codeblock_TextMateGrammar',
+    fileFormat: 'json',
   },
   'markdown.lhaskell.codeblock': {
     language: undefined,
     injections: [],
     embeddedLanguages: {'meta.embedded.block.lhaskell': 'lhaskell'},
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('markdown_lhaskell_codeblock_TextMateGrammar', 'json');
-    },
+    fileName: 'markdown_lhaskell_codeblock_TextMateGrammar',
+    fileFormat: 'json',
   },
   'markdown.toml.frontmatter.codeblock': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('markdown_toml_frontmatter_codeblock_TextMateGrammar', 'plist');
-    },
+    fileName: 'markdown_toml_frontmatter_codeblock_TextMateGrammar',
+    fileFormat: 'plist',
   },
   'source.asp.vb.net': {
     language: 'vb',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_asp_vb_net_TextMateGrammar', 'json');
-    },
+    fileName: 'source_asp_vb_net_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.batchfile': {
     language: 'bat',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_batchfile_TextMateGrammar', 'json');
-    },
+    fileName: 'source_batchfile_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.c': {
     language: 'c',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_c_TextMateGrammar', 'json');
-    },
+    fileName: 'source_c_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.c.platform': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_c_platform_TextMateGrammar', 'json');
-    },
+    fileName: 'source_c_platform_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.c2hs': {
     language: 'C2Hs',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_c2hs_TextMateGrammar', 'json');
-    },
+    fileName: 'source_c2hs_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.cabal': {
     language: 'cabal',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_cabal_TextMateGrammar', 'json');
-    },
+    fileName: 'source_cabal_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.clojure': {
     language: 'clojure',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_clojure_TextMateGrammar', 'json');
-    },
+    fileName: 'source_clojure_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.coffee': {
     language: 'coffeescript',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_coffee_TextMateGrammar', 'json');
-    },
+    fileName: 'source_coffee_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.cpp': {
     language: 'cpp',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_cpp_TextMateGrammar', 'json');
-    },
+    fileName: 'source_cpp_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.cpp.embedded.macro': {
     language: 'cpp',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_cpp_embedded_macro_TextMateGrammar', 'json');
-    },
+    fileName: 'source_cpp_embedded_macro_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.cs': {
     language: 'csharp',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_cs_TextMateGrammar', 'json');
-    },
+    fileName: 'source_cs_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.css': {
     language: 'css',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_css_TextMateGrammar', 'json');
-    },
+    fileName: 'source_css_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.css.less': {
     language: 'less',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_css_less_TextMateGrammar', 'json');
-    },
+    fileName: 'source_css_less_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.css.scss': {
     language: 'scss',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_css_scss_TextMateGrammar', 'json');
-    },
+    fileName: 'source_css_scss_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.cuda-cpp': {
     language: 'cuda-cpp',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_cuda-cpp_TextMateGrammar', 'json');
-    },
+    fileName: 'source_cuda-cpp_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.dart': {
     language: 'dart',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_dart_TextMateGrammar', 'json');
-    },
+    fileName: 'source_dart_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.dockerfile': {
     language: 'dockerfile',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_dockerfile_TextMateGrammar', 'json');
-    },
+    fileName: 'source_dockerfile_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.fsharp': {
     language: 'fsharp',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_fsharp_TextMateGrammar', 'json');
-    },
+    fileName: 'source_fsharp_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.gdscript': {
     language: 'gdscript',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_gdscript_TextMateGrammar', 'json');
-    },
+    fileName: 'source_gdscript_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.go': {
     language: 'go',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_go_TextMateGrammar', 'json');
-    },
+    fileName: 'source_go_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.groovy': {
     language: 'groovy',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_groovy_TextMateGrammar', 'json');
-    },
+    fileName: 'source_groovy_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.hack': {
     language: 'hack',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_hack_TextMateGrammar', 'json');
-    },
+    fileName: 'source_hack_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.haskell': {
     language: 'haskell',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_haskell_TextMateGrammar', 'json');
-    },
+    fileName: 'source_haskell_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.hlsl': {
     language: 'hlsl',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_hlsl_TextMateGrammar', 'json');
-    },
+    fileName: 'source_hlsl_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.hsc': {
     language: 'Hsc2Hs',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_hsc_TextMateGrammar', 'json');
-    },
+    fileName: 'source_hsc_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.ignore': {
     language: 'ignore',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_ignore_TextMateGrammar', 'json');
-    },
+    fileName: 'source_ignore_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.ini': {
     language: 'ini',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_ini_TextMateGrammar', 'json');
-    },
+    fileName: 'source_ini_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.java': {
     language: 'java',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_java_TextMateGrammar', 'json');
-    },
+    fileName: 'source_java_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.js': {
     language: 'javascript',
@@ -305,9 +271,8 @@ const grammars: {[scopeName: string]: Grammar} = {
       'meta.tag.attributes.js': 'javascript',
       'meta.embedded.expression.js': 'javascript',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_js_TextMateGrammar', 'json');
-    },
+    fileName: 'source_js_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.js.jsx': {
     language: 'javascriptreact',
@@ -318,17 +283,15 @@ const grammars: {[scopeName: string]: Grammar} = {
       'meta.tag.attributes.js.jsx': 'javascriptreact',
       'meta.embedded.expression.js': 'javascriptreact',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_js_jsx_TextMateGrammar', 'json');
-    },
+    fileName: 'source_js_jsx_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.js.regexp': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_js_regexp_TextMateGrammar', 'plist');
-    },
+    fileName: 'source_js_regexp_TextMateGrammar',
+    fileFormat: 'plist',
   },
   'source.julia': {
     language: 'julia',
@@ -340,169 +303,148 @@ const grammars: {[scopeName: string]: Grammar} = {
       'meta.embedded.inline.r': 'r',
       'meta.embedded.inline.sql': 'sql',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_julia_TextMateGrammar', 'json');
-    },
+    fileName: 'source_julia_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.kotlin': {
     language: 'kotlin',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_kotlin_TextMateGrammar', 'plist');
-    },
+    fileName: 'source_kotlin_TextMateGrammar',
+    fileFormat: 'plist',
   },
   'source.lua': {
     language: 'lua',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_lua_TextMateGrammar', 'json');
-    },
+    fileName: 'source_lua_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.makefile': {
     language: 'makefile',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_makefile_TextMateGrammar', 'json');
-    },
+    fileName: 'source_makefile_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.objc': {
     language: 'objective-c',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_objc_TextMateGrammar', 'json');
-    },
+    fileName: 'source_objc_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.objcpp': {
     language: 'objective-cpp',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_objcpp_TextMateGrammar', 'json');
-    },
+    fileName: 'source_objcpp_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.perl': {
     language: 'perl',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_perl_TextMateGrammar', 'json');
-    },
+    fileName: 'source_perl_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.perl.6': {
     language: 'perl6',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_perl_6_TextMateGrammar', 'json');
-    },
+    fileName: 'source_perl_6_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.powershell': {
     language: 'powershell',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_powershell_TextMateGrammar', 'json');
-    },
+    fileName: 'source_powershell_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.python': {
     language: 'python',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_python_TextMateGrammar', 'json');
-    },
+    fileName: 'source_python_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.r': {
     language: 'r',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_r_TextMateGrammar', 'json');
-    },
+    fileName: 'source_r_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.regexp.python': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_regexp_python_TextMateGrammar', 'json');
-    },
+    fileName: 'source_regexp_python_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.ruby': {
     language: 'ruby',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_ruby_TextMateGrammar', 'json');
-    },
+    fileName: 'source_ruby_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.rust': {
     language: 'rust',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_rust_TextMateGrammar', 'json');
-    },
+    fileName: 'source_rust_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.sassdoc': {
     language: undefined,
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_sassdoc_TextMateGrammar', 'json');
-    },
+    fileName: 'source_sassdoc_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.shell': {
     language: 'shellscript',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_shell_TextMateGrammar', 'json');
-    },
+    fileName: 'source_shell_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.sql': {
     language: 'sql',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_sql_TextMateGrammar', 'json');
-    },
+    fileName: 'source_sql_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.swift': {
     language: 'swift',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_swift_TextMateGrammar', 'json');
-    },
+    fileName: 'source_swift_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.thrift': {
     language: 'thrift',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_thrift_TextMateGrammar', 'plist');
-    },
+    fileName: 'source_thrift_TextMateGrammar',
+    fileFormat: 'plist',
   },
   'source.toml': {
     language: 'toml',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_toml_TextMateGrammar', 'plist');
-    },
+    fileName: 'source_toml_TextMateGrammar',
+    fileFormat: 'plist',
   },
   'source.ts': {
     language: 'typescript',
     injections: ['documentation.injection.ts'],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_ts_TextMateGrammar', 'json');
-    },
+    fileName: 'source_ts_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.tsx': {
     language: 'typescriptreact',
@@ -513,33 +455,29 @@ const grammars: {[scopeName: string]: Grammar} = {
       'meta.tag.attributes.tsx': 'typescriptreact',
       'meta.embedded.expression.tsx': 'typescriptreact',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_tsx_TextMateGrammar', 'json');
-    },
+    fileName: 'source_tsx_TextMateGrammar',
+    fileFormat: 'json',
   },
   'source.yaml': {
     language: 'yaml',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('source_yaml_TextMateGrammar', 'json');
-    },
+    fileName: 'source_yaml_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.git-commit': {
     language: 'git-commit',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_git-commit_TextMateGrammar', 'json');
-    },
+    fileName: 'text_git-commit_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.git-rebase': {
     language: 'git-rebase',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_git-rebase_TextMateGrammar', 'json');
-    },
+    fileName: 'text_git-rebase_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.html.basic': {
     language: undefined,
@@ -551,9 +489,8 @@ const grammars: {[scopeName: string]: Grammar} = {
       'source.python': 'python',
       'source.smarty': 'smarty',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_html_basic_TextMateGrammar', 'json');
-    },
+    fileName: 'text_html_basic_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.html.cshtml': {
     language: 'razor',
@@ -563,9 +500,8 @@ const grammars: {[scopeName: string]: Grammar} = {
       'source.css': 'css',
       'source.js': 'javascript',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_html_cshtml_TextMateGrammar', 'json');
-    },
+    fileName: 'text_html_cshtml_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.html.derivative': {
     language: 'html',
@@ -577,17 +513,15 @@ const grammars: {[scopeName: string]: Grammar} = {
       'source.python': 'python',
       'source.smarty': 'smarty',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_html_derivative_TextMateGrammar', 'json');
-    },
+    fileName: 'text_html_derivative_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.html.handlebars': {
     language: 'handlebars',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_html_handlebars_TextMateGrammar', 'json');
-    },
+    fileName: 'text_html_handlebars_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.html.markdown': {
     language: 'markdown',
@@ -645,58 +579,45 @@ const grammars: {[scopeName: string]: Grammar} = {
       'meta.embedded.block.csharp': 'csharp',
       'meta.embedded.block.fsharp': 'fsharp',
     },
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_html_markdown_TextMateGrammar', 'json');
-    },
+    fileName: 'text_html_markdown_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.log': {
     language: 'log',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_log_TextMateGrammar', 'json');
-    },
+    fileName: 'text_log_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.pug': {
     language: 'jade',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_pug_TextMateGrammar', 'json');
-    },
+    fileName: 'text_pug_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.tex.latex.haskell': {
     language: 'literate haskell',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_tex_latex_haskell_TextMateGrammar', 'json');
-    },
+    fileName: 'text_tex_latex_haskell_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.xml': {
     language: 'xml',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_xml_TextMateGrammar', 'json');
-    },
+    fileName: 'text_xml_TextMateGrammar',
+    fileFormat: 'json',
   },
   'text.xml.xsl': {
     language: 'xsl',
     injections: [],
     embeddedLanguages: undefined,
-    getGrammar(): Promise<TextMateGrammar> {
-      return fetchGrammar('text_xml_xsl_TextMateGrammar', 'json');
-    },
+    fileName: 'text_xml_xsl_TextMateGrammar',
+    fileFormat: 'json',
   },
 };
-
-async function fetchGrammar(moduleName: string, type: 'json' | 'plist'): Promise<TextMateGrammar> {
-  const uri = `/generated/textmate/${moduleName}.${type}`;
-  const response = await fetch(uri);
-  const grammar = await response.text();
-  return {type, grammar};
-}
 
 const languages: {[language: string]: LanguageConfiguration} = {
   C2Hs: {
