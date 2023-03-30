@@ -1372,9 +1372,9 @@ class EdenCheckout:
                 predictive_num_dirs = 0
 
         enable_sqlite_overlay = repository.get("enable-sqlite-overlay")
-        # Older mount that doesn't have tree overlay setting should remain disabled.
+        # SqliteOverlay is default on Windows
         if not isinstance(enable_sqlite_overlay, bool):
-            enable_sqlite_overlay = False
+            enable_sqlite_overlay = sys.platform == "win32"
 
         use_write_back_cache = repository.get("use-write-back-cache")
         if not isinstance(use_write_back_cache, bool):
