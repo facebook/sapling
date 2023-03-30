@@ -53,7 +53,13 @@ impl Metadata {
     }
 
     pub fn is_file(&self, vfs: &VFS) -> bool {
-        !self.is_symlink(vfs) && self.flags.intersects(MetadataFlags::IS_REGULAR)
+        if vfs.supports_symlinks() {
+            self.flags.intersects(MetadataFlags::IS_REGULAR)
+        } else {
+            // If symlinks aren't supported, treat symlinks as regular files.
+            self.flags
+                .intersects(MetadataFlags::IS_REGULAR | MetadataFlags::IS_SYMLINK)
+        }
     }
 
     pub fn len(&self) -> Option<u64> {
