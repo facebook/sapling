@@ -279,6 +279,8 @@ if sys.platform != "win32":
             "prjfs_stress.PrjFSStress": True,
             "prjfs_stress.PrjfsStressNoListenToFull": True,
             "projfs_buffer.PrjFSBuffer": True,
+            "projfs_enumeration.ProjFSEnumeration": True,
+            "projfs_enumeration.ProjFSEnumerationInsufficientBuffer": True,
         }
     )
 
