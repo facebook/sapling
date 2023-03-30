@@ -95,21 +95,21 @@ pub trait Subcommand: Send + Sync {
  */
 #[derive(Parser, Debug)]
 pub enum TopLevelSubcommand {
-    #[clap(alias = "health")]
-    Status(crate::status::StatusCmd),
-    Pid(crate::pid::PidCmd),
-    Uptime(crate::uptime::UptimeCmd),
-    // Gc(crate::gc::GcCmd),
     Config(crate::config::ConfigCmd),
     Debug(crate::debug::DebugCmd),
-    // Top(crate::top::TopCmd),
-    Minitop(crate::minitop::MinitopCmd),
     Du(crate::du::DiskUsageCmd),
+    // Gc(crate::gc::GcCmd),
     List(crate::list::ListCmd),
+    Minitop(crate::minitop::MinitopCmd),
+    Pid(crate::pid::PidCmd),
     #[clap(subcommand, alias = "pp")]
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
+    #[clap(alias = "health")]
+    Status(crate::status::StatusCmd),
+    // Top(crate::top::TopCmd),
+    Uptime(crate::uptime::UptimeCmd),
 }
 
 impl TopLevelSubcommand {
@@ -117,35 +117,37 @@ impl TopLevelSubcommand {
         use TopLevelSubcommand::*;
 
         match self {
-            Status(cmd) => cmd,
-            Pid(cmd) => cmd,
-            Uptime(cmd) => cmd,
-            // Gc(cmd) => cmd,
             Config(cmd) => cmd,
             Debug(cmd) => cmd,
-            // Top(cmd) => cmd,
-            Minitop(cmd) => cmd,
             Du(cmd) => cmd,
+            // Gc(cmd) => cmd,
             List(cmd) => cmd,
+            Minitop(cmd) => cmd,
+            Pid(cmd) => cmd,
             PrefetchProfile(cmd) => cmd,
             Redirect(cmd) => cmd,
+            Status(cmd) => cmd,
+            // Top(cmd) => cmd,
+            Uptime(cmd) => cmd,
         }
     }
 
     fn name(&self) -> &'static str {
+        // TODO: Is there a way to extract the subcommand's name from clap?
+        // Otherwise, there is a risk of divergence with clap's own attributes.
         match self {
-            TopLevelSubcommand::Status(_) => "status",
-            TopLevelSubcommand::Pid(_) => "pid",
-            TopLevelSubcommand::Uptime(_) => "uptime",
-            //TopLevelSubcommand::Gc(_) => "gc",
             TopLevelSubcommand::Config(_) => "config",
             TopLevelSubcommand::Debug(_) => "debug",
-            //TopLevelSubcommand::Top(_) => "top",
-            TopLevelSubcommand::Minitop(_) => "minitop",
             TopLevelSubcommand::Du(_) => "du",
+            //TopLevelSubcommand::Gc(_) => "gc",
             TopLevelSubcommand::List(_) => "list",
+            TopLevelSubcommand::Minitop(_) => "minitop",
+            TopLevelSubcommand::Pid(_) => "pid",
             TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
             TopLevelSubcommand::Redirect(_) => "redirect",
+            TopLevelSubcommand::Status(_) => "status",
+            //TopLevelSubcommand::Top(_) => "top",
+            TopLevelSubcommand::Uptime(_) => "uptime",
         }
     }
 }
