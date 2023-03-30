@@ -251,6 +251,32 @@ class LineLog {
   }
 
   /**
+   * Rewrite `rev` to `mapping[rev] ?? rev`.
+   * This can be useful for reordering, folding, or insertion.
+   *
+   * Note: There are no checks about whether the reordering is
+   * meaningful or not. The callsite is responsible to perform
+   * a dependency check and avoid troublesome reorders like
+   * moving a change to before its dependency.
+   */
+  remapRevs(revMap: Map<Rev, Rev>) {
+    let newMaxRev = 0;
+    this.code.forEach(c => {
+      if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
+        const newRev = revMap.get(c.rev) ?? c.rev;
+        if (newRev > newMaxRev) {
+          newMaxRev = newRev;
+        }
+        c.rev = newRev;
+      }
+    });
+    this.maxRev = newMaxRev;
+    // Invalidate outdated checkout.
+    this.lastCheckoutKey = '';
+    this.checkOut(this.maxRev);
+  }
+
+  /**
    * Interpret the bytecodes with the given revision range.
    * Used by `checkOut`.
    */

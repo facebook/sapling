@@ -229,6 +229,78 @@ describe('LineLog', () => {
       expect(text).toBe(textList[rev - 1]);
     }
   });
+
+  describe('supports remapping revisions', () => {
+    it('updates maxRev up', () => {
+      const log = logFromTextList(['a', 'b']);
+      log.remapRevs(new Map([[1, 10]]));
+      expect(log.maxRev).toBe(10);
+    });
+
+    it('updates maxRev down', () => {
+      const log = new LineLog();
+      log.recordText('a\n', 10);
+      log.remapRevs(new Map([[10, 5]]));
+      expect(log.maxRev).toBe(5);
+    });
+
+    it('invalidates previous checkout', () => {
+      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
+      log.checkOut(2);
+      log.remapRevs(
+        new Map([
+          [2, 3],
+          [3, 2],
+        ]),
+      );
+      expect(log.content).not.toBe('b\nc\n');
+    });
+
+    it('can reorder changes', () => {
+      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
+      log.remapRevs(
+        new Map([
+          [2, 3],
+          [3, 2],
+        ]),
+      );
+      expect(log.checkOut(1)).toBe('b\n');
+      expect(log.checkOut(2)).toBe('a\nb\n');
+      expect(log.checkOut(3)).toBe('a\nb\nc\n');
+      expect(log.getLineRev(0)).toBe(2); // 'a' is from rev 2
+      expect(log.getLineRev(1)).toBe(1); // 'b' is from rev 1
+      expect(log.getLineRev(2)).toBe(3); // 'c' is from rev 3
+    });
+
+    it('can merge changes', () => {
+      const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']);
+      log.remapRevs(new Map([[2, 1]]));
+      expect(log.checkOut(1)).toBe('b\nc\n');
+      expect(log.checkOut(2)).toBe('b\nc\n');
+      expect(log.checkOut(3)).toBe('a\nb\nc\n');
+    });
+
+    it('can insert changes', () => {
+      const log = logFromTextList(['b\n', 'b\nc\n']);
+      log.remapRevs(new Map([[2, 3]]));
+      log.recordText('a\nb\n', 2);
+      expect(log.checkOut(3)).toBe('a\nb\nc\n');
+    });
+
+    it('does not check dependencies or conflicts', () => {
+      // rev 2: +b between a and c. rev 2 depends on rev 1.
+      const log = logFromTextList(['a\nc\n', 'a\nb\nc\n']);
+      log.remapRevs(
+        new Map([
+          [1, 2],
+          [2, 1],
+        ]),
+      );
+      // rev 1 is now empty, not 'b'.
+      expect(log.checkOut(1)).toBe('');
+      expect(log.checkOut(2)).toBe('a\nb\nc\n');
+    });
+  });
 });
 
 function logFromTextList(textList: string[], {trackDeps} = {trackDeps: false}): LineLog {
