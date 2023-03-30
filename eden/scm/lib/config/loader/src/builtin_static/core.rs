@@ -50,4 +50,8 @@ filtersuspectsymlink=true
 exportstack-max-commit-count=50
 exportstack-max-file-count=200
 exportstack-max-bytes=2M
+
+[zsh]
+completion-age=7
+completion-description=false
 "#);

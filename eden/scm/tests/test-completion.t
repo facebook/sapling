@@ -491,7 +491,7 @@ Show all commands + options
   debugmetalogroots: style, template
   debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
-  debugnamecomplete: 
+  debugnamecomplete: description
   debugnetworkdoctor: 
   debugobsolete: flags, record-parents, rev, exclusive, index, date, user, template
   debugpathcomplete: full, normal, added, removed
@@ -634,19 +634,21 @@ Test debugnamecomplete
 
   $ hg debugnamecomplete
   Fum
-  default
   fee
   fo
   $ hg debugnamecomplete f
   fee
   fo
+  $ hg debugnamecomplete --config zsh.completion-description=true --description
+  Fum:Fum
+  fee:fee
+  fo:Fum
 
 Test debuglabelcomplete, a deprecated name for debugnamecomplete that is still
 used for completions in some shells.
 
   $ hg debuglabelcomplete
   Fum
-  default
   fee
   fo
   $ hg debuglabelcomplete f

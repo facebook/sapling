@@ -38,17 +38,12 @@ Test renaming
 Test hoisting basics
   $ hg book
   no bookmarks set
-  $ hg debugnamecomplete
-  default
-  remote/bm1
-  remote/bm2
+
+  $ hg dbsh -c 'print("\n".join(repo.names["hoistednames"].listnames(repo)), end="")'
   $ setglobalconfig remotenames.hoist=remote
-  $ hg debugnamecomplete
+  $ hg dbsh -c 'print("\n".join(repo.names["hoistednames"].listnames(repo)))'
   bm1
   bm2
-  default
-  remote/bm1
-  remote/bm2
 
 Test hoisting name lookup
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'

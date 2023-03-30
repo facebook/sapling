@@ -2431,27 +2431,49 @@ def debugmergestate(ui, repo, *args) -> None:
             printrecords(2)
 
 
-@command("debugnamecomplete", [], _("NAME..."))
-def debugnamecomplete(ui, repo, *args) -> None:
+@command(
+    "debugnamecomplete",
+    [
+        ("d", "description", False, _("include first line of the message")),
+    ],
+    _("NAME..."),
+)
+def debugnamecomplete(ui, repo, *args, **opts) -> None:
     """complete "names" - tags, open branch names, bookmark names"""
 
     names = set()
     # since we previously only listed open branches, we will handle that
     # specially (after this for loop)
     for name, ns in pycompat.iteritems(repo.names):
-        if name != "branches":
+        if name != "branches" and name != "remotebookmarks":
             names.update(ns.listnames(repo))
-    names.update(
-        tag
-        for (tag, heads, tip, closed) in repo.branchmap().iterbranches()
-        if not closed
-    )
-    completions = set()
-    if not args:
-        args = [""]
-    for a in args:
-        completions.update(n for n in names if n.startswith(a))
-    ui.write("\n".join(sorted(completions)))
+
+    age = ui.configint("zsh", "completion-age")
+    draft = repo.set("sort(draft() and age('<{}d'), -date)".format(age))
+    draft = [repo.changelog.shortest(cs.hex(), 8) for cs in draft]
+    all_completions = []
+    all_completions.extend(draft)
+    all_completions.extend(sorted(n for n in names if n not in ["default", "tip"]))
+
+    completions = []
+    if args:
+        for completion in all_completions:
+            for arg in args:
+                if completion.startswith(arg):
+                    completions.append(completion)
+                    break
+    else:
+        completions = all_completions
+
+    if opts.get("description", False) and ui.configbool(
+        "zsh", "completion-description"
+    ):
+        completions = [
+            "{}:{}".format(name, repo[name].description().splitlines()[0])
+            for name in completions
+        ]
+
+    ui.write("\n".join(completions))
     ui.write("\n")
 
 
