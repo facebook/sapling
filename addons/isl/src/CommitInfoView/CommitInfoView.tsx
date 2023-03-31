@@ -14,7 +14,7 @@ import type {
 } from './CommitInfoState';
 import type {Dispatch, ReactNode, SetStateAction} from 'react';
 
-import {Commit, YouAreHere} from '../Commit';
+import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
 import {HighlightCommitsWhileHovering} from '../HighlightedCommits';
@@ -37,7 +37,6 @@ import {PrSubmitOperation} from '../operations/PrSubmitOperation';
 import {SetConfigOperation} from '../operations/SetConfigOperation';
 import platform from '../platform';
 import {CommitPreview, treeWithPreviews, uncommittedChangesWithPreviews} from '../previews';
-import {RelativeDate} from '../relativeDate';
 import {selectedCommitInfos, selectedCommits} from '../selection';
 import {repositoryInfo, useRunOperation} from '../serverAPIState';
 import {useModal} from '../useModal';
@@ -50,6 +49,7 @@ import {
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
 import {CommitInfoField} from './TextArea';
+import {Section, SmallCapsTitle, CommitTitleByline} from './utils';
 import {
   VSCodeBadge,
   VSCodeButton,
@@ -58,7 +58,7 @@ import {
   VSCodeRadio,
   VSCodeRadioGroup,
 } from '@vscode/webview-ui-toolkit/react';
-import React, {useEffect} from 'react';
+import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
 import {ComparisonType} from 'shared/Comparison';
 import {Icon} from 'shared/Icon';
@@ -583,48 +583,6 @@ function ActionsBar({
         ) : null}
       </div>
     </div>
-  );
-}
-
-function CommitTitleByline({commit}: {commit: CommitInfo}) {
-  const createdByInfo = (
-    // TODO: determine if you're the author to say "you"
-    <T replace={{$author: commit.author}}>Created by $author</T>
-  );
-  return (
-    <Subtle className="commit-info-title-byline">
-      {commit.isHead ? <YouAreHere hideSpinner /> : null}
-      <OverflowEllipsis shrink>
-        <Tooltip trigger="hover" component={() => createdByInfo}>
-          {createdByInfo}
-        </Tooltip>
-      </OverflowEllipsis>
-      <OverflowEllipsis>
-        <Tooltip trigger="hover" title={commit.date.toLocaleString()}>
-          <RelativeDate date={commit.date} />
-        </Tooltip>
-      </OverflowEllipsis>
-    </Subtle>
-  );
-}
-
-function OverflowEllipsis({children, shrink}: {children: ReactNode; shrink?: boolean}) {
-  return <div className={`overflow-ellipsis${shrink ? ' overflow-shrink' : ''}`}>{children}</div>;
-}
-
-function SmallCapsTitle({children}: {children: ReactNode}) {
-  return <div className="commit-info-small-title">{children}</div>;
-}
-
-function Section({
-  children,
-  className,
-  ...rest
-}: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>) {
-  return (
-    <section {...rest} className={'commit-info-section' + (className ? ' ' + className : '')}>
-      {children}
-    </section>
   );
 }
 
