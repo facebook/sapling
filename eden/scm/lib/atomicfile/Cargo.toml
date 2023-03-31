@@ -7,5 +7,5 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
-tempfile = "3.4"
+tempfile = "3.5"
 tracing = "0.1.35"
