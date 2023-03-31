@@ -708,7 +708,8 @@ class Top:
             requests_for_type = "N/A"
         elif requests_for_type == STATS_NOT_IMPLEMENTED:
             requests_for_type = ""
-        requests_for_type_display = f"{requests_for_type:>{request_count_size-1}} "
+        request_count_padding = max(request_count_size - 1, 0)
+        requests_for_type_display = f"{requests_for_type:>{request_count_padding}} "
 
         # duration of the longest request
         longest_request = metrics[RequestMetric.MAX_DURATION]  # s
