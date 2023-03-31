@@ -97,6 +97,7 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
   const provider = useRecoilValue(codeReviewProvider);
   const diffSummaries = useRecoilValue(allDiffSummaries);
   const runOperation = useRunOperation();
+  const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
   const submittable =
     (diffSummaries.value != null
       ? provider?.getSubmittableDiffs(selectedCommits, diffSummaries.value)
@@ -119,16 +120,25 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         ))}
       </div>
       <div className="commit-info-actions-bar">
-        {submittable.length === 0 ? null : (
-          <HighlightCommitsWhileHovering toHighlight={submittable}>
-            <VSCodeButton
-              onClick={() => {
-                runOperation(unwrap(provider).submitOperation(selectedCommits));
-              }}>
-              <T>Submit Selected Commits</T>
-            </VSCodeButton>
-          </HighlightCommitsWhileHovering>
-        )}
+        <div className="commit-info-actions-bar-left">
+          <SubmitAsDraftCheckbox commitsToBeSubmit={selectedCommits} />
+        </div>
+        <div className="commit-info-actions-bar-right">
+          {submittable.length === 0 ? null : (
+            <HighlightCommitsWhileHovering toHighlight={submittable}>
+              <VSCodeButton
+                onClick={() => {
+                  runOperation(
+                    unwrap(provider).submitOperation(selectedCommits, {
+                      draft: shouldSubmitAsDraft,
+                    }),
+                  );
+                }}>
+                <T>Submit Selected Commits</T>
+              </VSCodeButton>
+            </HighlightCommitsWhileHovering>
+          )}
+        </div>
       </div>
     </div>
   );

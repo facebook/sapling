@@ -39,7 +39,7 @@ export function SubmitAsDraftCheckbox({commitsToBeSubmit}: {commitsToBeSubmit: A
       className="submit-as-draft-checkbox"
       checked={isDraft}
       onChange={e => setIsDraft((e.target as HTMLInputElement).checked)}>
-      <Tooltip title={t('Whether to submit this diff as a draft')}>
+      <Tooltip title={t('whetherToSubmitDiffAsDraft', {count: commitsToBeSubmit.length})}>
         <T>Submit as Draft</T>
       </Tooltip>
     </VSCodeCheckbox>
