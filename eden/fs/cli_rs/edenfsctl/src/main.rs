@@ -183,7 +183,8 @@ fn wrapper_main() -> Result<i32> {
             // UnknownArgument (whether or not --help was requested) and we
             // should fall back to Python.
             Err(e) => {
-                if e.kind() == clap::ErrorKind::DisplayHelp
+                if (e.kind() == clap::ErrorKind::DisplayHelp
+                    || e.kind() == clap::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand)
                     && should_use_rust_help(std::env::args(), &None).unwrap_or(false)
                 {
                     e.exit()
