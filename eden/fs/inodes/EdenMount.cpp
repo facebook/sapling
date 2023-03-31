@@ -269,7 +269,9 @@ EdenMount::EdenMount(
           std::move(stats),
           *serverState_->getEdenConfig())},
 #ifndef _WIN32
-      overlayFileAccess_{overlay_.get()},
+      overlayFileAccess_{
+          overlay_.get(),
+          serverState_->getEdenConfig()->overlayFileAccessCacheSize.getValue()},
 #endif
       journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},

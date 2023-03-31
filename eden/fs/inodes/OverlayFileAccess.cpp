@@ -12,7 +12,6 @@
 #include <folly/Expected.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
-#include <folly/portability/GFlags.h>
 #include <folly/portability/OpenSSL.h>
 
 #include "eden/fs/inodes/FileInode.h"
@@ -33,8 +32,6 @@ namespace facebook::eden {
  * overlay which impacts throughput under concurrent operations.
  */
 
-DEFINE_uint64(overlayFileCacheSize, 100, "");
-
 void OverlayFileAccess::Entry::Info::invalidateMetadata() {
   ++version;
   size = std::nullopt;
@@ -47,8 +44,8 @@ OverlayFileAccess::State::State(size_t cacheSize) : entries{cacheSize} {
   }
 }
 
-OverlayFileAccess::OverlayFileAccess(Overlay* overlay)
-    : overlay_{overlay}, state_{folly::in_place, FLAGS_overlayFileCacheSize} {}
+OverlayFileAccess::OverlayFileAccess(Overlay* overlay, size_t cacheSize)
+    : overlay_{overlay}, state_{folly::in_place, cacheSize} {}
 
 OverlayFileAccess::~OverlayFileAccess() = default;
 

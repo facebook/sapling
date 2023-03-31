@@ -30,7 +30,7 @@ class Overlay;
  */
 class OverlayFileAccess {
  public:
-  explicit OverlayFileAccess(Overlay* overlay);
+  explicit OverlayFileAccess(Overlay* overlay, size_t cacheSize);
   ~OverlayFileAccess();
 
   /**

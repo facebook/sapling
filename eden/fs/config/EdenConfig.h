@@ -1067,6 +1067,14 @@ class EdenConfig : private ConfigSettingManager {
       64 * 1024 * 1024,
       this};
 
+  /**
+   * Number of OverlayFile and metadata cached in memory.
+   */
+  ConfigSetting<size_t> overlayFileAccessCacheSize{
+      "overlay:file-access-cache-size",
+      100,
+      this};
+
   // [clone]
 
   /**
