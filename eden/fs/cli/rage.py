@@ -269,7 +269,17 @@ def print_os_version(out: IO[bytes]) -> None:
                 if "PRETTY_NAME" in release_info:
                     version = release_info["PRETTY_NAME"]
     elif sys.platform == "darwin":
-        version = "MacOS " + platform.mac_ver()[0]
+        # While upstream Python correctly returns the macOS version number from
+        # platform.mac_ver(), the version we're currently using incorrectly
+        # returns '10.16' on macOS Ventura.  So let's get the OS version from a
+        # system helper instead.
+        try:
+            sw_vers = subprocess.check_output(["/usr/bin/sw_vers", "-productVersion"])
+            version = "MacOS " + sw_vers.decode("utf-8").rstrip()
+        except Exception:
+            version = (
+                "MacOS " + platform.mac_ver()[0] + " (platform.mac_ver() fallback)"
+            )
     elif sys.platform == "win32":
         import winreg
 
