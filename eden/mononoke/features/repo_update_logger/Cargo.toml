@@ -16,7 +16,7 @@ changesets = { version = "0.1.0", path = "../../changesets" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 context = { version = "0.1.0", path = "../../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
-futures = { version = "0.3.22", features = ["async-await", "compat"] }
+futures = { version = "0.3.28", features = ["async-await", "compat"] }
 logger_ext = { version = "0.1.0", path = "../../common/logger_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
