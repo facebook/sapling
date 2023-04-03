@@ -16,7 +16,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../../server/context" }
 encoding_rs = "0.8"
 filestore = { version = "0.1.0", path = "../../filestore" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 git-actor = "0.14"
 git-hash = "0.10"
 git-object = "0.23"

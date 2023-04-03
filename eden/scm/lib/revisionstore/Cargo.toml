@@ -17,7 +17,7 @@ configmodel = { version = "0.1.0", path = "../config/model" }
 crossbeam = "0.8"
 edenapi = { version = "0.1.0", path = "../edenapi" }
 edenapi_types = { version = "0.1.0", path = "../edenapi/types" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 hex = "0.4.3"
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }

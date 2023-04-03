@@ -20,7 +20,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 dashmap = { version = "5.4", features = ["raw-api", "rayon", "serde"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-futures = { version = "0.3.28", features = ["async-await", "compat"] }
+futures = { version = "0.3.22", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
