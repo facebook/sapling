@@ -428,6 +428,10 @@ async fn fill_multiple_memcache<'a, V: 'a>(
 ) where
     V: MemcacheEntity,
 {
+    if memcache.is_noop() {
+        return;
+    }
+
     let futs = data
         .into_iter()
         .filter_map(|(memcache_key, ttl, v)| {
