@@ -56,9 +56,12 @@ def unlink_closed_pr_hint() -> str:
     )
 
 
+def uisetup(ui):
+    ui.setconfig("hooks", "post-pull.prmarker", pr_marker.cleanup_landed_pr_hook)
+
+
 def extsetup(ui):
     pr_status.setup_smartset_prefetch()
-    ui.setconfig("hooks", "post-pull.prmarker", pr_marker.cleanup_landed_pr_hook)
 
 
 @command(
