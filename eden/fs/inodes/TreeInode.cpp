@@ -4180,7 +4180,7 @@ ImmediateFuture<uint64_t> TreeInode::invalidateChildrenNotMaterialized(
   // When the mount is shutting down, let's make sure to terminate quickly so
   // unmount is not blocked for a potential very long amount of time.
   if (getMount()->getState() == EdenMount::State::SHUTTING_DOWN) {
-    return (uint64_t)0;
+    return 0u;
   }
 
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
