@@ -739,7 +739,11 @@ impl CommitGraph {
 
             let all_edges = self
                 .storage
-                .fetch_many_edges(ctx, &cs_ids_not_excluded, Prefetch::None)
+                .fetch_many_edges(
+                    ctx,
+                    &cs_ids_not_excluded,
+                    Prefetch::for_p1_linear_traversal(),
+                )
                 .await?;
 
             for (_, edges) in all_edges.into_iter() {

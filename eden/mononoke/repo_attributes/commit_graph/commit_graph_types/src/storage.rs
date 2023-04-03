@@ -19,6 +19,7 @@ use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
+use mononoke_types::FIRST_GENERATION;
 use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;
@@ -78,6 +79,18 @@ impl Prefetch {
             edge: PrefetchEdge::SkipTreeSkewAncestor,
             generation,
             steps: 32,
+        })
+    }
+
+    /// Prepare prefetching for linear traversal of the p1 history.
+    pub fn for_p1_linear_traversal() -> Self {
+        // Prefetch linear ranges of 128 commits.  This is arbitrary, but is a
+        // balance between not overfetching for the cache and reducing the
+        // number of sequential steps.
+        Prefetch::Hint(PrefetchTarget {
+            edge: PrefetchEdge::FirstParent,
+            generation: FIRST_GENERATION,
+            steps: 128,
         })
     }
 
