@@ -9,16 +9,7 @@
 import asyncio
 from typing import Optional
 
-from edenscm import (
-    autopull,
-    commands,
-    error,
-    extensions,
-    git,
-    namespaces,
-    registrar,
-    util,
-)
+from edenscm import autopull, commands, error, namespaces, registrar, util
 from edenscm.autopull import pullattempt
 from edenscm.i18n import _
 from edenscm.namespaces import namespace
@@ -66,8 +57,8 @@ def unlink_closed_pr_hint() -> str:
 
 
 def extsetup(ui):
-    extensions.wrapfunction(git, "pull", _pull)
     pr_status.setup_smartset_prefetch()
+    ui.setconfig("hooks", "post-pull.prmarker", pr_marker.cleanup_landed_pr_hook)
 
 
 @command(
@@ -269,7 +260,7 @@ def list_cmd(ui, repo, *args, **opts) -> int:
 @command("debugprmarker", commands.dryrunopts)
 def debug_pr_marker(ui, repo, **opts):
     dry_run = opts.get("dry_run")
-    pr_marker.cleanup_landed_pr(repo, dry_run=dry_run)
+    pr_marker.cleanup_landed_pr(ui, repo, dry_run=dry_run)
     if dry_run:
         ui.status(_("(this is a dry-run, nothing was actually done)\n"))
 
@@ -408,14 +399,3 @@ def _autopullghpr(repo, name, rewritepullrev: bool = False) -> Optional[pullatte
             # HASH".
             friendlyname = "PR%s (%s)" % (prno, hex(n))
             return autopull.pullattempt(headnodes=[n], friendlyname=friendlyname)
-
-
-def _pull(orig, repo, source, names=(), nodes=()):
-    ret = orig(repo, source, names, nodes)
-    try:
-        # Don't run in tests by default since it requires more stuff to be mocked out.
-        if repo.ui.configbool("github", "hide-landed-commits", not util.istest()):
-            pr_marker.cleanup_landed_pr(repo)
-    except Exception as ex:
-        repo.ui.warn(_("error marking landed prs: %s\n") % str(ex))
-    return ret

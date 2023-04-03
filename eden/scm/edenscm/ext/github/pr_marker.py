@@ -9,7 +9,7 @@ mark commits as "Landed" on pull
 import typing as t
 from collections import defaultdict
 
-from edenscm import mutation, visibility
+from edenscm import mutation, util, visibility
 from edenscm.ext.github.github_repo_util import find_github_repo
 from edenscm.ext.github.pr_parser import get_pull_request_for_context
 from edenscm.ext.github.pullrequest import get_pr_state, PullRequestId
@@ -22,17 +22,28 @@ from ghstack.github_cli_endpoint import GitHubCLIEndpoint
 Node = bytes
 
 
-def cleanup_landed_pr(repo, dry_run: bool = False) -> None:
+def cleanup_landed_pr_hook(ui, repo, **kwargs) -> None:
+    """hook for cleanup_landed_pr
+
+    This is used as a post hook of `pull` command.
+    """
+    cleanup_landed_pr(ui, repo)
+
+
+def cleanup_landed_pr(ui, repo, dry_run: bool = False) -> None:
     """cleanup landed GitHub PRs
 
     If the repo is not a valid GitHub repo, just return.
     """
+    # Don't run in tests by default since it requires more stuff to be mocked out.
+    if not ui.configbool("github", "hide-landed-commits", not util.istest()):
+        return
+
     github_repo = find_github_repo(repo).ok()
     if github_repo is None:
         # not a GitHubRepo, just return
         return
 
-    ui = repo.ui
     pr_to_draft = _get_draft_commits(repo)
 
     try:
