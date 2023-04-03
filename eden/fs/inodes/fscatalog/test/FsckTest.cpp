@@ -333,14 +333,14 @@ TEST(Fsck, testNoErrors) {
   SimpleOverlayLayout layout(root);
   testOverlay->closeCleanly();
 
-  FileContentStore fcs(testOverlay->overlayPath());
-  FsInodeCatalog fs(&fcs);
-  auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
+  FileContentStore& fcs = testOverlay->fcs();
+  InodeCatalog* catalog = testOverlay->inodeCatalog();
+  auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fs, &fcs, nextInode, lookup);
+  OverlayChecker checker(catalog, &fcs, nextInode, lookup);
   checker.scanForErrors();
   EXPECT_EQ(0, checker.getErrors().size());
   EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
@@ -369,16 +369,16 @@ TEST(Fsck, testMissingNextInodeNumber) {
   // Close the overlay without saving the next inode number
   testOverlay->inodeCatalog()->close(std::nullopt);
 
-  FileContentStore fcs(testOverlay->overlayPath());
-  FsInodeCatalog fs(&fcs);
-  auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
+  FileContentStore& fcs = testOverlay->fcs();
+  InodeCatalog* catalog = testOverlay->inodeCatalog();
+  auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   // Confirm there is no next inode data
   EXPECT_FALSE(nextInode.has_value());
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fs, &fcs, nextInode, lookup);
+  OverlayChecker checker(catalog, &fcs, nextInode, lookup);
   checker.scanForErrors();
   // OverlayChecker should still report 0 errors in this case.
   // We don't report a missing next inode number as an error: if this is the
@@ -386,7 +386,7 @@ TEST(Fsck, testMissingNextInodeNumber) {
   // generate an fsck report.  The correct next inode number will always be
   // written out the next time we close the overlay.
   EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
-  fs.close(checker.getNextInodeNumber());
+  catalog->close(checker.getNextInodeNumber());
 }
 
 TEST(Fsck, testBadNextInodeNumber) {
@@ -398,15 +398,15 @@ TEST(Fsck, testBadNextInodeNumber) {
   ASSERT_LE(2, actualNextInodeNumber.get());
   testOverlay->inodeCatalog()->close(InodeNumber(2));
 
-  FileContentStore fcs(testOverlay->overlayPath());
-  FsInodeCatalog fs(&fcs);
-  auto nextInode = fs.initOverlay(/*createIfNonExisting=*/false);
+  FileContentStore& fcs = testOverlay->fcs();
+  InodeCatalog* catalog = testOverlay->inodeCatalog();
+  auto nextInode = catalog->initOverlay(/*createIfNonExisting=*/false);
   EXPECT_EQ(2, nextInode ? nextInode->get() : 0);
   OverlayChecker::LookupCallback lookup = [](auto&&, auto&&) {
     return makeImmediateFuture<OverlayChecker::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(&fs, &fcs, nextInode, lookup);
+  OverlayChecker checker(catalog, &fcs, nextInode, lookup);
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -414,7 +414,7 @@ TEST(Fsck, testBadNextInodeNumber) {
           "bad stored next inode number: read 2 but should be at least ",
           actualNextInodeNumber)));
   EXPECT_EQ(checker.getNextInodeNumber(), actualNextInodeNumber);
-  fs.close(checker.getNextInodeNumber());
+  catalog->close(checker.getNextInodeNumber());
 }
 
 TEST(Fsck, testBadFileData) {
