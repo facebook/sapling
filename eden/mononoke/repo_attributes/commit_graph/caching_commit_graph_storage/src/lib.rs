@@ -207,7 +207,13 @@ impl EntityStore<CachedChangesetEdges> for CacheRequest<'_> {
     }
 
     fn memcache(&self) -> &MemcacheHandler {
-        &self.caching_storage.memcache
+        if self.prefetch.is_include() {
+            // If asked to prefetch, fetching from memcache is actually
+            // slower, so don't perform memcache look-ups.
+            &MemcacheHandler::Noop
+        } else {
+            &self.caching_storage.memcache
+        }
     }
 
     fn cache_determinator(&self, _: &CachedChangesetEdges) -> CacheDisposition {
@@ -227,24 +233,19 @@ impl KeyedEntityStore<ChangesetId, CachedChangesetEdges> for CacheRequest<'_> {
         &self,
         keys: HashSet<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, CachedChangesetEdges>> {
-        let prefetch = if tunables().disable_commit_graph_prefetch().unwrap_or(false) {
-            Prefetch::None
-        } else {
-            self.prefetch.include_hint()
-        };
         let cs_ids: Vec<ChangesetId> = keys.iter().copied().collect();
         let entries = if self.required {
             self.caching_storage
                 .storage
-                .fetch_many_edges_required(self.ctx, &cs_ids, prefetch)
+                .fetch_many_edges_required(self.ctx, &cs_ids, self.prefetch)
                 .await?
         } else {
             self.caching_storage
                 .storage
-                .fetch_many_edges(self.ctx, &cs_ids, prefetch)
+                .fetch_many_edges(self.ctx, &cs_ids, self.prefetch)
                 .await?
         };
-        if prefetch.is_include() {
+        if self.prefetch.is_include() {
             // We were asked to prefetch. We must separate out the prefetched
             // values from the fetched values as we may only return the
             // fetched values.
@@ -306,6 +307,11 @@ impl CachingCommitGraphStorage {
     }
 
     fn request<'a>(&'a self, ctx: &'a CoreContext, prefetch: Prefetch) -> CacheRequest<'a> {
+        let prefetch = if tunables().disable_commit_graph_prefetch().unwrap_or(false) {
+            Prefetch::None
+        } else {
+            prefetch.include_hint()
+        };
         CacheRequest {
             ctx,
             caching_storage: self,
@@ -319,6 +325,11 @@ impl CachingCommitGraphStorage {
         ctx: &'a CoreContext,
         prefetch: Prefetch,
     ) -> CacheRequest<'a> {
+        let prefetch = if tunables().disable_commit_graph_prefetch().unwrap_or(false) {
+            Prefetch::None
+        } else {
+            prefetch.include_hint()
+        };
         CacheRequest {
             ctx,
             caching_storage: self,
