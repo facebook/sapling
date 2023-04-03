@@ -27,6 +27,7 @@
   padding-left: 10px;
   padding-right: 10px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .SplitDiffView-hunk-table td.separator {
