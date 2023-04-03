@@ -29,6 +29,7 @@ use anyhow::Context;
 use atomicfile::atomic_write;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
+use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -776,6 +777,17 @@ impl EdenFsCheckout {
         }
     }
 
+    pub fn should_prefetch_profiles(config: &EdenFsConfig) -> bool {
+        config.prefetch_profiles.prefetching_enabled.unwrap_or(true)
+    }
+
+    pub fn should_prefetch_predictive_profiles(config: &EdenFsConfig) -> bool {
+        config
+            .prefetch_profiles
+            .predictive_prefetching_enabled
+            .unwrap_or(false)
+    }
+
     pub async fn prefetch_profiles(
         &self,
         instance: &EdenFsInstance,
@@ -793,7 +805,8 @@ impl EdenFsCheckout {
         let config = instance
             .get_config()
             .context("unable to load configuration")?;
-        if predictive && !config.prefetch_profiles.predictive_prefetching_enabled {
+
+        if predictive && !EdenFsCheckout::should_prefetch_predictive_profiles(&config) {
             if !silent {
                 eprintln!(
                     "Skipping Predictive Prefetch Profiles fetch due to global kill switch. \
@@ -805,7 +818,7 @@ impl EdenFsCheckout {
             }
         }
 
-        if !config.prefetch_profiles.prefetching_enabled && !predictive {
+        if !EdenFsCheckout::should_prefetch_profiles(&config) && !predictive {
             if !silent {
                 eprintln!(
                     "Skipping Prefetch Profiles fetch due to global kill switch. \

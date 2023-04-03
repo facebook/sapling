@@ -27,11 +27,11 @@ pub struct Core {
 #[derive(Serialize, Deserialize, StackConfig, Debug, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct PrefetchProfiles {
-    #[stack(default)]
-    pub prefetching_enabled: bool,
+    #[stack(default, merge = "merge_option")]
+    pub prefetching_enabled: Option<bool>,
 
-    #[stack(default)]
-    pub predictive_prefetching_enabled: bool,
+    #[stack(default, merge = "merge_option")]
+    pub predictive_prefetching_enabled: Option<bool>,
 
     #[stack(merge = "merge_table", default)]
     #[serde(flatten)]
