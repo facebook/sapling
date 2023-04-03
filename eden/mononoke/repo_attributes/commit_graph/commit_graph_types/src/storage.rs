@@ -102,6 +102,11 @@ impl Prefetch {
         matches!(self, Prefetch::Include(..))
     }
 
+    /// Indicate that prefetching should be included if it has been hinted.
+    ///
+    /// This is called when the caching layer determines that it is able to
+    /// store any prefetched values, and so values for any prefetch hint
+    /// should be included.
     pub fn include_hint(self) -> Prefetch {
         match self {
             Prefetch::None => Prefetch::None,
@@ -109,10 +114,14 @@ impl Prefetch {
         }
     }
 
+    /// Target to prefetch to, if prefetching should be included.
+    ///
+    /// If prefetching is merely hinted, this won't return the target, as
+    /// prefetching should not be performed.
     pub fn target(self) -> Option<PrefetchTarget> {
         match self {
-            Prefetch::None => None,
-            Prefetch::Hint(target) | Prefetch::Include(target) => Some(target),
+            Prefetch::None | Prefetch::Hint(..) => None,
+            Prefetch::Include(target) => Some(target),
         }
     }
 }
