@@ -25,7 +25,6 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
-use commit_graph_types::storage::PrefetchEdge;
 use commit_graph_types::ChangesetParents;
 use context::CoreContext;
 use itertools::Either;
@@ -588,7 +587,7 @@ impl CommitGraph {
                     .fetch_many_edges_required(
                         ctx,
                         &cs_ids,
-                        Prefetch::Hint(PrefetchEdge::SkipTreeSkewAncestor, target_generation),
+                        Prefetch::for_skip_tree_traversal(target_generation),
                     )
                     .await?;
                 for cs_id in cs_ids {

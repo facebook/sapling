@@ -49,7 +49,9 @@ use vec1::Vec1;
 mod tests;
 
 /// Maximum number of recursive steps to take when prefetching commits.
-const DEFAULT_PREFETCH_STEP_LIMIT: i64 = 32;
+///
+/// The configured maximum number of recursive steps in MySQL is 1000.
+const DEFAULT_PREFETCH_STEP_LIMIT: i64 = 1000;
 
 pub struct SqlCommitGraphStorageBuilder {
     connections: SqlConnections,
@@ -728,17 +730,20 @@ impl SqlCommitGraphStorage {
             return Ok(HashMap::new());
         }
 
-        if let Some((prefetch_edge, generation)) = prefetch.target() {
-            let step_limit = tunables()
-                .commit_graph_prefetch_step_limit()
-                .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT) as u64;
-            let fetched_edges = match prefetch_edge {
+        if let Some(target) = prefetch.target() {
+            let steps = std::cmp::min(
+                target.steps,
+                tunables()
+                    .commit_graph_prefetch_step_limit()
+                    .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT) as u64,
+            );
+            let fetched_edges = match target.edge {
                 PrefetchEdge::FirstParent => {
                     SelectManyChangesetsWithFirstParentPrefetch::query(
                         &self.read_connection.conn,
                         &self.repo_id,
-                        &step_limit,
-                        &generation.value(),
+                        &steps,
+                        &target.generation.value(),
                         cs_ids,
                     )
                     .await?
@@ -747,8 +752,8 @@ impl SqlCommitGraphStorage {
                     SelectManyChangesetsWithSkipTreeSkewAncestorPrefetch::query(
                         &self.read_connection.conn,
                         &self.repo_id,
-                        &step_limit,
-                        &generation.value(),
+                        &steps,
+                        &target.generation.value(),
                         cs_ids,
                     )
                     .await?

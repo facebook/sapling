@@ -35,6 +35,19 @@ pub enum PrefetchEdge {
     SkipTreeSkewAncestor,
 }
 
+/// Where to prefetch to.
+#[derive(Copy, Clone, Debug)]
+pub struct PrefetchTarget {
+    /// Prefetch along this edge.
+    pub edge: PrefetchEdge,
+
+    /// Prefetch as far back as this generation.
+    pub generation: Generation,
+
+    /// Prefetch up to this many steps.
+    pub steps: u64,
+}
+
 /// Indication for additional changesets to be fetched for subsequent
 /// traversals.
 ///
@@ -48,13 +61,26 @@ pub enum Prefetch {
 
     /// Prefetch is permitted with the given hint, but additional items are
     /// not to be returned.
-    Hint(PrefetchEdge, Generation),
+    Hint(PrefetchTarget),
 
     /// Prefetch if possible, and included prefetched items in the result.
-    Include(PrefetchEdge, Generation),
+    Include(PrefetchTarget),
 }
 
 impl Prefetch {
+    /// Prepare prefetching for skew-binary traversal over the skip tree.
+    pub fn for_skip_tree_traversal(generation: Generation) -> Self {
+        // We are prefetching mostly along the skew ancestor edge, which
+        // should typically be O(log(N)) in length, except that for merge
+        // commits without a common ancestor we follow the p1 parent, so limit
+        // to 32 steps so that we don't follow the p1 ancestry too far.
+        Prefetch::Hint(PrefetchTarget {
+            edge: PrefetchEdge::SkipTreeSkewAncestor,
+            generation,
+            steps: 32,
+        })
+    }
+
     pub fn is_hint(&self) -> bool {
         matches!(self, Prefetch::Hint(..))
     }
@@ -66,16 +92,14 @@ impl Prefetch {
     pub fn include_hint(self) -> Prefetch {
         match self {
             Prefetch::None => Prefetch::None,
-            Prefetch::Hint(edge, gen) | Prefetch::Include(edge, gen) => {
-                Prefetch::Include(edge, gen)
-            }
+            Prefetch::Hint(target) | Prefetch::Include(target) => Prefetch::Include(target),
         }
     }
 
-    pub fn target(self) -> Option<(PrefetchEdge, Generation)> {
+    pub fn target(self) -> Option<PrefetchTarget> {
         match self {
             Prefetch::None => None,
-            Prefetch::Hint(edge, gen) | Prefetch::Include(edge, gen) => Some((edge, gen)),
+            Prefetch::Hint(target) | Prefetch::Include(target) => Some(target),
         }
     }
 }
