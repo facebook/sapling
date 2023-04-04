@@ -1,5 +1,5 @@
 #debugruntest-compatible
-#require /bin/bash /bin/cat
+#require /bin/bash /bin/cat /bin/fbpython
 
   $ configure modernclient
   $ newclientrepo
@@ -18,24 +18,32 @@
 # Basics
 
 If the script doesn't return anything, an abort is raised:
-  $ printf "#!/bin/bash\n" > stable.sh
-  $ chmod +x stable.sh
-  $ setconfig stablerev.script=stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > EOF
+  $ chmod +x stable.py
+  $ setconfig stablerev.script=stable.py
   $ hg log -r "getstablerev()" --debug
-  Executing script: $TESTTMP/repo1/stable.sh
+  Executing script: $TESTTMP/repo1/stable.py
   setting current working directory to: $TESTTMP/repo1
   script stdout:
-  
-  abort: stable rev returned by script (stable.sh) was empty
+
+  abort: stable rev returned by script (stable.py) was empty
   [255]
 
 Make the script return something:
-  $ printf "#!/bin/bash\n\necho 'B'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print("B")
+  > EOF
   $ hg log -r "getstablerev()"
   [112478962961]: B
 
 Change the script, change the result:
-  $ printf "#!/bin/bash\n\necho 'C'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print("C")
+  > EOF
   $ hg log -r "getstablerev()"
   [26805aba1e60]: C
 
@@ -47,30 +55,35 @@ The script is always run relative to repo root:
   $ cd ..
 
 JSON is also supported:
-  $ printf "#!/bin/bash\n\necho '{\"node\": \"D\"}'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print('{\"node\": \"D\"}')
+  > EOF
   $ hg log -r "getstablerev()"
   [f585351a92f8]: D
 
 Invalid JSON aborts:
-  $ printf "#!/bin/bash\n\necho '{node\": \"D\"}'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print('{node\": \"D\"}')
+  > EOF
   $ hg log -r "getstablerev()"
-  abort: stable rev returned by script (stable.sh) was invalid
+  abort: stable rev returned by script (stable.py) was invalid
   [255]
 
 An alias can be used for simplicity:
-  $ printf "#!/bin/bash\n\necho 'A'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print("A")
+  > EOF
   $ setconfig revsetalias.stable="getstablerev()"
   $ hg log -r stable
   [426bada5c675]: A
 
 Check that stables template keyword works:
-  $ cat <<'EOF' > stables.sh
-  > #!/bin/bash
-  > /bin/cat << FOE
-  > {
-  >   "$1": ["stable1", "stable2"]
-  > }
-  > FOE
+  $ cat << 'EOF' > stables.py
+  > #!/usr/bin/env fbpython
+  > print('{nodeid\": [\"stable1\",\"stable1\"]}')
   > EOF
   $ chmod +x stables.sh
   $ setconfig "stablerev.stablesscript=./stables.sh {nodeid}"
@@ -97,7 +110,10 @@ Make another repo with "E" (9bc730a19041):
   $ cd ../repo1
 
 What if the stable commit isn't present locally?
-  $ printf "#!/bin/bash\n\necho '9bc730a19041'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print("9bc730a19041")
+  > EOF
   $ hg log -r stable
   abort: stable commit (9bc730a19041) not in the repo
   (try hg pull first)
@@ -114,7 +130,10 @@ The revset can be configured to automatically pull in this case:
   [9bc730a19041]: E
 
 But it might not exist even after pulling:
-  $ printf "#!/bin/bash\n\necho 'abcdef123'" > stable.sh
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > print("abcdef123")
+  > EOF
   $ hg log -r stable
   stable commit (abcdef123) not in repo; pulling to get it...
   pulling from test:repo2_server
@@ -144,13 +163,13 @@ But they can be made optional or required:
   [255]
 
 Try making the script return different locations
-  $ cat <<'EOF' > stable.sh
-  > #!/bin/bash
-  > if [ "$TARGET" = "foo" ]; then
-  >    echo 'D'
-  > else
-  >    echo 'C'
-  > fi
+  $ cat << 'EOF' > stable.py
+  > #!/usr/bin/env fbpython
+  > import os
+  > if os.getenv("REAL_CWD") == "foo":
+  >   print('D')
+  > else:
+  >   print('C')
   > EOF
   $ hg log -r "getstablerev(foo)"
   [f585351a92f8]: D
