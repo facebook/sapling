@@ -823,7 +823,7 @@ class EdenConfig : private ConfigSettingManager {
    * Sets the maximum number of events an ActivityBuffer can store before
    * evicting old events
    */
-  ConfigSetting<uint32_t> ActivityBufferMaxEvents{
+  ConfigSetting<uint32_t> activityBufferMaxEvents{
       "telemetry:activitybuffer-max-events",
       100,
       this};

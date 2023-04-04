@@ -429,7 +429,7 @@ EdenServiceHandler::initThriftRequestActivityBuffer() {
     return std::make_optional<ActivityBuffer<ThriftRequestTraceEvent>>(
         server_->getServerState()
             ->getEdenConfig()
-            ->ActivityBufferMaxEvents.getValue());
+            ->activityBufferMaxEvents.getValue());
   }
   return std::nullopt;
 }

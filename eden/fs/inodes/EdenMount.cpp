@@ -2420,7 +2420,7 @@ std::optional<ActivityBuffer<InodeTraceEvent>>
 EdenMount::initInodeActivityBuffer() {
   if (serverState_->getEdenConfig()->enableActivityBuffer.getValue()) {
     return std::make_optional<ActivityBuffer<InodeTraceEvent>>(
-        serverState_->getEdenConfig()->ActivityBufferMaxEvents.getValue());
+        serverState_->getEdenConfig()->activityBufferMaxEvents.getValue());
   }
   return std::nullopt;
 }

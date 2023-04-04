@@ -114,7 +114,7 @@ std::optional<ActivityBuffer<HgImportTraceEvent>>
 HgQueuedBackingStore::initActivityBuffer() {
   if (config_->getEdenConfig()->enableActivityBuffer.getValue()) {
     return std::make_optional<ActivityBuffer<HgImportTraceEvent>>(
-        config_->getEdenConfig()->ActivityBufferMaxEvents.getValue());
+        config_->getEdenConfig()->activityBufferMaxEvents.getValue());
   }
   return std::nullopt;
 }
