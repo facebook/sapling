@@ -1,0 +1,297 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "fbcode/eden/fs/docs/prjfs-read-tour",
+  "ref": "47a7263b59316220837c97b1cc2aa0ee334246c7",
+  "steps": [
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Each PrjFS endpoint is a free function in PrjFS Channel. In the case of reading a file, the function is called getFileData.",
+      "line": 253,
+      "selection": {
+        "start": {
+          "line": 189,
+          "character": 40
+        },
+        "end": {
+          "line": 189,
+          "character": 44
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "All those free functions that act as the handlers are registered in the PrjFSStartVirtualizing call which is sort of the equivalent of `mount` for our unix systems. ",
+      "line": 1263,
+      "selection": {
+        "start": {
+          "line": 1214,
+          "character": 13
+        },
+        "end": {
+          "line": 1214,
+          "character": 24
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Here is the info stored in that struct we send to PrjStartVirtualizing. You can see getFileData here. ",
+      "line": 1214
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Back to this handler, all the handlers call runCallback with a \"real\" handler on the PrjFSChannelInner object.",
+      "line": 258,
+      "selection": {
+        "start": {
+          "line": 253,
+          "character": 9
+        },
+        "end": {
+          "line": 253,
+          "character": 20
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "RunCallback does some generic things like block crawling applications like WinDirStat",
+      "line": 154,
+      "selection": {
+        "start": {
+          "line": 148,
+          "character": 9
+        },
+        "end": {
+          "line": 148,
+          "character": 20
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "then it finds the Channel object, we send a literal pointer (like a raw addresss :)) too it in the call to PrjFSStartVirtualizing that is then included in the arguments to each callback. ",
+      "line": 159
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "We setup some request tracking",
+      "line": 167
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "And then we call the \"real\" handler on the inner object of the PrjFSChannel object. In this case it's PrjFSChannelInner::getFileData. ",
+      "line": 172
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Here begins the \"real\" handler. ",
+      "line": 714
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "We return ERROR_IO_PENDING from the handler and run the read on another thread with detachAndCompleteCallback. ERROR_IO_PENDING is the way to tell PrjFS that we will respond to the request asyncrhonously. ",
+      "line": 816,
+      "selection": {
+        "start": {
+          "line": 823,
+          "character": 3
+        },
+        "end": {
+          "line": 823,
+          "character": 28
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "the real work is done in a future that is run on another thread. We will come back to this detatch logic later, but first let's look at the future chain above that is doing the read. ",
+      "line": 813
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "We read the file content from the dispatcher all at once. We will get into that later, there's a bit more I want to show you in the PrjFS layer before we go down the the dispatcher. ",
+      "line": 742
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "PrjFS has some support for chunking reading a file. We respect that - ish. Note that we already fetched the full file above, so if Eden were to really support large files this chunking needs to be pushed down into the dispatcher layer. ",
+      "line": 756
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "For simplicity let's just look at how we complete the read when we do it all in one chunk. ",
+      "line": 760
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "reading the single chunk leads us here",
+      "line": 696,
+      "selection": {
+        "start": {
+          "line": 700,
+          "character": 9
+        },
+        "end": {
+          "line": 700,
+          "character": 28
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Which brings us here. This is a \"Windows syscall\" that places raw data into a file on disk. Note that the file content is not being returned from the getFileData call, but rather we literally place the contents on disk. ",
+      "line": 672,
+      "selection": {
+        "start": {
+          "line": 651,
+          "character": 9
+        },
+        "end": {
+          "line": 651,
+          "character": 31
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "At this point, the data should be on disk, so we are ready to complete the getFileData request. ",
+      "line": 808,
+      "selection": {
+        "start": {
+          "line": 770,
+          "character": 26
+        },
+        "end": {
+          "line": 770,
+          "character": 45
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsRequestContext.h",
+      "description": "We use the request context to forward the sucsess result to the channel. ",
+      "line": 57
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "and here we finally tell PrjFS that we have completed the request. Every IO_PENDING direct response to a PrjFS handler needs to call PrjCompleteCommand to finish the request. At this point the operating system returns to the clients user space and reads file content out of the file on disk. ",
+      "line": 1157
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "lets comeback to this dispatching logic now. ",
+      "line": 813
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "we chain some error handling on the future",
+      "line": 344,
+      "selection": {
+        "start": {
+          "line": 339,
+          "character": 6
+        },
+        "end": {
+          "line": 339,
+          "character": 31
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "and then we run the future on the global executor. This means we need to be careful about pushing any blocking workin on the global executor. if a PrjFS waits on something that enqueues to the global executor and waits for it, we could deadlock. \n\nperhaps this should not be the global executor for that reason, but this is how it works right now. ",
+      "line": 349
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsRequestContext.h",
+      "description": "When the future chain results in an error we are going to send an Error. This is calling PrjCompleteCommand. If you looked closely before we sendError in the PrjFSChannelInner::getFileData call as well; we are living dangerously there. It's important that a handler does not re-raise the error if it already called sendError. That would result in duplicate PrjCompleteCommand, and that could be problematic. ",
+      "line": 51,
+      "selection": {
+        "start": {
+          "line": 47,
+          "character": 32
+        },
+        "end": {
+          "line": 47,
+          "character": 43
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "alrighty we have gone through most of the Channel plumbing, let's dive into how we read this data!",
+      "line": 742,
+      "selection": {
+        "start": {
+          "line": 724,
+          "character": 28
+        },
+        "end": {
+          "line": 724,
+          "character": 39
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "That brings us here. ",
+      "line": 222
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "First, we lookup the TreeEntry that represents the file. ",
+      "line": 225
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/EdenMount.cpp",
+      "description": "That brings us here.",
+      "line": 1280
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/EdenMount.cpp",
+      "description": "We get the root tree for the currently checked out tree ... that is the root tree for the lass commit has that we ran `checkoutRevision` or roughly `hg checkout` to. ",
+      "line": 1283
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/EdenMount.cpp",
+      "description": "Then we use this processor object to walk down from the root and file the object that represents our file. ",
+      "line": 1289
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/EdenMount.cpp",
+      "description": "TreeLookupProcessor seems kinda complicated, but the real logic is in the `next` method. `next` is recursive, it looks up the next object down the path and then calls it self again. ",
+      "line": 369,
+      "selection": {
+        "start": {
+          "line": 320,
+          "character": 7
+        },
+        "end": {
+          "line": 320,
+          "character": 26
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/EdenMount.cpp",
+      "description": "We lookup the next piece in the path with the object store. ",
+      "line": 355
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/EdenMount.cpp",
+      "description": "You might be thinking why do we even have a whole class for the TreeLookupProcessor. It protects the memory of the path, so that we don't have to copy the path through each recursive call. Maybe we should have just passed the whole path as a shared pointer to the recursive call as well as the path piece to the not yet looked up path ... but we have this code pattern multiple places in Eden. We seem to like it ¯\\_(ツ)_/¯  ",
+      "line": 376
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "Once we found the entry for the object in the currently checked out source control tree we use the object store to lookup the blob. ",
+      "line": 231
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "We have some extra special handling for the .eden/config file which is a majic file we add to every directory in the repo. but at this point we are pretty much done. \n\nYou might be wondering then, how do we read files that are not in the source control tree ? ... well we don't, PrjFS internally handles that. It will read the contents directly from disk and does not send a getFileData request to Eden for those files. It's therefore important (ish) that all \"materialized\" files (one's that we would normally read out of the overlay on unixes) are full files on disk. This ensures that PrjFS itself can read them without calling getFileInfo. There certainly could be cases where files have stale content if they are supose to be locally modified, but are not full files and PrjFS asks Eden to read the file with getFileInfo. ",
+      "line": 241
+    }
+  ]
+}
