@@ -74,8 +74,9 @@ class SubmitWorkflow(Enum):
             return SubmitWorkflow.OVERLAP
         elif workflow == "single":
             return SubmitWorkflow.SINGLE
+        elif workflow == "classic":
+            return SubmitWorkflow.CLASSIC
         else:
-            # Note that "classic" is not recognized yet.
             ui.warn(
                 _("unrecognized config for github.pr_workflow: defaulting to 'overlap'")
             )
@@ -160,6 +161,12 @@ async def update_commits_in_stack(
     if not partitions:
         ui.status_err(_("no commits to submit\n"))
         return 0
+
+    # If we are using the "classic" workflow, then we only want to submit the
+    # top of the stack.
+    if workflow == SubmitWorkflow.CLASSIC:
+        partitions = partitions[:1]
+
     origin = get_push_origin(ui)
     use_placeholder_strategy = ui.configbool("github", "placeholder-strategy")
     if use_placeholder_strategy:
