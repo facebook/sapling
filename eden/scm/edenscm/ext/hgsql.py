@@ -1143,7 +1143,7 @@ def wraprepo(repo) -> None:
                     t = threading.Thread(
                         target=self.fetchthread, args=(q, abort, fetchstart, fetchend)
                     )
-                    t.setDaemon(True)
+                    t.daemon = True
                     try:
                         t.start()
                         addentries(self, q, transaction)
@@ -2591,7 +2591,7 @@ def _sqlreplay(repo, startrev, endrev) -> None:
             t = threading.Thread(
                 target=repo.fetchthread, args=(q, abort, startrev, endrev)
             )
-            t.setDaemon(True)
+            t.daemon = True
             try:
                 t.start()
                 addentries(repo, q, transaction, ignoreexisting=True)
@@ -2686,7 +2686,7 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
     q = queue.Queue()
     abort = threading.Event()
     t = threading.Thread(target=repo.fetchthread, args=(q, abort, minrev, maxrev))
-    t.setDaemon(True)
+    t.daemon = True
 
     insql = set()
     try:
