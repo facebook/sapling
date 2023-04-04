@@ -317,11 +317,16 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto requireUtf8Path = repository->get_as<bool>(kRequireUtf8Path.str());
   config->requireUtf8Path_ = requireUtf8Path ? *requireUtf8Path : true;
 
-  auto enableSqliteOverlay =
-      repository->get_as<bool>(kEnableSqliteOverlay.str());
-  // SqliteOverlay is default on Windows
-  config->enableSqliteOverlay_ =
-      enableSqliteOverlay.value_or(folly::kIsWindows);
+  // TODO(xavierd): Remove the Windows check once D44683911 has been rolled out
+  // for several months at which point all the CheckoutConfig will have been
+  // rewritten to contain `enable-sqlite-overlay = true`
+  if (!folly::kIsWindows) {
+    auto enableSqliteOverlay =
+        repository->get_as<bool>(kEnableSqliteOverlay.str());
+    // SqliteOverlay is default on Windows
+    config->enableSqliteOverlay_ =
+        enableSqliteOverlay.value_or(folly::kIsWindows);
+  }
 
   auto useWriteBackCache = repository->get_as<bool>(kUseWriteBackCache.str());
   config->useWriteBackCache_ = useWriteBackCache.value_or(false);
