@@ -1,0 +1,357 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "prjfs-write-tour",
+  "ref": "47a7263b59316220837c97b1cc2aa0ee334246c7",
+  "steps": [
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Again there is a free function that is a handler for write requests. For all \"write\" - file created, added, deleted the same handler is used. This handler is the \"something changed handler.\"",
+      "line": 292
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Again it's registered when we start. ",
+      "line": 1253,
+      "selection": {
+        "start": {
+          "line": 1234,
+          "character": 24
+        },
+        "end": {
+          "line": 1234,
+          "character": 30
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "through the start up options.",
+      "line": 1205
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "Note: We do not call the same runCallbackFunction. notification is a special callback. This means we don't attempt to block accesses, so WinDirStat and friends could write to the repo despite not being able to read. ",
+      "line": 297,
+      "selection": {
+        "start": {
+          "line": 291,
+          "character": 9
+        },
+        "end": {
+          "line": 291,
+          "character": 22
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "we do the same channel lookup.",
+      "line": 299
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "and then get to the real work in PrjFSChannelInner::notification",
+      "line": 325,
+      "selection": {
+        "start": {
+          "line": 317,
+          "character": 7
+        },
+        "end": {
+          "line": 317,
+          "character": 12
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "which brings us here.",
+      "line": 1096
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "we figure out which type of \"somthing changed\" we are handling. In this case it's going to be `PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED`",
+      "line": 1103,
+      "selection": {
+        "start": {
+          "line": 1113,
+          "character": 13
+        },
+        "end": {
+          "line": 1113,
+          "character": 35
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "We then call the handler for whatever type of \"something changed\" we are handling here. In this case it will be `PrjfsChannelInner::fileHandleClosedFileModified` as defined in the notificationHandlerMap.",
+      "line": 1129,
+      "selection": {
+        "start": {
+          "line": 1114,
+          "character": 13
+        },
+        "end": {
+          "line": 1114,
+          "character": 35
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "see the global static mapping here.",
+      "line": 956,
+      "selection": {
+        "start": {
+          "line": 945,
+          "character": 5
+        },
+        "end": {
+          "line": 945,
+          "character": 27
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "then we block on the current thread for the result of that future. This is different from the callback's where we return ERROR_IO_PENDING in the channel layer. We are pushing the async work to the disptcher layer!",
+      "line": 1137,
+      "selection": {
+        "start": {
+          "line": 1113,
+          "character": 13
+        },
+        "end": {
+          "line": 1113,
+          "character": 35
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "That's gonna bring us here.",
+      "line": 1013
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "This just simply calls the fileModifed handler on the dispatcher to do our business. ",
+      "line": 1018
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "That dispatcher call goes here.",
+      "line": 725
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "most the dispatcher methods/handlers that are called by PrjfsChannelInner::notification just call fileNotification. It's the \"something changed\" of the dispatcher later. ",
+      "line": 728,
+      "selection": {
+        "start": {
+          "line": 722,
+          "character": 10
+        },
+        "end": {
+          "line": 722,
+          "character": 26
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "fileNotification goes here. Note that it's a free function, it's not a member of the Dispatcher object. ",
+      "line": 662
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "this enqueues work to an executor. This executor is a serial executor. It's important that this is a serial executor, this is roughly how we ensure that we handle all callbacks before we handle thrift calls like checkout/filesChangedSince ...\n\nWe place work in the serial executor and wait for the executor to process it. When it gets processed we assume that all the notifications recieved before that point have been handled. \n\nThis approach is flawed, further work that is enqueued from this callback will be enqued after the \"fake\" work that we wait to process. So this is not a 100% correct scheme. ",
+      "line": 670
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "notably we return immediatly, this keeps from blocking the thread which we handled the notification from PrjFS. ",
+      "line": 704,
+      "selection": {
+        "start": {
+          "line": 660,
+          "character": 30
+        },
+        "end": {
+          "line": 660,
+          "character": 46
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/prjfs/PrjfsChannel.cpp",
+      "description": "In the PrjFSChannel we turn this folly::unit into a result to ProjectedFS",
+      "line": 1137,
+      "selection": {
+        "start": {
+          "line": 1113,
+          "character": 13
+        },
+        "end": {
+          "line": 1113,
+          "character": 35
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/common/utils/WinError.h",
+      "description": "any value including unit is just \"ok\".",
+      "line": 72
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "Other than some request tracking and general plumbing the enqueued work is mostly `fileNotificationImpl`. It's important that we don't flatten out this future chain, so that our sync scheme waits for `fileNotificationImpl`. ",
+      "line": 681,
+      "selection": {
+        "start": {
+          "line": 679,
+          "character": 22
+        },
+        "end": {
+          "line": 679,
+          "character": 42
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "That brings us here. fileNotificationImpl makes Eden's internal state match what is on disk. Note that at this point we have lost the information about what ProjFS told us changed. We are going to look at disk our selves and make Eden match. ",
+      "line": 638
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "The first step of that process is seeing what the state of the path is on disk. ",
+      "line": 643
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "thats basically just \"stat\"-ing the file.",
+      "line": 317,
+      "selection": {
+        "start": {
+          "line": 306,
+          "character": 30
+        },
+        "end": {
+          "line": 306,
+          "character": 44
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "And then interpreting the result",
+      "line": 319
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "If the file looks normal and we know that something about this file changed, then it's a locally modified file. Eden's term for locally modified (or potentially different from the source control tree is \"materialized\"). ",
+      "line": 320
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "Symlinks first appear as directories, so when we see a directory on disk, we wait a bit and check again. ",
+      "line": 327
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "\"Something changed\" might have been that something was removed so the file might be missing",
+      "line": 343
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "we retry errors for a fixed retry count of 5.",
+      "line": 352
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "If the file/directory exists we call handleMaterializedFileNotification. Otherwise we call handleNotPresentFileNotification. We are tracing the path of modifying a file, so it should fit into the first case. We will continue there.",
+      "line": 650,
+      "selection": {
+        "start": {
+          "line": 654,
+          "character": 20
+        },
+        "end": {
+          "line": 654,
+          "character": 52
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "Once we know that a file exists on disk, we know it should exist in memory. First we make sure the parent exists in memory. ",
+      "line": 508,
+      "selection": {
+        "start": {
+          "line": 500,
+          "character": 30
+        },
+        "end": {
+          "line": 500,
+          "character": 64
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "That leads us here.",
+      "line": 250
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "we look up the inode. I'm not going to go into this, but it's basically find the root inode, then find the indodes all the way down the path. You should find code structure very similar to TreeLookupProcessor in here.",
+      "line": 255
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "If the inode didn't exist then we have to create it. We should have gotten a notification that the directory was added before this point, but sometimes ProjFS sends notifications out of order (i.e. we get a notification about dir/file before dir.)\n\nWe are looking at the case where a file is written, so we should find the parent directory at this point. I'm not going to go further into creation, but it's pretty simply a mkdir to create all the directories that are missing.",
+      "line": 261
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "Then we try to find the inode that changed here. ",
+      "line": 516,
+      "selection": {
+        "start": {
+          "line": 506,
+          "character": 10
+        },
+        "end": {
+          "line": 506,
+          "character": 24
+        }
+      }
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "If this were a creation request, we would error out trying to find the inode because it does not get exist. we are tracing a write to an existing file, so I am not going to go into this. ",
+      "line": 526
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "If we are handling an update for a directory we fall into this case. We are tracing a write to a file, so I am not going to go further here.",
+      "line": 553
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "If the file is on disk, but there is a tree inode in memory, then we need to remove it and add a file inode in it's place. This should not be our code path as we are modifying a file on disk, so not going to go further into how this is handled.",
+      "line": 608
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "Here's the case for handling an update for what is a file on disk. Finally, our case.",
+      "line": 601
+    },
+    {
+      "file": "fbcode/eden/fs/inodes/PrjfsDispatcherImpl.cpp",
+      "description": "We should already have a file inode in memory we simiply mark it materilized. We do not store file content's in inodes/the overlay, so there is no further update we need to do in this case. ",
+      "line": 603
+    }
+  ]
+}
