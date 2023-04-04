@@ -705,6 +705,11 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  ConfigSetting<uint32_t> hgActivityBufferSize{
+      "hg:activity-buffer-size",
+      100,
+      this};
+
   // [backingstore]
 
   /**

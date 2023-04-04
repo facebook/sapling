@@ -121,19 +121,7 @@ class HgQueuedBackingStore final : public BackingStore {
 
   ~HgQueuedBackingStore() override;
 
-  /**
-   * Return a newly initialized ActivityBuffer<HgImportTraceEvent> if
-   * using ActivityBuffers is enabled and return std::nullopt otherwise.
-   */
-  std::optional<ActivityBuffer<HgImportTraceEvent>> initActivityBuffer();
-
-  /**
-   * Subscribes activityBuffer_ to traceBus_ in order to read and
-   * store HgImportTraceEvents into the ActivityBuffer as they occur.
-   */
-  void subscribeActivityBuffer();
-
-  std::optional<ActivityBuffer<HgImportTraceEvent>>& getActivityBuffer() {
+  ActivityBuffer<HgImportTraceEvent>& getActivityBuffer() {
     return activityBuffer_;
   }
 
@@ -357,18 +345,14 @@ class HgQueuedBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;
 
-  std::optional<ActivityBuffer<HgImportTraceEvent>> activityBuffer_;
+  ActivityBuffer<HgImportTraceEvent> activityBuffer_;
 
   // The traceBus_ and hgTraceHandle_ should be last so any internal subscribers
   // can capture [this].
   std::shared_ptr<TraceBus<HgImportTraceEvent>> traceBus_;
 
-  // Handle for traceBus subscription
-  struct HgTraceHandle {
-    TraceSubscriptionHandle<HgImportTraceEvent> subHandle;
-  };
-
-  std::shared_ptr<HgTraceHandle> hgTraceHandle_;
+  // Handle for TraceBus subscription.
+  TraceSubscriptionHandle<HgImportTraceEvent> hgTraceHandle_;
 };
 
 } // namespace facebook::eden

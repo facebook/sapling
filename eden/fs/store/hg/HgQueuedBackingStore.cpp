@@ -87,7 +87,8 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
-      activityBuffer_(initActivityBuffer()),
+      activityBuffer_{
+          config_->getEdenConfig()->hgActivityBufferSize.getValue()},
       traceBus_{TraceBus<HgImportTraceEvent>::create("hg", kTraceBusCapacity)} {
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
@@ -100,39 +101,22 @@ HgQueuedBackingStore::HgQueuedBackingStore(
   for (uint16_t i = 0; i < numberThreads; i++) {
     threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
   }
-  subscribeActivityBuffer();
+
+  hgTraceHandle_ = traceBus_->subscribeFunction(
+      folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
+      [this](const HgImportTraceEvent& event) {
+        // Currently we decide to not add QUEUE events to the ActivityBuffer
+        // as they are never shown in the tracing CLI.
+        if (event.eventType != HgImportTraceEvent::EventType::QUEUE) {
+          activityBuffer_.addEvent(event);
+        }
+      });
 }
 
 HgQueuedBackingStore::~HgQueuedBackingStore() {
   queue_.stop();
   for (auto& thread : threads_) {
     thread.join();
-  }
-}
-
-std::optional<ActivityBuffer<HgImportTraceEvent>>
-HgQueuedBackingStore::initActivityBuffer() {
-  if (config_->getEdenConfig()->enableActivityBuffer.getValue()) {
-    return std::make_optional<ActivityBuffer<HgImportTraceEvent>>(
-        config_->getEdenConfig()->activityBufferMaxEvents.getValue());
-  }
-  return std::nullopt;
-}
-
-void HgQueuedBackingStore::subscribeActivityBuffer() {
-  hgTraceHandle_ = std::make_shared<HgTraceHandle>();
-
-  if (activityBuffer_.has_value()) {
-    hgTraceHandle_->subHandle = traceBus_->subscribeFunction(
-        folly::to<std::string>(
-            "hg-activitybuffer-", getRepoName().value_or("")),
-        [this](const HgImportTraceEvent& event) {
-          // Currently we decide to not add QUEUE events to the ActivityBuffer
-          // as they are never shown in the tracing CLI.
-          if (event.eventType != HgImportTraceEvent::EventType::QUEUE) {
-            activityBuffer_->addEvent(event);
-          }
-        });
   }
 }
 

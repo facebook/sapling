@@ -4011,15 +4011,8 @@ void EdenServiceHandler::getRetroactiveHgEvents(
   std::shared_ptr<HgQueuedBackingStore> hgBackingStore =
       castToHgQueuedBackingStore(backingStore, mountPath);
 
-  if (!hgBackingStore->getActivityBuffer().has_value()) {
-    throw newEdenError(
-        ENOTSUP,
-        EdenErrorType::POSIX_ERROR,
-        "ActivityBuffer not initialized in HgQueuedBackingStore.");
-  }
-
   std::vector<HgEvent> thriftEvents;
-  auto bufferEvents = hgBackingStore->getActivityBuffer()->getAllEvents();
+  auto bufferEvents = hgBackingStore->getActivityBuffer().getAllEvents();
   thriftEvents.reserve(bufferEvents.size());
   for (auto const& event : bufferEvents) {
     HgEvent thriftEvent{};
