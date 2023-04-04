@@ -92,11 +92,32 @@ struct Repository {
     #[serde(rename = "require-utf8-path", default = "default_require_utf8_path")]
     require_utf8_path: bool,
 
-    #[serde(rename = "enable-sqlite-overlay", default)]
+    #[serde(
+        rename = "enable-sqlite-overlay",
+        default = "default_sqlite_overlay",
+        deserialize_with = "deserialize_sqlite_overlay"
+    )]
     enable_sqlite_overlay: bool,
 
     #[serde(rename = "use-write-back-cache", default)]
     use_write_back_cache: bool,
+}
+
+fn default_sqlite_overlay() -> bool {
+    cfg!(target_os = "windows")
+}
+
+fn deserialize_sqlite_overlay<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = bool::deserialize(deserializer)?;
+
+    if cfg!(target_os = "windows") {
+        Ok(true)
+    } else {
+        Ok(s)
+    }
 }
 
 fn deserialize_repo_type<'de, D>(deserializer: D) -> Result<String, D::Error>

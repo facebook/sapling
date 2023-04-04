@@ -1375,6 +1375,9 @@ class EdenCheckout:
         # SqliteOverlay is default on Windows
         if not isinstance(enable_sqlite_overlay, bool):
             enable_sqlite_overlay = sys.platform == "win32"
+        elif sys.platform == "win32":
+            # SqliteOverlay is always enabled on Windows
+            enable_sqlite_overlay = True
 
         use_write_back_cache = repository.get("use-write-back-cache")
         if not isinstance(use_write_back_cache, bool):
