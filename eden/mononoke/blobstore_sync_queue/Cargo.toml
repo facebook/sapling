@@ -16,7 +16,7 @@ anyhow = "1.0.65"
 async-trait = "0.1.58"
 auto_impl = "0.4"
 context = { version = "0.1.0", path = "../server/context" }
-futures = { version = "0.3.22", features = ["async-await", "compat"] }
+futures = { version = "0.3.28", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 rand = { version = "0.8", features = ["small_rng"] }
