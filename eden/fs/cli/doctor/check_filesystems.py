@@ -758,7 +758,7 @@ class HgStatusAndDiffMismatch(PathsProblem):
 
 
 def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[Path]:
-    with instance.get_thrift_client_legacy(timeout=5.0) as client:
+    with instance.get_thrift_client_legacy(timeout=60.0) as client:
         status = client.getScmStatusV2(
             GetScmStatusParams(
                 mountPoint=bytes(checkout.path),
@@ -786,7 +786,7 @@ def get_hg_diff(checkout: EdenCheckout) -> Set[Path]:
     ).stdout
     diff = json.loads(json_diff)
 
-    return diff.keys()
+    return {Path(path) for path in diff.keys()}
 
 
 def check_hg_status_match_hg_diff(
@@ -804,11 +804,10 @@ def check_hg_status_match_hg_diff(
     if modified_files != get_modified_files(instance, checkout):
         return
 
-    if len(diff) != len(modified_files):
-        mismatched_files = []
-        for modified_file in modified_files:
-            if modified_file not in diff:
-                mismatched_files += [Path(modified_file)]
+    mismatched_files = []
+    for modified_file in modified_files:
+        if modified_file not in diff:
+            mismatched_files += [modified_file]
 
-        if mismatched_files != []:
-            tracker.add_problem(HgStatusAndDiffMismatch(mismatched_files))
+    if mismatched_files != []:
+        tracker.add_problem(HgStatusAndDiffMismatch(mismatched_files))
