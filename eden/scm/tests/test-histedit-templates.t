@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #chg-compatible
 
+  $ eagerepo
 Testing templating for histedit command
 
 Setup

@@ -6,6 +6,7 @@
 
 # debug-args
 
+  $ eagerepo
   $ hg --cwd . debug-args a b
   ["a", "b"]
   $ hg --cwd . debug args a b

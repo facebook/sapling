@@ -6,6 +6,7 @@
 
 # test interaction between sparse and treemanifest (sparse file listing)
 
+  $ eagerepo
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > sparse=

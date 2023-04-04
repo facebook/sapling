@@ -1,6 +1,7 @@
 #chg-compatible
 #require bash
 
+  $ eagerepo
 Initialize scm prompt
   $ . $TESTDIR/../contrib/scm-prompt.sh
 

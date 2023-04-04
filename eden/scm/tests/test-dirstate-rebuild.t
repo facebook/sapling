@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ shorttraceback
   $ newrepo
   $ drawdag << 'EOS'

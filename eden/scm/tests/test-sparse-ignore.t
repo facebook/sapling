@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
   $ enable sparse
   $ newrepo
   $ hg sparse include src

@@ -6,6 +6,7 @@
 
 # Set up extension
 
+  $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > debugcommitmessage=

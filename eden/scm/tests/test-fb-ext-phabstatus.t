@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
 Setup
 
   $ enable phabstatus smartlog

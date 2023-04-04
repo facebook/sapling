@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Tests of the file helper tool
 
   $ mkdir dir

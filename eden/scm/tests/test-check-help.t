@@ -2,6 +2,7 @@
 
 #require test-repo normal-layout
 
+  $ eagerepo
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ enable amend undo
   $ cat <<'EOF' > scanhelptopics.py

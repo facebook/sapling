@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ unset HGUSER
   $ EMAIL="My Name <myname@example.com>"
   $ export EMAIL

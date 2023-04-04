@@ -7,6 +7,7 @@
 
 # Setup repo
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ newrepo
 

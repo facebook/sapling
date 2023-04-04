@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ cat >> foo.py << EOF
   > from edenscm import registrar
   > cmdtable = {}

@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
 Using 'ext.' prefix triggers the warning.
 
   $ hg init --config extensions.ext.rebase=

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ enable amend
   $ setconfig extensions.extralog=$TESTDIR/extralog.py
   $ setconfig extensions.staleidentifiers=$TESTDIR/stableidentifiers.py

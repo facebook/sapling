@@ -1,6 +1,7 @@
 #chg-compatible
 #require bash
 
+  $ eagerepo
   $ enable progress
   $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
   $ setconfig progress.delay=0 progress.assume-tty=true progress.lockstep=True progress.renderer=rust:simple

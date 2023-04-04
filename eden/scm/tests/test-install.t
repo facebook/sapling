@@ -1,3 +1,4 @@
+  $ eagerepo
 hg debuginstall
   $ hg debuginstall
   checking encoding (utf-8)...

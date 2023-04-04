@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
   $ enable amend rebase remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true

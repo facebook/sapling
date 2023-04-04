@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig ui.color=always color.mode=ansi
   $ setconfig color.color.none=0
 

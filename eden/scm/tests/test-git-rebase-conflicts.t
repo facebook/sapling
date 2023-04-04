@@ -2,6 +2,7 @@
 #require git no-windows
 #debugruntest-compatible
 
+  $ eagerepo
 Test that rebasing in a git repo with conflicts work.
 
   $ . $TESTDIR/git.sh

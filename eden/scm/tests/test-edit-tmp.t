@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ newrepo
   $ setconfig ui.allowemptycommit=1
   $ enable amend

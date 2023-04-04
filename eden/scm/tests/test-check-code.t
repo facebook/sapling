@@ -2,6 +2,7 @@
 
 #require test-repo
 
+  $ eagerepo
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
 

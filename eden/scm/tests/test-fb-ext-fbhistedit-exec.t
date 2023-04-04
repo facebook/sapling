@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #chg-compatible
 
+  $ eagerepo
   $ configure mutation-norecord
   $ . "$TESTDIR/histedit-helpers.sh"
 

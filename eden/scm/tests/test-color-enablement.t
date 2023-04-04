@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig alias.testcolor="debugtemplate '{label(\"green\", \"output\n\")}'"
 
   $ HGPLAINEXCEPT=alias hg testcolor

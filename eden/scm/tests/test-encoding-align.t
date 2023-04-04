@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Test alignment of multibyte characters
 
   $ HGENCODING=utf-8

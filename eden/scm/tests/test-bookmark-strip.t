@@ -7,6 +7,7 @@
 
 # Test bookmark -D
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init book-D
   $ cd book-D

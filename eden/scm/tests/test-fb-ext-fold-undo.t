@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
 Set up test environment.
 This test confirms cacheinvalidation in hg fold.

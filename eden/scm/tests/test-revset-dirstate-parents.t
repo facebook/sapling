@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig format.dirstate=2
 
   $ HGENCODING=utf-8

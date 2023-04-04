@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ cat >> foo.py << EOF
   > def f(x): return x + 1
   > ui.write('%r\n' % [f(i) for i in [1]])

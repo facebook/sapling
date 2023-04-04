@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation-norecord
   $ enable amend rebase

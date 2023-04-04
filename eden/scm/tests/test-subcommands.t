@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ newext testcommands <<EOF
   > from edenscm import registrar
   > cmdtable = {}

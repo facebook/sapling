@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ hg init t
   $ cd t

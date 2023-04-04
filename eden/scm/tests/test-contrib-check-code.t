@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ run_check_code() {
   >   PYTHONPATH= python "$TESTDIR/../contrib/check-code.py" "$@"
   > }

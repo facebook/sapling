@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
   $ configure mutation
   $ enable undo remotenames
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"

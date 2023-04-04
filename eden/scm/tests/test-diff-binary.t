@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ newrepo
   $ setconfig diff.git=1 diff.nobinary=1
 

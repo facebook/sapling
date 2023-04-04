@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
   $ newrepo
   $ drawdag << 'EOS'
   > E

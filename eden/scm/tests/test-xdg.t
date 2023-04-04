@@ -3,6 +3,7 @@
 
 #if no-windows no-osx
 
+  $ eagerepo
   $ setconfig config.use-rust=true
   $ mkdir -p xdgconf/sapling
   $ echo '[ui]' > xdgconf/sapling/sapling.conf

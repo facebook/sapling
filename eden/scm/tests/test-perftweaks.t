@@ -3,6 +3,7 @@
 
 #if osx
 #else
+  $ eagerepo
 Test disabling the case conflict check (only fails on case sensitive systems)
   $ hg init casecheck
   $ cd casecheck

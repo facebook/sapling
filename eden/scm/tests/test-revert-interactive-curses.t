@@ -1,6 +1,7 @@
 #require tic
 #debugruntest-compatible
 
+  $ eagerepo
 Revert interactive tests with the Curses interface
 
   $ cat <<EOF >> $HGRCPATH

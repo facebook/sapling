@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
   $ newext crash <<EOF
   > from edenscm import registrar
   > cmdtable = {}

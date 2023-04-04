@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
 ensure that failing ui.atexit handlers report sensibly
 
   $ cat > $TESTTMP/bailatexit.py <<EOF

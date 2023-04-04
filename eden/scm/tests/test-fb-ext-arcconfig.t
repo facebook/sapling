@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > arcconfig=$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py

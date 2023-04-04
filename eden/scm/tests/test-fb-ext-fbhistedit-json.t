@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Tests JSON Input support for histedit
 
   $ . "$TESTDIR/histedit-helpers.sh"

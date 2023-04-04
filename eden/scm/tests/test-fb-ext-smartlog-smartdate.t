@@ -6,6 +6,7 @@
 
 #testcases withpytz withoutpytz
 #if withpytz
+  $ eagerepo
   $ hg debugshell -c "import pytz; pytz.__name__" || exit 80
 #endif
   $ enable smartlog

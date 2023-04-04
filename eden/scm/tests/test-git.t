@@ -1,6 +1,7 @@
 #chg-compatible
 #require git no-windows
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true

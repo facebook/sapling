@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ enable github
   $ export SL_TEST_GH_URL=https://github.com/facebook/test_github_repo.git
   $ . $TESTDIR/git.sh

@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
   $ configure mutation-norecord
 Test mergedriver invalidation with IMM.
 

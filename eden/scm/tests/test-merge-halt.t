@@ -1,6 +1,7 @@
 #chg-compatible
 
 
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ enable rebase
   $ setconfig phases.publish=false

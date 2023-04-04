@@ -2,6 +2,7 @@
 #debugruntest-compatible
 
 
+  $ eagerepo
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ enable rebase

@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
 Testing templating for rebase command
 
 Setup

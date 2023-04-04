@@ -6,6 +6,7 @@
 
 # make shared repo
 
+  $ eagerepo
   $ export HGIDENTITY=sl
   $ enable share
   $ newrepo repo1

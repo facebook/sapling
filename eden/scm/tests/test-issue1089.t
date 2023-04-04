@@ -7,6 +7,7 @@
 
 # https://bz.mercurial-scm.org/1089
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ mkdir a

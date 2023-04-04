@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable tweakdefaults
 

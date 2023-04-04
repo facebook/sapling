@@ -10,6 +10,7 @@
 # (eg: "activating bookmarks")
 # Set up the repository.
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ hg debugbuilddag -m '+4 *3 +1'

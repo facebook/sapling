@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
   $ configure mutation-norecord
 Test a mergedriver that raises exceptions in its preprocess() hook:
 

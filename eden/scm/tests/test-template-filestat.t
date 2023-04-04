@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ newrepo
   $ touch base
   $ hg commit -Am A

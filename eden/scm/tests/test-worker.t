@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Test UI worker interaction
 
   $ cat > t.py <<EOF

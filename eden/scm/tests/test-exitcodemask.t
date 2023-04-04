@@ -6,6 +6,7 @@
 
 # Command line flag is effective:
 
+  $ eagerepo
   $ hg add a --config 'ui.exitcodemask=63'
   abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
   (use 'cd' to go to a directory inside a repository and try again)

@@ -2,6 +2,7 @@
 #require git no-windows
 #debugruntest-compatible
 
+  $ eagerepo
   $ . $TESTDIR/git.sh
 
 Make a commit with a non-GMT timezone:

@@ -2,6 +2,7 @@
 #debugruntest-compatible
 
 
+  $ eagerepo
   $ enable absorb
   $ export HGIDENTITY=sl
 

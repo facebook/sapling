@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ configure mutation-norecord modernclient
 
 Set up

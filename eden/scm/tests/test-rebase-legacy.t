@@ -9,6 +9,7 @@
 
 # TODO: Make this test compatibile with obsstore enabled.
 
+  $ eagerepo
   $ setconfig format.use-segmented-changelog=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'experimental.evolution='

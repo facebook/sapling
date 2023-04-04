@@ -6,6 +6,7 @@
 
 # Build up a repo
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ touch a

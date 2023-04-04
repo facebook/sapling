@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Test the "--base" flag of the rebase command. (Tests unrelated to the "--base"
 flag should probably live in somewhere else)
 

@@ -2,6 +2,7 @@
 
 #require test-repo execbit hg10
 
+  $ eagerepo
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"
 

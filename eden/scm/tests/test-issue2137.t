@@ -13,6 +13,7 @@
 # 3) test that repo.lookup() works
 # 1 and 2 are preconditions for the bug; 3 is the bug.
 
+  $ eagerepo
   $ cat > commitwrapper.py << 'EOF'
   > from edenscm import extensions, node, revlog
   > def reposetup(ui, repo):

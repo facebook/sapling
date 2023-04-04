@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ hg init rep; cd rep
 
   $ touch empty-file

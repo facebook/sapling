@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Setup:
   $ newext eval <<EOF
   > from __future__ import absolute_import

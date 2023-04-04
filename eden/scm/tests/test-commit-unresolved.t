@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ addcommit () {
   >     echo $1 > $1
   >     hg add $1

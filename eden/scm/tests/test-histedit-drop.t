@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit

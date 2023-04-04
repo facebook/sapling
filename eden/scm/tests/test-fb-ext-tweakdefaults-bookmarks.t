@@ -6,6 +6,7 @@
 
 # Set up
 
+  $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [experimental]
   > evolution=all

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ enable rebase
   $ setconfig experimental.evolution.allowdivergence=1
 

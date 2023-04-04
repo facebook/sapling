@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ touch $TESTTMP/stub
 
   $ setconfig experimental.network-doctor=True paths.default=mononoke://169.254.1.2/foo

@@ -6,6 +6,7 @@
 
 #require symlink
 
+  $ eagerepo
   $ mkdir -p a
   $ ln -s a/b a/c
   $ hg debugshell -c 'e.util.makedirs("a/c/e/f")'

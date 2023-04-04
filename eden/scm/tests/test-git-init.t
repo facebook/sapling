@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #require git no-windows
 
+  $ eagerepo
 Can init with --git in an existing directory
   $ mkdir init-git-nonempty
   $ cd init-git-nonempty

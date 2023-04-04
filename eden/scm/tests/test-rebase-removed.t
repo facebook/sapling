@@ -1,5 +1,6 @@
 #chg-compatible
 #debugruntest-compatible
+  $ eagerepo
   $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord

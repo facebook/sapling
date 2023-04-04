@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ enable rebase
 
 Rebasing D onto B detaching from C (one commit):

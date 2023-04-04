@@ -11,6 +11,7 @@
 #        4--5--6--7--8
 
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
 

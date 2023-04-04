@@ -1,6 +1,7 @@
 #require no-windows
 #debugruntest-compatible
 
+  $ eagerepo
 Explore the semi-mysterious matchmod.match API
 
   $ newrepo

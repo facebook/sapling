@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Test sortdictfilter.py which stabilizes dict output
 
   $ python $RUNTESTDIR/sortdictfilter.py << EOS

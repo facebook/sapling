@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
   >>> with open("a", "wb") as f: f.write(b"a\n" * 213) and None

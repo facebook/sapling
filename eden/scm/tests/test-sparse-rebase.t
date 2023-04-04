@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
   $ enable sparse rebase

@@ -1,6 +1,7 @@
 #chg-compatible
 #require bash
 
+  $ eagerepo
 Initialize scm prompt compatibility layer
   $ . $TESTDIR/../contrib/scm-prompt.sh
 

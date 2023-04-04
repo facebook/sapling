@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 GNU diff is the reference for all of these results.
 
 Prepare tests:

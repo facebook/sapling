@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ configure mutation-norecord
   $ enable amend rebase
   $ setconfig rebase.experimental.inmemory=True

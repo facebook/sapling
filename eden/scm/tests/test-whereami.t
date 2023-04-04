@@ -6,6 +6,7 @@
 
 # Test whereami
 
+  $ eagerepo
   $ hg init repo1
   $ cd repo1
 

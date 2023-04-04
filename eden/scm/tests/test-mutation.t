@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ configure dummyssh
   $ enable amend rebase histedit fbhistedit phabdiff absorb
   $ setconfig ui.interactive=true

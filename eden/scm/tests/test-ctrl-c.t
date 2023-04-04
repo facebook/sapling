@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
   $ cat > sleep.py << 'EOF'
   > import os
   > with open("pid", "w") as f:

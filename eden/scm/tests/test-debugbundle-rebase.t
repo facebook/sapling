@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Terse output:
 
   $ hg debugbundle "$TESTDIR/bundles/bx2rebase.hg"

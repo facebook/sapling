@@ -6,6 +6,7 @@
 
 # Setup the repository
 
+  $ eagerepo
   $ hg init myrepo
   $ cd myrepo
   $ mkdir -p foo/bar-test foo/bartest

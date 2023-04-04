@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Test migration between narrow-heads and non-narrow-heads
 
   $ enable remotenames amend

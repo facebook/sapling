@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
   $ cat <<EOF > mmap-unlink.py
   > import mmap
   > import os

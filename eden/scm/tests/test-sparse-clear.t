@@ -6,6 +6,7 @@
 
 # test sparse
 
+  $ eagerepo
   $ hg init myrepo
   $ cd myrepo
   $ cat >> $HGRCPATH << 'EOF'

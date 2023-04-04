@@ -2,6 +2,7 @@
 #debugruntest-compatible
 
 
+  $ eagerepo
   $ configure mutation-norecord
   $ enable amend rebase
   $ mkcommit() {

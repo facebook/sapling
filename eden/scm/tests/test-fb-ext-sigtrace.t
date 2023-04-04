@@ -1,4 +1,5 @@
 
+  $ eagerepo
   $ newext signal <<EOF
   > from edenscm import registrar
   > import os, signal

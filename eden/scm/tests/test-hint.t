@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
 `#chg-compatible
 
   $ newext showhint << EOF

@@ -1,5 +1,6 @@
 #require rmcwd normal-layout
 
+  $ eagerepo
 Note: With buck build the hg script can be a wrapper that runs shell commands.
 That can print extra noisy outputs like " shell-init: error retrieving current
 directory: getcwd: cannot access parent directories". So we skip this test for

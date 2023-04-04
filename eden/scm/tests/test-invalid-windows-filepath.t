@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #require git
 
+  $ eagerepo
   $ . $TESTDIR/git.sh
 
 Make sure that Windows is unable to check out paths with `..\` in their path.

@@ -7,6 +7,7 @@
 
 # Set up test environment.
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]

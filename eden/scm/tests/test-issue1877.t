@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 https://bz.mercurial-scm.org/1877
 
   $ hg init a

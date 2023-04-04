@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
 Test text wrapping for multibyte characters
 
   $ mkdir t

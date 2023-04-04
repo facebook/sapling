@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
 Set up repository
 
   $ hg init repo

@@ -6,6 +6,7 @@
 
 # Share works with blackbox enabled:
 
+  $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > blackbox =

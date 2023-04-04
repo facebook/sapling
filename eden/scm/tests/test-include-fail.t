@@ -3,6 +3,7 @@
 
 #require execbit
 
+  $ eagerepo
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > foo = bar

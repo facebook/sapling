@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ enable amend rebase reset
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true

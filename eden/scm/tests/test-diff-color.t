@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Setup
 
   $ setconfig ui.color=always ui.paginate=never

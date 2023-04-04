@@ -6,6 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ eagerepo
   $ newrepo
 
   $ for d in a a/b a/b/c a/b/d b/c/ b/d; do

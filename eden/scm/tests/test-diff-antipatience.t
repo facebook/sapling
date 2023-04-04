@@ -6,6 +6,7 @@
 
 # Test case that makes use of the weakness of patience diff algorithm
 
+  $ eagerepo
   $ hg init repo
   $ cd repo
 

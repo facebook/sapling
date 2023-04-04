@@ -3,6 +3,7 @@
 
 #require no-windows
 
+  $ eagerepo
   $ newrepo
   $ mkdir -p a/b c/d/e c/f/g c/g
   $ cat > .gitignore << EOF

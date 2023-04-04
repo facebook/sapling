@@ -1,6 +1,7 @@
 #chg-compatible
 #require bash
 
+  $ eagerepo
   $ enable progress
   $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress-refresh=0
 

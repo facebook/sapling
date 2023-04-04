@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ cat >> foo.py << EOF
   > ui.write('argv = %r\n' % (sys.argv,))
   > EOF

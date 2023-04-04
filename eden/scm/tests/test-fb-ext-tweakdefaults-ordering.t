@@ -6,6 +6,7 @@
 
 # TODO: Make this test compatibile with obsstore enabled.
 
+  $ eagerepo
   $ setconfig 'experimental.evolution='
 
 # Set up extensions (order is important here, we must test tweakdefaults loading last)

@@ -6,6 +6,7 @@
 
 # Setup
 
+  $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > arcconfig=$TESTDIR/../edenscm/ext/extlib/phabricator/arcconfig.py

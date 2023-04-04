@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Test temp file used with an editor has the expected suffix.
 
   $ hg init repo

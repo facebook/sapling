@@ -1,4 +1,5 @@
 #chg-compatible
+  $ eagerepo
   $ setconfig workingcopy.ruststatus=False
   $ setconfig experimental.allowfilepeer=True
 

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 A script to generate nasty diff worst-case scenarios:
 
   $ cat > s.py <<EOF

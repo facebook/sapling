@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ enable amend
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=false

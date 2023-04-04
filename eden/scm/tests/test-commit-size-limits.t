@@ -1,4 +1,5 @@
 #debugruntest-compatible
+  $ eagerepo
   $ enable commitextras
   $ newrepo
   $ echo data > file

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ . "$TESTDIR/library.sh"
 
   $ hg init test

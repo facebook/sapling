@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init a
   $ cd a

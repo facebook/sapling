@@ -8,6 +8,7 @@
 # loaded in a non-sparse repository.
 # First create a base repository with sparse enabled.
 
+  $ eagerepo
   $ hg init base
   $ cd base
   $ cat > .hg/hgrc << 'EOF'

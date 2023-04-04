@@ -1,6 +1,7 @@
 #debugruntest-compatible
 #chg-compatible
 
+  $ eagerepo
   $ enable blackbox rage smartlog sparse share
 
   $ hg init repo

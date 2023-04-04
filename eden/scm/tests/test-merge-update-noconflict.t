@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
   $ enable amend rebase
   $ setconfig experimental.updatecheck=noconflict
 

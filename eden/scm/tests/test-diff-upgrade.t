@@ -3,6 +3,7 @@
 
 #require execbit
 
+  $ eagerepo
   $ setconfig extensions.autodiff="$TESTDIR/autodiff.py" diff.nodates=1
 
   $ hg init repo

@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Set up test environment.
   $ configure mutation
   $ enable amend rebase tweakdefaults

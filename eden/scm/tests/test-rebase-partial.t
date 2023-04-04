@@ -1,6 +1,7 @@
 #chg-compatible
 #debugruntest-compatible
 
+  $ eagerepo
 Tests rebasing with part of the rebase set already in the
 destination (issue5422)
 

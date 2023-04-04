@@ -1,5 +1,6 @@
 #require bash
 
+  $ eagerepo
   $ cat > a.py << EOF
   > import os
   > def uisetup(ui):

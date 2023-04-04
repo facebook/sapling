@@ -6,6 +6,7 @@
 
 # Test various flags to turn off bad hg features.
 
+  $ eagerepo
   $ newrepo
   $ drawdag << 'EOS'
   > A

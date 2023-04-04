@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ eagerepo
   $ newrepo
 
 The "enabled" template returns true or false:

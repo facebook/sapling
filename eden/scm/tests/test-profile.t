@@ -1,3 +1,4 @@
+  $ eagerepo
 test --time
 
   $ hg --time help -q help 2>&1 | grep time > /dev/null

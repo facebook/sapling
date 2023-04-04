@@ -2,6 +2,7 @@
 #debugruntest-compatible
 #inprocess-hg-incompatible
 
+  $ eagerepo
 Test the extensions.afterloaded() function
 
   $ cat > foo.py <<EOF

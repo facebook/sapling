@@ -1,6 +1,7 @@
 #chg-compatible
 #require git no-windows
 
+  $ eagerepo
   $ . $TESTDIR/git.sh
   $ enable smartlog amend
   $ setconfig workingcopy.ruststatus=False

@@ -6,6 +6,7 @@
 
 # Test that journal and lfs wrap the share extension properly
 
+  $ eagerepo
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > journal=

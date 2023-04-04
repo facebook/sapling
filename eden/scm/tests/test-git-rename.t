@@ -1,6 +1,7 @@
 #require git no-windows
 #debugruntest-compatible
 
+  $ eagerepo
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=True
 
