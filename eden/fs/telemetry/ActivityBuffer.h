@@ -7,14 +7,9 @@
 
 #pragma once
 
-#include <deque>
-
 #include <folly/Synchronized.h>
 
-#include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/telemetry/TraceBus.h"
-#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/RingBuffer.h"
 
 namespace facebook::eden {
 
@@ -33,7 +28,7 @@ namespace facebook::eden {
 template <typename TraceEvent>
 class ActivityBuffer {
  public:
-  explicit ActivityBuffer(uint32_t maxEvents);
+  explicit ActivityBuffer(size_t maxEvents);
 
   ActivityBuffer(const ActivityBuffer&) = delete;
   ActivityBuffer(ActivityBuffer&&) = delete;
@@ -45,19 +40,32 @@ class ActivityBuffer {
    * event if the buffer was full (meaning maxEvents events were already stored
    * in the buffer).
    */
-  void addEvent(TraceEvent event);
+  template <typename T>
+  void addEvent(T&& event);
 
   /**
-   * Returns an std::deque containing all TraceEvents stored in the
+   * Returns a std::vector containing all TraceEvents stored in the
    * ActivityBuffer.
    */
-  std::deque<TraceEvent> getAllEvents() const;
+  std::vector<TraceEvent> getAllEvents() const;
 
  private:
-  uint32_t maxEvents_;
-  folly::Synchronized<std::deque<TraceEvent>> events_;
+  folly::Synchronized<RingBuffer<TraceEvent>> events_;
 };
 
-} // namespace facebook::eden
+template <typename TraceEvent>
+ActivityBuffer<TraceEvent>::ActivityBuffer(size_t maxEvents)
+    : events_{folly::in_place, maxEvents} {}
 
-#include "eden/fs/telemetry/ActivityBuffer-inl.h"
+template <typename TraceEvent>
+template <typename T>
+void ActivityBuffer<TraceEvent>::addEvent(T&& event) {
+  events_.wlock()->push(std::forward<T>(event));
+}
+
+template <typename TraceEvent>
+std::vector<TraceEvent> ActivityBuffer<TraceEvent>::getAllEvents() const {
+  return events_.rlock()->toVector();
+}
+
+} // namespace facebook::eden
