@@ -66,6 +66,8 @@ HgImportTraceEvent::HgImportTraceEvent(
       importPriority{priority},
       importCause{cause} {
   auto hgPath = proxyHash.path().view();
+  // TODO: If HgProxyHash (and correspondingly ObjectId) used an immutable,
+  // refcounted string, we wouldn't need to allocate here.
   path.reset(new char[hgPath.size() + 1]);
   memcpy(path.get(), hgPath.data(), hgPath.size());
   path[hgPath.size()] = 0;
@@ -143,6 +145,8 @@ void HgQueuedBackingStore::processBlobImportRequests(
   for (auto& request : requests) {
     auto* blobImport = request->getRequest<HgImportRequest::BlobImport>();
 
+    // TODO: We could reduce the number of lock acquisitions by adding a batch
+    // publish method.
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(),
         HgImportTraceEvent::BLOB,
@@ -197,6 +201,8 @@ void HgQueuedBackingStore::processTreeImportRequests(
   for (auto& request : requests) {
     auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
 
+    // TODO: We could reduce the number of lock acquisitions by adding a batch
+    // publish method.
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(),
         HgImportTraceEvent::TREE,
@@ -252,6 +258,8 @@ void HgQueuedBackingStore::processBlobMetaImportRequests(
     auto* blobMetaImport =
         request->getRequest<HgImportRequest::BlobMetaImport>();
 
+    // TODO: We could reduce the number of lock acquisitions by adding a batch
+    // publish method.
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(),
         HgImportTraceEvent::BLOBMETA,
