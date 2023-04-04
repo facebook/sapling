@@ -105,11 +105,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) {
-        // Currently we decide to not add QUEUE events to the ActivityBuffer
-        // as they are never shown in the tracing CLI.
-        if (event.eventType != HgImportTraceEvent::EventType::QUEUE) {
-          activityBuffer_.addEvent(event);
-        }
+        activityBuffer_.addEvent(event);
       });
 }
 
