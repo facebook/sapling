@@ -51,14 +51,14 @@ class AnnotateTests(unittest.TestCase):
 
         oldann = decorate(olddata, oldfctx)
         p1ann = decorate(p1data, p1fctx)
-        p1ann = _annotatepair([oldann], p1fctx, p1ann, False, diffopts)
+        p1ann = _annotatepair([oldann], p1ann, diffopts)
         self.assertEqual(
             p1ann[0],
             [annotateline("old", 1), annotateline("old", 2), annotateline("p1", 3)],
         )
 
         p2ann = decorate(p2data, p2fctx)
-        p2ann = _annotatepair([oldann], p2fctx, p2ann, False, diffopts)
+        p2ann = _annotatepair([oldann], p2ann, diffopts)
         self.assertEqual(
             p2ann[0],
             [annotateline("old", 1), annotateline("p2", 2), annotateline("p2", 3)],
@@ -67,7 +67,7 @@ class AnnotateTests(unittest.TestCase):
         # Test with multiple parents (note the difference caused by ordering)
 
         childann = decorate(childdata, childfctx)
-        childann = _annotatepair([p1ann, p2ann], childfctx, childann, False, diffopts)
+        childann = _annotatepair([p1ann, p2ann], childann, diffopts)
         self.assertEqual(
             childann[0],
             [
@@ -80,7 +80,7 @@ class AnnotateTests(unittest.TestCase):
         )
 
         childann = decorate(childdata, childfctx)
-        childann = _annotatepair([p2ann, p1ann], childfctx, childann, False, diffopts)
+        childann = _annotatepair([p2ann, p1ann], childann, diffopts)
         self.assertEqual(
             childann[0],
             [
@@ -88,36 +88,6 @@ class AnnotateTests(unittest.TestCase):
                 annotateline("c", 2),
                 annotateline("p1", 3),
                 annotateline("c", 4),
-                annotateline("p2", 3),
-            ],
-        )
-
-        # Test with skipchild (note the difference caused by ordering)
-
-        childann = decorate(childdata, childfctx)
-        childann = _annotatepair([p1ann, p2ann], childfctx, childann, True, diffopts)
-        self.assertEqual(
-            childann[0],
-            [
-                annotateline("old", 1),
-                annotateline("old", 2, True),
-                # note that this line was carried over from earlier so it is *not*
-                # marked skipped
-                annotateline("p2", 2),
-                annotateline("p2", 2, True),
-                annotateline("p2", 3),
-            ],
-        )
-
-        childann = decorate(childdata, childfctx)
-        childann = _annotatepair([p2ann, p1ann], childfctx, childann, True, diffopts)
-        self.assertEqual(
-            childann[0],
-            [
-                annotateline("old", 1),
-                annotateline("old", 2, True),
-                annotateline("p1", 3),
-                annotateline("p1", 3, True),
                 annotateline("p2", 3),
             ],
         )

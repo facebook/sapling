@@ -532,7 +532,6 @@ class remotefilectx(context.filectx):
         self,
         follow=False,
         linenumber=None,
-        skiprevs=None,
         diffopts=None,
         prefetchskip=None,
     ):
@@ -575,7 +574,7 @@ class remotefilectx(context.filectx):
         if fetch:
             self._repo.fileservice.prefetch(fetch)
         return super(remotefilectx, self).annotate(
-            follow, linenumber, skiprevs=skiprevs, diffopts=diffopts
+            follow, linenumber, diffopts=diffopts
         )
 
     # Return empty set so that the hg serve and thg don't stack trace

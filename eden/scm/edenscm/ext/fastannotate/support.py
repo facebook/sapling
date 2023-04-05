@@ -95,19 +95,15 @@ def _fctxannotate(
     self,
     follow: bool = False,
     linenumber: bool = False,
-    skiprevs=None,
     diffopts=None,
 ):
-    if skiprevs:
-        # skiprevs is not supported yet
-        return orig(self, follow, linenumber, skiprevs=skiprevs, diffopts=diffopts)
     try:
         return _doannotate(self, follow, diffopts)
     except Exception as ex:
         self._repo.ui.debug(
             "fastannotate: falling back to the vanilla " "annotate: %r\n" % ex
         )
-        return orig(self, follow, linenumber, skiprevs=skiprevs, diffopts=diffopts)
+        return orig(self, follow, linenumber, diffopts=diffopts)
 
 
 def _remotefctxannotate(
@@ -115,7 +111,6 @@ def _remotefctxannotate(
     self,
     follow: bool = False,
     linenumber=None,
-    skiprevs=None,
     diffopts=None,
     prefetchskip=None,
 ):
@@ -127,7 +122,6 @@ def _remotefctxannotate(
         self,
         follow,
         linenumber,
-        skiprevs=skiprevs,
         diffopts=diffopts,
         prefetchskip=skipset,
     )

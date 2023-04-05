@@ -336,7 +336,6 @@ def addremove(ui, repo, *pats, **opts):
         ("n", "number", None, _("list the revision number (default)")),
         ("c", "changeset", None, _("list the changeset")),
         ("l", "line-number", None, _("show line number at the first appearance")),
-        ("", "skip", [], _("revision to not display (EXPERIMENTAL)"), _("REV")),
         ("", "short-date", None, _("list the brief date (EXPERIMENTAL)")),
     ]
     + diffwsopts
@@ -490,9 +489,6 @@ def annotate(ui, repo, *pats, **opts):
 
     follow = not opts.get("no_follow")
     diffopts = patch.difffeatureopts(ui, opts, section="annotate", whitespace=True)
-    skiprevs = opts.get("skip")
-    if skiprevs:
-        skiprevs = scmutil.revrange(repo, skiprevs)
 
     for abs in ctx.walk(m):
         fctx = ctx[abs]
@@ -507,7 +503,6 @@ def annotate(ui, repo, *pats, **opts):
             fctx.annotate(
                 follow=follow,
                 linenumber=linenumber,
-                skiprevs=skiprevs,
                 diffopts=diffopts,
             )
         )
@@ -531,8 +526,7 @@ def annotate(ui, repo, *pats, **opts):
 
         for f, p, l, a in zip(zip(*formats), zip(*pieces), lines, agebuckets):
             fm.startitem()
-            sep = "* " if l[0].skip else ": "
-            fm.write(fields, "".join(f) + sep, *p, label="blame.age." + a)
+            fm.write(fields, "".join(f) + ": ", *p, label="blame.age." + a)
             fm.write("line", "%s", pycompat.decodeutf8(l[1], errors="replace"))
 
         if not lines[-1][1].endswith(b"\n"):

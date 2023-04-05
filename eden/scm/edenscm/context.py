@@ -1058,7 +1058,7 @@ class basefilectx(object):
             return p[1]
         return filectx(self._repo, self._path, fileid=nullid, filelog=self._filelog)
 
-    def annotate(self, follow=False, linenumber=False, skiprevs=None, diffopts=None):
+    def annotate(self, follow=False, linenumber=False, diffopts=None):
         """returns a list of tuples of ((ctx, number), line) for each line
         in the file, where ctx is the filectx of the node where
         that line was last changed; if linenumber parameter is true, number is
@@ -1089,14 +1089,6 @@ class basefilectx(object):
                 text = fctx.data()
                 return ([annotateline(fctx=fctx)] * lines(text), text)
 
-        if skiprevs is not None:
-
-            def skipfunc(fctx, skiprevs=skiprevs):
-                return fctx._changeid in skiprevs
-
-        else:
-            skipfunc = None
-
         repo = self.repo()
 
         if (
@@ -1117,9 +1109,7 @@ class basefilectx(object):
             base, parents = _filelogbaseparents(self, follow)
             repo.ui.log("blame_info", blame_mode="filelog")
 
-        annotatedlines, text = annotate.annotate(
-            base, parents, decorate, diffopts, skipfunc
-        )
+        annotatedlines, text = annotate.annotate(base, parents, decorate, diffopts)
         return zip(annotatedlines, text.splitlines(True))
 
     def _edenapi_annotate(self, linenumber=False, diffopts=None):
@@ -1334,8 +1324,6 @@ class pathhistoryparents:
 class annotateline(object):
     fctx = attr.ib()
     lineno = attr.ib(default=False)
-    # Whether this annotation was the result of a skip-annotate.
-    skip = attr.ib(default=False)
 
 
 class filectx(basefilectx):
