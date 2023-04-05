@@ -33,22 +33,26 @@ export type HighlightedToken = {
   color: number;
 };
 
-export default function tokenizeFileContents(
+export function tokenizeFileContents(
   fileContents: string,
-  {
-    grammar,
-  }: {
-    grammar: IGrammar;
-  },
+  grammar: IGrammar,
   timeLimit: number = DEFAULT_TOKENIZE_TIMEOUT_MS,
 ): Array<Array<HighlightedToken>> {
-  let state = INITIAL;
   // As fileContents could be quite large, we are assuming that, even though
   // split() generates a potentially large array, because it is one native
   // call, it is likely to be more efficient than us doing our own bookkeeping
   // to slice off one substring at a time (though that would avoid the array
   // allocation).
-  return fileContents.split('\n').map((line: string) => {
+  return tokenizeLines(fileContents.split('\n'), grammar, timeLimit);
+}
+
+export function tokenizeLines(
+  lines: ReadonlyArray<string>,
+  grammar: IGrammar,
+  timeLimit: number = DEFAULT_TOKENIZE_TIMEOUT_MS,
+): Array<Array<HighlightedToken>> {
+  let state = INITIAL;
+  return lines.map((line: string) => {
     // Line-processing logic taken from:
     // https://github.com/microsoft/vscode-textmate/blob/cc8ae321cfb47940470bd82c87a8ac61366fbd80/src/tests/themedTokenizer.ts#L20-L41
     const result = grammar.tokenizeLine2(line, state, timeLimit);

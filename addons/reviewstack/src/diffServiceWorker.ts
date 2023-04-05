@@ -10,7 +10,7 @@ import type GitHubClient from './github/GitHubClient';
 import type {Blob, GitObjectID} from './github/types';
 import type {LineToPosition} from './lineToPosition';
 import type GrammarStore from './textmate-lib/GrammarStore';
-import type {HighlightedToken} from './textmate-lib/tokenizeFileContents';
+import type {HighlightedToken} from './textmate-lib/tokenize';
 import type {SupportedPrimerColorMode} from './themeState';
 import type {ParsedDiff} from 'diff';
 
@@ -21,7 +21,7 @@ import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import RejectingGitHubClient from './github/RejectingGitHubClient';
 import {subscribeToLogout} from './github/logoutBroadcastChannel';
 import lineToPosition from './lineToPosition';
-import tokenizeFileContents from './textmate-lib/tokenizeFileContents';
+import {tokenizeFileContents} from './textmate-lib/tokenize';
 import VSCodeDarkPlusTheme from './textmate/VSCodeDarkPlusTheme';
 import VSCodeLightPlusTheme from './textmate/VSCodeLightPlusTheme';
 import createGrammarStore from './textmate/createGrammarStore';
@@ -265,8 +265,8 @@ async function tokenizeSplitDiff(
   }
 
   return {
-    before: tokenizeFileContents(beforeContents, {grammar}),
-    after: tokenizeFileContents(afterContents, {grammar}),
+    before: tokenizeFileContents(beforeContents, grammar),
+    after: tokenizeFileContents(afterContents, grammar),
   };
 }
 

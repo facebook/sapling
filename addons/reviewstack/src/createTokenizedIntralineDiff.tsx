@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {HighlightedToken} from './textmate-lib/tokenizeFileContents';
+import type {HighlightedToken} from './textmate-lib/tokenize';
 
 import {CSS_CLASS_PREFIX} from './textmate-lib/textmateStyles';
 import {diffWordsWithSpace} from 'diff';

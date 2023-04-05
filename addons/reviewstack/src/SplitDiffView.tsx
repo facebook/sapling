@@ -15,7 +15,7 @@ import type {
 } from './github/pullRequestTimelineTypes';
 import type {GitObjectID} from './github/types';
 import type {NewCommentInputCallbacks} from './recoil';
-import type {HighlightedToken} from './textmate-lib/tokenizeFileContents';
+import type {HighlightedToken} from './textmate-lib/tokenize';
 import type {Hunk, ParsedDiff} from 'diff';
 
 import SplitDiffRow from './SplitDiffRow';

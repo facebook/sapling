@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {HighlightedToken} from './textmate/tokenizeFileContents';
+import type {HighlightedToken} from './textmate-lib/tokenize';
 
 import {
   createTokenizedIntralineDiff,
