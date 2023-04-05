@@ -703,6 +703,18 @@ impl BlameData {
         }
     }
 
+    pub fn ranges(&self) -> &[BlameRangeIndexes] {
+        &self.ranges
+    }
+
+    pub fn csid_index(&self) -> &VecMap<ChangesetId> {
+        &self.csids
+    }
+
+    pub fn paths(&self) -> &[MPath] {
+        &self.paths
+    }
+
     /// Generate a string containing content annotated with this blame data.
     fn annotate(&self, content: &str) -> Result<String> {
         if content.is_empty() {

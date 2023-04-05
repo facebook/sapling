@@ -9,6 +9,7 @@ use std::fmt;
 
 use anyhow::Context;
 use anyhow::Result;
+use edenapi_types::HgId;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 
@@ -50,6 +51,12 @@ impl From<ChangesetId> for ChangesetSpecifier {
 impl From<HgChangesetId> for ChangesetSpecifier {
     fn from(id: HgChangesetId) -> Self {
         Self::Hg(id)
+    }
+}
+
+impl From<HgId> for ChangesetSpecifier {
+    fn from(id: HgId) -> Self {
+        Self::Hg(HgChangesetId::from(id))
     }
 }
 

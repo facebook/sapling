@@ -62,6 +62,7 @@ use crate::utils::monitor::Monitor;
 use crate::utils::parse_wire_request;
 use crate::utils::to_cbor_bytes;
 
+mod blame;
 mod bookmarks;
 mod capabilities;
 mod clone;
@@ -84,6 +85,7 @@ pub(crate) use handler::PathExtractorWithRepo;
 /// Used to identify the handler for logging and stats collection.
 #[derive(Copy, Clone)]
 pub enum EdenApiMethod {
+    Blame,
     Capabilities,
     Files,
     Files2,
@@ -118,6 +120,7 @@ pub enum EdenApiMethod {
 impl fmt::Display for EdenApiMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
+            Self::Blame => "blame",
             Self::Capabilities => "capabilities",
             Self::Files => "files",
             Self::Files2 => "files2",
@@ -439,6 +442,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);
         Handlers::setup::<commit::CommitTranslateId>(route);
+        Handlers::setup::<blame::BlameHandler>(route);
         route.get("/:repo/health_check").to(health_handler);
         route
             .get("/:repo/capabilities")

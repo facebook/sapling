@@ -25,6 +25,7 @@ define_stats! {
     failure_4xx: dynamic_timeseries("{}.failure_4xx", (method: String); Rate, Sum),
     failure_5xx: dynamic_timeseries("{}.failure_5xx", (method: String); Rate, Sum),
     response_bytes_sent: dynamic_histogram("{}.response_bytes_sent", (method: String); 1_500_000, 0, 150_000_000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    blame_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     capabilities_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     files_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     files2_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -79,6 +80,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
 
             use EdenApiMethod::*;
             match method {
+                Blame => STATS::blame_duration_ms.add_value(dur_ms),
                 Capabilities => STATS::capabilities_duration_ms.add_value(dur_ms),
                 Files => STATS::files_duration_ms.add_value(dur_ms),
                 Files2 => STATS::files2_duration_ms.add_value(dur_ms),
