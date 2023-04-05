@@ -80,7 +80,8 @@ impl Middleware for RequestContextMiddleware {
 
         let request_id = state.short_request_id();
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let ctx = session.new_context(logger.clone(), (*self.scuba).clone());
+        let scuba = (*self.scuba).clone().with_seq("seq");
+        let ctx = session.new_context(logger.clone(), scuba);
 
         state.put(RequestContext::new(ctx, logger).await);
 

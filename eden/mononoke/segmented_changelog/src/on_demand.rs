@@ -491,6 +491,8 @@ impl PeriodicUpdateSegmentedChangelog {
 
                 let mut interval = tokio::time::interval(period);
                 loop {
+                    // Reset the scuba sequence counter for each loop iteration.
+                    let ctx = ctx.with_mutated_scuba(|scuba| scuba.with_seq("seq"));
                     let _ = interval.tick().await;
                     if let Err(err) = my_dag.build_up_to_bookmark(&ctx).await {
                         slog::error!(

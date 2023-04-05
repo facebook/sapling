@@ -885,6 +885,8 @@ impl BookmarksCoordinator {
             info!(ctx.logger(), "Started warm bookmark cache updater");
             let infinite_loop = async {
                 loop {
+                    // Reset the sequence counter for each loop iteration.
+                    let ctx = ctx.with_mutated_scuba(|scuba| scuba.with_seq("seq"));
                     let res = self.update(&ctx).await;
 
                     if let Err(err) = res.as_ref() {

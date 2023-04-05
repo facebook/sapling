@@ -357,7 +357,8 @@ impl ScubaMiddlewareState {
 #[async_trait::async_trait]
 impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        state.put(ScubaMiddlewareState(self.scuba.clone()));
+        // Reset the scuba sequence counter for each request.
+        state.put(ScubaMiddlewareState(self.scuba.clone().with_seq("seq")));
         None
     }
 
