@@ -368,13 +368,6 @@ pub struct MononokeTunables {
     // Enable derivation on service per repo
     enable_remote_derivation: TunableBoolByRepo,
 
-    // Enable reading from the new commit graph
-    enable_reading_from_new_commit_graph: TunableBoolByRepo,
-    // Enable writing to the new commit graph (double writes to both
-    // the old changesets and csparents tables, and the new
-    // commit_graph_edges and commit_graph_merge_parents tables)
-    enable_writing_to_new_commit_graph: TunableBoolByRepo,
-
     // Usage of new commit graph for speeding up server-side operations
     new_commit_graph_is_ancestor_percentage: TunableI64ByRepo,
 

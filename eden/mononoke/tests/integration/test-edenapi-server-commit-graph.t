@@ -13,17 +13,6 @@ Set up local hgrc and Mononoke config.
   $ setup_common_config
   $ setup_configerator_configs
   $ cd $TESTTMP
-#if commitgraph_v2
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches_by_repo": {
-  >     "repo": {
-  >       "enable_writing_to_new_commit_graph": true
-  >     }
-  >   }
-  > }
-  > EOF
-#endif
 
 Initialize test repo.
   $ hginit_treemanifest repo-hg
@@ -63,7 +52,7 @@ Populate test repo
   o  112478962961147124edd43549aedd1a335e44bf B
   │
   o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
-  
+
 
 
 Blobimport test repo.

@@ -35,11 +35,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   >     "mutation_advertise_for_infinitepush": true,
   >     "mutation_accept_for_infinitepush": true,
   >     "mutation_generate_for_draft": true
-  >   },
-  >   "killswitches_by_repo": {
-  >     "repo": {
-  >       "enable_writing_to_new_commit_graph": true
-  >     }
   >   }
   > }
   > EOF
@@ -148,7 +143,7 @@ Test phases from commitgraph
   │ x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
   ├─╯
   o  8b2dca0c8a72 'base_commit'
-  
+
 Test how they are propagated to client 2
   $ cd ../client2
   $ hgedenapi debugchangelog --migrate lazy
@@ -168,4 +163,3 @@ Test how they are propagated to client 2
   │ o  f643b098cd18 'new_message'
   ├─╯
   o  8b2dca0c8a72 'base_commit'
-  

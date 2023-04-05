@@ -55,11 +55,6 @@ setup tunables
   >     "mutation_advertise_for_infinitepush": true,
   >     "mutation_accept_for_infinitepush": true,
   >     "mutation_generate_for_draft": true
-  >   },
-  >   "killswitches_by_repo": {
-  >     "repo": {
-  >       "enable_writing_to_new_commit_graph": true
-  >     }
   >   }
   > }
   > EOF
@@ -162,7 +157,7 @@ Make commits in the first client, and sync it
   o  929f2b9071cf draft 'A'
   │
   o  8b2dca0c8a72 public 'base_commit'
-  
+
 Sync from the second client - the commits should appear
   $ cd ../client2
   $ hgedenapi cloud sync
@@ -183,7 +178,7 @@ Sync from the second client - the commits should appear
   o  929f2b9071cf draft 'A'
   │
   @  8b2dca0c8a72 public 'base_commit'
-  
+
 
 Make commits from the second client and sync it
   $ mkcommitedenapi "D"
@@ -232,8 +227,8 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   │ o  929f2b9071cf draft 'A'
   ├─╯
   o  8b2dca0c8a72 public 'base_commit' new_bookmark
-  
- 
+
+
 On the first client rebase the stack
   $ hgedenapi rebase -s 4594cad5305d -d c4f3cf0b6f49
   rebasing 4594cad5305d "D"
@@ -283,7 +278,7 @@ On the second client sync it
   o  929f2b9071cf draft 'A'
   │
   o  8b2dca0c8a72 public 'base_commit' new_bookmark
-  
+
 Check mutation markers
   $ hgedenapi up c981069f3f05 -q
   $ sl
@@ -306,7 +301,7 @@ Check mutation markers
   o │  929f2b9071cf draft 'A'
   ├─╯
   o  8b2dca0c8a72 public 'base_commit' new_bookmark
-  
+
 
 On the second client hide all draft commits
   $ hgedenapi hide -r 'draft()'
@@ -331,7 +326,7 @@ On the second client hide all draft commits
 
   $ sl
   @  8b2dca0c8a72 public 'base_commit' new_bookmark
-  
+
 
 On the first client check that all commits were hidden
   $ cd ../client1
@@ -344,4 +339,3 @@ On the first client check that all commits were hidden
 
   $ sl
   @  8b2dca0c8a72 public 'base_commit' new_bookmark
-  

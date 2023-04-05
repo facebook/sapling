@@ -30,7 +30,6 @@ use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use smallvec::SmallVec;
-use tunables::tunables;
 use vec1::vec1;
 use vec1::Vec1;
 
@@ -76,13 +75,6 @@ impl ChangesetsCommitGraphCompat {
         ctx: &CoreContext,
         css: Vec1<(ChangesetId, ChangesetParents)>,
     ) -> Result<()> {
-        if !tunables()
-            .by_repo_enable_writing_to_new_commit_graph(&self.repo_name)
-            .unwrap_or(false)
-        {
-            return Ok(());
-        }
-
         let mut scuba = self.scuba.clone();
 
         scuba.add_common_server_data();

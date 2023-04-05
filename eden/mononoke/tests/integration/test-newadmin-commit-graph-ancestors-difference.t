@@ -8,15 +8,6 @@
 
 setup configuration
   $ setup_common_config
-  $ merge_tunables <<EOF
-  > {
-  >   "killswitches_by_repo": {
-  >     "repo": {
-  >       "enable_writing_to_new_commit_graph": true
-  >     }
-  >   }
-  > }
-  > EOF
 
   $ testtool_drawdag -R repo << 'EOF'
   > J G
