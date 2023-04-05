@@ -480,7 +480,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                 .into_iter()
                 .map(|(path, fc)| {
                     Ok((
-                        to_hg_path(&path.into())?,
+                        to_hg_path(&path)?,
                         match fc {
                             FileChange::Deletion => BonsaiFileChange::Deletion,
                             FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,

@@ -59,14 +59,10 @@ pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<Option<MPath>> {
     MPath::new_opt(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
 }
 
-/// Convert a `MononokePath` into a Mercurial `RepoPathBuf`.
+/// Convert an `MPath` into a Mercurial `RepoPathBuf`.
 /// The input will be copied due to differences in data representation.
-pub fn to_hg_path(path: &MononokePath) -> Result<RepoPathBuf> {
-    let path_bytes = match path.as_mpath() {
-        Some(mpath) => mpath.to_vec(),
-        None => return Ok(RepoPathBuf::new()),
-    };
-    RepoPathBuf::from_utf8(path_bytes.clone()).context(ErrorKind::InvalidPath(path_bytes))
+pub fn to_hg_path(path: &MPath) -> Result<RepoPathBuf> {
+    RepoPathBuf::from_utf8(path.to_vec()).with_context(|| ErrorKind::InvalidPath(path.to_vec()))
 }
 
 pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
