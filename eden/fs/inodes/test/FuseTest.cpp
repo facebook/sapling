@@ -49,8 +49,8 @@ TEST(FuseTest, initMount) {
 
   auto initFuture =
       testMount.getEdenMount()
-          ->startChannel(false)
-          .thenValue([](auto&&) { XLOG(INFO) << "startChannel() succeeded"; })
+          ->startFsChannel(false)
+          .thenValue([](auto&&) { XLOG(INFO) << "startFsChannel() succeeded"; })
           .thenError([&](const folly::exception_wrapper& ew) {
             ADD_FAILURE() << "startFuse() failed: " << folly::exceptionStr(ew);
           });
@@ -109,7 +109,7 @@ TEST(FuseTest, destroyBeforeInitComplete) {
     testMount.registerFakeFuse(fuse);
 
     // Call startFuse() on the test mount.
-    initFuture = testMount.getEdenMount()->startChannel(false);
+    initFuture = testMount.getEdenMount()->startFsChannel(false);
 
     // Exit the scope to destroy the mount
   }
@@ -138,7 +138,7 @@ TEST(FuseTest, destroyWithInitRace) {
     testMount.registerFakeFuse(fuse);
 
     // Call startFuse() on the test mount.
-    initFuture = testMount.getEdenMount()->startChannel(false);
+    initFuture = testMount.getEdenMount()->startFsChannel(false);
     completionFuture = testMount.getEdenMount()->getChannelCompletionFuture();
 
     // Send the FUSE INIT request.

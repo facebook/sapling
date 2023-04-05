@@ -666,7 +666,7 @@ TEST(
 
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
-  auto startChannelFuture = mount->startChannel(false);
+  auto startChannelFuture = mount->startFsChannel(false);
 
   rootInode.reset();
   mount.reset();
@@ -706,7 +706,7 @@ TEST(EdenMount, unmountDoesNothingIfPriorMountFailed) {
   mountDelegate->makeUnmountFail();
 
   ASSERT_THROW(
-      { mount.startChannel(false).get(kTimeout); },
+      { mount.startFsChannel(false).get(kTimeout); },
       MockMountDelegate::MountFailed);
   EXPECT_NO_THROW({ mount.unmount().get(kTimeout); });
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
@@ -723,7 +723,7 @@ TEST(EdenMount, unmountIsIdempotent) {
   mountDelegate->setMountFuseDevice(fuse->start());
   mountDelegate->makeUnmountSucceed();
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   std::move(startChannelFuture)
@@ -752,7 +752,7 @@ TEST(EdenMount, concurrentUnmountCallsWaitForExactlyOneFuseUnmount) {
   auto fuse = std::make_shared<FakeFuse>();
   mountDelegate->setMountFuseDevice(fuse->start());
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   std::move(startChannelFuture)
@@ -789,7 +789,7 @@ TEST(EdenMount, unmountUnmountsIfMounted) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   std::move(startChannelFuture)
@@ -834,7 +834,7 @@ TEST(EdenMount, cancelledMountDoesNotUnmountIfMountingFails) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   auto unmountFuture = mount.unmount();
 
   auto unmountCallCountBeforeMountFails =
@@ -860,7 +860,7 @@ TEST(EdenMount, unmountCancelsInProgressMount) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   auto unmountFuture = mount.unmount();
   SCOPE_EXIT {
     std::move(unmountFuture).get(kTimeout);
@@ -889,7 +889,7 @@ TEST(EdenMount, cancelledMountWaitsForUnmountBeforeCompleting) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   auto unmountFuture = mount.unmount();
   SCOPE_EXIT {
     std::move(unmountFuture).get(kTimeout);
@@ -914,7 +914,7 @@ TEST(EdenMount, unmountWaitsForInProgressMountBeforeUnmounting) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   auto unmountFuture = mount.unmount();
 
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
@@ -943,7 +943,7 @@ TEST(EdenMount, unmountingDuringFuseHandshakeCancelsStart) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   ASSERT_FALSE(startChannelFuture.wait(kMicroTimeout).isReady())
       << "start should not finish before FUSE handshake";
 
@@ -967,7 +967,7 @@ TEST(EdenMount, startingFuseFailsImmediatelyIfUnmountWasEverCalled) {
 
   mount.unmount().within(kTimeout).get();
 
-  EXPECT_THROW(mount.startChannel(false).get(kTimeout), EdenMountCancelled);
+  EXPECT_THROW(mount.startFsChannel(false).get(kTimeout), EdenMountCancelled);
   EXPECT_FALSE(mountDelegate->wasFuseMountEverCalled())
       << "start should fail and not call fuseMount";
 }
@@ -1010,7 +1010,7 @@ TEST(EdenMountState, mountIsStartingBeforeMountCompletes) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   SCOPE_EXIT {
     mountPromise.setException(MockMountDelegate::MountFailed{});
     logAndSwallowExceptions(
@@ -1027,7 +1027,7 @@ TEST(EdenMountState, mountIsStartingBeforeFuseInitializationCompletes) {
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   SCOPE_EXIT {
     fuse->close();
     logAndSwallowExceptions(
@@ -1077,7 +1077,7 @@ TEST(EdenMountState, mountIsFuseErrorAfterMountFails) {
       mount.getPath(), mountDelegate);
   mountDelegate->makeMountFail();
 
-  logAndSwallowExceptions([&] { mount.startChannel(false).get(kTimeout); });
+  logAndSwallowExceptions([&] { mount.startFsChannel(false).get(kTimeout); });
   EXPECT_EQ(mount.getState(), EdenMount::State::FUSE_ERROR);
 }
 
@@ -1087,7 +1087,7 @@ TEST(EdenMountState, mountIsFuseErrorAfterFuseInitializationFails) {
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
 
-  auto startChannelFuture = mount.startChannel(false);
+  auto startChannelFuture = mount.startFsChannel(false);
   EXPECT_FALSE(startChannelFuture.wait(kMicroTimeout).isReady())
       << "start should not finish before FUSE mounting completes";
 

@@ -1443,13 +1443,6 @@ void EdenServer::unregisterInodePopulationReportsCallback() {
       nullptr);
 }
 
-folly::Future<folly::Unit> EdenServer::performFreshStart(
-    std::shared_ptr<EdenMount> edenMount,
-    bool readOnly) {
-  // Start up the fuse workers.
-  return edenMount->startChannel(readOnly);
-}
-
 Future<Unit> EdenServer::performTakeoverStart(
     FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
     FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
@@ -1565,9 +1558,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
           return makeFuture<shared_ptr<EdenMount>>(
               std::move(result).exception());
         }
+
         return (optionalTakeover ? performTakeoverStart(
                                        edenMount, std::move(*optionalTakeover))
-                                 : performFreshStart(edenMount, readOnly))
+                                 : edenMount->startFsChannel(readOnly))
             .thenTry([edenMount, doTakeover, this](
                          folly::Try<Unit>&& result) mutable {
               // Call mountFinished() if an error occurred during FUSE

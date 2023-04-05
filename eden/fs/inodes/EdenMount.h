@@ -829,7 +829,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * * The returned Future is fulfilled with an
    *   FuseDeviceUnmountedDuringInitialization exception
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> startChannel(bool readOnly);
+  FOLLY_NODISCARD folly::Future<folly::Unit> startFsChannel(bool readOnly);
 
   /**
    * Take over a FUSE channel for an existing mount point.

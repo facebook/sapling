@@ -2164,7 +2164,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
       });
 }
 
-folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
+folly::Future<folly::Unit> EdenMount::startFsChannel(bool readOnly) {
   return folly::makeFutureWith([&]() {
     transitionState(
         /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);

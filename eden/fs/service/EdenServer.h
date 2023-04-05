@@ -594,12 +594,6 @@ class EdenServer : private TakeoverHandler {
   FOLLY_NODISCARD folly::Future<folly::Unit> performNormalShutdown();
   void shutdownPrivhelper();
 
-  // Starts up a new mount for edenMount, starting up the thread
-  // pool and initializing the dependent bits.
-  FOLLY_NODISCARD folly::Future<folly::Unit> performFreshStart(
-      std::shared_ptr<EdenMount> edenMount,
-      bool readOnly);
-
   // Performs a takeover initialization for the provided mount, loading the
   // state from the old incarnation and starting up the thread pool.
   FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverStart(
