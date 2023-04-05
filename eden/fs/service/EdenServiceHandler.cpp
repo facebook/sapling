@@ -2800,8 +2800,9 @@ folly::SemiFuture<struct folly::Unit> EdenServiceHandler::semifuture_chown(
 #ifndef _WIN32
   auto mountPath = absolutePathFromThrift(*mountPoint);
   auto [edenMount, rootInode] = server_->getMountAndRootInode(mountPath);
-  return edenMount->chown(uid, gid).ensure(
-      [rootInode = std::move(rootInode)] {});
+  return edenMount->chown(uid, gid)
+      .ensure([rootInode = std::move(rootInode)] {})
+      .semi();
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
@@ -3873,7 +3874,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
     }
 
     // Wait for all of the invalidations to complete
-    return fuseChannel->flushInvalidations();
+    return fuseChannel->flushInvalidations().semi();
   }
 
   if (auto* nfsChannel = edenMount->getNfsdChannel()) {

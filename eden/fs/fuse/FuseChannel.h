@@ -30,6 +30,7 @@
 #include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/FsChannelTypes.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
@@ -353,11 +354,9 @@ class FuseChannel {
    * operations to complete.
    *
    * The returned Future will complete once all invalidation operations
-   * scheduled before this flushInvalidations() call have finished.  This
-   * future will normally be completed in the FuseChannel's invalidation
-   * thread.
+   * scheduled before this flushInvalidations() call have finished.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> flushInvalidations();
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> flushInvalidations();
 
   /**
    * Sends a reply to a kernel request that consists only of the error

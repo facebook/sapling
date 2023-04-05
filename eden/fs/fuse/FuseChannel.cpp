@@ -976,7 +976,8 @@ void FuseChannel::invalidateInodes(folly::Range<InodeNumber*> range) {
     invalidationCV_.notify_one();
   }
 }
-folly::Future<folly::Unit> FuseChannel::flushInvalidations() {
+
+ImmediateFuture<folly::Unit> FuseChannel::flushInvalidations() {
   // Add a promise to the invalidation queue, which the invalidation thread
   // will fulfill once it reaches that element in the queue.
   Promise<Unit> promise;

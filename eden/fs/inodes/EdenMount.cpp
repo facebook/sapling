@@ -1744,7 +1744,7 @@ ImmediateFuture<folly::Unit> EdenMount::flushInvalidations() {
 }
 
 #ifndef _WIN32
-folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
+ImmediateFuture<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // 1) Ensure we are running in a fuse mount
   auto fuseChannel = getFuseChannel();
   if (!fuseChannel) {
