@@ -319,7 +319,6 @@ export function YouAreHere({
       break;
     case CommitPreview.GOTO_PREVIOUS_LOCATION:
       text = <T>You were here...</T>;
-      spinner = true;
       break;
     default:
       text = <T>You are here</T>;
@@ -331,7 +330,11 @@ export function YouAreHere({
         {spinner ? <Icon icon="loading" /> : null}
         {text}
       </span>
-      {isFetching ? <Icon icon="loading" /> : null}
+      {isFetching &&
+      // don't show fetch spinner on previous location
+      previewType !== CommitPreview.GOTO_PREVIOUS_LOCATION ? (
+        <Icon icon="loading" />
+      ) : null}
     </div>
   );
 }
