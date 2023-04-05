@@ -209,15 +209,6 @@ class FindExeClass(object):
             "HG_ETC_MERCURIAL", "eden/scm", "fb/staticfiles/etc/mercurial"
         )
 
-    @cached_property
-    def SOURCE_BUILT_BUCK(self) -> str:
-        return self._find_exe(
-            "buck",
-            env="SOURCE_BUILT_BUCK",
-            buck_path="programs/buck.pex",
-            buck_cell_path="dev/cells/buck",
-        )
-
     def _find_hg(self) -> str:
         hg_bin = self._find_exe_optional(
             "hg", env="EDEN_HG_BINARY", buck_path="scm/telemetry/hg/hg#binary/hg"
