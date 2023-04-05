@@ -104,7 +104,7 @@ target_link_libraries(
 
 add_library(
   eden_nfs_dirlist STATIC
-    "DirList.cpp" "DirList.h"
+    "NfsDirList.cpp" "NfsDirList.h"
 )
 
 target_link_libraries(

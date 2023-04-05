@@ -15,7 +15,7 @@
 #ifdef _WIN32
 #include "eden/fs/prjfs/Enumerator.h"
 #else
-#include "eden/fs/fuse/DirList.h"
+#include "eden/fs/fuse/FuseDirList.h"
 #endif // _WIN32
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"

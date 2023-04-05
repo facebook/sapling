@@ -18,8 +18,8 @@
 
 #include "eden/common/utils/Synchronized.h"
 #include "eden/fs/config/CheckoutConfig.h"
-#include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"

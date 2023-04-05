@@ -15,11 +15,11 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <optional>
-#include "eden/fs/fuse/DirList.h"
+#include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/nfs/DirList.h"
+#include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeBackingStore.h"

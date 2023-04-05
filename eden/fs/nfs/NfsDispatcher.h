@@ -9,7 +9,7 @@
 
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/nfs/DirList.h"
+#include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"

@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/nfs/DirList.h"
+#include "eden/fs/nfs/NfsDirList.h"
 #include <variant>
 #include "eden/fs/nfs/NfsdRpc.h"
 

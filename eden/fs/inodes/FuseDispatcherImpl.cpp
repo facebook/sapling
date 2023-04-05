@@ -9,7 +9,7 @@
 
 #include "eden/fs/inodes/FuseDispatcherImpl.h"
 #include <folly/logging/xlog.h>
-#include "eden/fs/fuse/DirList.h"
+#include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"

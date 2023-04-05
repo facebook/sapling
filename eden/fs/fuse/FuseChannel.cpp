@@ -19,7 +19,7 @@
 #include <chrono>
 #include <type_traits>
 #include "eden/common/utils/Synchronized.h"
-#include "eden/fs/fuse/DirList.h"
+#include "eden/fs/fuse/FuseDirList.h"
 #include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/telemetry/FsEventLogger.h"
