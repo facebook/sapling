@@ -302,12 +302,8 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
 
 async fn handle_http<S: MononokeStream>(conn: AcceptedConnection, stream: S) -> Result<()> {
     STATS::http_accepted.add_value(1);
-
     let svc = MononokeHttpService::<S>::new(conn);
-
-    // NOTE: We don't select h2 in alpn, so we only expect HTTP/1.1 here.
     Http::new()
-        .http1_only(true)
         .serve_connection(stream, svc)
         .with_upgrades()
         .await

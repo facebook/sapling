@@ -171,7 +171,6 @@ members = [
   "acl_regions",
   "admin",
   "aliasverify",
-  "alpn",
   "backfill_derived_data",
   "benchmark_filestore",
   "benchmarks/derived_data",

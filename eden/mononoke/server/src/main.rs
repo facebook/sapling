@@ -50,6 +50,10 @@ use slog::Logger;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
+// We will select the first protocol supported by the server which is also supported by the client.
+// Order of preferences: hgcli, h2, http/1.1.
+pub const ALPN_MONONOKE_PROTOS_OFFERS: &[u8] = b"\x05hgcli\x02h2\x08http/1.1";
+
 /// Mononoke Server
 #[derive(Parser)]
 struct MononokeServerArgs {
@@ -248,10 +252,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         .tls_acceptor_builder(root_log.clone())
         .context("Failed to instantiate TLS Acceptor builder")?;
 
-        builder.set_alpn_select_callback(|_, protos| {
-            // NOTE: Currently we do not support HTTP/2 here yet.
-            alpn::alpn_select(protos, alpn::HGCLI_ALPN)
-                .map_err(|_| AlpnError::ALERT_FATAL)?
+        builder.set_alpn_protos(ALPN_MONONOKE_PROTOS_OFFERS)?;
+        builder.set_alpn_select_callback(|_, list| {
+            openssl::ssl::select_next_proto(ALPN_MONONOKE_PROTOS_OFFERS, list)
                 .ok_or(AlpnError::NOACK)
         });
 
