@@ -45,17 +45,27 @@ impl SamplingConfig {
             return None;
         }
 
-        if let Some(output_file) = sampling_output_file(config) {
-            if let Ok(file) = OpenOptions::new()
-                .create(true)
-                .write(true)
+        if let Some((output_file, okay_exists)) = sampling_output_file(config) {
+            match OpenOptions::new()
+                .create(okay_exists)
+                .create_new(!okay_exists)
                 .append(true)
-                .open(output_file)
+                .open(&output_file)
             {
-                return Some(Self {
-                    keys: sample_categories,
-                    file: Mutex::new(file),
-                });
+                Ok(file) => {
+                    return Some(Self {
+                        keys: sample_categories,
+                        file: Mutex::new(file),
+                    });
+                }
+                Err(err) => {
+                    // This is expected for child commands that skirt the telemetry wrapper.
+                    tracing::warn!(
+                        ?err,
+                        ?output_file,
+                        "error opening sampling file (expected for child commands)"
+                    );
+                }
             }
         }
 
@@ -71,18 +81,22 @@ impl SamplingConfig {
     }
 }
 
-fn sampling_output_file(config: &dyn configmodel::Config) -> Option<PathBuf> {
-    let mut candidates: Vec<PathBuf> = Vec::with_capacity(2);
+// Returns tuple of output path and whether it's okay if the path already exists.
+fn sampling_output_file(config: &dyn configmodel::Config) -> Option<(PathBuf, bool)> {
+    let mut candidates: Vec<(PathBuf, bool)> = Vec::with_capacity(2);
 
     if let Ok(path) = std::env::var("SCM_SAMPLING_FILEPATH") {
-        candidates.push(path.into());
+        // Env var is not-okay-exists (i.e. only one process should respect this).
+        candidates.push((path.into(), false));
     }
 
     if let Some(path) = config.get("sampling", "filepath") {
-        candidates.push(path.to_string().into());
+        // Config setting is okay to be shared across multiple commands (mainly
+        // for test compat).
+        candidates.push((path.to_string().into(), true));
     }
 
     candidates
         .into_iter()
-        .find(|path| path.parent().map_or(false, |d| d.exists()))
+        .find(|(path, _okay_exists)| path.parent().map_or(false, |d| d.exists()))
 }
