@@ -274,7 +274,7 @@ def _clonetotmp(repo, tmprepopath: str):
         with tmprepo.localvfs.open(ident.configrepofile(), "a") as f:
             f.write(
                 b"\n%%include %s\n"
-                % pycompat.encodeutf8(repo.localvfs.join(ident.configerpofile()))
+                % pycompat.encodeutf8(repo.localvfs.join(ident.configrepofile()))
             )
     tmprepo = hg.repository(repo.ui, path=tmprepopath)
     clone.revlogclone("default", tmprepo)
