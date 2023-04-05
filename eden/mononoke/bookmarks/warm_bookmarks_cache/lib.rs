@@ -8,7 +8,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::ops::RangeBounds;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -579,9 +578,14 @@ async fn move_bookmark_back_in_history_until_derived(
 ) -> Result<Option<ChangesetId>, Error> {
     info!(ctx.logger(), "moving {} bookmark back in history...", book);
 
-    let (latest_derived_entry, _) =
-        find_all_underived_and_latest_derived(ctx, bookmarks, bookmark_update_log, book, warmers)
-            .await?;
+    let (latest_derived_entry, _) = find_latest_derived_and_oldest_underived(
+        ctx,
+        bookmarks,
+        bookmark_update_log,
+        book,
+        warmers,
+    )
+    .await?;
 
     match latest_derived_entry {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
@@ -607,25 +611,25 @@ pub enum LatestDerivedBookmarkEntry {
     NotFound,
 }
 
+#[derive(Default)]
+pub struct LatestUnderivedBookmarkEntry {
+    maybe_cs_id: Option<ChangesetId>,
+    /// ID and TS for the oldest underived bookmark entry for logging
+    maybe_id_ts: Option<(BookmarkUpdateLogId, Timestamp)>,
+}
+
 pub struct BookmarkUpdateLogId(pub u64);
 
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
-/// deletes a bookmark to be derived. Returns this entry if it was found and changesets for all underived entries after that
-/// OLDEST ENTRIES FIRST.
-pub async fn find_all_underived_and_latest_derived(
+/// deletes a bookmark to be derived.
+pub async fn find_latest_derived_and_oldest_underived(
     ctx: &CoreContext,
     bookmarks: &dyn Bookmarks,
     bookmark_update_log: &dyn BookmarkUpdateLog,
     book: &BookmarkKey,
     warmers: &[Warmer],
-) -> Result<
-    (
-        LatestDerivedBookmarkEntry,
-        VecDeque<(ChangesetId, Option<(BookmarkUpdateLogId, Timestamp)>)>,
-    ),
-    Error,
-> {
-    let mut res = VecDeque::new();
+) -> Result<(LatestDerivedBookmarkEntry, LatestUnderivedBookmarkEntry), Error> {
+    let mut latest_underived = LatestUnderivedBookmarkEntry::default();
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
     for (prev_limit, limit) in history_depth_limits.into_iter().tuple_windows() {
@@ -658,6 +662,10 @@ pub async fn find_all_underived_and_latest_derived(
         }
 
         let log_entries_fetched = log_entries.len();
+        if let Some((maybe_cs_id, _)) = log_entries.first() {
+            latest_underived.maybe_cs_id = *maybe_cs_id;
+        };
+
         let mut maybe_derived = stream::iter(log_entries.into_iter().map(
             |(maybe_cs_id, id_and_ts)| async move {
                 match maybe_cs_id {
@@ -677,19 +685,23 @@ pub async fn find_all_underived_and_latest_derived(
                 // Remove bookmark update log id
                 let maybe_cs_ts =
                     maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
-                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_ts), res));
-            } else if let Some(cs_id_ts) = maybe_cs_id_ts {
-                res.push_front(cs_id_ts);
+                return Ok((
+                    LatestDerivedBookmarkEntry::Found(maybe_cs_ts),
+                    latest_underived,
+                ));
+            } else {
+                // Store the oldest underived bookmarke entry ID and ts for logging purpose
+                latest_underived.maybe_id_ts = maybe_cs_id_ts.and_then(|(_, id_and_ts)| id_and_ts);
             }
         }
 
         // Bookmark has been created recently and wasn't derived at all
         if (log_entries_fetched as u32) < limit {
-            return Ok((LatestDerivedBookmarkEntry::Found(None), res));
+            return Ok((LatestDerivedBookmarkEntry::Found(None), latest_underived));
         }
     }
 
-    Ok((LatestDerivedBookmarkEntry::NotFound, res))
+    Ok((LatestDerivedBookmarkEntry::NotFound, latest_underived))
 }
 
 #[facet::container]
@@ -1007,7 +1019,7 @@ async fn single_bookmark_updater(
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
-    let (latest_derived, underived_history) = find_all_underived_and_latest_derived(
+    let (latest_derived, latest_underived) = find_latest_derived_and_oldest_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
@@ -1042,7 +1054,11 @@ async fn single_bookmark_updater(
         }
     }
 
-    for (underived_cs_id, maybe_id_ts) in underived_history {
+    let LatestUnderivedBookmarkEntry {
+        maybe_cs_id,
+        maybe_id_ts,
+    } = latest_underived;
+    if let Some(underived_cs_id) = maybe_cs_id {
         if let Some((_, ts)) = maybe_id_ts {
             // timestamp might not be known if e.g. bookmark has no history.
             // In that case let's not report staleness
@@ -1081,7 +1097,6 @@ async fn single_bookmark_updater(
                     bookmark.key(),
                     err
                 );
-                break;
             }
         }
     }
