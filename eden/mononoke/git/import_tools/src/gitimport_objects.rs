@@ -39,6 +39,7 @@ use mononoke_types::MPath;
 use mononoke_types::MPathElement;
 use slog::debug;
 use slog::Logger;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
@@ -292,6 +293,7 @@ pub struct CommitMetadata {
     pub author_date: DateTime,
     pub committer: String,
     pub committer_date: DateTime,
+    pub git_extra_headers: SortedVectorMap<SmallVec<[u8; 24]>, Bytes>,
 }
 
 pub struct ExtractedCommit {
@@ -367,6 +369,7 @@ impl ExtractedCommit {
             committer,
             encoding,
             message,
+            extra_headers,
             ..
         } = read_commit(reader, &oid).await?;
 
@@ -387,6 +390,15 @@ impl ExtractedCommit {
         let committer = format_signature(committer.to_ref());
         let message = decode_commit_message(&message, &encoding, ctx.logger())?;
         let parents = parents.into_vec();
+        let git_extra_headers = extra_headers
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    SmallVec::from(k.as_slice()),
+                    Bytes::copy_from_slice(v.as_slice()),
+                )
+            })
+            .collect();
 
         Result::<_, Error>::Ok(ExtractedCommit {
             metadata: CommitMetadata {
@@ -397,6 +409,7 @@ impl ExtractedCommit {
                 author_date,
                 committer,
                 committer_date,
+                git_extra_headers,
             },
             tree,
             parent_trees,
