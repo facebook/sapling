@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use serde::Deserialize;
 use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
-#[derive(Serialize)] // used to convert to Python
+#[derive(Serialize, Deserialize)] // used to convert to Python
 #[cfg_attr(
     any(test, feature = "for-tests"),
     derive(quickcheck_arbitrary_derive::Arbitrary)

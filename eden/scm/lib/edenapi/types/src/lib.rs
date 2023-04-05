@@ -28,6 +28,7 @@ pub mod hash;
 
 pub mod anyid;
 pub mod batch;
+pub mod blame;
 pub mod bookmark;
 pub mod commit;
 pub mod commitid;
@@ -60,6 +61,10 @@ pub use crate::anyid::LookupRequest;
 pub use crate::anyid::LookupResponse;
 pub use crate::anyid::LookupResult;
 pub use crate::batch::Batch;
+pub use crate::blame::BlameData;
+pub use crate::blame::BlameLineRange;
+pub use crate::blame::BlameRequest;
+pub use crate::blame::BlameResult;
 pub use crate::bookmark::BookmarkEntry;
 pub use crate::bookmark::BookmarkRequest;
 pub use crate::bookmark::SetBookmarkRequest;

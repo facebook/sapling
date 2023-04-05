@@ -109,16 +109,26 @@ fn remove_id(attrs: &mut Vec<Attribute>) {
         .collect();
 }
 
+fn extract_no_default(attrs: &mut Vec<Attribute>) -> bool {
+    let mut no_default = false;
+    attrs.retain(|a| match a.path.get_ident() {
+        Some(id) if *id == "no_default" => {
+            no_default = true;
+            false
+        }
+        _ => true,
+    });
+    no_default
+}
+
 fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
     let mut item = original.clone();
     let ident = item.ident.clone();
     let wire_ident = format_ident!("Wire{}", ident);
     item.ident = wire_ident.clone();
-    item.attrs = vec![
-        parse_quote!(#[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]),
-    ];
 
     let mut fields = vec![];
+    let mut has_no_default_field = false;
 
     let mut ids = HashSet::new();
     match &mut item.fields {
@@ -129,9 +139,17 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
             let ty = &field.ty;
             field.ty = parse_quote!( <#ty as crate::ToWire>::Wire );
             let name = format!("{}", id);
-            field.attrs.push(
-                parse_quote!( #[serde(rename=#name, default, skip_serializing_if="crate::wire::is_default")] ),
-            );
+
+            if extract_no_default(&mut field.attrs) {
+                has_no_default_field = true;
+                field.attrs.push(
+                    parse_quote!( #[serde(rename=#name)] ),
+                );
+            } else {
+                field.attrs.push(
+                    parse_quote!( #[serde(rename=#name, default, skip_serializing_if="crate::wire::is_default")] ),
+                );
+            }
             Result::Ok(())
         })?,
         _ => {
@@ -142,10 +160,21 @@ fn get_wire_struct(original: &mut ItemStruct) -> Result<TokenStream> {
         }
     }
 
+    if has_no_default_field {
+        item.attrs = vec![
+            parse_quote!(#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]),
+        ];
+    } else {
+        item.attrs = vec![
+            parse_quote!(#[derive(Default, Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]),
+        ];
+    }
+
     // remove id() attribute from original struct
     match &mut original.fields {
         Fields::Named(ref mut fs) => fs.named.iter_mut().for_each(|ref mut field| {
             remove_id(&mut field.attrs);
+            extract_no_default(&mut field.attrs);
         }),
         _ => unreachable!(),
     }
