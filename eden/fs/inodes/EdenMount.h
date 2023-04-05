@@ -1393,13 +1393,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::optional<ActivityBuffer<InodeTraceEvent>> inodeActivityBuffer_;
 
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
-
-  // Handle for inodeTraceBus subscription
-  struct InodeTraceHandle {
-    TraceSubscriptionHandle<InodeTraceEvent> subHandle;
-  };
-
-  std::shared_ptr<InodeTraceHandle> inodeTraceHandle_;
+  TraceSubscriptionHandle<InodeTraceEvent> inodeTraceHandle_;
 
 #ifdef _WIN32
   /**

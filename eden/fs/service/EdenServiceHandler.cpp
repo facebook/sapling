@@ -486,24 +486,21 @@ EdenServiceHandler::EdenServiceHandler(
       server_->getServerState()->getThreadPool(),
       server_->getServerState()->getEdenConfig());
 #endif
-  thriftRequestTraceHandle_ = std::make_shared<ThriftRequestTraceHandle>();
-  thriftRequestTraceHandle_->subHandle =
-      thriftRequestTraceBus_->subscribeFunction(
-          "Outstanding Thrift request tracing",
-          [this](const ThriftRequestTraceEvent& event) {
-            switch (event.type) {
-              case ThriftRequestTraceEvent::START:
-                outstandingThriftRequests_.wlock()->emplace(
-                    event.requestId, event);
-                break;
-              case ThriftRequestTraceEvent::FINISH:
-                outstandingThriftRequests_.wlock()->erase(event.requestId);
-                break;
-            }
-            if (thriftRequestActivityBuffer_.has_value()) {
-              thriftRequestActivityBuffer_->addEvent(event);
-            }
-          });
+  thriftRequestTraceHandle_ = thriftRequestTraceBus_->subscribeFunction(
+      "Outstanding Thrift request tracing",
+      [this](const ThriftRequestTraceEvent& event) {
+        switch (event.type) {
+          case ThriftRequestTraceEvent::START:
+            outstandingThriftRequests_.wlock()->emplace(event.requestId, event);
+            break;
+          case ThriftRequestTraceEvent::FINISH:
+            outstandingThriftRequests_.wlock()->erase(event.requestId);
+            break;
+        }
+        if (thriftRequestActivityBuffer_.has_value()) {
+          thriftRequestActivityBuffer_->addEvent(event);
+        }
+      });
 }
 
 EdenServiceHandler::~EdenServiceHandler() = default;

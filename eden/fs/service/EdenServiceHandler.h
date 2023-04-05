@@ -449,12 +449,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   std::optional<ActivityBuffer<ThriftRequestTraceEvent>>
       thriftRequestActivityBuffer_;
 
-  // Handle for traceBus subscription
-  struct ThriftRequestTraceHandle {
-    TraceSubscriptionHandle<ThriftRequestTraceEvent> subHandle;
-  };
-
-  std::shared_ptr<ThriftRequestTraceHandle> thriftRequestTraceHandle_;
+  TraceSubscriptionHandle<ThriftRequestTraceEvent> thriftRequestTraceHandle_;
 
   std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> thriftRequestTraceBus_;
 };

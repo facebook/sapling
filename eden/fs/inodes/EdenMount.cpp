@@ -2426,10 +2426,8 @@ EdenMount::initInodeActivityBuffer() {
 }
 
 void EdenMount::subscribeInodeActivityBuffer() {
-  inodeTraceHandle_ = std::make_shared<InodeTraceHandle>();
-
   if (inodeActivityBuffer_.has_value()) {
-    inodeTraceHandle_->subHandle = inodeTraceBus_->subscribeFunction(
+    inodeTraceHandle_ = inodeTraceBus_->subscribeFunction(
         fmt::format("inode-activitybuffer-{}", getPath().basename()),
         [this](const InodeTraceEvent& event) {
           // Use full path name for the inode event if available, otherwise
