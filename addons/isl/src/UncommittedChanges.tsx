@@ -192,7 +192,7 @@ export function ChangedFiles({
                 platform.openFile(file.path);
               }}>
               <Icon icon={icon} />
-              <Tooltip title={file.tooltip} delayMs={2_000} placement="right">
+              <Tooltip title={file.tooltip} delayMs={2_000} placement="top">
                 <span className="changed-file-path-text">{file.label}</span>
               </Tooltip>
             </span>

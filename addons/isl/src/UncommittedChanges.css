@@ -82,17 +82,26 @@
   cursor: pointer;
 }
 
-.changed-file-path:hover {
-  color: var(--highlight-foreground);
+.changed-file-path {
+  max-width: calc(100% - 2 * var(--pad));
+  position: relative;
+  overflow: hidden;
+}
+.changed-file-path-text {
+  float: right;
+}
+.changed-file-path .tooltip-creator {
+  width: 100%;
+  text-align: right;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
 }
 
-.changed-file-path-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* ellipsis dots on the start of the file path rather than the end */
-  direction: rtl;
-  text-align: left;
+.changed-file-path:hover {
+  color: var(--highlight-foreground);
 }
 
 .file-actions {
@@ -142,13 +151,14 @@
 .uncommitted-changes .button-rows {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin: 5px 0;
+  gap: var(--halfpad);
+  margin: var(--halfpad) 0;
 }
 
 .uncommitted-changes .button-row {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 0 var(--pad);
   align-items: center;
 }
 
@@ -165,7 +175,7 @@
 .quick-commit-inputs {
   transition: background-color 0.1s;
   display: flex;
-  gap: 10px;
+  gap: var(--pad);
   align-items: center;
   padding: 4px;
   margin: -4px;
