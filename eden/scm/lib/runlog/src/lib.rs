@@ -134,7 +134,7 @@ fn accidentally_running_as_root(shared_path: &Path) -> bool {
 }
 
 #[cfg(not(unix))]
-fn accidentally_running_as_root(shared_path: &Path) -> bool {
+fn accidentally_running_as_root(_: &Path) -> bool {
     false
 }
 

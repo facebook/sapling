@@ -156,7 +156,12 @@ impl VFS {
         Ok(())
     }
 
-    fn write_mode(&self, filepath: &Path, content: &[u8], exec: bool) -> Result<usize> {
+    fn write_mode(
+        &self,
+        filepath: &Path,
+        content: &[u8],
+        #[allow(unused_variables)] exec: bool,
+    ) -> Result<usize> {
         let mut options = OpenOptions::new();
         options.write(true).create(true).truncate(true);
 
@@ -192,18 +197,18 @@ impl VFS {
         }
     }
 
-    fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
-        #[cfg(windows)]
+    #[cfg(windows)]
+    fn set_exec(&self, _: &Path, _: bool) -> Result<()> {
         return Ok(());
+    }
 
-        #[cfg(not(windows))]
-        {
-            let mode = if flag { 0o755 } else { 0o644 };
-            let perms = Permissions::from_mode(mode);
-            set_permissions(filepath, perms)
-                .with_context(|| format!("Can't update exec flag({}) on {:?}", flag, filepath))?;
-            Ok(())
-        }
+    #[cfg(unix)]
+    fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
+        let mode = if flag { 0o755 } else { 0o644 };
+        let perms = Permissions::from_mode(mode);
+        set_permissions(filepath, perms)
+            .with_context(|| format!("Can't update exec flag({}) on {:?}", flag, filepath))?;
+        Ok(())
     }
 
     /// On some OS/filesystems, symlinks aren't supported, we simply create a file where it's content

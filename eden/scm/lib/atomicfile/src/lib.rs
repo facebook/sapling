@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#[cfg(unix)]
 use std::fs;
 use std::fs::File;
 #[cfg(unix)]
@@ -50,17 +51,24 @@ pub struct AtomicFile {
 }
 
 impl AtomicFile {
-    pub fn open(path: &Path, #[allow(dead_code)] mode_perms: u32, fsync: bool) -> io::Result<Self> {
+    pub fn open(
+        path: &Path,
+        #[allow(unused_variables)] mode_perms: u32,
+        fsync: bool,
+    ) -> io::Result<Self> {
         let dir = match path.parent() {
             Some(dir) => dir,
             None => return Err(io::Error::from(io::ErrorKind::InvalidInput)),
         };
 
+        #[allow(unused_mut)]
         let mut temp = NamedTempFile::new_in(dir)?;
-        let f = temp.as_file_mut();
 
         #[cfg(unix)]
-        f.set_permissions(Permissions::from_mode(mode_perms))?;
+        {
+            let f = temp.as_file_mut();
+            f.set_permissions(Permissions::from_mode(mode_perms))?;
+        }
 
         Ok(Self {
             file: temp,
@@ -75,6 +83,7 @@ impl AtomicFile {
     }
 
     pub fn save(self) -> io::Result<File> {
+        #[allow(unused_variables)]
         let (mut temp, path, dir, fsync) = (self.file, self.path, self.dir, self.fsync);
         let f = temp.as_file_mut();
 

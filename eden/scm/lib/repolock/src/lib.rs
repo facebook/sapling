@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::error;
 use std::fmt;
 use std::fs::File;
+#[cfg(unix)]
 use std::fs::Permissions;
 use std::io::Write;
 use std::num::NonZeroU64;
