@@ -28,9 +28,28 @@ Errors are propagated:
     "file": {"node": bin("e9ace545f925b6f62ae34087895fdc950d168e5f"),
              "path": "bar"}}]
 
+Fall back gracefully if edenapi not configured:
+  $ hg blame -cldqf bar -r $D
+  1ac4b616a32d 1970-01-01 bar:1: zero
+  e9ace545f925 1970-01-01 bar:2: uno
+  4b86660b0697 1970-01-01 foo:2: two
+
+Fall back if server doesn't have commits:
+  $ hgedenapi blame -cldqf bar -r $D
+  1ac4b616a32d 1970-01-01 bar:1: zero
+  e9ace545f925 1970-01-01 bar:2: uno
+  4b86660b0697 1970-01-01 foo:2: two
+
+Server has commits - use edenapi blame data:
   $ hgedenapi push -q -r $D --to master --create
 
-API works:
+  $ EDENSCM_LOG=edenapi::client=info hgedenapi blame -cldqf bar -r $D
+   INFO edenapi::client: Blaming 1 file(s)
+  1ac4b616a32d 1970-01-01 bar:1: zero
+  e9ace545f925 1970-01-01 bar:2: uno
+  4b86660b0697 1970-01-01 foo:3: two
+
+Peek at what the data looks like:
   $ hgedenapi debugapi -e blame -i "[{'path': 'bar', 'node': '$D'}]"
   [{"data": {"Ok": {"paths": ["foo",
                               "bar"],

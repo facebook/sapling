@@ -1098,16 +1098,79 @@ class basefilectx(object):
             skipfunc = None
 
         repo = self.repo()
+
+        if (
+            repo.ui.configbool("experimental", "edenapi-blame")
+            and follow  # would be extra work to _not_ follow renames
+            and repo.nullableedenapi
+        ):
+            data = self._edenapi_annotate(linenumber, diffopts)
+            if data is not None:
+                repo.ui.log("blame_info", blame_mode="edenapi")
+                return data
+
         if git.isgitstore(repo) or repo.ui.configbool("experimental", "pathhistory"):
             # git does not have filelog to answer history questions
             base, parents = _pathhistorybaseparents(self, follow)
+            repo.ui.log("blame_info", blame_mode="pathhistory")
         else:
             base, parents = _filelogbaseparents(self, follow)
+            repo.ui.log("blame_info", blame_mode="filelog")
 
         annotatedlines, text = annotate.annotate(
             base, parents, decorate, diffopts, skipfunc
         )
         return zip(annotatedlines, text.splitlines(True))
+
+    def _edenapi_annotate(self, linenumber=False, diffopts=None):
+        if diffopts and any(
+            getattr(diffopts, wsopt)
+            for wsopt in [
+                "ignorews",
+                "ignorewsamount",
+                "ignorewseol",
+                "ignoreblanklines",
+            ]
+        ):
+            # TODO: emulate whitespace diffopts support
+            return None
+
+        repo = self.repo()
+
+        blame = next(
+            iter(
+                repo.edenapi.blame(
+                    [
+                        {
+                            "path": self.path(),
+                            "node": self.hex(),
+                        }
+                    ]
+                )
+            )
+        )["data"]
+
+        if not "Ok" in blame:
+            repo.ui.note_err(
+                _("EdenAPI blame error for %s@%s: %s")
+                % (self.path(), self.hex(), blame["Err"])
+            )
+            return None
+
+        blame = blame["Ok"]
+
+        # prefetch commit text
+        repo.changelog.inner.getcommitrawtextlist([n for n in blame["commits"]])
+
+        lines = []
+        for rng in blame["line_ranges"]:
+            ctx = repo[blame["commits"][rng["commit_index"]]]
+            fctx = ctx[blame["paths"][rng["path_index"]]]
+            for i in range(rng["line_count"]):
+                lineno = bool(linenumber) and rng["line_offset"] + i + 1
+                lines.append(annotateline(fctx=fctx, lineno=lineno))
+
+        return zip(lines, self.data().splitlines(True))
 
     def topologicalancestors(self, followfirst=False):
         return self.ancestors(followfirst=followfirst)
