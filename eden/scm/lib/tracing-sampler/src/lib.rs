@@ -5,15 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
-use parking_lot::Mutex;
+use sampling::SamplingConfig;
 use serde::ser::SerializeMap;
 use serde::ser::Serializer;
 use serde_json::Serializer as JsonSerializer;
@@ -49,13 +45,13 @@ impl<S: Subscriber> Layer<S> for SamplingLayer {
             None => return,
         };
 
-        let category = match config.keys.get(event.metadata().target()) {
+        let category = match config.category(event.metadata().target()) {
             Some(v) => v,
             None => return,
         };
 
         let serialize = || -> std::io::Result<()> {
-            let mut file = config.file.lock();
+            let mut file = config.file();
             let mut serializer = JsonSerializer::new(&*file);
 
             let mut serializer = serializer.serialize_map(None)?;
@@ -72,48 +68,6 @@ impl<S: Subscriber> Layer<S> for SamplingLayer {
     }
 }
 
-#[derive(Debug)]
-pub struct SamplingConfig {
-    keys: HashMap<String, String>,
-    file: Mutex<File>,
-}
-
-impl SamplingConfig {
-    pub fn new(config: &dyn configmodel::Config) -> Option<Self> {
-        let sample_categories: HashMap<String, String> = config
-            .keys("sampling")
-            .into_iter()
-            .filter_map(|name| {
-                if let Some(key) = name.strip_prefix("key.") {
-                    if let Some(val) = config.get("sampling", &name) {
-                        return Some((key.to_string(), val.to_string()));
-                    }
-                }
-                None
-            })
-            .collect();
-        if sample_categories.is_empty() {
-            return None;
-        }
-
-        if let Some(output_file) = sampling_output_file(config) {
-            if let Ok(file) = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .write(true)
-                .open(output_file)
-            {
-                return Some(Self {
-                    keys: sample_categories,
-                    file: Mutex::new(file),
-                });
-            }
-        }
-
-        None
-    }
-}
-
 struct SamplingFilter {
     config: Arc<OnceCell<SamplingConfig>>,
 }
@@ -125,7 +79,7 @@ impl SamplingFilter {
             None => return false,
         };
 
-        config.keys.get(meta.target()).is_some()
+        config.category(meta.target()).is_some()
     }
 }
 
@@ -141,22 +95,6 @@ impl<S: Subscriber> Filter<S> for SamplingFilter {
             Interest::never()
         }
     }
-}
-
-fn sampling_output_file(config: &dyn configmodel::Config) -> Option<PathBuf> {
-    let mut candidates: Vec<PathBuf> = Vec::with_capacity(2);
-
-    if let Ok(path) = std::env::var("SCM_SAMPLING_FILEPATH") {
-        candidates.push(path.into());
-    }
-
-    if let Some(path) = config.get("sampling", "filepath") {
-        candidates.push(path.to_string().into());
-    }
-
-    candidates
-        .into_iter()
-        .find(|path| path.parent().map_or(false, |d| d.exists()))
 }
 
 #[cfg(test)]

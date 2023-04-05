@@ -59,6 +59,7 @@ repo = { version = "0.1.0", path = "../repo" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 revsets = { version = "0.1.0", path = "../revsets" }
 runlog = { version = "0.1.0", path = "../runlog" }
+sampling = { version = "0.1.0", path = "../sampling" }
 serde = { version = "1.0.136", features = ["derive", "rc"] }
 serde_json = { version = "1.0.79", features = ["float_roundtrip", "unbounded_depth"] }
 status = { version = "0.1.0", path = "../status" }
