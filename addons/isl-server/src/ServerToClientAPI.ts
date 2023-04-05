@@ -183,6 +183,9 @@ export default class ServerToClientAPI {
   private disposeRepoDisposables() {
     this.repoDisposables.forEach(disposable => disposable.dispose());
     this.repoDisposables = [];
+
+    this.subscriptions.forEach(sub => sub.dispose());
+    this.subscriptions.clear();
   }
 
   private processQueuedMessages() {
