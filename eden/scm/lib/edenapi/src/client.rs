@@ -23,6 +23,8 @@ use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
+use edenapi_types::BlameRequest;
+use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
@@ -117,6 +119,7 @@ const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
 const MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST: usize = 1000;
+const MAX_CONCURRENT_BLAMES_PER_REQUEST: usize = 10;
 const MAX_ERROR_MSG_LEN: usize = 500;
 
 static REQUESTS_INFLIGHT: Counter = Counter::new("edenapi.req_inflight");
@@ -152,6 +155,7 @@ mod paths {
     pub const FETCH_SNAPSHOT: &str = "snapshot";
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const DOWNLOAD_FILE: &str = "download/file";
+    pub const BLAME: &str = "blame";
 }
 
 #[derive(Clone)]
@@ -1302,6 +1306,28 @@ impl EdenApi for Client {
             },
         )?;
         Ok(self.fetch::<CommitTranslateIdResponse>(requests)?)
+    }
+
+    async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
+        tracing::info!("Blaming {} file(s)", files.len());
+
+        if files.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::BLAME)?;
+        let requests = self.prepare_requests(
+            &url,
+            files,
+            Some(MAX_CONCURRENT_BLAMES_PER_REQUEST),
+            |files| {
+                let req = BlameRequest { files };
+                self.log_request(&req, "blame");
+                req
+            },
+        )?;
+
+        Ok(self.fetch::<BlameResult>(requests)?)
     }
 }
 

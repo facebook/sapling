@@ -27,6 +27,7 @@ use edenapi_ext::upload_snapshot;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
+use edenapi_types::BlameResult;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitHashLookupResponse;
 use edenapi_types::CommitHashToLocationResponse;
@@ -45,6 +46,7 @@ use edenapi_types::FileType;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
+use edenapi_types::Key;
 use edenapi_types::LandStackResponse;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
@@ -519,6 +521,18 @@ py_class!(pub class client |py| {
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(responses.entries.map_ok(Serde).map_err(Into::into).into())
+    }
+
+    def blame(
+        &self,
+        files: Serde<Vec<Key>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<BlameResult>>>> {
+        let api = self.inner(py).as_ref();
+        let blames = py.allow_threads(|| block_unless_interrupted(api.blame(files.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(blames.map_ok(Serde).map_err(Into::into).into())
     }
 });
 

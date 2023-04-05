@@ -14,6 +14,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::CloneData;
@@ -325,6 +326,12 @@ pub trait EdenApi: Send + Sync + 'static {
         scheme: CommitIdScheme,
     ) -> Result<Response<CommitTranslateIdResponse>, EdenApiError> {
         let _ = (commits, scheme);
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Fetch metadata describing the last commit to modify each line in given file(s)
+    async fn blame(&self, files: Vec<Key>) -> Result<Response<BlameResult>, EdenApiError> {
+        let _ = files;
         Err(EdenApiError::NotSupported)
     }
 }
