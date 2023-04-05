@@ -3,6 +3,7 @@
 //! An LRU-cache for lines.
 
 use std::borrow::Cow;
+use std::num::NonZeroUsize;
 
 use lru::LruCache;
 use regex::bytes::Regex;
@@ -15,7 +16,7 @@ pub(crate) struct LineCache(LruCache<usize, Line>);
 
 impl LineCache {
     /// Create a new LineCache with the given capacity.
-    pub(crate) fn new(capacity: usize) -> LineCache {
+    pub(crate) fn new(capacity: NonZeroUsize) -> LineCache {
         LineCache(LruCache::new(capacity))
     }
 

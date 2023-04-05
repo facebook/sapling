@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::str;
 use std::sync::{Arc, Mutex};
+use std::num::NonZeroUsize;
 
 use lru::LruCache;
 use regex::bytes::{NoExpand, Regex};
@@ -633,7 +634,7 @@ impl Line {
     pub(crate) fn new(_index: usize, data: impl AsRef<[u8]>) -> Line {
         let data = overstrike::convert_overstrike(data.as_ref());
         let spans = parse_spans(&data[..], None).into_boxed_slice();
-        let wraps = Arc::new(Mutex::new(LruCache::new(WRAPS_CACHE_SIZE)));
+        let wraps = Arc::new(Mutex::new(LruCache::new(NonZeroUsize::new(WRAPS_CACHE_SIZE).unwrap())));
         Line { spans, wraps }
     }
 
@@ -685,7 +686,7 @@ impl Line {
             spans.append(&mut parse_spans(&data[start..], None));
         }
         let spans = spans.into_boxed_slice();
-        let wraps = Arc::new(Mutex::new(LruCache::new(WRAPS_CACHE_SIZE)));
+        let wraps = Arc::new(Mutex::new(LruCache::new(NonZeroUsize::new(WRAPS_CACHE_SIZE).unwrap())));
         Line { spans, wraps }
     }
 

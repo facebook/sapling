@@ -27,6 +27,7 @@
 //! ```
 
 use std::cmp::{max, min};
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 use termwiz::cell::{CellAttributes, Intensity};
@@ -223,8 +224,8 @@ impl Screen {
             wrapping_mode: config.wrapping_mode,
             rendered: RenderState::default(),
             line_numbers: false,
-            line_cache: LineCache::new(LINE_CACHE_SIZE),
-            search_line_cache: LineCache::new(LINE_CACHE_SIZE),
+            line_cache: LineCache::new(NonZeroUsize::new(LINE_CACHE_SIZE).unwrap()),
+            search_line_cache: LineCache::new(NonZeroUsize::new(LINE_CACHE_SIZE).unwrap()),
             error: None,
             prompt: None,
             search: None,
