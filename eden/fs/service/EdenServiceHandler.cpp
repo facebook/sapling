@@ -2816,7 +2816,7 @@ EdenServiceHandler::semifuture_getScmStatusV2(
   auto* context = getRequestContext();
 
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2,
+      DBG3,
       *params->mountPoint_ref(),
       folly::to<string>("commitHash=", logHash(*params->commit_ref())),
       folly::to<string>("listIgnored=", *params->listIgnored_ref()));
