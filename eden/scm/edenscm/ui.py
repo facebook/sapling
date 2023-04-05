@@ -1660,28 +1660,6 @@ class ui(object):
         else:
             self.develwarn(_("feature '%s' is deprecated: %s\n") % (name, message))
 
-    def _computesamplingfilters(self):
-        filtermap = {}
-        for k in self.configitems("sampling"):
-            if not k[0].startswith("key."):
-                continue  # not a key
-            filtermap[k[0][len("key.") :]] = k[1]
-        return filtermap
-
-    def _getcandidatelocation(self):
-        def _parentfolderexists(f):
-            return f is not None and os.path.exists(
-                os.path.dirname(os.path.normpath(f))
-            )
-
-        for candidatelocation in (
-            encoding.environ.get("SCM_SAMPLING_FILEPATH", None),
-            self.config("sampling", "filepath"),
-        ):
-            if _parentfolderexists(candidatelocation):
-                return candidatelocation
-        return None
-
     def _logsample(self, event, *msg, **opts):
         """Redirect filtered log event to a sampling file
         The configuration looks like:
@@ -1720,9 +1698,9 @@ class ui(object):
           [sampling]
           env_vars = PATH,SHELL
         """
-        if not util.safehasattr(self, "samplingfilters"):
-            self.samplingfilters = self._computesamplingfilters()
-        if event not in self.samplingfilters:
+
+        category = bindings.hgmetrics.samplingcategory(event)
+        if category is None:
             return
 
         # special case: remove less interesting blocked fields starting
@@ -1734,42 +1712,34 @@ class ui(object):
                 if (not k.startswith("alias_") and not k.startswith("unknown_"))
             }
 
-        ref = self.samplingfilters[event]
-        script = self._getcandidatelocation()
-        if script:
-            debug = self.configbool("sampling", "debug")
-            try:
-                opts["metrics_type"] = event
-                if msg and event != "metrics":
-                    # do not keep message for "metrics", which only wants
-                    # to log key/value dict.
-                    if len(msg) == 1:
-                        # don't try to format if there is only one item.
-                        opts["msg"] = msg[0]
-                    else:
-                        # ui.log treats msg as a format string + format args.
-                        try:
-                            opts["msg"] = msg[0] % msg[1:]
-                        except TypeError:
-                            # formatting failed - just log each item of the
-                            # message separately.
-                            opts["msg"] = " ".join(msg)
-                with open(script, "a") as outfile:
-                    outfile.write(
-                        pycompat.toutf8lossy(
-                            json.dumps({"data": opts, "category": ref})
-                        )
-                    )
-                    outfile.write("\0")
-                if debug:
-                    self.write_err(
-                        "%s\n"
-                        % pycompat.toutf8lossy(
-                            json.dumps({"data": opts, "category": ref})
-                        )
-                    )
-            except EnvironmentError:
-                pass
+        opts["metrics_type"] = event
+        if msg and event != "metrics":
+            # do not keep message for "metrics", which only wants
+            # to log key/value dict.
+            if len(msg) == 1:
+                # don't try to format if there is only one item.
+                opts["msg"] = msg[0]
+            else:
+                # ui.log treats msg as a format string + format args.
+                try:
+                    opts["msg"] = msg[0] % msg[1:]
+                except TypeError:
+                    # formatting failed - just log each item of the
+                    # message separately.
+                    opts["msg"] = " ".join(msg)
+
+        try:
+            bindings.hgmetrics.appendsamples(
+                json.dumps({"data": opts, "category": category})
+            )
+        except OSError:
+            pass
+
+        if self.configbool("sampling", "debug"):
+            self.write_err(
+                "%s\n"
+                % pycompat.toutf8lossy(json.dumps({"data": opts, "category": category}))
+            )
 
     def label(self, msg, label, usebytes=False):
         """style msg based on supplied label

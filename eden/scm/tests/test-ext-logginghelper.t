@@ -1,4 +1,5 @@
 #debugruntest-compatible
+#inprocess-hg-incompatible
 
   $ . "$TESTDIR/library.sh"
 

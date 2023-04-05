@@ -8,3 +8,4 @@ edition = "2021"
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext" }
 hg-metrics = { path = "../../../../lib/hg-metrics" }
+sampling = { path = "../../../../lib/sampling" }
