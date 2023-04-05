@@ -15,7 +15,7 @@ async-compression = { version = "0.3.14", features = ["brotli", "bzip2", "deflat
 atty = "0.2"
 curl = { version = "0.4.41", features = ["http2"] }
 curl-sys = "0.4.51"
-env_logger = "0.7"
+env_logger = "0.10"
 futures = { version = "0.3.28", features = ["async-await", "compat"] }
 http = "0.2"
 lru-cache = "0.1.2"
