@@ -36,11 +36,9 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use fail::FailScenario;
 use once_cell::sync::Lazy;
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use repo::repo::Repo;
-use sampling::SamplingConfig;
 use tracing::dispatcher;
 use tracing::dispatcher::Dispatch;
 use tracing::Level;
@@ -90,12 +88,9 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Extra initialization based on global flags.
     let global_opts = dispatch::parse_global_opts(&args[1..]).ok();
 
-    // This allows us to defer the SamplingLayer initialization until after the repo config is loaded.
-    let sampling_config = Arc::new(OnceCell::<SamplingConfig>::new());
-
     // Setup tracing early since "log_start" will use it immediately.
     // The tracing clock starts ticking from here.
-    let tracing_data = match setup_tracing(&global_opts, io, sampling_config.clone()) {
+    let tracing_data = match setup_tracing(&global_opts, io) {
         Err(_) => {
             // With our current architecture it is common to see this path in our tests due to
             // trying to set a global collector a second time. Ignore the error and return some
@@ -148,9 +143,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             Ok(dispatcher) => {
                 let _guard = span.enter();
 
-                if let Some(sc) = SamplingConfig::new(dispatcher.config()) {
-                    sampling_config.set(sc).unwrap();
-                }
+                sampling::init(dispatcher.config());
 
                 dispatch_command(io, dispatcher, cwd, Arc::downgrade(&in_scope), now)
             }
@@ -315,11 +308,7 @@ fn current_dir(io: &IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing(
-    global_opts: &Option<HgGlobalOpts>,
-    io: &IO,
-    sampling_config: Arc<OnceCell<SamplingConfig>>,
-) -> Result<Arc<Mutex<TracingData>>> {
+fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mutex<TracingData>>> {
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
@@ -384,8 +373,8 @@ fn setup_tracing(
                 Level::INFO
             });
 
-        let collector = tracing_collector::default_collector(data.clone(), level)
-            .with(SamplingLayer::new(sampling_config));
+        let collector =
+            tracing_collector::default_collector(data.clone(), level).with(SamplingLayer::new());
         tracing::subscriber::set_global_default(collector)?;
     }
 

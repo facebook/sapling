@@ -24,25 +24,26 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
 pub struct SamplingLayer {
-    config: Arc<OnceCell<SamplingConfig>>,
+    config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
 }
 
 impl SamplingLayer {
-    pub fn new<S: Subscriber + for<'a> LookupSpan<'a>>(
-        config: Arc<OnceCell<SamplingConfig>>,
+    pub fn new<S: Subscriber + for<'a> LookupSpan<'a>>() -> impl Layer<S> {
+        Self::new_with_config(&sampling::CONFIG)
+    }
+
+    fn new_with_config<S: Subscriber + for<'a> LookupSpan<'a>>(
+        config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
     ) -> impl Layer<S> {
-        Self {
-            config: config.clone(),
-        }
-        .with_filter(SamplingFilter { config })
+        Self { config }.with_filter(SamplingFilter { config })
     }
 }
 
 impl<S: Subscriber> Layer<S> for SamplingLayer {
     fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
         let config = match self.config.get() {
-            Some(config) => config,
-            None => return,
+            Some(Some(sc)) => sc.clone(),
+            _ => return,
         };
 
         let category = match config.category(event.metadata().target()) {
@@ -69,17 +70,15 @@ impl<S: Subscriber> Layer<S> for SamplingLayer {
 }
 
 struct SamplingFilter {
-    config: Arc<OnceCell<SamplingConfig>>,
+    config: &'static OnceCell<Option<Arc<SamplingConfig>>>,
 }
 
 impl SamplingFilter {
     fn is_enabled(&self, meta: &Metadata<'_>) -> bool {
-        let config = match self.config.get() {
-            Some(config) => config,
-            None => return false,
-        };
-
-        config.category(meta.target()).is_some()
+        match self.config.get() {
+            Some(Some(sc)) => sc.category(meta.target()).is_some(),
+            _ => false,
+        }
     }
 }
 
@@ -107,6 +106,8 @@ mod tests {
 
     use super::*;
 
+    static TEST_CONFIG: OnceCell<Option<Arc<SamplingConfig>>> = OnceCell::new();
+
     #[test]
     fn test_sampling_layer() {
         let dir = tempdir().unwrap();
@@ -114,8 +115,7 @@ mod tests {
 
         {
             // Config not initialized yet.
-            let sc = Arc::new(OnceCell::<SamplingConfig>::new());
-            let sl = SamplingLayer::new(sc.clone());
+            let sl = SamplingLayer::new_with_config(&TEST_CONFIG);
 
             let _subscriber = tracing::subscriber::set_default(Registry::default().with(sl));
 
@@ -129,7 +129,9 @@ mod tests {
                 ("sampling.key.orange", "melon"),
             ]);
 
-            sc.set(SamplingConfig::new(&config).unwrap()).unwrap();
+            TEST_CONFIG
+                .set(Some(Arc::new(SamplingConfig::new(&config).unwrap())))
+                .unwrap();
 
             // Should be picked up.
             tracing::info!(target: "banana", foo = "baz");

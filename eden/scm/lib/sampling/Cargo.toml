@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 configmodel = { version = "0.1.0", path = "../config/model" }
+once_cell = "1.12"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
