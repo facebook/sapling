@@ -191,34 +191,30 @@ class TraceBus : public std::enable_shared_from_this<TraceBus<TraceEvent>> {
   ~TraceBus();
 
   /**
-   * Publishes an event into the trace queue. The copy constructor must not
-   * throw. Also, one should avoid publishing to tracebus while holding any
-   * locks or ensure held locks are not attempted to be acquired by tracebus
-   * subscribers. Otherwise, the thread could deadlock if capacity is reached
+   * Publishes an event into the trace queue. The constructor must not throw.
+   * Also, do not publish() while holding any locks that might be acquired by a
+   * subscriber. This may cause deadlock if TraceBus capacity is reached, as
+   * publish() will block until subscribers can finish.
    */
-  void publish(const TraceEvent& event) noexcept;
-
-  /**
-   * Publishes an event into the trace queue. The move constructor must not
-   * throw. Also, one should avoid publishing to tracebus while holding any
-   * locks or ensure held locks are not attempted to be acquired by tracebus
-   * subscribers. Otherwise, the thread could deadlock if capacity is reached
-   */
-  void publish(TraceEvent&& event) noexcept;
+  template <typename... Args>
+  void publish(Args&&... event) noexcept;
 
   /**
    * Subscribe to published events. If the subscriber throws, it will
    * automatically be unsubscribed.
    *
-   * Events are always observed by the order in which they're published, but
+   * Events are always observed in the order in which they're published, but
    * observers are not in any particular order relative to each other.
    *
    * The subscription will be unsubscribed when the returned handle is dropped.
    *
    * IMPORTANT: Even after a subscription handle is dropped, the callback may be
    * called a few more times, since the callback itself is not deleted until the
-   * background thread gets to that. If using closures, be careful when
-   * capturing raw pointers like `this`.
+   * background thread gets to it. A subscriber's captures must outlive the
+   * TraceBus, because the TraceBus joins its thread in its destructor.
+   *
+   * For example, to safely capture raw pointers like `this` in a closure, the
+   * TraceBus must be the final member of a `final` class.
    */
   FOLLY_NODISCARD SubscriptionHandle
   subscribe(std::shared_ptr<Subscriber> subscriber);

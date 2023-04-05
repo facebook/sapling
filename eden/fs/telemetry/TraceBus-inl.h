@@ -59,14 +59,9 @@ TraceBus<TraceEvent>::~TraceBus() {
 }
 
 template <typename TraceEvent>
-void TraceBus<TraceEvent>::publish(const TraceEvent& event) noexcept {
-  static_assert(std::is_nothrow_copy_constructible_v<TraceEvent>);
-  publish(TraceEvent{event});
-}
-
-template <typename TraceEvent>
-void TraceBus<TraceEvent>::publish(TraceEvent&& event) noexcept {
-  static_assert(std::is_nothrow_move_constructible_v<TraceEvent>);
+template <typename... Args>
+void TraceBus<TraceEvent>::publish(Args&&... args) noexcept {
+  static_assert(std::is_nothrow_constructible_v<TraceEvent, Args&&...>);
 
   bool wake;
   {
@@ -82,7 +77,7 @@ void TraceBus<TraceEvent>::publish(TraceEvent&& event) noexcept {
       });
     }
     wake = state->writeBuffer.empty();
-    state->writeBuffer.push_back(std::move(event));
+    state->writeBuffer.emplace_back(std::forward<Args>(args)...);
     state->sequenceNumber++;
   }
   if (wake) {
