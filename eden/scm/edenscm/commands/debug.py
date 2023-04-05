@@ -2445,7 +2445,7 @@ def debugnamecomplete(ui, repo, *args, **opts) -> None:
     # since we previously only listed open branches, we will handle that
     # specially (after this for loop)
     for name, ns in pycompat.iteritems(repo.names):
-        if name != "branches" and name != "remotebookmarks":
+        if name != "branches":
             names.update(ns.listnames(repo))
 
     age = ui.configint("zsh", "completion-age")
