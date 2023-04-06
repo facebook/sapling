@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -12,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use dag::delegate;
+use dag::errors::programming;
 use dag::errors::NotFoundError;
 use dag::nonblocking::non_blocking_result;
 use dag::ops::IdConvert;
@@ -66,14 +68,66 @@ impl RevlogCommits {
 #[async_trait::async_trait]
 impl AppendCommits for RevlogCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
-        for commit in commits {
+        // Topo sort nodes since EdenAPI returns nodes sorted lexically.
+
+        let mut vertex_to_commit: HashMap<Vertex, &HgCommit> =
+            commits.iter().map(|c| (c.vertex.clone(), c)).collect();
+        // Tracks reverse dependency so we can enqueue the child after parent is added.
+        let mut parent_to_children: HashMap<Vertex, Vec<&HgCommit>> = HashMap::new();
+        // Counter to know when all a child's parents have been added.
+        let mut parent_count: HashMap<Vertex, usize> = HashMap::new();
+        // Queue of nodes not waiting on parents to be processed.
+        let mut queue: Vec<&HgCommit> = Vec::new();
+
+        for (v, c) in vertex_to_commit.iter() {
+            let mut pending_parents = 0;
+            for pv in c.parents.iter() {
+                if let Some(pc) = vertex_to_commit.get(pv) {
+                    parent_to_children
+                        .entry(pc.vertex.clone())
+                        .or_default()
+                        .push(c);
+                    pending_parents += 1;
+                }
+            }
+            if pending_parents == 0 {
+                // Parents are not present in args - assume we are good to go.
+                queue.push(c);
+            } else {
+                parent_count.insert(v.clone(), pending_parents);
+            }
+        }
+
+        while let Some(commit) = queue.pop() {
             let mut parent_revs = Vec::with_capacity(commit.parents.len());
             for parent in &commit.parents {
                 parent_revs.push(self.revlog.vertex_id(parent.clone()).await?.0 as u32);
             }
             self.revlog
-                .insert(commit.vertex.clone(), parent_revs, commit.raw_text.clone())
+                .insert(commit.vertex.clone(), parent_revs, commit.raw_text.clone());
+
+            // Remove so we can make sure we processed all the nodes, later.
+            vertex_to_commit.remove(&commit.vertex);
+
+            for child in parent_to_children
+                .get(&commit.vertex)
+                .map(|v| v.as_slice())
+                .unwrap_or_default()
+            {
+                if let Some(parent_count) = parent_count.get_mut(&child.vertex) {
+                    *parent_count -= 1;
+                    if *parent_count == 0 {
+                        // We were this child's last pending parent.
+                        queue.push(child);
+                    }
+                }
+            }
         }
+
+        if !vertex_to_commit.is_empty() {
+            programming("commits form a cycle when adding to revlog")?;
+        }
+
         Ok(())
     }
 
