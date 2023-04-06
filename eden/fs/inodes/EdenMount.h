@@ -32,6 +32,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/VirtualInode.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/nfs/Nfsd3.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -42,7 +43,6 @@
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
-#include "eden/fs/nfs/Nfsd3.h"
 #else
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #endif
@@ -1042,11 +1042,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * on the mount to determine if its an NFS inode map.
    */
   bool shouldUseNFSMount() {
-#ifndef _WIN32
     return getEdenConfig()->enableNfsServer.getValue() &&
         getCheckoutConfig()->getMountProtocol() == MountProtocol::NFS;
-#endif
-    return false;
   }
   /**
    * Clear the fs reference count for all stale inodes. Stale inodes are those
@@ -1395,15 +1392,16 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<TraceBus<InodeTraceEvent>> inodeTraceBus_;
   TraceSubscriptionHandle<InodeTraceEvent> inodeTraceHandle_;
 
+  using NfsdChannelVariant = std::unique_ptr<Nfsd3>;
+
 #ifdef _WIN32
-  /**
-   * This is the channel between ProjectedFS and rest of Eden.
-   */
-  std::unique_ptr<PrjfsChannel> channel_;
+  using PrjfsChannelVariant = std::unique_ptr<PrjfsChannel>;
+
+  std::variant<std::monostate, PrjfsChannelVariant, NfsdChannelVariant>
+      channel_;
 
 #else
   using FuseChannelVariant = std::unique_ptr<FuseChannel, FuseChannelDeleter>;
-  using NfsdChannelVariant = std::unique_ptr<Nfsd3>;
 
   /**
    * The associated fuse channel to the kernel.

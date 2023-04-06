@@ -9,10 +9,11 @@
 
 #ifndef _WIN32
 #include "eden/fs/inodes/FuseDispatcherImpl.h"
-#include "eden/fs/inodes/NfsDispatcherImpl.h"
 #else
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
 #endif
+
+#include "eden/fs/inodes/NfsDispatcherImpl.h"
 
 namespace facebook::eden {
 
@@ -22,15 +23,16 @@ std::unique_ptr<FuseDispatcher> EdenDispatcherFactory::makeFuseDispatcher(
   return std::make_unique<FuseDispatcherImpl>(mount);
 }
 
-std::unique_ptr<NfsDispatcher> EdenDispatcherFactory::makeNfsDispatcher(
-    EdenMount* mount) {
-  return std::make_unique<NfsDispatcherImpl>(mount);
-}
 #else
 std::unique_ptr<PrjfsDispatcher> EdenDispatcherFactory::makePrjfsDispatcher(
     EdenMount* mount) {
   return std::make_unique<PrjfsDispatcherImpl>(mount);
 }
 #endif
+
+std::unique_ptr<NfsDispatcher> EdenDispatcherFactory::makeNfsDispatcher(
+    EdenMount* mount) {
+  return std::make_unique<NfsDispatcherImpl>(mount);
+}
 
 } // namespace facebook::eden
