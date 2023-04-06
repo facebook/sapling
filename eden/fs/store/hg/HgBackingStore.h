@@ -149,10 +149,7 @@ class HgBackingStore {
       const Hash20& manifestNode,
       const ObjectId& edenTreeID,
       RelativePathPiece path);
-  folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
-      Hash20 manifestNode,
-      ObjectId edenTreeID,
-      RelativePath path);
+
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromImporter(
       Hash20 manifestNode,
       ObjectId edenTreeID,

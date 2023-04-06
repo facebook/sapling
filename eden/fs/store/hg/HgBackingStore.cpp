@@ -263,38 +263,24 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     return makeFuture(std::move(tree));
   }
 
-  folly::stop_watch<std::chrono::milliseconds> watch;
+  if (!FLAGS_hg_fetch_missing_trees) {
+    auto ew = folly::exception_wrapper{std::runtime_error{
+        "Data not available via edenapi, skipping fallback to importer because "
+        "of FLAGS_hg_fetch_missing_trees"}};
+    return folly::makeFuture<unique_ptr<Tree>>(std::move(ew));
+  }
 
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  auto writeBatch = localStore_->beginWrite();
   // When aux metadata is enabled hg fetches file metadata along with get tree
   // request, no need for separate network call!
-  return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
+  return fetchTreeFromImporter(
+             manifestNode, edenTreeID, path.copy(), std::move(writeBatch))
       .thenValue([this, watch, config = config_](
                      std::unique_ptr<Tree>&& result) mutable {
         stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
         return std::move(result);
       });
-}
-
-folly::Future<std::unique_ptr<Tree>>
-HgBackingStore::fetchTreeFromHgCacheOrImporter(
-    Hash20 manifestNode,
-    ObjectId edenTreeID,
-    RelativePath path) {
-  auto writeBatch = localStore_->beginWrite();
-  if (auto tree = datapackStore_.getTree(path, manifestNode, edenTreeID)) {
-    XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
-               << " from Rust hgcache";
-    return folly::makeFuture(std::move(tree));
-  } else {
-    // Data for this tree was not present locally.
-    // Fall through and fetch the data from the server below.
-    if (!FLAGS_hg_fetch_missing_trees) {
-      auto ew = folly::exception_wrapper{std::current_exception()};
-      return folly::makeFuture<unique_ptr<Tree>>(std::move(ew));
-    }
-    return fetchTreeFromImporter(
-        manifestNode, edenTreeID, std::move(path), std::move(writeBatch));
-  }
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
@@ -535,6 +521,15 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
     case HgObjectIdFormat::HashOnly:
       objectId = HgProxyHash::makeEmbeddedProxyHash2(manifestNode);
       break;
+  }
+
+  // try edenapi + hgcache first
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  if (auto tree = datapackStore_.getTree(path.copy(), manifestNode, objectId)) {
+    XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
+               << " from Rust hgcache";
+    stats_->addDuration(&HgBackingStoreStats::fetchTree, watch.elapsed());
+    return folly::makeFuture(std::move(tree));
   }
 
   return importTreeImpl(manifestNode, objectId, path);
