@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/NfsServer.h"
 
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
@@ -77,5 +75,3 @@ folly::SemiFuture<folly::File> NfsServer::takeoverStop() {
 }
 
 } // namespace facebook::eden
-
-#endif

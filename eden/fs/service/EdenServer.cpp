@@ -917,12 +917,13 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
     prepareThriftAddress();
   }
 
-#ifndef _WIN32
   if (auto nfsServer = serverState_->getNfsServer()) {
+#ifndef _WIN32
     if (doingTakeover && takeoverData.mountdServerSocket.has_value()) {
       XLOG(DBG7) << "Initializing mountd from existing socket";
       nfsServer->initialize(std::move(takeoverData.mountdServerSocket.value()));
     } else {
+#endif
       XLOG(DBG7) << "Initializing mountd from scratch";
       std::optional<AbsolutePath> unixSocketPath;
       if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
@@ -931,9 +932,10 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
       nfsServer->initialize(
           makeNfsSocket(std::move(unixSocketPath)),
           serverState_->getEdenConfig()->registerMountd.getValue());
+#ifndef _WIN32
     }
-  }
 #endif
+  }
 
   // TODO: The "state config" only has one configuration knob now. When
   // another is required, introduce an EdenStateConfig class to manage

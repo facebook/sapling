@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include <tuple>
 #include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/nfs/Nfsd3.h"
@@ -111,5 +109,3 @@ class NfsServer {
 };
 
 } // namespace facebook::eden
-
-#endif

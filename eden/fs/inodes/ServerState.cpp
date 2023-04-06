@@ -57,17 +57,13 @@ ServerState::ServerState(
       hiveLogger_{std::move(hiveLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       nfs_{
-#ifndef _WIN32
           initialConfig.enableNfsServer.getValue()
               ? std::make_shared<NfsServer>(
                     mainEventBase,
                     initialConfig.numNfsThreads.getValue(),
                     initialConfig.maxNfsInflightRequests.getValue(),
                     structuredLogger_)
-              :
-#endif
-              nullptr,
-      },
+              : nullptr},
       config_{std::move(reloadableConfig)},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           initialConfig.userIgnoreFile.getValue(),
