@@ -68,6 +68,15 @@ package them into a single self-contained directory that can be distributed.
 `yarn build` lets you build production bundles without watching for changes, in either
 `isl/` or `isl-server/`.
 
+## Testing
+
+Run `yarn test` in the `isl` server to run client-side tests. These generally use
+[React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to "render" the UI in a node process, and check that the fake in-memory DOM is correct.
+
+Sometimes, this can spit out very long errors, showing the entire DOM when some element is not found.
+You can disable this by passing HIDE_RTL_DOM_ERRORS as an env var:
+`HIDE_RTL_DOM_ERRORS=1 yarn test`
+
 # Goals
 
 ISL is designed to be an opinionated UI. It does not implement every single feature or argument that the CLI supports.
