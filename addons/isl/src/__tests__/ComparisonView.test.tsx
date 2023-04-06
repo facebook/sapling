@@ -101,11 +101,15 @@ describe('ComparisonView', () => {
   }
   async function openUncommittedChangesComparison() {
     clickComparisonViewButton();
-    await waitFor(() =>
-      expectMessageSentToServer({
-        type: 'requestComparison',
-        comparison: {type: ComparisonType.UncommittedChanges},
-      }),
+    await waitFor(
+      () =>
+        expectMessageSentToServer({
+          type: 'requestComparison',
+          comparison: {type: ComparisonType.UncommittedChanges},
+        }),
+      // Since this dynamically imports the comparison view, it may take a while to load in resource-constrained CI,
+      // so add a generous timeout to reducy flakiness.
+      {timeout: 10_000},
     );
     act(() => {
       simulateMessageFromServer({
