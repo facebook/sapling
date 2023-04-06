@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.12
+
+- Reduce visual padding in the tree to improve information density
+- Show copied/renamed files
+- Add revert button to files on non-head commits
+- Use more consistent custom icon for pending CI tests
+- Reduce number of spinners while running goto
+- Fix line numbers wrapping in the comparison view
+- Fix text overflow in tooltips
+- Fix truncation for long file names
+- Fix vscode webview getting stuck with "Webview is disposed" error when reopened
+
 ## 0.1.11
 
 - Allow submitting PRs as drafts and showing whether a PRs is a draft
