@@ -23,47 +23,35 @@ void HgImportRequestQueue::stop() {
 
 folly::Future<std::unique_ptr<Blob>> HgImportRequestQueue::enqueueBlob(
     std::shared_ptr<HgImportRequest> request) {
-  return enqueue<std::unique_ptr<Blob>, HgImportRequest::BlobImport>(
-      std::move(request));
+  return enqueue<Blob, HgImportRequest::BlobImport>(std::move(request));
 }
 
 folly::Future<std::unique_ptr<Tree>> HgImportRequestQueue::enqueueTree(
     std::shared_ptr<HgImportRequest> request) {
-  return enqueue<std::unique_ptr<Tree>, HgImportRequest::TreeImport>(
-      std::move(request));
+  return enqueue<Tree, HgImportRequest::TreeImport>(std::move(request));
 }
 
 folly::Future<std::unique_ptr<BlobMetadata>>
 HgImportRequestQueue::enqueueBlobMeta(
     std::shared_ptr<HgImportRequest> request) {
-  return enqueue<
-      std::unique_ptr<BlobMetadata>,
-      HgImportRequest::BlobMetaImport>(std::move(request));
+  return enqueue<BlobMetadata, HgImportRequest::BlobMetaImport>(
+      std::move(request));
 }
 
-template <typename Ret, typename ImportType>
-folly::Future<Ret> HgImportRequestQueue::enqueue(
+template <typename T, typename ImportType>
+folly::Future<std::unique_ptr<T>> HgImportRequestQueue::enqueue(
     std::shared_ptr<HgImportRequest> request) {
   auto state = state_.lock();
-
-  std::vector<std::shared_ptr<HgImportRequest>>* queue;
-  if constexpr (std::is_same_v<ImportType, HgImportRequest::BlobImport>) {
-    queue = &state->blobQueue;
-  } else if constexpr (std::is_same_v<
-                           ImportType,
-                           HgImportRequest::BlobMetaImport>) {
-    queue = &state->blobMetaQueue;
-  } else {
-    static_assert(std::is_same_v<ImportType, HgImportRequest::TreeImport>);
-    queue = &state->treeQueue;
-  }
+  auto* importQueue = getImportQueue<T>(state);
+  auto* requestQueue = &importQueue->queue;
 
   const auto& hash = request->getRequest<ImportType>()->hash;
-  if (auto* existingRequestPtr = folly::get_ptr(state->requestTracker, hash)) {
+  if (auto* existingRequestPtr =
+          folly::get_ptr(importQueue->requestTracker, hash)) {
     auto& existingRequest = *existingRequestPtr;
     auto* trackedImport = existingRequest->template getRequest<ImportType>();
 
-    auto [promise, future] = folly::makePromiseContract<Ret>();
+    auto [promise, future] = folly::makePromiseContract<std::unique_ptr<T>>();
     trackedImport->promises.emplace_back(std::move(promise));
 
     if (existingRequest->getPriority() < request->getPriority()) {
@@ -75,8 +63,8 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
       // TODO(xavierd): this has a O(n) complexity, and enqueing tons of
       // duplicated requests will thus lead to a quadratic complexity.
       std::make_heap(
-          queue->begin(),
-          queue->end(),
+          requestQueue->begin(),
+          requestQueue->end(),
           [](const std::shared_ptr<HgImportRequest>& lhs,
              const std::shared_ptr<HgImportRequest>& rhs) {
             return (*lhs) < (*rhs);
@@ -86,14 +74,14 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
     return std::move(future).toUnsafeFuture();
   }
 
-  queue->emplace_back(request);
-  auto promise = request->getPromise<Ret>();
+  requestQueue->emplace_back(request);
+  auto promise = request->getPromise<std::unique_ptr<T>>();
 
-  state->requestTracker.emplace(hash, std::move(request));
+  importQueue->requestTracker.emplace(hash, std::move(request));
 
   std::push_heap(
-      queue->begin(),
-      queue->end(),
+      requestQueue->begin(),
+      requestQueue->end(),
       [](const std::shared_ptr<HgImportRequest>& lhs,
          const std::shared_ptr<HgImportRequest>& rhs) {
         return (*lhs) < (*rhs);
@@ -107,27 +95,27 @@ folly::Future<Ret> HgImportRequestQueue::enqueue(
 std::vector<std::shared_ptr<HgImportRequest>>
 HgImportRequestQueue::combineAndClearRequestQueues() {
   auto state = state_.lock();
-  auto treeQSz = state->treeQueue.size();
-  auto blobQSz = state->blobQueue.size();
-  auto blobMetaQSz = state->blobMetaQueue.size();
+  auto treeQSz = state->treeQueue.queue.size();
+  auto blobQSz = state->blobQueue.queue.size();
+  auto blobMetaQSz = state->blobMetaQueue.queue.size();
   XLOGF(
       DBG5,
       "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}, blob metadata queue size = {}",
       treeQSz,
       blobQSz,
       blobMetaQSz);
-  auto res = std::move(state->treeQueue);
+  auto res = std::move(state->treeQueue.queue);
   res.insert(
       res.end(),
-      std::make_move_iterator(state->blobQueue.begin()),
-      std::make_move_iterator(state->blobQueue.end()));
+      std::make_move_iterator(state->blobQueue.queue.begin()),
+      std::make_move_iterator(state->blobQueue.queue.end()));
   res.insert(
       res.end(),
-      std::make_move_iterator(state->blobMetaQueue.begin()),
-      std::make_move_iterator(state->blobMetaQueue.end()));
-  state->treeQueue.clear();
-  state->blobQueue.clear();
-  state->blobMetaQueue.clear();
+      std::make_move_iterator(state->blobMetaQueue.queue.begin()),
+      std::make_move_iterator(state->blobMetaQueue.queue.end()));
+  state->treeQueue.queue.clear();
+  state->blobQueue.queue.clear();
+  state->blobMetaQueue.queue.clear();
   XCHECK_EQ(res.size(), treeQSz + blobQSz + blobMetaQSz);
   return res;
 }
@@ -139,9 +127,9 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
   auto state = state_.lock();
   while (true) {
     if (!state->running) {
-      state->treeQueue.clear();
-      state->blobQueue.clear();
-      state->blobMetaQueue.clear();
+      state->treeQueue.queue.clear();
+      state->blobQueue.queue.clear();
+      state->blobMetaQueue.queue.clear();
       return std::vector<std::shared_ptr<HgImportRequest>>();
     }
 
@@ -151,25 +139,25 @@ std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue() {
     // order.  The reason for trees having a higher priority is due to trees
     // allowing a higher fan-out and thus increasing concurrency of fetches
     // which translate onto a higher overall throughput.
-    if (!state->treeQueue.empty()) {
+    if (!state->treeQueue.queue.empty()) {
       count = config_->getEdenConfig()->importBatchSizeTree.getValue();
-      highestPriority = state->treeQueue.front()->getPriority();
-      queue = &state->treeQueue;
+      highestPriority = state->treeQueue.queue.front()->getPriority();
+      queue = &state->treeQueue.queue;
     }
 
-    if (!state->blobMetaQueue.empty()) {
-      auto priority = state->blobMetaQueue.front()->getPriority();
+    if (!state->blobMetaQueue.queue.empty()) {
+      auto priority = state->blobMetaQueue.queue.front()->getPriority();
       if (!queue || priority > highestPriority) {
-        queue = &state->blobMetaQueue;
+        queue = &state->blobMetaQueue.queue;
         count = config_->getEdenConfig()->importBatchSizeBlobMeta.getValue();
         highestPriority = priority;
       }
     }
 
-    if (!state->blobQueue.empty()) {
-      auto priority = state->blobQueue.front()->getPriority();
+    if (!state->blobQueue.queue.empty()) {
+      auto priority = state->blobQueue.queue.front()->getPriority();
       if (!queue || priority > highestPriority) {
-        queue = &state->blobQueue;
+        queue = &state->blobQueue.queue;
         count = config_->getEdenConfig()->importBatchSize.getValue();
         highestPriority = priority;
       }

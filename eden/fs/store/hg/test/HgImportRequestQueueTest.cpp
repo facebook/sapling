@@ -74,6 +74,20 @@ makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
           ObjectFetchContext::Cause::Unknown));
 }
 
+std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
+makeBlobMetaImportRequestWithHash(
+    ImportPriority priority,
+    HgProxyHash proxyHash) {
+  auto hash = proxyHash.sha1();
+  return std::make_pair(
+      hash,
+      HgImportRequest::makeBlobMetaImportRequest(
+          hash,
+          std::move(proxyHash),
+          priority,
+          ObjectFetchContext::Cause::Unknown));
+}
+
 std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
@@ -104,6 +118,27 @@ ObjectId insertTreeImportRequest(
   XLOG(INFO) << "enqueuing tree:" << hash;
   queue.enqueueTree(std::move(request));
   return hash;
+}
+
+TEST_F(HgImportRequestQueueTest, sameObjectIdDifferentType) {
+  auto queue = HgImportRequestQueue{edenConfig};
+
+  auto hgRevHash = uniqueHash();
+  auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
+
+  auto [blobHash, blobRequest] = makeBlobImportRequestWithHash(
+      ImportPriority(ImportPriority::Class::Normal, 1), proxyHash);
+  auto [blobMetaHash, blobMetaRequest] = makeBlobMetaImportRequestWithHash(
+      ImportPriority(ImportPriority::Class::Normal, 1), proxyHash);
+
+  queue.enqueueBlob(std::move(blobRequest));
+  queue.enqueueBlobMeta(std::move(blobMetaRequest));
+
+  auto request1 = queue.dequeue().at(0);
+  EXPECT_NE(request1, nullptr);
+
+  auto request2 = queue.dequeue().at(0);
+  EXPECT_NE(request2, nullptr);
 }
 
 TEST_F(HgImportRequestQueueTest, getRequestByPriority) {

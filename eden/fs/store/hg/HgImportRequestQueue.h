@@ -71,57 +71,11 @@ class HgImportRequestQueue {
   void stop();
 
   /* ====== De-duplication methods ====== */
+
   template <typename T>
   void markImportAsFinished(
       const ObjectId& id,
-      folly::Try<std::unique_ptr<T>>& importTry) {
-    std::shared_ptr<HgImportRequest> import;
-    {
-      auto state = state_.lock();
-
-      auto importReq = state->requestTracker.find(id);
-      if (importReq != state->requestTracker.end()) {
-        import = std::move(importReq->second);
-        state->requestTracker.erase(importReq);
-      }
-    }
-
-    if (!import) {
-      return;
-    }
-
-    std::vector<folly::Promise<std::unique_ptr<T>>>* promises;
-
-    if constexpr (std::is_same_v<T, Tree>) {
-      auto* treeImport = import->getRequest<HgImportRequest::TreeImport>();
-      promises = &treeImport->promises;
-    } else if constexpr (std::is_same_v<T, BlobMetadata>) {
-      auto* blobMetaImport =
-          import->getRequest<HgImportRequest::BlobMetaImport>();
-      promises = &blobMetaImport->promises;
-    } else {
-      static_assert(
-          std::is_same_v<T, Blob>,
-          "markImportAsFinished can only be called with Tree or Blob types");
-      auto* blobImport = import->getRequest<HgImportRequest::BlobImport>();
-      promises = &blobImport->promises;
-    }
-
-    if (importTry.hasValue()) {
-      // If we find the id in the map, loop through all of the associated
-      // Promises and fulfill them with the obj. We need to construct a
-      // deep copy of the unique_ptr to fulfill the Promises
-      for (auto& promise : (*promises)) {
-        promise.setValue(std::make_unique<T>(*(importTry.value())));
-      }
-    } else {
-      // If we find the id in the map, loop through all of the associated
-      // Promises and fulfill them with the exception
-      for (auto& promise : (*promises)) {
-        promise.setException(importTry.exception());
-      }
-    }
-  }
+      folly::Try<std::unique_ptr<T>>& importTry);
 
   /**
    * Combines all requests into 1 vec and clears the contents of the originals.
@@ -132,31 +86,113 @@ class HgImportRequestQueue {
   /**
    * Puts an item into the queue.
    */
-  template <typename Ret, typename ImportType>
-  folly::Future<Ret> enqueue(std::shared_ptr<HgImportRequest> request);
+  template <typename T, typename ImportType>
+  folly::Future<std::unique_ptr<T>> enqueue(
+      std::shared_ptr<HgImportRequest> request);
 
   HgImportRequestQueue(HgImportRequestQueue&&) = delete;
   HgImportRequestQueue& operator=(HgImportRequestQueue&&) = delete;
 
-  struct State {
-    bool running = true;
-    std::vector<std::shared_ptr<HgImportRequest>> treeQueue;
-    std::vector<std::shared_ptr<HgImportRequest>> blobQueue;
-    std::vector<std::shared_ptr<HgImportRequest>> blobMetaQueue;
+  struct ImportQueue {
+    std::vector<std::shared_ptr<HgImportRequest>> queue;
 
     /**
      * Map of a ObjectId to an element in the queue. Any changes to this type
      * can have a significant effect on EdenFS performance and thus changes to
      * it needs to be carefully studied and measured. The
-     * benchmarks/hg_import_request_queue.cpp is a good way to measure the
-     * potential performance impact.
+     * store/hg/tests/HgImportRequestQueueBenchmark.cpp is a good way to measure
+     * the potential performance impact.
      */
     folly::F14FastMap<ObjectId, std::shared_ptr<HgImportRequest>>
         requestTracker;
   };
+
+  struct State {
+    bool running = true;
+    ImportQueue treeQueue;
+    ImportQueue blobQueue;
+    ImportQueue blobMetaQueue;
+  };
+
+  /**
+   * Short-hand to map the request type to the appropriate request tracker map.
+   */
+  template <typename T>
+  HgImportRequestQueue::ImportQueue* getImportQueue(
+      folly::Synchronized<HgImportRequestQueue::State, std::mutex>::LockedPtr&
+          state);
+
   std::shared_ptr<ReloadableConfig> config_;
   folly::Synchronized<State, std::mutex> state_;
   std::condition_variable queueCV_;
 };
 
+template <typename T>
+void HgImportRequestQueue::markImportAsFinished(
+    const ObjectId& id,
+    folly::Try<std::unique_ptr<T>>& importTry) {
+  std::shared_ptr<HgImportRequest> import;
+  {
+    auto state = state_.lock();
+
+    auto& requestTracker = getImportQueue<T>(state)->requestTracker;
+    auto importReq = requestTracker.find(id);
+    if (importReq != requestTracker.end()) {
+      import = std::move(importReq->second);
+      requestTracker.erase(importReq);
+    }
+  }
+
+  if (!import) {
+    return;
+  }
+
+  std::vector<folly::Promise<std::unique_ptr<T>>>* promises;
+
+  if constexpr (std::is_same_v<T, Tree>) {
+    auto* treeImport = import->getRequest<HgImportRequest::TreeImport>();
+    promises = &treeImport->promises;
+  } else if constexpr (std::is_same_v<T, BlobMetadata>) {
+    auto* blobMetaImport =
+        import->getRequest<HgImportRequest::BlobMetaImport>();
+    promises = &blobMetaImport->promises;
+  } else {
+    static_assert(
+        std::is_same_v<T, Blob>,
+        "markImportAsFinished can only be called with Tree, Blob or BlobMetadata types");
+    auto* blobImport = import->getRequest<HgImportRequest::BlobImport>();
+    promises = &blobImport->promises;
+  }
+
+  if (importTry.hasValue()) {
+    // If we find the id in the map, loop through all of the associated
+    // Promises and fulfill them with the obj. We need to construct a
+    // deep copy of the unique_ptr to fulfill the Promises
+    for (auto& promise : (*promises)) {
+      promise.setValue(std::make_unique<T>(*(importTry.value())));
+    }
+  } else {
+    // If we find the id in the map, loop through all of the associated
+    // Promises and fulfill them with the exception
+    for (auto& promise : (*promises)) {
+      promise.setException(importTry.exception());
+    }
+  }
+}
+
+template <typename T>
+HgImportRequestQueue::ImportQueue* HgImportRequestQueue::getImportQueue(
+    folly::Synchronized<HgImportRequestQueue::State, std::mutex>::LockedPtr&
+        state) {
+  if constexpr (std::is_same_v<T, Tree>) {
+    return &state->treeQueue;
+  } else if constexpr (std::is_same_v<T, BlobMetadata>) {
+    return &state->blobMetaQueue;
+  } else {
+    static_assert(
+        std::is_same_v<T, Blob>,
+        "getImportQueue can only be called with Tree, Blob or BlobMetadata types");
+    return &state->blobQueue;
+  }
+}
 } // namespace facebook::eden
