@@ -36,6 +36,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -50,6 +51,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/TimeUtil.h"
@@ -1198,13 +1200,13 @@ FileInodePtr TreeInode::createImpl(
   return inode;
 }
 
-#ifndef _WIN32
-// Eden doesn't support symlinks on Windows
-
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget,
     InvalidationRequired invalidate) {
+#ifndef _WIN32
+  // Eden doesn't support symlinks on Windows
+
   // symlink creates a newly materialized file in createImpl. We count this as
   // an inode materialization event to publish to TraceBus, which we begin
   // timing here before the parent tree inode materializes
@@ -1225,8 +1227,13 @@ FileInodePtr TreeInode::symlink(
         invalidate,
         startTime);
   }
-}
+#else
+  (void)name;
+  (void)symlinkTarget;
+  (void)invalidate;
+  NOT_IMPLEMENTED();
 #endif
+}
 
 FileInodePtr TreeInode::mknod(
     PathComponentPiece name,
@@ -2220,7 +2227,6 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
   }
 }
 
-#ifndef _WIN32
 template <typename Fn>
 bool TreeInode::readdirImpl(
     off_t off,
@@ -2272,8 +2278,12 @@ bool TreeInode::readdirImpl(
   // serially stat() every entry. Since stat() returns a file's size and a
   // directory's entry count in the st_nlink field, treat readdir() as a signal
   // that we may want to prefetch metadata for all children.
+#ifndef _WIN32
+  // TODO: enable readdir prefetching on Windows
   considerReaddirPrefetch(context);
-
+#else
+  (void)context;
+#endif
   // Possible offset values are:
   //   0: start at the beginning
   //   1: start after .
@@ -2329,6 +2339,7 @@ bool TreeInode::readdirImpl(
   return true;
 }
 
+#ifndef _WIN32
 FuseDirList TreeInode::fuseReaddir(
     FuseDirList&& list,
     off_t off,
@@ -2344,6 +2355,8 @@ FuseDirList TreeInode::fuseReaddir(
   return std::move(list);
 }
 
+#endif // _WIN32
+
 std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
     NfsDirList&& list,
     off_t off,
@@ -2358,7 +2371,6 @@ std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
 
   return {std::move(list), isEof};
 }
-#endif // _WIN32
 
 InodeMap* TreeInode::getInodeMap() const {
   return getMount()->getInodeMap();
@@ -4599,11 +4611,10 @@ void TreeInode::doPrefetch(
       });
 }
 
-#ifndef _WIN32
-
 ImmediateFuture<struct stat> TreeInode::setattr(
     const DesiredMetadata& desired,
     const ObjectFetchContextPtr& /*fetchContext*/) {
+#ifndef _WIN32
   struct stat result(getMount()->initStatData());
   result.st_ino = getNodeId().get();
 
@@ -4639,8 +4650,14 @@ ImmediateFuture<struct stat> TreeInode::setattr(
   // Update Journal
   updateJournal();
   return result;
+#else
+  (void)desired;
+  // Inode metatdata table is not on Windows
+  return makeImmediateFutureWith([]() -> struct stat { NOT_IMPLEMENTED(); });
+#endif
 }
 
+#ifndef _WIN32
 ImmediateFuture<std::vector<std::string>> TreeInode::listxattr() {
   return std::vector<std::string>{};
 }

@@ -115,11 +115,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<struct stat> stat(
       const ObjectFetchContextPtr& context) override;
 
-#ifndef _WIN32
   ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
       const ObjectFetchContextPtr& fetchContext) override;
 
+#ifndef _WIN32
   ImmediateFuture<std::vector<std::string>> listxattr() override;
   ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
@@ -195,7 +195,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       FuseDirList&& list,
       off_t off,
       const ObjectFetchContextPtr& context);
-
+#endif
   /**
    * Populate the list with as many directory entries as possible starting from
    * the inode start.
@@ -207,7 +207,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       NfsDirList&& list,
       off_t off,
       const ObjectFetchContextPtr& context);
-#endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {
     return contents_;

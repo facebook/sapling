@@ -34,6 +34,7 @@
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/XAttr.h"
@@ -486,10 +487,10 @@ FileInode::FileInode(
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place) {}
 
-#ifndef _WIN32
 ImmediateFuture<struct stat> FileInode::setattr(
     const DesiredMetadata& desired,
     const ObjectFetchContextPtr& fetchContext) {
+#ifndef _WIN32
   if (desired.is_nop(false /* ignoreAtime */)) {
     // Short-circuit completely nop requests as early as possible, without doing
     // any additional work to fetch current metadata.
@@ -555,8 +556,15 @@ ImmediateFuture<struct stat> FileInode::setattr(
     return runWhileMaterialized(
         std::move(state), nullptr, setAttrs, fetchContext);
   }
+#else
+  (void)desired;
+  (void)fetchContext;
+  // neither overlay access nor Inode metadata table is supported on Windows
+  return makeImmediateFutureWith([]() -> struct stat { NOT_IMPLEMENTED(); });
+#endif
 }
 
+#ifndef _WIN32
 ImmediateFuture<std::string> FileInode::readlink(
     const ObjectFetchContextPtr& fetchContext,
     CacheHint cacheHint) {
@@ -891,6 +899,9 @@ ImmediateFuture<folly::Unit> FileInode::fallocate(
 ImmediateFuture<string> FileInode::readAll(
     const ObjectFetchContextPtr& fetchContext,
     CacheHint cacheHint) {
+  // TODO: calling this on Windows with a non ProjFS filesystem is likely to
+  // deadlock Eden. diff calls into this. So `hg status` on non ProjFS mounts
+  // is likely to hang things.
   auto interest = BlobCache::Interest::LikelyNeededAgain;
   switch (cacheHint) {
     case CacheHint::NotNeededAgain:
@@ -940,6 +951,96 @@ ImmediateFuture<string> FileInode::readAll(
 
         return result;
       });
+}
+
+ImmediateFuture<std::tuple<BufVec, bool>>
+FileInode::read(size_t size, off_t off, const ObjectFetchContextPtr& context) {
+#ifndef _WIN32
+  XDCHECK_GE(off, 0);
+  return runWhileDataLoaded(
+      LockedState{this},
+      BlobCache::Interest::WantHandle,
+      // This function is only called by FUSE.
+      context,
+      nullptr,
+      [size, off, self = inodePtrFromThis()](
+          LockedState&& state,
+          std::shared_ptr<const Blob> blob) -> std::tuple<BufVec, bool> {
+        SCOPE_SUCCESS {
+          self->updateAtimeLocked(*state);
+        };
+
+        // Materialized either before or during blob load.
+        if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+          // TODO(xavierd): For materialized files, only return EOF when
+          // read returned no bytes. This will force some FS Channel
+          // (like NFS) to issue at least 2 read calls: one for reading
+          // the entire file, and the second one to get the EOF bit.
+          auto buf = self->getOverlayFileAccess(state)->read(*self, size, off);
+          auto eof = size != 0 && buf->empty();
+          return {std::move(buf), eof};
+        }
+
+        // runWhileDataLoaded() ensures that the state is either
+        // MATERIALIZED_IN_OVERLAY or BLOB_NOT_LOADING
+        XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
+        XDCHECK(blob) << "blob missing after load completed";
+
+        state->readByteRanges.add(off, off + size);
+        if (state->readByteRanges.covers(0, blob->getSize())) {
+          XLOG(DBG4) << "Inode " << self->getNodeId()
+                     << " dropping interest for blob " << blob->getHash()
+                     << " because it's been fully read.";
+          state->interestHandle.reset();
+          state->readByteRanges.clear();
+        }
+
+        auto buf = blob->getContents();
+        folly::io::Cursor cursor(&buf);
+
+        if (!cursor.canAdvance(off)) {
+          // Seek beyond EOF.  Return an empty result.
+          return {BufVec{folly::IOBuf::wrapBuffer("", 0)}, true};
+        }
+
+        cursor.skip(off);
+
+        std::unique_ptr<folly::IOBuf> result;
+        cursor.cloneAtMost(result, size);
+
+        return {BufVec{std::move(result)}, cursor.isAtEnd()};
+      });
+#else
+  (void)size;
+  (void)off;
+  (void)context;
+  // TODO: overlay access not available on Windows.
+  return makeImmediateFutureWith(
+      []() -> std::tuple<BufVec, bool> { NOT_IMPLEMENTED(); });
+#endif
+}
+
+ImmediateFuture<size_t> FileInode::write(
+    BufVec&& buf,
+    off_t off,
+    const ObjectFetchContextPtr& fetchContext) {
+#ifndef _WIN32
+  return runWhileMaterialized(
+      LockedState{this},
+      nullptr,
+      [buf = std::move(buf), off, self = inodePtrFromThis()](
+          LockedState&& state) {
+        auto vec = buf->getIov();
+        return self->writeImpl(state, vec.data(), vec.size(), off);
+      },
+      fetchContext);
+#else
+  (void)buf;
+  (void)off;
+  (void)fetchContext;
+  // TODO: enable writing on Windows, overlay access is not available.
+  return makeImmediateFutureWith([]() -> size_t { NOT_IMPLEMENTED(); });
+#endif
 }
 
 #ifdef _WIN32
@@ -1007,64 +1108,6 @@ ImmediateFuture<folly::Unit> FileInode::ensureMaterialized(
       fetchContext);
 }
 
-ImmediateFuture<std::tuple<BufVec, bool>>
-FileInode::read(size_t size, off_t off, const ObjectFetchContextPtr& context) {
-  XDCHECK_GE(off, 0);
-  return runWhileDataLoaded(
-      LockedState{this},
-      BlobCache::Interest::WantHandle,
-      // This function is only called by FUSE.
-      context,
-      nullptr,
-      [size, off, self = inodePtrFromThis()](
-          LockedState&& state,
-          std::shared_ptr<const Blob> blob) -> std::tuple<BufVec, bool> {
-        SCOPE_SUCCESS {
-          self->updateAtimeLocked(*state);
-        };
-
-        // Materialized either before or during blob load.
-        if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-          // TODO(xavierd): For materialized files, only return EOF when
-          // read returned no bytes. This will force some FS Channel
-          // (like NFS) to issue at least 2 read calls: one for reading
-          // the entire file, and the second one to get the EOF bit.
-          auto buf = self->getOverlayFileAccess(state)->read(*self, size, off);
-          auto eof = size != 0 && buf->empty();
-          return {std::move(buf), eof};
-        }
-
-        // runWhileDataLoaded() ensures that the state is either
-        // MATERIALIZED_IN_OVERLAY or BLOB_NOT_LOADING
-        XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
-        XDCHECK(blob) << "blob missing after load completed";
-
-        state->readByteRanges.add(off, off + size);
-        if (state->readByteRanges.covers(0, blob->getSize())) {
-          XLOG(DBG4) << "Inode " << self->getNodeId()
-                     << " dropping interest for blob " << blob->getHash()
-                     << " because it's been fully read.";
-          state->interestHandle.reset();
-          state->readByteRanges.clear();
-        }
-
-        auto buf = blob->getContents();
-        folly::io::Cursor cursor(&buf);
-
-        if (!cursor.canAdvance(off)) {
-          // Seek beyond EOF.  Return an empty result.
-          return {BufVec{folly::IOBuf::wrapBuffer("", 0)}, true};
-        }
-
-        cursor.skip(off);
-
-        std::unique_ptr<folly::IOBuf> result;
-        cursor.cloneAtMost(result, size);
-
-        return {BufVec{std::move(result)}, cursor.isAtEnd()};
-      });
-}
-
 size_t FileInode::writeImpl(
     LockedState& state,
     const struct iovec* iov,
@@ -1081,21 +1124,6 @@ size_t FileInode::writeImpl(
   updateJournal();
 
   return xfer;
-}
-
-ImmediateFuture<size_t> FileInode::write(
-    BufVec&& buf,
-    off_t off,
-    const ObjectFetchContextPtr& fetchContext) {
-  return runWhileMaterialized(
-      LockedState{this},
-      nullptr,
-      [buf = std::move(buf), off, self = inodePtrFromThis()](
-          LockedState&& state) {
-        auto vec = buf->getIov();
-        return self->writeImpl(state, vec.data(), vec.size(), off);
-      },
-      fetchContext);
 }
 
 ImmediateFuture<size_t> FileInode::write(

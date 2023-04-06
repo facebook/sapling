@@ -145,12 +145,12 @@ class InodeBase {
   virtual ImmediateFuture<struct stat> stat(
       const ObjectFetchContextPtr& context) = 0;
 
-#ifndef _WIN32
   // See Dispatcher::setattr
   virtual ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
       const ObjectFetchContextPtr& fetchContext) = 0;
 
+#ifndef _WIN32
   FOLLY_NODISCARD folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
   FOLLY_NODISCARD folly::Future<folly::Unit> removexattr(

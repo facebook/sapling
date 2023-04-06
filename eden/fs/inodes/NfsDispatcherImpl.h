@@ -7,8 +7,6 @@
 
 #pragma once
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/NfsDispatcher.h"
 
 namespace facebook::eden {
@@ -117,5 +115,3 @@ class NfsDispatcherImpl : public NfsDispatcher {
   InodeMap* const inodeMap_;
 };
 } // namespace facebook::eden
-
-#endif

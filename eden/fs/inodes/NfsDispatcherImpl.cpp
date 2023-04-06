@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/inodes/NfsDispatcherImpl.h"
 
 #include <folly/futures/Future.h>
@@ -17,9 +15,26 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/nfs/NfsUtils.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/String.h"
 
 namespace facebook::eden {
+
+ImmediateFuture<struct stat> statHelper(
+    const InodePtr& inode,
+    const ObjectFetchContextPtr& context) {
+  // TODO: stat is not safe to call on windows because it's gonna try to stat
+  // the working copy. On NFS thats going to cause infinite recursion, and if I
+  // had to bet probably blue screens. Needs to be fixed before we can call
+  // stat.
+#ifndef _WIN32
+  return inode->stat(context);
+#else
+  (void)inode;
+  (void)context;
+  return makeImmediateFutureWith([]() -> struct stat { NOT_IMPLEMENTED(); });
+#endif
+}
 
 NfsDispatcherImpl::NfsDispatcherImpl(EdenMount* mount)
     : NfsDispatcher(mount->getStats().copy(), mount->getClock()),
@@ -31,7 +46,7 @@ ImmediateFuture<struct stat> NfsDispatcherImpl::getattr(
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupInode(ino).thenValue(
       [context = context.copy()](const InodePtr& inode) {
-        return inode->stat(context);
+        return statHelper(inode, context);
       });
 }
 
@@ -69,7 +84,7 @@ ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
         return inode->getOrLoadChild(name, context);
       })
       .thenValue([context = context.copy()](InodePtr&& inode) {
-        auto statFut = inode->stat(context);
+        auto statFut = statHelper(inode, context);
         return std::move(statFut).thenValue(
             [inode = std::move(inode)](
                 struct stat stat) -> std::tuple<InodeNumber, struct stat> {
@@ -84,7 +99,16 @@ ImmediateFuture<std::string> NfsDispatcherImpl::readlink(
     const ObjectFetchContextPtr& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [context = context.copy()](const FileInodePtr& inode) {
+#ifndef _WIN32
         return inode->readlink(context);
+#else
+        // todo: enable readlink on Windows
+        // this would read out of the working copy on windows. not what we
+        // want on NFS.
+        (void)inode;
+        return makeImmediateFutureWith(
+            []() -> std::string { NOT_IMPLEMENTED(); });
+#endif
       });
 }
 
@@ -143,7 +167,7 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
         // directory.
         // Set dev to 0 as this is unused for a regular file.
         auto newFile = inode->mknod(name, mode, 0, InvalidationRequired::No);
-        auto statFut = newFile->stat(context);
+        auto statFut = statHelper(newFile, context);
         return std::move(statFut).thenValue(
             [newFile = std::move(newFile)](struct stat&& stat) {
               newFile->incFsRefcount();
@@ -167,7 +191,7 @@ ImmediateFuture<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
         // TODO(xavierd): Modify mkdir to obtain the pre and post stat of the
         // directory.
         auto newDir = inode->mkdir(name, mode, InvalidationRequired::No);
-        auto statFut = newDir->stat(context);
+        auto statFut = statHelper(newDir, context);
         return std::move(statFut).thenValue([newDir = std::move(newDir)](
                                                 struct stat&& stat) {
           newDir->incFsRefcount();
@@ -189,7 +213,7 @@ ImmediateFuture<NfsDispatcher::SymlinkRes> NfsDispatcherImpl::symlink(
         // TODO(xavierd): Modify symlink to obtain the pre and post stat of the
         // directory.
         auto symlink = inode->symlink(name, data, InvalidationRequired::No);
-        auto statFut = symlink->stat(context);
+        auto statFut = statHelper(symlink, context);
         return std::move(statFut).thenValue(
             [symlink = std::move(symlink)](struct stat&& stat) {
               symlink->incFsRefcount();
@@ -214,7 +238,7 @@ ImmediateFuture<NfsDispatcher::MknodRes> NfsDispatcherImpl::mknod(
         // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
         // directory.
         auto newFile = inode->mknod(name, mode, rdev, InvalidationRequired::No);
-        auto statFut = newFile->stat(context);
+        auto statFut = statHelper(newFile, context);
         return std::move(statFut).thenValue(
             [newFile = std::move(newFile)](struct stat&& stat) {
               newFile->incFsRefcount();
@@ -308,6 +332,7 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
     off_t offset,
     uint32_t count,
     const ObjectFetchContextPtr& context) {
+#ifndef _WIN32
   return inodeMap_->lookupTreeInode(dir).thenValue(
       [context = context.copy(), offset, count, this](
           const TreeInodePtr& inode) {
@@ -328,7 +353,7 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
                 inode->getOrLoadChild(PathComponent{entry.name}, context)
                     .thenValue(
                         [entry, context = context.copy()](InodePtr&& inodep) {
-                          return inodep->stat(context);
+                          return statHelper(inodep, context);
                         })
                     .thenTry([&entry](folly::Try<struct stat> st) {
                       entry.name_attributes = statToPostOpAttr(st);
@@ -343,16 +368,35 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
               return ReaddirRes{std::move(dirList), isEof};
             });
       });
+#else
+  // TODO: implement readdirplus on Windows.
+  // shouldn't be too hard, but left out for now since we don't use readdir plus
+  // in production.
+  (void)dir;
+  (void)offset;
+  (void)count;
+  (void)context;
+  return makeImmediateFutureWith(
+      []() -> NfsDispatcher::ReaddirRes { NOT_IMPLEMENTED(); });
+#endif
 }
+
+#ifdef _WIN32
+// TODO: find a statfs definition for Windows?
+struct statfs {};
+#endif
 
 ImmediateFuture<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
     const ObjectFetchContextPtr& /*context*/) {
+#ifndef _WIN32
   // See the comment in FuseDispatcherImpl::statfs for why we gather the statFs
   // from the overlay.
   return mount_->getOverlay()->statFs();
+#else
+  // TODO: implement statfs on windows
+  return makeImmediateFutureWith([]() -> struct statfs { NOT_IMPLEMENTED(); });
+#endif
 }
 
 } // namespace facebook::eden
-
-#endif

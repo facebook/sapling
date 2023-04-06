@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#ifndef _WIN32
-
 #include "eden/fs/nfs/NfsDirList.h"
 #include <variant>
 #include "eden/fs/nfs/NfsdRpc.h"
@@ -85,5 +83,3 @@ bool NfsDirList::add(
 }
 
 } // namespace facebook::eden
-
-#endif

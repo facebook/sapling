@@ -159,11 +159,11 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       mode_t initialMode,
       const InodeTimestamps& initialTimestamps);
 
-#ifndef _WIN32
   ImmediateFuture<struct stat> setattr(
       const DesiredMetadata& desired,
       const ObjectFetchContextPtr& fetchContext) override;
 
+#ifndef _WIN32
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   ImmediateFuture<std::string> readlink(
       const ObjectFetchContextPtr& fetchContext,
@@ -248,12 +248,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const ObjectFetchContextPtr& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
-#ifdef _WIN32
-  // This function will update the FileInode's state as materialized. This is a
-  // Windows only function. On POSIX systems the write() functions mark a file
-  // as Materialized.
-  void materialize();
-#else
   /**
    * Read up to size bytes from the file at the specified offset.
    *
@@ -272,6 +266,14 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   ImmediateFuture<size_t>
   write(BufVec&& buf, off_t off, const ObjectFetchContextPtr& fetchContext);
+
+#ifdef _WIN32
+  // This function will update the FileInode's state as materialized. This is a
+  // Windows only function. On POSIX systems the write() functions mark a file
+  // as Materialized.
+  void materialize();
+#else
+
   ImmediateFuture<size_t> write(
       folly::StringPiece data,
       off_t off,
