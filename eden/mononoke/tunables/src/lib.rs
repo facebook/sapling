@@ -743,6 +743,30 @@ mod test {
             }
         });
         assert_eq!(test.by_repo_repobool("repo"), Some(false));
+
+        test.update_by_repo_bools(&hashmap! {
+            s(":default:") => hashmap! {
+                s("repobool") => true,
+            },
+            s("repo") => hashmap! {
+                s("repobool") => false,
+            }
+        });
+
+        assert_eq!(test.by_repo_repobool("repo"), Some(false));
+        assert_eq!(test.by_repo_repobool("repo2"), Some(true));
+
+        test.update_by_repo_bools(&hashmap! {
+            s(":override:") => hashmap! {
+                s("repobool") => true,
+            },
+            s("repo") => hashmap! {
+                s("repobool") => false,
+            }
+        });
+
+        assert_eq!(test.by_repo_repobool("repo"), Some(true));
+        assert_eq!(test.by_repo_repobool("repo2"), Some(true));
     }
 
     #[test]
@@ -797,6 +821,30 @@ mod test {
         });
         assert_eq!(test.by_repo_repostr("repo"), Some(s("hello2")));
         assert_eq!(test.by_repo_repostr("repo2"), None);
+
+        test.update_by_repo_strings(&hashmap! {
+            s(":default:") => hashmap! {
+                s("repostr") => s("hello3")
+            },
+            s("repo") => hashmap! {
+                s("repostr") => s("hello"),
+            },
+        });
+
+        assert_eq!(test.by_repo_repostr("repo"), Some(s("hello")));
+        assert_eq!(test.by_repo_repostr("repo2"), Some(s("hello3")));
+
+        test.update_by_repo_strings(&hashmap! {
+            s(":override:") => hashmap! {
+                s("repostr") => s("hello3")
+            },
+            s("repo") => hashmap! {
+                s("repostr") => s("hello"),
+            },
+        });
+
+        assert_eq!(test.by_repo_repostr("repo"), Some(s("hello3")));
+        assert_eq!(test.by_repo_repostr("repo2"), Some(s("hello3")));
     }
 
     #[test]
@@ -850,6 +898,30 @@ mod test {
         });
         assert_eq!(test.by_repo_repoint("repo"), Some(3));
         assert_eq!(test.by_repo_repoint("repo2"), None);
+
+        test.update_by_repo_ints(&hashmap! {
+            s(":default:") => hashmap! {
+                s("repoint") => 4
+            },
+            s("repo") => hashmap! {
+                s("repoint") => 1,
+            },
+        });
+
+        assert_eq!(test.by_repo_repoint("repo"), Some(1));
+        assert_eq!(test.by_repo_repoint("repo2"), Some(4));
+
+        test.update_by_repo_ints(&hashmap! {
+            s(":override:") => hashmap! {
+                s("repoint") => 4
+            },
+            s("repo") => hashmap! {
+                s("repoint") => 1,
+            },
+        });
+
+        assert_eq!(test.by_repo_repoint("repo"), Some(4));
+        assert_eq!(test.by_repo_repoint("repo2"), Some(4));
     }
 
     #[test]
@@ -899,6 +971,42 @@ mod test {
         assert_eq!(
             test.by_repo_repovecofstrings("repo"),
             Some(vec![s("val1"), s("val2")])
+        );
+
+        test.update_by_repo_vec_of_strings(&hashmap! {
+            s(":default:") => hashmap! {
+                s("repovecofstrings") => vec![s("val3"), s("val4")],
+            },
+            s("repo") => hashmap! {
+                s("repovecofstrings") => vec![s("val1"), s("val2")],
+            },
+        });
+
+        assert_eq!(
+            test.by_repo_repovecofstrings("repo"),
+            Some(vec![s("val1"), s("val2")])
+        );
+        assert_eq!(
+            test.by_repo_repovecofstrings("repo2"),
+            Some(vec![s("val3"), s("val4")])
+        );
+
+        test.update_by_repo_vec_of_strings(&hashmap! {
+            s(":override:") => hashmap! {
+                s("repovecofstrings") => vec![s("val3"), s("val4")],
+            },
+            s("repo") => hashmap! {
+                s("repovecofstrings") => vec![s("val1"), s("val2")],
+            },
+        });
+
+        assert_eq!(
+            test.by_repo_repovecofstrings("repo"),
+            Some(vec![s("val3"), s("val4")])
+        );
+        assert_eq!(
+            test.by_repo_repovecofstrings("repo2"),
+            Some(vec![s("val3"), s("val4")])
         );
     }
 

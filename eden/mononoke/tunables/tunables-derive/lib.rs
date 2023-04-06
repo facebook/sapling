@@ -116,7 +116,10 @@ impl TunableType {
                 let by_repo_method = quote::format_ident!("by_repo_{}", name);
                 quote! {
                     pub fn #by_repo_method(&self, repo: &str) -> Option<#external_type> {
-                        self.#name.load_full().get(repo).map(|val| (*val).clone())
+                        // If :override: has a value set for this tunable then use it, otherwise
+                        // lookup the repo specific value, if not found lookup the value for :default:.
+                        let values = self.#name.load_full();
+                        values.get(":override:").or_else(|| values.get(repo)).or_else(|| values.get(":default:")).cloned()
                     }
                 }
             }
