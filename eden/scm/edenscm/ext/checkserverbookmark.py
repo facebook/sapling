@@ -74,7 +74,7 @@ def verifydeleted(ui, remote, name) -> int:
     _("[OPTION]..."),
     norepo=True,
 )
-def checkserverbookmark(ui, **opts):
+def checkserverbookmark(ui, **opts) -> int:
     """Verify whether the bookmark on @prog@ server points to a given hash"""
     name = opts["name"]
     path = opts["path"]
