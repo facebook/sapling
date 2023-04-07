@@ -159,10 +159,15 @@ Available IPython magics (auto magic is on, `%` is optional):
     config.InteractiveShell.banner2 = bannermsg
     config.InteractiveShell.confirm_exit = False
 
-    shell = InteractiveShellEmbed.instance(config=config)
-    _configipython(ui, shell)
+    if util.istest():
+        # Disable history during tests.
+        config.HistoryAccessor.enabled = False
 
-    locals().update(env)
+    globals().update(env)
+    shell = InteractiveShellEmbed.instance(
+        config=config, user_ns=globals(), user_module=sys.modules[__name__]
+    )
+    _configipython(ui, shell)
     shell()
 
 
