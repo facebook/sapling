@@ -14,6 +14,7 @@ import type {
 } from '../previews';
 import type {CommandArg, RepoRelativePath, UncommittedChanges} from '../types';
 
+import {CommitMessageFieldUtils} from '../CommitInfoView/CommitMessageFields';
 import {Operation} from './Operation';
 
 export class AmendOperation extends Operation {
@@ -41,7 +42,10 @@ export class AmendOperation extends Operation {
       );
     }
     if (this.message) {
-      args.push('--message', `${this.message.title}\n${this.message.description}`);
+      args.push(
+        '--message',
+        CommitMessageFieldUtils.commitMessageFieldsToString(this.message.fields),
+      );
     }
     return args;
   }
@@ -75,7 +79,11 @@ export class AmendOperation extends Operation {
     if (this.message == null) {
       return undefined;
     }
-    if (head?.title === this.message.title && head?.description === this.message.description) {
+    const message = this.message;
+    const stringMessage = CommitMessageFieldUtils.commitMessageFieldsToString(message.fields);
+    const [title] = stringMessage.split(/\n+/, 1);
+    const description = stringMessage.slice(title.length);
+    if (head?.title === title && head?.description === description) {
       // amend succeeded when the message is what we asked for
       return undefined;
     }
@@ -87,7 +95,11 @@ export class AmendOperation extends Operation {
           // TODO: we should also update `filesSample` after amending.
           // These files are visible in the commit info view during optimistic state.
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          info: {...tree.info, title: this.message!.title, description: this.message!.description},
+          info: {
+            ...tree.info,
+            title,
+            description,
+          },
           children: tree.children,
         };
       } else {

@@ -5,9 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EditedMessage, EditedMessageUnlessOptimistic} from './CommitInfoState';
 import type {ForwardedRef, MutableRefObject, ReactNode} from 'react';
-import type {SetterOrUpdater} from 'recoil';
 
 import {
   useUploadFilesCallback,
@@ -17,7 +15,6 @@ import {
 } from '../ImageUpload';
 import {Internal} from '../Internal';
 import {assert} from '../utils';
-import {assertNonOptimistic} from './CommitInfoState';
 import {VSCodeTextArea} from '@vscode/webview-ui-toolkit/react';
 import {forwardRef, useRef, useEffect} from 'react';
 
@@ -81,16 +78,18 @@ const MinHeightTextField = forwardRef(
   },
 );
 
-export function CommitInfoField({
-  which,
+export function CommitInfoTextArea({
+  kind,
+  name,
   autoFocus,
   editedMessage,
   setEditedCommitMessage,
 }: {
-  which: keyof EditedMessage;
+  kind: 'title' | 'textarea' | 'field';
+  name: string;
   autoFocus: boolean;
-  editedMessage: EditedMessage;
-  setEditedCommitMessage: SetterOrUpdater<EditedMessageUnlessOptimistic>;
+  editedMessage: string;
+  setEditedCommitMessage: (fieldValue: string) => unknown;
 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -99,12 +98,12 @@ export function CommitInfoField({
       inner?.focus();
     }
   }, [autoFocus, ref]);
-  const Component = which === 'title' ? MinHeightTextField : VSCodeTextArea;
+  const Component = kind === 'field' || kind === 'title' ? MinHeightTextField : VSCodeTextArea;
   const props =
-    which === 'title'
+    kind === 'field' || kind === 'title'
       ? {}
       : {
-          rows: 30,
+          rows: 15,
           resize: 'vertical',
         };
 
@@ -112,16 +111,13 @@ export function CommitInfoField({
   // see https://github.com/cli/cli/issues/1895#issuecomment-718899617
   // for now, this is internal-only.
   const supportsImageUpload =
-    which === 'description' &&
+    kind === 'textarea' &&
     (Internal.supportsImageUpload === true ||
       // image upload is always enabled in tests
       process.env.NODE_ENV === 'test');
 
   const onInput = (event: {target: HTMLInputElement}) => {
-    setEditedCommitMessage({
-      ...assertNonOptimistic(editedMessage),
-      [which]: (event.target as HTMLInputElement)?.value,
-    });
+    setEditedCommitMessage((event.target as HTMLInputElement)?.value);
   };
 
   const uploadFiles = useUploadFilesCallback(ref, onInput);
@@ -145,8 +141,8 @@ export function CommitInfoField({
                 }
               }
         }
-        value={editedMessage[which]}
-        data-testid={`commit-info-${which}-field`}
+        value={editedMessage}
+        data-testid={`commit-info-${name}-field`}
         onInput={onInput}
       />
     </div>

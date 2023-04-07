@@ -24,6 +24,7 @@ import type {AtomEffect, CallbackInterface} from 'recoil';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
+import {CommitMessageFieldUtils} from './CommitInfoView/CommitMessageFields';
 import messageBus from './MessageBus';
 import {getCommitTree, walkTreePostorder} from './getCommitTree';
 import {operationBeingPreviewed} from './previews';
@@ -329,7 +330,8 @@ export const commitMessageTemplate = atom<EditedMessage | undefined>({
       const disposable = serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
         const title = firstLine(event.template);
         const description = event.template.slice(title.length + 1);
-        setSelf({title, description});
+        const fields = CommitMessageFieldUtils.parseCommitMessageFields(title, description);
+        setSelf({fields});
       });
       return () => disposable.dispose();
     },

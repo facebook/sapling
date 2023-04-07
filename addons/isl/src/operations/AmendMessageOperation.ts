@@ -9,6 +9,7 @@ import type {EditedMessage} from '../CommitInfoView/CommitInfoState';
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {CommandArg, Hash} from '../types';
 
+import {CommitMessageFieldUtils} from '../CommitInfoView/CommitMessageFields';
 import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
 
@@ -25,7 +26,7 @@ export class AmendMessageOperation extends Operation {
       '--rev',
       SucceedableRevset(this.hash),
       '--message',
-      `${this.message.title}\n${this.message.description}`,
+      CommitMessageFieldUtils.commitMessageFieldsToString(this.message.fields),
     ];
     return args;
   }
@@ -38,11 +39,20 @@ export class AmendMessageOperation extends Operation {
       return undefined;
     }
 
+    const message = this.message;
+    const stringMessage = CommitMessageFieldUtils.commitMessageFieldsToString(message.fields);
+    const [title] = stringMessage.split(/\n+/, 1);
+    const description = stringMessage.slice(title.length);
+
     const func: ApplyPreviewsFuncType = (tree, _previewType) => {
       if (tree.info.hash === this.hash) {
         // use fake title/description on the changed commit
         return {
-          info: {...tree.info, title: this.message.title, description: this.message.description},
+          info: {
+            ...tree.info,
+            title,
+            description,
+          },
           children: tree.children,
         };
       } else {

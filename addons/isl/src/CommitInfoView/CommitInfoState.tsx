@@ -6,24 +6,19 @@
  */
 
 import type {Hash} from '../types';
+import type {CommitMessageFields} from './CommitMessageFields';
+import type {FieldsBeingEdited} from './types';
 
 import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
+import {CommitMessageFieldUtils} from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom} from 'recoil';
 
-export type EditedMessage = {title: string; description: string};
-
-/**
- * Which fields of the message should display as editors instead of rendered values.
- * This can be controlled outside of the commit info view, but it gets updated in an effect as well when commits are changed.
- * `forceWhileOnHead` can be used to prevent auto-updating when in amend mode to bypass this effect.
- * This value is removed whenever the next real update to the value is given.
- */
-export type FieldsBeingEdited = {title: boolean; description: boolean; forceWhileOnHead?: boolean};
+export type EditedMessage = {fields: CommitMessageFields};
 
 export type CommitInfoMode = 'commit' | 'amend';
 export type EditedMessageUnlessOptimistic =
   | (EditedMessage & {type?: undefined})
-  | {type: 'optimistic'; title?: undefined; description?: undefined};
+  | {type: 'optimistic'; fields?: CommitMessageFields};
 
 /**
  * Throw if the edited message is of optimistic type.
@@ -65,12 +60,7 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
       ({get}) => {
         if (hash === 'head') {
           const template = get(commitMessageTemplate);
-          return (
-            template ?? {
-              title: '',
-              description: '',
-            }
-          );
+          return template ?? {fields: CommitMessageFieldUtils.emptyCommitMessageFields()};
         }
         // TODO: is there a better way we should derive `isOptimistic`
         // from `get(treeWithPreviews)`, rather than using non-previewed map?
@@ -79,7 +69,11 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
         if (info == null) {
           return {type: 'optimistic'};
         }
-        return {title: info.title, description: info.description};
+        const fields = CommitMessageFieldUtils.parseCommitMessageFields(
+          info.title,
+          info.description,
+        );
+        return {fields};
       },
   }),
 });
@@ -94,20 +88,23 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
         return false;
       }
       if (hash === 'head') {
-        return Boolean(edited.title || edited.description);
+        return Object.values(edited).some(Boolean);
       }
-      // TODO: use treeWithPreviews so this indicator is accurate on top of previews
+      // TODO: T149536695 use treeWithPreviews so this indicator is accurate on top of previews
       const original = get(latestCommitTreeMap).get(hash)?.info;
-      return edited.title !== original?.title || edited.description !== original?.description;
+      const parsed = CommitMessageFieldUtils.parseCommitMessageFields(
+        original?.title ?? '',
+        original?.description ?? '',
+      );
+      return Object.values(
+        CommitMessageFieldUtils.findFieldsBeingEdited(edited.fields, parsed),
+      ).some(Boolean);
     },
 });
 
-export const commitFieldsBeingEdited = atom<FieldsBeingEdited>({
+export const commitFieldsBeingEdited = atom<FieldsBeingEdited<CommitMessageFields>>({
   key: 'commitFieldsBeingEdited',
-  default: {
-    title: false,
-    description: false,
-  },
+  default: CommitMessageFieldUtils.noFieldsBeingEdited(),
 });
 
 export const commitMode = atom<CommitInfoMode>({

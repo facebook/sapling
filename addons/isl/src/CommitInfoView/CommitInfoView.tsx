@@ -6,13 +6,10 @@
  */
 
 import type {CommitInfo} from '../types';
-import type {
-  CommitInfoMode,
-  EditedMessage,
-  EditedMessageUnlessOptimistic,
-  FieldsBeingEdited,
-} from './CommitInfoState';
-import type {Dispatch, ReactNode, SetStateAction} from 'react';
+import type {CommitInfoMode, EditedMessageUnlessOptimistic} from './CommitInfoState';
+import type {CommitMessageFields} from './CommitMessageFields';
+import type {FieldsBeingEdited} from './types';
+import type {Dispatch, SetStateAction} from 'react';
 
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
@@ -41,6 +38,7 @@ import {selectedCommitInfos, selectedCommits} from '../selection';
 import {repositoryInfo, useRunOperation} from '../serverAPIState';
 import {useModal} from '../useModal';
 import {assert, firstOfIterable} from '../utils';
+import {CommitInfoField} from './CommitInfoField';
 import {
   assertNonOptimistic,
   commitFieldsBeingEdited,
@@ -48,8 +46,8 @@ import {
   editedCommitMessages,
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
-import {CommitInfoField} from './TextArea';
-import {Section, SmallCapsTitle, CommitTitleByline} from './utils';
+import {CommitMessageFieldUtils} from './CommitMessageFields';
+import {CommitTitleByline, Section, SmallCapsTitle} from './utils';
 import {
   VSCodeBadge,
   VSCodeButton,
@@ -153,9 +151,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
 
   const [fieldsBeingEdited, setFieldsBeingEdited] =
-    useRecoilState<FieldsBeingEdited>(commitFieldsBeingEdited);
+    useRecoilState<FieldsBeingEdited<CommitMessageFields>>(commitFieldsBeingEdited);
 
-  const startEditingField = (field: 'title' | 'description') => {
+  const startEditingField = (field: string) => {
     assert(
       editedMessage.type !== 'optimistic',
       'Cannot start editing fields when viewing optimistic commit',
@@ -163,16 +161,18 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     setFieldsBeingEdited({...fieldsBeingEdited, [field]: true});
   };
 
+  const parsedFields = CommitMessageFieldUtils.parseCommitMessageFields(
+    commit.title,
+    commit.description,
+  );
+
   useEffect(() => {
     if (editedMessage.type === 'optimistic') {
       // invariant: if mode === 'commit', editedMessage.type !== 'optimistic'.
       assert(!isCommitMode, 'Should not be in commit mode while editedMessage.type is optimistic');
 
       // no fields are edited during optimistic state
-      setFieldsBeingEdited({
-        title: false,
-        description: false,
-      });
+      setFieldsBeingEdited(CommitMessageFieldUtils.noFieldsBeingEdited());
       return;
     }
     if (fieldsBeingEdited.forceWhileOnHead && commit.isHead) {
@@ -183,10 +183,11 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     }
     // If the selected commit is changed, the fields being edited should reset;
     // except for fields that are being edited on this commit, too
-    setFieldsBeingEdited({
-      title: isCommitMode || editedMessage.title !== commit.title,
-      description: isCommitMode || editedMessage.description !== commit.description,
-    });
+    setFieldsBeingEdited(
+      isCommitMode
+        ? CommitMessageFieldUtils.allFieldsBeingEdited()
+        : CommitMessageFieldUtils.findFieldsBeingEdited(editedMessage.fields, parsedFields),
+    );
 
     // We only want to recompute this when the commit/mode changes.
     // we expect the edited message to change constantly.
@@ -209,87 +210,35 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </VSCodeRadioGroup>
         </div>
       )}
-      <div className="commit-info-view-main-content">
-        {fieldsBeingEdited.title ? (
-          <Section className="commit-info-title-field-section">
-            <SmallCapsTitle>
-              <Icon icon="milestone" />
-              <T>Title</T>
-            </SmallCapsTitle>
-            <CommitInfoField
-              which="title"
-              autoFocus={true}
-              editedMessage={assertNonOptimistic(editedMessage)}
-              setEditedCommitMessage={setEditedCommitMesage}
-              // remount this component if we switch commit mode
-              key={mode}
-            />
-          </Section>
-        ) : (
-          <>
-            <ClickToEditField
-              startEditingField={
-                editedMessage.type === 'optimistic' ? undefined : startEditingField
-              }
-              which="title">
-              <span>{commit.title}</span>
-              {editedMessage.type === 'optimistic' ? null : (
-                <span className="hover-edit-button">
-                  <Icon icon="edit" />
-                </span>
-              )}
-            </ClickToEditField>
-            <CommitTitleByline commit={commit} />
-          </>
-        )}
-        {fieldsBeingEdited.description ? (
-          <Section>
-            <SmallCapsTitle>
-              <Icon icon="note" />
-              <T>Description</T>
-            </SmallCapsTitle>
-            <CommitInfoField
-              which="description"
-              autoFocus={!fieldsBeingEdited.title}
-              editedMessage={assertNonOptimistic(editedMessage)}
-              setEditedCommitMessage={setEditedCommitMesage}
-              // remount this component if we switch commit mode
-              key={mode}
-            />
-          </Section>
-        ) : (
-          <Section>
-            <ClickToEditField
-              startEditingField={
-                editedMessage.type === 'optimistic' ? undefined : startEditingField
-              }
-              which="description">
-              <SmallCapsTitle>
-                <Icon icon="note" />
-                <T>Description</T>
-                <span className="hover-edit-button">
-                  <Icon icon="edit" />
-                </span>
-              </SmallCapsTitle>
-              {commit.description ? (
-                <div>{commit.description}</div>
-              ) : (
-                <span className="empty-description subtle">
-                  {editedMessage.type === 'optimistic' ? (
-                    <>
-                      <T>No description</T>
-                    </>
-                  ) : (
-                    <>
-                      <Icon icon="add" />
-                      <T> Click to add description</T>
-                    </>
-                  )}
-                </span>
-              )}
-            </ClickToEditField>
-          </Section>
-        )}
+
+      <div
+        className="commit-info-view-main-content"
+        // remount this if we change to commit mode
+        key={mode}>
+        {CommitMessageFieldUtils.configuredFields.map(field => (
+          <CommitInfoField
+            key={field.key}
+            field={field}
+            content={parsedFields[field.key as keyof CommitMessageFields]}
+            isOptimistic={editedMessage.type === 'optimistic'}
+            isBeingEdited={fieldsBeingEdited[field.key]}
+            startEditingField={() => startEditingField(field.key)}
+            editedField={editedMessage.fields?.[field.key]}
+            setEditedField={(newVal: string) =>
+              setEditedCommitMesage(val =>
+                val.type === 'optimistic'
+                  ? val
+                  : {
+                      fields: {
+                        ...val.fields,
+                        [field.key]: field.type === 'field' ? [newVal] : newVal,
+                      },
+                    },
+              )
+            }
+            extra={field.key === 'title' ? <CommitTitleByline commit={commit} /> : undefined}
+          />
+        ))}
         <VSCodeDivider />
         {commit.isHead ? (
           <Section data-testid="changes-to-amend">
@@ -351,12 +300,12 @@ function ActionsBar({
 }: {
   commit: CommitInfo;
   editedMessage: EditedMessageUnlessOptimistic;
-  fieldsBeingEdited: FieldsBeingEdited;
-  setFieldsBeingEdited: Dispatch<SetStateAction<FieldsBeingEdited>>;
+  fieldsBeingEdited: FieldsBeingEdited<CommitMessageFields>;
+  setFieldsBeingEdited: Dispatch<SetStateAction<FieldsBeingEdited<CommitMessageFields>>>;
   isCommitMode: boolean;
   setMode: (mode: CommitInfoMode) => unknown;
 }) {
-  const isAnythingBeingEdited = fieldsBeingEdited.title || fieldsBeingEdited.description;
+  const isAnythingBeingEdited = Object.values(fieldsBeingEdited).some(Boolean);
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
   const deselected = useRecoilValue(deselectedUncommittedChanges);
   const anythingToCommit =
@@ -400,7 +349,7 @@ function ActionsBar({
         }
 
         reset(editedCommitMessages(isCommitMode ? 'head' : commit.hash));
-        setFieldsBeingEdited({title: false, description: false});
+        setFieldsBeingEdited(CommitMessageFieldUtils.noFieldsBeingEdited());
       },
   );
   const runOperation = useRunOperation();
@@ -592,43 +541,6 @@ function ActionsBar({
           </Tooltip>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function ClickToEditField({
-  children,
-  startEditingField,
-  which,
-}: {
-  children: ReactNode;
-  /** function to run when you click to edit. If null, the entire field will be non-editable. */
-  startEditingField?: (which: keyof EditedMessage) => void;
-  which: keyof EditedMessage;
-}) {
-  const editable = startEditingField != null;
-  return (
-    <div
-      className={`commit-info-rendered-${which}${editable ? '' : ' non-editable'}`}
-      data-testid={`commit-info-rendered-${which}`}
-      onClick={
-        startEditingField != null
-          ? () => {
-              startEditingField(which);
-            }
-          : undefined
-      }
-      onKeyPress={
-        startEditingField != null
-          ? e => {
-              if (e.key === 'Enter') {
-                startEditingField(which);
-              }
-            }
-          : undefined
-      }
-      tabIndex={0}>
-      {children}
     </div>
   );
 }

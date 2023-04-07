@@ -15,6 +15,7 @@ import type {
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 
+import {CommitMessageFieldUtils} from '../CommitInfoView/CommitMessageFields';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -38,7 +39,7 @@ export class CommitOperation extends Operation {
       'commit',
       '--addremove',
       '--message',
-      `${this.message.title}\n${this.message.description}`,
+      CommitMessageFieldUtils.commitMessageFieldsToString(this.message.fields),
     ];
     if (this.filesPathsToCommit) {
       args.push(
@@ -62,12 +63,17 @@ export class CommitOperation extends Operation {
       return undefined;
     }
 
+    const message = this.message;
+    const stringMessage = CommitMessageFieldUtils.commitMessageFieldsToString(message.fields);
+    const [title] = stringMessage.split(/\n+/, 1);
+    const description = stringMessage.slice(title.length);
+
     const optimisticCommit: CommitTree = {
       children: [],
       info: {
         author: head?.author ?? '',
-        description: this.message.description,
-        title: this.message.title,
+        description,
+        title,
         bookmarks: [],
         remoteBookmarks: [],
         // TODO: we should include the files that will be in the commit.
