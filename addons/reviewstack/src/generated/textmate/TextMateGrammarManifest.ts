@@ -1012,7 +1012,7 @@ const languages: {[language: string]: LanguageConfiguration} = {
   rust: {
     id: 'rust',
     extensions: ['.rs'],
-    aliases: ['Rust', 'rust'],
+    aliases: ['Rust', 'rust', 'rs'],
   },
   scss: {
     id: 'scss',

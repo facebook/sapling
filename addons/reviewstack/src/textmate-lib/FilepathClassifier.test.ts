@@ -21,3 +21,11 @@ describe('findScopeNameForPath', () => {
     expect(findScopeNameForPath('foo/CHANGELOG.md')).toBe('text.html.markdown');
   });
 });
+
+describe('findScopeNameForAlias', () => {
+  test('verify amended aliases are mapped correctly', () => {
+    const classifier = new FilepathClassifier(grammars, languages);
+    const findScopeNameForAlias = (alias: string) => classifier.findScopeNameForAlias(alias);
+    expect(findScopeNameForAlias('rs')).toBe('source.rust');
+  });
+});

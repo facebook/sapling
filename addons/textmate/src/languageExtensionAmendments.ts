@@ -32,6 +32,19 @@ const languageExtensionAmendments: {[language: string]: LanguageExtensionAmendme
   hack: {
     aliases: ['php'],
   },
+  rust: {
+    // Note the TextMate grammar recognizes `rs` as an alias for Rust:
+    //
+    // https://github.com/microsoft/vscode/blob/ea0e3e0d1fab/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json#L1389
+    //
+    // though the VS Code extension does not list it as such:
+    //
+    // https://github.com/microsoft/vscode/blob/ea0e3e0d1fab/extensions/rust/package.json#L21-L24
+    //
+    // But we include it so that `FilepathClassifier.findScopeNameForAlias('rs')`
+    // returns `"source.rust"`.
+    aliases: ['rs'],
+  },
   systemverilog: {
     extensions: ['.svi', '.v', '.vh', '.SV'],
   },

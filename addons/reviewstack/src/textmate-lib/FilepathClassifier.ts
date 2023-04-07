@@ -46,6 +46,30 @@ export default class FilepathClassifier {
   }
 
   /**
+   * This function is useful for mapping the tag used in a fenced code block
+   * to a scope name. For example, while the language id for JavaScript is
+   * `javascript` according to the LSP spec, users frequently use the alias
+   * `js` when creating fenced code blocks, so we would like to be able to map
+   * both to the scope name `source.js`.
+   *
+   * Note that the TextMate grammar for Markdown hardcodes these aliases,
+   * which is useful when displaying Markdown source in an editor:
+   *
+   * https://github.com/microsoft/vscode/blob/ea0e3e0d1fab/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json#L960
+   *
+   * But when rendering Markdown as HTML, clients often have to provide their
+   * own syntax highlighting logic, which has to do its own mapping of the tag
+   * for the fenced code block. For example, here is where highlight.js declares
+   * its aliases for Javascript [sic]:
+   *
+   * https://github.com/highlightjs/highlight.js/blob/91e1898df92a/src/languages/javascript.js#L454
+   */
+  findScopeNameForAlias(alias: string): string | null {
+    const language = this.index.aliases.get(alias) ?? alias;
+    return this.findScopeNameForLanguage(language);
+  }
+
+  /**
    * Given a filename like `index.js` or `BUCK`, returns the language id of the
    * TextMate grammar that should be used to highlight it. This function does
    * *not* depend on Monaco, so it can be used in other contexts.
