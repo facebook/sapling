@@ -60,13 +60,24 @@ function parseCommitMessageFields(title: string, description: string): CommitMes
   };
 }
 
-function commitMessageFieldsToString(fields: CommitMessageFields): string {
-  return `${fields.title}\n${fields.description}`;
+export function commitMessageFieldsToString(
+  schema: Array<FieldConfig>,
+  fields: CommitMessageFields,
+): string {
+  return schema
+    .map(
+      config =>
+        // stringified messages of the form Key: value, except the title or generic description don't need a label
+        (config.key === 'title' || config.key === 'description' ? '' : config.name + ': ') +
+        (config.type === 'field'
+          ? (fields[config.key] as Array<string>).join(', ')
+          : fields[config.key]),
+    )
+    .join('\n\n');
 }
 
 export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
   parseCommitMessageFields,
-  commitMessageFieldsToString,
 
   configuredFields: [
     {key: 'title', name: 'Title', type: 'title', icon: 'milestone'},

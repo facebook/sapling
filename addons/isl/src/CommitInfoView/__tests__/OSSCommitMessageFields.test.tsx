@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {OSSCommitMessageFieldsUtils} from '../CommitMessageFields';
+import {commitMessageFieldsToString, OSSCommitMessageFieldsUtils} from '../CommitMessageFields';
 
 describe('InternalCommitInfoFields', () => {
   it('parses messages correctly', () => {
@@ -22,12 +22,13 @@ another line
 
   it('converts to string properly', () => {
     expect(
-      OSSCommitMessageFieldsUtils.commitMessageFieldsToString({
+      commitMessageFieldsToString(OSSCommitMessageFieldsUtils.configuredFields, {
         title: 'my title',
         description: 'my summary\nline 2',
       }),
     ).toEqual(
       `my title
+
 my summary
 line 2`,
     );

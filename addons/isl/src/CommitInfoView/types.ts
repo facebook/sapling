@@ -29,10 +29,6 @@ export interface CommitMessageFieldsUtilsType {
    * Extract fields from string commit message
    */
   parseCommitMessageFields: (title: string, description: string) => CommitMessageFields;
-  /**
-   * Convert fields back into a string commit message, the opposite of parseCommitMessageFields.
-   */
-  commitMessageFieldsToString: (fields: CommitMessageFields) => string;
 
   /**
    * Schema for fields in a commit message

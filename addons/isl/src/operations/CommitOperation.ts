@@ -15,7 +15,10 @@ import type {
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 
-import {CommitMessageFieldUtils} from '../CommitInfoView/CommitMessageFields';
+import {
+  commitMessageFieldsToString,
+  CommitMessageFieldUtils,
+} from '../CommitInfoView/CommitMessageFields';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -39,7 +42,7 @@ export class CommitOperation extends Operation {
       'commit',
       '--addremove',
       '--message',
-      CommitMessageFieldUtils.commitMessageFieldsToString(this.message.fields),
+      commitMessageFieldsToString(CommitMessageFieldUtils.configuredFields, this.message.fields),
     ];
     if (this.filesPathsToCommit) {
       args.push(
@@ -63,7 +66,10 @@ export class CommitOperation extends Operation {
       return undefined;
     }
 
-    const stringMessage = CommitMessageFieldUtils.commitMessageFieldsToString(this.message.fields);
+    const stringMessage = commitMessageFieldsToString(
+      CommitMessageFieldUtils.configuredFields,
+      this.message.fields,
+    );
     const [title] = stringMessage.split(/\n+/, 1);
     const description = stringMessage.slice(title.length);
 
