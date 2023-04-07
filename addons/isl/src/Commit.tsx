@@ -170,6 +170,15 @@ export const Commit = memo(
             {commit.remoteBookmarks.map(remoteBookmarks => (
               <VSCodeTag key={remoteBookmarks}>{remoteBookmarks}</VSCodeTag>
             ))}
+            {commit?.stableCommitMetadata != null ? (
+              <Tooltip title={commit.stableCommitMetadata}>
+                <div className="stable-commit-metadata">
+                  <VSCodeTag key={commit.stableCommitMetadata}>
+                    {commit.stableCommitMetadata}
+                  </VSCodeTag>
+                </div>
+              </Tooltip>
+            ) : null}
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {previewType === CommitPreview.REBASE_OPTIMISTIC_ROOT ? (
               <span className="commit-inline-operation-progress">

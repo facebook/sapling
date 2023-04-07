@@ -214,3 +214,12 @@
   left: calc(-3.5 * var(--pad));
   pointer-events: none;
 }
+
+.stable-commit-metadata vscode-tag::part(control) {
+  background-color: var(--list-hover-background);
+  color: var(--list-hover-foreground);
+  text-overflow: ellipsis;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+}

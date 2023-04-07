@@ -148,6 +148,7 @@ export type CommitInfo = {
   totalFileCount: number;
   /** @see {@link DiffId} */
   diffId?: DiffId;
+  stableCommitMetadata?: string;
 };
 export type SuccessorInfo = {
   hash: string;
