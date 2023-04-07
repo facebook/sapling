@@ -21,7 +21,9 @@ create or update GitHub pull requests from local commits
 | - | - | - | - |
 | `-s`| `--stack`| `false`| also include draft ancestors|
 | `-m`| `--message`| | message describing changes to updated commits|
-| `-d`| `--draft`| `false`| mark new pull requests as draft|### pull
+| `-d`| `--draft`| `false`| mark new pull requests as draft|
+
+### pull
 
 &#x69;mport a pull request into your working copy
 
@@ -34,7 +36,9 @@ or just the PR number within the GitHub repository identified by
 
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-g`| `--goto`| `false`| goto the pull request after importing it|### link
+| `-g`| `--goto`| `false`| goto the pull request after importing it|
+
+### link
 
 identify a commit as the head of a GitHub pull request
 
@@ -46,13 +50,17 @@ A PULL_REQUEST can be specified in a number of formats:
 
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-r`| `--rev`| | revision to link|### unlink
+| `-r`| `--rev`| | revision to link|
+
+### unlink
 
 remove a commit's association with a GitHub pull request
 
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-r`| `--rev`| | revisions to unlink|### follow
+| `-r`| `--rev`| | revisions to unlink|
+
+### follow
 
 join the nearest desecendant's pull request
 
@@ -63,7 +71,9 @@ Use `pr unlink` to undo.
 
 | shortname | fullname | default | description |
 | - | - | - | - |
-| `-r`| `--rev`| | revisions to follow the next pull request|### list
+| `-r`| `--rev`| | revisions to follow the next pull request|
+
+### list
 
 calls `gh pr list [flags]` with the current repo as the value of --repo
 
