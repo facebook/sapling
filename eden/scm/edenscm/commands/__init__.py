@@ -4385,20 +4385,24 @@ def parents(ui, repo, file_=None, **opts):
         if len(m.files()) != 1:
             raise error.Abort(_("can only specify an explicit filename"))
         file_ = m.files()[0]
-        filenodes = []
-        for cp in ctx.parents():
-            if not cp:
-                continue
-            try:
-                filenodes.append(cp.filenode(file_))
-            except error.LookupError:
-                pass
-        if not filenodes:
+        parent_nodes = [pctx.node() for pctx in ctx.parents() if file_ in pctx]
+        if not parent_nodes:
             raise error.Abort(_("'%s' not found in manifest!") % file_)
+        dag = repo.changelog.dag
         p = []
-        for fn in filenodes:
-            fctx = repo.filectx(file_, fileid=fn)
-            p.append(fctx.node())
+        covered = dag.sort([])
+        # To preserve order, we don't pass ancestors(parent_nodes) to
+        # pathhistory but iterate parents one by one.
+        for parent_node in parent_nodes:
+            nodes = dag.ancestors([parent_node])
+            history = repo.pathhistory(m.files(), nodes)
+            for node in history:
+                if node not in covered:
+                    p.append(node)
+                    covered |= dag.ancestors([node]) | dag.range([node], parent_nodes)
+                if not (nodes - covered):
+                    # No more interesting history.
+                    break
     else:
         p = [cp.node() for cp in ctx.parents()]
 

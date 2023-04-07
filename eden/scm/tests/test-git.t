@@ -107,6 +107,14 @@ Test log FILE:
   ╷
   o  alpha
   
+Test file history via 'parents FILE':
+
+  $ hg parents -T '{desc}\n' alpha
+  alpha3
+
+  $ hg parents -T '{desc}\n' alpha -r 'desc(beta)'
+  alpha
+
 Test log FILE with patches:
 
   $ hg log -p -G -T '{desc}\n' alpha
