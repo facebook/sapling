@@ -78,35 +78,17 @@ impl DagCopyTrace {
         Ok(map)
     }
 
-    async fn vertex_to_tree_manifest(
-        &self,
-        old_commit: &dag::Vertex,
-        new_commit: &dag::Vertex,
-    ) -> Result<(TreeManifest, TreeManifest)> {
-        let commit_hgids = vec![
-            HgId::from_slice(old_commit.as_ref())?,
-            HgId::from_slice(new_commit.as_ref())?,
-        ];
-        let commit_to_tree_ids: HashMap<HgId, HgId> = self
+    async fn vertex_to_tree_manifest(&self, commit: &dag::Vertex) -> Result<TreeManifest> {
+        let commit_id = HgId::from_slice(commit.as_ref())?;
+        let commit_to_tree_id = self
             .root_tree_reader
-            .read_root_tree_ids(commit_hgids.clone())
-            .await?
-            .into_iter()
-            .collect();
-
-        let tree_ids = commit_hgids
-            .iter()
-            .map(|i| {
-                commit_to_tree_ids
-                    .get(i)
-                    .ok_or(CopyTraceError::RootTreeIdNotFound(commit_hgids[0]))
-            })
-            .collect::<Result<Vec<&HgId>, _>>()?;
-
-        let old_manifest = TreeManifest::durable(self.tree_store.clone(), *tree_ids[0]);
-        let new_manifest = TreeManifest::durable(self.tree_store.clone(), *tree_ids[1]);
-
-        Ok((old_manifest, new_manifest))
+            .read_root_tree_ids(vec![commit_id])
+            .await?;
+        if commit_to_tree_id.is_empty() {
+            return Err(CopyTraceError::RootTreeIdNotFound(commit_id).into());
+        }
+        let (_, tree_id) = commit_to_tree_id[0];
+        Ok(TreeManifest::durable(self.tree_store.clone(), tree_id))
     }
 
     async fn trace_rename_commit(
@@ -138,7 +120,8 @@ impl DagCopyTrace {
         }
         // For simplicity, we only check p1.
         let p1 = &parents[0];
-        let (old_manifest, new_manifest) = self.vertex_to_tree_manifest(p1, &commit).await?;
+        let old_manifest = self.vertex_to_tree_manifest(p1).await?;
+        let new_manifest = self.vertex_to_tree_manifest(&commit).await?;
         let renames = self.find_renames(&old_manifest, &new_manifest).await?;
         let (renames, next_commit) = match direction {
             SearchDirection::Backward => (renames, p1.clone()),
