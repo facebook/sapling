@@ -5,14 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {
-  CommitMessageFields,
-  CommitMessageFieldsUtilsType,
-  FieldConfig,
-  FieldsBeingEdited,
-} from './types';
+import type {CommitMessageFields, FieldConfig, FieldsBeingEdited} from './types';
 
 import {Internal} from '../Internal';
+import {atom} from 'recoil';
 
 export function emptyCommitMessageFields(schema: Array<FieldConfig>): CommitMessageFields {
   return Object.fromEntries(schema.map(config => [config.key, config.type === 'field' ? [] : '']));
@@ -132,24 +128,28 @@ export function parseCommitMessageFields(
   return result;
 }
 
-export const OSSCommitMessageFieldsUtils: CommitMessageFieldsUtilsType = {
-  configuredFields: [
-    {key: 'title', name: 'Title', type: 'title', icon: 'milestone'},
-    {key: 'description', name: 'Description', type: 'textarea', icon: 'note'},
-  ],
-};
-
-/**
- * Type representing fields parsed from a commit message.
- * Internally, this includes summary and test plan, etc.
- * Externally, this is just the description right now
- */
-export const CommitMessageFieldUtils: CommitMessageFieldsUtilsType =
-  Internal.CommitMessageFieldUtils ?? OSSCommitMessageFieldsUtils;
+export const OSSDefaultFieldSchema: Array<FieldConfig> = [
+  {key: 'title', name: 'Title', type: 'title', icon: 'milestone'},
+  {key: 'description', name: 'Description', type: 'textarea', icon: 'note'},
+];
 
 function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
   if (a.length !== b.length) {
     return false;
   }
   return a.every((val, i) => b[i] === val);
+}
+
+/**
+ * Schema defining what fields we expect to be in a CommitMessageFields object,
+ * and some information about those fields.
+ * This is determined by an sl config on the server, hence it lives as an atom.
+ */
+export const commitMessageFieldsSchema = atom<Array<FieldConfig>>({
+  key: 'commitMessageFieldsSchema',
+  default: getDefaultCommitMessageSchema(),
+});
+
+export function getDefaultCommitMessageSchema() {
+  return Internal.CommitMessageFieldSchema ?? OSSDefaultFieldSchema;
 }

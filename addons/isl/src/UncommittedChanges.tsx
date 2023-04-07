@@ -15,8 +15,7 @@ import serverAPI from './ClientToServerAPI';
 import {commitFieldsBeingEdited, commitMode} from './CommitInfoView/CommitInfoState';
 import {
   allFieldsBeingEdited,
-  CommitMessageFieldUtils,
-  emptyCommitMessageFields,
+  commitMessageFieldsSchema,
 } from './CommitInfoView/CommitMessageFields';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {ErrorNotice} from './ErrorNotice';
@@ -214,6 +213,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
   const error = useRecoilValue(uncommittedChangesFetchError);
   // TODO: use treeWithPreviews instead, and update CommitOperation
   const headCommit = useRecoilValue(latestHeadCommit);
+  const schema = useRecoilValue(commitMessageFieldsSchema);
 
   const conflicts = useRecoilValue(optimisticMergeConflicts);
 
@@ -233,7 +233,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
     // Start editing fields when amending so you can go right into typing.
     if (which === 'amend') {
       set(commitFieldsBeingEdited, {
-        ...allFieldsBeingEdited(CommitMessageFieldUtils.configuredFields),
+        ...allFieldsBeingEdited(schema),
         // we have to explicitly keep this change to fieldsBeingEdited because otherwise it would be reset by effects.
         forceWhileOnHead: true,
       });
@@ -414,12 +414,7 @@ export function UncommittedChanges({place}: {place: 'main' | 'amend sidebar' | '
                           .map(file => file.path);
                   runOperation(
                     new CommitOperation(
-                      {
-                        fields: {
-                          ...emptyCommitMessageFields(CommitMessageFieldUtils.configuredFields),
-                          title,
-                        },
-                      },
+                      title, // just the title, no description / other fields
                       headCommit?.hash ?? '',
                       filesToCommit,
                     ),

@@ -25,7 +25,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import serverAPI from './ClientToServerAPI';
 import {
-  CommitMessageFieldUtils,
+  commitMessageFieldsSchema,
   parseCommitMessageFields,
 } from './CommitInfoView/CommitMessageFields';
 import messageBus from './MessageBus';
@@ -329,15 +329,12 @@ export const commitMessageTemplate = atom<EditedMessage | undefined>({
   key: 'commitMessageTemplate',
   default: undefined,
   effects: [
-    ({setSelf}) => {
+    ({setSelf, getLoadable}) => {
       const disposable = serverAPI.onMessageOfType('fetchedCommitMessageTemplate', event => {
         const title = firstLine(event.template);
         const description = event.template.slice(title.length + 1);
-        const fields = parseCommitMessageFields(
-          CommitMessageFieldUtils.configuredFields,
-          title,
-          description,
-        );
+        const schema = getLoadable(commitMessageFieldsSchema).valueOrThrow();
+        const fields = parseCommitMessageFields(schema, title, description);
         setSelf({fields});
       });
       return () => disposable.dispose();

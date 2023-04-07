@@ -24,13 +24,6 @@ export type CommitMessageFields = Record<string, string | Array<string>>;
  */
 export type FieldsBeingEdited = Record<string, boolean> & {forceWhileOnHead?: boolean};
 
-export interface CommitMessageFieldsUtilsType {
-  /**
-   * Schema for fields in a commit message
-   */
-  configuredFields: Array<FieldConfig>;
-}
-
 /**
  * Dynamic configuration for a single field in a commit message
  */

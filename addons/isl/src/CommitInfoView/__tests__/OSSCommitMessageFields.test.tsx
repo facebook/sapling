@@ -7,14 +7,14 @@
 
 import {
   commitMessageFieldsToString,
-  OSSCommitMessageFieldsUtils,
+  OSSDefaultFieldSchema,
   parseCommitMessageFields,
 } from '../CommitMessageFields';
 
 describe('InternalCommitInfoFields', () => {
   it('parses messages correctly', () => {
     const parsed = parseCommitMessageFields(
-      OSSCommitMessageFieldsUtils.configuredFields,
+      OSSDefaultFieldSchema,
       'my title',
       `My description!
 another line
@@ -27,7 +27,7 @@ another line
 
   it('converts to string properly', () => {
     expect(
-      commitMessageFieldsToString(OSSCommitMessageFieldsUtils.configuredFields, {
+      commitMessageFieldsToString(OSSDefaultFieldSchema, {
         title: 'my title',
         description: 'my summary\nline 2',
       }),

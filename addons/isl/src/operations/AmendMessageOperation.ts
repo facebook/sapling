@@ -5,19 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EditedMessage} from '../CommitInfoView/CommitInfoState';
 import type {ApplyPreviewsFuncType, PreviewContext} from '../previews';
 import type {CommandArg, Hash} from '../types';
 
-import {
-  commitMessageFieldsToString,
-  CommitMessageFieldUtils,
-} from '../CommitInfoView/CommitMessageFields';
 import {SucceedableRevset} from '../types';
 import {Operation} from './Operation';
 
 export class AmendMessageOperation extends Operation {
-  constructor(private hash: Hash, private message: EditedMessage) {
+  constructor(private hash: Hash, private message: string) {
     super('AmendMessageOperation');
   }
 
@@ -29,7 +24,7 @@ export class AmendMessageOperation extends Operation {
       '--rev',
       SucceedableRevset(this.hash),
       '--message',
-      commitMessageFieldsToString(CommitMessageFieldUtils.configuredFields, this.message.fields),
+      this.message,
     ];
     return args;
   }
@@ -42,13 +37,8 @@ export class AmendMessageOperation extends Operation {
       return undefined;
     }
 
-    const message = this.message;
-    const stringMessage = commitMessageFieldsToString(
-      CommitMessageFieldUtils.configuredFields,
-      message.fields,
-    );
-    const [title] = stringMessage.split(/\n+/, 1);
-    const description = stringMessage.slice(title.length);
+    const [title] = this.message.split(/\n+/, 1);
+    const description = this.message.slice(title.length);
 
     const func: ApplyPreviewsFuncType = (tree, _previewType) => {
       if (tree.info.hash === this.hash) {

@@ -8,11 +8,12 @@
 import type {Hash} from './types';
 
 import {
-  CommitMessageFieldUtils,
-  OSSCommitMessageFieldsUtils,
+  commitMessageFieldsSchema,
+  OSSDefaultFieldSchema,
 } from './CommitInfoView/CommitMessageFields';
 import {screen, within, fireEvent, waitFor} from '@testing-library/react';
 import {act} from 'react-dom/test-utils';
+import {snapshot_UNSTABLE} from 'recoil';
 import {unwrap} from 'shared/utils';
 
 export const CommitTreeListTestUtils = {
@@ -195,5 +196,7 @@ export const MergeConflictTestUtils = {
 };
 
 function isInternalMessageFields(): boolean {
-  return CommitMessageFieldUtils.configuredFields !== OSSCommitMessageFieldsUtils.configuredFields;
+  const snapshot = snapshot_UNSTABLE();
+  const schema = snapshot.getLoadable(commitMessageFieldsSchema).valueOrThrow();
+  return schema !== OSSDefaultFieldSchema;
 }

@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EditedMessage} from '../CommitInfoView/CommitInfoState';
 import type {CommitTree} from '../getCommitTree';
 import type {
   ApplyPreviewsFuncType,
@@ -15,10 +14,6 @@ import type {
 } from '../previews';
 import type {CommandArg, Hash, RepoRelativePath, UncommittedChanges} from '../types';
 
-import {
-  commitMessageFieldsToString,
-  CommitMessageFieldUtils,
-} from '../CommitInfoView/CommitMessageFields';
 import {Operation} from './Operation';
 
 export class CommitOperation extends Operation {
@@ -28,7 +23,7 @@ export class CommitOperation extends Operation {
    * @param filesPathsToCommit if provided, only these file paths will be included in the commit operation. If undefined, ALL uncommitted changes are included. Paths should be relative to repo root.
    */
   constructor(
-    private message: EditedMessage,
+    private message: string,
     private originalHeadHash: Hash,
     private filesPathsToCommit?: Array<RepoRelativePath>,
   ) {
@@ -38,12 +33,7 @@ export class CommitOperation extends Operation {
   static opName = 'Commit';
 
   getArgs() {
-    const args: Array<CommandArg> = [
-      'commit',
-      '--addremove',
-      '--message',
-      commitMessageFieldsToString(CommitMessageFieldUtils.configuredFields, this.message.fields),
-    ];
+    const args: Array<CommandArg> = ['commit', '--addremove', '--message', this.message];
     if (this.filesPathsToCommit) {
       args.push(
         ...this.filesPathsToCommit.map(file =>
@@ -66,12 +56,8 @@ export class CommitOperation extends Operation {
       return undefined;
     }
 
-    const stringMessage = commitMessageFieldsToString(
-      CommitMessageFieldUtils.configuredFields,
-      this.message.fields,
-    );
-    const [title] = stringMessage.split(/\n+/, 1);
-    const description = stringMessage.slice(title.length);
+    const [title] = this.message.split(/\n+/, 1);
+    const description = this.message.slice(title.length);
 
     const optimisticCommit: CommitTree = {
       children: [],

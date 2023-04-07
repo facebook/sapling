@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {EditedMessage} from '../CommitInfoView/CommitInfoState';
 import type {
   ApplyPreviewsFuncType,
   ApplyUncommittedChangesPreviewsFuncType,
@@ -14,10 +13,6 @@ import type {
 } from '../previews';
 import type {CommandArg, RepoRelativePath, UncommittedChanges} from '../types';
 
-import {
-  commitMessageFieldsToString,
-  CommitMessageFieldUtils,
-} from '../CommitInfoView/CommitMessageFields';
 import {Operation} from './Operation';
 
 export class AmendOperation extends Operation {
@@ -25,7 +20,7 @@ export class AmendOperation extends Operation {
    * @param filePathsToAmend if provided, only these file paths will be included in the amend operation. If undefined, ALL uncommitted changes are included. Paths should be relative to repo root.
    * @param message if provided, update commit description to use this title & description
    */
-  constructor(private filePathsToAmend?: Array<RepoRelativePath>, private message?: EditedMessage) {
+  constructor(private filePathsToAmend?: Array<RepoRelativePath>, private message?: string) {
     super('AmendOperation');
   }
 
@@ -45,10 +40,7 @@ export class AmendOperation extends Operation {
       );
     }
     if (this.message) {
-      args.push(
-        '--message',
-        commitMessageFieldsToString(CommitMessageFieldUtils.configuredFields, this.message.fields),
-      );
+      args.push('--message', this.message);
     }
     return args;
   }
@@ -82,13 +74,8 @@ export class AmendOperation extends Operation {
     if (this.message == null) {
       return undefined;
     }
-    const message = this.message;
-    const stringMessage = commitMessageFieldsToString(
-      CommitMessageFieldUtils.configuredFields,
-      message.fields,
-    );
-    const [title] = stringMessage.split(/\n+/, 1);
-    const description = stringMessage.slice(title.length);
+    const [title] = this.message.split(/\n+/, 1);
+    const description = this.message.slice(title.length);
     if (head?.title === title && head?.description === description) {
       // amend succeeded when the message is what we asked for
       return undefined;

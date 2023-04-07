@@ -10,11 +10,10 @@ import type {CommitMessageFields, FieldsBeingEdited} from './types';
 
 import {commitMessageTemplate, latestCommitTreeMap} from '../serverAPIState';
 import {
+  commitMessageFieldsSchema,
   parseCommitMessageFields,
   findFieldsBeingEdited,
-  noFieldsBeingEdited,
   emptyCommitMessageFields,
-  CommitMessageFieldUtils,
 } from './CommitMessageFields';
 import {atomFamily, selectorFamily, atom} from 'recoil';
 
@@ -65,9 +64,7 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
       ({get}) => {
         if (hash === 'head') {
           const template = get(commitMessageTemplate);
-          return (
-            template ?? {fields: emptyCommitMessageFields(CommitMessageFieldUtils.configuredFields)}
-          );
+          return template ?? {fields: emptyCommitMessageFields(get(commitMessageFieldsSchema))};
         }
         // TODO: is there a better way we should derive `isOptimistic`
         // from `get(treeWithPreviews)`, rather than using non-previewed map?
@@ -77,7 +74,7 @@ export const editedCommitMessages = atomFamily<EditedMessageUnlessOptimistic, Ha
           return {type: 'optimistic'};
         }
         const fields = parseCommitMessageFields(
-          CommitMessageFieldUtils.configuredFields,
+          get(commitMessageFieldsSchema),
           info.title,
           info.description,
         );
@@ -100,20 +97,19 @@ export const hasUnsavedEditedCommitMessage = selectorFamily<boolean, Hash | 'hea
       }
       // TODO: T149536695 use treeWithPreviews so this indicator is accurate on top of previews
       const original = get(latestCommitTreeMap).get(hash)?.info;
+      const schema = get(commitMessageFieldsSchema);
       const parsed = parseCommitMessageFields(
-        CommitMessageFieldUtils.configuredFields,
+        schema,
         original?.title ?? '',
         original?.description ?? '',
       );
-      return Object.values(
-        findFieldsBeingEdited(CommitMessageFieldUtils.configuredFields, edited.fields, parsed),
-      ).some(Boolean);
+      return Object.values(findFieldsBeingEdited(schema, edited.fields, parsed)).some(Boolean);
     },
 });
 
 export const commitFieldsBeingEdited = atom<FieldsBeingEdited>({
   key: 'commitFieldsBeingEdited',
-  default: noFieldsBeingEdited(CommitMessageFieldUtils.configuredFields),
+  default: {}, // empty object is valid as FieldsBeingEdited, and constructable without the schema
 });
 
 export const commitMode = atom<CommitInfoMode>({

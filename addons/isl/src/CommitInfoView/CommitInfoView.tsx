@@ -46,11 +46,12 @@ import {
   hasUnsavedEditedCommitMessage,
 } from './CommitInfoState';
 import {
+  commitMessageFieldsToString,
+  commitMessageFieldsSchema,
   parseCommitMessageFields,
   allFieldsBeingEdited,
   findFieldsBeingEdited,
   noFieldsBeingEdited,
-  CommitMessageFieldUtils,
 } from './CommitMessageFields';
 import {CommitTitleByline, getTopmostEditedField, Section, SmallCapsTitle} from './utils';
 import {
@@ -154,6 +155,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     editedCommitMessages(isCommitMode ? 'head' : commit.hash),
   );
   const uncommittedChanges = useRecoilValue(uncommittedChangesWithPreviews);
+  const schema = useRecoilValue(commitMessageFieldsSchema);
 
   const [fieldsBeingEdited, setFieldsBeingEdited] =
     useRecoilState<FieldsBeingEdited>(commitFieldsBeingEdited);
@@ -166,11 +168,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     setFieldsBeingEdited({...fieldsBeingEdited, [field]: true});
   };
 
-  const parsedFields = parseCommitMessageFields(
-    CommitMessageFieldUtils.configuredFields,
-    commit.title,
-    commit.description,
-  );
+  const parsedFields = parseCommitMessageFields(schema, commit.title, commit.description);
 
   useEffect(() => {
     if (editedMessage.type === 'optimistic') {
@@ -178,7 +176,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
       assert(!isCommitMode, 'Should not be in commit mode while editedMessage.type is optimistic');
 
       // no fields are edited during optimistic state
-      setFieldsBeingEdited(noFieldsBeingEdited(CommitMessageFieldUtils.configuredFields));
+      setFieldsBeingEdited(noFieldsBeingEdited(schema));
       return;
     }
     if (fieldsBeingEdited.forceWhileOnHead && commit.isHead) {
@@ -191,12 +189,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     // except for fields that are being edited on this commit, too
     setFieldsBeingEdited(
       isCommitMode
-        ? allFieldsBeingEdited(CommitMessageFieldUtils.configuredFields)
-        : findFieldsBeingEdited(
-            CommitMessageFieldUtils.configuredFields,
-            editedMessage.fields,
-            parsedFields,
-          ),
+        ? allFieldsBeingEdited(schema)
+        : findFieldsBeingEdited(schema, editedMessage.fields, parsedFields),
     );
 
     // We only want to recompute this when the commit/mode changes.
@@ -204,10 +198,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commit.hash, isCommitMode]);
 
-  const topmostEditedField = getTopmostEditedField(
-    CommitMessageFieldUtils.configuredFields,
-    fieldsBeingEdited,
-  );
+  const topmostEditedField = getTopmostEditedField(schema, fieldsBeingEdited);
 
   return (
     <div className="commit-info-view" data-testid="commit-info-view">
@@ -230,7 +221,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
         className="commit-info-view-main-content"
         // remount this if we change to commit mode
         key={mode}>
-        {CommitMessageFieldUtils.configuredFields.map(field => (
+        {schema.map(field => (
           <CommitInfoField
             key={field.key}
             field={field}
@@ -336,6 +327,7 @@ function ActionsBar({
   const [repoInfo, setRepoInfo] = useRecoilState(repositoryInfo);
   const diffSummaries = useRecoilValue(allDiffSummaries);
   const shouldSubmitAsDraft = useRecoilValue(submitAsDraft);
+  const schema = useRecoilValue(commitMessageFieldsSchema);
 
   // after committing/amending, if you've previously selected the head commit,
   // we should show you the newly amended/committed commit instead of the old one.
@@ -369,11 +361,12 @@ function ActionsBar({
         }
 
         reset(editedCommitMessages(isCommitMode ? 'head' : commit.hash));
-        setFieldsBeingEdited(noFieldsBeingEdited(CommitMessageFieldUtils.configuredFields));
+        setFieldsBeingEdited(noFieldsBeingEdited(schema));
       },
   );
   const runOperation = useRunOperation();
   const doAmendOrCommit = () => {
+    const message = commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields);
     const filesToCommit =
       deselected.size === 0
         ? // all files
@@ -382,8 +375,8 @@ function ActionsBar({
           uncommittedChanges.filter(file => !deselected.has(file.path)).map(file => file.path);
     runOperation(
       isCommitMode
-        ? new CommitOperation(assertNonOptimistic(editedMessage), commit.hash, filesToCommit)
-        : new AmendOperation(filesToCommit, assertNonOptimistic(editedMessage)),
+        ? new CommitOperation(message, commit.hash, filesToCommit)
+        : new AmendOperation(filesToCommit, message),
     );
     clearEditedCommitMessage(/* skip confirmation */ true);
     // reset to amend mode now that the commit has been made
@@ -446,7 +439,10 @@ function ActionsBar({
               disabled={!isAnythingBeingEdited || editedMessage == null || areImageUploadsOngoing}
               onClick={() => {
                 runOperation(
-                  new AmendMessageOperation(commit.hash, assertNonOptimistic(editedMessage)),
+                  new AmendMessageOperation(
+                    commit.hash,
+                    commitMessageFieldsToString(schema, assertNonOptimistic(editedMessage).fields),
+                  ),
                 );
                 clearEditedCommitMessage(/* skip confirmation */ true);
               }}>
