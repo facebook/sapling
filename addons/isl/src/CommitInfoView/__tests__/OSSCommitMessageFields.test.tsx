@@ -21,15 +21,15 @@ another line
 `,
     );
 
-    expect(parsed.title).toEqual('my title');
-    expect(parsed.description).toEqual('My description!\nanother line\n');
+    expect(parsed.Title).toEqual('my title');
+    expect(parsed.Description).toEqual('My description!\nanother line\n');
   });
 
   it('converts to string properly', () => {
     expect(
       commitMessageFieldsToString(OSSDefaultFieldSchema, {
-        title: 'my title',
-        description: 'my summary\nline 2',
+        Title: 'my title',
+        Description: 'my summary\nline 2',
       }),
     ).toEqual(
       `my title

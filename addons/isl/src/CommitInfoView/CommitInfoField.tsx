@@ -43,7 +43,7 @@ export function CommitInfoField({
           <Section className="commit-info-title-field-section">
             <SmallCapsTitle>
               <Icon icon="milestone" />
-              <T>{field.name}</T>
+              <T>{field.key}</T>
             </SmallCapsTitle>
             <CommitInfoTextArea
               kind={field.type}
@@ -74,7 +74,7 @@ export function CommitInfoField({
       <Section className="commit-info-field-section">
         <SmallCapsTitle>
           <Icon icon={field.icon} />
-          {field.name}
+          {field.key}
         </SmallCapsTitle>
         <CommitInfoTextArea
           kind={field.type}
@@ -92,7 +92,7 @@ export function CommitInfoField({
           fieldKey={field.key}>
           <SmallCapsTitle>
             <Icon icon={field.icon} />
-            <T>{field.name}</T>
+            <T>{field.key}</T>
             <span className="hover-edit-button">
               <Icon icon="edit" />
             </span>
@@ -103,13 +103,12 @@ export function CommitInfoField({
             <span className="empty-description subtle">
               {isOptimistic ? (
                 <>
-                  <T>No description</T>
-                  <T replace={{$name: field.name}}> No $name</T>
+                  <T replace={{$name: field.key}}> No $name</T>
                 </>
               ) : (
                 <>
                   <Icon icon="add" />
-                  <T replace={{$name: field.name}}> Click to add $name</T>
+                  <T replace={{$name: field.key}}> Click to add $name</T>
                 </>
               )}
             </span>
@@ -133,10 +132,11 @@ function ClickToEditField({
   kind: 'title' | 'field' | 'textarea';
 }) {
   const editable = startEditingField != null;
+  const renderKey = fieldKey.toLowerCase().replace(/\s/g, '-');
   return (
     <div
       className={`commit-info-rendered-${kind}${editable ? '' : ' non-editable'}`}
-      data-testid={`commit-info-rendered-${fieldKey}`}
+      data-testid={`commit-info-rendered-${renderKey}`}
       onClick={
         startEditingField != null
           ? () => {

@@ -122,6 +122,8 @@ export function CommitInfoTextArea({
 
   const uploadFiles = useUploadFilesCallback(ref, onInput);
 
+  const fieldKey = name.toLowerCase().replace(/\s/g, '-');
+
   const rendered = (
     <div className="commit-info-field">
       <EditorToolbar
@@ -142,7 +144,7 @@ export function CommitInfoTextArea({
               }
         }
         value={editedMessage}
-        data-testid={`commit-info-${name}-field`}
+        data-testid={`commit-info-${fieldKey}-field`}
         onInput={onInput}
       />
     </div>

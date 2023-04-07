@@ -244,7 +244,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               )
             }
             extra={
-              mode !== 'commit' && field.key === 'title' ? (
+              mode !== 'commit' && field.key === 'Title' ? (
                 <CommitTitleByline commit={commit} />
               ) : undefined
             }

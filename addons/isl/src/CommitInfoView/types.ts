@@ -28,13 +28,14 @@ export type FieldsBeingEdited = Record<string, boolean> & {forceWhileOnHead?: bo
  * Dynamic configuration for a single field in a commit message
  */
 export type FieldConfig = {
-  /** i18n key for the display name for this field. Note: this should be provided to t() or <T> to render. */
-  name: string;
   /**
-   * Internal label for this field, unrelated to how it was parsed from the message.
-   * commitMessageFieldsToString handles re-inserting parseable tags.
+   * Label for this field, and the value used to parse this key from the string.
+   * For example, "Summary" corresponds to 'Summary:' in the commit message.
+   * There are some specially handled values:
+   *   'Title' -> we don't look for "title: foo", we assume first line is the title always.
+   *   'Description' -> we don't look for "description: foo", description is handled as the entire message
    */
-  key: 'title' | string;
+  key: 'Title' | string;
   /** Codicon to show next to this field */
   icon: string;
 } & (

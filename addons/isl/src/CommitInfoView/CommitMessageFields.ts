@@ -54,11 +54,11 @@ export function commitMessageFieldsToString(
   fields: CommitMessageFields,
 ): string {
   return schema
-    .filter(config => config.key === 'title' || fields[config.key])
+    .filter(config => config.key === 'Title' || fields[config.key])
     .map(
       config =>
         // stringified messages of the form Key: value, except the title or generic description don't need a label
-        (config.key === 'title' || config.key === 'description' ? '' : config.name + ': ') +
+        (config.key === 'Title' || config.key === 'Description' ? '' : config.key + ': ') +
         (config.type === 'field'
           ? (fields[config.key] as Array<string>).join(', ')
           : fields[config.key]),
@@ -88,7 +88,7 @@ export function parseCommitMessageFields(
   const map: Partial<Record<string, string>> = {};
   const sanitizedCommitMessage = (title + '\n' + description).replace(SL_COMMIT_MESSAGE_REGEX, '');
 
-  const sectionTags = schema.map(field => field.name);
+  const sectionTags = schema.map(field => field.key);
   const TAG_SEPARATOR = ':';
   const sectionSeparatorRegex = new RegExp(`\n\\s*\\b(${sectionTags.join('|')})${TAG_SEPARATOR} ?`);
 
@@ -112,25 +112,25 @@ export function parseCommitMessageFields(
 
   const result = Object.fromEntries(
     schema.map(config => {
-      const found = map[config.name] ?? '';
-      if (config.key === 'description') {
+      const found = map[config.key] ?? '';
+      if (config.key === 'Description') {
         // special case: a field called "description" should contain the entire description,
         // in case you don't have any fields configured.
         // TODO: this should probably be a key on the schema description field instead,
         // or configured as part of the overall schema "parseMethod", to support formats other than "Key: Value"
-        return ['description', description];
+        return ['Description', description];
       }
       return [config.key, config.type === 'field' ? commaSeparated(found) : found];
     }),
   );
   // title won't get parsed automatically, manually insert it
-  result.title = title;
+  result.Title = title;
   return result;
 }
 
 export const OSSDefaultFieldSchema: Array<FieldConfig> = [
-  {key: 'title', name: 'Title', type: 'title', icon: 'milestone'},
-  {key: 'description', name: 'Description', type: 'textarea', icon: 'note'},
+  {key: 'Title', type: 'title', icon: 'milestone'},
+  {key: 'Description', type: 'textarea', icon: 'note'},
 ];
 
 function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
